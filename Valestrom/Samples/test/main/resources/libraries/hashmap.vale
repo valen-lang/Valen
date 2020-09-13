@@ -34,7 +34,7 @@ fn update<K, V, H, E>(self &HashMap<K, V, H, E>, key K, value V) void {
   hash int = (self.hasher)(key);
   startIndex = abs(hash mod self.table.len());
   index? = findIndexOfKey(self.table, self.equator, startIndex, key);
-  if (index?.empty?()) {
+  if (index?.isEmpty()) {
     panic("Map doesnt have given key!");
   }
   node = self.table[index?.get()].get();
@@ -58,7 +58,7 @@ fn add<K, V, H, E>(map &HashMap<K, V, H, E>, key K, value V) void {
             }));
     i = 0;
     while (i < map.table.len()) {
-      if (map.table[i].empty?()) {
+      if (map.table[i].isEmpty()) {
         // do nothing
       } else {
         node? = (mut map.table[i] = None<HashMapNode<K, V>>());
@@ -88,7 +88,7 @@ fn findEmptyIndexForKey<K, V>(table &Array<mut, Opt<HashMapNode<K, V>>>, startIn
   while (i < table.len()) {
     index = (startIndex + i) mod table.len();
     something = table[index];
-    if (something.empty?()) {
+    if (something.isEmpty()) {
       ret index;
     }
     // continue to next node
@@ -102,7 +102,7 @@ fn findIndexOfKey<K, V, E>(table &Array<mut, Opt<HashMapNode<K, V>>>, equator E,
   while (i < table.len()) {
     index = (startIndex + i) mod table.len();
     something = table[index];
-    if (something.empty?()) {
+    if (something.isEmpty()) {
       ret None<int>();
     }
     node = something.get();
@@ -122,7 +122,7 @@ fn get<K, V, H, E>(self &HashMap<K, V, H, E>, key K) Opt<&V> {
   hash int = (self.hasher)(key);
   startIndex = abs(hash mod self.table.len());
   index? = findIndexOfKey(self.table, self.equator, startIndex, key);
-  if (index?.empty?()) {
+  if (index?.isEmpty()) {
     opt Opt<&V> = None<&V>();
     ret opt;
   }
@@ -132,7 +132,7 @@ fn get<K, V, H, E>(self &HashMap<K, V, H, E>, key K) Opt<&V> {
 }
 
 fn has<K, V, H, E>(self &HashMap<K, V, H, E>, key K) bool {
-  not(self.get(key).empty?())
+  not(self.get(key).isEmpty())
 }
 
 fn keys<K, V, H, E>(self &HashMap<K, V, H, E>) Array<imm, K> {
@@ -140,7 +140,7 @@ fn keys<K, V, H, E>(self &HashMap<K, V, H, E>) Array<imm, K> {
   index = 0;
   while (index < self.table.len()) {
     node? = self.table[index];
-    if (not(node?.empty?())) {
+    if (not(node?.isEmpty())) {
       list.add(node?.get().key);
     }
     mut index = index + 1;
@@ -153,7 +153,7 @@ fn values<K, V, H, E>(self &HashMap<K, V, H, E>) Array<mut, V> {
   index = 0;
   while (index < self.table.len()) {
     node? = self.table[index];
-    if (not(node?.empty?())) {
+    if (not(node?.isEmpty())) {
       list.add(node?.get().value);
     }
     mut index = index + 1;
@@ -186,7 +186,7 @@ void {
   while (i < map.table.len()) {
     neighborIndex = (originalIndex + i) mod len(map.table);
     neighbor? = (mut map.table[neighborIndex] = None<HashMapNode<K, V>>());
-    if (not neighbor?.empty?()) {
+    if (not neighbor?.isEmpty()) {
       (neighborKey, neighborValue) = neighbor?^.get();
       addNodeToTable(map.table, map.hasher, HashMapNode<K, V>(neighborKey, neighborValue));
     } else {
