@@ -5,7 +5,7 @@ fn main() {
   weakMuta = &&ownMuta;
   drop(ownMuta);
   maybeBorrowMuta = lock(weakMuta);
-  = if (maybeBorrowMuta.empty?()) {
+  = if (maybeBorrowMuta.isEmpty()) {
       drop(maybeBorrowMuta);
       = 42;
     } else {
