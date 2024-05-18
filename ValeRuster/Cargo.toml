@@ -1,0 +1,11 @@
+[package]
+name = "ValeRuster"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+clap = "4.5.4"
+anyhow = { version = "1.0.66", features = ["backtrace"] }
+rustdoc-types = "0.25.0"
+serde_json = "1.0.117"
+regex = "1.10.4"
