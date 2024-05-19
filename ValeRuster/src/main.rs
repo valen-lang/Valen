@@ -10,7 +10,7 @@ use std::io::{BufRead, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use anyhow::{Context, Result};
-use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericParamDef, Id, Impl, Item, ItemEnum, Struct, Type};
+use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericParamDef, Id, Impl, Import, Item, ItemEnum, Struct, Type};
 use regex::{Regex};
 use crate::GenealogyKey::{ImplOrMethod, Normal};
 
@@ -65,7 +65,11 @@ struct SimpleValType {
   generic_args: Vec<SimpleType>,
 
   // If this is a method, then the parent will be the struct.
-  maybe_parent: Option<Box<SimpleValType>>
+  maybe_parent_struct: Option<Box<SimpleValType>>,
+  // // We'll need this in case we import like:
+  // //   #pragma vrinclude std::ffi::OsString::From<&str>::from as RustOsStringFrom
+  // // and that resolves to
+  // maybe_parent_impl: Option<Box<SimpleValType>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -93,31 +97,31 @@ fn main() -> Result<(), anyhow::Error> {
           .subcommand(
             clap::Command::new("instantiate")
                 .about("Instantiate either a function or a struct.")
-                  .arg(Arg::new("output_dir")
-                      .long("output_dir")
-                      .help("Directory to output to.")
-                      .action(ArgAction::Set)
-                      .required(true))
-                  .arg(Arg::new("input_file")
-                      .long("input_file")
-                      .help("File to read from.")
-                      .action(ArgAction::Set))
-                // .arg(Arg::new("as")
-                //     .long("as")
-                //     .help("Sets the name for the newly generated type.")
-                //     .action(ArgAction::Set))
-                // .arg(Arg::new("c_folder")
-                //     .long("c_folder")
-                //     .help("The folder to output the C code to")
-                //     .action(ArgAction::Set)
-                //     .required(true))
+                .arg(Arg::new("output_dir")
+                    .long("output_dir")
+                    .help("Directory to output to.")
+                    .action(ArgAction::Set)
+                    .required(true))
+                .arg(Arg::new("input_file")
+                    .long("input_file")
+                    .help("File to read from.")
+                    .action(ArgAction::Set))
+            // .arg(Arg::new("as")
+            //     .long("as")
+            //     .help("Sets the name for the newly generated type.")
+            //     .action(ArgAction::Set))
+            // .arg(Arg::new("c_folder")
+            //     .long("c_folder")
+            //     .help("The folder to output the C code to")
+            //     .action(ArgAction::Set)
+            //     .required(true))
 
-                // .arg(Arg::new("generated")
-                //     .long("generated")
-                //     .help("The folder to output the Rust code to")
-                //     .action(ArgAction::Set)
-                //     .required(true)))
-  )
+            // .arg(Arg::new("generated")
+            //     .long("generated")
+            //     .help("The folder to output the Rust code to")
+            //     .action(ArgAction::Set)
+            //     .required(true)))
+          )
           .arg(Arg::new("crate")
               .long("crate")
               .help("The crate name to generate bindings for")
@@ -193,7 +197,7 @@ fn main() -> Result<(), anyhow::Error> {
             valtype: SimpleValType {
               id: primitive_id("str"),
               generic_args: Vec::new(),
-              maybe_parent: None
+              maybe_parent_struct: None
             }
           };
       type_to_alias.insert(str_ref_type.valtype.clone(), "VR_str_ref".to_owned());
@@ -234,26 +238,26 @@ fn main() -> Result<(), anyhow::Error> {
             Regex::new(r#"^\s*(#pragma\s+vrinclude\s+)?(\S.+)\s+as\s+(\w+)\s*$"#).unwrap()
                 .captures(&line);
         let (target_type_str, maybe_alias) =
-          if let Some(aliasing_line_captures) = maybe_aliasing_line_captures {
-            // Getting the first capture group
-            let target_type_str =
-                aliasing_line_captures.get(2)
-                    .expect("Blork")
-                    .as_str();
-            let maybe_alias =
-                aliasing_line_captures.get(3).map(|x| x.as_str().to_string());
-            (target_type_str, maybe_alias)
-          } else {
-            let simple_line_captures =
-                Regex::new(r#"^\s*(#pragma\s+vrinclude\s+)?(\S.+)\s*$"#).unwrap()
-                    .captures(&line)
-                    .expect(&("Bad line: ".to_owned() + &line));;
-            let target_type_str =
-                simple_line_captures.get(2)
-                    .expect("Blork")
-                    .as_str();
-            (target_type_str, None)
-          };
+            if let Some(aliasing_line_captures) = maybe_aliasing_line_captures {
+              // Getting the first capture group
+              let target_type_str =
+                  aliasing_line_captures.get(2)
+                      .expect("Blork")
+                      .as_str();
+              let maybe_alias =
+                  aliasing_line_captures.get(3).map(|x| x.as_str().to_string());
+              (target_type_str, maybe_alias)
+            } else {
+              let simple_line_captures =
+                  Regex::new(r#"^\s*(#pragma\s+vrinclude\s+)?(\S.+)\s*$"#).unwrap()
+                      .captures(&line)
+                      .expect(&("Bad line: ".to_owned() + &line));;
+              let target_type_str =
+                  simple_line_captures.get(2)
+                      .expect("Blork")
+                      .as_str();
+              (target_type_str, None)
+            };
 
         let (target_type, _) =
             parse_type(&crates, None, &target_type_str)?;
@@ -368,11 +372,11 @@ fn main() -> Result<(), anyhow::Error> {
                     let is_slice =
                         signature_part_type.valtype.id.crate_name == "" && signature_part_type.valtype.id.id.0 == "str";
                     let type_str =
-                      if is_slice {
-                        "&".to_owned() + &valtype_str
-                      } else {
-                        valtype_str.clone()
-                      };
+                        if is_slice {
+                          "&".to_owned() + &valtype_str
+                        } else {
+                          valtype_str.clone()
+                        };
                     eprintln!("Sizing {} from {}", &type_str, item.name.as_ref().unwrap_or(&"(none)".to_string()));
                     // TODO: check duplicates, i think we're doing extra work here
                     sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
@@ -402,12 +406,12 @@ fn main() -> Result<(), anyhow::Error> {
       eprintln!("Running sizer program on {} types...", sizer_strings.len());
 
       let sizer_program_str =
-        std::iter::once(common_preamble().to_owned()).into_iter()
-            .chain(std::iter::once("fn main() {".to_owned()))
-            .chain(sizer_strings)
-            .chain(std::iter::once("}".to_owned()))
-            .collect::<Vec<String>>()
-            .join("\n");
+          std::iter::once(common_preamble().to_owned()).into_iter()
+              .chain(std::iter::once("fn main() {".to_owned()))
+              .chain(sizer_strings)
+              .chain(std::iter::once("}".to_owned()))
+              .collect::<Vec<String>>()
+              .join("\n");
 
       if Path::new(&(output_dir_path.to_owned() + "/src/lib.rs")).exists() {
         fs::remove_file(output_dir_path.to_owned() + "/src/lib.rs")
@@ -557,7 +561,14 @@ fn main() -> Result<(), anyhow::Error> {
       fs::write(output_dir_path.to_string() + "/src/capi.rs", final_program_str)
           .with_context(|| "Failed to write ".to_string() + output_dir_path + "/src/capi.rs")?;
 
-      fs::write(output_dir_path.to_string() + "/src/lib.rs", "#[cfg(feature = \"capi\")] mod capi;")
+      fs::write(
+        output_dir_path.to_string() + "/src/lib.rs",
+        r#"
+#![feature(os_str_display)]
+
+#[cfg(feature = "capi")]
+mod capi;
+"#)
           .with_context(|| "Failed to write ".to_string() + output_dir_path + "/src/lib.rs")?;
 
       fs::remove_file(output_dir_path.to_string() + "/src/main.rs")
@@ -607,6 +618,8 @@ fn main() -> Result<(), anyhow::Error> {
 
 fn common_preamble() -> &'static str {
   r#"
+#![feature(os_str_display)]
+
 use static_assertions::const_assert_eq;
 use std::mem;
 extern crate alloc;
@@ -616,7 +629,7 @@ use core::ffi::c_char;
 }
 
 fn instantiations_preamble() -> &'static str {
-    r#"
+  r#"
 #[no_mangle]
 pub extern "C" fn RustStrFromCStr(char_ptr: *const c_char) -> VR_str_ref {
   let c_str = unsafe { core::ffi::CStr::from_ptr(char_ptr) };
@@ -647,7 +660,7 @@ pub extern "C" fn RustStrNew(length: usize, char_ptr: *const u8) -> VR_str_ref {
 }
 
 fn genealogize(
-    crates: &HashMap<String, Crate>
+  crates: &HashMap<String, Crate>
 ) -> Result<HashMap<GenealogyKey, UId>> {
   let mut child_key_to_parent_uid: HashMap<GenealogyKey, UId> = HashMap::new();
 
@@ -658,23 +671,23 @@ fn genealogize(
       let self_uid =
           UId { crate_name: crate_name.to_string(), id: self_id.clone() };
       let child_uids =
-        match &item.inner {
-          ItemEnum::Module(_) => {
-            get_direct_child_uids(crates, &self_uid)
-                .into_iter()
-                .map(|x| GenealogyKey::Normal(x.clone()))
-                .collect::<Vec<GenealogyKey>>()
-          },
-          ItemEnum::Struct(Struct { impls: impl_ids, .. }) |
-          ItemEnum::Enum(Enum { impls: impl_ids, .. }) => {
-            get_direct_child_uids(crates, &self_uid)
-                .into_iter()
-                .map(|impl_uid| {
-                  GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: impl_uid.clone() }
-                })
-                // Now add all the impls' children.
-                .chain(
-                  impl_ids
+          match &item.inner {
+            ItemEnum::Module(_) => {
+              get_direct_child_uids(crates, &self_uid)
+                  .into_iter()
+                  .map(|x| GenealogyKey::Normal(x.clone()))
+                  .collect::<Vec<GenealogyKey>>()
+            },
+            ItemEnum::Struct(Struct { impls: impl_ids, .. }) |
+            ItemEnum::Enum(Enum { impls: impl_ids, .. }) => {
+              get_direct_child_uids(crates, &self_uid)
+                  .into_iter()
+                  .map(|impl_uid| {
+                    GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: impl_uid.clone() }
+                  })
+                  // Now add all the impls' children.
+                  .chain(
+                    impl_ids
                         .iter()
                         .flat_map(|impl_id| {
                           let impl_uid = UId { crate_name: crate_name.clone(), id: impl_id.clone() };
@@ -685,22 +698,22 @@ fn genealogize(
                               })
                               .collect::<Vec<_>>()
                         }))
-                .collect::<Vec<GenealogyKey>>()
-          },
-          ItemEnum::Import(import) => {
-            if let Some(imported_id) = import.id.as_ref() {
-              let importee_uid =
-                UId { crate_name: crate_name.clone(), id: imported_id.clone() };
-              if !importee_uid_to_imports.contains_key(&importee_uid) {
-                importee_uid_to_imports.insert(importee_uid.clone(), HashSet::new());
+                  .collect::<Vec<GenealogyKey>>()
+            },
+            ItemEnum::Import(import) => {
+              if let Some(imported_id) = import.id.as_ref() {
+                let importee_uid =
+                    UId { crate_name: crate_name.clone(), id: imported_id.clone() };
+                if !importee_uid_to_imports.contains_key(&importee_uid) {
+                  importee_uid_to_imports.insert(importee_uid.clone(), HashSet::new());
+                }
+                eprintln!("Noting importee {:?} imported by import {:?}", importee_uid, self_uid);
+                importee_uid_to_imports.get_mut(&importee_uid).unwrap().insert(self_uid);
               }
-              eprintln!("Noting importee {:?} imported by import {:?}", importee_uid, self_uid);
-              importee_uid_to_imports.get_mut(&importee_uid).unwrap().insert(self_uid);
+              continue;
             }
-            continue;
-          }
-          _ => continue
-        };
+            _ => continue
+          };
       for child_uid in child_uids {
         if let Some(existing_parent_uid) = child_key_to_parent_uid.get(&child_uid) {
           if *existing_parent_uid != self_uid {
@@ -759,13 +772,10 @@ fn assemble_generics(
   target_valtype: &SimpleValType
 ) -> Result<HashMap<String, SimpleType>> {
   let mut generics: HashMap<String, SimpleType> = HashMap::new();
-  // TODO: dedup with instantiate_func's
-  for (generic_param, generic_arg_type) in func.generics.params.iter().zip(&target_valtype.generic_args) {
-    // println!("Got generic arg: {:?}", generic_arg_type);
-    generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
-  }
 
-  if let Some(parent) = &target_valtype.maybe_parent {
+  // Do the parents' first, in case the more local scopes want to override
+  // some generic param name.
+  if let Some(parent) = &target_valtype.maybe_parent_struct {
     generics.insert(
       "Self".to_owned(),
       SimpleType {
@@ -774,29 +784,38 @@ fn assemble_generics(
         valtype: (**parent).clone()
       });
   }
+  // TODO: we'll probably need this at some point
+  // if let Some(parent) = &target_valtype.maybe_parent_impl {
+  //   // TODO: maybe dedup with instantiate_func's
+  //   for (generic_param, generic_arg_type) in impl_.generics.params.iter().zip(&parent.generic_args) {
+  //     // println!("Got generic arg: {:?}", generic_arg_type);
+  //     generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
+  //   }
+  // }
+
+  // TODO: dedup with instantiate_func's
+  for (generic_param, generic_arg_type) in func.generics.params.iter().zip(&target_valtype.generic_args) {
+    // println!("Got generic arg: {:?}", generic_arg_type);
+    generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
+  }
+
   Ok(generics)
 }
 
 // This adds the given step to the end, and if it lands on an
 // import or a typealias it will follow it and return the new corrected
 // path.
-fn extend_and_resolve(
+fn extend_and_resolve_uid(
   crates: &HashMap<String, Crate>,
   // This is the containing module or impl.
-  previous: Option<&SimpleValType>,
-  name: &str,
-  generic_args: Vec<SimpleType>
-) -> Result<SimpleValType> {
+  previous: Option<&UId>,
+  name: &str
+) -> Result<UId> {
   if name.len() == 0 {
     // For the life of me I can't figure out the Id for tuples, I suspect they don't have one
     // because they have a special entry in the Type enum.
     // We'll just use the empty string.
-    return Ok(
-      SimpleValType {
-        id: tuple_id(),
-        generic_args: generic_args,
-        maybe_parent: None,
-      });
+    return Ok(tuple_id());
   }
 
   match previous {
@@ -808,16 +827,12 @@ fn extend_and_resolve(
         }
         Some(crate_) => {
           let root_module_id = &crate_.root;
-          Ok(SimpleValType {
-            id: UId { crate_name: name.to_string(), id: root_module_id.clone() },
-            generic_args: Vec::new(),
-            maybe_parent: None
-          })
+          Ok(UId { crate_name: name.to_string(), id: root_module_id.clone() })
         }
       }
     }
     Some(previous_last_step) => {
-      let previous_container_id = &previous_last_step.id;
+      let previous_container_id = &previous_last_step;
       let previous_crate_name = &previous_container_id.crate_name;
       let previous_crate = crates.get(previous_crate_name).unwrap();
       // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
@@ -836,85 +851,16 @@ fn extend_and_resolve(
         let error = format!("Couldn't find anything with name: {}", name);
         return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
       } else if found_items.len() > 1 {
-        // If they're all impls, then let's do some overload resolution.
-
-        let mut non_impls = Vec::new();
-        let mut impls = Vec::new();
-        for (item_uid, item) in found_items.into_iter() {
-          match &item.inner {
-            ItemEnum::Impl(impl_) => impls.push((item_uid, impl_)),
-            _ => non_impls.push((item_uid, item)),
-          }
-        }
-        if non_impls.is_empty() {
-          let mut matches: Vec<(UId, &Impl, i64, Vec<SimpleType>)> = Vec::new();
-          for (impl_uid, impl_) in impls {
-            if let Some((score, generics)) = impl_from_matches_generic_args(crates, impl_, &generic_args) {
-              matches.push((impl_uid, impl_, score, generics));
-            }
-          }
-          if matches.len() == 0 {
-            unimplemented!();
-          } else if matches.len() > 1 {
-            eprintln!("Too many matches!");
-            for m in &matches {
-              eprintln!("Candidate: {:?}", m);
-            }
-            matches.sort_by_key(|x| {
-              let score: i64 = x.2;
-              // We want highest first
-              -score
-            });
-            if matches[0].2 == matches[1].2 {
-              // Then the scores are the same, we couldn't decide.
-              unimplemented!();
-            }
-            matches = vec![matches.remove(0)];
-          }
-          let (impl_uid, impl_, _, impl_generic_args) = matches.remove(0);
-
-          let maybe_self_struct =
-              // combine with the other bit of code that looks like this
-              match previous_crate.index.get(&previous_container_id.id).unwrap().inner {
-                ItemEnum::Struct(_) | ItemEnum::Enum(_) => previous,
-                _ => None
-              };
-
-          eprintln!("Before resolve: {:?}", impl_generic_args);
-
-          let result_step =
-              resolve(
-                crates,
-                maybe_self_struct,
-                &impl_uid,
-                impl_generic_args)?;
-
-          eprintln!("After resolve: {:?}", result_step.generic_args);
-
-          return Ok(result_step);
-        }
-
         let error = format!("Found too many things with name: {}", name);
+        eprintln!("Error: {}", error);
+        for found_item in &found_items {
+          eprintln!("Candidate: {:?}", found_item);
+        }
         return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
       }
       let (found_item_uid, found_item) = found_items.remove(0);
 
-      let maybe_self_struct =
-          if let Some(previous_parent) = &previous.unwrap().maybe_parent {
-            // If the previous had a parent, then the previous was an impl and the previous parent
-            // was a struct and we're a method.
-            // Use the same parent as the impl.
-            // TODO: explain more with examples, this is very nuanced
-            Some(previous_parent.as_ref())
-          } else {
-            match previous_crate.index.get(&previous_container_id.id).unwrap().inner {
-              ItemEnum::Struct(_) | ItemEnum::Enum(_) => previous,
-              _ => None
-            }
-          };
-
-      let result_step =
-          resolve(crates, maybe_self_struct, &found_item_uid, generic_args)?;
+      let result_step = resolve_uid(crates, &found_item_uid)?;
 
       // let mut tentative_path = previous.clone();
       // tentative_path.steps.push(result_step);
@@ -1073,6 +1019,115 @@ fn match_generic_arg_valtype(
 }
 
 // Recurses.
+fn resolve_uid(
+  crates: &HashMap<String, Crate>,
+  tentative_item_id: &UId
+) -> Result<UId> {
+  // let tentative_item_id = &tentative_path.steps.last().unwrap().id;
+  let local_crate = crates.get(&tentative_item_id.crate_name).unwrap();
+  match local_crate.index.get(&tentative_item_id.id) {
+    None => {
+      // Then this might be just referring to something in the paths.
+      match local_crate.paths.get(&tentative_item_id.id) {
+        None => panic!("Unknown ID: {:?}", &tentative_item_id.id),
+        Some(path) => {
+          let foreign_crate_name = &path.path[0];
+          // let foreign_crate = crates.get(foreign_crate_name).unwrap();
+          let mut current = extend_and_resolve_uid(crates, None, foreign_crate_name)?;
+          for step in &path.path[1..] {
+            current = extend_and_resolve_uid(crates, Some(&current), step)?;
+          }
+          Ok(current)
+        }
+      }
+    }
+    Some(tentative_item) => {
+      // // TODO: impl
+      // assert!(tentative_path.steps.last().unwrap().generic_args.is_empty());
+
+      match &tentative_item.inner {
+        ItemEnum::ExternCrate { .. } => unimplemented!(),
+        ItemEnum::Import(import) => {
+          // When we do an import, we actually want the module the
+          // import is referring to, not the import's id.
+
+          let local_crate = crates.get(&tentative_item_id.crate_name).unwrap();
+          let import_id = import.id.as_ref().unwrap();
+          match local_crate.paths.get(&import_id) {
+            None => {
+              resolve_uid(
+                crates,
+                &UId {
+                  crate_name: tentative_item_id.crate_name.clone(),
+                  id: import_id.clone()
+                })
+            }
+            Some(path) => {
+              if path.path[0] == "std_detect" {
+                unimplemented!();
+                // return Ok(None)
+              }
+              if path.path[0] == "core" && path.path[1] == "macros" {
+                unimplemented!();
+                // return Ok(None)
+              }
+
+              // let foreign_crate_path = SimpleValType { steps: Vec::new() };
+              let foreign_crate_root_name = &path.path[0];
+              // TODO: if we're not addressing a foreign crate, we might need to add
+              // a case here
+              let foreign_crate = crates.get(foreign_crate_root_name).unwrap();
+              let foreign_crate_root_module_id = UId { crate_name: foreign_crate_root_name.clone(), id: foreign_crate.root.clone() };
+              // let foreign_crate_root_module = foreign_crate.index.get(&foreign_crate_root_module_id.id).unwrap();
+
+              let mut result_uid = foreign_crate_root_module_id.clone();
+              for next_foreign_crate_name in &path.path[1..] {
+                let mut found_child_uids = Vec::new();
+                for hay_child_id in get_direct_child_uids(crates, &result_uid) {
+                  let hay_child = foreign_crate.index.get(&hay_child_id.id).unwrap();
+                  if item_has_name(&hay_child, next_foreign_crate_name) {
+                    found_child_uids.push(hay_child_id);
+                  }
+                }
+                if found_child_uids.len() > 1 {
+                  // Let's filter out any macros, sometimes they collide with real things,
+                  // like how "vec" is both a macro and a module.
+                  let mut narrowed_found_child_ids = Vec::new();
+                  for found_child_uid in &found_child_uids {
+                    // Note we're doing a shallow lookup here, these might refer to more imports
+                    // or type aliases. We could resolve them fully in the future.
+                    let found_child = lookup_uid(crates, found_child_uid);
+                    if !matches!(found_child.inner, ItemEnum::Macro(_)) {
+                      narrowed_found_child_ids.push(found_child_uid.clone());
+                    }
+                  }
+                  found_child_uids = narrowed_found_child_ids;
+                }
+                if found_child_uids.len() != 1 {
+                  unimplemented!();
+                }
+                result_uid = found_child_uids[0].clone();
+              }
+              // Recurse
+              assert_ne!(&result_uid, tentative_item_id); // Otherwise infinite loop
+              resolve_uid(crates, &result_uid)
+            }
+          }
+        }
+        ItemEnum::TraitAlias(_) => unimplemented!(),
+        ItemEnum::TypeAlias(type_alias) => {
+          Ok(
+            resolve_type_uid(
+              crates, &tentative_item_id.crate_name, &type_alias.type_)?)
+        },
+        ItemEnum::ForeignType => unimplemented!(),
+        _ => Ok(tentative_item_id.clone())
+      }
+    }
+  }
+}
+
+// Recurses.
 fn resolve(
   crates: &HashMap<String, Crate>,
   // If we're resolving an impl or a method, we'll want to know what
@@ -1195,7 +1250,7 @@ fn resolve(
             SimpleValType {
               id: tentative_item_id.clone(),
               generic_args: final_generic_args,
-              maybe_parent: {
+              maybe_parent_struct: {
                 maybe_self_struct.map(|x| Box::new(x.clone()))
               }
             })
@@ -1427,7 +1482,7 @@ fn instantiate_func(
     rust_builder += &crustify_simple_type(crates, child_key_to_parent_uid, aliases, &return_type_simple);
     rust_builder += " = unsafe { mem::transmute(result_rs) };\n";
     rust_builder += "  return result_c;\n";
-    }
+  }
   rust_builder += "}\n";
 
   // fs::write(rust_folder.to_owned() + "/" + &mangled_func_name + ".rs", rust_builder)
@@ -1583,11 +1638,11 @@ fn list_generics(v: &Crate) {
 
 fn get_crate(rustc_sysroot_path: &String, crate_name: &str) -> Result<Crate, anyhow::Error> {
   let json =
-    if let Some(crate_json) = get_stdlib_json(&rustc_sysroot_path, crate_name)? {
-      crate_json
-    } else {
-      unimplemented!()
-    };
+      if let Some(crate_json) = get_stdlib_json(&rustc_sysroot_path, crate_name)? {
+        crate_json
+      } else {
+        unimplemented!()
+      };
   let v: Crate = serde_json::from_str(&json)?;
   Ok(v)
 }
@@ -1602,12 +1657,12 @@ fn print_function(
   func: &Function
 ) -> Result<()> {
   println!("Function: {:?}",
-      "VR_".to_string() +
-      &(match generics.get("Self") {
-        None => "".to_string(),
-        Some(self_type) => mangle_simple_type(crates, child_key_to_parent_uid, &self_type) + "_"
-      }) +
-      &item.clone().name.unwrap_or("(none)".to_string()));
+           "VR_".to_string() +
+               &(match generics.get("Self") {
+                 None => "".to_string(),
+                 Some(self_type) => mangle_simple_type(crates, child_key_to_parent_uid, &self_type) + "_"
+               }) +
+               &item.clone().name.unwrap_or("(none)".to_string()));
 
   for (name, input) in &func.decl.inputs {
     println!("  {:?}: {:?}", name, mangle_simple_type(
@@ -1630,7 +1685,7 @@ fn get_stdlib_json(rustc_sysroot_path: &str, crate_name: &str) -> Result<Option<
 
   let mut stdlib_json_file =
       File::open(stdlib_json_file_path.clone())
-      .with_context(|| format!("Failed to open {}", stdlib_json_file_path))?;
+          .with_context(|| format!("Failed to open {}", stdlib_json_file_path))?;
 
   let mut stdlib_json_str: String = String::new();
   stdlib_json_file.read_to_string(&mut stdlib_json_str)
@@ -1691,12 +1746,12 @@ fn parse_type_path<'a>(
       rest = &rest[name_preview.len()..].trim();
       return Ok(
         (
-            SimpleValType {
-              id: primitive_id(name_preview),
-              generic_args: Vec::new(),
-              maybe_parent: None
-            },
-            rest))
+          SimpleValType {
+            id: primitive_id(name_preview),
+            generic_args: Vec::new(),
+            maybe_parent_struct: None
+          },
+          rest))
     }
     _ => {} // Nevermind, proceed...
   }
@@ -1725,11 +1780,11 @@ fn parse_type_path_step<'a>(
   let mut rest = original;
   let re = Regex::new(r"(::<|::|<|>|\(|\)|$)").unwrap();
   let name_end =
-    if let Some(generic_name_match) = re.find(&rest) {
-      generic_name_match.start()
-    } else {
-      rest.len()
-    };
+      if let Some(generic_name_match) = re.find(&rest) {
+        generic_name_match.start()
+      } else {
+        rest.len()
+      };
   let name = &rest[0..name_end];
   rest = &rest[name.len()..].trim();
 
@@ -1795,7 +1850,7 @@ fn simplify_generic_arg_inner(
           valtype: SimpleValType {
             id: lifetime_id(),
             generic_args: Vec::new(),
-            maybe_parent: None
+            maybe_parent_struct: None
           }
         })
     },
@@ -1846,17 +1901,17 @@ fn crustify_simple_type(
     else if type_.mut_ref { "*mut ".to_owned() }
     else { "".to_owned() })
   }) +
-  &(if let Some(alias) = aliases.get(&type_.valtype) {
-    alias.to_owned()
-  } else {
-    if type_.valtype.id.crate_name == "" {
-      // It's a primitive
-      mangle_simple_valtype(crates, child_key_to_parent_uid, &valtype)
-    } else {
-      "VR_".to_owned() +
-          &mangle_simple_valtype(crates, child_key_to_parent_uid, &valtype)
-    }
-  })
+      &(if let Some(alias) = aliases.get(&type_.valtype) {
+        alias.to_owned()
+      } else {
+        if type_.valtype.id.crate_name == "" {
+          // It's a primitive
+          mangle_simple_valtype(crates, child_key_to_parent_uid, &valtype)
+        } else {
+          "VR_".to_owned() +
+              &mangle_simple_valtype(crates, child_key_to_parent_uid, &valtype)
+        }
+      })
 }
 
 fn rustify_simple_valtype(
@@ -1869,8 +1924,8 @@ fn rustify_simple_valtype(
       if valtype.id.crate_name == "" { // Then it's a primitive
         if valtype.id == tuple_id() {
           "".to_owned()
-        // } else if valtype.id.id.0 == "str" {
-        //   "".to_owned()
+          // } else if valtype.id.id.0 == "str" {
+          //   "".to_owned()
         } else {
           valtype.id.id.0.clone()
         }
@@ -1879,46 +1934,46 @@ fn rustify_simple_valtype(
       };
 
   let key =
-    match &valtype.maybe_parent {
-      None => Normal(valtype.id.clone()),
-      Some(parent) => {
-        ImplOrMethod { struct_uid: parent.id.clone(), child_uid: valtype.id.clone() }
-      }
-    };
+      match &valtype.maybe_parent_struct {
+        None => Normal(valtype.id.clone()),
+        Some(parent) => {
+          ImplOrMethod { struct_uid: parent.id.clone(), child_uid: valtype.id.clone() }
+        }
+      };
   let prefix =
-    if let Some(parent_uid) = child_key_to_parent_uid.get(&key) {
-      rustify_simple_valtype(
-        crates,
-        child_key_to_parent_uid,
-        &SimpleValType {
-          id: parent_uid.clone(),
-          generic_args: Vec::new(),
-          maybe_parent: None
-        },
-        is_func) + "::"
-    } else {
-      "".to_string()
-    };
+      if let Some(parent_uid) = child_key_to_parent_uid.get(&key) {
+        rustify_simple_valtype(
+          crates,
+          child_key_to_parent_uid,
+          &SimpleValType {
+            id: parent_uid.clone(),
+            generic_args: Vec::new(),
+            maybe_parent_struct: None
+          },
+          is_func) + "::"
+      } else {
+        "".to_string()
+      };
 
   let generics_part =
       // If it's a tuple then we still want to print out the () even if
       // there's nothing inside it.
       if valtype.generic_args.len() > 0 || valtype.id == tuple_id() {
         let (start, end) =
-          if this_part_name == "" { ("(", ")") }
-          else if is_func { ("::<", ">") }
-          else { ("<", ">") };
+            if this_part_name == "" { ("(", ")") }
+            else if is_func { ("::<", ">") }
+            else { ("<", ">") };
         "".to_owned() +
-        start +
-        &valtype.generic_args
-            .iter()
-            .map(|x| {
-              rustify_simple_type(
-                crates, child_key_to_parent_uid, x, false)
-            })
-            .collect::<Vec<_>>()
-            .join(", ") +
-        end
+            start +
+            &valtype.generic_args
+                .iter()
+                .map(|x| {
+                  rustify_simple_type(
+                    crates, child_key_to_parent_uid, x, false)
+                })
+                .collect::<Vec<_>>()
+                .join(", ") +
+            end
       } else {
         "".to_owned()
       };
@@ -1968,7 +2023,7 @@ fn mangle_simple_valtype(
       };
 
   let key =
-      match &valtype.maybe_parent {
+      match &valtype.maybe_parent_struct {
         None => Normal(valtype.id.clone()),
         Some(parent) => {
           ImplOrMethod { struct_uid: parent.id.clone(), child_uid: valtype.id.clone() }
@@ -1982,7 +2037,7 @@ fn mangle_simple_valtype(
           &SimpleValType {
             id: parent_uid.clone(),
             generic_args: Vec::new(),
-            maybe_parent: None
+            maybe_parent_struct: None
           }) + "_"
       } else {
         "".to_string()
@@ -2018,32 +2073,32 @@ fn simplify_type(
     match type_ {
       Type::ResolvedPath(path) => {
         let generic_args =
-          if let Some(outer_args) = &path.args {
-            match outer_args.deref() {
-              GenericArgs::AngleBracketed { args, bindings } => {
-                let mut result = Vec::new();
-                for arg in args {
-                  result.push(
-                    simplify_generic_arg_inner(crates, generics, type_crate_name, arg)?);
+            if let Some(outer_args) = &path.args {
+              match outer_args.deref() {
+                GenericArgs::AngleBracketed { args, bindings } => {
+                  let mut result = Vec::new();
+                  for arg in args {
+                    result.push(
+                      simplify_generic_arg_inner(crates, generics, type_crate_name, arg)?);
+                  }
+                  result
                 }
-                result
+                GenericArgs::Parenthesized { inputs, output } => {
+                  let mut result = Vec::new();
+                  for arg in inputs {
+                    result.push(
+                      simplify_type(crates, generics, unimplemented!(), arg)?);
+                  }
+                  for output in output {
+                    result.push(
+                      simplify_type(crates, generics, unimplemented!(), output)?);
+                  }
+                  result
+                }
               }
-              GenericArgs::Parenthesized { inputs, output } => {
-                let mut result = Vec::new();
-                for arg in inputs {
-                  result.push(
-                    simplify_type(crates, generics, unimplemented!(), arg)?);
-                }
-                for output in output {
-                  result.push(
-                    simplify_type(crates, generics, unimplemented!(), output)?);
-                }
-                result
-              }
-            }
-          } else {
-            Vec::new()
-          };
+            } else {
+              Vec::new()
+            };
 
         // Note that this type might not really exist.
         // If we did:
@@ -2089,7 +2144,7 @@ fn simplify_type(
           valtype: SimpleValType {
             id: primitive_id(name),
             generic_args: Vec::new(),
-            maybe_parent: None
+            maybe_parent_struct: None
           }
         }
       },
@@ -2106,7 +2161,7 @@ fn simplify_type(
           valtype: SimpleValType {
             id: tuple_id(),
             generic_args: generic_args,
-            maybe_parent: None
+            maybe_parent_struct: None
           }
         }
       }
@@ -2118,4 +2173,247 @@ fn simplify_type(
       Type::RawPointer { .. } => unimplemented!(),
       Type::QualifiedPath { .. } => unimplemented!(),
     })
+}
+
+fn resolve_type_uid(
+  crates: &HashMap<String, Crate>,
+  type_crate_name: &str,
+  type_: &Type
+) -> anyhow::Result<UId> {
+  Ok(
+    match type_ {
+      Type::ResolvedPath(path) => {
+        // Note that this type might not really exist.
+        // If we did:
+        //   crates.get(type_crate_name).unwrap()
+        //     .index.get(&path.id).unwrap();
+        // it might panic.
+        // This happens because ResolvedPath sometimes refers to an ID
+        // that isn't defined in this crate.
+        let tentative_uid =
+            UId { crate_name: type_crate_name.to_string(), id: path.id.clone() };
+        resolve_uid(&crates, &tentative_uid)?
+      }
+      Type::DynTrait(dynTrait) => {
+        println!("what");
+        unimplemented!();
+      }
+      Type::Generic(name) => unimplemented!(),
+      Type::BorrowedRef { type_, .. } => resolve_type_uid(crates, type_crate_name, type_)?,
+      Type::Primitive(name) => primitive_id(name),
+      Type::FunctionPointer(_) => unimplemented!(),
+      Type::Tuple(inners) => tuple_id(),
+      Type::Slice(_) => unimplemented!(),
+      Type::Array { .. } => unimplemented!(),
+      Type::Pat { .. } => unimplemented!(),
+      Type::ImplTrait(_) => unimplemented!(),
+      Type::Infer => unimplemented!(),
+      Type::RawPointer { .. } => unimplemented!(),
+      Type::QualifiedPath { .. } => unimplemented!(),
+    })
+}
+
+// This adds the given step to the end, and if it lands on an
+// import or a typealias it will follow it and return the new corrected
+// path.
+fn extend_and_resolve(
+  crates: &HashMap<String, Crate>,
+  // This is the containing module or impl.
+  previous: Option<&SimpleValType>,
+  name: &str,
+  initial_generic_args: Vec<SimpleType>
+) -> Result<SimpleValType> {
+  if name.len() == 0 {
+    // For the life of me I can't figure out the Id for tuples, I suspect they don't have one
+    // because they have a special entry in the Type enum.
+    // We'll just use the empty string.
+    return Ok(
+      SimpleValType {
+        id: tuple_id(),
+        generic_args: initial_generic_args,
+        maybe_parent_struct: None,
+      });
+  }
+
+  match previous {
+    None => {
+      match crates.get(name) {
+        None => {
+          let error = format!("Couldn't find any crate named {}", name);
+          return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+        }
+        Some(crate_) => {
+          let root_module_id = &crate_.root;
+          Ok(SimpleValType {
+            id: UId { crate_name: name.to_string(), id: root_module_id.clone() },
+            generic_args: Vec::new(),
+            maybe_parent_struct: None
+          })
+        }
+      }
+    }
+    Some(previous_last_step) => {
+      let previous_container_id = &previous_last_step.id;
+      let previous_crate_name = &previous_container_id.crate_name;
+      let previous_crate = crates.get(previous_crate_name).unwrap();
+      // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
+
+      let direct_child_uids =
+          get_direct_child_uids(crates, &previous_container_id);
+      let mut found_items: Vec<(UId, &Item)> = Vec::new();
+      for direct_child_uid in direct_child_uids {
+        let direct_child_item =
+            previous_crate.index.get(&direct_child_uid.id).unwrap();
+        if item_has_name(&direct_child_item, name) {
+          found_items.push((direct_child_uid, direct_child_item));
+        }
+      }
+
+      let mut unnarrowed_imports: Vec<(UId, &Import)> = Vec::new();
+      let mut unnarrowed_others: Vec<(UId, &Item)> = Vec::new();
+      let mut unnarrowed_impls: Vec<(UId, &Impl)> = Vec::new();
+      for (item_uid, item) in found_items {
+        match &item.inner {
+          ItemEnum::Impl(impl_) => unnarrowed_impls.push((item_uid.clone(), impl_)),
+          ItemEnum::Import(import_) => unnarrowed_imports.push((item_uid.clone(), import_)),
+          _ => unnarrowed_others.push((item_uid.clone(), item)),
+        }
+      }
+      let (imports, impls, others) =
+          if unnarrowed_imports.len() + unnarrowed_impls.len() + unnarrowed_others.len() <= 1 {
+            // Then no need for anything more.
+            (
+              unnarrowed_imports,
+              unnarrowed_impls
+                  .into_iter()
+                  .map(|(uid, import)| (uid, import, None))
+                  .collect::<Vec<_>>(),
+              unnarrowed_others)
+          } else {
+            // Then lets do some overload resolution.
+
+            // Narrow down imports. Sometimes there are two imports pointing to the same place.
+            // WARNING: THIS MODIFIES unnarrowed_impls which is read below.
+            let mut narrowed_imports: Vec<(UId, &Import)> = Vec::new();
+            for (import_uid, import) in &unnarrowed_imports {
+              let resolved_import_uid = resolve_uid(crates, import_uid)?;
+              let import_item = lookup_uid(crates, &resolved_import_uid);
+              match &import_item.inner {
+                ItemEnum::Import(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
+                ItemEnum::Impl(impl_) => {
+                  unnarrowed_impls.push((resolved_import_uid, impl_));
+                }
+                _ => {
+                  unnarrowed_others.push((resolved_import_uid, &import_item));
+                }
+              }
+            }
+
+            unnarrowed_others.dedup_by_key(|(id, _)| id.clone());
+            unnarrowed_impls.dedup_by_key(|(id, _)| id.clone());
+
+            // Narrow down impls
+            let mut impl_matches: Vec<(UId, &Impl, i64, Vec<SimpleType>)> = Vec::new();
+            for (impl_uid, impl_) in unnarrowed_impls {
+              if let Some((score, generics)) = impl_from_matches_generic_args(crates, impl_, &initial_generic_args) {
+                impl_matches.push((impl_uid.clone(), impl_, score, generics));
+              }
+            }
+            if impl_matches.len() + narrowed_imports.len() > 1 &&
+                impl_matches.len() > 0 {
+              eprintln!("Too many matches! Doing impl overload resolution.");
+              for m in &impl_matches {
+                eprintln!("Candidate: {:?}", m);
+              }
+              impl_matches.sort_by_key(|(id, impl_, score, generics)| {
+                -score // We want highest first
+              });
+              if impl_matches.len() > 1 {
+                if impl_matches[0].2 == impl_matches[1].2 {
+                  // Then the scores are the same, we couldn't decide.
+                  unimplemented!();
+                }
+              }
+              impl_matches = vec![impl_matches.remove(0)];
+            }
+
+            if impl_matches.len() + narrowed_imports.len() > 1 {
+              let error = format!("Too many matches for name: {}", name);
+              return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+            }
+
+            let mut narrowed_impls: Vec<(UId, &Impl, i64, Vec<SimpleType>)> = Vec::new();
+            if impl_matches.len() > 0 {
+              narrowed_impls.push(impl_matches[0].clone());
+            }
+
+            (
+              narrowed_imports,
+              narrowed_impls.into_iter()
+                  .map(|(uid, import, score, generics)| {
+                    (uid, import, Some((score, generics)))
+                  })
+                  .collect(),
+              unnarrowed_others)
+          };
+      let num_found_items = impls.len() + imports.len() + others.len();
+      if num_found_items == 0 {
+        let error = format!("Couldn't find anything with name: {}", name);
+        return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+      } else if num_found_items > 1 {
+        // If they're all impls, then let's do some overload resolution.
+
+        let error = format!("Found too many things with name: {}", name);
+        eprintln!("Error: {}", error);
+        for found_item in &imports {
+          eprintln!("Candidate: {:?}", found_item);
+        }
+        for found_item in &others {
+          eprintln!("Candidate: {:?}", found_item);
+        }
+        for found_item in &impls {
+          eprintln!("Candidate: {:?}", found_item);
+        }
+        return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+      }
+
+      let maybe_self_struct =
+          if let Some(previous_parent) = &previous.unwrap().maybe_parent_struct {
+            // If the previous had a parent, then the previous was an impl and the previous parent
+            // was a struct and we're a method.
+            // Use the same parent as the impl.
+            // TODO: explain more with examples, this is very nuanced
+            Some(previous_parent.as_ref())
+          } else {
+            match previous_crate.index.get(&previous_container_id.id).unwrap().inner {
+              ItemEnum::Struct(_) | ItemEnum::Enum(_) => previous,
+              _ => None
+            }
+          };
+
+      // TODO: lets have two different types for uid, resolved and unresolved
+      let (perhaps_unresolved_uid, generics) =
+        if impls.len() > 0 {
+          let impl_id = impls[0].0.clone();
+          if let Some((score, generics)) = &impls[0].2 {
+            (impl_id, generics.clone())
+          } else {
+            (impl_id, Vec::new())
+          }
+        } else if imports.len() > 0 {
+          (imports[0].0.clone(), initial_generic_args)
+        } else if others.len() > 0 {
+          (others[0].0.clone(), initial_generic_args)
+        } else {
+          panic!("wat");
+        };
+
+      let result_step =
+          resolve(crates, maybe_self_struct, &perhaps_unresolved_uid, generics)?;
+
+      // let mut tentative_path = previous.clone();
+      // tentative_path.steps.push(result_step);
+      Ok(result_step)
+    }
+  }
 }
