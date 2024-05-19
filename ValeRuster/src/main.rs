@@ -327,8 +327,7 @@ fn main() -> Result<(), anyhow::Error> {
           // TODO: check duplicates, i think we're doing extra work here
           sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
         } else {
-          let (id, item) =
-              lookup_item(&crates, None, &unresolved_id)?.unwrap();
+          let item = lookup_uid(&crates, &unresolved_id);
 
           match &item.inner {
             ItemEnum::Struct(_) => {
@@ -469,8 +468,7 @@ fn main() -> Result<(), anyhow::Error> {
             _ => unimplemented!()
           }
         } else {
-          let (id, item) =
-              lookup_item(&crates, None, &unresolved_id)?.unwrap();
+          let item = lookup_uid(&crates, &unresolved_id);
           // if let Some((id, item)) = crate_.index.iter().find(|(id, item)| item.name.as_ref() == target_valtype.name.as_ref()) {
           match &item.inner {
             ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::TypeAlias(_) | ItemEnum::Import(_) => {
@@ -755,153 +753,6 @@ fn genealogize(
   return Ok(child_key_to_parent_uid);
 }
 
-// Returns None for blacklisted modules like std_detect
-fn item_matches_name<'a>(
-  crates: &'a HashMap<String, Crate>,
-  needle: &str,
-  id: &UId,
-) -> bool {
-  let context_crate = crates.get(&id.crate_name).unwrap();
-  if let Some(item) = context_crate.index.get(&id.id) {
-    match &item.inner {
-      ItemEnum::Import(import) => {
-        // When we do an import, we actually want the module the
-        // import is referring to, not the import's id.
-
-        if import.name.starts_with(needle) && import.name != needle {
-          unimplemented!();
-        }
-        import.name == needle
-        //
-        // let local_crate = crates.get(&id.crate_name).unwrap();
-        // let import_id = import.id.as_ref().unwrap();
-        // match local_crate.paths.get(&import_id) {
-        //   None => {
-        //     return Ok(
-        //       Some(
-        //         (
-        //           UId { crate_name: id.crate_name.clone(), id: import_id.clone() },
-        //           local_crate.index.get(import_id).unwrap())));
-        //   }
-        //   Some(path) => {
-        //     if path.path[0] == "std_detect" {
-        //       return Ok(None)
-        //     }
-        //     if path.path[0] == "core" && path.path[1] == "macros" {
-        //       return Ok(None)
-        //     }
-        //
-        //     let foreign_crate_path = SimpleValType { steps: Vec::new() };
-        //     let foreign_crate_root_name = &path.path[0];
-        //     let foreign_crate = crates.get(foreign_crate_root_name).unwrap();
-        //     let foreign_crate_root_module_id = UId { crate_name: foreign_crate_root_name.clone(), id: foreign_crate.root.clone() };
-        //     let foreign_crate_root_module = foreign_crate.index.get(&foreign_crate_root_module_id.id).unwrap();
-        //
-        //     let mut result = SimpleValType { steps: Vec::new() };
-        //     result.steps.push(
-        //       SimpleValTypeStep {
-        //         id: foreign_crate_root_module_id.clone(),
-        //         name: foreign_crate_root_name.clone(),
-        //         generic_args: Vec::new()
-        //       });
-        //     for foreign_crate_name in &path.path[1..] {
-        //       let foreign_crate_module_id = find_id_with_name(crates, &result, foreign_crate_name)?;
-        //       result.steps.push(
-        //         SimpleValTypeStep {
-        //           id: foreign_crate_module_id.clone(),
-        //           name: foreign_crate_name.clone(),
-        //           generic_args: Vec::new()
-        //         });
-        //     }
-        //     return Ok(
-        //       Some(
-        //         (
-        //           result.steps.last().unwrap().id.clone(),
-        //           foreign_crate.index
-        //               .get(&result.steps.last().unwrap().id.id.clone())
-        //               .unwrap())));
-        //   }
-        // }
-      },
-      _ => {
-        item.name.as_ref().map(|x| &x[..]) == Some(needle)
-      }
-    }
-  } else {
-    false
-  }
-}
-
-// Returns None for blacklisted modules like std_detect
-fn lookup_item<'a>(
-  crates: &'a HashMap<String, Crate>,
-  context_container: Option<&SimpleValType>,
-  id: &UId
-) -> Result<Option<(UId, &'a Item)>> {
-  let context_crate = crates.get(&id.crate_name).unwrap();
-  if let Some(item) = context_crate.index.get(&id.id) {
-    match &item.inner {
-      ItemEnum::Import(import) => {
-        // When we do an import, we actually want the module the
-        // import is referring to, not the import's id.
-
-        let local_crate = crates.get(&id.crate_name).unwrap();
-        let import_id = import.id.as_ref().unwrap();
-        match local_crate.paths.get(&import_id) {
-          None => {
-            return Ok(
-              Some(
-                (
-                    UId { crate_name: id.crate_name.clone(), id: import_id.clone() },
-                    local_crate.index.get(import_id).unwrap())));
-          }
-          Some(path) => {
-            if path.path[0] == "std_detect" {
-              return Ok(None)
-            }
-            if path.path[0] == "core" && path.path[1] == "macros" {
-              return Ok(None)
-            }
-
-            // let foreign_crate_path = SimpleValType { steps: Vec::new() };
-            let foreign_crate_root_name = &path.path[0];
-            let foreign_crate = crates.get(foreign_crate_root_name).unwrap();
-            let foreign_crate_root_module_id = UId { crate_name: foreign_crate_root_name.clone(), id: foreign_crate.root.clone() };
-            let foreign_crate_root_module = foreign_crate.index.get(&foreign_crate_root_module_id.id).unwrap();
-
-            let mut result =
-                SimpleValType {
-                  id: foreign_crate_root_module_id.clone(),
-                  generic_args: Vec::new(),
-                  maybe_parent: None
-                };
-            for foreign_crate_name in &path.path[1..] {
-              let foreign_crate_module_id = find_id_with_name(crates, Some(&result), foreign_crate_name)?;
-              result =
-                  SimpleValType {
-                    id: foreign_crate_module_id.clone(),
-                    generic_args: Vec::new(),
-                    maybe_parent: None
-                  };
-            }
-            return Ok(
-              Some(
-                (
-                  result.id.clone(),
-                  foreign_crate.index
-                      .get(&result.id.id.clone())
-                      .unwrap())));
-          }
-        }
-      },
-      _ => {} // skip
-    }
-
-    return Ok(Some((id.clone(), item)));
-  }
-  panic!("Item not found with Id {:?}", id);
-}
-
 fn assemble_generics(
   crates: &HashMap<String, Crate>,
   func: &Function,
@@ -922,77 +773,9 @@ fn assemble_generics(
         mut_ref: false,
         valtype: (**parent).clone()
       });
-    // let (_, parent_item) = lookup_item(crates, Some(target_valtype), &parent.id)?.unwrap();
-    // match &parent_item.inner {
-    //   ItemEnum::Module(_) => {} // Do nothing
-    //   ItemEnum::Struct(struct_) => {
-    //     // Get the parent struct's type and add it as Self generic.
-    //     // let mut struct_valtype = target_valtype.clone();
-    //     // struct_valtype.steps.remove(struct_valtype.steps.len() - 1);
-    //     let struct_type =
-    //         SimpleType { imm_ref: false, mut_ref: false, valtype: *parent.clone() };
-    //     generics.insert("Self".to_owned(), struct_type);
-    //   }
-    //   ItemEnum::Impl(impl_) => {
-    //     unimplemented!();
-    //     // let struct_type =
-    //     //     simplify_type(
-    //     //       &crate_name, &crates, &Vec::new(), &HashMap::new(), &impl_.for_)?;
-    //     // generics.insert("Self".to_owned(), struct_type);
-    //   }
-    //   _ => {
-    //     panic!("Wat func in");
-    //   }
-    // }
   }
   Ok(generics)
 }
-
-// fn find_item_path(
-//   crates: &HashMap<String, Crate>,
-//   in_ids: &Vec<UId>,
-//   mut path: Vec<String>
-// ) -> Result<Vec<UId>> {
-//   if path.len() == 1 && path[0] == "" {
-//     return Ok(Vec::new());
-//   }
-//   if path.len() == 0 {
-//     return Ok(Vec::new());
-//   }
-//   // eprintln!("Looking through candidates.");
-//   let id = find_id_with_name(crates, in_ids, &path[0])?.clone();
-//
-//   let item = lookup_item(crates, &id);
-//
-//   path.remove(0);
-//   if path.len() == 0 {
-//     return Ok(vec![id]);
-//   } else {
-//     match &item.inner {
-//       ItemEnum::Module(m) => {
-//         let mut result =
-//             find_item_path(
-//               crates,
-//               &m.items.iter().map(|child_id| UId { crate_name: id.crate_name.clone(), id: child_id.clone() }).collect(),
-//               path)?;
-//         result.insert(0, id);
-//         return Ok(result);
-//       }
-//       ItemEnum::Struct(_) => {
-//         let impl_matches = get_struct_impl_children(crates, &id);
-//         let mut result = find_item_path(crates, &impl_matches, path)?;
-//         result.insert(0, id);
-//         return Ok(result);
-//       }
-//       _ => {
-//         let error = format!("Couldn't find type {}, path dead-ended.", path.last().unwrap());
-//         eprintln!("{}", error);
-//         return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-//       }
-//     }
-//   }
-// }
-
 
 // This adds the given step to the end, and if it lands on an
 // import or a typealias it will follow it and return the new corrected
@@ -1138,73 +921,6 @@ fn extend_and_resolve(
       Ok(result_step)
     }
   }
-
-  //
-  // let unresolved_matches =
-  //     filter_ids_by_name(crates, previous, &name)?;
-  //
-  // let mut resolved_matches = Vec::new();
-  // for unresolved_id in &unresolved_matches {
-  //   match lookup_item(crates, previous, &unresolved_id)? {
-  //     None => {
-  //       // It's a blacklisted module like std_detect, don't lookup in that direction
-  //     }
-  //     Some((resolved_id, item)) => {
-  //       // Some conditions to skip things if there are multiple
-  //       if unresolved_matches.len() > 1 {
-  //         match item.inner {
-  //           // Ignore macros, because their names sometimes collide with real things,
-  //           // like "vec"
-  //           ItemEnum::Macro(_) | ItemEnum::ProcMacro(_) => {
-  //             continue;
-  //           }
-  //           // "array" is both a module and a primitive
-  //           ItemEnum::Primitive(_) => {
-  //             continue;
-  //           }
-  //           _ => {} // proceed
-  //         }
-  //       }
-  //       resolved_matches.push(resolved_id);
-  //     }
-  //   }
-  // }
-  //
-  // if resolved_matches.len() > 1 {
-  //   resolved_matches.dedup();
-  //   if resolved_matches.len() == 1 {
-  //     eprintln!("Warning: duplicates in find_id_with_name.");
-  //   }
-  // }
-  //
-  // if resolved_matches.len() == 0 {
-  //   let error = format!("Couldn't find {}, no matches.", name);
-  //   // eprint!("{} Candidates: ", error);
-  //   // for id in in_ids.into_iter() {
-  //   //   eprint!("{}, ", lookup_item(crates, None, &id)?.unwrap().1.name.as_ref().unwrap_or(&"(no name)".to_string()));
-  //   // }
-  //
-  //   // TODO: for debugging, remove
-  //   filter_ids_by_name(crates, previous, &name)?;
-  //
-  //   return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-  // } else if resolved_matches.len() > 1 {
-  //   let error = format!("Too many matches for {}", name);
-  //   eprintln!("{}", error);
-  //   for id in resolved_matches {
-  //     let (resolved_id, item) = lookup_item(crates, previous, &id)?.unwrap();
-  //     eprintln!(
-  //       "Id {:?} resolved {:?} name {}",
-  //       id,
-  //       resolved_id,
-  //       item.name.as_ref().unwrap_or(&"(none)".to_owned()));
-  //     // if let Some(thing) = crate_.paths.get(&id) {
-  //     //   eprintln!("  {:?} {:?}", thing.kind, thing.path.join("."));
-  //     // }
-  //   }
-  //   return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-  // }
-  // Ok(resolved_matches[0].clone())
 }
 
 // If successful match, returns a height score and the deduced generics.
@@ -1531,106 +1247,6 @@ fn get_direct_child_uids(
     },
     _ => unimplemented!()
   }
-}
-
-fn find_id_with_name(
-  crates: &HashMap<String, Crate>,
-  context_container: Option<&SimpleValType>,
-  name: &str
-) -> Result<UId> {
-  if name.len() == 0 {
-    // For the life of me I can't figure out the Id for tuples, I suspect they don't have one
-    // because they have a special entry in the Type enum.
-    // We'll just use the empty string.
-    return Ok(tuple_id());
-  }
-
-  let unresolved_matches =
-      filter_ids_by_name(crates, context_container, &name)?;
-
-  let mut resolved_matches = Vec::new();
-  for unresolved_id in &unresolved_matches {
-    match lookup_item(crates, context_container, &unresolved_id)? {
-      None => {
-        // It's a blacklisted module like std_detect, don't lookup in that direction
-      }
-      Some((resolved_id, item)) => {
-        // Some conditions to skip things if there are multiple
-        if unresolved_matches.len() > 1 {
-          match item.inner {
-            // Ignore macros, because their names sometimes collide with real things,
-            // like "vec"
-            ItemEnum::Macro(_) | ItemEnum::ProcMacro(_) => {
-              continue;
-            }
-            // "array" is both a module and a primitive
-            ItemEnum::Primitive(_) => {
-              continue;
-            }
-            _ => {} // proceed
-          }
-        }
-        resolved_matches.push(resolved_id);
-      }
-    }
-  }
-
-  if resolved_matches.len() > 1 {
-    resolved_matches.dedup();
-    if resolved_matches.len() == 1 {
-      eprintln!("Warning: duplicates in find_id_with_name.");
-    }
-  }
-
-  if resolved_matches.len() == 0 {
-    let error = format!("Couldn't find {}, no matches.", name);
-    // eprint!("{} Candidates: ", error);
-    // for id in in_ids.into_iter() {
-    //   eprint!("{}, ", lookup_item(crates, None, &id)?.unwrap().1.name.as_ref().unwrap_or(&"(no name)".to_string()));
-    // }
-
-    // TODO: for debugging, remove
-    filter_ids_by_name(crates, context_container, &name)?;
-
-    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-  } else if resolved_matches.len() > 1 {
-    let error = format!("Too many matches for {}", name);
-    eprintln!("{}", error);
-    for id in resolved_matches {
-      let (resolved_id, item) = lookup_item(crates, context_container, &id)?.unwrap();
-      eprintln!(
-        "Id {:?} resolved {:?} name {}",
-        id,
-        resolved_id,
-        item.name.as_ref().unwrap_or(&"(none)".to_owned()));
-      // if let Some(thing) = crate_.paths.get(&id) {
-      //   eprintln!("  {:?} {:?}", thing.kind, thing.path.join("."));
-      // }
-    }
-    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-  }
-  Ok(resolved_matches[0].clone())
-}
-
-fn filter_ids_by_name(
-  crates: &HashMap<String, Crate>,
-  context_container: Option<&SimpleValType>,
-  name: &str
-) -> Result<Vec<UId>> {
-  unimplemented!();
-  // let candidate_ids =
-  //     get_child_or_root_ids(
-  //       crates,
-  //       context_container,
-  //       &context.steps.last().map(|x: &SimpleValTypeStep| &x.id))?;
-  //
-  // let mut result = Vec::new();
-  // for unresolved_candidate_id in candidate_ids {
-  //   if item_matches_name(crates, name, &unresolved_candidate_id) {
-  //     result.push(unresolved_candidate_id.clone());
-  //   }
-  // }
-  // return Ok(result);
 }
 
 // TODO: optimize: super expensive
@@ -2214,28 +1830,6 @@ fn mangle_simple_type(
   }
 }
 
-fn mangle_simple_valtype_name(
-  crates: &HashMap<String, Crate>,
-  child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
-  original_type: &SimpleValType
-) -> String {
-  if original_type.id.crate_name == "" {
-    // // Then its a primitive
-    match &original_type.id.id.0[..] {
-      "str" => {
-        "VR_Str".to_owned()
-      }
-      _ => unimplemented!()
-    }
-  } else {
-    "VR_".to_owned() +
-        &mangle_simple_valtype(
-          crates,
-          child_key_to_parent_uid,
-          original_type)
-  }
-}
-
 fn crustify_simple_type(
   crates: &HashMap<String, Crate>,
   child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
@@ -2263,10 +1857,6 @@ fn crustify_simple_type(
           &mangle_simple_valtype(crates, child_key_to_parent_uid, &valtype)
     }
   })
-}
-
-fn get_name(uid: &UId) -> String {
-  unimplemented!()
 }
 
 fn rustify_simple_valtype(
@@ -2354,41 +1944,6 @@ fn rustify_simple_type(
       &rustify_simple_valtype(
         &crates, &child_key_to_parent_uid,
         &type_.valtype, is_func)
-}
-
-fn mangle_simple_type_name_inner(
-  crates: &HashMap<String, Crate>,
-  child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
-  type_: &SimpleType
-) -> String {
-  (if type_.imm_ref {
-    "1Ref_"
-  } else if type_.mut_ref {
-    "1MRef_"
-  } else {
-    ""
-  }).to_string() +
-      &mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype)
-}
-
-fn mangle_simple_valtype_step_name_inner(
-  crates: &HashMap<String, Crate>,
-  child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
-  valtype_: &SimpleValType
-) -> String {
-  // let path_name_mangled = path.name.replace("::", "_");
-  let generic_name = get_name(&valtype_.id);// valtype_.name_or("Tup");
-  if valtype_.generic_args.len() == 0 {
-    generic_name
-  } else {
-    // TODO: what about default args? args.len != params.len
-    valtype_.generic_args.len().to_string() +
-        &generic_name +
-        &valtype_.generic_args.iter()
-            .map(|x| "__".to_owned() + &mangle_simple_type_name_inner(crates, child_key_to_parent_uid, &x))
-            .collect::<Vec<_>>()
-            .join("")
-  }
 }
 
 fn mangle_simple_valtype(
@@ -2564,39 +2119,3 @@ fn simplify_type(
       Type::QualifiedPath { .. } => unimplemented!(),
     })
 }
-
-// fn get_type_id(
-//   crates: &HashMap<String, Crate>,
-//   type_crate_name: &str,
-//   type_: &Type
-// ) -> anyhow::Result<UId> {
-//   Ok(
-//     match type_ {
-//       Type::ResolvedPath(path) => {
-//         let resolved =
-//           resolve(
-//             &crates,
-//             &UId { crate_name: type_crate_name.to_string(), id: path.id.clone() },
-//             Vec::new())?;
-//         resolved.id
-//       }
-//       Type::DynTrait(dynTrait) => {
-//         println!("what");
-//         unimplemented!();
-//       }
-//       Type::Generic(name) => unimplemented!(),
-//       Type::BorrowedRef { lifetime, mutable, type_ } => {
-//         get_type_id(crates, type_crate_name, type_)?
-//       }
-//       Type::Primitive(name) => primitive_id(name),
-//       Type::FunctionPointer(_) => unimplemented!(),
-//       Type::Tuple(inners) => tuple_id(),
-//       Type::Slice(_) => unimplemented!(),
-//       Type::Array { .. } => unimplemented!(),
-//       Type::Pat { .. } => unimplemented!(),
-//       Type::ImplTrait(_) => unimplemented!(),
-//       Type::Infer => unimplemented!(),
-//       Type::RawPointer { .. } => unimplemented!(),
-//       Type::QualifiedPath { .. } => unimplemented!(),
-//     })
-// }
