@@ -1,3 +1,5 @@
+extern crate toml;
+
 use std::collections::{HashMap, HashSet};
 use std::{fs, io};
 use std::cmp::{max, Ordering};
@@ -10,17 +12,23 @@ use std::io::{BufRead, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use anyhow::{Context, Result};
-use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericParamDef, Id, Impl, Import, Item, ItemEnum, Struct, Type};
+use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericBound, GenericParamDef, GenericParamDefKind, Id, Impl, Import, Item, ItemEnum, Struct, Type};
 use regex::{Regex};
 use crate::GenealogyKey::{ImplOrMethod, Normal};
 
 // TODO: optimize: All over the place we're calling .keys() and .collect()
 // on some crate.index.
-fn tuple_id() -> UId { UId{ crate_name: "".to_string(), id: Id("".to_string()) } }
+fn tuple_id() -> UId { UId{ crate_name: "".to_string(), id: Id("()".to_string()) } }
+fn str_id() -> UId { UId{ crate_name: "".to_string(), id: Id("str".to_string()) } }
+fn slice_id() -> UId { UId{ crate_name: "".to_string(), id: Id("[]".to_string()) } }
 fn lifetime_id() -> UId { UId{ crate_name: "".to_string(), id: Id("life".to_string()) } }
 fn primitive_id(name: &str) -> UId { UId{ crate_name: "".to_string(), id: Id(name.to_string()) } }
 
-fn generic_placeholder_id() -> UId { UId{ crate_name: "".to_string(), id: Id("ph".to_string()) } }
+// Any other primitive can roughly be treated as a normal type
+fn is_special_primitive(id: &UId) -> bool {
+  return id == &tuple_id() || id == &str_id() || id == &slice_id();
+}
+
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
 enum GenealogyKey {
@@ -97,11 +105,6 @@ fn main() -> Result<(), anyhow::Error> {
           .subcommand(
             clap::Command::new("instantiate")
                 .about("Instantiate either a function or a struct.")
-                .arg(Arg::new("output_dir")
-                    .long("output_dir")
-                    .help("Directory to output to.")
-                    .action(ArgAction::Set)
-                    .required(true))
                 .arg(Arg::new("input_file")
                     .long("input_file")
                     .help("File to read from.")
@@ -125,6 +128,11 @@ fn main() -> Result<(), anyhow::Error> {
           .arg(Arg::new("crate")
               .long("crate")
               .help("The crate name to generate bindings for")
+              .action(ArgAction::Set)
+              .required(true))
+          .arg(Arg::new("output_dir")
+              .long("output_dir")
+              .help("Directory to output to.")
               .action(ArgAction::Set)
               .required(true))
           .arg(Arg::new("cargo_toml")
@@ -163,10 +171,15 @@ fn main() -> Result<(), anyhow::Error> {
     return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, format!("No stdout from command: {} {}", command, args.join(" ")))));
   }
 
+  let output_dir_path = root_matches.get_one::<String>("output_dir").unwrap();
+
+  // This should be done before read_toml, so it can read the generated docs from it.
+  setup_output_dir(&cargo_toml_path, &output_dir_path)?;
+
   match root_matches.subcommand() {
     Some(("list", list_matches)) => {
       let maybe_struct_name = list_matches.get_one::<String>("struct");
-      let v = get_crate(&rustc_sysroot_path, &crate_name)?;
+      let v = get_crate(&rustc_sysroot_path, &cargo_path, &output_dir_path, &crate_name)?;
       match maybe_struct_name {
         None => list_generics(&v),
         Some(struct_name) => list_struct_and_methods(&v, struct_name),
@@ -195,7 +208,7 @@ fn main() -> Result<(), anyhow::Error> {
             imm_ref: true,
             mut_ref: false,
             valtype: SimpleValType {
-              id: primitive_id("str"),
+              id: str_id(),
               generic_args: Vec::new(),
               maybe_parent_struct: None
             }
@@ -204,14 +217,13 @@ fn main() -> Result<(), anyhow::Error> {
       type_and_original_line_and_type_str_and_maybe_alias.push(
         (str_ref_type, "(builtin)".to_owned(), Some("VR_str_ref".to_owned())));
 
-      let output_dir_path = instantiate_matches.get_one::<String>("output_dir").unwrap();
-
       let maybe_input_file_path = instantiate_matches.get_one::<String>("input_file");
 
       let mut crates = HashMap::new();
-      crates.insert("std".to_string(), get_crate(&rustc_sysroot_path, "std")?);
-      crates.insert("alloc".to_string(), get_crate(&rustc_sysroot_path, "alloc")?);
-      crates.insert("core".to_string(), get_crate(&rustc_sysroot_path, "core")?);
+      crates.insert("std".to_string(), get_crate(&rustc_sysroot_path, &cargo_path, &output_dir_path, "std")?);
+      crates.insert("alloc".to_string(), get_crate(&rustc_sysroot_path, &cargo_path, &output_dir_path, "alloc")?);
+      crates.insert("core".to_string(), get_crate(&rustc_sysroot_path, &cargo_path, &output_dir_path, "core")?);
+      get_dependency_crates(&rustc_sysroot_path, &cargo_path, &output_dir_path, &cargo_toml_path, &mut crates)?;
 
       let child_key_to_parent_uid: HashMap<GenealogyKey, UId> = genealogize(&crates)?;
 
@@ -270,29 +282,6 @@ fn main() -> Result<(), anyhow::Error> {
           (target_type, line.clone(), maybe_alias));
       }
 
-      if !Path::new(&output_dir_path).exists() {
-        fs::create_dir(&output_dir_path)
-            .with_context(|| "Failed to create ".to_owned() + output_dir_path + " directory")?;
-      }
-      if !Path::new(&(output_dir_path.to_string() + "/src")).exists() {
-        fs::create_dir(output_dir_path.to_string() + "/src")
-            .with_context(|| "Failed to create ".to_owned() + output_dir_path + "/src directory")?;
-      }
-
-      let cargo_toml_contents =
-          fs::read_to_string(&cargo_toml_path)
-              .with_context(|| "Failed to read Cargo toml at given path: ".to_owned() + &cargo_toml_path)?;
-
-      // let mut cargo_toml_contents = String::with_capacity(1000);
-      // cargo_toml_contents += "[package]\n";
-      // cargo_toml_contents += "name = \"vale-rust-sizer\"\n";
-      // cargo_toml_contents += "version = \"0.1.0\"\n";
-      // cargo_toml_contents += "edition = \"2021\"\n";
-      // cargo_toml_contents += "[dependencies]\n";
-      // cargo_toml_contents += "subprocess = \"0.2.9\"\n";
-      fs::write(output_dir_path.to_owned() + "/Cargo.toml", cargo_toml_contents)
-          .with_context(|| "Failed to write ".to_owned() + output_dir_path + "/Cargo.toml")?;
-
       let mut cbindgen_toml_contents = String::with_capacity(1000);
       cbindgen_toml_contents += "include_guard = \"EXAMPLE_PROJECT_H\"\n";
       cbindgen_toml_contents += "include_version = true\n";
@@ -312,16 +301,15 @@ fn main() -> Result<(), anyhow::Error> {
         // let target_name: String = unimplemented!();
         let rustified_type =
             rustify_simple_valtype(
-              &crates, &child_key_to_parent_uid, &target_valtype, false);
+              &crates, &child_key_to_parent_uid, &target_valtype, None);
 
         // let path = find_item_path(&crates, target_valtype.string_path())?;
         let unresolved_id = &target_valtype.id;
         if target_valtype.id.crate_name == "" {
           let valtype_str =
               rustify_simple_valtype(
-                &crates, &child_key_to_parent_uid, &target_valtype, false);
-          let is_slice =
-              target_valtype.id.crate_name == "" && target_valtype.id.id.0 == "str";
+                &crates, &child_key_to_parent_uid, &target_valtype, None);
+          let is_slice = is_dynamically_sized(&target_valtype.id);
           let type_str =
               if is_slice {
                 "&".to_owned() + &valtype_str
@@ -337,9 +325,8 @@ fn main() -> Result<(), anyhow::Error> {
             ItemEnum::Struct(_) => {
               let valtype_str =
                   rustify_simple_valtype(
-                    &crates, &child_key_to_parent_uid, &target_valtype, false);
-              let is_slice =
-                  target_valtype.id.crate_name == "" && target_valtype.id.id.0 == "str";
+                    &crates, &child_key_to_parent_uid, &target_valtype, None);
+              let is_slice = is_dynamically_sized(&target_valtype.id);
               let type_str =
                   if is_slice {
                     "&".to_owned() + &valtype_str
@@ -367,10 +354,9 @@ fn main() -> Result<(), anyhow::Error> {
                         simplify_type(&crates, /*Some(target_valtype),*/ &generics, &target_valtype.id.crate_name, &type_)?;
                     let valtype_str =
                         rustify_simple_valtype(
-                          &crates, &child_key_to_parent_uid, &signature_part_type.valtype, false);
+                          &crates, &child_key_to_parent_uid, &signature_part_type.valtype, None);
                     // TODO: dedupe
-                    let is_slice =
-                        signature_part_type.valtype.id.crate_name == "" && signature_part_type.valtype.id.id.0 == "str";
+                    let is_slice = is_dynamically_sized(&signature_part_type.valtype.id);
                     let type_str =
                         if is_slice {
                           "&".to_owned() + &valtype_str
@@ -444,32 +430,28 @@ fn main() -> Result<(), anyhow::Error> {
         let target_valtype = &target_type.valtype;
         let target_rust_type_string =
             rustify_simple_type(
-              &crates, &child_key_to_parent_uid, &target_type, false);// target_valtype.name().clone();
+              &crates, &child_key_to_parent_uid, &target_type, None);// target_valtype.name().clone();
 
         // let crate_ = get_crate(&crate_name, &rustc_sysroot_path)?;
         // let path = &target_valtype.id_path();// find_item_path(&crates, target_valtype.string_path)?;
         let unresolved_id = &target_valtype.id;// path.last().unwrap();
         if unresolved_id.crate_name == "" {
-          // Then its a primitive.
-          match &unresolved_id.id.0[..] {
-            "str" => {
-              // Only instantiate if we're asking for a reference since its a slice
-              if target_type.mut_ref || target_type.imm_ref {
-                let type_str = rustify_simple_valtype(&crates, &child_key_to_parent_uid, &target_valtype, false);
-                let size =
-                    target_type_str_to_size.get(&type_str)
-                        .with_context(|| {
-                          "Couldn't find size entry for struct: ".to_owned() + &type_str
-                        })?
-                        .clone();
-                // TODO: dedupe with other call to instantiate_struct
-                struct_strings.push(
-                  instantiate_struct(
-                    &crates, &child_key_to_parent_uid,
-                    &target_type, &maybe_alias, size)?);
-              }
-            }
-            _ => unimplemented!()
+          let is_dst = is_dynamically_sized(unresolved_id);
+          let asking_for_ref = target_type.mut_ref || target_type.imm_ref;
+          // Only instantiate if we're asking for a reference to a slice, or a non-reference to a non-slice.
+          if asking_for_ref == is_dst {
+            let type_str = rustify_simple_valtype(&crates, &child_key_to_parent_uid, &target_valtype, None);
+            let size =
+                target_type_str_to_size.get(&type_str)
+                    .with_context(|| {
+                      "Couldn't find size entry for struct: ".to_owned() + &type_str
+                    })?
+                    .clone();
+            // TODO: dedupe with other call to instantiate_struct
+            struct_strings.push(
+              instantiate_struct(
+                &crates, &child_key_to_parent_uid,
+                &target_type, &maybe_alias, size)?);
           }
         } else {
           let item = lookup_uid(&crates, &unresolved_id);
@@ -479,7 +461,7 @@ fn main() -> Result<(), anyhow::Error> {
               // Skip if we're asking for an instantiation of a pointer
               if !target_type.imm_ref && !target_type.mut_ref {
                 eprintln!("Instantiating type {}...", &target_rust_type_string);
-                let type_str = rustify_simple_valtype(&crates, &child_key_to_parent_uid, &target_valtype, false);
+                let type_str = rustify_simple_valtype(&crates, &child_key_to_parent_uid, &target_valtype, None);
                 let size =
                     target_type_str_to_size.get(&type_str)
                         .with_context(|| {
@@ -541,7 +523,7 @@ fn main() -> Result<(), anyhow::Error> {
               func_strings.push(
                 instantiate_func(
                   &crates, &child_key_to_parent_uid,
-                  &type_to_alias, &target_type, &maybe_alias, &params, &maybe_return_type)?);
+                  &type_to_alias, &target_type, func, &maybe_alias, &params, &maybe_return_type)?);
             }
             _ => {
               unimplemented!();
@@ -614,6 +596,91 @@ mod capi;
   // println!("{:?}", v);
 
   return Ok(());
+}
+
+fn is_dynamically_sized(unresolved_id: &UId) -> bool {
+  *unresolved_id == str_id() || *unresolved_id == slice_id()
+}
+
+fn setup_output_dir(cargo_toml_path: &String, output_dir_path: &String) -> Result<()> {
+  if !Path::new(&output_dir_path).exists() {
+    fs::create_dir(&output_dir_path)
+        .with_context(|| "Failed to create ".to_owned() + output_dir_path + " directory")?;
+  }
+
+  let cargo_toml_contents =
+      fs::read_to_string(&cargo_toml_path)
+          .with_context(|| "Failed to read Cargo toml at given path: ".to_owned() + &cargo_toml_path)?;
+
+  fs::write(output_dir_path.to_owned() + "/Cargo.toml", cargo_toml_contents)
+      .with_context(|| "Failed to write ".to_owned() + output_dir_path + "/Cargo.toml")?;
+
+  if !Path::new(&(output_dir_path.to_string() + "/src")).exists() {
+    fs::create_dir(output_dir_path.to_string() + "/src")
+        .with_context(|| "Failed to create ".to_owned() + output_dir_path + "/src directory")?;
+  }
+  // Cargo need something in main.rs or lib.rs to even be able to *parse* the toml.
+  fs::write(output_dir_path.to_string() + "/src/main.rs", "")
+      .with_context(|| "Failed to write ".to_string() + output_dir_path + "/src/main.rs")?;
+
+  Ok(())
+}
+
+fn get_dependency_crates(
+  rustc_sysroot_path: &str,
+  cargo_path: &str,
+  output_dir_path: &str,
+  cargo_toml_path: &str,
+  crates: &mut HashMap<String, Crate>
+) -> Result<()> {
+
+  // Open the Cargo.toml file
+  let mut file = match File::open(cargo_toml_path) {
+    Ok(file) => file,
+    Err(err) => {
+      let error = format!("Error opening {}: {}", cargo_toml_path, err);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Read the contents of the file into a string
+  let mut contents = String::new();
+  if let Err(err) = file.read_to_string(&mut contents) {
+    let error = format!("Error reading {}: {}", cargo_toml_path, err);
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  // Parse the TOML contents
+  let toml_contents = match contents.parse::<toml::Value>() {
+    Ok(toml_contents) => toml_contents,
+    Err(err) => {
+      let error = format!("Error parsing {}: {}", cargo_toml_path, err);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Get the dependencies table
+  let dependencies = match toml_contents.get("dependencies") {
+    Some(dependencies) => dependencies,
+    None => {
+      let error = format!("No dependencies found in {}", cargo_toml_path);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    }
+  };
+
+  // Iterate over the dependencies
+  let dependencies_table =
+    if let Some(dependencies_table) = dependencies.as_table() {
+      dependencies_table
+    } else {
+      let error = format!("No dependencies found in {}", cargo_toml_path);
+      return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+    };
+
+  for (name, _) in dependencies_table.iter() {
+    crates.insert(name.clone(), get_crate(rustc_sysroot_path, cargo_path, output_dir_path, name)?);
+  }
+  Ok(())
 }
 
 fn common_preamble() -> &'static str {
@@ -783,6 +850,20 @@ fn assemble_generics(
         mut_ref: false,
         valtype: (**parent).clone()
       });
+    // For example,
+    //   std::vec::Vec<&std::ffi::OsString>::push
+    // needs to know its containing struct's <T>.
+    let parent_item = lookup_uid(crates, &parent.id);
+    let parent_generic_params =
+      match &parent_item.inner {
+        ItemEnum::Struct(struct_) => &struct_.generics.params,
+        ItemEnum::Enum(enum_) => &enum_.generics.params,
+        _ => panic!("parent id not referring to a concrete?"),
+      };
+    for (generic_param, generic_arg_type) in parent_generic_params.iter().zip(&parent.generic_args) {
+      // println!("Got generic arg: {:?}", generic_arg_type);
+      generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
+    }
   }
   // TODO: we'll probably need this at some point
   // if let Some(parent) = &target_valtype.maybe_parent_impl {
@@ -1387,8 +1468,8 @@ fn instantiate_struct(
   size: usize
 ) -> anyhow::Result<String> {
   let default_name =
-      mangle_simple_type(
-        crates, child_key_to_parent_uid, needle_type);
+      mangle_simple_valtype(
+        crates, child_key_to_parent_uid, &needle_type.valtype);
   let as_ = maybe_alias.as_ref().unwrap_or(&default_name);
 
 
@@ -1400,7 +1481,7 @@ fn instantiate_struct(
   builder += &size.to_string();
   builder += "]);\n";
   builder += "const_assert_eq!(std::mem::size_of::<";
-  builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &needle_type, false);
+  builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &needle_type, None);
   builder += ">(), ";
   builder += &size.to_string();
   builder += ");\n";
@@ -1419,7 +1500,7 @@ fn instantiate_func(
   needle_type: &SimpleType,
   // item: &Item,
   // context_container: Option<&SimpleValType>,
-  // func: &Function,
+  func: &Function,
   maybe_alias: &Option<String>,
   params: &Vec<(&String, SimpleType)>,
   maybe_output_type: &Option<SimpleType>
@@ -1430,7 +1511,8 @@ fn instantiate_func(
       mangle_simple_type(
         crates,
         child_key_to_parent_uid,
-        &needle_type);
+        &needle_type,
+        true);
   let as_ = maybe_alias.as_ref().unwrap_or(&default_name);
 
   // let generics = assemble_generics(crates, func, &needle_valtype);
@@ -1454,22 +1536,29 @@ fn instantiate_func(
   }
   rust_builder += " {\n";
   for (param_name, param_type) in params {
+    rust_builder += "  const_assert_eq!(std::mem::size_of::<";
+    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &param_type, None);
+    rust_builder += ">(), std::mem::size_of::<";
+    rust_builder += &crustify_simple_type(crates, child_key_to_parent_uid, aliases, &param_type);
+    rust_builder += ">());\n";
+
     rust_builder += "  let ";
     rust_builder += param_name;
     rust_builder += "_rs: ";
-    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &param_type, false);
+    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &param_type, None);
     rust_builder += " = unsafe { mem::transmute(";
     rust_builder += param_name;
     rust_builder += "_c) };\n";
+
   }
 
   rust_builder += "  ";
   if let Some(return_type_simple) = maybe_output_type {
     rust_builder += "let result_rs: ";
-    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &return_type_simple, false);
+    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &return_type_simple, None);
     rust_builder += " = ";
   }
-  rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, needle_type, true);
+  rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, needle_type, Some(func));
   rust_builder += "(";
   for (param_name, param_type) in params {
     rust_builder += param_name;
@@ -1478,6 +1567,12 @@ fn instantiate_func(
   rust_builder += ");\n";
 
   if let Some(return_type_simple) = &maybe_output_type {
+    rust_builder += "  const_assert_eq!(std::mem::size_of::<";
+    rust_builder += &rustify_simple_type(&crates, &child_key_to_parent_uid, &return_type_simple, None);
+    rust_builder += ">(), std::mem::size_of::<";
+    rust_builder += &crustify_simple_type(crates, child_key_to_parent_uid, aliases, &return_type_simple);
+    rust_builder += ">());\n";
+
     rust_builder += "  let result_c: ";
     rust_builder += &crustify_simple_type(crates, child_key_to_parent_uid, aliases, &return_type_simple);
     rust_builder += " = unsafe { mem::transmute(result_rs) };\n";
@@ -1636,12 +1731,12 @@ fn list_generics(v: &Crate) {
   }
 }
 
-fn get_crate(rustc_sysroot_path: &String, crate_name: &str) -> Result<Crate, anyhow::Error> {
+fn get_crate(rustc_sysroot_path: &str, cargo_path: &str, output_dir_path: &str, crate_name: &str) -> Result<Crate, anyhow::Error> {
   let json =
       if let Some(crate_json) = get_stdlib_json(&rustc_sysroot_path, crate_name)? {
         crate_json
       } else {
-        unimplemented!()
+        get_dependency_json(cargo_path, output_dir_path, crate_name)?
       };
   let v: Crate = serde_json::from_str(&json)?;
   Ok(v)
@@ -1660,7 +1755,7 @@ fn print_function(
            "VR_".to_string() +
                &(match generics.get("Self") {
                  None => "".to_string(),
-                 Some(self_type) => mangle_simple_type(crates, child_key_to_parent_uid, &self_type) + "_"
+                 Some(self_type) => mangle_simple_type(crates, child_key_to_parent_uid, &self_type, false) + "_"
                }) +
                &item.clone().name.unwrap_or("(none)".to_string()));
 
@@ -1669,10 +1764,50 @@ fn print_function(
       crates,
       child_key_to_parent_uid,
       &simplify_type(
-        crates, /*context_container,*/ generics, crate_name, &input)?));
+        crates, /*context_container,*/ generics, crate_name, &input)?,
+    true));
   }
 
   Ok(())
+}
+
+fn get_dependency_json(cargo_path: &str, output_dir_path: &str, crate_name: &str) -> Result<String, anyhow::Error> {
+  let output = Command::new(&cargo_path)
+      .args(&[
+        "rustdoc",
+        &("--manifest-path=".to_string() + output_dir_path + "/Cargo.toml"),
+        "-Zunstable-options",
+        "--output-format=json",
+        "--package",
+        crate_name
+      ])
+      .output()
+      .with_context(|| "Failed to execute cargo rustdoc command")?;
+  if output.status.code() == Some(0) {
+    // Continue
+  } else {
+    let stderr = String::from_utf8_lossy(&output.stderr);
+    let error = "Error from cargo rustdoc command: ".to_string() + &stderr;
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  let json_file_path: String =
+      output_dir_path.to_owned() + "/target/doc/" + &crate_name + ".json";
+
+  if !Path::new(&json_file_path).exists() {
+    let error = format!("cargo rustdoc command didn't generate json in the expected place ({})", json_file_path);
+    return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+  }
+
+  let mut stdlib_json_file =
+      File::open(json_file_path.clone())
+          .with_context(|| format!("Failed to open {}", json_file_path))?;
+
+  let mut stdlib_json_str: String = String::new();
+  stdlib_json_file.read_to_string(&mut stdlib_json_str)
+      .with_context(|| format!("Failed to read {} into string", json_file_path))?;
+
+  return Ok(stdlib_json_str);
 }
 
 fn get_stdlib_json(rustc_sysroot_path: &str, crate_name: &str) -> Result<Option<String>, anyhow::Error> {
@@ -1693,6 +1828,7 @@ fn get_stdlib_json(rustc_sysroot_path: &str, crate_name: &str) -> Result<Option<
 
   return Ok(Some(stdlib_json_str));
 }
+
 
 fn parse_type<'a>(
   crates: &HashMap<String, Crate>,
@@ -1863,25 +1999,47 @@ fn simplify_generic_arg_inner(
 fn mangle_simple_type(
   crates: &HashMap<String, Crate>,
   child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
-  original_type: &SimpleType
+  original_type: &SimpleType,
+  // If this is the top one, then refs should be come pointers.
+  // Otherwise, not.
+  // For example, a param:
+  //   &std::vec::Vec<&std::ffi::OsString>
+  // should become:
+  //   1std_vec_Vec__Ref__std_ffi_OsString*
+  is_root: bool
 ) -> String {
   let mut type_ = original_type.clone();
   let has_pointer = type_.imm_ref || type_.mut_ref;
-  if original_type.valtype.id.crate_name == "" {
-    if original_type.valtype.id == tuple_id() {
-      "VR_".to_owned() +
-          &mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype) +
-          (if has_pointer { "*" } else { "" })
-    } else if original_type.valtype.id.id.0 == "str" {
-      "VR_str_ref".to_owned()
+  let unpointered =
+    if original_type.valtype.id.crate_name == "" {
+      if is_special_primitive(&original_type.valtype.id) {
+        if original_type.valtype.id == tuple_id() {
+          "VR_".to_owned() +
+              &mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype)
+        } else if original_type.valtype.id == slice_id() {
+          mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype)
+        } else if original_type.valtype.id == str_id() {
+          "VR_str_ref".to_owned()
+        } else {
+          unimplemented!();
+        }
+      } else {
+        unimplemented!();
+        // Then it's a primitive
+        original_type.valtype.id.id.0.clone()
+      }
     } else {
-      // Then it's a primitive
-      original_type.valtype.id.id.0.clone()
+      "VR_".to_owned() +
+          &mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype)
+    };
+  if has_pointer {
+    if is_root {
+      unpointered + "*"
+    } else {
+      (if type_.imm_ref { "SRef" } else { "URef" }).to_string() + &unpointered
     }
   } else {
-    "VR_".to_owned() +
-        &mangle_simple_valtype(crates, child_key_to_parent_uid, &type_.valtype) +
-        (if has_pointer { "*" } else { "" })
+    unpointered
   }
 }
 
@@ -1892,9 +2050,9 @@ fn crustify_simple_type(
   type_: &SimpleType
 ) -> String {
   let valtype = &type_.valtype;
-  let is_slice =
-      type_.valtype.id.crate_name == "" && type_.valtype.id.id.0 == "str";
+  let is_slice = is_dynamically_sized(&type_.valtype.id);
   (if is_slice {
+    // Then it's going to be a struct, not a pointer.
     "".to_owned()
   } else {
     (if type_.imm_ref { "*const ".to_owned() }
@@ -1918,14 +2076,18 @@ fn rustify_simple_valtype(
   crates: &HashMap<String, Crate>,
   child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
   valtype: &SimpleValType,
-  is_func: bool
+  maybe_func: Option<&Function>
 ) -> String {
   let this_part_name =
       if valtype.id.crate_name == "" { // Then it's a primitive
-        if valtype.id == tuple_id() {
-          "".to_owned()
-          // } else if valtype.id.id.0 == "str" {
-          //   "".to_owned()
+        if is_special_primitive(&valtype.id) {
+          if valtype.id == tuple_id() || valtype.id == slice_id() {
+            "".to_owned()
+          } else if valtype.id.id.0 == "str" {
+            "str".to_owned()
+          } else {
+            unimplemented!();
+          }
         } else {
           valtype.id.id.0.clone()
         }
@@ -1950,26 +2112,45 @@ fn rustify_simple_valtype(
             generic_args: Vec::new(),
             maybe_parent_struct: None
           },
-          is_func) + "::"
+          maybe_func) + "::"
       } else {
         "".to_string()
+      };
+
+  let displayable_generic_args =
+      if let Some(func) = maybe_func {
+        // We don't want to display any impl args, like
+        //   pub fn create(argv: &[impl AsRef<OsStr>], config: PopenConfig) -> Result<Popen>
+        // from https://docs.rs/subprocess/latest/subprocess/struct.Popen.html#method.create
+        // So lets filter them out.
+        func.generics.params.iter()
+            .zip(&valtype.generic_args)
+            .filter(|(generic_param, generic_arg)| {
+              // Yeah, this seems to be the best way to find them...
+              !generic_param.name.starts_with("impl ")
+            })
+            .map(|(generic_param, generic_arg)| generic_arg.clone())
+            .collect::<Vec<SimpleType>>()
+      } else {
+        valtype.generic_args.clone()
       };
 
   let generics_part =
       // If it's a tuple then we still want to print out the () even if
       // there's nothing inside it.
-      if valtype.generic_args.len() > 0 || valtype.id == tuple_id() {
+      if displayable_generic_args.len() > 0 || valtype.id == tuple_id() || valtype.id == slice_id() {
         let (start, end) =
-            if this_part_name == "" { ("(", ")") }
-            else if is_func { ("::<", ">") }
+            if valtype.id == tuple_id() { ("(", ")") }
+            else if valtype.id == slice_id() { ("[", "]") }
+            else if maybe_func.is_some() { ("::<", ">") }
             else { ("<", ">") };
         "".to_owned() +
             start +
-            &valtype.generic_args
+            &displayable_generic_args
                 .iter()
                 .map(|x| {
                   rustify_simple_type(
-                    crates, child_key_to_parent_uid, x, false)
+                    crates, child_key_to_parent_uid, x, None)
                 })
                 .collect::<Vec<_>>()
                 .join(", ") +
@@ -1991,14 +2172,14 @@ fn rustify_simple_type(
   crates: &HashMap<String, Crate>,
   child_key_to_parent_uid: &HashMap<GenealogyKey, UId>,
   type_: &SimpleType,
-  is_func: bool
+  maybe_func: Option<&Function>
 ) -> String {
   (if type_.imm_ref { "&".to_owned() }
   else if type_.mut_ref { "&mut ".to_owned() }
   else { "".to_owned() }) +
       &rustify_simple_valtype(
         &crates, &child_key_to_parent_uid,
-        &type_.valtype, is_func)
+        &type_.valtype, maybe_func)
 }
 
 fn mangle_simple_valtype(
@@ -2008,10 +2189,16 @@ fn mangle_simple_valtype(
 ) -> String {
   let this_part_name =
       if valtype.id.crate_name == "" { // Then it's a primitive
-        if valtype.id == tuple_id() {
-          "".to_owned()
-        } else if &valtype.id.id.0[..] == "str" {
-          "VR_str_ref".to_owned()
+        if is_special_primitive(&valtype.id) {
+          if valtype.id == tuple_id() {
+            "".to_owned()
+          } else if valtype.id == slice_id() {
+            "VR_slice__".to_owned()
+          } else if &valtype.id == &str_id() {
+            "VR_str_ref".to_owned()
+          } else {
+            unimplemented!();
+          }
         } else {
           valtype.id.id.0.clone()
         }
@@ -2052,7 +2239,7 @@ fn mangle_simple_valtype(
                 .iter()
                 .map(|x| {
                   mangle_simple_type(
-                    crates, child_key_to_parent_uid, x)//, false)
+                    crates, child_key_to_parent_uid, x, false)//, false)
                 })
                 .collect::<Vec<_>>()
                 .join("__")
@@ -2165,10 +2352,45 @@ fn simplify_type(
           }
         }
       }
-      Type::Slice(_) => unimplemented!(),
+      Type::Slice(inner) => {
+        eprintln!("generics: {:?}", generics);
+        eprintln!("slice inner: {:?}", inner);
+        let inner_simple_type =
+            simplify_type(crates, generics, type_crate_name, inner)?;
+        SimpleType {
+          imm_ref: false,
+          mut_ref: false,
+          valtype: SimpleValType {
+            id: slice_id(),
+            generic_args: vec![inner_simple_type],
+            maybe_parent_struct: None
+          }
+        }
+      },
       Type::Array { .. } => unimplemented!(),
       Type::Pat { .. } => unimplemented!(),
-      Type::ImplTrait(_) => unimplemented!(),
+      Type::ImplTrait(generic_bounds) => {
+        if generic_bounds.len() == 1 {
+          let generic_bound = &generic_bounds[0];
+          match generic_bound {
+            GenericBound::TraitBound { trait_, generic_params, modifier } => {
+              let needle_start = "impl ".to_owned() + &trait_.name;
+              let matches =
+                  generics.iter()
+                      .filter(|(name, _)| name.starts_with(&needle_start))
+                      .collect::<Vec<_>>();
+              if matches.len() != 1 {
+                unimplemented!();
+              }
+              let (_, match_) = matches[0];
+              match_.clone()
+            }
+            GenericBound::Outlives(_) => unimplemented!(),
+          }
+        } else {
+          unimplemented!();
+        }
+      }
       Type::Infer => unimplemented!(),
       Type::RawPointer { .. } => unimplemented!(),
       Type::QualifiedPath { .. } => unimplemented!(),
