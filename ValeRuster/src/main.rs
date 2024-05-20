@@ -12,7 +12,7 @@ use std::io::{BufRead, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use anyhow::{Context, Result};
-use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericBound, Id, Impl, Item, ItemEnum, Primitive, Struct, Type};
+use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericBound, Id, Impl, Item, ItemEnum, Primitive, Struct, Type, WherePredicate};
 use regex::Regex;
 use crate::GenealogyKey::{ImplOrMethod, Normal};
 use crate::resolve_id::lookup_uid;
@@ -108,11 +108,11 @@ struct SimpleValType {
   generic_args: Vec<SimpleType>,
 
   // If this is a method, then the parent will be the struct.
-  maybe_parent_struct: Option<Box<SimpleValType>>,
-  // // We'll need this in case we import like:
-  // //   #pragma vrinclude std::ffi::OsString::From<&str>::from as RustOsStringFrom
-  // // and that resolves to
-  // maybe_parent_impl: Option<Box<SimpleValType>>,
+  maybe_parent_concrete: Option<Box<SimpleValType>>,
+  // We'll need this in case we import like:
+  //   #pragma vrinclude std::ffi::OsString::From<&str>::from as RustOsStringFrom
+  // because when we figure out from's argument's we'll need to know what the impl's <T> is.
+  maybe_parent_impl: Option<Box<SimpleValType>>,
 }
 
 #[derive(Clone, PartialEq, Eq, Hash, Debug)]
@@ -255,7 +255,8 @@ fn main() -> Result<(), anyhow::Error> {
             valtype: SimpleValType {
               id: str_id(&item_index.primitive_name_to_uid),
               generic_args: Vec::new(),
-              maybe_parent_struct: None
+              maybe_parent_concrete: None,
+              maybe_parent_impl: None,
             }
           };
       type_to_alias.insert(str_ref_type.valtype.clone(), "VR_str_ref".to_owned());
@@ -382,7 +383,9 @@ fn main() -> Result<(), anyhow::Error> {
               for type_ in signature_types {
                 match type_ {
                   Type::ResolvedPath(_) | Type::Generic(_) | Type::FunctionPointer(_) | Type::Tuple(_) | Type::Slice(_) | Type::Array { .. } | Type::RawPointer { .. } | Type::BorrowedRef { .. } | Type::QualifiedPath { .. } => {
-                    let generics = assemble_generics(&crates, func, &target_valtype)?;
+                    // println!("bork");
+                    let generics =
+                        assemble_generics(&crates, func, &target_valtype)?;
 
                     eprintln!("Doing things with type {:?}", target_valtype);
                     let signature_part_type =
@@ -551,6 +554,7 @@ fn main() -> Result<(), anyhow::Error> {
               }
               let maybe_return_type: Option<SimpleType> =
                   if let Some(output) = &func.decl.output {
+                    eprintln!("name {:?} Generics: {:?}", item.name, generics);
                     Some(simplify_type(&crates, &item_index, /*Some(target_valtype),*/ &generics, &target_valtype.id.crate_name, &output)?)
                   } else {
                     None
@@ -941,7 +945,7 @@ fn assemble_generics(
 
   // Do the parents' first, in case the more local scopes want to override
   // some generic param name.
-  if let Some(parent) = &target_valtype.maybe_parent_struct {
+  if let Some(parent) = &target_valtype.maybe_parent_concrete {
     generics.insert(
       "Self".to_owned(),
       SimpleType {
@@ -952,28 +956,33 @@ fn assemble_generics(
     // For example,
     //   std::vec::Vec<&std::ffi::OsString>::push
     // needs to know its containing struct's <T>.
-    let parent_item = resolve_id::lookup_uid(crates, &parent.id);
+    let parent_concrete_item = resolve_id::lookup_uid(crates, &parent.id);
     let empty = Vec::new();
-    let parent_generic_params =
-      match &parent_item.inner {
+    let parent_concrete_generic_params =
+      match &parent_concrete_item.inner {
         ItemEnum::Struct(struct_) => &struct_.generics.params,
         ItemEnum::Enum(enum_) => &enum_.generics.params,
         ItemEnum::Primitive(prim) => &empty,
         _ => panic!("parent id not referring to a concrete?"),
       };
-    for (generic_param, generic_arg_type) in parent_generic_params.iter().zip(&parent.generic_args) {
+    for (generic_param, generic_arg_type) in parent_concrete_generic_params.iter().zip(&parent.generic_args) {
       // println!("Got generic arg: {:?}", generic_arg_type);
       generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
     }
   }
-  // TODO: we'll probably need this at some point
-  // if let Some(parent) = &target_valtype.maybe_parent_impl {
-  //   // TODO: maybe dedup with instantiate_func's
-  //   for (generic_param, generic_arg_type) in impl_.generics.params.iter().zip(&parent.generic_args) {
-  //     // println!("Got generic arg: {:?}", generic_arg_type);
-  //     generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
-  //   }
-  // }
+  if let Some(parent) = &target_valtype.maybe_parent_impl {
+    let parent_impl_item = resolve_id::lookup_uid(crates, &parent.id);
+    let parent_impl_generic_params =
+        match &parent_impl_item.inner {
+          ItemEnum::Impl(impl_) => &impl_.generics.params,
+          _ => panic!("parent impl id not referring to an impl?"),
+        };
+    // TODO: maybe dedup with instantiate_func's
+    for (generic_param, generic_arg_type) in parent_impl_generic_params.iter().zip(&parent.generic_args) {
+      // println!("Got generic arg: {:?}", generic_arg_type);
+      generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
+    }
+  }
 
   // TODO: dedup with instantiate_func's
   for (generic_param, generic_arg_type) in func.generics.params.iter().zip(&target_valtype.generic_args) {
@@ -1099,7 +1108,7 @@ fn match_generic_arg_valtype(
   match (generic_arg, generic_param) {
     (_, _) if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) => {
       if let Type::Primitive(generic_param_primitive_name) = generic_param {
-        if &generic_arg.id.id.0 == generic_param_primitive_name {
+        if item_index.primitive_uid_to_name.get(&generic_arg.id).unwrap() == generic_param_primitive_name {
           Some(current_height)
         } else {
           None
@@ -1109,7 +1118,8 @@ fn match_generic_arg_valtype(
       }
     }
     (_, Type::Primitive(generic_param_primitive_name)) => {
-      if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) && &generic_arg.id.id.0 == generic_param_primitive_name {
+      if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) &&
+          item_index.primitive_uid_to_name.get(&generic_arg.id).unwrap() == generic_param_primitive_name {
         Some(current_height)
       } else {
         None
@@ -1764,7 +1774,8 @@ fn parse_type<'a>(
           valtype: SimpleValType {
             id: lifetime_id(),
             generic_args: Vec::new(),
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None
           }
         },
         rest));
@@ -1819,7 +1830,8 @@ fn parse_valtype<'a>(
         SimpleValType {
           id: uid.clone(),
           generic_args: Vec::new(),
-          maybe_parent_struct: None
+          maybe_parent_concrete: None,
+          maybe_parent_impl: None
         },
         rest));
   }
@@ -1929,7 +1941,8 @@ fn simplify_generic_arg_inner(
           valtype: SimpleValType {
             id: lifetime_id(),
             generic_args: Vec::new(),
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None
           }
         })
     },
@@ -2035,13 +2048,13 @@ fn rustify_simple_valtype(
             unimplemented!();
           }
         } else {
-          valtype.id.id.0.clone()
+          return item_index.primitive_uid_to_name.get(&valtype.id).unwrap().to_string()
         }
       } else {
         let name = lookup_name(crates, &valtype);
 
         let key =
-            match &valtype.maybe_parent_struct {
+            match &valtype.maybe_parent_concrete {
               None => Normal(valtype.id.clone()),
               Some(parent) => {
                 ImplOrMethod { struct_uid: parent.id.clone(), child_uid: valtype.id.clone() }
@@ -2055,7 +2068,8 @@ fn rustify_simple_valtype(
                 &SimpleValType {
                   id: parent_uid.clone(),
                   generic_args: Vec::new(),
-                  maybe_parent_struct: None
+                  maybe_parent_concrete: None,
+                  maybe_parent_impl: None
                 },
                 maybe_func) + "::"
             } else {
@@ -2151,7 +2165,7 @@ fn mangle_simple_valtype(
             unimplemented!();
           }
         } else {
-          valtype.id.id.0.clone()
+          return item_index.primitive_uid_to_name.get(&valtype.id).unwrap().to_string()
         }
       } else {
         let item =
@@ -2161,7 +2175,7 @@ fn mangle_simple_valtype(
       };
 
   let key =
-      match &valtype.maybe_parent_struct {
+      match &valtype.maybe_parent_concrete {
         None => Normal(valtype.id.clone()),
         Some(parent) => {
           ImplOrMethod { struct_uid: parent.id.clone(), child_uid: valtype.id.clone() }
@@ -2175,7 +2189,8 @@ fn mangle_simple_valtype(
           &SimpleValType {
             id: parent_uid.clone(),
             generic_args: Vec::new(),
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None
           },
         false) + "_"
       } else {
@@ -2260,7 +2275,7 @@ fn simplify_type(
           imm_ref: false,
           mut_ref: false,
           valtype:
-          match resolve::resolve(&crates, item_index, None, &result_uid, generic_args) {
+          match resolve::resolve(&crates, item_index, None, None, &result_uid, generic_args) {
             Ok(x) => x,
             Err(ResolveError::NotFound) => {
               unimplemented!()
@@ -2295,7 +2310,8 @@ fn simplify_type(
           valtype: SimpleValType {
             id: primitive_id(&item_index.primitive_name_to_uid, name),
             generic_args: Vec::new(),
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None
           }
         }
       },
@@ -2312,7 +2328,8 @@ fn simplify_type(
           valtype: SimpleValType {
             id: tuple_id(&item_index.primitive_name_to_uid, ),
             generic_args: generic_args,
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None
           }
         }
       }
@@ -2327,7 +2344,8 @@ fn simplify_type(
           valtype: SimpleValType {
             id: slice_id(&item_index.primitive_name_to_uid, ),
             generic_args: vec![inner_simple_type],
-            maybe_parent_struct: None
+            maybe_parent_concrete: None,
+            maybe_parent_impl: None,
           }
         }
       },

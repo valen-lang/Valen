@@ -9,7 +9,8 @@ pub fn resolve(
   item_index: &ItemIndex,
   // If we're resolving an impl or a method, we'll want to know what
   // struct we're coming from.
-  maybe_self_struct: Option<&SimpleValType>,
+  maybe_parent_concrete: Option<&SimpleValType>,
+  maybe_parent_impl: Option<&SimpleValType>,
   tentative_item_id: &UId,
   final_generic_args: Vec<SimpleType>
 ) -> anyhow::Result<SimpleValType, ResolveError> {
@@ -68,7 +69,8 @@ pub fn resolve(
               resolve(
                 crates,
                 item_index,
-                maybe_self_struct,
+                maybe_parent_concrete,
+                maybe_parent_impl,
                 &UId {
                   crate_name: tentative_item_id.crate_name.clone(),
                   id: import_id.clone()
@@ -117,7 +119,8 @@ pub fn resolve(
               resolve(
                 crates,
                 item_index,
-                maybe_self_struct,
+                maybe_parent_concrete,
+                maybe_parent_impl,
                 &result_uid,
                 final_generic_args)
             }
@@ -149,12 +152,16 @@ pub fn resolve(
         },
         ItemEnum::ForeignType => unimplemented!(),
         _ => {
+
           Ok(
             SimpleValType {
               id: tentative_item_id.clone(),
               generic_args: final_generic_args,
-              maybe_parent_struct: {
-                maybe_self_struct.map(|x| Box::new(x.clone()))
+              maybe_parent_concrete: {
+                maybe_parent_concrete.map(|x| Box::new(x.clone()))
+              },
+              maybe_parent_impl: {
+                maybe_parent_impl.map(|x| Box::new(x.clone()))
               }
             })
         }
@@ -182,7 +189,8 @@ pub fn extend_and_resolve(
       SimpleValType {
         id: crate::tuple_id(&item_index.primitive_name_to_uid),
         generic_args: initial_generic_args,
-        maybe_parent_struct: None,
+        maybe_parent_concrete: None,
+        maybe_parent_impl: None,
       });
   }
 
@@ -194,7 +202,8 @@ pub fn extend_and_resolve(
             SimpleValType {
               id: crate::primitive_id(&item_index.primitive_name_to_uid, name),
               generic_args: Vec::new(),
-              maybe_parent_struct: None
+              maybe_parent_concrete: None,
+              maybe_parent_impl: None
             })
         }
         _ => {
@@ -208,7 +217,8 @@ pub fn extend_and_resolve(
               Ok(SimpleValType {
                 id: UId { crate_name: name.to_string(), id: root_module_id.clone() },
                 generic_args: Vec::new(),
-                maybe_parent_struct: None
+                maybe_parent_concrete: None,
+                maybe_parent_impl: None
               })
             }
           }
@@ -372,17 +382,19 @@ pub fn extend_and_resolve(
         return Err(ResolveFatal(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error))));
       }
 
-      let maybe_self_struct =
-          if let Some(previous_parent) = &previous.unwrap().maybe_parent_struct {
+      let (maybe_self_struct, maybe_self_impl): (Option<&SimpleValType>, Option<&SimpleValType>) =
+          if let Some(previous_parent) = &previous.unwrap().maybe_parent_concrete {
             // If the previous had a parent, then the previous was an impl and the previous parent
             // was a struct and we're a method.
             // Use the same parent as the impl.
             // TODO: explain more with examples, this is very nuanced
-            Some(previous_parent.as_ref())
+            (Some(previous_parent.as_ref()), Some(&previous.unwrap()))
           } else {
             match crates.get(previous_crate_name).unwrap().index.get(&previous_container_id.id).unwrap().inner {
-              ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => previous,
-              _ => None
+              ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
+                (previous, None)
+              },
+              _ => (None, None)
             }
           };
 
@@ -404,7 +416,8 @@ pub fn extend_and_resolve(
         };
 
       let result_step =
-          resolve(crates, &item_index, maybe_self_struct, &perhaps_unresolved_uid, generics)?;
+          resolve(
+            crates, &item_index, maybe_self_struct, maybe_self_impl, &perhaps_unresolved_uid, generics)?;
 
       // let mut tentative_path = previous.clone();
       // tentative_path.steps.push(result_step);
