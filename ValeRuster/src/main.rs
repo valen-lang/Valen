@@ -15,7 +15,7 @@ use anyhow::{Context, Result};
 use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericBound, Id, Impl, Item, ItemEnum, Primitive, Struct, Type, WherePredicate};
 use regex::Regex;
 use crate::GenealogyKey::{ImplOrMethod, Normal};
-use crate::resolve_id::lookup_uid;
+use crate::resolve_id::{lookup_uid, resolve_uid};
 use crate::ResolveError::ResolveFatal;
 
 mod resolve;
@@ -474,7 +474,7 @@ fn main() -> Result<(), anyhow::Error> {
         let target_valtype = &target_type.valtype;
         let target_rust_type_string =
             rustify_simple_type(
-              &crates, &item_index, &target_type, None);// target_valtype.name().clone();
+              &crates, &item_index, &target_type, None)?;// target_valtype.name().clone();
 
         // let crate_ = get_crate(&crate_name, &rustc_sysroot_path)?;
         // let path = &target_valtype.id_path();// find_item_path(&crates, target_valtype.string_path)?;
@@ -791,7 +791,9 @@ pub extern "C" fn VR_StrLen(str_c: VR_str_ref) -> usize {
 struct ItemIndex {
   child_key_to_parent_uid: HashMap<GenealogyKey, UId>,
   primitive_name_to_uid: HashMap<String, UId>,
-  primitive_uid_to_name: HashMap<UId, String>
+  primitive_uid_to_name: HashMap<UId, String>,
+  drop_trait_uid: UId,
+  drop_method_uid: UId,
 }
 
 fn genealogize(
@@ -934,11 +936,43 @@ fn genealogize(
       }
     }
   }
+
+  let std =
+      match resolve_id::extend_and_resolve_uid(
+        crates, &primitive_name_to_uid, None, "std") {
+        Ok(x) => x,
+        Err(ResolveError::NotFound) => unimplemented!(),
+        Err(ResolveFatal(e)) => return Err(e)
+      };
+  let ops =
+      match resolve_id::extend_and_resolve_uid(
+        crates, &primitive_name_to_uid, Some(&std), "ops") {
+        Ok(x) => x,
+        Err(ResolveError::NotFound) => unimplemented!(),
+        Err(ResolveFatal(e)) => return Err(e)
+      };
+  let drop_trait =
+      match resolve_id::extend_and_resolve_uid(
+        crates, &primitive_name_to_uid, Some(&ops), "Drop") {
+        Ok(x) => x,
+        Err(ResolveError::NotFound) => unimplemented!(),
+        Err(ResolveFatal(e)) => return Err(e)
+      };
+  let drop_method_uid =
+      match resolve_id::extend_and_resolve_uid(
+        crates, &primitive_name_to_uid, Some(&drop_trait), "drop") {
+        Ok(x) => x,
+        Err(ResolveError::NotFound) => unimplemented!(),
+        Err(ResolveFatal(e)) => return Err(e)
+      };
+
   return Ok(
     ItemIndex {
       child_key_to_parent_uid,
       primitive_uid_to_name,
-      primitive_name_to_uid
+      primitive_name_to_uid,
+      drop_trait_uid: drop_trait,
+      drop_method_uid: drop_method_uid
     })
 }
 
@@ -1207,6 +1241,12 @@ fn get_direct_child_uids(
             .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
             .collect())
     },
+    ItemEnum::Trait(t) => {
+      Ok(
+        t.items.iter()
+            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
+            .collect())
+    },
     ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
       // TODO: optimize: get_concrete_impls_children is repeating get_concrete_impls's work
       let mut result = Vec::new();
@@ -1412,7 +1452,7 @@ fn instantiate_struct(
   builder += &size.to_string();
   builder += "]);\n";
   builder += "const_assert_eq!(std::mem::size_of::<";
-  builder += &rustify_simple_type(&crates, &item_index, &needle_type, None);
+  builder += &rustify_simple_type(&crates, &item_index, &needle_type, None)?;
   builder += ">(), ";
   builder += &size.to_string();
   builder += ");\n";
@@ -1468,7 +1508,7 @@ fn instantiate_func(
   rust_builder += " {\n";
   for (param_name, param_type) in params {
     rust_builder += "  const_assert_eq!(std::mem::size_of::<";
-    rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None);
+    rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None)?;
     rust_builder += ">(), std::mem::size_of::<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &param_type, true);
     rust_builder += ">());\n";
@@ -1476,7 +1516,7 @@ fn instantiate_func(
     rust_builder += "  let ";
     rust_builder += param_name;
     rust_builder += "_rs: ";
-    rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None);
+    rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None)?;
     rust_builder += " = unsafe { mem::transmute(";
     rust_builder += param_name;
     rust_builder += "_c) };\n";
@@ -1486,10 +1526,10 @@ fn instantiate_func(
   rust_builder += "  ";
   if let Some(return_type_simple) = maybe_output_type {
     rust_builder += "let result_rs: ";
-    rust_builder += &rustify_simple_type(&crates, &item_index, &return_type_simple, None);
+    rust_builder += &rustify_simple_type(&crates, &item_index, &return_type_simple, None)?;
     rust_builder += " = ";
   }
-  rust_builder += &rustify_simple_type(&crates, &item_index, needle_type, Some(func));
+  rust_builder += &rustify_simple_type(&crates, &item_index, needle_type, Some(func))?;
   rust_builder += "(";
   for (param_name, param_type) in params {
     rust_builder += param_name;
@@ -1499,7 +1539,7 @@ fn instantiate_func(
 
   if let Some(return_type_simple) = &maybe_output_type {
     rust_builder += "  const_assert_eq!(std::mem::size_of::<";
-    rust_builder += &rustify_simple_type(&crates, &item_index, &return_type_simple, None);
+    rust_builder += &rustify_simple_type(&crates, &item_index, &return_type_simple, None)?;
     rust_builder += ">(), std::mem::size_of::<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &return_type_simple, true);
     rust_builder += ">());\n";
@@ -1926,10 +1966,20 @@ fn parse_type_path_step<'a>(
       match resolve::extend_and_resolve(crates, item_index, context_container, &name, generic_args.clone()) {
         Ok(x) => x,
         Err(ResolveError::NotFound) => {
-          resolve::extend_and_resolve(crates, item_index, context_container, &name, generic_args);
-          let error = format!("Couldn't find {}", name);
-          return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
-          // unimplemented!()
+          if name == "drop" && context_container.is_some() {
+            SimpleValType {
+              id: item_index.drop_method_uid.clone(),
+              generic_args: Vec::new(),
+              maybe_parent_concrete:
+                context_container.map(|x| Box::new(x.clone())),
+              maybe_parent_impl: None
+              }
+          } else {
+            resolve::extend_and_resolve(crates, item_index, context_container, &name, generic_args);
+            let error = format!("Couldn't find {}", name);
+            return Err(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error)));
+            // unimplemented!()
+          }
         }
         Err(ResolveFatal(e)) => return Err(e)
       };
@@ -2125,7 +2175,7 @@ fn rustify_simple_valtype(
                 .iter()
                 .map(|x| {
                   rustify_simple_type(
-                    crates, item_index, x, None)
+                    crates, item_index, x, None).unwrap() // TODO DO NOT SUBMIT
                 })
                 .collect::<Vec<_>>()
                 .join(", ") +
@@ -2148,13 +2198,43 @@ fn rustify_simple_type(
   item_index: &ItemIndex,
   type_: &SimpleType,
   maybe_func: Option<&Function>
-) -> String {
-  (if type_.imm_ref { "&".to_owned() }
-  else if type_.mut_ref { "&mut ".to_owned() }
-  else { "".to_owned() }) +
-      &rustify_simple_valtype(
-        &crates, &item_index,
-        &type_.valtype, maybe_func)
+) -> Result<String> {
+  if type_.valtype.id == item_index.drop_method_uid {
+    return Ok("std::mem::drop".to_string());
+  }
+  if let Some(parent_impl) = &type_.valtype.maybe_parent_impl {
+    let item = lookup_uid(crates, &parent_impl.id);
+    let impl_ =
+      match &item.inner {
+        ItemEnum::Impl(impl_) => impl_,
+        _ => panic!("Impl id doesn't refer to impl")
+      };
+    if let Some(trait_) = &impl_.trait_ {
+      let resolved_trait_uid =
+          match resolve_uid(
+            crates,
+            &item_index.primitive_name_to_uid,
+            &UId { crate_name: parent_impl.id.crate_name.clone(), id: trait_.id.clone() })  {
+            Ok(x) => x,
+            Err(ResolveError::NotFound) => {
+              unimplemented!()
+            }
+            Err(ResolveFatal(e)) => return Err(e)
+          };
+      if resolved_trait_uid == item_index.drop_trait_uid {
+        return Ok("std::mem::drop".to_string());
+      }
+    }
+  }
+
+
+  Ok(
+    (if type_.imm_ref { "&".to_owned() }
+    else if type_.mut_ref { "&mut ".to_owned() }
+    else { "".to_owned() }) +
+        &rustify_simple_valtype(
+          &crates, &item_index,
+          &type_.valtype, maybe_func))
 }
 
 fn mangle_simple_valtype(

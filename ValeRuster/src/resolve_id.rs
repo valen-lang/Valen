@@ -138,7 +138,7 @@ pub fn resolve_uid(
 // This adds the given step to the end, and if it lands on an
 // import or a typealias it will follow it and return the new corrected
 // path.
-fn extend_and_resolve_uid(
+pub(crate) fn extend_and_resolve_uid(
   crates: &HashMap<String, Crate>,
   primitive_name_to_uid: &HashMap<String, UId>,
   // This is the containing module or impl.
