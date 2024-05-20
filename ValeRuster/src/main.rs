@@ -110,7 +110,7 @@ struct SimpleValType {
   // If this is a method, then the parent will be the struct.
   maybe_parent_concrete: Option<Box<SimpleValType>>,
   // We'll need this in case we import like:
-  //   #pragma vrinclude std::ffi::OsString::From<&str>::from as RustOsStringFrom
+  //   #pragma rsuse std::ffi::OsString::From<&str>::from as RustOsStringFrom
   // because when we figure out from's argument's we'll need to know what the impl's <T> is.
   maybe_parent_impl: Option<Box<SimpleValType>>,
 }
@@ -236,6 +236,7 @@ fn main() -> Result<(), anyhow::Error> {
       //     .with_context(|| "Failed to create directory ".to_owned() + rust_folder)?;
 
       let mut type_to_alias: HashMap<SimpleValType, String> = HashMap::new();
+      let mut alias_to_type: HashMap<String, SimpleValType> = HashMap::new();
       let mut type_and_original_line_and_type_str_and_maybe_alias: Vec<(SimpleType, String, Option<String>)> = Vec::new();
 
       let maybe_input_file_path = instantiate_matches.get_one::<String>("input_file");
@@ -248,28 +249,13 @@ fn main() -> Result<(), anyhow::Error> {
 
       let item_index = genealogize(&crates)?;
 
-      let str_ref_type =
-          SimpleType{
-            imm_ref: true,
-            mut_ref: false,
-            valtype: SimpleValType {
-              id: str_id(&item_index.primitive_name_to_uid),
-              generic_args: Vec::new(),
-              maybe_parent_concrete: None,
-              maybe_parent_impl: None,
-            }
-          };
-      type_to_alias.insert(str_ref_type.valtype.clone(), "VR_str_ref".to_owned());
-      type_and_original_line_and_type_str_and_maybe_alias.push(
-        (str_ref_type, "(builtin)".to_owned(), Some("VR_str_ref".to_owned())));
-
       let mut lines: Vec<String> = Vec::new();
       if let Some(input_file_path) = maybe_input_file_path {
         let file = File::open(input_file_path)?;
         let reader = io::BufReader::new(file);
         for line_res in reader.lines() {
           let line = line_res?;
-          if Regex::new(r#"^#pragma\s+vrinclude"#).unwrap().is_match(&line) {
+          if Regex::new(r#"^#pragma\s+rsuse"#).unwrap().is_match(&line) {
             lines.push(line);
           }
         }
@@ -283,21 +269,21 @@ fn main() -> Result<(), anyhow::Error> {
         let line = line.trim().to_string();
 
         let maybe_aliasing_line_captures =
-            Regex::new(r#"^\s*(#pragma\s+vrinclude\s+)?(\S.+)\s+as\s+(\w+)\s*$"#).unwrap()
+            Regex::new(r#"^\s*(#pragma\s+rsuse\s+)?(\w+)\s+=\s+(\S.+)\s*$"#).unwrap()
                 .captures(&line);
         let (target_type_str, maybe_alias) =
             if let Some(aliasing_line_captures) = maybe_aliasing_line_captures {
               // Getting the first capture group
+              let maybe_alias =
+                  aliasing_line_captures.get(2).map(|x| x.as_str().to_string());
               let target_type_str =
-                  aliasing_line_captures.get(2)
+                  aliasing_line_captures.get(3)
                       .expect("Blork")
                       .as_str();
-              let maybe_alias =
-                  aliasing_line_captures.get(3).map(|x| x.as_str().to_string());
               (target_type_str, maybe_alias)
             } else {
               let simple_line_captures =
-                  Regex::new(r#"^\s*(#pragma\s+vrinclude\s+)?(\S.+)\s*$"#).unwrap()
+                  Regex::new(r#"^\s*(#pragma\s+rsuse\s+)?(\S.+)\s*$"#).unwrap()
                       .captures(&line)
                       .expect(&("Bad line: ".to_owned() + &line));;
               let target_type_str =
@@ -308,15 +294,35 @@ fn main() -> Result<(), anyhow::Error> {
             };
 
         let (target_type, _) =
-            parse_type(&crates, &item_index, None, &target_type_str)?;
+            parse_type(&crates, &item_index, &alias_to_type, None, &target_type_str)?;
 
         if let Some(alias) = &maybe_alias {
           type_to_alias.insert(target_type.valtype.clone(), alias.clone());
+          alias_to_type.insert(alias.clone(), target_type.valtype.clone());
         }
         eprintln!("Adding {:?}", target_type);
         type_and_original_line_and_type_str_and_maybe_alias.push(
           (target_type, line.clone(), maybe_alias));
       }
+
+      let str_ref_type =
+          SimpleType{
+            imm_ref: true,
+            mut_ref: false,
+            valtype: SimpleValType {
+              id: str_id(&item_index.primitive_name_to_uid),
+              generic_args: Vec::new(),
+              maybe_parent_concrete: None,
+              maybe_parent_impl: None,
+            }
+          };
+      if !type_to_alias.contains_key(&str_ref_type.valtype) {
+        type_to_alias.insert(str_ref_type.valtype.clone(), "VR_str_ref".to_owned());
+        alias_to_type.insert("VR_str_ref".to_owned(), str_ref_type.valtype.clone());
+        type_and_original_line_and_type_str_and_maybe_alias.push(
+          (str_ref_type.clone(), "(builtin)".to_owned(), Some("VR_str_ref".to_owned())));
+      }
+      let str_ref_alias = type_to_alias.get(&str_ref_type.valtype).unwrap();
 
       let mut cbindgen_toml_contents = String::with_capacity(1000);
       cbindgen_toml_contents += "include_guard = \"EXAMPLE_PROJECT_H\"\n";
@@ -573,7 +579,7 @@ fn main() -> Result<(), anyhow::Error> {
 
 
       let final_program_str =
-          [common_preamble().to_owned(), instantiations_preamble().to_owned()].into_iter()
+          [common_preamble().to_owned(), instantiations_preamble(str_ref_alias).to_owned()].into_iter()
               .chain(struct_strings.into_iter())
               .chain(func_strings.into_iter())
               .collect::<Vec<String>>()
@@ -736,10 +742,10 @@ use core::ffi::c_char;
 "#
 }
 
-fn instantiations_preamble() -> &'static str {
+fn instantiations_preamble(str_ref_alias: &str) -> String {
   r#"
 #[no_mangle]
-pub extern "C" fn RustStrFromCStr(char_ptr: *const c_char) -> VR_str_ref {
+pub extern "C" fn VR_StrFromCStr(char_ptr: *const c_char) -> VR_str_ref {
   let c_str = unsafe { core::ffi::CStr::from_ptr(char_ptr) };
   if let Ok(rust_str) = c_str.to_str() {
     let s_rs: VR_str_ref = unsafe { mem::transmute(rust_str) };
@@ -751,7 +757,7 @@ pub extern "C" fn RustStrFromCStr(char_ptr: *const c_char) -> VR_str_ref {
 
 // TODO: Is it okay to use u8 here instead of c_char?
 #[no_mangle]
-pub extern "C" fn RustStrNew(length: usize, char_ptr: *const u8) -> VR_str_ref {
+pub extern "C" fn VR_StrNew(length: usize, char_ptr: *const u8) -> VR_str_ref {
   let c_str = unsafe { std::slice::from_raw_parts(char_ptr, length) };
   if let Ok(rust_str) = core::ffi::CStr::from_bytes_with_nul(c_str) {
     if let Ok(rust_str) = rust_str.to_str() {
@@ -766,20 +772,20 @@ pub extern "C" fn RustStrNew(length: usize, char_ptr: *const u8) -> VR_str_ref {
 }
 
 #[no_mangle]
-pub extern "C" fn RustStrToCStr(str_c: VR_str_ref) -> *const c_char {
+pub extern "C" fn VR_StrToCStr(str_c: VR_str_ref) -> *const c_char {
   let str_rs: &str = unsafe { mem::transmute(str_c) };
   let ptr = str_rs.as_ptr() as *const c_char;
   return ptr;
 }
 
 #[no_mangle]
-pub extern "C" fn RustStrLen(str_c: VR_str_ref) -> usize {
+pub extern "C" fn VR_StrLen(str_c: VR_str_ref) -> usize {
   let str_rs: &str = unsafe { mem::transmute(str_c) };
   let len: usize = str_rs.len();
   return len;
 }
 
-"#
+"#.replace("VR_str_ref", str_ref_alias)
 }
 
 struct ItemIndex {
@@ -1758,6 +1764,7 @@ fn get_stdlib_json(rustc_sysroot_path: &str, crate_name: &str) -> Result<Option<
 fn parse_type<'a>(
   crates: &HashMap<String, Crate>,
   primitive_name_to_uid: &ItemIndex,
+  alias_to_type: &HashMap<String, SimpleValType>,
   context_container: Option<&SimpleValType>,
   original: &'a str
 ) -> anyhow::Result<(SimpleType, &'a str)> {
@@ -1791,7 +1798,7 @@ fn parse_type<'a>(
   }
 
   let (path, new_rest) =
-      parse_valtype(crates, primitive_name_to_uid, context_container, rest)?;
+      parse_valtype(crates, primitive_name_to_uid, &alias_to_type, context_container, rest)?;
   rest = new_rest;
 
   return Ok(
@@ -1807,6 +1814,7 @@ fn parse_type<'a>(
 fn parse_valtype<'a>(
   crates: &HashMap<String, Crate>,
   item_index: &ItemIndex,
+  alias_to_type: &HashMap<String, SimpleValType>,
   original_context_container: Option<&SimpleValType>,
   original: &'a str
 ) -> anyhow::Result<(SimpleValType, &'a str)> {
@@ -1821,9 +1829,9 @@ fn parse_valtype<'a>(
       } else {
         rest.len()
       };
-  let name_preview = &rest[0..name_end];
-  if let Some(uid) = item_index.primitive_name_to_uid.get(name_preview) {
-    rest = &rest[name_preview.len()..].trim();
+  let full_name_preview = &rest[0..name_end];
+  if let Some(uid) = item_index.primitive_name_to_uid.get(full_name_preview) {
+    rest = &rest[full_name_preview.len()..].trim();
 
     return Ok(
       (
@@ -1838,7 +1846,7 @@ fn parse_valtype<'a>(
 
   loop {
     let (new_steps, new_rest) =
-        parse_type_path_step(crates, item_index, current.as_ref(), rest)?;
+        parse_type_path_step(crates, item_index, &alias_to_type, current.as_ref(), rest)?;
     current = Some(new_steps);
     rest = new_rest;
     if rest.starts_with("::") {
@@ -1854,6 +1862,7 @@ fn parse_valtype<'a>(
 fn parse_type_path_step<'a>(
   crates: &HashMap<String, Crate>,
   item_index: &ItemIndex,
+  alias_to_type: &HashMap<String, SimpleValType>,
   context_container: Option<&SimpleValType>,
   original: &'a str
 ) -> anyhow::Result<(SimpleValType, &'a str)> {
@@ -1868,6 +1877,10 @@ fn parse_type_path_step<'a>(
       };
   let name = &rest[0..name_end];
   rest = &rest[name.len()..].trim();
+
+  if let Some(aliased_type) = alias_to_type.get(name) {
+    return Ok((aliased_type.clone(), rest));
+  }
 
   let mut generic_args = Vec::new();
   if rest.starts_with("::<") || rest.starts_with("<") || rest.starts_with("(") {
@@ -1887,7 +1900,7 @@ fn parse_type_path_step<'a>(
       // Do nothing
     } else {
       loop {
-        let (generic_arg, new_rest) = parse_type(crates, item_index, None, rest)?;
+        let (generic_arg, new_rest) = parse_type(crates, item_index, &alias_to_type, None, rest)?;
         rest = new_rest;
         generic_args.push(generic_arg);
         if rest.starts_with(",") {
