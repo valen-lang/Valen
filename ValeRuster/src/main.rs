@@ -12,14 +12,16 @@ use std::io::{BufRead, Read};
 use std::ops::{Deref, DerefMut};
 use std::path::Path;
 use anyhow::{Context, Result};
-use rustdoc_types::{Crate, Enum, Function, GenericArg, GenericArgs, GenericBound, Id, Impl, Item, ItemEnum, Primitive, Struct, Type, WherePredicate};
+use rustdoc_types::{Crate, Function, GenericArg, GenericArgs, GenericBound, Id, Impl, Item, ItemEnum, Type};
 use regex::Regex;
+use indexer::ItemIndex;
 use crate::GenealogyKey::{ImplOrMethod, Normal};
 use crate::resolve_id::{lookup_uid, resolve_uid};
 use crate::ResolveError::ResolveFatal;
 
 mod resolve;
 mod resolve_id;
+mod indexer;
 
 // TODO: optimize: All over the place we're calling .keys() and .collect()
 // on some crate.index.
@@ -247,7 +249,7 @@ fn main() -> Result<(), anyhow::Error> {
       crates.insert("core".to_string(), get_crate(&rustc_sysroot_path, &cargo_path, &output_dir_path, "core")?);
       get_dependency_crates(&rustc_sysroot_path, &cargo_path, &output_dir_path, &cargo_toml_path, &mut crates)?;
 
-      let item_index = genealogize(&crates)?;
+      let item_index = indexer::genealogize(&crates)?;
 
       let mut lines: Vec<String> = Vec::new();
       if let Some(input_file_path) = maybe_input_file_path {
@@ -359,12 +361,13 @@ fn main() -> Result<(), anyhow::Error> {
                 valtype_str.clone()
               };
           // TODO: check duplicates, i think we're doing extra work here
+          eprintln!("Sizing primitive {}", &type_str);
           sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
         } else {
           let item = resolve_id::lookup_uid(&crates, &unresolved_id);
 
           match &item.inner {
-            ItemEnum::Struct(_) => {
+            ItemEnum::Struct(_) | ItemEnum::Enum(_) => {
               let valtype_str =
                   rustify_simple_valtype(
                     &crates, &item_index, &target_valtype, None);
@@ -376,6 +379,7 @@ fn main() -> Result<(), anyhow::Error> {
                     valtype_str.clone()
                   };
               // TODO: check duplicates, i think we're doing extra work here
+              eprintln!("Sizing non-primitive {}", &type_str);
               sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
             }
             ItemEnum::Function(func) => {
@@ -788,194 +792,6 @@ pub extern "C" fn VR_StrLen(str_c: VR_str_ref) -> usize {
 "#.replace("VR_str_ref", str_ref_alias)
 }
 
-struct ItemIndex {
-  child_key_to_parent_uid: HashMap<GenealogyKey, UId>,
-  primitive_name_to_uid: HashMap<String, UId>,
-  primitive_uid_to_name: HashMap<UId, String>,
-  drop_trait_uid: UId,
-  drop_method_uid: UId,
-}
-
-fn genealogize(
-  crates: &HashMap<String, Crate>
-) -> Result<ItemIndex> {
-  let core_crate = crates.get("core").unwrap();
-  let core_root_module = core_crate.index.get(&core_crate.root).unwrap();
-  let core_root_module_member_ids =
-      match &core_root_module.inner {
-        ItemEnum::Module(module) => &module.items,
-        _ => panic!("wat")
-      };
-  let mut primitive_name_to_uid: HashMap<String, UId> = HashMap::new();
-  let mut primitive_uid_to_name: HashMap<UId, String> = HashMap::new();
-  for core_root_module_member_id in core_root_module_member_ids {
-    let item = core_crate.index.get(&core_root_module_member_id).unwrap();
-    match &item.inner {
-      ItemEnum::Primitive(Primitive { name: name, .. }) => {
-        let real_name = name;
-          match name.as_str() {
-            "fn" | "reference" | "tuple" | "slice" | "array" | "pointer" | "unit" | "never" | "bool" | "char" | "f16" | "f32" | "f64" | "f128" | "i128" | "i16" | "i32" | "i64" | "i8" | "isize" | "str" | "u128" | "u16" | "u32" | "u64" | "u8" | "usize" => {
-              name.as_str()
-            }
-            _ => unimplemented!(),
-          };
-        let uid = UId { crate_name: "core".to_string(), id: core_root_module_member_id.clone() };
-        primitive_name_to_uid.insert(real_name.to_string(), uid.clone());
-        primitive_uid_to_name.insert(uid, real_name.to_string());
-      }
-      _ => {} // Skip
-    }
-  }
-
-  let mut child_key_to_parent_uid: HashMap<GenealogyKey, UId> = HashMap::new();
-
-  let mut importee_uid_to_imports: HashMap<UId, HashSet<UId>> = HashMap::new();
-
-  for (crate_name, crate_) in crates {
-    for (self_id, item) in &crate_.index {
-      let self_uid =
-          UId { crate_name: crate_name.to_string(), id: self_id.clone() };
-      let child_uids =
-          match &item.inner {
-            ItemEnum::Module(_) => {
-              get_direct_child_uids(crates, &primitive_name_to_uid, &self_uid)?
-                  .into_iter()
-                  .map(|x| GenealogyKey::Normal(x.clone()))
-                  .collect::<Vec<GenealogyKey>>()
-            },
-            ItemEnum::Primitive(Primitive { impls: impl_ids, .. }) |
-            ItemEnum::Struct(Struct { impls: impl_ids, .. }) |
-            ItemEnum::Enum(Enum { impls: impl_ids, .. }) => {
-              let mut result = Vec::new();
-              for impl_uid in get_direct_child_uids(crates, &primitive_name_to_uid, &self_uid)? {
-                result.push(GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: impl_uid.clone() });
-              }
-              // Now add all the impls' children.
-              for impl_id in impl_ids {
-                let impl_uid = UId { crate_name: crate_name.clone(), id: impl_id.clone() };
-                for method_uid in get_direct_child_uids(crates, &primitive_name_to_uid, &impl_uid)? {
-                  result.push(GenealogyKey::ImplOrMethod { struct_uid: self_uid.clone(), child_uid: method_uid.clone() });
-                }
-              }
-              result
-            },
-            ItemEnum::Import(import) => {
-              if let Some(imported_id) = import.id.as_ref() {
-                let importee_uid =
-                    UId { crate_name: crate_name.clone(), id: imported_id.clone() };
-                if !importee_uid_to_imports.contains_key(&importee_uid) {
-                  importee_uid_to_imports.insert(importee_uid.clone(), HashSet::new());
-                }
-                eprintln!("Noting importee {:?} imported by import {:?}", importee_uid, self_uid);
-                let set = importee_uid_to_imports.get_mut(&importee_uid).unwrap().insert(self_uid);
-              }
-              continue;
-            }
-            _ => continue
-          };
-      for child_uid in child_uids {
-        if let Some(existing_parent_uid) = child_key_to_parent_uid.get(&child_uid) {
-          if *existing_parent_uid != self_uid {
-            // TODO: resultify all these panics
-            panic!("Parent collision {:?} and {:?} for child {:?}", existing_parent_uid, self_uid, child_uid);
-          }
-        } else {
-          child_key_to_parent_uid.insert(child_uid, self_uid.clone());
-        }
-      }
-    }
-  }
-
-  // Sanity check:
-  for (crate_name, crate_) in crates {
-    for (item_id, item) in &crate_.index {
-      let item_uid =
-          UId { crate_name: crate_name.to_string(), id: item_id.clone() };
-      let item = crate_.index.get(&item_uid.id).unwrap();
-      match item.inner {
-        ItemEnum::Module(_) | ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
-          let item_key = Normal(item_uid.clone());
-          if !child_key_to_parent_uid.contains_key(&item_key) {
-            if let Some(unnarrowed_imports) = importee_uid_to_imports.get(item_key.uid()) {
-              let imports: Vec<UId> =
-                if unnarrowed_imports.len() == 0 {
-                  eprintln!("No owners or imports for {:?}", item_key);
-                  continue;
-                } else if unnarrowed_imports.len() > 1 {
-                  // Narrow it down by the smallest path. For example, LineWriter
-                  // is imported in two places:
-                  //   "library/std/src/io/buffered/mod.rs",
-                  //   "library/std/src/io/mod.rs",
-                  // so we'll go with the second one.
-                  // TODO: use a better resolution approach
-                  let mut bork: Vec<(UId, &Item)> =
-                      unnarrowed_imports.iter()
-                          .map(|id| (id.clone(), lookup_uid(crates, id)))
-                          .collect::<Vec<_>>();
-                  bork.sort_by_key(|(uid, item)| item.span.as_ref().unwrap().filename.to_str().as_ref().unwrap().len());
-                  eprintln!("Heuristic, estimating owner for {:?} is {:?}", item_key, bork.iter().next().unwrap().clone());
-                  bork.into_iter().map(|x| x.0).collect()
-                } else {
-                  unnarrowed_imports.iter().map(|x| x.clone()).collect()
-                };
-              let import_key = Normal(imports.iter().next().unwrap().clone());
-              if let Some(import_parent_id) = child_key_to_parent_uid.get(&import_key) {
-                eprintln!("Noting new owner for {:?}, import {:?}", item_key, import_key.uid());
-                child_key_to_parent_uid.insert(item_key, import_parent_id.clone());
-              } else {
-                eprintln!("New owner for {:?}, import {:?} has no owner itself!", item_key, import_key.uid());
-                continue;
-              }
-            } else {
-              eprintln!("Orphan module: {:?}", item.name);
-            }
-          }
-        }
-        // ItemEnum::Function(_) => {}
-        _ => {}
-      }
-    }
-  }
-
-  let std =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, None, "std") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let ops =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&std), "ops") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let drop_trait =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&ops), "Drop") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-  let drop_method_uid =
-      match resolve_id::extend_and_resolve_uid(
-        crates, &primitive_name_to_uid, Some(&drop_trait), "drop") {
-        Ok(x) => x,
-        Err(ResolveError::NotFound) => unimplemented!(),
-        Err(ResolveFatal(e)) => return Err(e)
-      };
-
-  return Ok(
-    ItemIndex {
-      child_key_to_parent_uid,
-      primitive_uid_to_name,
-      primitive_name_to_uid,
-      drop_trait_uid: drop_trait,
-      drop_method_uid: drop_method_uid
-    })
-}
-
 fn assemble_generics(
   crates: &HashMap<String, Crate>,
   func: &Function,
@@ -1222,46 +1038,6 @@ fn item_has_name(direct_child_item: &&Item, name: &str) -> bool {
     _ => {
       direct_child_item.name.as_ref().map(|x| &x[..]) == Some(name)
     }
-  }
-}
-
-fn get_direct_child_uids(
-  crates: &HashMap<String, Crate>,
-  primitive_name_to_uid: &HashMap<String, UId>,
-  container_id: &UId,
-) -> Result<Vec<UId>> {
-  let container_item =
-      crates
-          .get(&container_id.crate_name).unwrap()
-          .index.get(&container_id.id).unwrap();
-  match &container_item.inner {
-    ItemEnum::Module(m) => {
-      Ok(
-        m.items.iter()
-            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
-            .collect())
-    },
-    ItemEnum::Trait(t) => {
-      Ok(
-        t.items.iter()
-            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
-            .collect())
-    },
-    ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
-      // TODO: optimize: get_concrete_impls_children is repeating get_concrete_impls's work
-      let mut result = Vec::new();
-      for thing in get_concrete_impls(crates, primitive_name_to_uid, &container_id) {
-        result.push(thing);
-      }
-      for children in get_concrete_impls_children(crates, &primitive_name_to_uid, &container_id)? {
-        result.push(children);
-      }
-      Ok(result)
-    }
-    ItemEnum::Impl(impl_) => {
-      Ok(impl_.items.iter().map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() }).collect())
-    }
-    _ => unimplemented!()
   }
 }
 
@@ -1862,7 +1638,7 @@ fn parse_valtype<'a>(
   let mut current =
       original_context_container.map(|x| x.clone());
 
-  let re = Regex::new(r"(>|\)|$)").unwrap();
+  let re = Regex::new(r"(,|>|\)|$)").unwrap();
   let name_end =
       if let Some(generic_name_match) = re.find(&rest) {
         generic_name_match.start()
@@ -1908,7 +1684,7 @@ fn parse_type_path_step<'a>(
 ) -> anyhow::Result<(SimpleValType, &'a str)> {
 
   let mut rest = original;
-  let re = Regex::new(r"(::<|::|<|>|\(|\)|$)").unwrap();
+  let re = Regex::new(r"(,|::<|::|<|>|\(|\)|$)").unwrap();
   let name_end =
       if let Some(generic_name_match) = re.find(&rest) {
         generic_name_match.start()
@@ -2142,8 +1918,8 @@ fn rustify_simple_valtype(
         prefix.to_string() + &name
       };
 
-  let displayable_generic_args =
-      if let Some(func) = maybe_func {
+  let displayable_generic_args: Vec<SimpleType> =
+      (if let Some(func) = maybe_func {
         // We don't want to display any impl args, like
         //   pub fn create(argv: &[impl AsRef<OsStr>], config: PopenConfig) -> Result<Popen>
         // from https://docs.rs/subprocess/latest/subprocess/struct.Popen.html#method.create
@@ -2158,7 +1934,14 @@ fn rustify_simple_valtype(
             .collect::<Vec<SimpleType>>()
       } else {
         valtype.generic_args.clone()
-      };
+      })
+          .into_iter()
+          .filter(|x| {
+            // Filter out all lifetimes if we're calling a function
+            if maybe_func.is_some() && x.valtype.id == lifetime_id() { false }
+            else { true }
+          })
+          .collect();
 
   let generics_part =
       // If it's a tuple then we still want to print out the () even if

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
-use rustdoc_types::{Crate, Item, ItemEnum, Type};
-use crate::{ResolveError, SimpleValType, UId};
+use rustdoc_types::{Crate, Import, Item, ItemEnum, Type};
+use crate::{get_concrete_impls, get_concrete_impls_children, ResolveError, UId};
 use crate::ResolveError::{NotFound, ResolveFatal};
 
 // Recurses.
@@ -88,7 +88,7 @@ pub fn resolve_uid(
               for next_foreign_crate_name in &path.path[1..] {
                 let mut found_child_uids = Vec::new();
                 let hay_child_uids =
-                    match crate::get_direct_child_uids(crates, &primitive_name_to_uid, &result_uid) {
+                    match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &result_uid) {
                       Ok(x) => x,
                       Err(e) => return Err(ResolveFatal(e))
                     };
@@ -179,7 +179,7 @@ pub(crate) fn extend_and_resolve_uid(
       // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
 
       let direct_child_uids =
-          match crate::get_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id) {
+          match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id) {
         Ok(x) => x,
         Err(e) => return Err(ResolveFatal(e))
       };;
@@ -300,4 +300,80 @@ fn resolve_type_uid(
       Type::RawPointer { .. } => unimplemented!(),
       Type::QualifiedPath { .. } => unimplemented!(),
     })
+}
+
+pub(crate) fn get_expanded_direct_child_uids(
+  crates: &HashMap<String, Crate>,
+  primitive_name_to_uid: &HashMap<String, UId>,
+  previous_container_id: &UId
+) -> Result<Vec<UId>, ResolveError> {
+  let unexpanded_direct_child_uids: Vec<UId> =
+      match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id) {
+        Ok(x) => x,
+        Err(e) => return Err(ResolveFatal(e))
+      };
+  let mut direct_child_uids: Vec<UId> = vec![];
+  for direct_child_uid in unexpanded_direct_child_uids.clone() {
+    match &lookup_uid(crates, &direct_child_uid).inner {
+      ItemEnum::Import(Import { id: Some(target_module_id), glob: true, .. }) => {
+        // We treat glob imports as if we're directly importing
+        // everything matching them.
+        let target_module_uid =
+            resolve_uid(
+              crates,
+              &primitive_name_to_uid,
+              &UId {
+                crate_name: direct_child_uid.crate_name,
+                id: target_module_id.clone()
+              })?;
+        direct_child_uids.append(
+          &mut get_expanded_direct_child_uids(
+            crates, &primitive_name_to_uid, &target_module_uid)?);
+      }
+      _ => {
+        direct_child_uids.push(direct_child_uid);
+      }
+    }
+  }
+  Ok(direct_child_uids)
+}
+
+pub(crate) fn get_unexpanded_direct_child_uids(
+  crates: &HashMap<String, Crate>,
+  primitive_name_to_uid: &HashMap<String, UId>,
+  container_id: &UId,
+) -> anyhow::Result<Vec<UId>> {
+  let container_item =
+      crates
+          .get(&container_id.crate_name).unwrap()
+          .index.get(&container_id.id).unwrap();
+  match &container_item.inner {
+    ItemEnum::Module(m) => {
+      Ok(
+        m.items.iter()
+            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
+            .collect())
+    },
+    ItemEnum::Trait(t) => {
+      Ok(
+        t.items.iter()
+            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
+            .collect())
+    },
+    ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
+      // TODO: optimize: get_concrete_impls_children is repeating get_concrete_impls's work
+      let mut result = Vec::new();
+      for thing in get_concrete_impls(crates, primitive_name_to_uid, &container_id) {
+        result.push(thing);
+      }
+      for children in get_concrete_impls_children(crates, &primitive_name_to_uid, &container_id)? {
+        result.push(children);
+      }
+      Ok(result)
+    }
+    ItemEnum::Impl(impl_) => {
+      Ok(impl_.items.iter().map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() }).collect())
+    }
+    _ => unimplemented!()
+  }
 }

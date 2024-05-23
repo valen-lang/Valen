@@ -1,7 +1,10 @@
 use std::collections::HashMap;
 use rustdoc_types::{Crate, Impl, Import, Item, ItemEnum};
-use crate::{ItemIndex, resolve_id, ResolveError, SimpleType, SimpleValType, UId};
+use crate::{resolve_id, ResolveError, SimpleType, SimpleValType, UId};
+use crate::indexer::ItemIndex;
 use crate::ResolveError::{NotFound, ResolveFatal};
+use crate::resolve_id::get_expanded_direct_child_uids;
+use crate::resolve_id::get_unexpanded_direct_child_uids;
 
 // Recurses.
 pub fn resolve(
@@ -99,7 +102,7 @@ pub fn resolve(
               for next_foreign_crate_name in &path.path[1..] {
                 let mut maybe_found_child_id: Option<UId> = None;
                 let hay_child_uids =
-                    match crate::get_direct_child_uids(crates, &item_index.primitive_name_to_uid, &result_uid) {
+                    match get_unexpanded_direct_child_uids(crates, &item_index.primitive_name_to_uid, &result_uid) {
                       Ok(x) => x,
                       Err(e) => return Err(ResolveFatal(e))
                     };
@@ -209,8 +212,9 @@ pub fn extend_and_resolve(
         _ => {
           match crates.get(name) {
             None => {
-              let error = format!("Couldn't find any crate named {}", name);
-              return Err(ResolveFatal(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error))));
+              return Err(NotFound);
+              // let error = format!("Couldn't find any crate named {}", name);
+              // return Err(ResolveFatal(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error))));
             }
             Some(crate_) => {
               let root_module_id = &crate_.root;
@@ -231,10 +235,8 @@ pub fn extend_and_resolve(
       // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
 
       let direct_child_uids =
-          match crate::get_direct_child_uids(crates, &item_index.primitive_name_to_uid, &previous_container_id) {
-            Ok(x) => x,
-            Err(e) => return Err(ResolveFatal(e))
-          };
+          get_expanded_direct_child_uids(
+            &crates, &item_index.primitive_name_to_uid, &previous_container_id)?;
       let mut found_items: Vec<(UId, &Item)> = Vec::new();
       for direct_child_uid in direct_child_uids {
         let direct_child_item =
