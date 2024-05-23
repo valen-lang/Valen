@@ -4,7 +4,8 @@ use crate::{resolve_id, ResolveError, SimpleType, SimpleValType, UId};
 use crate::indexer::ItemIndex;
 use crate::ResolveError::{NotFound, ResolveFatal};
 use crate::resolve_id::get_expanded_direct_child_uids;
-use crate::resolve_id::get_unexpanded_direct_child_uids;
+use crate::resolve_id::get_unexpanded_direct_child_uids_exclude_impl_children;
+use crate::resolve_id::include_impls_children;
 
 // Recurses.
 pub fn resolve(
@@ -100,22 +101,29 @@ pub fn resolve(
 
               let mut result_uid = foreign_crate_root_module_id.clone();
               for next_foreign_crate_name in &path.path[1..] {
-                let mut maybe_found_child_id: Option<UId> = None;
-                let hay_child_uids =
-                    match get_unexpanded_direct_child_uids(crates, &item_index.primitive_name_to_uid, &result_uid) {
+                let hey_direct_child_ids =
+                    match get_unexpanded_direct_child_uids_exclude_impl_children(crates, &item_index.primitive_name_to_uid, &result_uid) {
                       Ok(x) => x,
                       Err(e) => return Err(ResolveFatal(e))
                     };
-                for hay_child_id in hay_child_uids {
-                  let hay_child = foreign_crate.index.get(&hay_child_id.id).unwrap();
+                // let hay_child_keys =
+                //     match include_impls_children(crates, &item_index.primitive_name_to_uid, hey_direct_child_ids) {
+                //       Ok(x) => x,
+                //       Err(e) => return Err(ResolveFatal(e))
+                //     };
+                let mut maybe_found_child_ids: Vec<UId> = Vec::new();
+                for hay_child_key in hey_direct_child_ids {
+                  let hay_child = foreign_crate.index.get(&hay_child_key.id).unwrap();
                   if crate::item_has_name(&hay_child, next_foreign_crate_name) {
-                    maybe_found_child_id = Some(hay_child_id);
+                    maybe_found_child_ids.push(hay_child_key.clone());
                   }
                 }
-                if maybe_found_child_id.is_none() {
+                if maybe_found_child_ids.len() == 0 {
+                  unimplemented!();
+                } else if maybe_found_child_ids.len() > 1 {
                   unimplemented!();
                 }
-                result_uid = maybe_found_child_id.unwrap();
+                result_uid = maybe_found_child_ids.get(0).unwrap().clone();
               }
               // Recurse
               assert_ne!(&result_uid, tentative_item_id); // Otherwise infinite loop
@@ -236,7 +244,7 @@ pub fn extend_and_resolve(
 
       let direct_child_uids =
           get_expanded_direct_child_uids(
-            &crates, &item_index.primitive_name_to_uid, &previous_container_id)?;
+            &crates, &item_index.primitive_name_to_uid, &previous_container_id, true)?;
       let mut found_items: Vec<(UId, &Item)> = Vec::new();
       for direct_child_uid in direct_child_uids {
         let direct_child_item =
@@ -272,8 +280,7 @@ pub fn extend_and_resolve(
 
             // Narrow down imports. Sometimes there are two imports pointing to the same place.
             // WARNING: THIS MODIFIES unnarrowed_impls which is read below.
-            let mut narrowed_imports: Vec<(UId, &Import)> = Vec::new();
-            for (import_uid, import) in &unnarrowed_imports {
+            for (import_uid, _import) in &unnarrowed_imports {
               let resolved_import_uid =
                   match resolve_id::resolve_uid(crates, &item_index.primitive_name_to_uid, import_uid) {
                     Ok(thing) => thing,
@@ -304,7 +311,7 @@ pub fn extend_and_resolve(
             for (item_uid, item) in unfiltered_unnarrowed_others {
               match &item.inner {
                 ItemEnum::Import(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
-                ItemEnum::Impl(impl_) => panic!("Impl shouldnt be in this list"),
+                ItemEnum::Impl(_impl_) => panic!("Impl shouldnt be in this list"),
                 ItemEnum::Module(_) | ItemEnum::Struct(_) | ItemEnum::Trait(_) | ItemEnum::Function(_) | ItemEnum::Enum(_) => {
                   unnarrowed_others.push((item_uid, &item));
                 }
@@ -315,8 +322,15 @@ pub fn extend_and_resolve(
               }
             }
 
-            unnarrowed_others.dedup_by_key(|(id, _)| id.clone());
-            unnarrowed_impls.dedup_by_key(|(id, _)| id.clone());
+            // Dedup
+            unnarrowed_others =
+                unnarrowed_others
+                    .into_iter().collect::<HashMap<UId, &Item>>()
+                    .into_iter().collect();
+            unnarrowed_impls =
+                unnarrowed_impls
+                    .into_iter().collect::<HashMap<UId, &Impl>>()
+                    .into_iter().collect();
 
             // Narrow down impls
             let mut impl_matches: Vec<(UId, &Impl, i64, Vec<SimpleType>)> = Vec::new();
@@ -325,13 +339,13 @@ pub fn extend_and_resolve(
                 impl_matches.push((impl_uid.clone(), impl_, score, generics));
               }
             }
-            if impl_matches.len() + narrowed_imports.len() > 1 &&
+            if impl_matches.len() + unnarrowed_others.len() > 1 &&
                 impl_matches.len() > 0 {
               eprintln!("Too many matches! Doing impl overload resolution.");
               for m in &impl_matches {
                 eprintln!("Candidate: {:?}", m);
               }
-              impl_matches.sort_by_key(|(id, impl_, score, generics)| {
+              impl_matches.sort_by_key(|(_id, _impl_, score, _generics)| {
                 -score // We want highest first
               });
               if impl_matches.len() > 1 {
@@ -343,7 +357,7 @@ pub fn extend_and_resolve(
               impl_matches = vec![impl_matches.remove(0)];
             }
 
-            if impl_matches.len() + narrowed_imports.len() > 1 {
+            if impl_matches.len() + unnarrowed_others.len() > 1 {
               let error = format!("Too many matches for name: {}", name);
               return Err(ResolveFatal(anyhow::Error::new(std::io::Error::new(std::io::ErrorKind::Other, error))));
             }
@@ -354,7 +368,7 @@ pub fn extend_and_resolve(
             }
 
             (
-              narrowed_imports,
+              Vec::new(),
               narrowed_impls.into_iter()
                   .map(|(uid, import, score, generics)| {
                     (uid, import, Some((score, generics)))
@@ -404,7 +418,7 @@ pub fn extend_and_resolve(
       let (perhaps_unresolved_uid, generics) =
         if impls.len() > 0 {
           let impl_id = impls[0].0.clone();
-          if let Some((score, generics)) = &impls[0].2 {
+          if let Some((_score, generics)) = &impls[0].2 {
             (impl_id, generics.clone())
           } else {
             (impl_id, Vec::new())

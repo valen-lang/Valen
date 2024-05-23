@@ -1,6 +1,6 @@
-use std::collections::HashMap;
+use std::collections::{HashMap, HashSet};
 use rustdoc_types::{Crate, Import, Item, ItemEnum, Type};
-use crate::{get_concrete_impls, get_concrete_impls_children, ResolveError, UId};
+use crate::{GenealogyKey, get_concrete_impls, get_impl_children, ResolveError, UId};
 use crate::ResolveError::{NotFound, ResolveFatal};
 
 // Recurses.
@@ -19,7 +19,8 @@ pub fn resolve_uid(
         Some(path) => {
           let foreign_crate_name = &path.path[0];
           // let foreign_crate = crates.get(foreign_crate_name).unwrap();
-          let mut current = extend_and_resolve_uid(crates, &primitive_name_to_uid, None, foreign_crate_name)?;
+          let mut current =
+              extend_and_resolve_uid(crates, &primitive_name_to_uid, None, foreign_crate_name)?;
           for i in 1.. path.path.len() {
             let step = &path.path[i];
             current =
@@ -86,9 +87,10 @@ pub fn resolve_uid(
 
               let mut result_uid = foreign_crate_root_module_id.clone();
               for next_foreign_crate_name in &path.path[1..] {
-                let mut found_child_uids = Vec::new();
+                let mut found_child_uids: Vec<UId> = Vec::new();
                 let hay_child_uids =
-                    match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &result_uid) {
+                    match get_unexpanded_direct_child_uids_exclude_impl_children(
+                      crates, &primitive_name_to_uid, &result_uid) {
                       Ok(x) => x,
                       Err(e) => return Err(ResolveFatal(e))
                     };
@@ -150,6 +152,7 @@ pub(crate) fn extend_and_resolve_uid(
     // because they have a special entry in the Type enum.
     // We'll just use the empty string.
     return Ok(crate::tuple_id(&primitive_name_to_uid));
+    // return Ok(ChildKey::Normal { id: crate::tuple_id(&primitive_name_to_uid) });
   }
 
   match previous {
@@ -157,6 +160,7 @@ pub(crate) fn extend_and_resolve_uid(
       match name {
         "bool" | "char" | "f32" | "f64" | "f128" | "i128" | "i16" | "i32" | "i64" | "i8" | "isize" | "str" | "u128" | "u16" | "u32" | "u64" | "u8" | "usize" => {
           Ok(crate::primitive_id(&primitive_name_to_uid, name))
+          // Ok(ChildKey::Normal { id: crate::primitive_id(&primitive_name_to_uid, name) })
         }
         _ => {
           match crates.get(name) {
@@ -167,6 +171,7 @@ pub(crate) fn extend_and_resolve_uid(
             Some(crate_) => {
               let root_module_id = &crate_.root;
               Ok(UId { crate_name: name.to_string(), id: root_module_id.clone() })
+              // Ok(ChildKey::Normal { id: UId { crate_name: name.to_string(), id: root_module_id.clone() }})
             }
           }
         }
@@ -178,16 +183,21 @@ pub(crate) fn extend_and_resolve_uid(
       let previous_crate = crates.get(previous_crate_name).unwrap();
       // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
 
-      let direct_child_uids =
-          match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id) {
+      let direct_child_uids_without_methods =
+          match get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &previous_container_id) {
         Ok(x) => x,
         Err(e) => return Err(ResolveFatal(e))
-      };;
+      };
+      let direct_child_keys =
+          match include_impls_children(crates, &primitive_name_to_uid, direct_child_uids_without_methods) {
+            Ok(x) => x,
+            Err(e) => return Err(ResolveFatal(e))
+          };
+      let direct_child_uids = collapse_children(&direct_child_keys);
+
       let mut found_items: Vec<(UId, &Item)> = Vec::new();
       for direct_child_uid in direct_child_uids {
         let direct_child_item =
-            // seems sus that we're looking in previous crate when we can just
-            // look in direct_child_uid.crate_name
             previous_crate.index.get(&direct_child_uid.id).unwrap();
         if crate::item_has_name(&direct_child_item, name) {
           found_items.push((direct_child_uid, direct_child_item));
@@ -197,7 +207,7 @@ pub(crate) fn extend_and_resolve_uid(
       let mut new_found_items: Vec<(UId, &Item)> = Vec::new();
       for (found_child_unresolved_uid, item) in &found_items {
         let found_child_uid =
-            match resolve_uid(crates, primitive_name_to_uid, found_child_unresolved_uid) {
+            match resolve_uid(crates, primitive_name_to_uid, &found_child_unresolved_uid) {
               Ok(found_child_id) => found_child_id,
               Err(ResolveError::NotFound) => {
                 unimplemented!()
@@ -232,7 +242,7 @@ pub(crate) fn extend_and_resolve_uid(
         //         .map(|(a, b)| (a, b.clone()))
         //         .collect()));
       }
-      let (found_item_uid, found_item) = found_items.remove(0);
+      let (found_item_uid, _found_item) = found_items.remove(0);
 
       let result_step = resolve_uid(crates, &primitive_name_to_uid, &found_item_uid)?;
 
@@ -283,15 +293,15 @@ fn resolve_type_uid(
           Err(ResolveError::ResolveFatal(fatal)) => return Err(fatal)
         }
       }
-      Type::DynTrait(dynTrait) => {
+      Type::DynTrait(_dynTrait) => {
         println!("what");
         unimplemented!();
       }
-      Type::Generic(name) => unimplemented!(),
+      Type::Generic(_name) => unimplemented!(),
       Type::BorrowedRef { type_, .. } => resolve_type_uid(crates, primitive_name_to_uid, type_crate_name, type_)?,
       Type::Primitive(name) => crate::primitive_id(primitive_name_to_uid, name),
       Type::FunctionPointer(_) => unimplemented!(),
-      Type::Tuple(inners) => crate::tuple_id(&primitive_name_to_uid, ),
+      Type::Tuple(_inners) => crate::tuple_id(&primitive_name_to_uid, ),
       Type::Slice(_) => unimplemented!(),
       Type::Array { .. } => unimplemented!(),
       Type::Pat { .. } => unimplemented!(),
@@ -305,13 +315,22 @@ fn resolve_type_uid(
 pub(crate) fn get_expanded_direct_child_uids(
   crates: &HashMap<String, Crate>,
   primitive_name_to_uid: &HashMap<String, UId>,
-  previous_container_id: &UId
+  previous_container_id: &UId,
+  include_impls_children_: bool
 ) -> Result<Vec<UId>, ResolveError> {
-  let unexpanded_direct_child_uids: Vec<UId> =
-      match get_unexpanded_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id) {
+  let unexpanded_direct_child_uids_without_methods: Vec<UId> =
+      match get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &previous_container_id) {
         Ok(x) => x,
         Err(e) => return Err(ResolveFatal(e))
       };
+  assert!(include_impls_children_); // false is unimplemented
+  let unexpanded_direct_child_keys =
+      match include_impls_children(crates, primitive_name_to_uid, unexpanded_direct_child_uids_without_methods) {
+        Ok(x) => x,
+        Err(e) => return Err(ResolveFatal(e))
+      };
+  let unexpanded_direct_child_uids = collapse_children(&unexpanded_direct_child_keys);
+
   let mut direct_child_uids: Vec<UId> = vec![];
   for direct_child_uid in unexpanded_direct_child_uids.clone() {
     match &lookup_uid(crates, &direct_child_uid).inner {
@@ -328,7 +347,7 @@ pub(crate) fn get_expanded_direct_child_uids(
               })?;
         direct_child_uids.append(
           &mut get_expanded_direct_child_uids(
-            crates, &primitive_name_to_uid, &target_module_uid)?);
+            crates, &primitive_name_to_uid, &target_module_uid, true)?);
       }
       _ => {
         direct_child_uids.push(direct_child_uid);
@@ -338,41 +357,129 @@ pub(crate) fn get_expanded_direct_child_uids(
   Ok(direct_child_uids)
 }
 
-pub(crate) fn get_unexpanded_direct_child_uids(
+#[derive(Clone, Debug)]
+pub(crate) enum ChildKey {
+  Normal { id: UId },
+  ImplChild { impl_id: UId, child_id: UId }
+}
+impl ChildKey {
+  pub(crate) fn uid(&self) -> UId {
+    match self {
+      ChildKey::Normal { id: uid } => uid.clone(),
+      ChildKey::ImplChild { child_id, .. } => child_id.clone(),
+    }
+  }
+  fn expect_normal(&self) -> UId {
+    match self {
+      ChildKey::Normal { id: uid } => uid.clone(),
+      ChildKey::ImplChild { .. } => panic!("expect_normal failed!"),
+    }
+  }
+}
+
+pub(crate) fn include_impls_children(
   crates: &HashMap<String, Crate>,
   primitive_name_to_uid: &HashMap<String, UId>,
-  container_id: &UId,
+  original_ids: Vec<UId>
+) -> anyhow::Result<Vec<ChildKey>> {
+  let mut result= Vec::new();
+  for direct_child_id in &original_ids {
+    result.push(ChildKey::Normal{ id: direct_child_id.clone() });
+  }
+
+  for original_id in original_ids {
+    match &lookup_uid(crates, &original_id).inner {
+      ItemEnum::Impl(_) => {
+        let impl_uid = original_id;
+        match get_impl_children(crates, &primitive_name_to_uid, &impl_uid) {
+          Ok(Some(impl_child_uids)) => {
+            for impl_child_uid in impl_child_uids {
+              // println!("Found impl {:?}'s direct child {:?}", impl_uid, impl_child_uid);
+              result.push(
+                ChildKey::ImplChild {
+                  impl_id: impl_uid.clone(),
+                  child_id: impl_child_uid.clone()
+                });
+            }
+          },
+          Ok(None) => {}
+          Err(ResolveError::NotFound) => unimplemented!(),
+          Err(ResolveFatal(e)) => return Err(e)
+        }
+      }
+      _ => {}
+    }
+  }
+
+  Ok(result)
+}
+
+pub(crate) fn collapse_children(
+  original_ids: &Vec<ChildKey>
+) -> Vec<UId> {
+  let mut result: Vec<UId> = Vec::new();
+  for direct_child_id in original_ids {
+    result.push(direct_child_id.uid().clone());
+  }
+  // std::io::Cursor: "0:8994:8529"
+  // has impls "0:2960", "0:2955", "0:2966", "0:2972", "0:2978":
+  // - impl Write for Cursor<&mut [u8]>
+  // - impl<A> Write for Cursor<&mut Vec<u8, A>> where A: Allocator
+  // - impl<const N: usize> Write for Cursor<[u8; N]>
+  // - impl<A> Write for Cursor<Box<[u8], A>> where A: Allocator
+  // - impl<A> Write for Cursor<Vec<u8, A>> where A: Allocator
+  // which all have method write_all "0:3610:7588"
+  // So here we dedup them.
+  result
+      .into_iter().collect::<HashSet<_>>()
+      .into_iter().collect::<Vec<_>>()
+}
+
+// Unexpanded refers to any potential glob imports.
+pub(crate) fn get_unexpanded_direct_child_uids_exclude_impl_children(
+  crates: &HashMap<String, Crate>,
+  primitive_name_to_uid: &HashMap<String, UId>,
+  container_id: &UId
 ) -> anyhow::Result<Vec<UId>> {
+  let include_impls_children = false;
   let container_item =
       crates
           .get(&container_id.crate_name).unwrap()
           .index.get(&container_id.id).unwrap();
   match &container_item.inner {
     ItemEnum::Module(m) => {
-      Ok(
-        m.items.iter()
-            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
-            .collect())
+      let mut result = Vec::new();
+      for child in &m.items {
+        // eprintln!("Found module's direct child {:?}", child);
+        result.push(UId { crate_name: container_id.crate_name.clone(), id: child.clone() });
+      }
+      Ok(result)
     },
     ItemEnum::Trait(t) => {
-      Ok(
-        t.items.iter()
-            .map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() })
-            .collect())
+      let mut result = Vec::new();
+      for child in &t.items {
+        // eprintln!("Found trait's direct child {:?}", child);
+        result.push(UId { crate_name: container_id.crate_name.clone(), id: child.clone() });
+      }
+      Ok(result)
     },
     ItemEnum::Struct(_) | ItemEnum::Enum(_) | ItemEnum::Primitive(_) => {
       // TODO: optimize: get_concrete_impls_children is repeating get_concrete_impls's work
-      let mut result = Vec::new();
-      for thing in get_concrete_impls(crates, primitive_name_to_uid, &container_id) {
-        result.push(thing);
-      }
-      for children in get_concrete_impls_children(crates, &primitive_name_to_uid, &container_id)? {
-        result.push(children);
+      let mut result: Vec<UId> = Vec::new();
+      // eprintln!("Looking through things...");
+      for impl_uid in get_concrete_impls(crates, primitive_name_to_uid, &container_id) {
+        // eprintln!("Found concrete's direct child {:?}", impl_uid);
+        result.push(impl_uid.clone());
       }
       Ok(result)
     }
     ItemEnum::Impl(impl_) => {
-      Ok(impl_.items.iter().map(|x| UId { crate_name: container_id.crate_name.clone(), id: x.clone() }).collect())
+      let mut result = Vec::new();
+      for child in &impl_.items {
+        // eprintln!("Found standalone impl's direct child {:?}", container_id);
+        result.push(UId { crate_name: container_id.crate_name.clone(), id: child.clone() });
+      }
+      Ok(result)
     }
     _ => unimplemented!()
   }

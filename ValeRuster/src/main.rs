@@ -1,3 +1,5 @@
+#![allow(unused_imports)]
+
 extern crate toml;
 
 use std::collections::{HashMap, HashSet};
@@ -287,7 +289,7 @@ fn main() -> Result<(), anyhow::Error> {
               let simple_line_captures =
                   Regex::new(r#"^\s*(#pragma\s+rsuse\s+)?(\S.+)\s*$"#).unwrap()
                       .captures(&line)
-                      .expect(&("Bad line: ".to_owned() + &line));;
+                      .expect(&("Bad line: ".to_owned() + &line));
               let target_type_str =
                   simple_line_captures.get(2)
                       .expect("Blork")
@@ -302,7 +304,7 @@ fn main() -> Result<(), anyhow::Error> {
           type_to_alias.insert(target_type.valtype.clone(), alias.clone());
           alias_to_type.insert(alias.clone(), target_type.valtype.clone());
         }
-        eprintln!("Adding {:?}", target_type);
+        println!("Adding {:?}", target_type);
         type_and_original_line_and_type_str_and_maybe_alias.push(
           (target_type, line.clone(), maybe_alias));
       }
@@ -340,7 +342,7 @@ fn main() -> Result<(), anyhow::Error> {
 
       // TODO: Expensive call to string_path
       type_and_original_line_and_type_str_and_maybe_alias.sort_by_key(|x| x.0.valtype.id.id.0.clone());
-      for (target_type, line, maybe_alias) in &type_and_original_line_and_type_str_and_maybe_alias {
+      for (target_type, _line, _maybe_alias) in &type_and_original_line_and_type_str_and_maybe_alias {
         let target_valtype = &target_type.valtype;
         // let target_name: String = unimplemented!();
         let rustified_type =
@@ -361,7 +363,7 @@ fn main() -> Result<(), anyhow::Error> {
                 valtype_str.clone()
               };
           // TODO: check duplicates, i think we're doing extra work here
-          eprintln!("Sizing primitive {}", &type_str);
+          println!("Sizing primitive {}", &type_str);
           sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
         } else {
           let item = resolve_id::lookup_uid(&crates, &unresolved_id);
@@ -379,12 +381,12 @@ fn main() -> Result<(), anyhow::Error> {
                     valtype_str.clone()
                   };
               // TODO: check duplicates, i think we're doing extra work here
-              eprintln!("Sizing non-primitive {}", &type_str);
+              println!("Sizing non-primitive {}", &type_str);
               sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
             }
             ItemEnum::Function(func) => {
               let mut signature_types: Vec<&Type> = Vec::new();
-              for (name, type_) in &func.decl.inputs {
+              for (_name, type_) in &func.decl.inputs {
                 signature_types.push(type_);
               }
               if let Some(thing) = &func.decl.output {
@@ -397,7 +399,7 @@ fn main() -> Result<(), anyhow::Error> {
                     let generics =
                         assemble_generics(&crates, func, &target_valtype)?;
 
-                    eprintln!("Doing things with type {:?}", target_valtype);
+                    println!("Doing things with type {:?}", target_valtype);
                     let signature_part_type =
                         simplify_type(&crates, &item_index, /*Some(target_valtype),*/ &generics, &target_valtype.id.crate_name, &type_)?;
                     let valtype_str =
@@ -411,7 +413,7 @@ fn main() -> Result<(), anyhow::Error> {
                         } else {
                           valtype_str.clone()
                         };
-                    eprintln!("Sizing {} from {}", &type_str, item.name.as_ref().unwrap_or(&"(none)".to_string()));
+                    println!("Sizing {} from {}", &type_str, item.name.as_ref().unwrap_or(&"(none)".to_string()));
                     // TODO: check duplicates, i think we're doing extra work here
                     sizer_strings.push(get_sizer_string(&valtype_str, &type_str));
 
@@ -432,12 +434,12 @@ fn main() -> Result<(), anyhow::Error> {
         // Check first; we don't want to overwrite it in case the user requested it and
         // perhaps even aliased it.
         if type_and_original_line_and_type_str_and_maybe_alias.iter().find(|x| x.0 == type_).is_none() {
-          eprintln!("Adding {:?}", type_);
+          println!("Adding {:?}", type_);
           type_and_original_line_and_type_str_and_maybe_alias.push((type_, original_line, maybe_alias));
         }
       }
 
-      eprintln!("Running sizer program on {} types...", sizer_strings.len());
+      println!("Running sizer program on {} types...", sizer_strings.len());
 
       let sizer_program_str =
           std::iter::once(common_preamble().to_owned()).into_iter()
@@ -474,7 +476,7 @@ fn main() -> Result<(), anyhow::Error> {
 
       type_and_original_line_and_type_str_and_maybe_alias
           .sort_by_key(|x| x.0.valtype.id.id.0.clone());
-      for (target_type, line, maybe_alias) in &type_and_original_line_and_type_str_and_maybe_alias {
+      for (target_type, _line, maybe_alias) in &type_and_original_line_and_type_str_and_maybe_alias {
         let target_valtype = &target_type.valtype;
         let target_rust_type_string =
             rustify_simple_type(
@@ -523,7 +525,7 @@ fn main() -> Result<(), anyhow::Error> {
               }
             }
             ItemEnum::Function(func) => {
-              eprintln!("Instantiating function {}...", &target_rust_type_string);
+              println!("Instantiating function {}...", &target_rust_type_string);
 
               // let (needle_type, _) =
               //     parse_type(crates, None, &needle_full_name_str)?;
@@ -564,7 +566,7 @@ fn main() -> Result<(), anyhow::Error> {
               }
               let maybe_return_type: Option<SimpleType> =
                   if let Some(output) = &func.decl.output {
-                    eprintln!("name {:?} Generics: {:?}", item.name, generics);
+                    println!("name {:?} Generics: {:?}", item.name, generics);
                     Some(simplify_type(&crates, &item_index, /*Some(target_valtype),*/ &generics, &target_valtype.id.crate_name, &output)?)
                   } else {
                     None
@@ -818,7 +820,7 @@ fn assemble_generics(
       match &parent_concrete_item.inner {
         ItemEnum::Struct(struct_) => &struct_.generics.params,
         ItemEnum::Enum(enum_) => &enum_.generics.params,
-        ItemEnum::Primitive(prim) => &empty,
+        ItemEnum::Primitive(_prim) => &empty,
         _ => panic!("parent id not referring to a concrete?"),
       };
     for (generic_param, generic_arg_type) in parent_concrete_generic_params.iter().zip(&parent.generic_args) {
@@ -921,7 +923,7 @@ fn match_generic_arg_type(
   generic_param: &Type,
   current_height: i64
 ) -> Option<i64> {
-  eprintln!("arg {:?} param {:?}", generic_arg, generic_param);
+  println!("arg {:?} param {:?}", generic_arg, generic_param);
   match (generic_arg, generic_param) {
     (_, Type::Generic(generic_param_name)) => {
       if let Some(existing) = generics.get(generic_param_name) {
@@ -993,7 +995,7 @@ fn match_generic_arg_valtype(
     }
     (
       _,
-      Type::ResolvedPath(rustdoc_types::Path { name: generic_param_name, args: generic_params, .. })
+      Type::ResolvedPath(rustdoc_types::Path { name: generic_param_name, args: _generic_params, .. })
     ) => {
       if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) {
         return None;
@@ -1071,7 +1073,8 @@ fn get_concrete_impls(
                 result.push(uid);
               }
             } else {
-              eprintln!("Primitive not found: {}", name);
+              // DO NOT SUBMIT put this warning back in
+              // eprintln!("Primitive not found: {}", name);
             }
           }
           _ => {}
@@ -1083,100 +1086,93 @@ fn get_concrete_impls(
   return result;
 }
 
-// TODO: optimize: super expensive
-// TODO: look for impls in other crates
-// A concrete is a struct or an enum
-fn get_concrete_impls_children(
+
+fn get_impl_children(
   crates: &HashMap<String, Crate>,
   primitive_name_to_uid: &HashMap<String, UId>,
-  concrete_id: &UId
-) -> Result<Vec<UId>> {
-  let mut result = Vec::new();
-  for impl_uid in get_concrete_impls(crates, primitive_name_to_uid, concrete_id) {
-    let item = resolve_id::lookup_uid(crates, &impl_uid);
-    if let ItemEnum::Impl(impl_) = &item.inner {
-      if let Some(name) = &item.name {
-        if name == "Any" {
-          // Other crates seem to reference core::any::Any but don't have a path to it.
-          // If this becomes a problem with a lot of other things we might have to make
-          // lookup_uid return an optional.
+  impl_uid: &UId
+) -> anyhow::Result<Option<Vec<UId>>, ResolveError> {
+  let item = resolve_id::lookup_uid(crates, &impl_uid);
+  if let ItemEnum::Impl(impl_) = &item.inner {
+    if let Some(name) = &item.name {
+      if name == "Any" {
+        // Other crates seem to reference core::any::Any but don't have a path to it.
+        // If this becomes a problem with a lot of other things we might have to make
+        // lookup_uid return an optional.
+        return Ok(None);
+      }
+    }
+
+    // This impl_.items won't actually have everything.
+    // some impls dont actually implement all the methods in their trait, they instead use the default implementation. for example, this
+    // impl<'a> Iterator for Chars<'a> {
+    //   file:///Users/verdagon/.rustup/toolchains/nightly-aarch64-apple-darwin/share/doc/rust/html/src/core/str/iter.rs.html#38
+    // only overrides 6 methods of Iterator. luckily the doc lists the names of them so we can bring them in from the trait.
+    // TODO: doc better
+    let mut impl_method_uids: Vec<UId> =
+        impl_.items
+            .iter()
+            .map(|x| UId { crate_name: impl_uid.crate_name.clone(), id: x.clone() })
+            .collect();
+
+    let mut impl_methods_names = HashSet::new();
+    for impl_method_uid_unresolved in &impl_method_uids {
+      let impl_method_item =
+          resolve_id::lookup_uid(crates, &impl_method_uid_unresolved);
+      if let Some(name) = &impl_method_item.name {
+        if matches!(impl_method_item.inner, ItemEnum::Function(_)) {
+          impl_methods_names.insert(name);
+        } else {
+          // There are sometimes associated types in there, maybe other things too
+        }
+      }
+    }
+    if let Some(trait_) = &impl_.trait_ {
+      let trait_id = &trait_.id;
+      let trait_unresolved_uid = UId { crate_name: impl_uid.crate_name.clone(), id: trait_id.clone() };
+      let trait_uid =
+          match resolve_id::resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid) {
+            Ok(trait_uid) => trait_uid,
+            Err(ResolveError::NotFound) => {
+              resolve_id::resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid);
+              unimplemented!();
+            }
+            Err(ResolveError::ResolveFatal(fatal)) => {
+              return Err(ResolveError::ResolveFatal(fatal))
+            }
+          };
+      let trait_item = resolve_id::lookup_uid(crates, &trait_uid);
+      let trait_ =
+          match &trait_item.inner {
+            ItemEnum::Trait(trait_) => trait_,
+            _ => panic!("Not an impl!")
+          };
+      // Here, we grab the rest from the parent trait.
+      let mut needed_names = HashSet::new();
+      for name in &impl_.provided_trait_methods {
+        if impl_methods_names.contains(&name) {
           continue;
         }
+        // If we get here, then the impl didn't define this method, so it's
+        // inheriting it from the parent.
+        needed_names.insert(name);
       }
 
-      // This impl_.items won't actually have everything.
-      // some impls dont actually implement all the methods in their trait, they instead use the default implementation. for example, this
-      // impl<'a> Iterator for Chars<'a> {
-      //   file:///Users/verdagon/.rustup/toolchains/nightly-aarch64-apple-darwin/share/doc/rust/html/src/core/str/iter.rs.html#38
-      // only overrides 6 methods of Iterator. luckily the doc lists the names of them so we can bring them in from the trait.
-      // TODO: doc better
-      let mut impl_method_uids: Vec<UId> =
-          impl_.items
-              .iter()
-              .map(|x| UId { crate_name: concrete_id.crate_name.clone(), id: x.clone() })
-              .collect();
-
-      let mut impl_methods_names = HashSet::new();
-      for impl_method_uid_unresolved in &impl_method_uids {
-        let impl_method_item =
-            resolve_id::lookup_uid(crates, &impl_method_uid_unresolved);
-        if let Some(name) = &impl_method_item.name {
-          if matches!(impl_method_item.inner, ItemEnum::Function(_)) {
-            impl_methods_names.insert(name);
-          } else {
-            // There are sometimes associated types in there, maybe other things too
+      for trait_child_id in &trait_.items {
+        let trait_child_uid = UId { crate_name: trait_uid.crate_name.clone(), id: trait_child_id.clone() };
+        let trait_child_item = resolve_id::lookup_uid(crates, &trait_child_uid);
+        if let Some(name) = &trait_child_item.name {
+          if needed_names.contains(name) {
+            impl_method_uids.push(trait_child_uid);
           }
         }
       }
-      if let Some(trait_) = &impl_.trait_ {
-        let trait_id = &trait_.id;
-        let trait_unresolved_uid = UId { crate_name: impl_uid.crate_name.clone(), id: trait_id.clone() };
-        let trait_uid =
-            match resolve_id::resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid) {
-              Ok(trait_uid) => trait_uid,
-              Err(ResolveError::NotFound) => {
-                resolve_id::resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid);
-                unimplemented!();
-              }
-              Err(ResolveError::ResolveFatal(fatal)) => {
-                return Err(fatal)
-              }
-            };
-        let trait_item = resolve_id::lookup_uid(crates, &trait_uid);
-        let trait_ =
-            match &trait_item.inner {
-              ItemEnum::Trait(trait_) => trait_,
-              _ => panic!("Not an impl!")
-            };
-        // Here, we grab the rest from the parent trait.
-        let mut needed_names = HashSet::new();
-        for name in &impl_.provided_trait_methods {
-          if impl_methods_names.contains(&name) {
-            continue;
-          }
-          // If we get here, then the impl didn't define this method, so it's
-          // inheriting it from the parent.
-          needed_names.insert(name);
-        }
-
-        for trait_child_id in &trait_.items {
-          let trait_child_uid = UId { crate_name: trait_uid.crate_name.clone(), id: trait_child_id.clone() };
-          let trait_child_item = resolve_id::lookup_uid(crates, &trait_child_uid);
-          if let Some(name) = &trait_child_item.name {
-            if needed_names.contains(name) {
-              impl_method_uids.push(trait_child_uid);
-            }
-          }
-        }
-
-      }
-
-      result.append(&mut impl_method_uids);
-    } else {
-      panic!("Impl item id isn't impl.");
     }
+
+    return Ok(Some(impl_method_uids));
+  } else {
+    panic!("Impl item id isn't impl.");
   }
-  return Ok(result);
 }
 
 fn get_sizer_string(valtype_str: &str, needle_full_name: &str) -> String {
@@ -1339,7 +1335,7 @@ fn list_struct_and_methods(v: &Crate, struct_name: &String) {
       ItemEnum::Struct(struuct) => {
         match &item.name {
           None => {
-            eprintln!("{:?}", "No name, skipping struct!")
+            eprintln!("No name, skipping struct!")
           }
           Some(name) => {
             if name == struct_name {
@@ -1351,7 +1347,7 @@ fn list_struct_and_methods(v: &Crate, struct_name: &String) {
       ItemEnum::Impl(impl_) => {
         // println!("{:?}", impl_);
         match &impl_.for_ {
-          Type::QualifiedPath { name, args, self_type, trait_ } => {
+          Type::QualifiedPath { name, .. } => {
             if name == struct_name {
               // println!("{:?} {:?}", name, impl_);
             }
@@ -1437,12 +1433,12 @@ fn list_struct_and_methods(v: &Crate, struct_name: &String) {
 }
 
 fn list_generics(v: &Crate) {
-  for (id, item) in &v.index {
+  for (_id, item) in &v.index {
     match &item.inner {
       ItemEnum::Struct(struuct) => {
         match &item.name {
           None => {
-            eprintln!("{:?}", "No name, skipping struct!")
+            eprintln!("No name, skipping struct!")
           }
           Some(name) => {
             if struuct.generics.params.len() > 0 {
@@ -1453,7 +1449,7 @@ fn list_generics(v: &Crate) {
           }
         }
       }
-      ItemEnum::Function(func) => {}
+      ItemEnum::Function(_) => {}
       ItemEnum::Module(_) => {}
       ItemEnum::ExternCrate { .. } => {}
       ItemEnum::Import(_) => {}
@@ -1493,7 +1489,7 @@ fn print_function(
   crates: &HashMap<String, Crate>,
   item_index: &ItemIndex,
   crate_name: &str,
-  context_container: Option<&SimpleValType>,
+  _context_container: Option<&SimpleValType>,
   generics: &HashMap<String, SimpleType>,
   item: &Item,
   func: &Function
@@ -1803,7 +1799,7 @@ fn mangle_simple_type(
   //   1std_vec_Vec__Ref__std_ffi_OsString*
   is_root: bool
 ) -> String {
-  let mut type_ = original_type.clone();
+  let type_ = original_type.clone();
   let has_pointer = type_.imm_ref || type_.mut_ref;
   let unpointered =
     if is_primitive(&item_index.primitive_uid_to_name, &original_type.valtype.id) {
@@ -1821,8 +1817,8 @@ fn mangle_simple_type(
         }
       } else {
         unimplemented!();
-        // Then it's a primitive
-        original_type.valtype.id.id.0.clone()
+        // // Then it's a primitive
+        // original_type.valtype.id.id.0.clone()
       }
     } else {
       mangle_simple_valtype(crates, item_index, &type_.valtype, is_root)
@@ -1852,9 +1848,9 @@ fn crustify_simple_type(
     // Then it's going to be a struct, not a pointer.
     "".to_owned()
   } else {
-    (if type_.imm_ref { "*const ".to_owned() }
+    if type_.imm_ref { "*const ".to_owned() }
     else if type_.mut_ref { "*mut ".to_owned() }
-    else { "".to_owned() })
+    else { "".to_owned() }
   }) +
       &(if let Some(alias) = aliases.get(&type_.valtype) {
         alias.to_owned()
@@ -1926,11 +1922,11 @@ fn rustify_simple_valtype(
         // So lets filter them out.
         func.generics.params.iter()
             .zip(&valtype.generic_args)
-            .filter(|(generic_param, generic_arg)| {
+            .filter(|(generic_param, _generic_arg)| {
               // Yeah, this seems to be the best way to find them...
               !generic_param.name.starts_with("impl ")
             })
-            .map(|(generic_param, generic_arg)| generic_arg.clone())
+            .map(|(_generic_param, generic_arg)| generic_arg.clone())
             .collect::<Vec<SimpleType>>()
       } else {
         valtype.generic_args.clone()
@@ -2113,7 +2109,7 @@ fn simplify_type(
         let generic_args =
             if let Some(outer_args) = &path.args {
               match outer_args.deref() {
-                GenericArgs::AngleBracketed { args, bindings } => {
+                GenericArgs::AngleBracketed { args, .. } => {
                   let mut result = Vec::new();
                   for arg in args {
                     result.push(
@@ -2121,17 +2117,18 @@ fn simplify_type(
                   }
                   result
                 }
-                GenericArgs::Parenthesized { inputs, output } => {
-                  let mut result = Vec::new();
-                  for arg in inputs {
-                    result.push(
-                      simplify_type(crates, &item_index, generics, unimplemented!(), arg)?);
-                  }
-                  for output in output {
-                    result.push(
-                      simplify_type(crates, &item_index, generics, unimplemented!(), output)?);
-                  }
-                  result
+                GenericArgs::Parenthesized { inputs: _, output: _ } => {
+                  unimplemented!();
+                  // let mut result = Vec::new();
+                  // for arg in inputs {
+                  //   result.push(
+                  //     simplify_type(crates, &item_index, generics, unimplemented!(), arg)?);
+                  // }
+                  // for _output in output {
+                  //   result.push(
+                  //     simplify_type(crates, &item_index, generics, unimplemented!(), output)?);
+                  // }
+                  // result
                 }
               }
             } else {
@@ -2160,7 +2157,7 @@ fn simplify_type(
           }
         }
       }
-      Type::DynTrait(dynTrait) => {
+      Type::DynTrait(_dynTrait) => {
         println!("what");
         unimplemented!();
       }
@@ -2169,7 +2166,7 @@ fn simplify_type(
             .expect(&("Unknown generic: ".to_owned() + &name))
             .clone()
       }
-      Type::BorrowedRef { lifetime, mutable, type_ } => {
+      Type::BorrowedRef { mutable, type_, .. } => {
         let mut thing =
             simplify_type(crates, &item_index, generics, type_crate_name, type_)?;
         if *mutable {
@@ -2210,8 +2207,8 @@ fn simplify_type(
         }
       }
       Type::Slice(inner) => {
-        eprintln!("generics: {:?}", generics);
-        eprintln!("slice inner: {:?}", inner);
+        println!("generics: {:?}", generics);
+        println!("slice inner: {:?}", inner);
         let inner_simple_type =
             simplify_type(crates, &item_index, generics, type_crate_name, inner)?;
         SimpleType {
