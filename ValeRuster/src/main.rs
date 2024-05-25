@@ -340,12 +340,12 @@ fn main() -> Result<(), anyhow::Error> {
       cbindgen_toml_contents += "cpp_compat = true\n";
       cbindgen_toml_contents += "\n";
       cbindgen_toml_contents += "header = \"\"\"\n";
-      cbindgen_toml_contents += "#define CBINDGEN_ALIGNED(n) __attribute__ ((aligned(n)))\n";
+      cbindgen_toml_contents += "#define VALIGN(n) __attribute__ ((aligned(n)))\n";
       cbindgen_toml_contents += "#include <stdalign.h>\n";
       cbindgen_toml_contents += "\"\"\"\n";
       cbindgen_toml_contents += "\n";
       cbindgen_toml_contents += "[layout]\n";
-      cbindgen_toml_contents += "aligned_n = \"CBINDGEN_ALIGNED\"\n";
+      cbindgen_toml_contents += "aligned_n = \"VALIGN\"\n";
 
       fs::write(output_dir_path.to_owned() + "/cbindgen.toml", cbindgen_toml_contents)
           .with_context(|| "Failed to write ".to_owned() + output_dir_path + "/Cargo.toml")?;
@@ -587,10 +587,19 @@ fn main() -> Result<(), anyhow::Error> {
 
               let mut params: Vec<(&String, SimpleType)> = Vec::new();
               for (name, param_type) in func.decl.inputs.iter() {
-                params.push(
-                  (
-                    name,
-                    simplify_type(&crates, &item_index, /*Some(target_valtype),*/ &generics, &target_valtype.id.crate_name, param_type)?));
+                let mut param =
+                    simplify_type(
+                      &crates, &item_index, &generics, &target_valtype.id.crate_name, param_type)?;
+                if func.decl.inputs.len() == 1 &&
+                    (param.valtype.id == item_index.drop_method_uid ||
+                    item.name == Some("drop".to_owned())) {
+                  // We know this is the right param because we're here and there's only 1.
+
+                  // Take the &mut off self in drop methods, we're going to send a value into
+                  // std::mem::drop instead.
+                  param.mut_ref = false;
+                }
+                params.push((name, param));
               }
               let maybe_return_type: Option<SimpleType> =
                   if let Some(output) = &func.decl.output {
@@ -1062,7 +1071,7 @@ fn filter_out_macro_uids(
   return narrowed_found_child_ids;
 }
 
-fn item_has_name(direct_child_item: &&Item, name: &str) -> bool {
+fn item_has_name(direct_child_item: &Item, name: &str) -> bool {
   match &direct_child_item.inner {
     ItemEnum::Import(import) => {
       import.name == name
@@ -1077,6 +1086,14 @@ fn item_has_name(direct_child_item: &&Item, name: &str) -> bool {
       direct_child_item.name.as_ref().map(|x| &x[..]) == Some(name)
     }
   }
+}
+
+fn get_name_for_uid(crates: &HashMap<String, Crate>, uid: &UId) -> Option<String> {
+  if uid == &lifetime_id() {
+    return None
+  }
+  let item = lookup_uid(crates, uid);
+  return item.name.clone();
 }
 
 // TODO: optimize: super expensive
@@ -2031,7 +2048,8 @@ fn rustify_simple_type(
   type_: &SimpleType,
   maybe_func: Option<&Function>
 ) -> Result<String> {
-  if type_.valtype.id == item_index.drop_method_uid {
+  if type_.valtype.id == item_index.drop_method_uid ||
+      get_name_for_uid(crates, &type_.valtype.id) == Some("drop".to_owned()) {
     return Ok("std::mem::drop".to_string());
   }
   if let Some(parent_impl) = &type_.valtype.maybe_parent_impl {
