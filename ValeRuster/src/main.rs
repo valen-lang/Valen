@@ -25,6 +25,11 @@ mod resolve;
 mod resolve_id;
 mod indexer;
 
+struct Measurements {
+  size: usize,
+  alignment: usize
+}
+
 // TODO: optimize: All over the place we're calling .keys() and .collect()
 // on some crate.index.
 fn tuple_id(
@@ -333,6 +338,15 @@ fn main() -> Result<(), anyhow::Error> {
       cbindgen_toml_contents += "include_version = true\n";
       cbindgen_toml_contents += "language = \"C\"\n";
       cbindgen_toml_contents += "cpp_compat = true\n";
+      cbindgen_toml_contents += "\n";
+      cbindgen_toml_contents += "header = \"\"\"\n";
+      cbindgen_toml_contents += "#define CBINDGEN_ALIGNED(n) __attribute__ ((aligned(n)))\n";
+      cbindgen_toml_contents += "#include <stdalign.h>\n";
+      cbindgen_toml_contents += "\"\"\"\n";
+      cbindgen_toml_contents += "\n";
+      cbindgen_toml_contents += "[layout]\n";
+      cbindgen_toml_contents += "aligned_n = \"CBINDGEN_ALIGNED\"\n";
+
       fs::write(output_dir_path.to_owned() + "/cbindgen.toml", cbindgen_toml_contents)
           .with_context(|| "Failed to write ".to_owned() + output_dir_path + "/Cargo.toml")?;
 
@@ -456,19 +470,33 @@ fn main() -> Result<(), anyhow::Error> {
 
       let sizer_program_output_str =
           get_rust_program_output(&cargo_path, output_dir_path, &sizer_program_str)?;
-      let mut target_type_str_to_size: HashMap<String, usize> = HashMap::new();
+      let mut target_type_str_to_measurements: HashMap<String, Measurements> = HashMap::new();
       for line in sizer_program_output_str.split("\n") {
-        let parts =
+        let root_parts: Vec<String> =
             line.split("=").map(|x| x.to_string()).collect::<Vec<_>>();
         let name: String =
-            parts.get(0)
+            root_parts.get(0)
                 .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
                 .to_owned();
-        let size: usize =
-            parts.get(1)
+        let measurement_parts: Vec<String> =
+            root_parts.get(1)
                 .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
-                .parse()?;
-        target_type_str_to_size.insert(name, size);
+                .split(",")
+                .map(|x| x.to_string())
+                .collect::<Vec<_>>();
+        let size: usize =
+            measurement_parts.get(0)
+                .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
+                .parse::<usize>()
+                .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
+                .to_owned();
+        let alignment: usize =
+            measurement_parts.get(1)
+                .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
+                .parse::<usize>()
+                .with_context(|| "Invalid output from sizer program: ".to_owned() + &line)?
+                .to_owned();
+        target_type_str_to_measurements.insert(name, Measurements{ size: size, alignment: alignment });
       }
 
       let mut struct_strings: Vec<String> = Vec::new();
@@ -491,17 +519,17 @@ fn main() -> Result<(), anyhow::Error> {
           // Only instantiate if we're asking for a reference to a slice, or a non-reference to a non-slice.
           if asking_for_ref == is_dst {
             let type_str = rustify_simple_valtype(&crates, &item_index, &target_valtype, None);
-            let size =
-                target_type_str_to_size.get(&type_str)
+            let measurements =
+                target_type_str_to_measurements.get(&type_str)
                     .with_context(|| {
-                      "Couldn't find size entry for struct: ".to_owned() + &type_str
+                      "Couldn't find measurements entry for struct: ".to_owned() + &type_str
                     })?
                     .clone();
             // TODO: dedupe with other call to instantiate_struct
             struct_strings.push(
               instantiate_struct(
                 &crates, &item_index,
-                &target_type, &maybe_alias, size)?);
+                &target_type, &maybe_alias, measurements)?);
           }
         } else {
           let item = resolve_id::lookup_uid(&crates, &unresolved_id);
@@ -513,7 +541,7 @@ fn main() -> Result<(), anyhow::Error> {
                 eprintln!("Instantiating type {}...", &target_rust_type_string);
                 let type_str = rustify_simple_valtype(&crates, &item_index, &target_valtype, None);
                 let size =
-                    target_type_str_to_size.get(&type_str)
+                    target_type_str_to_measurements.get(&type_str)
                         .with_context(|| {
                           "Couldn't find size entry for struct: ".to_owned() + &type_str
                         })?
@@ -1187,7 +1215,9 @@ fn get_sizer_string(valtype_str: &str, needle_full_name: &str) -> String {
   let mut rust_src = String::with_capacity(1000);
   rust_src += "  println!(\"";
   rust_src += valtype_str;
-  rust_src += "={}\", std::mem::size_of::<";
+  rust_src += "={},{}\", std::mem::size_of::<";
+  rust_src += needle_full_name;
+  rust_src += ">(), std::mem::align_of::<";
   rust_src += needle_full_name;
   rust_src += ">());";
   return rust_src;
@@ -1216,7 +1246,7 @@ fn instantiate_struct(
   item_index: &ItemIndex,
   needle_type: &SimpleType,
   maybe_alias: &Option<String>,
-  size: usize
+  measurements: &Measurements
 ) -> anyhow::Result<String> {
   let default_name =
       mangle_simple_valtype(
@@ -1225,16 +1255,19 @@ fn instantiate_struct(
 
 
   let mut builder = String::with_capacity(1000);
-  builder += "#[repr(C)]\n";
+  builder += "#[repr(C, align(";
+  builder += &measurements.alignment.to_string();
+  builder += "))]\n";
+  // builder += "#[repr(C)]\n";
   builder += "pub struct ";
   builder += as_;
   builder += " (std::mem::MaybeUninit<[u8; ";
-  builder += &size.to_string();
+  builder += &measurements.size.to_string();
   builder += "]>);\n";
   builder += "const_assert_eq!(std::mem::size_of::<";
   builder += &rustify_simple_type(&crates, &item_index, &needle_type, None)?;
   builder += ">(), ";
-  builder += &size.to_string();
+  builder += &measurements.size.to_string();
   builder += ");\n";
 
   return Ok(builder);
@@ -1277,20 +1310,26 @@ fn instantiate_func(
     rust_builder += &"  ";
     rust_builder += &param_name;
     rust_builder += &"_c: ";
+    // rust_builder += "std::mem::MaybeUninit<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &param_type, true);
+    // rust_builder += ">";
     rust_builder += ",\n";
   }
   rust_builder += ")";
   if let Some(return_type_simple) = &maybe_output_type {
     rust_builder += " -> ";
+    // rust_builder += "std::mem::MaybeUninit<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &return_type_simple, true);
+    // rust_builder += ">";
   }
   rust_builder += " {\n";
   for (param_name, param_type) in params {
     rust_builder += "  const_assert_eq!(std::mem::size_of::<";
     rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None)?;
     rust_builder += ">(), std::mem::size_of::<";
+    // rust_builder += "std::mem::MaybeUninit<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &param_type, true);
+    // rust_builder += ">";
     rust_builder += ">());\n";
 
     rust_builder += "  let ";
@@ -1299,7 +1338,9 @@ fn instantiate_func(
     rust_builder += &rustify_simple_type(&crates, &item_index, &param_type, None)?;
     rust_builder += " = unsafe { mem::transmute(";
     rust_builder += param_name;
-    rust_builder += "_c) };\n";
+    rust_builder += "_c";
+    // rust_builder += ".assume_init()";
+    rust_builder += ") };\n";
 
   }
 
@@ -1321,11 +1362,15 @@ fn instantiate_func(
     rust_builder += "  const_assert_eq!(std::mem::size_of::<";
     rust_builder += &rustify_simple_type(&crates, &item_index, &return_type_simple, None)?;
     rust_builder += ">(), std::mem::size_of::<";
+    // rust_builder += "std::mem::MaybeUninit<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &return_type_simple, true);
+    // rust_builder += ">";
     rust_builder += ">());\n";
 
     rust_builder += "  let result_c: ";
+    // rust_builder += "std::mem::MaybeUninit<";
     rust_builder += &crustify_simple_type(crates, item_index, aliases, &return_type_simple, true);
+    // rust_builder += ">";
     rust_builder += " = unsafe { mem::transmute(result_rs) };\n";
     rust_builder += "  return result_c;\n";
   }
