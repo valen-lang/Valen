@@ -343,9 +343,9 @@ fn infer_missing_owners(
           let direct_child_keys =
             include_impls_children(
               crates, &primitive_name_to_uid, direct_child_uids_without_methods)?;
-          println!("Direct child keys: {:?}", &direct_child_keys);
+          // println!("Direct child keys: {:?}", &direct_child_keys);
           let direct_child_uids = collapse_children(&direct_child_keys);
-          println!("Direct child uids: {:?}", &direct_child_uids);
+          // println!("Direct child uids: {:?}", &direct_child_uids);
           // Now look for all their methods.
           let mut method_keys = Vec::new();
           for direct_child_uid in direct_child_uids {
@@ -498,7 +498,7 @@ fn determine_ultimate_owner(
                 .map(|id| (id.clone(), lookup_uid(crates, id)))
                 .collect::<Vec<(UId, &Item)>>();
         parent_uids_and_items.sort_by_key(|(_uid, item)| item.span.as_ref().unwrap().filename.to_str().as_ref().unwrap().len());
-        println!("Heuristic, estimating owner for {:?} is {:?}", item_uid, parent_uids_and_items.iter().next().unwrap().clone());
+        // println!("Heuristic, estimating owner for {:?} is {:?}", item_uid, parent_uids_and_items.iter().next().unwrap().clone());
         parent_uids_and_items
             .into_iter()
             .map(|x| x.0)

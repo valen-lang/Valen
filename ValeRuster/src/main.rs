@@ -609,10 +609,16 @@ mod capi;
 
       let output = Command::new(&cargo_path)
           .args(&[
+            "+nightly",
             "cbuild",
+            "--release",
             &("--manifest-path=".to_string() + output_dir_path + "/Cargo.toml"),
             "--destdir=clibthing",
+            "--target", "aarch64-apple-darwin",
+            "-Z", "build-std-features=panic_immediate_abort",
+            "-Z", "build-std=std,panic_abort",
             "--library-type", "staticlib"])
+          .env("RUSTFLAGS", "-Zlocation-detail=none")
           .output()
           .with_context(|| "Failed to execute cbuild command")?;
       if output.status.code() == Some(0) {
@@ -868,7 +874,7 @@ fn impl_from_matches_generic_args(
       if let Some(trait_) = &impl_.trait_ {
         if let Some(args) = &trait_.args {
           match args.as_ref() {
-            GenericArgs::AngleBracketed { args: args, .. } => {
+            GenericArgs::AngleBracketed { args, .. } => {
               args
             }
             GenericArgs::Parenthesized { .. } => unimplemented!(),
@@ -964,6 +970,18 @@ fn match_generic_arg_valtype(
   current_height: i64,
 ) -> Option<i64> {
   match (generic_arg, generic_param) {
+    // The order of these cases is important, for example we want to match
+    // any type to a generic variable T before we do anything else.
+    (_, Type::Generic(generic_param_name)) => {
+      generics.insert(
+        generic_param_name.clone(),
+        SimpleType {
+          imm_ref: false,
+          mut_ref: false,
+          valtype: generic_arg.clone()
+        });
+      Some(current_height)
+    }
     (_, _) if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) => {
       if let Type::Primitive(generic_param_primitive_name) = generic_param {
         if item_index.primitive_uid_to_name.get(&generic_arg.id).unwrap() == generic_param_primitive_name {
@@ -982,16 +1000,6 @@ fn match_generic_arg_valtype(
       } else {
         None
       }
-    }
-    (_, Type::Generic(generic_param_name)) => {
-      generics.insert(
-        generic_param_name.clone(),
-        SimpleType {
-          imm_ref: false,
-          mut_ref: false,
-          valtype: generic_arg.clone()
-        });
-      Some(current_height)
     }
     (
       _,
@@ -1220,9 +1228,9 @@ fn instantiate_struct(
   builder += "#[repr(C)]\n";
   builder += "pub struct ";
   builder += as_;
-  builder += " ([u8; ";
+  builder += " (std::mem::MaybeUninit<[u8; ";
   builder += &size.to_string();
-  builder += "]);\n";
+  builder += "]>);\n";
   builder += "const_assert_eq!(std::mem::size_of::<";
   builder += &rustify_simple_type(&crates, &item_index, &needle_type, None)?;
   builder += ">(), ";
@@ -1303,7 +1311,7 @@ fn instantiate_func(
   }
   rust_builder += &rustify_simple_type(&crates, &item_index, needle_type, Some(func))?;
   rust_builder += "(";
-  for (param_name, param_type) in params {
+  for (param_name, _param_type) in params {
     rust_builder += param_name;
     rust_builder += "_rs,";
   }
@@ -1330,7 +1338,7 @@ fn instantiate_func(
 }
 
 fn list_struct_and_methods(v: &Crate, struct_name: &String) {
-  for (id, item) in &v.index {
+  for (_id, item) in &v.index {
     match &item.inner {
       ItemEnum::Struct(struuct) => {
         match &item.name {
