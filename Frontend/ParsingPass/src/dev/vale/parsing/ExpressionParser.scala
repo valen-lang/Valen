@@ -690,10 +690,6 @@ class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptio
         case Ok(x) => x
       }
 
-    if (!iter.trySkipSymbol(';')) {
-      return Err(BadExpressionEnd(iter.getPos()))
-    }
-
     Ok(Some(DestructPE(RangeL(begin, iter.getPrevEndPos()), innerExpr)))
   }
 
