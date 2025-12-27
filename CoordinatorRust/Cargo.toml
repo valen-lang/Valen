@@ -1,0 +1,10 @@
+[package]
+name = "CoordinatorRust"
+version = "0.1.0"
+edition = "2021"
+
+[[bin]]
+name = "valec"
+path = "src/main.rs"
+
+[dependencies]

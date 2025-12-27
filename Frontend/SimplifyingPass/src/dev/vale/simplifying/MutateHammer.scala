@@ -31,7 +31,7 @@ class MutateHammer(
           translateMundaneLocalMutate(hinputs, hamuts, currentFunctionHeader, locals, sourceExprResultLine, varId)
         }
         case LocalLookupIE(AddressibleLocalVariableI(varId, variability, reference), _) => {
-          vimpl()
+          // vimpl()
           translateAddressibleLocalMutate(hinputs, hamuts, currentFunctionHeader, locals, sourceExprResultLine, sourceResultPointerTypeH, varId, variability, reference)
         }
         case ReferenceMemberLookupIE(_,structExpr2, memberName, _, _) => {
@@ -229,7 +229,7 @@ class MutateHammer(
     val loadBoxNode =
       LocalLoadH(
         local,
-        vimpl(/*BorrowH*/),
+        MutableBorrowH, //vimpl(), // BorrowH
         nameH)
     val storeNode =
         MemberStoreH(

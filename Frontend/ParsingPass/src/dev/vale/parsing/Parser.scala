@@ -714,8 +714,43 @@ class ParserCompilation(
     val foundCodeMap = new FileCoordinateMap[String]()
     val parsedMap = new FileCoordinateMap[(FileP, Vector[RangeL])]()
 
+    // First, load all .vpst files directly, bypassing lexing and parsing
+    neededPackages.foreach(packageCoord => {
+      resolver.resolve(packageCoord) match {
+        case None => // Package not found, will be handled by ParseAndExplore
+        case Some(filepathToCode) => {
+          filepathToCode.foreach({ case (filepath, code) =>
+            if (filepath.endsWith(".vpst")) {
+              val fileCoord = interner.intern(FileCoordinate(packageCoord, filepath))
+              foundCodeMap.put(fileCoord, code)
+              
+              // Load the .vpst file using ParsedLoader
+              val parsedLoader = new ParsedLoader(interner)
+              parsedLoader.load(code) match {
+                case Err(e) => return Err(FailedParse(code, fileCoord, e))
+                case Ok(fileP) => {
+                  // .vpst files don't have comment ranges tracked by Rust parser yet
+                  parsedMap.put(fileCoord, (fileP, Vector.empty))
+                }
+              }
+            }
+          })
+        }
+      }
+    })
+
+    // Create a resolver that filters out .vpst files (already processed above)
+    val valeOnlyResolver = new IPackageResolver[Map[String, String]] {
+      override def resolve(packageCoord: PackageCoordinate): Option[Map[String, String]] = {
+        resolver.resolve(packageCoord).map(filepathToCode => {
+          filepathToCode.filter({ case (filepath, _) => filepath.endsWith(".vale") })
+        })
+      }
+    }
+
+    // Now process .vale files through the normal lex/parse flow
     ParseAndExplore.parseAndExplore[IDenizenP, Unit](
-      interner, keywords, opts, parser, packagesToBuild.toVector, resolver,
+      interner, keywords, opts, parser, packagesToBuild.toVector, valeOnlyResolver,
       (fileCoord, code, imports, denizen) => denizen,
       (fileCoord, code, commentRanges, denizens) => {
         foundCodeMap.put(fileCoord, code)

@@ -9,6 +9,7 @@ import org.scalatest._
 
 class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUtils {
 
+  // This test does not pass yet, use #[ignore].
   test("Func with func bound with missing 'where'") {
     // It parses that func moo as a templex, and apparently a return can be a templex
     compileDenizen("func sum<T>() func moo(&T)void {3}").expectErr() match {

@@ -211,9 +211,9 @@ class ParsedLoader(interner: Interner) {
   }
 
   def loadPackageCoord(jobj: JObject): PackageCoordinate = {
-    PackageCoordinate(
+    interner.intern(PackageCoordinate(
       interner.intern(StrI(getStringField(jobj, "module"))),
-      getArrayField(jobj, "packages").map(expectString).map(s => interner.intern(StrI(s.s))))
+      getArrayField(jobj, "packages").map(expectString).map(s => interner.intern(StrI(s.s)))))
   }
 
   def loadParams(jobj: JObject): ParamsP = {
@@ -701,7 +701,9 @@ class ParsedLoader(interner: Interner) {
     getType(jobj) match {
       case "ReadOnlyRuneAttribute" => ReadOnlyRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
       case "ReadWriteRuneAttribute" => ReadWriteRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
-      case "ImmutableRuneAttribute" => ImmutableRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
+      case "ImmutableRuneAttribute" => ImmutableRuneAttributeP(loadRange(getObjectField(jobj, "range")))
+      case "MutableRuneAttribute" => MutableRuneAttributeP(loadRange(getObjectField(jobj, "range")))
+      case "ImmutableRegionRuneAttribute" => ImmutableRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
       case "AdditiveRuneAttribute" => AdditiveRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
       case "PoolRuneAttribute" => PoolRuneAttributeP(loadRange(getObjectField(jobj, "range")))
       case "ArenaRuneAttribute" => ArenaRuneAttributeP(loadRange(getObjectField(jobj, "range")))

@@ -5,7 +5,7 @@ import dev.vale.simplifying.VonHammer
 import dev.vale.highlighter.{Highlighter, Spanner}
 import dev.vale.finalast.{PackageH, ProgramH}
 import dev.vale.options.GlobalOptions
-import dev.vale.parsing.{ParseErrorHumanizer, ParserVonifier}
+import dev.vale.parsing.{ParseErrorHumanizer, ParsedLoader, ParserVonifier}
 import dev.vale.postparsing.PostParserErrorHumanizer
 import dev.vale.typing.CompilerErrorHumanizer
 import dev.vale.testvm.Vivem
@@ -54,6 +54,7 @@ object PassManager {
 //    modulePaths: Map[String, String],
 //    packagesToBuild: Vector[PackageCoordinate],
     outputDirPath: Option[String],
+    inputVpstDir: Option[String],
     benchmark: Boolean,
     outputVPST: Boolean,
     outputVAST: Boolean,
@@ -73,6 +74,10 @@ object PassManager {
       case "--output_dir" :: value :: tail => {
         vcheck(opts.outputDirPath.isEmpty, "Multiple output files specified!", InputException)
         parseOpts(interner, opts.copy(outputDirPath = Some(value)), tail)
+      }
+      case "--input_vpst" :: value :: tail => {
+        vcheck(opts.inputVpstDir.isEmpty, "Multiple --input_vpst specified!", InputException)
+        parseOpts(interner, opts.copy(inputVpstDir = Some(value)), tail)
       }
       case "--output_vpst" :: value :: tail => {
         parseOpts(interner, opts.copy(outputVPST = value.toBoolean), tail)
@@ -155,10 +160,10 @@ object PassManager {
 //    println("resolving " + packageCoord + " with inputs:\n" + inputs)
 
     val sourceInputs =
-      inputs.zipWithIndex.filter(_._1.packageCoord(interner).module == module).flatMap({
-        case (SourceInput(_, name, code), index) if (packages == Vector.empty) => {
-          // All .vpst and .vale direct inputs are considered part of the root paackage.
-          Vector((index + "(" + name + ")" -> code))
+      inputs.zipWithIndex.filter(_._1.packageCoord(interner) == packageCoord).flatMap({
+        case (SourceInput(_, name, code), index) => {
+          // .vpst and .vale direct inputs
+          Vector((name -> code))
         }
         case (mpi @ ModulePathInput(_, modulePath), _) => {
 //          println("checking with modulepathinput " + mpi)
@@ -203,13 +208,36 @@ object PassManager {
 
     val startTime = java.lang.System.currentTimeMillis()
 
+    // If --input_vpst is provided, load .vpst files
+    // The Rust parser already filtered to only needed packages via import-driven parsing
+    val (allInputs, packageCoords) = opts.inputVpstDir match {
+      case Some(vpstDir) => {
+        val vpstFiles = new java.io.File(vpstDir).listFiles().filter(_.getName.endsWith(".vpst"))
+        val vpstInputs = vpstFiles.map(file => {
+          val code = Source.fromFile(file).mkString
+          // Parse just enough to get the package coordinate
+          val parsedLoader = new ParsedLoader(interner)
+          val fileP = parsedLoader.load(code) match {
+            case Err(e) => return Err(s"Failed to load ${file.getName}: $e")
+            case Ok(f) => f
+          }
+          val packageCoord = fileP.fileCoord.packageCoordinate
+          SourceInput(packageCoord, file.getPath, code)
+        }).toVector
+        // Build all packages from vpst files (already filtered by Rust parser)
+        val coords = vpstInputs.map(_.packageCoord(interner)).distinct
+        (opts.inputs ++ vpstInputs, coords)
+      }
+      case None => (opts.inputs, opts.inputs.map(_.packageCoord(interner)).distinct)
+    }
+
     val compilation =
       new FullCompilation(
         interner,
         keywords,
-        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ opts.inputs.map(_.packageCoord(interner)).distinct,
+        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
         Builtins.getCodeMap(interner, keywords)
-          .or(packageCoord => resolvePackageContents(interner, opts.inputs, packageCoord)),
+          .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
         passmanager.FullCompilationOptions(
           GlobalOptions(
             sanityCheck = opts.sanityCheck,
@@ -373,6 +401,7 @@ object PassManager {
           Options(
             inputs = Vector.empty,
             outputDirPath = None,
+            inputVpstDir = None,
             benchmark = false,
             outputVPST = true,
             outputVAST = true,
@@ -386,7 +415,7 @@ object PassManager {
             debugOutput = false),
           args.toList)
       vcheck(opts.mode.nonEmpty, "No mode!", InputException)
-      vcheck(opts.inputs.nonEmpty, "No input files!", InputException)
+      vcheck(opts.inputs.nonEmpty || opts.inputVpstDir.nonEmpty, "No input files!", InputException)
 
       opts.mode.get match {
         case "highlight" => {

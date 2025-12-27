@@ -1,0 +1,2235 @@
+use std::sync::Arc;
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::lexing::ast::*;
+use crate::lexing::errors::ParseError;
+use crate::parsing::ast::*;
+use crate::parsing::scramble_iterator::ScrambleIterator;
+use crate::parsing::templex_parser::TemplexParser;
+use crate::parsing::pattern_parser::PatternParser;
+
+type ParseResult<T> = Result<T, ParseError>;
+
+// Helper enum for expression parsing
+#[derive(Clone, Debug)]
+enum ExpressionElement {
+    Data(IExpressionPE),
+    BinaryCall(NameP, i32), // name and precedence
+}
+
+#[derive(Clone)]
+pub struct ExpressionParser {
+    pub keywords: Arc<Keywords>,
+}
+
+impl ExpressionParser {
+    pub fn new(keywords: Arc<Keywords>) -> Self {
+        ExpressionParser {
+            keywords,
+        }
+    }
+
+    /// Parse a block from a curlied expression
+    /// Mirrors parseBlock in ExpressionParser.scala lines 586-589
+    pub fn parse_block(
+        &mut self,
+        block_l: &CurliedLE,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        let mut iter = ScrambleIterator::new(block_l.contents.clone());
+        self.parse_block_contents(&mut iter, false, templex_parser, pattern_parser)
+    }
+
+    /// Parse block contents
+    /// Mirrors parseBlockContents in ExpressionParser.scala lines 590-640
+    pub fn parse_block_contents(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        let mut statements = Vec::new();
+
+        // Parse statements (lines 603-615)
+        while match iter.peek() {
+            None => false,
+            Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
+            Some(_) => {
+                let statement = self.parse_statement(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+                statements.push(statement);
+                true
+            }
+        } {}
+
+        // If we just ate a semicolon, but there's nothing after it, then add a void (lines 617-633)
+        if iter.has_next() {
+            match iter.peek() {
+                Some(INodeLEEnum::Symbol(SymbolLE { c: ')', .. })) => {
+                    // vcurious() - unexpected but continue
+                }
+                Some(INodeLEEnum::Symbol(SymbolLE { c: ']', .. })) => {
+                    // vcurious() - unexpected but continue
+                }
+                _ => {}
+            }
+        } else {
+            if let Some(prev) = iter.peek_prev() {
+                if let INodeLEEnum::Symbol(SymbolLE { range, c: ';' }) = prev {
+                    statements.push(IExpressionPE::Void(VoidPE {
+                        range: RangeL {
+                            begin: range.end,
+                            end: range.end,
+                        },
+                    }));
+                }
+            }
+        }
+
+        // Return result (lines 635-639)
+        match statements.len() {
+            0 => Ok(IExpressionPE::Void(VoidPE {
+                range: RangeL {
+                    begin: iter.get_pos(),
+                    end: iter.get_pos(),
+                },
+            })),
+            1 => Ok(statements.into_iter().next().unwrap()),
+            _ => Ok(IExpressionPE::Consecutor(ConsecutorPE { inners: statements })),
+        }
+    }
+
+    /// Get operator precedence
+    /// Mirrors getPrecedence in ExpressionParser.scala lines 831-844
+    /// Get operator precedence
+    /// Mirrors getPrecedence in ExpressionParser.scala lines 831-843
+    pub fn get_precedence(&self, str: &StrI) -> i32 {
+        if *str == self.keywords.dot_dot {
+            6
+        } else if *str == self.keywords.asterisk || *str == self.keywords.slash {
+            5
+        } else if *str == self.keywords.plus || *str == self.keywords.minus {
+            4
+        } else if *str == self.keywords.spaceship
+            || *str == self.keywords.less_equals
+            || *str == self.keywords.less
+            || *str == self.keywords.greater_equals
+            || *str == self.keywords.greater
+            || *str == self.keywords.triple_equals
+            || *str == self.keywords.double_equals
+            || *str == self.keywords.not_equals
+        {
+            2
+        } else if *str == self.keywords.and || *str == self.keywords.or {
+            1
+        } else {
+            3 // Default precedence for custom operators like "mod", "florgle", etc. (Scala line 842)
+        }
+    }
+
+    /// Parse an expression
+    /// Mirrors parseExpression in ExpressionParser.scala lines 845-897
+    pub fn parse_expression(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        if !iter.has_next() {
+            return Err(ParseError::BadExpressionBegin(iter.get_pos()));
+        }
+
+        let mut elements = Vec::new();
+
+        // Parse expression elements (lines 853-890)
+        loop {
+            let sub_expr = self.parse_expression_data_element(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+            elements.push(ExpressionElement::Data(sub_expr.clone()));
+
+            if self.at_expression_end(iter, stop_on_curlied) {
+                break;
+            } else {
+                if sub_expr.range().end == iter.get_pos() {
+                    return Err(ParseError::NeedWhitespaceAroundBinaryOperator(iter.get_pos()));
+                }
+
+                match self.parse_binary_call(iter)? {
+                    None => break,
+                    Some(symbol) => {
+                        let precedence = self.get_precedence(&symbol.str);
+                        elements.push(ExpressionElement::BinaryCall(symbol.clone(), precedence));
+
+                        match iter.peek() {
+                            None => return Err(ParseError::BadExpressionEnd(iter.get_pos())),
+                            Some(node) => {
+                                if symbol.range.end == node.range().begin {
+                                    return Err(ParseError::NeedWhitespaceAroundBinaryOperator(iter.get_pos()));
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Descramble the expression (lines 892-894)
+        let (expr_pe, _) = self.descramble_elements(&elements, 0, elements.len() - 1, 1)?;
+        Ok(expr_pe)
+    }
+
+    /// Parse a lookup expression
+    /// Mirrors parseLookup in ExpressionParser.scala lines 898-939
+    pub fn parse_lookup(&mut self, iter: &mut ScrambleIterator) -> Option<IExpressionPE> {
+        let begin = iter.get_pos();
+        match iter.peek3() {
+            (Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. }))) => {
+                iter.advance();
+                iter.advance();
+                iter.advance();
+                Some(IExpressionPE::Lookup(LookupPE {
+                    name: IImpreciseNameP::LookupName(NameP {
+                        range: RangeL { begin, end: iter.get_prev_end_pos() },
+                        str: Arc::new(self.keywords.spaceship.clone()),
+                    }),
+                    template_args: None,
+                }))
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { range: range1, c: c1 @ ('=' | '>' | '<' | '!') })),
+             Some(INodeLEEnum::Symbol(SymbolLE { range: range2, c: '=' })), _) => {
+                let c1 = *c1;
+                let range1 = *range1;
+                let range2 = *range2;
+                iter.advance();
+                iter.advance();
+                let combined = format!("{}{}", c1, '=');
+                Some(IExpressionPE::Lookup(LookupPE {
+                    name: IImpreciseNameP::LookupName(NameP {
+                        range: RangeL { begin: range1.begin, end: range2.end },
+                        str: Arc::new(StrI::new(0, combined)), // TODO: proper interning
+                    }),
+                    template_args: None,
+                }))
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { range, c })), _, _) => {
+                let range = *range;
+                let c = *c;
+                iter.advance();
+                Some(IExpressionPE::Lookup(LookupPE {
+                    name: IImpreciseNameP::LookupName(NameP {
+                        range,
+                        str: Arc::new(StrI::new(0, c.to_string())), // TODO: proper interning
+                    }),
+                    template_args: None,
+                }))
+            }
+            (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
+                let range = *range;
+                let str = str.clone();
+                iter.advance();
+                Some(IExpressionPE::Lookup(LookupPE {
+                    name: IImpreciseNameP::LookupName(NameP {
+                        range,
+                        str: Arc::new(str),
+                    }),
+                    template_args: None,
+                }))
+            }
+            _ => None,
+        }
+    }
+
+    /// Parse a boolean literal
+    /// Mirrors parseBoolean in ExpressionParser.scala lines 940-954
+    pub fn parse_boolean(&mut self, iter: &mut ScrambleIterator) -> Option<IExpressionPE> {
+        if let Some(range) = iter.try_skip_word(&self.keywords.truue) {
+            return Some(IExpressionPE::ConstantBool(ConstantBoolPE { range, value: true }));
+        }
+        if let Some(range) = iter.try_skip_word(&self.keywords.faalse) {
+            return Some(IExpressionPE::ConstantBool(ConstantBoolPE { range, value: false }));
+        }
+        None
+    }
+
+    /// Parse an atomic expression
+    /// Mirrors parseAtom in ExpressionParser.scala lines 955-1092
+    pub fn parse_atom(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        assert!(iter.has_next());
+        let begin = iter.get_pos();
+
+        // Check for keywords that can't be used in expressions (lines 960-969)
+        if iter.try_skip_word(&self.keywords.r#break).is_some() {
+            return Err(ParseError::CantUseBreakInExpression(iter.get_pos()));
+        }
+        if iter.try_skip_word(&self.keywords.retuurn).is_some() {
+            return Err(ParseError::CantUseReturnInExpression(iter.get_pos()));
+        }
+        if iter.try_skip_word(&self.keywords.whiile).is_some() {
+            return Err(ParseError::CantUseWhileInExpression(iter.get_pos()));
+        }
+
+        // Check for underscore (magic param lookup) (lines 970-973)
+        if let Some(range) = iter.try_skip_word(&self.keywords.underscore) {
+            return Ok(IExpressionPE::MagicParamLookup(MagicParamLookupPE { range }));
+        }
+
+        // Try foreach (lines 974-978)
+        if let Some(x) = self.parse_foreach(iter, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+
+        // Try mut expression (lines 980-984)
+        if let Some(x) = self.parse_mut_expr(iter, stop_on_curlied, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+
+        // Parse literals (lines 986-1014)
+        match iter.peek() {
+            Some(INodeLEEnum::ParsedInteger(ParsedIntegerLE { range, value, bits })) => {
+                let range = *range;
+                let value = *value;
+                let bits = *bits;
+                iter.advance();
+                return Ok(IExpressionPE::ConstantInt(ConstantIntPE { range, value, bits }));
+            }
+            Some(INodeLEEnum::ParsedDouble(ParsedDoubleLE { range, value, .. })) => {
+                let range = *range;
+                let value = *value;
+                iter.advance();
+                return Ok(IExpressionPE::ConstantFloat(ConstantFloatPE { range, value }));
+            }
+            Some(INodeLEEnum::String(StringLE { range, parts })) => {
+                let range = *range;
+                let parts = parts.clone();
+                iter.advance();
+                
+                // Check if it's a simple literal string
+                if parts.len() == 1 {
+                    if let StringPart::Literal { s, .. } = &parts[0] {
+                        return Ok(IExpressionPE::ConstantStr(ConstantStrPE {
+                            range,
+                            value: s.clone(),
+                        }));
+                    }
+                }
+
+                // String interpolation
+                let mut parts_p = Vec::new();
+                for part in parts {
+                    match part {
+                        StringPart::Literal { range, s } => {
+                            parts_p.push(IExpressionPE::ConstantStr(ConstantStrPE { range, value: s }));
+                        }
+                        StringPart::Expr(scramble) => {
+                            let mut part_iter = ScrambleIterator::new(scramble.clone());
+                            let expr = self.parse_expression(&mut part_iter, false, templex_parser, pattern_parser)?;
+                            parts_p.push(expr);
+                        }
+                    }
+                }
+                return Ok(IExpressionPE::StrInterpolate(StrInterpolatePE { range, parts: parts_p }));
+            }
+            _ => {}
+        }
+
+        // Try boolean (lines 1015-1018)
+        if let Some(e) = self.parse_boolean(iter) {
+            return Ok(e);
+        }
+
+        // Try array (lines 1019-1023)
+        if let Some(e) = self.parse_array(iter, templex_parser, pattern_parser)? {
+            return Ok(e);
+        }
+
+        // Try lambda (lines 1024-1028)
+        if let Some(e) = self.parse_lambda(iter, templex_parser, pattern_parser)? {
+            return Ok(e);
+        }
+
+        // Try lookup (lines 1029-1032)
+        if let Some(e) = self.parse_lookup(iter) {
+            return Ok(e);
+        }
+
+        // Try tuple or sub-expression (lines 1033-1039)
+        if let Some(e) = self.parse_tuple_or_sub_expression(iter, templex_parser, pattern_parser)? {
+            return Ok(e);
+        }
+
+        // If nothing matched, error (continuing from line 1039+)
+        Err(ParseError::BadExpressionBegin(begin))
+    }
+
+    /// Parse a spree step (method call, field access, etc.)
+    /// Mirrors parseSpreeStep in ExpressionParser.scala lines 1093-1223
+    pub fn parse_spree_step(
+        &mut self,
+        spree_begin: i32,
+        iter: &mut ScrambleIterator,
+        expr_so_far: IExpressionPE,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let operator_begin = iter.get_pos();
+        
+        // Check for & (borrow augmentation)
+        if iter.try_skip_symbol('&') {
+            let range_pe = AugmentPE {
+                range: RangeL {
+                    begin: spree_begin,
+                    end: iter.get_prev_end_pos(),
+                },
+                target_ownership: OwnershipP::Borrow,
+                inner: Box::new(expr_so_far),
+            };
+            return Ok(Some(IExpressionPE::Augment(range_pe)));
+        }
+        
+        // Try template lookup
+        match self.parse_template_lookup(iter, expr_so_far.clone(), templex_parser)? {
+            Some(call) => return Ok(Some(IExpressionPE::Lookup(call))),
+            None => {}
+        }
+        
+        // Try function call
+        match self.parse_function_call(iter, spree_begin, expr_so_far.clone(), templex_parser, pattern_parser)? {
+            Some(call) => return Ok(Some(call)),
+            None => {}
+        }
+        
+        // Try brace pack (e.g., foo[1, 2, 3])
+        match self.parse_brace_pack(iter, templex_parser, pattern_parser)? {
+            Some(arg_exprs) => {
+                return Ok(Some(IExpressionPE::BraceCall(BraceCallPE {
+                    range: RangeL {
+                        begin: spree_begin,
+                        end: iter.get_prev_end_pos(),
+                    },
+                    operator_range: RangeL {
+                        begin: operator_begin,
+                        end: iter.get_prev_end_pos(),
+                    },
+                    subject_expr: Box::new(expr_so_far),
+                    arg_exprs,
+                    callable_readwrite: false,
+                })));
+            }
+            None => {}
+        }
+        
+        // Check for range operator (..)
+        if iter.try_skip_symbols(&['.', '.']) {
+            let operand = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+            let range_pe = RangePE {
+                range: RangeL {
+                    begin: spree_begin,
+                    end: iter.get_prev_end_pos(),
+                },
+                from_expr: Box::new(expr_so_far),
+                to_expr: Box::new(operand),
+            };
+            return Ok(Some(IExpressionPE::Range(range_pe)));
+        }
+        
+        // Check for map call (*.) or method call (.)
+        let is_map_call = iter.try_skip_symbols(&['*', '.']);
+        let is_method_call = if is_map_call {
+            false
+        } else {
+            iter.try_skip_symbol('.')
+        };
+        
+        let operator_end = iter.get_prev_end_pos();
+        
+        if is_method_call || is_map_call {
+            let name_begin = iter.get_pos();
+            let name = match iter.peek() {
+                Some(INodeLEEnum::ParsedInteger(ParsedIntegerLE { value: int, bits, .. })) => {
+                    let int = *int;
+                    let bits = bits.clone();
+                    iter.advance();
+                    if int < 0 {
+                        return Err(ParseError::BadDot(iter.get_pos()));
+                    }
+                    if bits.is_some() {
+                        return Err(ParseError::BadDot(iter.get_pos()));
+                    }
+                    NameP {
+                        range: RangeL {
+                            begin: name_begin,
+                            end: iter.get_prev_end_pos(),
+                        },
+                        str: Arc::new(StrI::new(0, int.to_string())),
+                    }
+                }
+                Some(INodeLEEnum::Symbol(_)) => {
+                    let name = match iter.peek3() {
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. }))) => self.keywords.spaceship.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. }))) => self.keywords.triple_equals.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         _) => self.keywords.greater_equals.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         _) => self.keywords.less_equals.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '!', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         _) => self.keywords.not_equals.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+                         _) => self.keywords.double_equals.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '+', .. })), _, _) => self.keywords.plus.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '-', .. })), _, _) => self.keywords.minus.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '*', .. })), _, _) => self.keywords.asterisk.clone(),
+                        (Some(INodeLEEnum::Symbol(SymbolLE { c: '/', .. })), _, _) => self.keywords.slash.clone(),
+                        _ => return Err(ParseError::BadDot(iter.get_pos())),
+                    };
+                    // Advance by the length of the keyword
+                    for _ in 0..name.str.len() {
+                        iter.advance();
+                    }
+                    NameP {
+                        range: RangeL {
+                            begin: name_begin,
+                            end: iter.get_prev_end_pos(),
+                        },
+                        str: Arc::new(name),
+                    }
+                }
+                Some(INodeLEEnum::Word(WordLE { str, .. })) => {
+                    let str = str.clone();
+                    iter.advance();
+                    NameP {
+                        range: RangeL {
+                            begin: name_begin,
+                            end: iter.get_prev_end_pos(),
+                        },
+                        str: Arc::new(str),
+                    }
+                }
+                _ => return Err(ParseError::BadDot(iter.get_pos())),
+            };
+            
+            let maybe_template_args = match self.parse_chevron_pack(iter, templex_parser)? {
+                None => None,
+                Some(template_args) => {
+                    Some(TemplateArgsP {
+                        range: RangeL {
+                            begin: operator_begin,
+                            end: iter.get_prev_end_pos(),
+                        },
+                        args: template_args,
+                    })
+                }
+            };
+            
+            match self.parse_pack(iter, templex_parser, pattern_parser)? {
+                Some((range, arg_exprs)) => {
+                    return Ok(Some(IExpressionPE::MethodCall(MethodCallPE {
+                        range: RangeL {
+                            begin: operator_begin,
+                            end: range.end,
+                        },
+                        subject_expr: Box::new(expr_so_far),
+                        operator_range: RangeL {
+                            begin: operator_begin,
+                            end: operator_end,
+                        },
+                        method_lookup: Box::new(LookupPE {
+                            name: IImpreciseNameP::LookupName(name),
+                            template_args: maybe_template_args,
+                        }),
+                        arg_exprs,
+                    })));
+                }
+                None => {
+                    if maybe_template_args.is_some() {
+                        return Err(ParseError::CantTemplateCallMember(iter.get_pos()));
+                    }
+                    
+                    return Ok(Some(IExpressionPE::Dot(DotPE {
+                        range: RangeL {
+                            begin: spree_begin,
+                            end: iter.get_prev_end_pos(),
+                        },
+                        left: Box::new(expr_so_far),
+                        operator_range: RangeL {
+                            begin: operator_begin,
+                            end: operator_end,
+                        },
+                        member: name,
+                    })));
+                }
+            }
+        }
+        
+        Ok(None)
+    }
+
+    /// Parse a function call
+    /// Mirrors parseFunctionCall in ExpressionParser.scala lines 1224-1245
+    pub fn parse_function_call(
+        &mut self,
+        original_iter: &mut ScrambleIterator,
+        spree_begin: i32,
+        expr_so_far: IExpressionPE,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let mut tentative_iter = original_iter.clone();
+        let operator_begin = tentative_iter.get_pos();
+        
+        match self.parse_pack(&mut tentative_iter, templex_parser, pattern_parser)? {
+            None => Ok(None),
+            Some((range, args)) => {
+                original_iter.skip_to(&tentative_iter);
+                Ok(Some(IExpressionPE::FunctionCall(FunctionCallPE {
+                    range: RangeL {
+                        begin: spree_begin,
+                        end: range.end,
+                    },
+                    operator_range: RangeL {
+                        begin: operator_begin,
+                        end: range.end,
+                    },
+                    callable_expr: Box::new(expr_so_far),
+                    arg_exprs: args,
+                })))
+            }
+        }
+    }
+
+    /// Parse an atom and tight suffixes
+    /// Mirrors parseAtomAndTightSuffixes in ExpressionParser.scala lines 1246-1272
+    pub fn parse_atom_and_tight_suffixes(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        assert!(iter.has_next());
+        let begin = iter.get_pos();
+        
+        let mut expr_so_far = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+        
+        let mut continuing = true;
+        while continuing && iter.has_next() {
+            match self.parse_spree_step(begin, iter, expr_so_far.clone(), stop_on_curlied, templex_parser, pattern_parser)? {
+                None => {
+                    continuing = false;
+                }
+                Some(new_expr) => {
+                    expr_so_far = new_expr;
+                }
+            }
+        }
+        
+        Ok(expr_so_far)
+    }
+
+    /// Parse chevron pack (template arguments)
+    /// Mirrors parseChevronPack in ExpressionParser.scala lines 1273-1292
+    pub fn parse_chevron_pack(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+    ) -> ParseResult<Option<Vec<ITemplexPT>>> {
+        match iter.peek() {
+            Some(INodeLEEnum::Angled(AngledLE { contents, .. })) => {
+                let contents = contents.clone();
+                iter.advance();
+                
+                let element_iters = ScrambleIterator::new(contents)
+                    .split_on_symbol(',', false);
+                
+                let mut result = vec![];
+                for mut element_iter in element_iters {
+                    let templex = templex_parser.parse_templex(&mut element_iter)?;
+                    result.push(templex);
+                }
+                
+                Ok(Some(result))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Parse a template lookup
+    /// Mirrors parseTemplateLookup in ExpressionParser.scala lines 1293-1313
+    pub fn parse_template_lookup(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        expr_so_far: IExpressionPE,
+        templex_parser: &mut TemplexParser,
+    ) -> ParseResult<Option<LookupPE>> {
+        let operator_begin = iter.get_pos();
+        
+        let template_args = match self.parse_chevron_pack(iter, templex_parser)? {
+            None => return Ok(None),
+            Some(template_args) => {
+                TemplateArgsP {
+                    range: RangeL {
+                        begin: operator_begin,
+                        end: iter.get_prev_end_pos(),
+                    },
+                    args: template_args,
+                }
+            }
+        };
+        
+        let result_pe = match expr_so_far {
+            IExpressionPE::Lookup(LookupPE { name, template_args: None }) => {
+                LookupPE {
+                    name,
+                    template_args: Some(template_args),
+                }
+            }
+            _ => return Err(ParseError::BadTemplateCallee(operator_begin)),
+        };
+        
+        Ok(Some(result_pe))
+    }
+
+    /// Parse a pack (parens, squares, or curlies)
+    /// Mirrors parsePack in ExpressionParser.scala lines 1314-1333
+    pub fn parse_pack(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<(RangeL, Vec<IExpressionPE>)>> {
+        let parend_le = match iter.peek() {
+            Some(INodeLEEnum::Parend(p)) => {
+                let p = p.clone();
+                iter.advance();
+                p
+            }
+            _ => return Ok(None),
+        };
+        
+        let element_iters = ScrambleIterator::new(parend_le.contents.clone())
+            .split_on_symbol(',', false);
+        
+        let mut elements = vec![];
+        for mut element_iter in element_iters {
+            let expr = self.parse_expression(&mut element_iter, false, templex_parser, pattern_parser)?;
+            elements.push(expr);
+        }
+        
+        Ok(Some((parend_le.range, elements)))
+    }
+
+    /// Parse a square pack (array/seq literal)
+    /// Mirrors parseSquarePack in ExpressionParser.scala lines 1334-1352
+    pub fn parse_square_pack(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<Vec<IExpressionPE>>> {
+        let squared_le = match iter.peek() {
+            Some(INodeLEEnum::Squared(p)) => {
+                let p = p.clone();
+                iter.advance();
+                p
+            }
+            None => return Ok(None),
+            _ => return Ok(None),
+        };
+        
+        let element_iters = ScrambleIterator::new(squared_le.contents.clone())
+            .split_on_symbol(',', false);
+        
+        let mut elements_p = vec![];
+        for mut element_iter in element_iters {
+            let expr = self.parse_expression(&mut element_iter, false, templex_parser, pattern_parser)?;
+            elements_p.push(expr);
+        }
+        
+        Ok(Some(elements_p))
+    }
+
+    /// Parse a brace pack
+    /// Mirrors parseBracePack in ExpressionParser.scala lines 1353-1371
+    pub fn parse_brace_pack(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<Vec<IExpressionPE>>> {
+        match iter.peek() {
+            Some(INodeLEEnum::Squared(SquaredLE { contents, .. })) => {
+                let contents = contents.clone();
+                iter.advance();
+                
+                let element_iters = ScrambleIterator::new(contents)
+                    .split_on_symbol(',', false);
+                
+                let mut elements = vec![];
+                for mut element_iter in element_iters {
+                    let expr = self.parse_expression(&mut element_iter, false, templex_parser, pattern_parser)?;
+                    elements.push(expr);
+                }
+                
+                Ok(Some(elements))
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Parse a tuple or sub-expression
+    /// Mirrors parseTupleOrSubExpression in ExpressionParser.scala lines 1372-1417
+    pub fn parse_tuple_or_sub_expression(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        match iter.peek() {
+            Some(INodeLEEnum::Parend(ParendLE { range, contents })) => {
+                let range = *range;
+                let contents = contents.clone();
+                iter.advance();
+                
+                let mut iters = ScrambleIterator::new(contents.clone())
+                    .split_on_symbol(',', true);
+                
+                assert!(!iters.is_empty());
+                
+                if iters.len() == 1 {
+                    if !iters[0].has_next() {
+                        // Then we have e.g. ()
+                        return Ok(Some(IExpressionPE::Tuple(TuplePE {
+                            range,
+                            elements: vec![],
+                        })));
+                    } else {
+                        // Then we have e.g. (true)
+                        let inner = self.parse_expression(&mut iters[0], false, templex_parser, pattern_parser)?;
+                        return Ok(Some(IExpressionPE::SubExpression(SubExpressionPE {
+                            range,
+                            inner: Box::new(inner),
+                        })));
+                    }
+                } else {
+                    // Then we have e.g. (true,) or (true,true) etc.
+                    // Mirrors ExpressionParser.scala lines 1394-1400
+                    let mut element_iters = if !iters.last().unwrap().has_next() {
+                        // Last is empty, like in (true,) so take it out
+                        // Scala: iters.init
+                        iters.pop();
+                        iters
+                    } else {
+                        iters
+                    };
+                    
+                    let mut elements_p = vec![];
+                    for element_iter in element_iters.iter_mut() {
+                        let expr = self.parse_expression(element_iter, false, templex_parser, pattern_parser)?;
+                        elements_p.push(expr);
+                    }
+                    
+                    return Ok(Some(IExpressionPE::Tuple(TuplePE {
+                        range,
+                        elements: elements_p,
+                    })));
+                }
+            }
+            _ => Ok(None),
+        }
+    }
+
+    /// Parse expression data element
+    /// Mirrors parseExpressionDataElement in ExpressionParser.scala lines 1418-1543
+    pub fn parse_expression_data_element(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        assert!(iter.has_next());
+
+        let begin = iter.get_pos();
+
+        // Handle … symbol (Scala line 1422-1424)
+        if iter.try_skip_symbol('…') {
+            return Ok(IExpressionPE::ConstantInt(ConstantIntPE {
+                range: RangeL::new(begin, iter.get_prev_end_pos()),
+                value: 0,
+                bits: None,
+            }));
+        }
+
+        // Handle single quote prefix (Scala line 1426-1432)
+        match iter.peek2() {
+            (Some(INodeLEEnum::Symbol(SymbolLE { c: '\'', .. })), Some(INodeLEEnum::Word(_))) => {
+                iter.advance();
+                iter.advance();
+                return self.parse_expression_data_element(iter, stop_on_curlied, templex_parser, pattern_parser);
+            }
+            _ => {}
+        }
+
+        // Handle 'not' keyword (Scala line 1438-1445)
+        if iter.try_skip_word(&self.keywords.not).is_some() {
+            let inner_pe = self.parse_expression_data_element(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+            let end = inner_pe.range().end;
+            return Ok(IExpressionPE::Not(NotPE {
+                range: RangeL::new(begin, end),
+                inner: Box::new(inner_pe),
+            }));
+        }
+
+        // Handle lone blocks (Scala line 1447-1451)
+        if let Some(block) = self.parse_lone_block(iter, templex_parser, pattern_parser)? {
+            return Ok(block);
+        }
+
+        // Handle if ladders (Scala line 1453-1457)
+        if let Some(if_expr) = self.parse_if_ladder(iter, templex_parser, pattern_parser)? {
+            return Ok(if_expr);
+        }
+
+        // Handle destruct (Scala line 1461-1465)
+        if let Some(destruct) = self.parse_destruct(iter, stop_on_curlied, templex_parser, pattern_parser)? {
+            return Ok(destruct);
+        }
+
+        // Handle foreach (Scala line 1467-1471)
+        if let Some(foreach) = self.parse_foreach(iter, templex_parser, pattern_parser)? {
+            return Ok(foreach);
+        }
+
+        // Handle unlet (Scala line 1473-1477)
+        if let Some(unlet) = self.parse_unlet(iter)? {
+            return Ok(unlet);
+        }
+
+        // Handle transmigration region'expr (Scala line 1479-1493)
+        match iter.peek2() {
+            (Some(INodeLEEnum::Word(WordLE { range: region_range, str: region })), 
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '\'', .. }))) => {
+                let region_name = NameP {
+                    range: *region_range,
+                    str: Arc::new(region.clone()),
+                };
+                iter.advance();
+                iter.advance();
+                let inner_pe = self.parse_atom_and_tight_suffixes(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+                return Ok(IExpressionPE::Transmigrate(TransmigratePE {
+                    range: RangeL::new(begin, iter.get_prev_end_pos()),
+                    target_region: region_name,
+                    inner: Box::new(inner_pe),
+                }));
+            }
+            _ => {}
+        }
+
+        // Handle ownership prefixes ^ & && inl (Scala line 1495-1531)
+        let maybe_target_ownership = match iter.peek() {
+            Some(INodeLEEnum::Symbol(SymbolLE { c: '^', .. })) => {
+                iter.advance();
+                Some(OwnershipP::Own)
+            }
+            Some(INodeLEEnum::Symbol(SymbolLE { c: '&', .. })) => {
+                iter.advance();
+                match iter.peek() {
+                    Some(INodeLEEnum::Symbol(SymbolLE { c: '&', .. })) => {
+                        iter.advance();
+                        Some(OwnershipP::Weak)
+                    }
+                    _ => Some(OwnershipP::Borrow),
+                }
+            }
+            Some(INodeLEEnum::Word(WordLE { str, .. })) if *str == self.keywords.r#inl => {
+                iter.advance();
+                Some(OwnershipP::Own)
+            }
+            _ => None,
+        };
+
+        if let Some(target_ownership) = maybe_target_ownership {
+            let inner_pe = self.parse_atom_and_tight_suffixes(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+            return Ok(IExpressionPE::Augment(AugmentPE {
+                range: RangeL::new(begin, iter.get_prev_end_pos()),
+                target_ownership,
+                inner: Box::new(inner_pe),
+            }));
+        }
+
+        // Now parse the atom and tight suffixes (Scala line 1541)
+        self.parse_atom_and_tight_suffixes(iter, stop_on_curlied, templex_parser, pattern_parser)
+    }
+
+    /// Parse lone block
+    /// Parse lone block expression
+    /// Mirrors parseLoneBlock in ExpressionParser.scala lines 642-676
+    fn parse_lone_block(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        // Mirrors ExpressionParser.scala line 645
+        let mut tentative_iter = iter.clone();
+        
+        // Mirrors ExpressionParser.scala lines 647-650
+        // The pure/unsafe is a hack to get syntax highlighting work for
+        // the future pure block feature.
+        tentative_iter.try_skip_word(&self.keywords.r#unsafe);
+        let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+        
+        // Mirrors ExpressionParser.scala lines 652-654
+        if tentative_iter.try_skip_word(&self.keywords.block).is_none() {
+            return Ok(None);
+        }
+        
+        // Mirrors ExpressionParser.scala lines 656-657
+        iter.skip_to(&tentative_iter);
+        
+        // Mirrors ExpressionParser.scala line 659
+        let begin = iter.get_pos();
+        
+        // Mirrors ExpressionParser.scala lines 661-673
+        let inner = match iter.peek() {
+            Some(INodeLEEnum::Curlied(curlied)) => {
+                let curlied_contents = curlied.contents.clone();
+                iter.advance();
+                let mut contents_iter = ScrambleIterator::new(curlied_contents);
+                match self.parse_block_contents(&mut contents_iter, false, templex_parser, pattern_parser) {
+                    Err(error) => return Err(error),
+                    Ok(result) => result,
+                }
+            }
+            _ => {
+                return Err(ParseError::BadStartOfBlock(iter.get_pos()));
+            }
+        };
+        
+        // Mirrors ExpressionParser.scala line 675
+        Ok(Some(IExpressionPE::Block(BlockPE {
+            range: RangeL {
+                begin,
+                end: iter.get_prev_end_pos(),
+            },
+            maybe_pure: pure,
+            maybe_default_region: None,
+            inner: Box::new(inner),
+        })))
+    }
+
+    /// Parse destruct expression
+    /// Mirrors parseDestruct in ExpressionParser.scala lines 678-694
+    fn parse_destruct(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        // Mirrors ExpressionParser.scala line 682
+        let begin = iter.get_pos();
+        
+        // Mirrors ExpressionParser.scala lines 683-685
+        if iter.try_skip_word(&self.keywords.destruct).is_none() {
+            return Ok(None);
+        }
+        
+        // Mirrors ExpressionParser.scala lines 687-691
+        let inner_expr = match self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser) {
+            Err(e) => return Err(e),
+            Ok(x) => x,
+        };
+        
+        // Mirrors ExpressionParser.scala line 693
+        Ok(Some(IExpressionPE::Destruct(DestructPE {
+            range: RangeL {
+                begin,
+                end: iter.get_prev_end_pos(),
+            },
+            inner: Box::new(inner_expr),
+        })))
+    }
+
+    /// Parse unlet
+    /// Mirrors parseUnlet in ExpressionParser.scala  
+    fn parse_unlet(
+        &mut self,
+        iter: &mut ScrambleIterator,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        // Check for 'unlet' keyword
+        if let Some(range) = iter.try_skip_word(&self.keywords.unlet) {
+            // Parse the name to unlet
+            match iter.peek() {
+                Some(INodeLEEnum::Word(WordLE { range: name_range, str: name_str })) => {
+                    let name = IImpreciseNameP::LookupName(NameP {
+                        range: *name_range,
+                        str: Arc::new(name_str.clone()),
+                    });
+                    iter.advance();
+                    Ok(Some(IExpressionPE::Unlet(UnletPE {
+                        range: RangeL::new(range.begin, iter.get_prev_end_pos()),
+                        name,
+                    })))
+                }
+                _ => Ok(None),
+            }
+        } else {
+            Ok(None)
+        }
+    }
+
+    /// Parse a braced body
+    /// Mirrors parseBracedBody in ExpressionParser.scala lines 1544-1561
+    pub fn parse_braced_body(&mut self, _iter: &mut ScrambleIterator) -> ParseResult<BlockPE> {
+        panic!("parse_braced_body: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1545")
+    }
+
+    /// Parse single-arg lambda begin
+    /// Mirrors parseSingleArgLambdaBegin in ExpressionParser.scala lines 1562-1585
+    pub fn parse_single_arg_lambda_begin(
+        &mut self,
+        _original_iter: &mut ScrambleIterator,
+    ) -> Option<ParamsP> {
+        panic!("parse_single_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1563")
+    }
+
+    /// Parse multi-arg lambda begin
+    /// Mirrors parseMultiArgLambdaBegin in ExpressionParser.scala lines 1586-1634
+    pub fn parse_multi_arg_lambda_begin(
+        &mut self,
+        _original_iter: &mut ScrambleIterator,
+    ) -> Option<ParamsP> {
+        panic!("parse_multi_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1587")
+    }
+
+    /// Parse a lambda
+    /// Mirrors parseLambda in ExpressionParser.scala lines 1635-1728
+    pub fn parse_lambda(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let begin = iter.get_pos();
+        
+        let header_p = match iter.peek3() {
+            // Just a curlied block with no params (e.g., { ... })
+            (Some(INodeLEEnum::Curlied(CurliedLE { range, .. })), _, _) => {
+                let range = *range;
+                let retuurn = FunctionReturnP {
+                    range: RangeL {
+                        begin: iter.get_pos(),
+                        end: iter.get_pos(),
+                    },
+                    ret_type: None,
+                };
+                // Don't iter.advance() because we still need to parse this later
+                FunctionHeaderP {
+                    range,
+                    name: None,
+                    attributes: vec![],
+                    generic_parameters: None,
+                    template_rules: None,
+                    params: None,
+                    ret: retuurn,
+                }
+            }
+            // Single param lambda: x => ...
+            (Some(INodeLEEnum::Word(WordLE { range: param_range, str: param_name })), 
+             Some(INodeLEEnum::Symbol(SymbolLE { range: eq_range, c: '=' })), 
+             Some(INodeLEEnum::Symbol(SymbolLE { range: gt_range, c: '>' }))) => {
+                let param_range = *param_range;
+                let eq_range = *eq_range;
+                let gt_range = *gt_range;
+                let param_name = param_name.clone();
+                
+                if eq_range.end != gt_range.begin {
+                    return Err(ParseError::BadLambdaBegin(eq_range.begin));
+                }
+                iter.advance();
+                iter.advance();
+                iter.advance();
+                
+                let param = ParameterP {
+                    range: param_range,
+                    virtuality: None,
+                    maybe_pre_checked: None,
+                    self_borrow: None,
+                    pattern: Some(PatternPP {
+                        range: param_range,
+                        destination: Some(DestinationLocalP {
+                            decl: INameDeclarationP::LocalNameDeclaration(NameP {
+                                range: param_range,
+                                str: Arc::new(param_name),
+                            }),
+                            mutate: None,
+                        }),
+                        templex: None,
+                        destructure: None,
+                    }),
+                };
+                let params = ParamsP {
+                    range: param_range,
+                    params: vec![param],
+                };
+                let retuurn = FunctionReturnP {
+                    range: RangeL {
+                        begin: iter.get_pos(),
+                        end: iter.get_pos(),
+                    },
+                    ret_type: None,
+                };
+                let range = RangeL {
+                    begin,
+                    end: iter.get_prev_end_pos(),
+                };
+                FunctionHeaderP {
+                    range,
+                    name: None,
+                    attributes: vec![],
+                    generic_parameters: None,
+                    template_rules: None,
+                    params: Some(params),
+                    ret: retuurn,
+                }
+            }
+            // Multi-param lambda: (x, y) => ...
+            (Some(INodeLEEnum::Parend(ParendLE { range: params_range, contents: params_contents })), 
+             Some(INodeLEEnum::Symbol(SymbolLE { range: eq_range, c: '=' })), 
+             Some(INodeLEEnum::Symbol(SymbolLE { range: gt_range, c: '>' }))) => {
+                let params_range = *params_range;
+                let params_contents = params_contents.clone();
+                let eq_range = *eq_range;
+                let gt_range = *gt_range;
+                
+                if eq_range.end != gt_range.begin {
+                    return Err(ParseError::BadLambdaBegin(eq_range.begin));
+                }
+                iter.advance();
+                iter.advance();
+                iter.advance();
+                
+                let param_iters = ScrambleIterator::new(params_contents)
+                    .split_on_symbol(',', false);
+                
+                let mut patterns = vec![];
+                for (index, mut pattern_iter) in param_iters.into_iter().enumerate() {
+                    let param = pattern_parser.parse_parameter(
+                        &mut pattern_iter,
+                        templex_parser,
+                        index,
+                        false,
+                        true,
+                        true,
+                    )?;
+                    patterns.push(param);
+                }
+                
+                let params_p = ParamsP {
+                    range: params_range,
+                    params: patterns,
+                };
+                let retuurn = FunctionReturnP {
+                    range: RangeL {
+                        begin: iter.get_pos(),
+                        end: iter.get_pos(),
+                    },
+                    ret_type: None,
+                };
+                let range = RangeL {
+                    begin,
+                    end: iter.get_prev_end_pos(),
+                };
+                FunctionHeaderP {
+                    range,
+                    name: None,
+                    attributes: vec![],
+                    generic_parameters: None,
+                    template_rules: None,
+                    params: Some(params_p),
+                    ret: retuurn,
+                }
+            }
+            (_, _, _) => return Ok(None),
+        };
+        
+        // Mirrors ExpressionParser.scala lines 1693-1723
+        let body_p = match iter.peek() {
+            Some(INodeLEEnum::Curlied(block_l)) => {
+                let block_l = block_l.clone();
+                iter.advance();
+                // parseBlock returns IExpressionPE, we need to wrap it in BlockPE
+                // Scala lines 1697-1707
+                let statements_p = self.parse_block(&block_l, templex_parser, pattern_parser)?;
+                BlockPE {
+                    range: block_l.range,
+                    maybe_pure: None,
+                    // Would we ever want a lambda with a different default region?
+                    maybe_default_region: None,
+                    inner: Box::new(statements_p),
+                }
+            }
+            Some(_) => {
+                // Scala lines 1709-1720
+                let result = self.parse_expression(iter, false, templex_parser, pattern_parser)?;
+                BlockPE {
+                    range: result.range(),
+                    maybe_pure: None,
+                    // Would we ever want a lambda with a different default region?
+                    maybe_default_region: None,
+                    inner: Box::new(result),
+                }
+            }
+            None => panic!("LAMBDA_MISSING_BODY: Expected body for lambda - not in Scala"),
+        };
+        
+        let lam = LambdaPE {
+            captures: None,
+            function: FunctionP {
+                range: RangeL {
+                    begin,
+                    end: iter.get_prev_end_pos(),
+                },
+                header: header_p,
+                body: Some(Box::new(body_p)),
+            },
+        };
+        
+        Ok(Some(IExpressionPE::Lambda(lam)))
+    }
+
+    /// Parse an array literal
+    /// Mirrors parseArray in ExpressionParser.scala lines 1729-1822
+    pub fn parse_array(
+        &mut self,
+        original_iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let mut tentative_iter = original_iter.clone();
+        let begin = tentative_iter.get_pos();
+        
+        let mutability = if tentative_iter.try_skip_symbol('#') {
+            ITemplexPT::Mutability {
+                range: RangeL {
+                    begin,
+                    end: tentative_iter.get_prev_end_pos(),
+                },
+                mutability: MutabilityP::Immutable,
+            }
+        } else {
+            ITemplexPT::Mutability {
+                range: RangeL { begin, end: begin },
+                mutability: MutabilityP::Mutable,
+            }
+        };
+        
+        // If there's no square, we're not making an array.
+        let sizer = match tentative_iter.peek() {
+            Some(INodeLEEnum::Squared(s)) => s.clone(),
+            _ => return Ok(None),
+        };
+        tentative_iter.advance();
+        
+        let is_array = match tentative_iter.peek() {
+            // If there's nothing after the square brackets, it's not an array.
+            None => false,
+            Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. })) => false,
+            _ => true,
+        };
+        
+        if !is_array {
+            // Not an array, bail.
+            // TODO: Someday, we could interpret this occurrence as a way to make a List.
+            return Ok(None);
+        }
+        
+        original_iter.skip_to(&tentative_iter);
+        let iter = original_iter;
+        
+        let mut sizer_iter = ScrambleIterator::new(sizer.contents.clone());
+        let size = if sizer_iter.try_skip_symbol('#') {
+            let size_pt = if sizer_iter.has_next() {
+                Some(templex_parser.parse_templex(&mut sizer_iter)?)
+            } else {
+                None
+            };
+            IArraySizeP::StaticSized { size_pt }
+        } else {
+            IArraySizeP::RuntimeSized
+        };
+        
+        let tyype = match iter.peek() {
+            Some(INodeLEEnum::Parend(_)) => None,
+            Some(_) => {
+                Some(templex_parser.parse_templex(iter)?)
+            }
+            None => return Err(ParseError::BadArraySpecifier(iter.get_pos())),
+        };
+        
+        let args = match self.parse_pack(iter, templex_parser, pattern_parser)? {
+            None => return Err(ParseError::BadArraySpecifier(iter.get_pos())),
+            Some((_range, e)) => e,
+        };
+        
+        let initializing_individual_elements = match &size {
+            IArraySizeP::StaticSized { size_pt: None } => true, // e.g. [#](3, 4, 5)
+            IArraySizeP::StaticSized { size_pt: Some(_) } => false, // Anything else should take a function.
+            IArraySizeP::RuntimeSized => false, // Any runtime sized array should take a function.
+        };
+        
+        let array_pe = ConstructArrayPE {
+            range: RangeL {
+                begin,
+                end: iter.get_prev_end_pos(),
+            },
+            type_pt: tyype,
+            mutability_pt: Some(mutability),
+            variability_pt: None,
+            size,
+            initializing_individual_elements,
+            args,
+        };
+        
+        Ok(Some(IExpressionPE::ConstructArray(array_pe)))
+    }
+
+    /// Descramble - converts scrambled expression elements to properly structured AST
+    /// Mirrors descramble in ExpressionParser.scala lines 1823-1880
+    fn descramble_elements(
+        &self,
+        elements: &[ExpressionElement],
+        begin_index_inclusive: usize,
+        end_index_inclusive: usize,
+        min_precedence: i32,
+    ) -> ParseResult<(IExpressionPE, usize)> {
+        assert!(!elements.is_empty());
+        assert!(elements.len() % 2 == 1);
+
+        const MAX_PRECEDENCE: i32 = 6;
+
+        // Base cases (lines 1832-1839)
+        if begin_index_inclusive == end_index_inclusive {
+            if let ExpressionElement::Data(expr) = &elements[begin_index_inclusive] {
+                return Ok((expr.clone(), begin_index_inclusive + 1));
+            } else {
+                panic!("Expected DataElement");
+            }
+        }
+        if min_precedence == MAX_PRECEDENCE {
+            if let ExpressionElement::Data(expr) = &elements[begin_index_inclusive] {
+                return Ok((expr.clone(), begin_index_inclusive + 1));
+            } else {
+                panic!("Expected DataElement");
+            }
+        }
+
+        // Recursive descent (lines 1841-1842)
+        let (mut left_operand, mut next_index) =
+            self.descramble_elements(elements, begin_index_inclusive, end_index_inclusive, min_precedence + 1)?;
+
+        // Process operators at this precedence level (lines 1844-1876)
+        while next_index < end_index_inclusive {
+            if let ExpressionElement::BinaryCall(_, precedence) = &elements[next_index] {
+                if *precedence != min_precedence {
+                    break;
+                }
+            } else {
+                break;
+            }
+
+            let binary_call = if let ExpressionElement::BinaryCall(symbol, _) = &elements[next_index] {
+                symbol.clone()
+            } else {
+                panic!("Expected BinaryCallElement");
+            };
+            next_index += 1;
+
+            let (right_operand, new_next_index) =
+                self.descramble_elements(elements, next_index, end_index_inclusive, min_precedence + 1)?;
+            next_index = new_next_index;
+
+            // Construct the appropriate expression (lines 1854-1875)
+            left_operand = if *binary_call.str == self.keywords.and {
+                IExpressionPE::And(AndPE {
+                    range: RangeL {
+                        begin: left_operand.range().begin,
+                        end: right_operand.range().end,
+                    },
+                    left: Box::new(left_operand),
+                    right: Box::new(BlockPE {
+                        range: right_operand.range(),
+                        maybe_pure: None,
+                        maybe_default_region: None,
+                        inner: Box::new(right_operand),
+                    }),
+                })
+            } else if *binary_call.str == self.keywords.or {
+                IExpressionPE::Or(OrPE {
+                    range: RangeL {
+                        begin: left_operand.range().begin,
+                        end: right_operand.range().end,
+                    },
+                    left: Box::new(left_operand),
+                    right: Box::new(BlockPE {
+                        range: right_operand.range(),
+                        maybe_pure: None,
+                        maybe_default_region: None,
+                        inner: Box::new(right_operand),
+                    }),
+                })
+            } else {
+                IExpressionPE::BinaryCall(BinaryCallPE {
+                    range: RangeL {
+                        begin: left_operand.range().begin,
+                        end: right_operand.range().end,
+                    },
+                    function_name: binary_call,
+                    left_expr: Box::new(left_operand),
+                    right_expr: Box::new(right_operand),
+                })
+            };
+        }
+
+        Ok((left_operand, next_index))
+    }
+
+    /// Parse a binary call
+    /// Mirrors parseBinaryCall in ExpressionParser.scala lines 1881-1923
+    pub fn parse_binary_call(&mut self, iter: &mut ScrambleIterator) -> ParseResult<Option<NameP>> {
+        let name = match iter.peek3() {
+            (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
+                let range = *range;
+                let str = str.clone();
+                iter.advance();
+                NameP { range, str: Arc::new(str) }
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { range, c: s @ ('+' | '-' | '*' | '/') })), _, _) => {
+                let range = *range;
+                let s = *s;
+                iter.advance();
+                let str_i = match s {
+                    '+' => Arc::new(self.keywords.plus.clone()),
+                    '-' => Arc::new(self.keywords.minus.clone()),
+                    '*' => Arc::new(self.keywords.asterisk.clone()),
+                    '/' => Arc::new(self.keywords.slash.clone()),
+                    _ => unreachable!(),
+                };
+                NameP {
+                    range,
+                    str: str_i,
+                }
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. }))) => {
+                let begin = iter.get_pos();
+                iter.advance();
+                iter.advance();
+                iter.advance();
+                let end = iter.get_prev_end_pos();
+                NameP {
+                    range: RangeL { begin, end },
+                    str: Arc::new(self.keywords.triple_equals.clone()),
+                }
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+             Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. }))) => {
+                let begin = iter.get_pos();
+                iter.advance();
+                iter.advance();
+                iter.advance();
+                let end = iter.get_prev_end_pos();
+                NameP {
+                    range: RangeL { begin, end },
+                    str: Arc::new(self.keywords.spaceship.clone()),
+                }
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { range: range1, c: s1 @ ('>' | '<' | '=' | '!') })),
+             Some(INodeLEEnum::Symbol(SymbolLE { range: range2, c: '=' })), _) => {
+                let s1 = *s1;
+                let begin = range1.begin;
+                let end = range2.end;
+                iter.advance();
+                iter.advance();
+                let str_i = match s1 {
+                    '!' => Arc::new(self.keywords.not_equals.clone()),
+                    '=' => Arc::new(self.keywords.double_equals.clone()),
+                    '<' => Arc::new(self.keywords.less_equals.clone()),
+                    '>' => Arc::new(self.keywords.greater_equals.clone()),
+                    _ => unreachable!(),
+                };
+                NameP {
+                    range: RangeL { begin, end },
+                    str: str_i,
+                }
+            }
+            (Some(INodeLEEnum::Symbol(SymbolLE { range, c: s @ ('>' | '<') })), _, _) => {
+                let range = *range;
+                let s = *s;
+                iter.advance();
+                let str_i = match s {
+                    '>' => Arc::new(self.keywords.greater.clone()),
+                    '<' => Arc::new(self.keywords.less.clone()),
+                    _ => unreachable!(),
+                };
+                NameP {
+                    range,
+                    str: str_i,
+                }
+            }
+            _ => return Ok(None),
+        };
+
+        Ok(Some(name))
+    }
+
+    /// Check if at expression end
+    /// Mirrors atExpressionEnd in ExpressionParser.scala lines 1924-1933
+    pub fn at_expression_end(&self, iter: &ScrambleIterator, stop_on_curlied: bool) -> bool {
+        match iter.peek() {
+            None => true,
+            Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => true,
+            Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => true,
+            _ => false,
+        }
+    }
+
+    /// Parse a statement
+    /// Mirrors parseStatement in ExpressionParser.scala lines 746-829
+    pub fn parse_statement(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<IExpressionPE> {
+        if !iter.has_next() {
+            return Err(ParseError::BadExpressionBegin(iter.get_pos()));
+        }
+
+        // Try various statement types (lines 754-785)
+        if let Some(x) = self.parse_while(iter, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+        if let Some(x) = self.parse_explicit_block(iter, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+        if let Some(x) = self.parse_if_ladder(iter, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+        if let Some(x) = self.parse_foreach(iter, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+        if let Some(x) = self.parse_break(iter)? {
+            return Ok(x);
+        }
+        if let Some(x) = self.parse_return(iter, stop_on_curlied, templex_parser, pattern_parser)? {
+            return Ok(x);
+        }
+
+        // Parse let or lone expression (lines 789-818)
+        let let_or_lone_expr = if self.next_is_set_expr(iter) {
+            self.parse_mut_expr(iter, stop_on_curlied, templex_parser, pattern_parser)?
+                .expect("parse_mut_expr should return Some when next_is_set_expr is true")
+        } else {
+            // Try to parse as let statement
+            match self.try_parse_let(iter, stop_on_curlied, templex_parser, pattern_parser)? {
+                Some(let_expr) => let_expr,
+                None => self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?,
+            }
+        };
+
+        // Consume optional semicolon (lines 819-827)
+        match iter.peek() {
+            None => {} // okay, hit the end
+            Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => {} // okay, hit the end
+            Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => {
+                iter.advance(); // consume it to end the statement
+            }
+            _ => return Err(ParseError::BadExpressionEnd(iter.get_pos())),
+        }
+
+        Ok(let_or_lone_expr)
+    }
+
+    // Helper methods for statement parsing
+    
+    /// Parse a while loop
+    /// Mirrors parseWhile in ExpressionParser.scala lines 242-279
+    fn parse_while(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let while_begin = iter.get_pos();
+        
+        let mut tentative_iter = iter.clone();
+        
+        let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+        
+        if tentative_iter.try_skip_word(&self.keywords.whiile).is_none() {
+            return Ok(None);
+        }
+        
+        iter.skip_to(&tentative_iter);
+        
+        // Parse condition (lines 255-259)
+        let condition = self.parse_block_contents(iter, true, templex_parser, pattern_parser)?;
+        
+        // Parse body (lines 261-271)
+        let body = match iter.peek() {
+            Some(INodeLEEnum::Curlied(CurliedLE { range: _, contents })) => {
+                let contents = contents.clone();
+                iter.advance();
+                let mut body_iter = ScrambleIterator::new(contents);
+                self.parse_block_contents(&mut body_iter, false, templex_parser, pattern_parser)?
+            }
+            _ => return Err(ParseError::BadExpressionBegin(iter.get_pos())),
+        };
+        
+        Ok(Some(IExpressionPE::While(WhilePE {
+            range: RangeL {
+                begin: while_begin,
+                end: iter.get_prev_end_pos(),
+            },
+            condition: Box::new(condition),
+            body: Box::new(BlockPE {
+                range: body.range(),
+                maybe_pure: pure,
+                maybe_default_region: None,
+                inner: Box::new(body),
+            }),
+        })))
+    }
+
+    /// Parse an explicit block
+    /// Mirrors parseExplicitBlock in ExpressionParser.scala lines 281-311
+    fn parse_explicit_block(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let block_begin = iter.get_pos();
+        
+        let mut tentative_iter = iter.clone();
+        
+        let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+        
+        if tentative_iter.try_skip_word(&self.keywords.block).is_none() {
+            return Ok(None);
+        }
+        
+        iter.skip_to(&tentative_iter);
+        
+        // Parse body
+        let contents = match iter.peek() {
+            Some(INodeLEEnum::Curlied(CurliedLE { contents, .. })) => {
+                let contents = contents.clone();
+                iter.advance();
+                let mut body_iter = ScrambleIterator::new(contents);
+                self.parse_block_contents(&mut body_iter, false, templex_parser, pattern_parser)?
+            }
+            _ => return Err(ParseError::BadExpressionBegin(iter.get_pos())),
+        };
+        
+        Ok(Some(IExpressionPE::Block(BlockPE {
+            range: RangeL {
+                begin: block_begin,
+                end: iter.get_prev_end_pos(),
+            },
+            maybe_pure: pure,
+            maybe_default_region: None,
+            inner: Box::new(contents),
+        })))
+    }
+
+    /// Parse an if ladder (if/else if/else)
+    /// Mirrors parseIfLadder in ExpressionParser.scala lines 388-478
+    fn parse_if_ladder(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let if_ladder_begin = iter.get_pos();
+        
+        // Check for 'if' keyword (lines 391-394)
+        match iter.peek() {
+            Some(INodeLEEnum::Word(WordLE { str, .. })) if *str == self.keywords.iff => {}
+            _ => return Ok(None),
+        }
+        
+        // Parse root if (lines 396-400)
+        let root_if = self.parse_if_part(iter, templex_parser, pattern_parser)?;
+        
+        // Parse else if parts (lines 402-415)
+        let mut if_elses = Vec::new();
+        while match iter.peek2() {
+            (Some(INodeLEEnum::Word(WordLE { str: elsse, .. })),
+             Some(INodeLEEnum::Word(WordLE { str: iff, .. })))
+                if *elsse == self.keywords.elsse && *iff == self.keywords.iff => true,
+            _ => false,
+        } {
+            iter.advance(); // Skip the else
+            if_elses.push(self.parse_if_part(iter, templex_parser, pattern_parser)?);
+        }
+        
+        // Parse else block (lines 417-436)
+        let else_begin = iter.get_pos();
+        let maybe_else_block = if iter.try_skip_word(&self.keywords.elsse).is_some() {
+            let body = match iter.peek() {
+                Some(INodeLEEnum::Curlied(b)) => {
+                    let b = b.clone();
+                    iter.advance();
+                    b
+                }
+                _ => return Err(ParseError::BadExpressionBegin(iter.get_pos())),
+            };
+            
+            let mut else_body_iter = ScrambleIterator::new(body.contents);
+            let else_body = self.parse_block_contents(&mut else_body_iter, false, templex_parser, pattern_parser)?;
+            
+            let else_end = iter.get_pos();
+            Some(BlockPE {
+                range: RangeL {
+                    begin: else_begin,
+                    end: else_end,
+                },
+                maybe_pure: None,
+                maybe_default_region: None,
+                inner: Box::new(else_body),
+            })
+        } else {
+            None
+        };
+        
+        // Build final else block (lines 438-448)
+        let final_else = match maybe_else_block {
+            None => {
+                let pos = iter.get_prev_end_pos();
+                BlockPE {
+                    range: RangeL { begin: pos, end: pos },
+                    maybe_pure: None,
+                    maybe_default_region: None,
+                    inner: Box::new(IExpressionPE::Void(VoidPE {
+                        range: RangeL { begin: pos, end: pos },
+                    })),
+                }
+            }
+            Some(block) => block,
+        };
+        
+        // Fold right to build nested if/else (lines 449-466)
+        let mut root_else_block = final_else;
+        for (cond_block, then_block) in if_elses.into_iter().rev() {
+            root_else_block = BlockPE {
+                range: RangeL {
+                    begin: cond_block.range().begin,
+                    end: then_block.range.end,
+                },
+                maybe_pure: None,
+                maybe_default_region: None,
+                inner: Box::new(IExpressionPE::If(IfPE {
+                    range: RangeL {
+                        begin: cond_block.range().begin,
+                        end: then_block.range.end,
+                    },
+                    condition: Box::new(cond_block),
+            then_body: Box::new(then_block),
+            else_body: Box::new(root_else_block),
+                })),
+            };
+        }
+        
+        let (root_condition, root_then) = root_if;
+        Ok(Some(IExpressionPE::If(IfPE {
+            range: RangeL {
+                begin: if_ladder_begin,
+                end: iter.get_prev_end_pos(),
+            },
+            condition: Box::new(root_condition),
+            then_body: Box::new(root_then),
+            else_body: Box::new(root_else_block),
+        })))
+    }
+    
+    /// Parse a single if part (condition and then block)
+    /// Mirrors parseIfPart in ExpressionParser.scala lines 313-386
+    fn parse_if_part(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<(IExpressionPE, BlockPE)> {
+        let if_begin = iter.get_pos();
+        
+        if iter.try_skip_word(&self.keywords.iff).is_none() {
+            return Err(ParseError::BadExpressionBegin(iter.get_pos()));
+        }
+        
+        // Parse condition (lines 318-321)
+        let condition = self.parse_block_contents(iter, true, templex_parser, pattern_parser)?;
+        
+        // Parse then block (lines 323-369)
+        let body = match iter.peek() {
+            Some(INodeLEEnum::Curlied(CurliedLE { range: _, contents })) => {
+                let contents = contents.clone();
+                iter.advance();
+                let mut body_iter = ScrambleIterator::new(contents);
+                self.parse_block_contents(&mut body_iter, false, templex_parser, pattern_parser)?
+            }
+            _ => return Err(ParseError::BadExpressionBegin(iter.get_pos())),
+        };
+        
+        Ok((
+            condition,
+            BlockPE {
+                range: RangeL {
+                    begin: if_begin,
+                    end: iter.get_prev_end_pos(),
+                },
+                maybe_pure: None,
+                maybe_default_region: None,
+                inner: Box::new(body),
+            },
+        ))
+    }
+
+    fn parse_foreach(
+        &mut self,
+        original_iter: &mut ScrambleIterator,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let each_begin = original_iter.get_pos();
+        
+        let mut tentative_iter = original_iter.clone();
+        
+        if tentative_iter.try_skip_word(&self.keywords.parallel).is_some() {
+            // do nothing for now
+        }
+        
+        let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+        
+        if tentative_iter.try_skip_word(&self.keywords.foreeach).is_none() {
+            return Ok(None);
+        }
+        original_iter.skip_to(&tentative_iter);
+        let iter = original_iter;
+        
+        let (in_range, pattern) = match self.try_skip_past_keyword_while(
+            iter,
+            &self.keywords.r#in,
+            |it| {
+                match it.peek() {
+                    // Stop if we hit the end or a semicolon or a curly brace
+                    None => false,
+                    Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+                    Some(INodeLEEnum::Curlied(_)) => false,
+                    // Continue for anything else
+                    Some(_) => true,
+                }
+            },
+        ) {
+            None => return Err(ParseError::BadForeachInError(iter.get_pos())),
+            Some((in_word, mut pattern_iter)) => {
+                let pattern_begin = pattern_iter.get_pos();
+                let pattern = pattern_parser.parse_pattern(
+                    &mut pattern_iter,
+                    templex_parser,
+                    pattern_begin,
+                    0,
+                    false,
+                    false,
+                    false,
+                    None,
+                )?;
+                (in_word.range, pattern)
+            }
+        };
+        
+        let iterable_expr = self.parse_block_contents(iter, true, templex_parser, pattern_parser)?;
+        
+        let _body_begin = iter.get_pos();
+        
+        let body = match iter.peek() {
+            Some(INodeLEEnum::Curlied(CurliedLE { contents, .. })) => {
+                let contents = contents.clone();
+                iter.advance();
+                self.parse_block_contents(
+                    &mut ScrambleIterator::new(contents),
+                    false,
+                    templex_parser,
+                    pattern_parser,
+                )?
+            }
+            _ => return Err(ParseError::BadStartOfWhileBody(iter.get_pos())),
+        };
+        
+        Ok(Some(IExpressionPE::Each(EachPE {
+            range: RangeL {
+                begin: each_begin,
+                end: iter.get_prev_end_pos(),
+            },
+            maybe_pure: pure,
+            entry_pattern: pattern,
+            in_keyword_range: in_range,
+            iterable_expr: Box::new(iterable_expr),
+            body: Box::new(BlockPE {
+                range: body.range(),
+                maybe_pure: None,
+                maybe_default_region: None,
+                inner: Box::new(body),
+            }),
+        })))
+    }
+
+    fn parse_break(&mut self, iter: &mut ScrambleIterator) -> ParseResult<Option<IExpressionPE>> {
+        let begin = iter.get_pos();
+        if iter.try_skip_word(&self.keywords.r#break).is_none() {
+            return Ok(None);
+        }
+        if !iter.try_skip_symbol(';') {
+            return Err(ParseError::BadExpressionEnd(iter.get_pos()));
+        }
+        Ok(Some(IExpressionPE::Break(BreakPE {
+            range: RangeL {
+                begin,
+                end: iter.get_prev_end_pos(),
+            },
+        })))
+    }
+
+    fn parse_return(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let begin = iter.get_pos();
+        if iter.try_skip_word(&self.keywords.retuurn).is_none() {
+            return Ok(None);
+        }
+
+        let inner_expr = self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+
+        if !iter.try_skip_symbol(';') {
+            return Err(ParseError::BadExpressionEnd(iter.get_pos()));
+        }
+
+        Ok(Some(IExpressionPE::Return(ReturnPE {
+            range: RangeL {
+                begin,
+                end: iter.get_prev_end_pos(),
+            },
+            expr: Box::new(inner_expr),
+        })))
+    }
+
+    fn next_is_set_expr(&self, iter: &ScrambleIterator) -> bool {
+        match iter.peek2() {
+            (Some(INodeLEEnum::Word(WordLE { range: set_range, str: set })), Some(other))
+                if set == &self.keywords.set && set_range.end < other.range().begin => {
+                // Then there's indeed a space after the set. Continue!
+                true
+            }
+            _ => false,
+        }
+    }
+
+    fn parse_mut_expr(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        let mutate_begin = iter.get_pos();
+        if !self.next_is_set_expr(iter) {
+            return Ok(None);
+        }
+        iter.advance();
+        
+        // Use try_skip_past_equals_while to find the mutatee expression
+        let mutatee_expr = match self.try_skip_past_equals_while(iter, |scouting_iter| {
+            match scouting_iter.peek() {
+                None => false,
+                Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+                _ => true,
+            }
+        }) {
+            None => return Err(ParseError::BadMutateEqualsError(iter.get_pos())),
+            Some(mut dest_iter) => {
+                self.parse_expression(&mut dest_iter, stop_on_curlied, templex_parser, pattern_parser)?
+            }
+        };
+        
+        let source_expr = self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+        
+        Ok(Some(IExpressionPE::Mutate(MutatePE {
+            range: RangeL {
+                begin: mutate_begin,
+                end: iter.get_prev_end_pos(),
+            },
+            mutatee: Box::new(mutatee_expr),
+            source: Box::new(source_expr),
+        })))
+    }
+
+    fn try_parse_let(
+        &mut self,
+        iter: &mut ScrambleIterator,
+        stop_on_curlied: bool,
+        templex_parser: &mut TemplexParser,
+        pattern_parser: &mut PatternParser,
+    ) -> ParseResult<Option<IExpressionPE>> {
+        // Try to parse a let statement by looking for pattern = expr
+        let original_pos = iter.index;
+        
+        // Use try_skip_past_equals_while to find the pattern and source expression
+        // Mirrors ExpressionParser.scala lines 797-804
+        let pattern = match self.try_skip_past_equals_while(iter, |scouting_iter| {
+            match scouting_iter.peek() {
+                None => false,
+                Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
+                Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+                _ => true,
+            }
+        }) {
+            None => {
+                // No equals found, not a let statement
+                iter.index = original_pos;
+                return Ok(None);
+            }
+            Some(mut pattern_iter) => {
+                let pattern_begin = pattern_iter.get_pos();
+                pattern_parser.parse_pattern(
+                    &mut pattern_iter,
+                    templex_parser,
+                    pattern_begin,
+                    0,
+                    false,
+                    false,
+                    false,
+                    None,
+                )?
+            }
+        };
+        
+        // Validate the pattern doesn't use 'set' keyword
+        if let Some(DestinationLocalP {
+            decl: INameDeclarationP::LocalNameDeclaration(NameP { str: name, .. }),
+            mutate: None,
+        }) = &pattern.destination
+        {
+            assert!(name.as_ref() != &self.keywords.set);
+        }
+        
+        let source_expr = self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+        
+        Ok(Some(IExpressionPE::Let(LetPE {
+            range: RangeL {
+                begin: pattern.range.begin,
+                end: source_expr.range().end,
+            },
+            pattern,
+            source: Box::new(source_expr),
+        })))
+    }
+    
+    /// Helper method to skip past equals sign while a condition is true
+    /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala lines 13-39
+    fn try_skip_past_equals_while<F>(
+        &self,
+        iter: &mut ScrambleIterator,
+        continue_while: F,
+    ) -> Option<ScrambleIterator>
+    where
+        F: Fn(&ScrambleIterator) -> bool,
+    {
+        let mut scouting_iter = iter.clone();
+        while continue_while(&scouting_iter) {
+            match scouting_iter.peek3() {
+                (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
+                    let surrounded_by_spaces =
+                        prev.range().end < range.begin && range.end < next.range().begin;
+                    if surrounded_by_spaces {
+                        // We'll return this iterator for the things that come before the =
+                        let mut before_iter = iter.clone();
+                        before_iter.end = scouting_iter.index + 1;
+                        
+                        // Now modify iter to skip past it
+                        iter.skip_to(&scouting_iter);
+                        iter.advance();
+                        iter.advance();
+                        
+                        return Some(before_iter);
+                    }
+                }
+                _ => {}
+            }
+            scouting_iter.advance();
+        }
+        
+        None
+    }
+    
+    /// Helper method to skip past a keyword while a condition is true
+    /// Mirrors ParseUtils.trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
+    fn try_skip_past_keyword_while<F>(
+        &self,
+        iter: &mut ScrambleIterator,
+        keyword: &StrI,
+        continue_while: F,
+    ) -> Option<(WordLE, ScrambleIterator)>
+    where
+        F: Fn(&ScrambleIterator) -> bool,
+    {
+        let mut scouting_iter = iter.clone();
+        while continue_while(&scouting_iter) {
+            match scouting_iter.peek() {
+                Some(INodeLEEnum::Word(w @ WordLE { str: kw, .. })) if kw == keyword => {
+                    let w = w.clone();
+                    // We'll return this iterator for the things that come before the keyword
+                    let mut before_iter = iter.clone();
+                    before_iter.end = scouting_iter.index;
+                    
+                    // Now modify iter to skip past it
+                    iter.skip_to(&scouting_iter);
+                    iter.advance();
+                    
+                    return Some((w, before_iter));
+                }
+                _ => {}
+            }
+            scouting_iter.advance();
+        }
+        
+        None
+    }
+}
+
+

@@ -57,7 +57,7 @@ class StructHammer(
             fullNameH,
             interfaceDefI.weakable,
             Conversions.evaluateMutabilityTemplata(interfaceDefI.mutability),
-            Vector.empty /* super interfaces */,
+            Vector.empty, // super interfaces
             methodsH)
         hamuts.addInterface(interfaceIT, interfaceDefH)
         vassert(interfaceDefH.getRef == temporaryInterfaceRefH)

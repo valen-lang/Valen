@@ -1204,7 +1204,8 @@ class ExpressionCompiler(
           }
 
           val loopExpr2 = WhileTE(uncoercedBodyBlock2)
-          (loopExpr2, /*returnsFromCondition ++*/ bodyReturnsFromExprs)
+          // (loopExpr2, returnsFromCondition ++ bodyReturnsFromExprs)
+          (loopExpr2, bodyReturnsFromExprs)
         }
         case m @ MapSE(range, bodySE) => {
           // Preprocess the entire loop once, to predict what its result type

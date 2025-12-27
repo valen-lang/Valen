@@ -67,7 +67,7 @@ exported func main() {
     });
   });
 
-  suite.sub("remove directory", (sts){
+  suite.sub("remove directory", (sts) => {
     sts.test("create and remove empty dir", {
       doomed_directory = test_directory./("/zork");
       doomed_directory.CreateDirAll(true).expect();

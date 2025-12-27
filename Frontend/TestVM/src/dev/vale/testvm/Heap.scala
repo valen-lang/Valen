@@ -120,7 +120,8 @@ class AllocationMap(vivemDout: PrintStream) {
 class Heap(in_vivemDout: PrintStream) {
   val vivemDout = in_vivemDout
 
-  /*private*/ val objectsById = new AllocationMap(vivemDout)
+  // private
+  val objectsById = new AllocationMap(vivemDout)
 
   private val callIdStack = mutable.Stack[CallId]();
   private val callsById = mutable.HashMap[CallId, Call]()
