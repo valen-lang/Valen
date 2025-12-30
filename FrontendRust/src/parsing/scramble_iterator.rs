@@ -10,7 +10,13 @@ pub struct ScrambleIterator {
     pub index: usize,
     pub end: usize,
 }
-
+/*
+class ScrambleIterator(
+    val scramble: ScrambleLE,
+    var index: Int,
+    var end: Int) {
+  assert(end <= scramble.elements.length)
+*/
 impl ScrambleIterator {
     /// Create a new iterator over the entire scramble
     pub fn new(scramble: ScrambleLE) -> Self {
@@ -21,6 +27,11 @@ impl ScrambleIterator {
             end,
         }
     }
+    /*
+      def this(scramble: ScrambleLE) {
+        this(scramble, 0, scramble.elements.length)
+      }
+    */
 
     /// Create a new iterator with custom bounds
     pub fn with_bounds(scramble: ScrambleLE, index: usize, end: usize) -> Self {
@@ -36,6 +47,11 @@ impl ScrambleIterator {
     pub fn at_end(&self) -> bool {
         self.index == self.end
     }
+    /*
+      def atEnd: Boolean = {
+        index == end
+      }
+    */
 
     /// Get the range covered by remaining elements
     pub fn range(&self) -> RangeL {
@@ -52,6 +68,18 @@ impl ScrambleIterator {
             }
         }
     }
+    /*
+      def range: RangeL = {
+        if (index < end) {
+          RangeL(
+            scramble.elements(index).range.begin,
+            scramble.elements(end - 1).range.end)
+        } else {
+          vassert(index == end)
+          RangeL(scramble.range.end, scramble.range.end)
+        }
+      }
+    */
 
     /// Get current position
     pub fn get_pos(&self) -> i32 {
@@ -61,6 +89,15 @@ impl ScrambleIterator {
             self.scramble.elements[self.index].range().begin
         }
     }
+    /*
+      def getPos(): Int = {
+        if (index >= end) {
+          scramble.range.end
+        } else {
+          scramble.elements(index).range.begin
+        }
+      }
+    */
 
     /// Get the end position of the previous element
     pub fn get_prev_end_pos(&self) -> i32 {
@@ -70,6 +107,15 @@ impl ScrambleIterator {
             self.scramble.elements[self.index - 1].range().end
         }
     }
+    /*
+      def getPrevEndPos(): Int = {
+        if (index == 0) {
+          scramble.range.begin
+        } else {
+          scramble.elements(index - 1).range.end
+        }
+      }
+    */
 
     /// Peek at the previous element
     pub fn peek_prev(&self) -> Option<&INodeLEEnum> {
@@ -84,16 +130,29 @@ impl ScrambleIterator {
     pub fn skip_to(&mut self, that: &ScrambleIterator) {
         self.index = that.index;
     }
+    /*
+      def skipTo(that: ScrambleIterator): Unit = {
+        index = that.index
+      }
+    */
 
     /// Stop iteration (move to end)
     pub fn stop(&mut self) {
         self.index = self.end;
     }
+    /*
+      def stop(): Unit = {
+        index = end
+      }
+    */
 
     /// Check if there are more elements
     pub fn has_next(&self) -> bool {
         self.index < self.end
     }
+    /*
+      def hasNext: Boolean = index < end
+    */
 
     /// Peek at the current element
     pub fn peek(&self) -> Option<&INodeLEEnum> {
@@ -103,6 +162,12 @@ impl ScrambleIterator {
             Some(&**&self.scramble.elements[self.index])
         }
     }
+    /*
+      def peek(): Option[INodeLE] = {
+        if (index >= end) None
+        else Some(scramble.elements(index))
+      }
+    */
 
     /// Peek at the next n elements
     pub fn peek_n(&self, n: usize) -> Vec<Option<&INodeLEEnum>> {
@@ -117,6 +182,20 @@ impl ScrambleIterator {
             })
             .collect()
     }
+    /*
+      // This is an Vector[Option[INodeLE]] instead of an Vector[INodeLE]
+      // because we like to be able to ignore the tail end of something like
+      // case Vector(Some(whatever), _)
+      def peek(n: Int): Vector[Option[INodeLE]] = {
+        U.mapRange[Option[INodeLE]](
+          index,
+          index + n,
+          i => {
+            if (i < end) Some(scramble.elements(i))
+            else None
+          })
+      }
+    */
 
     /// Peek at the next 2 elements
     pub fn peek2(&self) -> (Option<&INodeLEEnum>, Option<&INodeLEEnum>) {
@@ -132,6 +211,13 @@ impl ScrambleIterator {
         };
         (first, second)
     }
+    /*
+      def peek2(): (Option[INodeLE], Option[INodeLE]) = {
+        (
+          (if (index + 0 < end) Some(scramble.elements(index + 0)) else None),
+          (if (index + 1 < end) Some(scramble.elements(index + 1)) else None))
+      }
+    */
 
     /// Peek at the next 3 elements
     pub fn peek3(&self) -> (Option<&INodeLEEnum>, Option<&INodeLEEnum>, Option<&INodeLEEnum>) {
@@ -152,14 +238,30 @@ impl ScrambleIterator {
         };
         (first, second, third)
     }
+    /*
+      def peek3(): (Option[INodeLE], Option[INodeLE], Option[INodeLE]) = {
+        (
+          (if (index + 0 < end) Some(scramble.elements(index + 0)) else None),
+          (if (index + 1 < end) Some(scramble.elements(index + 1)) else None),
+          (if (index + 2 < end) Some(scramble.elements(index + 2)) else None))
+      }
+    */
 
     /// Check if next element is a specific word
     pub fn peek_word(&self, word: &Arc<StrI>) -> bool {
         match self.peek() {
-            Some(INodeLEEnum::Word(WordLE { str, .. })) => str == &**word,
+            Some(INodeLEEnum::Word(WordLE { str, .. })) => str == word,
             _ => false,
         }
     }
+    /*
+      def peekWord(word: StrI): Boolean = {
+        peek() match {
+          case Some(WordLE(_, s)) => s == word
+          case _ => false
+        }
+      }
+    */
 
     /// Advance and return a reference to the current element
     pub fn advance(&mut self) -> &INodeLEEnum {
@@ -168,6 +270,14 @@ impl ScrambleIterator {
         self.index += 1;
         result
     }
+    /*
+      def advance(): INodeLE = {
+        vassert(hasNext)
+        val result = scramble.elements(index)
+        index = index + 1
+        result
+      }
+    */
 
     /// Take the current element and advance (returning owned)
     pub fn take(&mut self) -> Option<INodeLEEnum> {
@@ -179,6 +289,12 @@ impl ScrambleIterator {
             Some(result)
         }
     }
+    /*
+      def take(): Option[INodeLE] = {
+        if (index >= end) None
+        else Some(advance())
+      }
+    */
 
     /// Try to skip a symbol
     pub fn try_skip_symbol(&mut self, symbol: char) -> bool {
@@ -190,6 +306,17 @@ impl ScrambleIterator {
             _ => false,
         }
     }
+    /*
+      def trySkipSymbol(symbol: Char): Boolean = {
+        peek() match {
+          case Some(SymbolLE(_, s)) if s == symbol => {
+            advance()
+            true
+          }
+          case _ => false
+        }
+      }
+    */
 
     /// Try to skip multiple symbols in sequence
     pub fn try_skip_symbols(&mut self, symbols: &[char]) -> bool {
@@ -207,6 +334,23 @@ impl ScrambleIterator {
         self.index += symbols.len();
         true
     }
+    /*
+      def trySkipSymbols(symbols: Vector[Char]): Boolean = {
+        if (index + symbols.length >= end) {
+          return false
+        }
+        var i = 0
+        while (i < symbols.length) {
+          scramble.elements(index + i) match {
+            case SymbolLE(_, s) if s == symbols(i) =>
+            case _ => return false
+          }
+          i = i + 1
+        }
+        index = index + symbols.length
+        true
+      }
+    */
 
     /// Get the next word element
     pub fn next_word(&mut self) -> Option<WordLE> {
@@ -219,15 +363,32 @@ impl ScrambleIterator {
             _ => None,
         }
     }
+    /*
+      def nextWord(): Option[WordLE] = {
+        peek() match {
+          case Some(w @ WordLE(_, _)) => {
+            advance()
+            Some(w)
+          }
+          case _ => None
+        }
+      }
+    */
 
     /// Expect a specific word (panics if not found)
     pub fn expect_word(&mut self, str: &Arc<StrI>) {
         let found = self.try_skip_word(str).is_some();
         assert!(found, "Expected word {:?}", str);
     }
+    /*
+      def expectWord(str: StrI): Unit = {
+        val found = trySkipWord(str).nonEmpty
+        vassert(found)
+      }
+    */
 
     /// Try to skip a specific word
-    pub fn try_skip_word(&mut self, str: &StrI) -> Option<RangeL> {
+    pub fn try_skip_word(&mut self, str: &Arc<StrI>) -> Option<RangeL> {
         match self.peek() {
             Some(INodeLEEnum::Word(WordLE { range, str: s })) if s == str => {
                 let result = *range;
@@ -237,6 +398,17 @@ impl ScrambleIterator {
             _ => None,
         }
     }
+    /*
+      def trySkipWord(str: StrI): Option[RangeL] = {
+        peek() match {
+          case Some(WordLE(range, s)) if s == str => {
+            advance()
+            Some(range)
+          }
+          case _ => None
+        }
+      }
+    */
 
     /// Find the index where a condition is true
     pub fn find_index_where<F>(&self, func: F) -> Option<usize>
@@ -250,6 +422,11 @@ impl ScrambleIterator {
         }
         None
     }
+    /*
+      def findIndexWhere(func: scala.Function1[INodeLE, Boolean]): Option[Int] = {
+        U.findIndexWhereFromUntil(scramble.elements, func, index, end)
+      }
+    */
 
     /// Split the scramble on a specific symbol
     /// 
@@ -295,6 +472,51 @@ impl ScrambleIterator {
 
         iters
     }
+    /*
+      // We use this splitOnSymbol method for things like comma-separated
+      // lists and things.
+      // TODO: Soon, it will fall apart on certain cases. For example,
+      // in a struct, we can have:
+      //   struct Moo {
+      //     x int;
+      //     func bork() { }
+      //     func zork() { }
+      //   }
+      // so it doesn't make much sense to split on semicolon.
+      // Instead, we should make the iterator go until it finds a certain symbol.
+      //
+      // includeEmptyTrailingSection means that if we end with a needle,
+      // we'll still return an empty iterator for the end.
+      def splitOnSymbol(needle: Char, includeEmptyTrailing: Boolean): Vector[ScrambleIterator] = {
+        val iters = new Accumulator[ScrambleIterator]()
+        var start = index
+        var i = start
+        while (i < end) {
+          scramble.elements(i) match {
+            case SymbolLE(_, c) if c == needle => {
+              iters.add(new ScrambleIterator(scramble, start, i))
+              start = i + 1
+              i = i + 1 // Note the 2 here
+            }
+            case _ => {
+              i = i + 1
+            }
+          }
+        }
+        if (start < end) {
+          // If we get in here, the scramble didnt end in this needle.
+          // So, just add this as the last result.
+          iters.add(new ScrambleIterator(scramble, start, end))
+        } else if (start == end) {
+          // If start == end, then we ended in a needle.
+          if (includeEmptyTrailing) {
+            iters.add(new ScrambleIterator(scramble, start, end))
+          }
+        }
+    
+        iters.buildArray()
+      }
+    */
 
     /// Try to match a Word node
     pub fn try_match_word(&self) -> Option<&WordLE> {
@@ -446,3 +668,50 @@ mod tests {
     }
 }
 
+
+/*
+sealed trait IStopBefore
+case object StopBeforeComma extends IStopBefore
+case object StopBeforeFileEnd extends IStopBefore
+case object StopBeforeCloseBrace extends IStopBefore
+case object StopBeforeCloseParen extends IStopBefore
+case object StopBeforeEquals extends IStopBefore
+case object StopBeforeCloseSquare extends IStopBefore
+case object StopBeforeCloseChevron extends IStopBefore
+// Such as after the if's condition or the foreach's iterable.
+case object StopBeforeOpenBrace extends IStopBefore
+*/
+
+/*
+object ExpressionParser {
+  val MAX_PRECEDENCE = 6
+  val MIN_PRECEDENCE = 1
+}
+*/
+/*
+  override def clone(): ScrambleIterator = new ScrambleIterator(scramble, index, end)
+*/
+/*
+  def trySkip[R](f: PartialFunction[INodeLE, R]): Option[INodeLE] = {
+    peek().filter(f.isDefinedAt)
+  }
+*/
+/*
+  def trySkipAll[R](f: Array[PartialFunction[INodeLE, Unit]]): Boolean = {
+    vassert(index + f.length < scramble.elements.length)
+    U.loop(f.length, i => {
+      if (!f(i).isDefinedAt(scramble.elements(index + i))) {
+        return false
+      }
+    })
+    true
+  }
+*/
+/*
+//  def exists(func: scala.Function1[INodeLE, Boolean]): Boolean = {
+//    U.exists(scramble.elements, func, index, end)
+//  }
+*/
+/*
+}
+*/

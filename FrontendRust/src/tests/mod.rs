@@ -1,6 +1,7 @@
 // Test module declarations
-pub mod test_utils;
-// pub mod von_tests; // TODO: Needs VonSyntax/JsonSyntax implementation
+pub mod test_parse_utils;
+pub mod parser_test_compilation;
+// pub mod von_tests;
 pub mod expression_tests;
 pub mod top_level_tests;
 pub mod struct_tests;

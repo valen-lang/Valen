@@ -1,7 +1,7 @@
 /// Coordinate rule parsing tests
 /// Mirrors tests from Frontend/ParsingPass/test/dev/vale/parsing/rules/CoordRuleTests.scala
 
-use crate::tests::test_utils::*;
+use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
 
 // Mirrors CoordRuleTests.scala line 16

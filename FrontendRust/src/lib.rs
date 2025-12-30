@@ -6,7 +6,6 @@ pub mod utils;
 pub mod lexing;
 pub mod parsing;
 pub mod von;
-pub mod error_humanizer;
 pub mod builtins;
 pub mod file_coordinate_map;
 pub mod pass_manager;

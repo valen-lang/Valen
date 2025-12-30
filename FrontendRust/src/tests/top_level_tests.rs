@@ -1,7 +1,7 @@
 /// Top-level parsing tests
 /// Mirrors Frontend/ParsingPass/test/dev/vale/parsing/TopLevelTests.scala
 
-use crate::tests::test_utils::*;
+use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
 use crate::lexing::errors::*;
 use crate::{should_have, matches_pattern};

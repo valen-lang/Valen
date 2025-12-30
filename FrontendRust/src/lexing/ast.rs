@@ -1,4 +1,10 @@
 use crate::StrI;
+use std::sync::Arc;
+/*
+package dev.vale.lexing
+
+import dev.vale.{IInterning, StrI, U, vassert, vcurious, vpass, vwat}
+*/
 
 /// Position range in source code
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -17,6 +23,15 @@ impl RangeL {
         RangeL { begin: 0, end: 0 }
     }
 }
+/*
+case class RangeL(begin: Int, end: Int) {
+  override def hashCode(): Int = vcurious()
+  vassert(begin == end || begin <= end)
+}
+object RangeL {
+  val zero = RangeL(0, 0)
+}
+*/
 
 /// A file with top-level denizens
 #[derive(Clone, Debug, PartialEq)]
@@ -24,6 +39,14 @@ pub struct FileL {
     pub denizens: Vec<IDenizenL>,
     pub comment_ranges: Vec<RangeL>,
 }
+/*
+case class FileL(
+  denizens: Vector[IDenizenL],
+  commentRanges: Vector[RangeL]
+) {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
+*/
 
 /// Top-level items in a file
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +58,15 @@ pub enum IDenizenL {
     TopLevelExportAs(ExportAsL),
     TopLevelImport(ImportL),
 }
+/*
+sealed trait IDenizenL
+case class TopLevelFunctionL(function: FunctionL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelStructL(struct: StructL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelInterfaceL(interface: InterfaceL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImplL(impl: ImplL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelExportAsL(export: ExportAsL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImportL(imporrt: ImportL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Impl block
 #[derive(Clone, Debug, PartialEq)]
@@ -46,6 +78,17 @@ pub struct ImplL {
     pub interface: ScrambleLE,
     pub attributes: Vec<IAttributeL>,
 }
+/*
+case class ImplL(
+  range: RangeL,
+  identifyingRunes: Option[AngledLE],
+  templateRules: Option[ScrambleLE],
+  // Option because we can say `impl MyInterface;` inside a struct.
+  struct: Option[ScrambleLE],
+  interface: ScrambleLE,
+  attributes: Vector[IAttributeL]
+) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Export as declaration
 #[derive(Clone, Debug, PartialEq)]
@@ -53,6 +96,11 @@ pub struct ExportAsL {
     pub range: RangeL,
     pub contents: ScrambleLE,
 }
+/*
+case class ExportAsL(
+  range: RangeL,
+  contents: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Import declaration
 #[derive(Clone, Debug, PartialEq)]
@@ -62,6 +110,13 @@ pub struct ImportL {
     pub package_steps: Vec<WordLE>,
     pub importee_name: WordLE,
 }
+/*
+case class ImportL(
+  range: RangeL,
+  moduleName: WordLE,
+  packageSteps: Vector[WordLE],
+  importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Struct definition
 #[derive(Clone, Debug, PartialEq)]
@@ -74,6 +129,16 @@ pub struct StructL {
     pub template_rules: Option<ScrambleLE>,
     pub members: ScrambleLE,
 }
+/*
+case class StructL(
+  range: RangeL,
+  name: WordLE,
+  attributes: Vector[IAttributeL],
+  mutability: Option[ScrambleLE],
+  identifyingRunes: Option[AngledLE],
+  templateRules: Option[ScrambleLE],
+  members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Interface definition
 #[derive(Clone, Debug, PartialEq)]
@@ -87,6 +152,17 @@ pub struct InterfaceL {
     pub body_range: RangeL,
     pub members: Vec<FunctionL>,
 }
+/*
+case class InterfaceL(
+  range: RangeL,
+  name: WordLE,
+  attributes: Vector[IAttributeL],
+  mutability: Option[ScrambleLE],
+  maybeIdentifyingRunes: Option[AngledLE],
+  templateRules: Option[ScrambleLE],
+  bodyRange: RangeL,
+  members: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Attributes on declarations
 #[derive(Clone, Debug, PartialEq)]
@@ -101,6 +177,17 @@ pub enum IAttributeL {
     SealedAttribute(RangeL),
     MacroCall { range: RangeL, inclusion: IMacroInclusionL, name: WordLE },
 }
+/*
+sealed trait IAttributeL
+case class AbstractAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class ExportAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class PureAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class AdditiveAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class ExternAttributeL(range: RangeL, maybeCustomName: Option[ParendLE]) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class LinearAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class WeakableAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class SealedAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Macro inclusion type
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -108,6 +195,12 @@ pub enum IMacroInclusionL {
     CallMacro,
     DontCallMacro,
 }
+/*
+sealed trait IMacroInclusionL
+case object CallMacroL extends IMacroInclusionL
+case object DontCallMacroL extends IMacroInclusionL
+case class MacroCallL(range: RangeL, inclusion: IMacroInclusionL, name: WordLE) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Function definition
 #[derive(Clone, Debug, PartialEq)]
@@ -116,12 +209,23 @@ pub struct FunctionL {
     pub header: FunctionHeaderL,
     pub body: Option<FunctionBodyL>,
 }
+/*
+case class FunctionL(
+  range: RangeL,
+  header: FunctionHeaderL,
+  body: Option[FunctionBodyL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Function body
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionBodyL {
     pub body: CurliedLE,
 }
+/*
+case class FunctionBodyL(
+  body: CurliedLE
+) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 /// Function header
 #[derive(Clone, Debug, PartialEq)]
@@ -135,11 +239,38 @@ pub struct FunctionHeaderL {
     /// Basically, everything up until the body's { or a ;
     pub trailing_details: ScrambleLE,
 }
+/*
+case class FunctionHeaderL(
+  range: RangeL,
+  name: WordLE,
+  attributes: Vector[IAttributeL],
+
+  maybeUserSpecifiedIdentifyingRunes: Option[AngledLE],
+
+  params: ParendLE,
+
+  // Includes:
+  // - where clause
+  // - return type
+  // - default region for the body
+  // Basically, everything up until the body's { or a ;
+  trailingDetails: ScrambleLE
+) {
+  vpass()
+
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
+*/
 
 /// Node in the lexer tree
 pub trait INodeLE {
     fn range(&self) -> RangeL;
 }
+/*
+trait INodeLE {
+  def range: RangeL
+}
+*/
 
 /// A scramble of lexer nodes (no structure yet)
 #[derive(Clone, Debug, PartialEq)]
@@ -147,12 +278,26 @@ pub struct ScrambleLE {
     pub range: RangeL,
     pub elements: Vec<Box<INodeLEEnum>>,
 }
-
 impl INodeLE for ScrambleLE {
     fn range(&self) -> RangeL {
         self.range
     }
 }
+/*
+case class ScrambleLE(
+  range: RangeL,
+  elements: Vector[INodeLE],
+) extends INodeLE {
+  vpass()
+
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+
+  U.foreach[INodeLE](elements, {
+    case ScrambleLE(_, _) => vwat()
+    case _ =>
+  })
+}
+*/
 
 /// Enum wrapper for INodeLE to allow storing in vectors
 #[derive(Clone, Debug, PartialEq)]
@@ -192,12 +337,16 @@ pub struct ParendLE {
     pub range: RangeL,
     pub contents: ScrambleLE,
 }
-
 impl INodeLE for ParendLE {
     fn range(&self) -> RangeL {
         self.range
     }
 }
+/*
+case class ParendLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Angled brackets (generics)
 #[derive(Clone, Debug, PartialEq)]
@@ -205,12 +354,16 @@ pub struct AngledLE {
     pub range: RangeL,
     pub contents: ScrambleLE,
 }
-
 impl INodeLE for AngledLE {
     fn range(&self) -> RangeL {
         self.range
     }
 }
+/*
+case class AngledLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Squared brackets (arrays)
 #[derive(Clone, Debug, PartialEq)]
@@ -224,6 +377,11 @@ impl INodeLE for SquaredLE {
         self.range
     }
 }
+/*
+case class SquaredLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Curly braces (blocks)
 #[derive(Clone, Debug, PartialEq)]
@@ -237,19 +395,28 @@ impl INodeLE for CurliedLE {
         self.range
     }
 }
+/*
+case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Word/identifier
 #[derive(Clone, Debug, PartialEq)]
 pub struct WordLE {
     pub range: RangeL,
-    pub str: StrI,
+    pub str: Arc<StrI>,
 }
-
 impl INodeLE for WordLE {
     fn range(&self) -> RangeL {
         self.range
     }
 }
+/*
+case class WordLE(range: RangeL, str: StrI) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Single character symbol
 #[derive(Clone, Debug, PartialEq)]
@@ -263,6 +430,11 @@ impl INodeLE for SymbolLE {
         self.range
     }
 }
+/*
+case class SymbolLE(range: RangeL, c: Char) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// String literal
 #[derive(Clone, Debug, PartialEq)]
@@ -276,6 +448,11 @@ impl INodeLE for StringLE {
         self.range
     }
 }
+/*
+case class StringLE(range: RangeL, parts: Vector[StringPart]) extends INodeLE {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+}
+*/
 
 /// Part of a string (literal or interpolated expression)
 #[derive(Clone, Debug, PartialEq)]
@@ -283,6 +460,17 @@ pub enum StringPart {
     Literal { range: RangeL, s: String },
     Expr(ScrambleLE),
 }
+/*
+sealed trait StringPart
+case class StringPartLiteral(range: RangeL, s: String) extends StringPart {
+  vpass()
+}
+case class StringPartExpr(expr: ScrambleLE) extends StringPart
+*/
+
+/*
+sealed trait IParsedNumberLE extends INodeLE
+*/
 
 /// Parsed integer literal
 #[derive(Clone, Debug, PartialEq)]
@@ -297,6 +485,9 @@ impl INodeLE for ParsedIntegerLE {
         self.range
     }
 }
+/*
+case class ParsedIntegerLE(range: RangeL, int: Long, bits: Option[Long]) extends IParsedNumberLE
+*/
 
 /// Parsed floating-point literal
 #[derive(Clone, Debug, PartialEq)]
@@ -311,4 +502,6 @@ impl INodeLE for ParsedDoubleLE {
         self.range
     }
 }
-
+/*
+case class ParsedDoubleLE(range: RangeL, double: Double, bits: Option[Long]) extends IParsedNumberLE
+*/

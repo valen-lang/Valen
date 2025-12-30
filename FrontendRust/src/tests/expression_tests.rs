@@ -5,7 +5,7 @@
 mod expression_tests {
     use crate::parsing::ast::*;
     use crate::lexing::errors::ParseError;
-    use crate::tests::test_utils::*;
+    use crate::tests::test_parse_utils::*;
     use crate::should_have;
 
     // Mirrors ExpressionTests.scala line 9

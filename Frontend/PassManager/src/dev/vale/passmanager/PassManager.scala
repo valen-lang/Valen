@@ -160,10 +160,10 @@ object PassManager {
 //    println("resolving " + packageCoord + " with inputs:\n" + inputs)
 
     val sourceInputs =
-      inputs.zipWithIndex.filter(_._1.packageCoord(interner) == packageCoord).flatMap({
-        case (SourceInput(_, name, code), index) => {
-          // .vpst and .vale direct inputs
-          Vector((name -> code))
+      inputs.zipWithIndex.filter(_._1.packageCoord(interner).module == module).flatMap({
+        case (SourceInput(_, name, code), index) if (packages == Vector.empty) => {
+          // All .vpst and .vale direct inputs are considered part of the root paackage.
+          Vector((index + "(" + name + ")" -> code))
         }
         case (mpi @ ModulePathInput(_, modulePath), _) => {
 //          println("checking with modulepathinput " + mpi)
@@ -210,26 +210,23 @@ object PassManager {
 
     // If --input_vpst is provided, load .vpst files
     // The Rust parser already filtered to only needed packages via import-driven parsing
-    val (allInputs, packageCoords) = opts.inputVpstDir match {
+    val allInputs = opts.inputVpstDir match {
       case Some(vpstDir) => {
         val vpstFiles = new java.io.File(vpstDir).listFiles().filter(_.getName.endsWith(".vpst"))
         val vpstInputs = vpstFiles.map(file => {
           val code = Source.fromFile(file).mkString
-          // Parse just enough to get the package coordinate
-          val parsedLoader = new ParsedLoader(interner)
-          val fileP = parsedLoader.load(code) match {
+          val fileP = new ParsedLoader(interner).load(code) match {
             case Err(e) => return Err(s"Failed to load ${file.getName}: $e")
             case Ok(f) => f
           }
-          val packageCoord = fileP.fileCoord.packageCoordinate
-          SourceInput(packageCoord, file.getPath, code)
+          SourceInput(fileP.fileCoord.packageCoordinate, file.getPath, code)
         }).toVector
-        // Build all packages from vpst files (already filtered by Rust parser)
-        val coords = vpstInputs.map(_.packageCoord(interner)).distinct
-        (opts.inputs ++ vpstInputs, coords)
+        opts.inputs ++ vpstInputs
       }
-      case None => (opts.inputs, opts.inputs.map(_.packageCoord(interner)).distinct)
+      case None => opts.inputs
     }
+
+    val packageCoords = allInputs.map(_.packageCoord(interner)).distinct
 
     val compilation =
       new FullCompilation(

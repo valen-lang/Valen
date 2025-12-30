@@ -1,7 +1,7 @@
 // From Frontend/Builtins/src/dev/vale/Builtins.scala
 
-use crate::parsing::ast::{FileCoordinate, PackageCoordinate};
-use crate::file_coordinate_map::FileCoordinateMap;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use std::sync::{Arc, Mutex};
@@ -57,7 +57,7 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 // to fail just because the builtin-yet-unused `func as<T, X>(x X) Opt<T> { ... }` doesn't want to
 // work right now.
 pub fn get_modulized_code_map(
-    interner: Arc<Mutex<Interner>>,
+    interner: Arc<Interner>,
     keywords: Arc<Keywords>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<String>, String> {
@@ -65,21 +65,21 @@ pub fn get_modulized_code_map(
     
     for (module_name, filename) in MODULE_TO_FILENAME {
         let module_name_stri = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern(module_name)
+            // Interner now has interior mutability
+            interner.intern(module_name)
         };
         
         let package_coord = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern_package_coordinate(PackageCoordinate {
-                module: Arc::new(keywords.v.clone()),
-                packages: vec![Arc::new(keywords.builtins.clone()), Arc::new(module_name_stri)],
+            // Interner now has interior mutability
+            interner.intern_package_coordinate(PackageCoordinate {
+                module: keywords.v.clone(),
+                packages: vec![keywords.builtins.clone(), module_name_stri.clone()],
             })
         };
         
         let file_coord = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern_file_coordinate(FileCoordinate {
+            // Interner now has interior mutability
+            interner.intern_file_coordinate(FileCoordinate {
                 package_coord: package_coord,
                 filepath: filename.to_string(),
             })
@@ -96,14 +96,14 @@ pub fn get_modulized_code_map(
 // Add an empty v.builtins.whatever so that the aforementioned imports still work.
 // But load the actual files all inside the root package.
 pub fn get_code_map(
-    interner: Arc<Mutex<Interner>>,
+    interner: Arc<Interner>,
     keywords: Arc<Keywords>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<String>, String> {
     let builtin_namespace_coord = {
-        let mut interner_lock = interner.lock().unwrap();
-        interner_lock.intern_package_coordinate(PackageCoordinate {
-            module: Arc::new(keywords.empty_string.clone()),
+        // Interner now has interior mutability
+        interner.intern_package_coordinate(PackageCoordinate {
+            module: keywords.empty_string.clone(),
             packages: vec![],
         })
     };
@@ -112,22 +112,22 @@ pub fn get_code_map(
     
     for (module_name, filename) in MODULE_TO_FILENAME {
         let module_name_stri = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern(module_name)
+            // Interner now has interior mutability
+            interner.intern(module_name)
         };
         
         // Put empty string for v.builtins.moduleName
         let modulized_package_coord = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern_package_coordinate(PackageCoordinate {
-                module: Arc::new(keywords.v.clone()),
-                packages: vec![Arc::new(keywords.builtins.clone()), Arc::new(module_name_stri)],
+            // Interner now has interior mutability
+            interner.intern_package_coordinate(PackageCoordinate {
+                module: keywords.v.clone(),
+                packages: vec![keywords.builtins.clone(), module_name_stri.clone()],
             })
         };
         
         let modulized_file_coord = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern_file_coordinate(FileCoordinate {
+            // Interner now has interior mutability
+            interner.intern_file_coordinate(FileCoordinate {
                 package_coord: modulized_package_coord,
                 filepath: filename.to_string(),
             })
@@ -137,8 +137,8 @@ pub fn get_code_map(
         
         // Put actual code for root package
         let root_file_coord = {
-            let mut interner_lock = interner.lock().unwrap();
-            interner_lock.intern_file_coordinate(FileCoordinate {
+            // Interner now has interior mutability
+            interner.intern_file_coordinate(FileCoordinate {
                 package_coord: builtin_namespace_coord.clone(),
                 filepath: filename.to_string(),
             })

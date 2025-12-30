@@ -1,8 +1,8 @@
 /// Integration tests that parse real Vale sample files
 /// Mirrors tests from Frontend/ParsingPass/test/dev/vale/parsing/ParseSamplesTests.scala
 
-use crate::tests::test_utils::*;
-use crate::error_humanizer::ParseErrorHumanizer;
+use crate::tests::test_parse_utils::*;
+use crate::parsing::parse_error_humanizer::ParseErrorHumanizer;
 use std::fs;
 use std::path::Path;
 

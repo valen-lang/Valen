@@ -1,7 +1,7 @@
 /// Rule parsing tests
 /// Mirrors tests from Frontend/ParsingPass/test/dev/vale/parsing/rules/
 
-use crate::tests::test_utils::*;
+use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
 
 // === RulesEnumsTests.scala ===

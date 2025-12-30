@@ -8,24 +8,48 @@ use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::pattern_parser::PatternParser;
 use std::sync::{Arc, Mutex};
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+/*
+package dev.vale.parsing
+
+import dev.vale.options.GlobalOptions
+import dev.vale.parsing.ast._
+import dev.vale.parsing.templex.TemplexParser
+import dev.vale._
+import dev.vale.lexing._
+import dev.vale.parsing.Parser.{parsePrefixingRegion, parseRegion}
+import dev.vale.parsing.ast._
+import dev.vale.von.{JsonSyntax, VonPrinter}
+
+import scala.collection.immutable.{List, Map}
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+import scala.util.matching.Regex
+*/
 
 type ParseResult<T> = Result<T, ParseError>;
 
 /// Main parser coordinating all parsing operations
 /// Matches Scala's Parser class
 pub struct Parser {
-    interner: Arc<Mutex<Interner>>,
+    interner: Arc<Interner>,
     keywords: Arc<Keywords>,
     pub templex_parser: TemplexParser,
     pub pattern_parser: PatternParser,
     pub expression_parser: ExpressionParser,
 }
+/*
+class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
+  val templexParser = new TemplexParser(interner, keywords)
+  val patternParser = new PatternParser(interner, keywords, templexParser)
+  val expressionParser = new ExpressionParser(interner, keywords, opts, patternParser, templexParser)
+*/
 
 impl Parser {
-    pub fn new(interner: Arc<Mutex<Interner>>, keywords: Arc<Keywords>) -> Self {
+    pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
         let templex_parser = TemplexParser::new(interner.clone(), keywords.clone());
         let pattern_parser = PatternParser::new(interner.clone(), keywords.clone());
-        let expression_parser = ExpressionParser::new(keywords.clone());
+        let expression_parser = ExpressionParser::new(interner.clone(), keywords.clone());
 
         Parser {
             interner,
@@ -53,7 +77,7 @@ impl Parser {
         while continue_while(&scouting_iter) {
             // Mirrors ParseUtils.scala lines 84-98
             match scouting_iter.peek() {
-                Some(INodeLEEnum::Word(w)) if w.str == *keyword => {
+                Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
                     // Mirrors ParseUtils.scala lines 86-88
                     // We'll return this iterator for the things that come before the keyword
                     let mut before_iter = iter.clone();
@@ -88,14 +112,18 @@ impl Parser {
             parsed_denizens.push(parsed);
         }
 
+        let empty_str = self.interner.intern("");
+        let empty_package = self.interner.intern_package_coordinate(PackageCoordinate {
+            module: empty_str,
+            packages: vec![],
+        });
+        let empty_file = self.interner.intern_file_coordinate(FileCoordinate {
+            package_coord: empty_package,
+            filepath: "".to_string(),
+        });
+        
         Ok(FileP {
-            file_coord: FileCoordinate {
-                package_coord: PackageCoordinate {
-                    module: Arc::new(self.interner.lock().unwrap().intern("")),
-                    packages: vec![],
-                },
-                filepath: "".to_string(),
-            },
+            file_coord: empty_file,
             comments_ranges: comment_ranges,
             denizens: parsed_denizens,
         })
@@ -148,6 +176,22 @@ impl Parser {
             params,
         })
     }
+/*
+  private[parsing] def parseIdentifyingRunes(node: AngledLE):
+  Result[GenericParametersP, IParseError] = {
+    val runesP =
+      U.map[ScrambleIterator, GenericParameterP](
+        new ScrambleIterator(node.contents).splitOnSymbol(',', false),
+        inner => {
+        parseGenericParameter(inner) match {
+          case Err(e) => return Err(e)
+          case Ok(x) => x
+        }
+      })
+
+    Ok(GenericParametersP(node.range, runesP.toVector))
+  }
+*/
 
     /// Parse a single generic parameter
     fn parse_generic_parameter(&mut self, mut iter: ScrambleIterator) -> ParseResult<GenericParameterP> {
@@ -164,7 +208,7 @@ impl Parser {
                     Some(INodeLEEnum::Word(WordLE { range, str })) => {
                         let result = NameP {
                             range: *range,
-                            str: Arc::new(str.clone()),
+                            str: str.clone(),
                         };
                         iter.advance();
                         result
@@ -183,7 +227,7 @@ impl Parser {
                     tyype,
                 });
 
-                let maybe_attrs = if iter.try_skip_word(&Arc::new(self.keywords.imm.clone())).is_some() {
+                let maybe_attrs = if iter.try_skip_word(&self.keywords.imm).is_some() {
                     vec![IRuneAttributeP::ImmutableRuneAttribute(RangeL { begin: iter.get_prev_end_pos(), end: iter.get_prev_end_pos() })]
                 } else {
                     vec![]
@@ -193,13 +237,13 @@ impl Parser {
             }
             Some(region) => {
                 // Region parameter
-                let attributes = if let Some(range) = iter.try_skip_word(&Arc::new(self.keywords.ro.clone())) {
+                let attributes = if let Some(range) = iter.try_skip_word(&self.keywords.ro) {
                     vec![IRuneAttributeP::ReadOnlyRegionRuneAttribute(range)]
-                } else if let Some(range) = iter.try_skip_word(&Arc::new(self.keywords.rw.clone())) {
+                } else if let Some(range) = iter.try_skip_word(&self.keywords.rw) {
                     vec![IRuneAttributeP::ReadWriteRegionRuneAttribute(range)]
-                } else if let Some(range) = iter.try_skip_word(&Arc::new(self.keywords.additive.clone())) {
+                } else if let Some(range) = iter.try_skip_word(&self.keywords.additive) {
                     vec![IRuneAttributeP::AdditiveRegionRuneAttribute(range)]
-                } else if let Some(range) = iter.try_skip_word(&Arc::new(self.keywords.imm.clone())) {
+                } else if let Some(range) = iter.try_skip_word(&self.keywords.imm) {
                     vec![IRuneAttributeP::ImmutableRegionRuneAttribute(range)]
                 } else {
                     vec![]
@@ -239,6 +283,96 @@ impl Parser {
             maybe_default,
         })
     }
+    /*
+      private[parsing] def parseGenericParameter(iter: ScrambleIterator):
+      Result[GenericParameterP, IParseError] = {
+        val range = iter.range
+    
+        val maybeCoordRegion =
+          parsePrefixingRegion(iter) match {
+            case Err(x) => return Err(x)
+            case Ok(maybeRegion) => maybeRegion
+          }
+    
+        val (name, maybeType, attributes) =
+          parseRegion(iter) match {
+            case Err(x) => return Err(x)
+            case Ok(None) => {
+              val name =
+                iter.peek() match {
+                  case Some(WordLE(range, str)) => {
+                    iter.advance()
+                    NameP(range, str)
+                  }
+                  case _ => return Err(BadRuneNameError(iter.getPos()))
+                }
+    
+              val typeBegin = iter.getPos()
+              val maybeRuneType =
+                templexParser.parseRuneType(iter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(Some(x)) => Some(GenericParameterTypeP(RangeL(typeBegin, iter.getPrevEndPos()), x))
+                  case Ok(None) => None
+                }
+    
+              val maybeAttrs =
+                iter.trySkipWord(keywords.imm) match {
+                  case Some(range) => Vector(ImmutableRuneAttributeP(range))
+                  case None => Vector()
+                }
+    
+              (name, maybeRuneType, maybeAttrs)
+            }
+            case Ok(Some(region)) => {
+              val attributes =
+                  (iter.trySkipWord(keywords.ro) match {
+                    case Some(range) => Vector(ReadOnlyRegionRuneAttributeP(range))
+                    case None => {
+                      iter.trySkipWord(keywords.rw) match {
+                        case Some(range) => Vector(ReadWriteRegionRuneAttributeP(range))
+                        case None => {
+                          iter.trySkipWord(keywords.additive) match {
+                            case Some(range) => Vector(AdditiveRegionRuneAttributeP(range))
+                            case None => {
+                              iter.trySkipWord(keywords.imm) match {
+                                case Some(range) => Vector(ImmutableRegionRuneAttributeP(range))
+                                case None => Vector()
+                              }
+                            }
+                          }
+                        }
+                      }
+                    }
+                  })
+    
+              val tyype =
+                GenericParameterTypeP(RangeL(range.begin, iter.getPrevEndPos()), RegionTypePR)
+    
+              val regionName =
+                region.name match {
+                  case None => return Err(BadRuneNameError(iter.getPos()))
+                  case Some(z) => z
+                }
+    
+              (regionName, Some(tyype), attributes)
+            }
+          }
+    
+        val maybeDefaultPT =
+          if (iter.trySkipSymbol('=')) {
+            templexParser.parseTemplex(iter) match {
+              case Err(e) => return Err(e)
+              case Ok(x) => Some(x)
+            }
+          } else {
+            None
+          }
+    
+        vassert(iter.atEnd)
+    
+        Ok(GenericParameterP(range, NameP(name.range, name.str), maybeType, maybeCoordRegion, attributes, maybeDefaultPT))
+      }
+    */
 
     /// Parse optional prefixing region (e.g., `'a`)
     fn parse_prefixing_region(&mut self, original_iter: &mut ScrambleIterator) -> ParseResult<Option<RegionRunePT>> {
@@ -258,6 +392,30 @@ impl Parser {
         original_iter.skip_to(&tentative_iter);
         Ok(Some(region))
     }
+    /*
+      // A prefixing region is one that appears before something else to modify it, like t'T.
+      def parsePrefixingRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
+        val tentativeIter = originalIter.clone()
+    
+        val region =
+          parseRegion(tentativeIter) match {
+            case Err(x) => return Err(x)
+            case Ok(Some(region)) => {
+              tentativeIter.peek() match {
+                case Some(next) if next.range.begin == region.range.end => {
+                  region
+                }
+                case _ => return Ok(None)
+              }
+            }
+            case _ => return Ok(None)
+          }
+    
+        originalIter.skipTo(tentativeIter)
+    
+        Ok(Some(region))
+      }
+    */
 
     /// Parse optional region marker
     fn parse_region(&mut self, original_iter: &mut ScrambleIterator) -> ParseResult<Option<RegionRunePT>> {
@@ -295,10 +453,40 @@ impl Parser {
                     begin: rune_begin,
                     end: rune_end,
                 },
-                str: Arc::new(z.str),
+                str: z.str,
             }),
         }))
     }
+    /*
+      def parseRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
+        val tentativeIter = originalIter.clone()
+    
+        val runeBegin = tentativeIter.getPos()
+        val maybeRune =
+          if (tentativeIter.trySkipSymbol('\'')) {
+            // Anonymous region, in other words an isolate
+            None
+          } else {
+            val regionRune =
+              tentativeIter.nextWord() match {
+                case None => return Ok(None)
+                case Some(r) => r
+              }
+    
+            if (!tentativeIter.trySkipSymbol('\'')) {
+              return Ok(None)
+            }
+    
+            Some(regionRune)
+          }
+        val runeEnd = tentativeIter.getPrevEndPos()
+    
+        originalIter.skipTo(tentativeIter)
+    
+        val range = RangeL(runeBegin, runeEnd)
+        return Ok(Some(RegionRunePT(range, maybeRune.map(z => NameP(RangeL(runeBegin, runeEnd), z.str)))))
+      }
+    */
 
     /// Parse struct member
     fn parse_struct_member(&mut self, iter: &mut ScrambleIterator) -> ParseResult<IStructContent> {
@@ -309,13 +497,13 @@ impl Parser {
             Some(INodeLEEnum::ParsedInteger(ParsedIntegerLE { range, value, .. })) => {
                 let result = NameP {
                     range: *range,
-                    str: Arc::new(self.interner.lock().unwrap().intern(&value.to_string())),
+                    str: self.interner.intern(&value.to_string()),
                 };
                 iter.advance();
                 result
             }
             _ => match iter.next_word() {
-                Some(WordLE { range, str }) => NameP { range, str: Arc::new(str) },
+                Some(WordLE { range, str }) => NameP { range, str },
                 None => {
                     return Err(ParseError::BadStructMember(iter.get_pos()))
                 }
@@ -340,7 +528,7 @@ impl Parser {
         let tyype = self.templex_parser.parse_templex(iter)?;
 
         if variadic {
-            if *name.str != self.keywords.underscore {
+            if name.str != self.keywords.underscore {
                 return Err(ParseError::VariadicStructMemberHasName(iter.get_pos()));
             }
 
@@ -364,6 +552,56 @@ impl Parser {
             })
         }
     }
+    /*
+      private[parsing] def parseStructMember(
+        iter: ScrambleIterator):
+      Result[IStructContent, IParseError] = {
+        val begin = iter.getPos()
+    
+        val name =
+          iter.peek() match {
+            case Some(ParsedIntegerLE(range, int, _)) => {
+              // This is just temporary until we add proper variadics again, see TAVWG.
+              iter.advance()
+              NameP(range, interner.intern(StrI(int.toString)))
+            }
+            case _ => {
+              iter.nextWord() match {
+                case None => return Err(BadStructMember(iter.getPos()))
+                case Some(WordLE(range, str)) => NameP(range, str)
+              }
+            }
+          }
+    
+        val variability = if (iter.trySkipSymbol('!')) VaryingP else FinalP
+    
+        val variadic =
+          iter.peek2() match {
+            case (Some(SymbolLE(_, '.')), Some(SymbolLE(_, '.'))) => {
+              iter.advance()
+              iter.advance()
+              true
+            }
+            case _ => false
+          }
+    
+        val tyype =
+          templexParser.parseTemplex(iter) match {
+            case Err(e) => return Err(e)
+            case Ok(x) => x
+          }
+    
+        if (variadic) {
+          if (name.str != keywords.UNDERSCORE) {
+            return Err(VariadicStructMemberHasName(iter.getPos()))
+          }
+    
+          Ok(VariadicStructMemberP(RangeL(begin, iter.getPrevEndPos()), variability, tyype))
+        } else {
+          Ok(NormalStructMemberP(RangeL(begin, iter.getPrevEndPos()), name, variability, tyype))
+        }
+      }
+    */
 
     /// Parse a struct definition
     fn parse_struct(&mut self, struct_l: StructL) -> ParseResult<StructP> {
@@ -442,6 +680,88 @@ impl Parser {
         })
     }
 
+/*
+  def parseStruct(functionL: StructL):
+  Result[StructP, IParseError] = {
+    Profiler.frame(() => {
+      val StructL(structRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, contentsL) = functionL
+
+      val maybeIdentifyingRunes =
+        maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
+          parseIdentifyingRunes(userSpecifiedIdentifyingRunes) match {
+            case Err(cpe) => return Err(cpe)
+            case Ok(x) => x
+          }
+        })
+
+
+      val maybeTemplateRulesP =
+        maybeTemplateRulesL.map(templateRulesScramble => {
+          val elementsPR =
+            U.map[ScrambleIterator, IRulexPR](
+              new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
+              ruleIter => {
+                templexParser.parseRule(ruleIter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              })
+          TemplateRulesP(templateRulesScramble.range, elementsPR.toVector)
+        })
+
+      val attributesP =
+        U.map[IAttributeL, IAttributeP](
+          attributesL,
+          attributeL => {
+            parseAttribute(attributeL) match {
+              case Err(e) => return Err(e)
+              case Ok(x) => x
+            }
+          })
+
+      val maybeMutabilityP =
+        maybeMutabilityL.map(returnTypeL => {
+          val scramble =
+            returnTypeL match {
+              case s @ ScrambleLE(_, _) => s
+              case other => ScrambleLE(other.range, Vector(other))
+            }
+          templexParser.parseTemplex(new ScrambleIterator(scramble, 0, scramble.elements.length)) match {
+            case Err(e) => return Err(e)
+            case Ok(x) => x
+          }
+        })
+
+      val membersP =
+        StructMembersP(
+          contentsL.range,
+          U.map[ScrambleIterator, IStructContent](
+            new ScrambleIterator(contentsL).splitOnSymbol(';', false),
+            member => {
+              parseStructMember(member) match {
+                case Err(e) => return Err(e)
+                case Ok(x) => x
+              }
+            }).toVector)
+
+      val maybeDefaultRegionP = vregionmut(None)
+
+      val struct =
+        StructP(
+          structRange,
+          toName(nameL),
+          attributesP.toVector,
+          maybeMutabilityP,
+          maybeIdentifyingRunes,
+          maybeTemplateRulesP,
+          maybeDefaultRegionP,
+          contentsL.range,
+          membersP)
+      Ok(struct)
+    })
+  }
+*/
+
     /// Parse an interface definition
     fn parse_interface(&mut self, interface_l: InterfaceL) -> ParseResult<InterfaceP> {
         let InterfaceL {
@@ -512,6 +832,149 @@ impl Parser {
         })
     }
 
+/*
+  def parseInterface(interfaceL: InterfaceL):
+  Result[InterfaceP, IParseError] = {
+    Profiler.frame(() => {
+      val InterfaceL(interfaceRange, nameL, attributesL, maybeMutabilityL, maybeIdentifyingRunesL, maybeTemplateRulesL, bodyRange, methodsL) = interfaceL
+
+      val maybeIdentifyingRunes =
+        maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
+          parseIdentifyingRunes(userSpecifiedIdentifyingRunes) match {
+            case Err(cpe) => return Err(cpe)
+            case Ok(x) => x
+          }
+        })
+
+
+      val maybeTemplateRulesP =
+        maybeTemplateRulesL.map(templateRulesScramble => {
+          val elementsPR =
+            U.map[ScrambleIterator, IRulexPR](
+              new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
+              ruleIter => {
+                templexParser.parseRule(ruleIter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              })
+          TemplateRulesP(templateRulesScramble.range, elementsPR.toVector)
+        })
+
+      val attributesP =
+        U.map[IAttributeL, IAttributeP](
+          attributesL,
+          attributeL => {
+            parseAttribute(attributeL) match {
+              case Err(e) => return Err(e)
+              case Ok(x) => x
+            }
+          })
+
+      val maybeMutabilityP =
+        maybeMutabilityL.map(returnTypeL => {
+          val scramble =
+            returnTypeL match {
+              case s @ ScrambleLE(_, _) => s
+              case other => ScrambleLE(other.range, Vector(other))
+            }
+          templexParser.parseTemplex(new ScrambleIterator(scramble, 0, scramble.elements.length)) match {
+            case Err(e) => return Err(e)
+            case Ok(x) => x
+          }
+        })
+
+      val membersP =
+          U.map[FunctionL, FunctionP](
+            methodsL,
+            methodL => {
+              parseFunction(methodL, true) match {
+                case Err(e) => return Err(e)
+                case Ok(x) => x
+              }
+            })
+
+      val maybeDefaultRegionP = vregionmut(None)
+
+      val interface =
+        InterfaceP(
+          interfaceRange,
+          toName(nameL),
+          attributesP.toVector,
+          maybeMutabilityP,
+          maybeIdentifyingRunes,
+          maybeTemplateRulesP,
+          maybeDefaultRegionP,
+          bodyRange,
+          membersP.toVector)
+      Ok(interface)
+    })
+
+//    if (!iter.trySkip("interface")) {
+//      return Ok(None)
+//    }
+//
+//    val name =
+//      Parser.parseTypeName(iter) match {
+//        case None => return Err(BadStructName(iter.getPos()))
+//        case Some(x) => x
+//      }
+//
+//    val maybeIdentifyingRunes =
+//      parseIdentifyingRunes(iter) match {
+//        case Err(e) => vwat()
+//        case Ok(x) => x
+//      }
+//
+//    val (mutabilityRange, maybeMutability, maybeTemplateRules) =
+//      parseCitizenSuffix(iter) match {
+//        case Err(e) => return Err(e)
+//        case Ok((a, b, c)) => (a, b, c)
+//      }
+//
+//
+//
+//    val contentsBegin = iter.getPos()
+//
+//    if (!iter.trySkip("\\{")) {
+//      return Err(BadStructContentsBegin(iter.getPos()))
+//    }
+//
+//    val methods = ArrayBuffer[FunctionP]()
+//
+//    while (!Parser.atEnd(iter, StopBeforeCloseBrace)) {
+//
+//      parseDenizen(iter) match {
+//        case Err(e) => return Err(e)
+//        case Ok(Some(TopLevelFunctionP(f))) => methods += f
+//        case Ok(Some(other)) => {
+//          return Err(UnexpectedDenizen(iter.getPos(), other))
+//        }
+//        case Ok(None) => return Err(BadInterfaceMember(iter.getPos()))
+//      }
+//    }
+//
+//
+//
+//    if (!iter.trySkip("\\}")) {
+//      return Err(BadStructContentsEnd(iter.getPos()))
+//    }
+//
+//    val contentsEnd = iter.getPos()
+//
+//    val interface =
+//      ast.InterfaceP(
+//        ast.RangeL(begin, iter.getPos()),
+//        name,
+//        attributes.toVector,
+//        maybeMutability.getOrElse(ast.MutabilityPT(mutabilityRange, MutableP)),
+//        maybeIdentifyingRunes,
+//        maybeTemplateRules,
+//        methods.toVector)
+//    Ok(Some(interface))
+  }
+*/
+
     /// Parse an impl block
     /// Mirrors Parser.parseImpl in Parser.scala lines 397-461
     fn parse_impl(&mut self, impl_l: ImplL) -> ParseResult<ImplP> {
@@ -579,6 +1042,73 @@ impl Parser {
             attributes: attributes_p,
         })
     }
+    /*
+      def parseImpl(functionL: ImplL):
+      Result[ImplP, IParseError] = {
+        Profiler.frame(() => {
+          val ImplL(implRange, maybeIdentifyingRunesL, maybeTemplateRulesL, structL, interfaceL, attributesL) = functionL
+    
+          val maybeIdentifyingRunes =
+            maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
+              parseIdentifyingRunes(userSpecifiedIdentifyingRunes) match {
+                case Err(cpe) => return Err(cpe)
+                case Ok(x) => x
+              }
+            })
+    
+          val maybeTemplateRulesP =
+            maybeTemplateRulesL.map(templateRulesScramble => {
+              val elementsPR =
+                U.map[ScrambleIterator, IRulexPR](
+                  new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
+                  ruleIter => {
+                    templexParser.parseRule(ruleIter) match {
+                      case Err(e) => return Err(e)
+                      case Ok(x) => x
+                    }
+                  })
+              TemplateRulesP(templateRulesScramble.range, elementsPR.toVector)
+            })
+    
+          val structP =
+            structL match {
+              case None => None
+              case Some(structL) => {
+                templexParser.parseTemplex(new ScrambleIterator(structL)) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => Some(x)
+                }
+              }
+            }
+    
+          val interfaceP =
+            templexParser.parseTemplex(new ScrambleIterator(interfaceL)) match {
+              case Err(e) => return Err(e)
+              case Ok(x) => x
+            }
+    
+          val attributesP =
+            U.map[IAttributeL, IAttributeP](
+              attributesL,
+              attributeL => {
+                parseAttribute(attributeL) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              })
+    
+          val impl =
+            ImplP(
+              implRange,
+              maybeIdentifyingRunes,
+              maybeTemplateRulesP,
+              structP,
+              interfaceP,
+              attributesP.toVector)
+          Ok(impl)
+        })
+      }
+    */
 
     /// Parse an export-as declaration
     /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
@@ -642,6 +1172,41 @@ impl Parser {
             exported_name: name,
         })
     }
+    /*
+      def parseExportAs(
+        expoort: ExportAsL):
+      Result[ExportAsP, IParseError] = {
+        val iter = new ScrambleIterator(expoort.contents)
+    
+        val exportee =
+          ParseUtils.trySkipPastKeywordWhile(
+            iter,
+            keywords.as,
+            iter => iter.peek() match {
+              case None => false
+              case Some(SymbolLE(range, ';')) => false
+              case _ => true
+            }) match {
+            case None => return Err(BadExportAs(iter.getPos()))
+            case Some((asKeyword, beforeAsIter)) => {
+              val templex =
+                templexParser.parseTemplex(beforeAsIter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              templex
+            }
+          }
+    
+        val name =
+          iter.peek() match {
+            case None => return Err(BadExportEnd(iter.getPos()))
+            case Some(WordLE(range, str)) => NameP(range, str)
+          }
+    
+        Ok(ast.ExportAsP(expoort.range, exportee, name))
+      }
+    */
 
     /// Parse an import declaration
     /// Mirrors Parser.parseImport in Parser.scala lines 499-516
@@ -669,6 +1234,26 @@ impl Parser {
             importee_name: importee_name_p,
         })
     }
+    /*
+      def parseImport(
+        importL: ImportL):
+      Result[ImportP, IParseError] = {
+        val ImportL(range, moduleNameL, packageStepsL, importeeNameL) = importL
+    
+        val WordLE(moduleNameRange, moduleNameStr) = moduleNameL
+        val moduleNameP = NameP(moduleNameRange, moduleNameStr)
+    
+        val packageStepsP =
+          U.map[WordLE, NameP](packageStepsL, { case WordLE(moduleNameRange, moduleNameStr) =>
+            NameP(moduleNameRange, moduleNameStr)
+          })
+    
+        val WordLE(importeeNameRange, importeeNameStr) = importeeNameL
+        val importeeNameP = NameP(importeeNameRange, importeeNameStr)
+    
+        Ok(ImportP(range, moduleNameP, packageStepsP.toVector, importeeNameP))
+      }
+    */
 
     /// Parse a function
     /// Mirrors Parser.parseFunction in Parser.scala lines 552-654
@@ -818,6 +1403,111 @@ impl Parser {
             body: body_p,
         })
     }
+    /*
+      def parseFunction(functionL: FunctionL, isInCitizen: Boolean):
+      Result[FunctionP, IParseError] = {
+        Profiler.frame(() => {
+          val FunctionL(funcRangeL, headerL, maybeBodyL) = functionL
+          val FunctionHeaderL(headerRangeL, nameL, attributesL, maybeIdentifyingRunesL, paramsL, originalTrailingDetailsL) = headerL
+    
+          val maybeIdentifyingRunes =
+            maybeIdentifyingRunesL.map(userSpecifiedIdentifyingRunes => {
+              parseIdentifyingRunes(userSpecifiedIdentifyingRunes) match {
+                case Err(cpe) => return Err(cpe)
+                case Ok(x) => x
+              }
+            })
+    
+          val paramsP =
+            ParamsP(
+              paramsL.range,
+              U.mapWithIndex[ScrambleIterator, ParameterP](
+                new ScrambleIterator(paramsL.contents).splitOnSymbol(',', false),
+                (index, patternIter) => {
+                  patternParser.parseParameter(patternIter, index, isInCitizen, true, false) match {
+                    case Err(e) => return Err(e)
+                    case Ok(x) => x
+                  }
+                }))
+    
+          val trailingDetailsWithReturnAndWhereAndDefaultRegion = originalTrailingDetailsL
+          val (trailingDetailsWithReturnAndWhere, maybeDefaultRegion) =
+            parseBodyDefaultRegion(trailingDetailsWithReturnAndWhereAndDefaultRegion)
+    
+          // TODO: simplify this. It's really just trying to split on "where".
+          val returnAndWhereIter = new ScrambleIterator(trailingDetailsWithReturnAndWhere)
+          val (maybeReturnIter, returnEndPos, maybeRulesIter) =
+            ParseUtils.trySkipPastKeywordWhile(
+              returnAndWhereIter, keywords.where, it => it.hasNext) match {
+              case None => (Some(returnAndWhereIter), returnAndWhereIter.scramble.range.end, None) // No "where" was found. Use everything remaining.
+              case Some((_, returnIter)) => (Some(returnIter), returnIter.scramble.range.end, Some(returnAndWhereIter))
+            }
+    
+          val returnBeginPos = returnAndWhereIter.scramble.range.begin
+          val maybeReturnTypeP =
+            maybeReturnIter.flatMap(returnIter => {
+              if (returnIter.hasNext) {
+                templexParser.parseTemplex(returnIter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => Some(x)
+                }
+              } else {
+                None
+              }
+            })
+          val returnP = FunctionReturnP(RangeL(returnBeginPos, returnEndPos), maybeReturnTypeP)
+    
+          val maybeRulesP =
+            maybeRulesIter.map(rulesIter => {
+              val begin = rulesIter.getPos()
+              val rules =
+                U.map[ScrambleIterator, IRulexPR](
+                rulesIter.splitOnSymbol(',', false),
+                templexL => {
+                  templexParser.parseRule(templexL) match {
+                    case Err(e) => return Err(e)
+                    case Ok(x) => x
+                  }
+                })
+              TemplateRulesP(rulesIter.scramble.range, rules)
+            })
+    
+          val attributesP =
+            U.map[IAttributeL, IAttributeP](
+              attributesL,
+              attributeL => {
+                parseAttribute(attributeL) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              })
+    
+    
+          val header =
+            FunctionHeaderP(
+              headerL.range,
+              Some(toName(nameL)),
+              attributesP.toVector,
+              maybeIdentifyingRunes,
+              maybeRulesP,
+              Some(paramsP),
+              returnP)
+    
+          val bodyP =
+            maybeBodyL.map(bodyL => {
+              val FunctionBodyL(blockL) = bodyL
+              val statementsP =
+                expressionParser.parseBlock(blockL) match {
+                  case Err(err) => return Err(err)
+                  case Ok(result) => result
+                }
+              BlockPE(blockL.range, None, maybeDefaultRegion, statementsP)
+            })
+    
+          Ok(FunctionP(funcRangeL, header, bodyP))
+        })
+      }
+    */
 
     /// Parse body default region from trailing details
     /// Mirrors Parser.parseBodyDefaultRegion in Parser.scala lines 660-691
@@ -860,7 +1550,7 @@ impl Parser {
                             range,
                             name: Some(NameP {
                                 range: *word_range,
-                                str: Arc::new(region_name.clone()),
+                                str: region_name.clone(),
                             }),
                         })
                     }
@@ -904,6 +1594,44 @@ impl Parser {
 
         (preceding_elements_scramble, default_region)
     }
+    /*
+      // Returns:
+      // - A scramble of everything before the default region. If there's no default region, it's the
+      //   same as the input scramble.
+      // - The default region if it existed.
+      private def parseBodyDefaultRegion(inputScramble: ScrambleLE):
+      (ScrambleLE, Option[RegionRunePT]) = {
+        if (inputScramble.elements.size < 2) {
+          return (inputScramble, None)
+        }
+    
+        val lastTwo =
+          inputScramble.elements.slice(inputScramble.elements.length - 2, inputScramble.elements.length)
+    
+        val defaultRegion =
+          lastTwo match {
+            case Vector(SymbolLE(symbolRange, '\'')) => {
+              RegionRunePT(symbolRange, None)
+            }
+            case Vector(WordLE(wordRange, regionName), SymbolLE(symbolRange, '\'')) => {
+              val range = RangeL(wordRange.begin, symbolRange.end)
+              RegionRunePT(range, Some(NameP(wordRange, regionName)))
+            }
+            case _ => return (inputScramble, None)
+          }
+    
+        val precedingElements = inputScramble.elements.slice(0, inputScramble.elements.length - 2)
+        val precedingElementsRange =
+          if (precedingElements.isEmpty) {
+            RangeL(inputScramble.range.begin, inputScramble.range.begin)
+          } else {
+            RangeL(precedingElements.head.range.begin, precedingElements.last.range.end)
+          }
+        val precedingElementsScramble = ScrambleLE(precedingElementsRange, precedingElements)
+    
+        (precedingElementsScramble, Some(defaultRegion))
+      }
+    */
 
     /// Parse an attribute
     fn parse_attribute(&mut self, attr_l: IAttributeL) -> ParseResult<IAttributeP> {
@@ -935,7 +1663,7 @@ impl Parser {
                                 if let StringPart::Literal { s, .. } = &string_le.parts[0] {
                                     let name = NameP {
                                         range: string_le.range,
-                                        str: Arc::new(self.interner.lock().unwrap().intern(s)),
+                                        str: self.interner.intern(s),
                                     };
                                     return Ok(IAttributeP::BuiltinAttribute {
                                         range,
@@ -956,12 +1684,47 @@ impl Parser {
             IAttributeL::LinearAttribute(range) => Ok(IAttributeP::LinearAttribute(range)),
         }
     }
+    /*
+      def parseAttribute(attrL: IAttributeL):
+      Result[IAttributeP, IParseError] = {
+        attrL match {
+          case AbstractAttributeL(range) => Ok(AbstractAttributeP(range))
+          case ExternAttributeL(range, None) => Ok(ExternAttributeP(range))
+          case LinearAttributeL(range) => Ok(LinearAttributeP(range))
+          case ExternAttributeL(range, Some(maybeName)) => {
+            val name =
+              maybeName.contents match {
+                case ScrambleLE(_, Vector(StringLE(_, Vector(StringPartLiteral(range, s))))) => {
+                  NameP(range, interner.intern(StrI(s)))
+                }
+                case _ => vfail("Bad builtin extern!")
+              }
+            Ok(BuiltinAttributeP(range, name))
+          }
+          case ExportAttributeL(range) => Ok(ExportAttributeP(range))
+          case PureAttributeL(range) => Ok(PureAttributeP(range))
+          case AdditiveAttributeL(range) => Ok(AdditiveAttributeP(range))
+          case WeakableAttributeL(range) => Ok(WeakableAttributeP(range))
+          case SealedAttributeL(range) => Ok(SealedAttributeP(range))
+          case MacroCallL(range, inclusion, name) => {
+            Ok(
+              MacroCallP(
+                range,
+                inclusion match {
+                  case CallMacroL => CallMacroP
+                  case DontCallMacroL => DontCallMacroP
+                },
+                toName(name)))
+          }
+        }
+      }
+    */
 
     /// Helper to convert WordLE to NameP
     fn to_name(&self, word: WordLE) -> NameP {
         NameP {
             range: word.range,
-            str: Arc::new(word.str),
+            str: word.str,
         }
     }
 }
@@ -970,3 +1733,168 @@ impl Parser {
 
 // ExpressionParser is defined in expression_parser.rs
 
+/*
+  val export = interner.intern(StrI("export"))
+*/
+/*
+  def toName(wordL: WordLE): NameP = {
+    val WordLE(range, s) = wordL
+    NameP(range, s)
+  }
+}
+*/
+/*
+class ParserCompilation(
+  opts: GlobalOptions,
+  interner: Interner,
+  keywords: Keywords,
+  packagesToBuild: Vector[PackageCoordinate],
+  packageToContentsResolver: IPackageResolver[Map[String, String]]
+) {
+  val parser = new Parser(interner, keywords, opts)
+*/
+/*
+  def loadAndParse(
+    neededPackages: Vector[PackageCoordinate],
+    resolver: IPackageResolver[Map[String, String]]):
+  Result[(FileCoordinateMap[String], FileCoordinateMap[(FileP, Vector[RangeL])]), FailedParse] = {
+    vassert(neededPackages.size == neededPackages.distinct.size, "Duplicate modules in: " + neededPackages.mkString(", "))
+
+    val foundCodeMap = new FileCoordinateMap[String]()
+    val parsedMap = new FileCoordinateMap[(FileP, Vector[RangeL])]()
+
+    // First, load all .vpst files directly, bypassing lexing and parsing
+    neededPackages.foreach(packageCoord => {
+      resolver.resolve(packageCoord) match {
+        case None => // Package not found, will be handled by ParseAndExplore
+        case Some(filepathToCode) => {
+          filepathToCode.foreach({ case (filepath, code) =>
+            if (filepath.endsWith(".vpst")) {
+              val fileCoord = interner.intern(FileCoordinate(packageCoord, filepath))
+              foundCodeMap.put(fileCoord, code)
+              
+              // Load the .vpst file using ParsedLoader
+              val parsedLoader = new ParsedLoader(interner)
+              parsedLoader.load(code) match {
+                case Err(e) => return Err(FailedParse(code, fileCoord, e))
+                case Ok(fileP) => {
+                  // .vpst files don't have comment ranges tracked by Rust parser yet
+                  parsedMap.put(fileCoord, (fileP, Vector.empty))
+                }
+              }
+            }
+          })
+        }
+      }
+    })
+
+    // Create a resolver that filters out .vpst files (already processed above)
+    val valeOnlyResolver = new IPackageResolver[Map[String, String]] {
+      override def resolve(packageCoord: PackageCoordinate): Option[Map[String, String]] = {
+        resolver.resolve(packageCoord).map(filepathToCode => {
+          filepathToCode.filter({ case (filepath, _) => filepath.endsWith(".vale") })
+        })
+      }
+    }
+
+    // Now process .vale files through the normal lex/parse flow
+    ParseAndExplore.parseAndExplore[IDenizenP, Unit](
+      interner, keywords, opts, parser, packagesToBuild.toVector, valeOnlyResolver,
+      (fileCoord, code, imports, denizen) => denizen,
+      (fileCoord, code, commentRanges, denizens) => {
+        foundCodeMap.put(fileCoord, code)
+        val file = FileP(fileCoord, commentRanges.buildArray(), denizens.buildArray())
+
+        if (opts.sanityCheck) {
+          val json = new VonPrinter(JsonSyntax, 120).print(ParserVonifier.vonifyFile(file))
+          val loadedFile = new ParsedLoader(interner).load(json).getOrDie()
+          val secondJson = new VonPrinter(JsonSyntax, 120).print(ParserVonifier.vonifyFile(loadedFile))
+          vassert(json == secondJson)
+        }
+
+        parsedMap.put(fileCoord, (file, commentRanges.buildArray().toVector))
+      }) match {
+      case Err(e) => return Err(e)
+      case Ok(_) =>
+    }
+
+    Ok((foundCodeMap, parsedMap))
+  }
+*/
+/*
+  var codeMapCache: Option[FileCoordinateMap[String]] = None
+  var vpstMapCache: Option[FileCoordinateMap[String]] = None
+  var parsedsCache: Option[FileCoordinateMap[(FileP, Vector[RangeL])]] = None
+*/
+/*
+  def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = {
+    getParseds() match {
+      case Ok(_) => Ok(codeMapCache.get)
+      case Err(e) => Err(e)
+    }
+  }
+  def expectCodeMap(): FileCoordinateMap[String] = {
+    vassertSome(codeMapCache)
+  }
+*/
+/*
+  def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = {
+    parsedsCache match {
+      case Some(parseds) => Ok(parseds)
+      case None => {
+        // Also build the "" module, which has all the builtins
+        val (codeMap, programPMap) =
+          loadAndParse(packagesToBuild, packageToContentsResolver) match {
+            case Ok((codeMap, programPMap)) => (codeMap, programPMap)
+            case Err(e) => return Err(e)
+          }
+        codeMapCache = Some(codeMap)
+        parsedsCache = Some(programPMap)
+        Ok(parsedsCache.get)
+      }
+    }
+  }
+*/
+/*
+  def expectParseds(): FileCoordinateMap[(FileP, Vector[RangeL])] = {
+    getParseds() match {
+      case Err(FailedParse(code, fileCoord, err)) => {
+        vfail(ParseErrorHumanizer.humanize(SourceCodeUtils.humanizeFile(fileCoord), code, err))
+      }
+      case Ok(x) => x
+    }
+  }
+*/
+/*
+  def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = {
+    vpstMapCache match {
+      case Some(vpst) => Ok(vpst)
+      case None => {
+        getParseds() match {
+          case Err(e) => Err(e)
+          case Ok(parseds) => {
+            Ok(
+              parseds.map({ case (fileCoord, (programP, commentRanges)) =>
+                val von = ParserVonifier.vonifyFile(programP)
+                val json = new VonPrinter(JsonSyntax, 120).print(von)
+                json
+              }))
+          }
+        }
+      }
+    }
+  }
+*/
+/*
+  def expectVpstMap(): FileCoordinateMap[String] = {
+    getVpstMap().getOrDie()
+  }
+*/
+/*
+}
+
+object Parser {
+*/
+/*
+}
+ */

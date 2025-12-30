@@ -1,5 +1,6 @@
 use std::collections::HashMap;
-use crate::parsing::ast::{PackageCoordinate, FileCoordinate};
+use std::sync::{Arc, Mutex};
+use crate::utils::code_hierarchy::{PackageCoordinate, FileCoordinate};
 
 const MIN_INTERNING_ID: u64 = (1u64 << (7 * 8)) + 1;
 
@@ -63,9 +64,13 @@ impl StrI {
     }
 }
 
-/// Generic interning system
+/// Generic interning system with interior mutability
 /// Matches Scala's Interner
 pub struct Interner {
+    inner: Mutex<InternerInner>,
+}
+
+struct InternerInner {
     string_to_id: HashMap<String, u64>,
     package_coord_to_id: HashMap<PackageCoordinate, u64>,
     file_coord_to_id: HashMap<FileCoordinate, u64>,
@@ -75,61 +80,68 @@ pub struct Interner {
 impl Interner {
     pub fn new() -> Self {
         Interner {
-            string_to_id: HashMap::new(),
-            package_coord_to_id: HashMap::new(),
-            file_coord_to_id: HashMap::new(),
-            next_id: MIN_INTERNING_ID,
+            inner: Mutex::new(InternerInner {
+                string_to_id: HashMap::new(),
+                package_coord_to_id: HashMap::new(),
+                file_coord_to_id: HashMap::new(),
+                next_id: MIN_INTERNING_ID,
+            }),
         }
     }
 
-    /// Intern a string, returning an interned StrI
+    /// Intern a string, returning an Arc<StrI>
     /// Matches Scala's interner.intern(StrI(s))
-    pub fn intern(&mut self, s: &str) -> StrI {
+    pub fn intern(&self, s: &str) -> Arc<StrI> {
+        let mut inner = self.inner.lock().unwrap();
         // Try shortcut for short strings
         if let Some(id) = StrI::try_encode_short_string(s) {
-            return StrI::new(id, s.to_string());
+            return Arc::new(StrI::new(id, s.to_string()));
         }
 
         // Look up existing
-        if let Some(&existing_id) = self.string_to_id.get(s) {
-            return StrI::new(existing_id, s.to_string());
+        if let Some(&existing_id) = inner.string_to_id.get(s) {
+            return Arc::new(StrI::new(existing_id, s.to_string()));
         }
 
         // Create new
-        let new_id = self.next_id;
-        self.next_id += 1;
-        self.string_to_id.insert(s.to_string(), new_id);
-        StrI::new(new_id, s.to_string())
+        let new_id = inner.next_id;
+        inner.next_id += 1;
+        inner.string_to_id.insert(s.to_string(), new_id);
+        Arc::new(StrI::new(new_id, s.to_string()))
     }
 
     /// Intern a PackageCoordinate
     /// Matches Scala's interner.intern(PackageCoordinate(...))
-    pub fn intern_package_coordinate(&mut self, coord: PackageCoordinate) -> PackageCoordinate {
+    pub fn intern_package_coordinate(&self, coord: PackageCoordinate) -> Arc<PackageCoordinate> {
+        let mut inner = self.inner.lock().unwrap();
+        
         // Look up existing
-        if let Some(&_existing_id) = self.package_coord_to_id.get(&coord) {
-            return coord;
+        if let Some(&_existing_id) = inner.package_coord_to_id.get(&coord) {
+            return Arc::new(coord);
         }
 
         // Create new
-        let new_id = self.next_id;
-        self.next_id += 1;
-        self.package_coord_to_id.insert(coord.clone(), new_id);
-        coord
+        let new_id = inner.next_id;
+        inner.next_id += 1;
+        inner.package_coord_to_id.insert(coord.clone(), new_id);
+        Arc::new(coord)
     }
 
     /// Intern a FileCoordinate
     /// Matches Scala's interner.intern(FileCoordinate(...))
-    pub fn intern_file_coordinate(&mut self, coord: FileCoordinate) -> FileCoordinate {
+    pub fn intern_file_coordinate(&self, coord: FileCoordinate) -> Arc<FileCoordinate> {
+        let mut inner = self.inner.lock().unwrap();
+        
         // Look up existing
-        if let Some(&_existing_id) = self.file_coord_to_id.get(&coord) {
-            return coord;
+        if let Some(&_existing_id) = inner.file_coord_to_id.get(&coord) {
+            return Arc::new(coord);
         }
 
         // Create new
-        let new_id = self.next_id;
-        self.next_id += 1;
-        self.file_coord_to_id.insert(coord.clone(), new_id);
-        coord
+        let new_id = inner.next_id;
+        inner.next_id += 1;
+        inner.file_coord_to_id.insert(coord.clone(), new_id);
+        Arc::new(coord)
     }
 }
 

@@ -8,3 +8,4 @@ name = "valec"
 path = "src/main.rs"
 
 [dependencies]
+frontend_rust = { path = "../FrontendRust" }
