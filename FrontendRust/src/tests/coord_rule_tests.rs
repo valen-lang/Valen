@@ -70,7 +70,7 @@ fn test_coord_with_rune_and_destructure() {
         ..
     } = result2 {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::Ownership { ownership: OwnershipP::Own, .. })));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. }))));
         assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
         assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
     } else {

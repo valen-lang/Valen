@@ -1,7 +1,6 @@
 // TODO: move to tests/test_parse_utils.rs
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::lexing::ast::ScrambleLE;
 use crate::lexing::errors::ParseError;
 use crate::lexing::lexing_iterator::LexingIterator;
 use crate::lexing::lexer::Lexer;
@@ -12,7 +11,7 @@ use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::scramble_iterator::ScrambleIterator;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 /// Test utilities for parsing tests
 /// Mirrors dev/vale/parsing/TestParseUtils.scala

@@ -4,9 +4,10 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // From CodeHierarchy.scala lines 104-189
+#[derive(Clone)]
 pub struct FileCoordinateMap<Contents> {
-    package_coord_to_file_coords: HashMap<Arc<PackageCoordinate>, Vec<Arc<FileCoordinate>>>,
-    file_coord_to_contents: HashMap<Arc<FileCoordinate>, Contents>,
+    pub package_coord_to_file_coords: HashMap<Arc<PackageCoordinate>, Vec<Arc<FileCoordinate>>>,
+    pub file_coord_to_contents: HashMap<Arc<FileCoordinate>, Contents>,
 }
 
 impl<Contents: Clone> FileCoordinateMap<Contents> {
@@ -122,6 +123,16 @@ pub struct FileCoordinate {
 pub struct PackageCoordinate {
     pub module: Arc<crate::StrI>,
     pub packages: Vec<Arc<crate::StrI>>,
+}
+
+impl PackageCoordinate {
+    // From CodeHierarchy.scala line 50: BUILTIN
+    pub fn builtin(interner: &Arc<crate::Interner>, keywords: &Arc<crate::Keywords>) -> Arc<PackageCoordinate> {
+        interner.intern_package_coordinate(PackageCoordinate {
+            module: keywords.empty_string.clone(),
+            packages: vec![],
+        })
+    }
 }
 
 // TODO: move to utils/code_hierarchy.rs

@@ -1,7 +1,4 @@
-use crate::interner::StrI;
 use crate::lexing::RangeL;
-use std::sync::Arc;
-use crate::utils::code_hierarchy::{FileCoordinate};
 use super::ast::NameP;
 use super::templex::ITemplexPT;
 /*

@@ -2,7 +2,7 @@ use super::ast::*;
 use super::errors::*;
 use super::lexing_iterator::*;
 use crate::{Interner, Keywords};
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 /*
 package dev.vale.lexing
 
@@ -570,6 +570,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
 */
 
     /// Lex a function definition
+    /// MIGBAD: Scala uses iter.peek(2) and iter.peek(3) for multi-character lookahead (lines 703-740), while Rust uses iter.peek_string() method. Change Rust to match Scala.
     pub fn lex_function(&mut self, iter: &mut LexingIterator, begin: i32, attributes: Vec<IAttributeL>) -> Result<Option<FunctionL>> {
         if !iter.try_skip_complete_word("func") && !iter.try_skip_complete_word("funky") {
             return Ok(None);
@@ -756,7 +757,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
     val params =
       lexParend(iter) match {
         case Err(e) => return Err(e)
-        case Ok(None) => vfail()
+        case Ok(None) => vfail() // MIGALLOW: Rust should handle this better
         case Ok(Some(x)) => x
       }
 
@@ -832,6 +833,16 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
         iter.consume_comments_and_whitespace();
 
+        let header_end = iter.get_pos();
+
+        let _maybe_default_region = if iter.try_skip_complete_word("region") {
+            Some(self.lex_node(iter, true, false)?)
+        } else {
+            None
+        };
+
+        iter.consume_comments_and_whitespace();
+
         if !iter.try_skip('{') {
             return Err(ParseError::BadStructContentsBegin(iter.get_pos()));
         }
@@ -846,10 +857,8 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
         iter.consume_comments_and_whitespace();
 
-        let end = iter.get_pos();
-
         Ok(Some(StructL {
-            range: RangeL::new(begin, end),
+            range: RangeL::new(begin, header_end),
             name,
             attributes,
             mutability: maybe_mutability,
@@ -868,7 +877,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
     iter.consumeCommentsAndWhitespace()
 
-    val nameBegin = iter.getPos()
+    val nameBegin = iter.getPos() // MIGALLOW: Unused
     val name =
       lexIdentifier(iter) match {
         case None => return Err(BadStructName(iter.getPos()))
@@ -932,7 +941,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
     iter.consumeCommentsAndWhitespace()
 
-    val membersAcc = new Accumulator[ScrambleLE]()
+    val membersAcc = new Accumulator[ScrambleLE]() // MIGALLOW: Unused
 
     val contents =
       lexScramble(iter, false, false, false) match {
@@ -992,6 +1001,16 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
         iter.consume_comments_and_whitespace();
 
+        let header_end = iter.get_pos();
+
+        let _maybe_default_region = if iter.try_skip_complete_word("region") {
+            Some(self.lex_node(iter, true, false)?)
+        } else {
+            None
+        };
+
+        iter.consume_comments_and_whitespace();
+
         if !iter.try_skip('{') {
             return Err(ParseError::BadInterfaceContentsBegin(iter.get_pos()));
         }
@@ -1018,7 +1037,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
         let end = iter.get_pos();
 
         Ok(Some(InterfaceL {
-            range: RangeL::new(begin, end),
+            range: RangeL::new(begin, header_end),
             name,
             attributes,
             mutability: maybe_mutability,
@@ -1336,7 +1355,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
           iter.consumeCommentsAndWhitespace()
     
           if (!iter.trySkip(')')) {
-            vfail()
+            vfail() // MIGALLOW: Rust handles this better
           }
     
           val end = iter.getPos()
@@ -1415,7 +1434,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
           }
     
           if (!iter.trySkip('}')) {
-            vfail()
+            vfail() // MIGALLOW: Rust handles this better
           }
     
           val end = iter.getPos()
@@ -1470,7 +1489,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
           iter.consumeCommentsAndWhitespace()
     
           if (!iter.trySkip(']')) {
-            vfail()
+            vfail() // MIGALLOW: Rust handles this better
           }
     
           val end = iter.getPos()
@@ -1527,7 +1546,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
           iter.consumeCommentsAndWhitespace()
     
           if (!iter.trySkip('>')) {
-            vfail()
+            vfail() // MIGALLOW: Rust handles this better
           }
     
           val end = iter.getPos()
@@ -1765,11 +1784,11 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
         let begin = iter.get_pos();
         
-        // Try identifier
-        if iter.peek().is_alphabetic() || iter.peek() == '_' {
-            if let Some(id) = self.lex_identifier(iter) {
-                return Ok(INodeLEEnum::Word(id));
-            }
+        // Try identifier - use is_unicode_identifier_part to match Scala's isUnicodeIdentifierPart
+        if Self::is_unicode_identifier_part(iter.peek()) {
+            let id = self.lex_identifier(iter)
+                .expect("lexIdentifier should return Some when peek is unicode identifier part");
+            return Ok(INodeLEEnum::Word(id));
         }
 
         // Otherwise it's a symbol
@@ -1806,30 +1825,28 @@ class Lexer(interner: Interner, keywords: Keywords) {
         }
       }
     */
+    
+    /// Check if a character is a Unicode identifier part (matches Java's isUnicodeIdentifierPart)
+    fn is_unicode_identifier_part(c: char) -> bool {
+        // This matches Java's Character.isUnicodeIdentifierPart behavior
+        c.is_alphabetic() || c.is_numeric() || c == '_' || 
+        c == '\u{00B7}' || // Middle dot
+        (c >= '\u{0300}' && c <= '\u{036F}') || // Combining diacritical marks
+        (c >= '\u{203F}' && c <= '\u{2040}')    // Undertie and character tie
+    }
+    /*
+    MIGALLOW: Scala didn't need this because it had Character.isUnicodeIdentifierPart.
+    */
 
     /// Lex an identifier
     fn lex_identifier(&mut self, iter: &mut LexingIterator) -> Option<WordLE> {
         let begin = iter.get_pos();
         
-        if iter.at_end() {
-            return None;
+        // Keep eating identifier characters using isUnicodeIdentifierPart to match Scala
+        while !iter.at_end() && Self::is_unicode_identifier_part(iter.peek()) {
+            iter.advance();
         }
-
-        let first_char = iter.peek();
-        if !first_char.is_alphabetic() && first_char != '_' {
-            return None;
-        }
-
-        // Keep eating identifier characters
-        while !iter.at_end() {
-            let c = iter.peek();
-            if c.is_alphanumeric() || c == '_' {
-                iter.advance();
-            } else {
-                break;
-            }
-        }
-
+        
         let end = iter.get_pos();
         let word = &iter.code[begin as usize..end as usize];
         
@@ -1860,20 +1877,22 @@ class Lexer(interner: Interner, keywords: Keywords) {
     */
 
     /// Lex a number (integer or float)
-    fn lex_number(&mut self, iter: &mut LexingIterator) -> Result<Option<INodeLEEnum>> {
-        let begin = iter.get_pos();
+    fn lex_number(&mut self, original_iter: &mut LexingIterator) -> Result<Option<INodeLEEnum>> {
+        let begin = original_iter.get_pos();
 
         // Check if preceded by a dot (for array access like arr.2.1)
-        let is_name = iter.position > 0 && iter.code.chars().nth(iter.position - 1) == Some('.');
+        let is_name = original_iter.position >= 1 && original_iter.code.chars().nth(original_iter.position - 1) == Some('.');
 
-        let tentative_pos = iter.position;
-        let negative = iter.try_skip('-');
+        let mut tentative_iter = original_iter.clone();
+        let negative = tentative_iter.try_skip('-');
 
-        let peeked = iter.peek();
+        let peeked = tentative_iter.peek();
         if !peeked.is_ascii_digit() {
-            iter.position = tentative_pos;
             return Ok(None);
         }
+
+        original_iter.skip_to(tentative_iter.position);
+        let iter = original_iter;
 
         let mut digits_consumed = 0;
         let mut integer: i64 = 0;
@@ -1926,7 +1945,7 @@ class Lexer(interner: Interner, keywords: Keywords) {
             }
 
             if iter.try_skip('f') {
-                // Float type suffix (ignore for now)
+                panic!("Float type suffix 'f' not yet implemented (vimpl)");
             }
 
             let result = (integer as f64 + mantissa) * (if negative { -1.0 } else { 1.0 });
@@ -1949,11 +1968,8 @@ class Lexer(interner: Interner, keywords: Keywords) {
                     break;
                 }
             }
-            if bits > 0 {
-                Some(bits)
-            } else {
-                None
-            }
+            assert!(bits > 0, "Integer type suffix 'i' must be followed by a number");
+            Some(bits)
         } else {
             None
         };
@@ -2323,6 +2339,8 @@ class Lexer(interner: Interner, keywords: Keywords) {
       }
     var i = 0;
     while (i < 4) {
+      // MIGALLOW: Scala has a bug here, in that it advances the iterator even if we end up
+      // returning None.
       val c = iter.advance()
       if (c >= '0' && c <= '9') {
       } else if (c >= 'a' && c <= 'f') {
@@ -2332,18 +2350,14 @@ class Lexer(interner: Interner, keywords: Keywords) {
       }
       i = i + 1;
     }
-    Some(Integer.parseInt(str, 16))
+    Some(Integer.parseInt(str, 16)) // MIGALLOW: parseInt vs from_str_radix
   }
 */
-}
 
-/// Helper enum for string parsing
-enum StringPartResult {
-    Char(char),
-    Expr(ScrambleLE),
-}
-
-/*
+  fn _lex_region(&mut self, _iter: &mut LexingIterator) -> Option<ScrambleLE> {
+    panic!("Unimplemented");
+  }
+  /*
   def lexRegion(originalIter: LexingIterator): Option[ScrambleLE] = {
     val begin = originalIter.getPos()
 
@@ -2368,7 +2382,19 @@ enum StringPartResult {
     val scramble = ScrambleLE(RangeL(begin, end), Vector(name, symbolL))
     return Some(scramble)
   }
+  */
+
+}
+
+/// Helper enum for string parsing
+enum StringPartResult {
+    Char(char),
+    Expr(ScrambleLE),
+}
+/*
+MIGALLOW: Scala didn't need this, it has Either for this.
 */
+
 /*
 //  def lexSemicolonSeparatedList(iter: LexingIterator, stopOnOpenBrace: Boolean, stopOnWhere: Boolean): Result[SemicolonSeparatedListLE, IParseError] = {
 //    val begin = iter.getPos()

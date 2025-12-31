@@ -1,7 +1,4 @@
-use crate::interner::StrI;
 use crate::lexing::RangeL;
-use std::sync::Arc;
-use crate::utils::code_hierarchy::{FileCoordinate};
 use super::ast::{NameP, OwnershipP, LocationP, MutabilityP, VariabilityP};
 use super::rules::ITypePR;
 /*
@@ -138,7 +135,7 @@ impl ITemplexPT {
             ITemplexPT::Mutability { range, .. } => *range,
             ITemplexPT::NameOrRune(n) => n.range,
             ITemplexPT::Interpreted { range, .. } => *range,
-            ITemplexPT::Ownership { range, .. } => *range,
+            ITemplexPT::Ownership(r) => r.range,
             ITemplexPT::Pack(p) => p.range,
             ITemplexPT::Func { range, .. } => *range,
             ITemplexPT::StaticSizedArray { range, .. } => *range,

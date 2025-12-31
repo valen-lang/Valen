@@ -1515,7 +1515,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Ownership { range, ownership } => IVonData::Object(VonObject {
+            ITemplexPT::Ownership(OwnershipPT { range, ownership }) => IVonData::Object(VonObject {
                 tyype: "OwnershipT".to_string(),
                 id: None,
                 members: vec![

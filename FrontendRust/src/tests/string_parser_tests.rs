@@ -3,12 +3,12 @@
 
 use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
-use crate::{should_have, matches_pattern};
-use crate::interner::{Interner, StrI};
+use crate::{should_have};
+use crate::interner::{Interner};
 use crate::keywords::Keywords;
 use crate::lexing::lexer::Lexer;
 use crate::lexing::lexing_iterator::LexingIterator;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 
 /// Test: Simple string
 /// Mirrors StringParserTests.scala line 13

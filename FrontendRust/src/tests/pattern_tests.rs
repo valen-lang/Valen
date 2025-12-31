@@ -3,7 +3,6 @@
 
 use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
-use crate::{should_have, matches_pattern};
 
 // === CaptureAndDestructureTests.scala ===
 

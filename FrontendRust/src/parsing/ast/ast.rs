@@ -4,7 +4,7 @@ use std::sync::Arc;
 use crate::utils::code_hierarchy::{FileCoordinate};
 use super::templex::{ITemplexPT, RegionRunePT};
 use super::expressions::BlockPE;
-use super::pattern::{PatternPP, ParameterP};
+use super::pattern::{ParameterP};
 use super::rules::{IRulexPR, ITypePR};
 /*
 package dev.vale.parsing.ast

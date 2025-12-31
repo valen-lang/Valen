@@ -4,7 +4,7 @@ use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::fs;
 use std::path::Path;
 

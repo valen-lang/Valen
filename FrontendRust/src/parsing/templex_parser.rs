@@ -10,7 +10,8 @@ use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::scramble_iterator::ScrambleIterator;
-use std::sync::{Arc, Mutex};
+use crate::parsing::parse_utils::try_skip_past_equals_while;
+use std::sync::{Arc};
 /*
 package dev.vale.parsing.templex
 
@@ -758,16 +759,16 @@ impl TemplexParser {
             return Ok(ITemplexPT::Bool { range, value: false });
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.own) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Own });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Own }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.borrow) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Borrow });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Borrow }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.weak) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Weak });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Weak }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.share) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Share });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Share }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.inl) {
             return Ok(ITemplexPT::Location { range, location: LocationP::Inline });
@@ -789,13 +790,13 @@ impl TemplexParser {
         }
         // Duplicate checks for weak, own, share (lines 392-403 in Scala)
         if let Some(range) = iter.try_skip_word(&self.keywords.weak) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Weak });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Weak }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.own) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Own });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Own }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.share) {
-            return Ok(ITemplexPT::Ownership { range, ownership: OwnershipP::Share });
+            return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Share }));
         }
 
         // Try parsing prototype (lines 404-408)
@@ -1347,7 +1348,7 @@ impl TemplexParser {
     /// Mirrors parseRuleUpToEqualsPrecedence in TemplexParser.scala lines 661-689
     pub fn parse_rule_up_to_equals_precedence(&mut self, iter: &mut ScrambleIterator) -> ParseResult<IRulexPR> {
         // Try to find an equals sign while scouting ahead (lines 663-672)
-        let maybe_before_iter = self.try_skip_past_equals_while(iter, |scouting_iter| {
+        let maybe_before_iter = try_skip_past_equals_while(iter, |scouting_iter| {
             match scouting_iter.peek() {
                 None => false,
                 // Stop on comma

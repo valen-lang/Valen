@@ -18,7 +18,7 @@ fn test_ownership() {
     let result3 = compile_rulex_expect("X = own");
     assert!(matches!(result3, IRulexPR::Equals {
         left: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })),
-        right: box IRulexPR::Templex(ITemplexPT::Ownership { ownership: OwnershipP::Own, .. }),
+        right: box IRulexPR::Templex(ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. })),
         ..
     } if x_str.str == "X"));
     
@@ -31,9 +31,9 @@ fn test_ownership() {
         assert_eq!(x_str.str, "X");
         assert_eq!(any_str.str, "any");
         assert_eq!(args.len(), 3);
-        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Own, .. })));
-        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Borrow, .. })));
-        assert!(matches!(&args[2], IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Weak, .. })));
+        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. }))));
+        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Borrow, .. }))));
+        assert!(matches!(&args[2], IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Weak, .. }))));
     } else {
         panic!("Expected Equals with Typed and BuiltinCall");
     }
@@ -42,7 +42,7 @@ fn test_ownership() {
     assert!(matches!(result5, IRulexPR::Typed { rune: None, tyype: ITypePR::OwnershipType, .. }));
     
     let result6 = compile_rulex_expect("own");
-    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Own, .. })));
+    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. }))));
     
     let result7 = compile_rulex_expect("_ Ownership = any(own, share)");
     if let IRulexPR::Equals {
@@ -52,8 +52,8 @@ fn test_ownership() {
     } = result7 {
         assert_eq!(any_str.str, "any");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Own, .. })));
-        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Ownership { ownership: OwnershipP::Share, .. })));
+        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. }))));
+        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Share, .. }))));
     } else {
         panic!("Expected Equals with Typed and BuiltinCall");
     }

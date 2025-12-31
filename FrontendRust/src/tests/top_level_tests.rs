@@ -3,8 +3,7 @@
 
 use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
-use crate::lexing::errors::*;
-use crate::{should_have, matches_pattern};
+use crate::{should_have};
 
 #[test]
 fn function_then_struct() {

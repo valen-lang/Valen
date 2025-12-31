@@ -41,9 +41,17 @@ pub fn invoke_frontend_rust(
         .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
     
     // Build command line args for FrontendRust
+    // Must match Scala PassManager.main() which expects mode as first arg
     let mut command_line_args = Vec::new();
+    command_line_args.push("build".to_string());
     command_line_args.push("--output_dir".to_string());
     command_line_args.push(output_dir.display().to_string());
+    // FrontendRust is only used for parsing, not full compilation
+    command_line_args.push("--output_vast".to_string());
+    command_line_args.push("false".to_string());
+    // FrontendRust is only used for parsing, not full compilation
+    command_line_args.push("--output_vast".to_string());
+    command_line_args.push("false".to_string());
     
     // Add all project directory inputs (e.g., stdlib)
     for declaration in project_directories {
@@ -115,12 +123,12 @@ pub fn invoke_frontend(
     let frontend_rust_path = compiler_root
         .join("FrontendRust")
         .join("target")
-        .join("release")
+        .join("debug")
         .join("frontend_rust");
     
     if !frontend_rust_path.exists() {
         return Err(format!(
-            "FrontendRust binary not found at: {}\nPlease build it with: cd FrontendRust && cargo build --release --bin frontend_rust",
+            "FrontendRust binary not found at: {}\nPlease build it with: cd FrontendRust && cargo build --bin frontend_rust",
             frontend_rust_path.display()
         ));
     }

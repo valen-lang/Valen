@@ -1,13 +1,22 @@
-// From Frontend/ParsingPass/src/dev/vale/parsing/ParseUtils.scala
-// Shared parsing utilities
+use crate::parsing::ScrambleIterator;
+use crate::lexing::ast::INodeLEEnum;
+use crate::lexing::ast::INodeLE;
+use crate::lexing::ast::SymbolLE;
+use crate::lexing::WordLE;
+/*
+package dev.vale.parsing
 
+import dev.vale.StrI
+import dev.vale.lexing.{SymbolLE, WordLE}
 
-  /// Helper method to skip past an equals sign while a condition is true
-  /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
-  fn try_skip_past_equals_while<F>(
-    &self,
-    iter: &mut ScrambleIterator,
-    continue_while: F,
+object ParseUtils {
+*/
+
+/// Helper method to skip past an equals sign while a condition is true
+/// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
+pub fn try_skip_past_equals_while<F>(
+  iter: &mut ScrambleIterator,
+  continue_while: F,
 ) -> Option<ScrambleIterator>
 where
     F: Fn(&ScrambleIterator) -> bool,
@@ -39,15 +48,7 @@ where
     None
 }
 
-
 /*
-package dev.vale.parsing
-
-import dev.vale.StrI
-import dev.vale.lexing.{SymbolLE, WordLE}
-
-object ParseUtils {
-
   // This method modifies the current iterator to skip it past the next = symbol
   // that's surrounded by spaces. Note that it won't catch an = at the beginning or
   // end of the statement.
@@ -80,35 +81,49 @@ object ParseUtils {
 
     return None
   }
+*/
 
-  // This method modifies the current iterator to skip it past the next = symbol
-  // that's surrounded by spaces. Note that it won't catch an = at the beginning or
-  // end of the statement.
-  // It returns None if there wasn't one (which leaves self untouched) or a Some
-  // containing everything we skipped past (minus the =).
-  def trySkipPastSemicolonWhile(iter: ScrambleIterator, continueWhile: ScrambleIterator => Boolean): Option[ScrambleIterator] = {
-    val scoutingIter = iter.clone()
-    while (continueWhile(scoutingIter)) {
-      scoutingIter.peek() match {
-        case Some(SymbolLE(_, ';')) => {
-          // We'll return this iterator for the things that come before the =
-          val beforeIter = iter.clone()
-          beforeIter.end = scoutingIter.index + 1
-
-          // Now modify self to skip past it.
-          iter.skipTo(scoutingIter)
-          iter.advance()
-
-          return Some(beforeIter)
+/// Try to skip past a keyword, returning the portion before it
+/// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
+pub fn try_skip_past_keyword_while<F>(
+  iter: &mut ScrambleIterator,
+  keyword: &crate::interner::StrI,
+  continue_while: F,
+) -> Option<(WordLE, ScrambleIterator)>
+where
+    F: Fn(&ScrambleIterator) -> bool,
+{
+    // Mirrors ParseUtils.scala line 82
+    let mut scouting_iter = iter.clone();
+    
+    // Mirrors ParseUtils.scala line 83
+    while continue_while(&scouting_iter) {
+        // Mirrors ParseUtils.scala lines 84-98
+        match scouting_iter.peek() {
+            Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
+                // Mirrors ParseUtils.scala lines 86-88
+                // We'll return this iterator for the things that come before the keyword
+                let mut before_iter = iter.clone();
+                before_iter.end = scouting_iter.index;
+                
+                // Mirrors ParseUtils.scala lines 90-92
+                // Now modify self to skip past it.
+                iter.skip_to(&scouting_iter);
+                iter.advance();
+                
+                // Mirrors ParseUtils.scala line 94
+                return Some((w.clone(), before_iter));
+            }
+            _ => {}
         }
-        case _ =>
-      }
-      scoutingIter.advance()
+        // Mirrors ParseUtils.scala line 98
+        scouting_iter.advance();
     }
-
-    return None
-  }
-
+    
+    // Mirrors ParseUtils.scala line 101
+    None
+}
+/*
   // This method modifies the current iterator to skip it past the next = symbol
   // that's surrounded by spaces. Note that it won't catch an = at the beginning or
   // end of the statement.
@@ -143,7 +158,40 @@ object ParseUtils {
 
     return None
   }
+*/
 
+
+/*
+  // This method modifies the current iterator to skip it past the next = symbol
+  // that's surrounded by spaces. Note that it won't catch an = at the beginning or
+  // end of the statement.
+  // It returns None if there wasn't one (which leaves self untouched) or a Some
+  // containing everything we skipped past (minus the =).
+  def trySkipPastSemicolonWhile(iter: ScrambleIterator, continueWhile: ScrambleIterator => Boolean): Option[ScrambleIterator] = {
+    val scoutingIter = iter.clone()
+    while (continueWhile(scoutingIter)) {
+      scoutingIter.peek() match {
+        case Some(SymbolLE(_, ';')) => {
+          // We'll return this iterator for the things that come before the =
+          val beforeIter = iter.clone()
+          beforeIter.end = scoutingIter.index + 1
+
+          // Now modify self to skip past it.
+          iter.skipTo(scoutingIter)
+          iter.advance()
+
+          return Some(beforeIter)
+        }
+        case _ =>
+      }
+      scoutingIter.advance()
+    }
+
+    return None
+  }
+*/
+
+/*
   def trySkipTo(
     iter: ScrambleIterator,
     stopAt: ScrambleIterator => Boolean):
@@ -169,6 +217,7 @@ object ParseUtils {
 
     return None
   }
-
+*/
+/*
 }
 */

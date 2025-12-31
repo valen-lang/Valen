@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;

@@ -1,4 +1,4 @@
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;
@@ -7,6 +7,8 @@ use crate::parsing::ast::*;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::pattern_parser::PatternParser;
+use crate::parsing::parse_utils::try_skip_past_keyword_while;
+use crate::parsing::parse_utils::try_skip_past_equals_while;
 /*
 package dev.vale.parsing
 
@@ -3462,7 +3464,7 @@ impl ExpressionParser {
         original_iter.skip_to(&tentative_iter);
         let iter = original_iter;
         
-        let (in_range, pattern) = match self.try_skip_past_keyword_while(
+        let (in_range, pattern) = match try_skip_past_keyword_while(
             iter,
             &self.keywords.r#in,
             |it| {
@@ -3721,7 +3723,7 @@ impl ExpressionParser {
         iter.advance();
         
         // Use try_skip_past_equals_while to find the mutatee expression
-        let mutatee_expr = match self.try_skip_past_equals_while(iter, |scouting_iter| {
+        let mutatee_expr = match try_skip_past_equals_while(iter, |scouting_iter| {
             match scouting_iter.peek() {
                 None => false,
                 Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
@@ -3796,7 +3798,7 @@ impl ExpressionParser {
         
         // Use try_skip_past_equals_while to find the pattern and source expression
         // Mirrors ExpressionParser.scala lines 797-804
-        let pattern = match self.try_skip_past_equals_while(iter, |scouting_iter| {
+        let pattern = match try_skip_past_equals_while(iter, |scouting_iter| {
             match scouting_iter.peek() {
                 None => false,
                 Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
@@ -3869,77 +3871,6 @@ impl ExpressionParser {
         Ok(LetPE(RangeL(pattern.range.begin, sourceExpr.range.end), pattern, sourceExpr))
       }
     */
-    
-    /// Helper method to skip past equals sign while a condition is true
-    /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala lines 13-39
-    fn try_skip_past_equals_while<F>(
-        &self,
-        iter: &mut ScrambleIterator,
-        continue_while: F,
-    ) -> Option<ScrambleIterator>
-    where
-        F: Fn(&ScrambleIterator) -> bool,
-    {
-        let mut scouting_iter = iter.clone();
-        while continue_while(&scouting_iter) {
-            match scouting_iter.peek3() {
-                (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
-                    let surrounded_by_spaces =
-                        prev.range().end < range.begin && range.end < next.range().begin;
-                    if surrounded_by_spaces {
-                        // We'll return this iterator for the things that come before the =
-                        let mut before_iter = iter.clone();
-                        before_iter.end = scouting_iter.index + 1;
-                        
-                        // Now modify iter to skip past it
-                        iter.skip_to(&scouting_iter);
-                        iter.advance();
-                        iter.advance();
-                        
-                        return Some(before_iter);
-                    }
-                }
-                _ => {}
-            }
-            scouting_iter.advance();
-        }
-        
-        None
-    }
-    
-    /// Helper method to skip past a keyword while a condition is true
-    /// Mirrors ParseUtils.trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
-    fn try_skip_past_keyword_while<F>(
-        &self,
-        iter: &mut ScrambleIterator,
-        keyword: &Arc<StrI>,
-        continue_while: F,
-    ) -> Option<(WordLE, ScrambleIterator)>
-    where
-        F: Fn(&ScrambleIterator) -> bool,
-    {
-        let mut scouting_iter = iter.clone();
-        while continue_while(&scouting_iter) {
-            match scouting_iter.peek() {
-                Some(INodeLEEnum::Word(w @ WordLE { str: kw, .. })) if kw == keyword => {
-                    let w = w.clone();
-                    // We'll return this iterator for the things that come before the keyword
-                    let mut before_iter = iter.clone();
-                    before_iter.end = scouting_iter.index;
-                    
-                    // Now modify iter to skip past it
-                    iter.skip_to(&scouting_iter);
-                    iter.advance();
-                    
-                    return Some((w, before_iter));
-                }
-                _ => {}
-            }
-            scouting_iter.advance();
-        }
-        
-        None
-    }
 }
 
 /*

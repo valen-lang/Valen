@@ -7,8 +7,13 @@ use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::pattern_parser::PatternParser;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use crate::parsing::parse_utils::try_skip_past_keyword_while;
+use crate::utils::code_hierarchy::{IPackageResolver, FileCoordinateMap};
+use crate::lexing::errors::FailedParse;
+use std::collections::HashMap;
+
 /*
 package dev.vale.parsing
 
@@ -58,47 +63,6 @@ impl Parser {
             pattern_parser,
             expression_parser,
         }
-    }
-
-    /// Try to skip past a keyword, returning the portion before it
-    /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
-    fn try_skip_past_keyword_while<F>(
-        iter: &mut ScrambleIterator,
-        keyword: &crate::interner::StrI,
-        continue_while: F,
-    ) -> Option<(WordLE, ScrambleIterator)>
-    where
-        F: Fn(&ScrambleIterator) -> bool,
-    {
-        // Mirrors ParseUtils.scala line 82
-        let mut scouting_iter = iter.clone();
-        
-        // Mirrors ParseUtils.scala line 83
-        while continue_while(&scouting_iter) {
-            // Mirrors ParseUtils.scala lines 84-98
-            match scouting_iter.peek() {
-                Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
-                    // Mirrors ParseUtils.scala lines 86-88
-                    // We'll return this iterator for the things that come before the keyword
-                    let mut before_iter = iter.clone();
-                    before_iter.end = scouting_iter.index;
-                    
-                    // Mirrors ParseUtils.scala lines 90-92
-                    // Now modify self to skip past it.
-                    iter.skip_to(&scouting_iter);
-                    iter.advance();
-                    
-                    // Mirrors ParseUtils.scala line 94
-                    return Some((w.clone(), before_iter));
-                }
-                _ => {}
-            }
-            // Mirrors ParseUtils.scala line 98
-            scouting_iter.advance();
-        }
-        
-        // Mirrors ParseUtils.scala line 101
-        None
     }
 
     /// Parse a complete file from lexer output
@@ -604,7 +568,7 @@ impl Parser {
     */
 
     /// Parse a struct definition
-    fn parse_struct(&mut self, struct_l: StructL) -> ParseResult<StructP> {
+    pub fn parse_struct(&mut self, struct_l: StructL) -> ParseResult<StructP> {
         let StructL {
             range: struct_range,
             name: name_l,
@@ -763,7 +727,7 @@ impl Parser {
 */
 
     /// Parse an interface definition
-    fn parse_interface(&mut self, interface_l: InterfaceL) -> ParseResult<InterfaceP> {
+    pub fn parse_interface(&mut self, interface_l: InterfaceL) -> ParseResult<InterfaceP> {
         let InterfaceL {
             range: interface_range,
             name: name_l,
@@ -977,7 +941,7 @@ impl Parser {
 
     /// Parse an impl block
     /// Mirrors Parser.parseImpl in Parser.scala lines 397-461
-    fn parse_impl(&mut self, impl_l: ImplL) -> ParseResult<ImplP> {
+    pub fn parse_impl(&mut self, impl_l: ImplL) -> ParseResult<ImplP> {
         let ImplL {
             range: impl_range,
             identifying_runes: maybe_identifying_runes_l,
@@ -1112,7 +1076,7 @@ impl Parser {
 
     /// Parse an export-as declaration
     /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
-    fn parse_export_as(&mut self, export_l: ExportAsL) -> ParseResult<ExportAsP> {
+    pub fn parse_export_as(&mut self, export_l: ExportAsL) -> ParseResult<ExportAsP> {
         let mut iter = ScrambleIterator::new(export_l.contents.clone());
 
         // Try to find "as" keyword and get everything before it
@@ -1210,7 +1174,7 @@ impl Parser {
 
     /// Parse an import declaration
     /// Mirrors Parser.parseImport in Parser.scala lines 499-516
-    fn parse_import(&mut self, import_l: ImportL) -> ParseResult<ImportP> {
+    pub fn parse_import(&mut self, import_l: ImportL) -> ParseResult<ImportP> {
         let ImportL {
             range,
             module_name: module_name_l,
@@ -1257,7 +1221,7 @@ impl Parser {
 
     /// Parse a function
     /// Mirrors Parser.parseFunction in Parser.scala lines 552-654
-    fn parse_function(&mut self, func_l: FunctionL, is_in_citizen: bool) -> ParseResult<FunctionP> {
+    pub fn parse_function(&mut self, func_l: FunctionL, is_in_citizen: bool) -> ParseResult<FunctionP> {
         let FunctionL {
             range: func_range_l,
             header: header_l,
@@ -1311,7 +1275,7 @@ impl Parser {
         
         // Mirrors Parser.scala lines 584-589
         let (maybe_return_iter, return_end_pos, maybe_rules_iter) =
-            match Self::try_skip_past_keyword_while(
+            match try_skip_past_keyword_while(
                 &mut return_and_where_iter,
                 &self.keywords.r#where,
                 |it| it.has_next(),
@@ -1743,6 +1707,20 @@ impl Parser {
   }
 }
 */
+
+// From Parser.scala lines 699-854: ParserCompilation class
+pub struct ParserCompilation {
+    opts: crate::passmanager::GlobalOptions,
+    interner: Arc<Interner>,
+    keywords: Arc<Keywords>,
+    packages_to_build: Vec<Arc<PackageCoordinate>>,
+    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    parser: Parser,
+    code_map_cache: Option<FileCoordinateMap<String>>,
+    vpst_map_cache: Option<FileCoordinateMap<String>>,
+    parseds_cache: Option<FileCoordinateMap<(FileP, Vec<RangeL>)>>,
+}
+impl ParserCompilation {
 /*
 class ParserCompilation(
   opts: GlobalOptions,
@@ -1754,6 +1732,112 @@ class ParserCompilation(
   val parser = new Parser(interner, keywords, opts)
 */
 /*
+  var codeMapCache: Option[FileCoordinateMap[String]] = None
+  var vpstMapCache: Option[FileCoordinateMap[String]] = None
+  var parsedsCache: Option[FileCoordinateMap[(FileP, Vector[RangeL])]] = None
+*/
+
+    // From Parser.scala lines 699-706
+    pub fn new(
+        opts: crate::passmanager::GlobalOptions,
+        interner: Arc<Interner>,
+        keywords: Arc<Keywords>,
+        packages_to_build: Vec<Arc<PackageCoordinate>>,
+        package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    ) -> Self {
+        let parser = Parser::new(interner.clone(), keywords.clone());
+        ParserCompilation {
+            opts,
+            interner,
+            keywords,
+            packages_to_build,
+            package_to_contents_resolver,
+            parser,
+            code_map_cache: None,
+            vpst_map_cache: None,
+            parseds_cache: None,
+        }
+    }
+
+    // From Parser.scala lines 708-773: loadAndParse
+    // From Parser.scala lines 708-773: loadAndParse
+    fn load_and_parse(
+        &mut self,
+        needed_packages: &[Arc<PackageCoordinate>],
+        resolver: &dyn IPackageResolver<HashMap<String, String>>,
+    ) -> Result<(FileCoordinateMap<String>, FileCoordinateMap<(FileP, Vec<RangeL>)>), FailedParse> {
+        // From Parser.scala line 712: Check for duplicates
+        let unique_packages: std::collections::HashSet<_> = needed_packages.iter().collect();
+        assert!(
+            unique_packages.len() == needed_packages.len(),
+            "Duplicate modules in: {:?}",
+            needed_packages
+        );
+
+        // From Parser.scala lines 714-715
+        let mut found_code_map = FileCoordinateMap::<String>::new();
+        let mut parsed_map = FileCoordinateMap::<(FileP, Vec<RangeL>)>::new();
+
+        // From Parser.scala lines 717-740: Load .vpst files directly
+        for package_coord in needed_packages {
+            if let Some(filepath_to_code) = resolver.resolve(package_coord) {
+                for (filepath, code) in filepath_to_code {
+                    if filepath.ends_with(".vpst") {
+                        panic!("ParsedLoader not yet implemented - see Parser.scala lines 724-735. Need to load .vpst file: {}", filepath);
+                    }
+                }
+            }
+        }
+
+        // From Parser.scala lines 742-749: Create resolver that filters out .vpst files
+        struct ValeOnlyResolver<'a> {
+            inner: &'a dyn IPackageResolver<HashMap<String, String>>,
+        }
+        impl<'a> IPackageResolver<HashMap<String, String>> for ValeOnlyResolver<'a> {
+            fn resolve(&self, package_coord: &Arc<PackageCoordinate>) -> Option<HashMap<String, String>> {
+                self.inner.resolve(package_coord).map(|filepath_to_code| {
+                    filepath_to_code
+                        .into_iter()
+                        .filter(|(filepath, _)| filepath.ends_with(".vale"))
+                        .collect()
+                })
+            }
+        }
+        let vale_only_resolver = ValeOnlyResolver { inner: resolver };
+
+        // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
+        use crate::parsing::parse_and_explore;
+        parse_and_explore::parse_and_explore(
+            self.interner.clone(),
+            self.keywords.clone(),
+            self.opts.clone(),
+            &mut self.parser,
+            needed_packages.to_vec(),
+            &vale_only_resolver,
+            |_file_coord, _code, _imports, denizen| denizen,
+            |file_coord, code, comment_ranges, denizens| {
+                // From Parser.scala lines 756-766
+                found_code_map.put(file_coord.clone(), code.to_string());
+                let file = FileP {
+                    file_coord: file_coord.clone(),
+                    comments_ranges: comment_ranges.to_vec(),
+                    denizens: denizens.to_vec(),
+                };
+                
+                // From Parser.scala lines 759-764: Sanity check (not yet implemented)
+                if self.opts.sanity_check {
+                    panic!("Sanity check not yet implemented - see Parser.scala lines 759-764. Need ParserVonifier and ParsedLoader");
+                }
+                
+                // From Parser.scala line 766
+                parsed_map.put(file_coord.clone(), (file, comment_ranges.to_vec()));
+            },
+        ).map_err(|e| e)?;
+        
+        // From Parser.scala line 772
+        Ok((found_code_map, parsed_map))
+    }
+    /*
   def loadAndParse(
     neededPackages: Vector[PackageCoordinate],
     resolver: IPackageResolver[Map[String, String]]):
@@ -1821,11 +1905,12 @@ class ParserCompilation(
     Ok((foundCodeMap, parsedMap))
   }
 */
-/*
-  var codeMapCache: Option[FileCoordinateMap[String]] = None
-  var vpstMapCache: Option[FileCoordinateMap[String]] = None
-  var parsedsCache: Option[FileCoordinateMap[(FileP, Vector[RangeL])]] = None
-*/
+
+    // From Parser.scala lines 779-784: getCodeMap
+    pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+        self.get_parseds()?;
+        Ok(self.code_map_cache.clone().unwrap())
+    }
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = {
     getParseds() match {
@@ -1837,6 +1922,26 @@ class ParserCompilation(
     vassertSome(codeMapCache)
   }
 */
+
+    // From Parser.scala lines 785-787: expectCodeMap
+    pub fn expect_code_map(&self) -> FileCoordinateMap<String> {
+        self.code_map_cache.clone().expect("code_map_cache should be populated")
+    }
+
+    // From Parser.scala lines 789-816: getParseds
+    pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+        if let Some(ref parseds) = self.parseds_cache {
+            return Ok(parseds.clone());
+        }
+
+        let packages = self.packages_to_build.clone();
+        let resolver = self.package_to_contents_resolver.clone();
+        let (code_map, program_p_map) = self.load_and_parse(&packages, resolver.as_ref())?;
+
+        self.code_map_cache = Some(code_map);
+        self.parseds_cache = Some(program_p_map);
+        Ok(self.parseds_cache.clone().unwrap())
+    }
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = {
     parsedsCache match {
@@ -1855,6 +1960,16 @@ class ParserCompilation(
     }
   }
 */
+
+    // From Parser.scala lines 818-826: expectParseds
+    pub fn expect_parseds(&mut self) -> FileCoordinateMap<(FileP, Vec<RangeL>)> {
+        match self.get_parseds() {
+            Err(FailedParse { code, file_coord, error }) => {
+                panic!("Parse error: {:?} - need ParseErrorHumanizer.humanize - see Parser.scala lines 818-826", error)
+            }
+            Ok(x) => x,
+        }
+    }
 /*
   def expectParseds(): FileCoordinateMap[(FileP, Vector[RangeL])] = {
     getParseds() match {
@@ -1865,6 +1980,16 @@ class ParserCompilation(
     }
   }
 */
+
+    // From Parser.scala lines 829-846: getVpstMap
+    pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+        if let Some(ref vpst) = self.vpst_map_cache {
+            return Ok(vpst.clone());
+        }
+
+        let parseds = self.get_parseds()?;
+        panic!("ParserCompilation.get_vpst_map not yet fully implemented - need to vonify and print. See Parser.scala lines 829-846")
+    }
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = {
     vpstMapCache match {
@@ -1885,14 +2010,19 @@ class ParserCompilation(
     }
   }
 */
+
+    // From Parser.scala lines 849-851: expectVpstMap
+    pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<String> {
+        self.get_vpst_map().expect("getVpstMap should succeed")
+    }
 /*
   def expectVpstMap(): FileCoordinateMap[String] = {
     getVpstMap().getOrDie()
   }
 */
+}
 /*
 }
-
 object Parser {
 */
 /*

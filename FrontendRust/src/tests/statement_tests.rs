@@ -4,7 +4,6 @@
 use crate::tests::test_parse_utils::*;
 use crate::parsing::ast::*;
 use crate::lexing::errors::ParseError;
-use crate::{should_have, matches_pattern};
 
 // Mirrors StatementTests.scala line 12
 #[test]
