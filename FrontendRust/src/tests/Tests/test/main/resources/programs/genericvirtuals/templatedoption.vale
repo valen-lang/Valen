@@ -1,0 +1,20 @@
+import v.builtins.drop.*;
+
+sealed interface MyOption<T Ref> { }
+
+struct MySome<T Ref> where func drop(T)void {
+  value T;
+}
+impl<T> MyOption<T> for MySome<T>;
+
+struct MyNone<T> where T Ref { }
+impl<T> MyOption<T> for MyNone<T>;
+
+abstract func len<T>(virtual opt &MyOption<T>) int;
+func len<T>(opt &MyNone<T>) int { return 0; }
+func len<T>(opt &MySome<T>) int { return 1; }
+
+exported func main() int {
+  myOpt MyOption<int> = MySome<int>(4);
+  return len(&myOpt);
+}

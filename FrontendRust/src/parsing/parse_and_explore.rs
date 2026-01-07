@@ -5,7 +5,7 @@ use crate::parsing::ast::{FileP, IDenizenP};
 use crate::parsing::Parser;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::{Interner, Keywords};
-use crate::passmanager::GlobalOptions;
+use crate::compile_options::GlobalOptions;
 use std::collections::HashMap;
 use std::sync::Arc;
 /*

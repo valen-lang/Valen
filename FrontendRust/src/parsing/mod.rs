@@ -19,3 +19,5 @@ pub use vonifier::*;
 // Don't re-export parsers to avoid name conflicts
 // Use explicit imports: templex_parser::TemplexParser, etc.
 
+#[cfg(test)]
+pub mod tests;

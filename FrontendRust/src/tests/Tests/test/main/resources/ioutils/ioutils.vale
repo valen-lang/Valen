@@ -1,0 +1,5 @@
+
+func getch() int { __getch() }
+extern func __getch() int;
+
+extern func stdinReadInt() int;

@@ -8,16 +8,13 @@ pub mod parsing;
 pub mod von;
 pub mod builtins;
 pub mod file_coordinate_map;
+pub mod compile_options;
 pub mod pass_manager;
-pub mod passmanager;
 pub mod simplifying;
 pub mod instantiating;
 pub mod typing;
-pub mod highertyping;
+pub mod higher_typing;
 pub mod postparsing;
-
-#[cfg(test)]
-mod tests;
 
 pub use interner::{Interner, StrI};
 pub use keywords::Keywords;

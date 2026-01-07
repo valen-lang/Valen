@@ -1,0 +1,8 @@
+
+
+interface MyInterface { }
+struct MyStruct { value int; }
+impl MyInterface for MyStruct;
+exported func main() {
+  x MyInterface = MyStruct(9);
+}

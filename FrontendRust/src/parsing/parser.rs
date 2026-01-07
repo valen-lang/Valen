@@ -7,6 +7,7 @@ use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::pattern_parser::PatternParser;
+use crate::compile_options::GlobalOptions;
 use std::sync::{Arc};
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::parsing::parse_utils::try_skip_past_keyword_while;
@@ -1710,7 +1711,7 @@ impl Parser {
 
 // From Parser.scala lines 699-854: ParserCompilation class
 pub struct ParserCompilation {
-    opts: crate::passmanager::GlobalOptions,
+    opts: GlobalOptions,
     interner: Arc<Interner>,
     keywords: Arc<Keywords>,
     packages_to_build: Vec<Arc<PackageCoordinate>>,
@@ -1739,7 +1740,7 @@ class ParserCompilation(
 
     // From Parser.scala lines 699-706
     pub fn new(
-        opts: crate::passmanager::GlobalOptions,
+        opts: GlobalOptions,
         interner: Arc<Interner>,
         keywords: Arc<Keywords>,
         packages_to_build: Vec<Arc<PackageCoordinate>>,

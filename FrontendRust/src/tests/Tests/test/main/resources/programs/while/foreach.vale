@@ -1,0 +1,11 @@
+import v.builtins.opt.*;
+import v.builtins.arith.*;
+import stdlib.collections.list.*;
+
+exported func main() int {
+  results =
+    foreach i in range(0, 10) {
+      i
+    };
+  return results.len();
+}

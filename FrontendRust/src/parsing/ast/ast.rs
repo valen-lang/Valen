@@ -260,17 +260,21 @@ case class StructMembersP(
 #[derive(Clone, Debug, PartialEq)]
 pub enum IStructContent {
     StructMethod(FunctionP),
-    NormalStructMember {
-        range: RangeL,
-        name: NameP,
-        variability: VariabilityP,
-        tyype: ITemplexPT,
-    },
-    VariadicStructMember {
-        range: RangeL,
-        variability: VariabilityP,
-        tyype: ITemplexPT,
-    },
+    NormalStructMember(NormalStructMemberP),
+    VariadicStructMember(VariadicStructMemberP),
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct NormalStructMemberP {
+    pub range: RangeL,
+    pub name: NameP,
+    pub variability: VariabilityP,
+    pub tyype: ITemplexPT,
+}
+#[derive(Clone, Debug, PartialEq)]
+pub struct VariadicStructMemberP {
+    pub range: RangeL,
+    pub variability: VariabilityP,
+    pub tyype: ITemplexPT,
 }
 /*
 sealed trait IStructContent

@@ -1,5 +1,5 @@
 // From Frontend/TypingPass/src/dev/vale/typing/
-pub mod typing_pass_compilation;
+pub mod compilation;
 
-pub use typing_pass_compilation::{TypingPassCompilation, TypingPassOptions};
+pub use compilation::{TypingPassCompilation, TypingPassOptions};
 

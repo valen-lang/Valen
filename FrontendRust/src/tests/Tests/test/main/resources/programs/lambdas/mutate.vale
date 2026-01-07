@@ -1,0 +1,8 @@
+
+exported func main() int {
+  x = 4;
+  {
+    set x = x + 1;
+  }();
+  x
+}

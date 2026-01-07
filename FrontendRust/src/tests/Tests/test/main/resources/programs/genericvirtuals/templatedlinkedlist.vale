@@ -1,0 +1,33 @@
+import v.builtins.opt.*;
+import v.builtins.logic.*;
+import v.builtins.drop.*;
+import printutils.*;
+
+#!DeriveStructDrop
+struct MyList<T Ref> {
+  value T;
+  next Opt<MyList<T>>;
+}
+
+func drop<T>(this MyList<T>)
+where func drop(T)void {
+  [value, next] = this;
+}
+
+func printValues(list &MyList<int>) void {
+  print(list.value);
+  printNextValue(list.next);
+}
+
+func printNextValue(opt &Opt<MyList<int>>) void {
+  if not opt.isEmpty() {
+    printValues(opt.get());
+  }
+}
+
+
+exported func main() int {
+  list = MyList<int>(10, Some<MyList<int>>(MyList<int>(20, Some<MyList<int>>(MyList<int>(30, None<MyList<int>>())))));
+  printValues(&list);
+  return 0;
+}

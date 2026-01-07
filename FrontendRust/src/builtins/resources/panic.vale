@@ -1,0 +1,1 @@
+extern func __vbi_panic() __Never;

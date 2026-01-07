@@ -1,5 +1,5 @@
 // From Frontend/PostParsingPass/src/dev/vale/postparsing/
-pub mod scout_compilation;
+pub mod post_parser;
 
-pub use scout_compilation::ScoutCompilation;
+pub use post_parser::ScoutCompilation;
 
