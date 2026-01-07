@@ -1,923 +1,408 @@
-/// Statement parsing tests
-/// Mirrors Frontend/ParsingPass/test/dev/vale/parsing/StatementTests.scala
+package dev.vale.parsing
 
-use crate::parsing::tests::test_parse_utils::*;
-use crate::parsing::ast::*;
-use crate::lexing::errors::ParseError;
+import dev.vale.{Collector, Interner, StrI, vimpl, vwat}
+import dev.vale.parsing.ast.{AugmentPE, BlockPE, BorrowP, ConsecutorPE, ConstantBoolPE, ConstantIntPE, ConstantStrPE, DestructPE, DestructureP, DotPE, EachPE, FunctionCallPE, IExpressionPE, IfPE, LetPE, LocalNameDeclarationP, LookupNameP, LookupPE, MutatePE, NameOrRunePT, NameP, PatternPP, Patterns, ReturnPE, TuplePE, UnletPE, VoidPE}
+import dev.vale.parsing.ast._
+import dev.vale.lexing._
+import dev.vale.options.GlobalOptions
+import org.scalatest._
 
-// Mirrors StatementTests.scala line 12
-#[test]
-fn test_simple_let() {
-    let result = compile_statement_expect("x = 4;");
-    
-    assert!(matches!(result, IExpressionPE::Let(LetPE {
-        pattern: PatternPP {
-            destination: Some(DestinationLocalP {
-                decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref name_str, .. }),
-                mutate: None,
-            }),
-            templex: None,
-            destructure: None,
-            ..
-        },
-        source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-        ..
-    }) if name_str.str == "x"));
-}
+class StatementTests extends FunSuite with Collector with TestParseUtils {
 
-// TODO: Port test "multiple statements" from StatementTests.scala line 18
-// Mirrors StatementTests.scala line 18
-#[test]
-fn test_multiple_statements() {
-    let result1 = compile_block_contents_expect("4");
-    assert!(matches!(result1, IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
+  test("Simple let") {
+    compileBlockContentsExpect( "x = 4;") shouldHave {
+      case LetPE(_, PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("x"))), None)), None, None), ConstantIntPE(_, 4, _)) =>
+    }
+  }
 
-    let result2 = compile_block_contents_expect("4;");
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result2 {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
-        assert!(matches!(elems[1], IExpressionPE::Void(_)));
-    } else {
-        panic!("Expected Consecutor");
+  test("multiple statements") {
+    compileBlockContentsExpect(
+      """4""".stripMargin) shouldHave {
+      case ConstantIntPE(_, 4, _) =>
     }
 
-    let result3 = compile_block_contents_expect("4; 3");
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result3 {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
-        assert!(matches!(elems[1], IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. })));
-    } else {
-        panic!("Expected Consecutor");
+    compileBlockContentsExpect(
+      """4;""".stripMargin) shouldHave {
+      case ConsecutorPE(Vector(ConstantIntPE(_, 4, _), VoidPE(_))) =>
     }
 
-    let result4 = compile_block_contents_expect("4; 3;");
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result4 {
-        assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0], IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
-        assert!(matches!(elems[1], IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. })));
-        assert!(matches!(elems[2], IExpressionPE::Void(_)));
-    } else {
-        panic!("Expected Consecutor");
+    compileBlockContentsExpect(
+      """4; 3""".stripMargin) shouldHave {
+      case ConsecutorPE(Vector(ConstantIntPE(_, 4, _), ConstantIntPE(_, 3, _))) =>
     }
-}
 
-// Mirrors StatementTests.scala line 40
-#[test]
-fn test_8() {
-    let result = compile_statement_expect("[x, y] = (4, 5);");
-    
-    if let IExpressionPE::Let(LetPE {
-        pattern: PatternPP {
-            destination: None,
-            templex: None,
-            destructure: Some(DestructureP { patterns: ref patterns, .. }),
-            ..
-        },
-        source: box IExpressionPE::Tuple(TuplePE { elements: ref tuple_elems, .. }),
-        ..
-    }) = result {
-        assert_eq!(patterns.len(), 2);
-        assert_eq!(tuple_elems.len(), 2);
-        
-        assert!(matches!(patterns[0], PatternPP {
-            destination: Some(DestinationLocalP {
-                decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref x_str, .. }),
-                ..
-            }),
-            ..
-        } if x_str.str == "x"));
-        
-        assert!(matches!(patterns[1], PatternPP {
-            destination: Some(DestinationLocalP {
-                decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref y_str, .. }),
-                ..
-            }),
-            ..
-        } if y_str.str == "y"));
-        
-        assert!(matches!(tuple_elems[0], IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
-        assert!(matches!(tuple_elems[1], IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. })));
-    } else {
-        panic!("Expected Let with destructure and tuple");
+    compileBlockContentsExpect(
+      """4; 3;""".stripMargin) shouldHave {
+      case ConsecutorPE(Vector(ConstantIntPE(_, 4, _), ConstantIntPE(_, 3, _), VoidPE(_))) =>
     }
-}
+  }
 
-// TODO: Port test "9" from StatementTests.scala line 55
-// Mirrors StatementTests.scala line 55
-#[test]
-fn test_9() {
-    let result = compile_statement_expect("set x.a = 5;");
-    
-    assert!(matches!(result, IExpressionPE::Mutate(MutatePE {
-        mutatee: box IExpressionPE::Dot(DotPE {
-            left: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref x_str, .. }),
-                ..
-            }),
-            member: NameP { str: ref a_str, .. },
-            ..
-        }),
-        source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-        ..
-    }) if x_str.str == "x" && a_str.str == "a"));
-}
+  test("8") {
+    compileStatementExpect("[x, y] = (4, 5);") shouldHave {
+      case LetPE(_,
+          PatternPP(_,
+            None,
+            None,
+            Some(
+              DestructureP(_,
+                Vector(
+                  PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("x"))), None)),None,None),
+                  PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("y"))), None)),None,None))))),
+          TuplePE(_,Vector(ConstantIntPE(_, 4, _), ConstantIntPE(_, 5, _)))) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 61
-#[test]
-fn test_1pe() {
-    let result = compile_statement_expect(r#"set board.PE.PE.symbol = "v";"#);
-    
-    assert!(matches!(result,
-        IExpressionPE::Mutate(MutatePE {
-            mutatee: box IExpressionPE::Dot(DotPE {
-                left: box IExpressionPE::Dot(DotPE {
-                    left: box IExpressionPE::Dot(DotPE {
-                        left: box IExpressionPE::Lookup(LookupPE {
-                            name: IImpreciseNameP::LookupName(NameP { str: ref board_str, .. }),
-                            ..
-                        }),
-                        member: NameP { str: ref pe1_str, .. },
-                        ..
-                    }),
-                    member: NameP { str: ref pe2_str, .. },
-                    ..
-                }),
-                member: NameP { str: ref symbol_str, .. },
-                ..
-            }),
-            source: box IExpressionPE::ConstantStr(ConstantStrPE { value: ref v_str, .. }),
-            ..
-        })
-    if board_str.str == "board" && pe1_str.str == "PE" && pe2_str.str == "PE" && symbol_str.str == "symbol" && v_str == "v"));
-}
+  test("9") {
+    compileStatementExpect("set x.a = 5;") shouldHave {
+      case MutatePE(_, DotPE(_, LookupPE(LookupNameP(NameP(_, StrI("x"))), None), _, NameP(_, StrI("a"))), ConstantIntPE(_, 5, _)) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 67
-#[test]
-fn test_simple_let_2() {
-    let result = compile_statement_expect("x = 3;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref x_str, .. }),
-                    mutate: None,
-                }),
-                templex: None,
-                destructure: None,
-                ..
-            },
-            source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-            ..
-        })
-    if x_str.str == "x"));
-}
+  test("1PE") {
+    compileStatementExpect("""set board.PE.PE.symbol = "v";""") shouldHave {
+      case MutatePE(_, DotPE(_, DotPE(_, DotPE(_, LookupPE(LookupNameP(NameP(_, StrI("board"))), None), _, NameP(_, StrI("PE"))), _, NameP(_, StrI("PE"))), _, NameP(_, StrI("symbol"))), ConstantStrPE(_, "v")) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 73
-#[test]
-fn test_simple_mut() {
-    let result = compile_statement_expect("set x = 5;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Mutate(MutatePE {
-            mutatee: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref x_str, .. }),
-                ..
-            }),
-            source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
-            ..
-        })
-    if x_str.str == "x"));
-}
+  test("Test simple let") {
+    compileStatementExpect("x = 3;") shouldHave {
+      case LetPE(_,PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("x"))), None)),None,None),ConstantIntPE(_, 3, _)) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 79
-#[test]
-fn test_expr_starting_with_return() {
+  test("Test simple mut") {
+    compileStatementExpect("set x = 5;") shouldHave {
+      case MutatePE(_, LookupPE(LookupNameP(NameP(_, StrI("x"))), None),ConstantIntPE(_, 5, _)) =>
+    }
+  }
+
+  test("Test expr starting with return") {
     // This test is here because we had a bug where we didn't check that there
     // was whitespace after a "return".
-    let result = compile_statement_expect("retcode()");
-    
-    assert!(matches!(result,
-        IExpressionPE::FunctionCall(FunctionCallPE {
-            callable_expr: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref name_str, .. }),
-                ..
-            }),
-            arg_exprs: ref args,
-            ..
-        })
-    if name_str.str == "retcode" && args.is_empty()));
-}
+    compileStatementExpect("retcode()") shouldHave {
+      case FunctionCallPE(_,_,LookupPE(LookupNameP(NameP(_, StrI("retcode"))),None),Vector()) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 87
-#[test]
-fn test_inner_set() {
+  test("Test inner set") {
     // This test is here because we had a bug where we didn't check that there
     // was whitespace after a "return".
-    let result = compile_statement_expect("oldArray = set list.array = newArray;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref old_str, .. }),
-                    ..
-                }),
-                ..
-            },
-            source: box IExpressionPE::Mutate(MutatePE {
-                mutatee: box IExpressionPE::Dot(DotPE {
-                    left: box IExpressionPE::Lookup(LookupPE {
-                        name: IImpreciseNameP::LookupName(NameP { str: ref list_str, .. }),
-                        ..
-                    }),
-                    member: NameP { str: ref array_str, .. },
-                    ..
-                }),
-                source: box IExpressionPE::Lookup(LookupPE {
-                    name: IImpreciseNameP::LookupName(NameP { str: ref new_str, .. }),
-                    ..
-                }),
-                ..
-            }),
-            ..
-        })
-    if old_str.str == "oldArray" && list_str.str == "list" && array_str.str == "array" && new_str.str == "newArray"));
-}
+    compileStatementExpect(
+      "oldArray = set list.array = newArray;") shouldHave {
+      case LetPE(_,
+        PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("oldArray"))), None)),None,None),
+        MutatePE(_,
+          DotPE(_,LookupPE(LookupNameP(NameP(_, StrI("list"))),None),_,NameP(_, StrI("array"))),
+          LookupPE(LookupNameP(NameP(_, StrI("newArray"))),None))) =>
+    }
+  }
 
-// TODO: Port test "Test if-statement producing" from StatementTests.scala line 100
-// Mirrors StatementTests.scala line 100
-#[test]
-fn test_if_statement_producing() {
+  test("Test if-statement producing") {
     // This test is here because we had a bug where we didn't check that there
     // was whitespace after a "return".
-    let result = compile_statement_expect("if true { 3 } else { 4 }");
-    
-    assert!(matches!(result,
-        IExpressionPE::If(IfPE {
-            condition: box IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. }),
-            then_body: box BlockPE {
-                inner: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-                ..
-            },
-            else_body: box BlockPE {
-                inner: box IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-                ..
-            },
-            ..
-        })
-   ));
-}
-
-// Mirrors StatementTests.scala line 112
-#[test]
-fn test_destruct() {
-    let result = compile_statement_expect("destruct x;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Destruct(DestructPE {
-            inner: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref x_str, .. }),
-                ..
-            }),
-            ..
-        })
-    if x_str.str == "x"));
-}
-
-// Mirrors StatementTests.scala line 118
-#[test]
-fn test_unlet() {
-    let result = compile_statement_expect("unlet x");
-    
-    assert!(matches!(result,
-        IExpressionPE::Unlet(UnletPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref x_str, .. }),
-            ..
-        })
-    if x_str.str == "x"));
-}
-
-// Mirrors StatementTests.scala line 124
-#[test]
-fn test_dot_on_function_call_result() {
-    let result = compile_statement_expect("Wizard(8).charges");
-    
-    if let IExpressionPE::Dot(DotPE {
-        left: box IExpressionPE::FunctionCall(FunctionCallPE {
-            callable_expr: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref wizard_str, .. }),
-                ..
-            }),
-            arg_exprs: ref args,
-            ..
-        }),
-        member: NameP { str: ref charges_str, .. },
-        ..
-    }) = result {
-        assert_eq!(wizard_str.str, "Wizard");
-        assert_eq!(args.len(), 1);
-        assert_eq!(charges_str.str, "charges");
-        assert!(matches!(args[0], IExpressionPE::ConstantInt(ConstantIntPE { value: 8, .. })));
-    } else {
-        panic!("Expected Dot expression");
+    compileStatementExpect(
+      "if true { 3 } else { 4 }") shouldHave {
+      case IfPE(_,
+        ConstantBoolPE(_,true),
+        BlockPE(_,None,None,ConstantIntPE(_,3,_)),
+        BlockPE(_,None,None,ConstantIntPE(_,4,_))) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 135
-#[test]
-fn test_let_with_pattern_with_only_a_capture() {
-    let result = compile_statement_expect("a = m;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                templex: None,
-                destructure: None,
-                ..
-            },
-            source: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref m_str, .. }),
-                ..
-            }),
-            ..
-        })
-    if a_str.str == "a" && m_str.str == "m"));
-}
-
-// Mirrors StatementTests.scala line 141
-#[test]
-fn test_let_with_simple_pattern() {
-    let result = compile_statement_expect("a Moo = m;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
-                destructure: None,
-                ..
-            },
-            source: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref m_str, .. }),
-                ..
-            }),
-            ..
-        })
-    if a_str.str == "a" && moo_str.str == "Moo" && m_str.str == "m"));
-}
-
-// TODO: Port test "Let with simple pattern in destructure" from StatementTests.scala line 149
-// Mirrors StatementTests.scala line 149
-#[test]
-fn test_let_with_simple_pattern_in_destructure() {
-    let result = compile_statement_expect("[a Moo] = m;");
-    
-    if let IExpressionPE::Let(LetPE {
-        pattern: PatternPP {
-            destination: None,
-            templex: None,
-            destructure: Some(DestructureP { patterns: ref patterns, .. }),
-            ..
-        },
-        source: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref m_str, .. }),
-            ..
-        }),
-        ..
-    }) = result {
-        assert_eq!(patterns.len(), 1);
-        assert_eq!(m_str.str, "m");
-        assert!(matches!(patterns[0],
-            PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
-                ..
-            }
-        if a_str.str == "a" && moo_str.str == "Moo"));
-    } else {
-        panic!("Expected Let expression");
+  test("Test destruct") {
+    compileStatementExpect("destruct x;") shouldHave {
+      case DestructPE(_,LookupPE(LookupNameP(NameP(_, StrI("x"))), None)) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 159
-#[test]
-fn test_let_with_destructuring_pattern() {
-    let result = compile_statement_expect("Muta[ ] = m;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: None,
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
-                destructure: Some(DestructureP { patterns: ref patterns, .. }),
-                ..
-            },
-            source: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref m_str, .. }),
-                ..
-            }),
-            ..
-        })
-    if muta_str.str == "Muta" && patterns.is_empty() && m_str.str == "m"));
-}
-
-// Mirrors StatementTests.scala line 165
-#[test]
-fn test_destructure_pattern_with_let_and_set() {
-    let result = compile_statement_expect("[a, set x] = m;");
-    
-    if let IExpressionPE::Let(LetPE {
-        pattern: PatternPP {
-            destination: None,
-            templex: None,
-            destructure: Some(DestructureP { patterns: ref patterns, .. }),
-            ..
-        },
-        ..
-    }) = result {
-        assert_eq!(patterns.len(), 2);
-        assert!(matches!(patterns[0],
-            PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    mutate: None,
-                }),
-                ..
-            }
-        if a_str.str == "a"));
-        assert!(matches!(patterns[1],
-            PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref x_str, .. }),
-                    mutate: Some(_),
-                }),
-                ..
-            }
-        if x_str.str == "x"));
-    } else {
-        panic!("Expected Let expression");
+  test("Test unlet") {
+    compileStatementExpect("unlet x") shouldHave {
+      case UnletPE(_,LookupNameP(NameP(_, StrI("x")))) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 179
-#[test]
-fn test_ret() {
-    let result = compile_statement_expect("return 3;");
-    
-    assert!(matches!(result,
-        IExpressionPE::Return(ReturnPE {
-            expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-            ..
-        })
-   ));
-}
-
-// Mirrors StatementTests.scala line 185
-#[test]
-fn test_foreach() {
-    let result = compile_statement_expect("foreach i in myList { }");
-    
-    assert!(matches!(result,
-        IExpressionPE::Each(EachPE {
-            entry_pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref i_str, .. }),
-                    ..
-                }),
-                ..
-            },
-            iterable_expr: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref list_str, .. }),
-                ..
-            }),
-            body: box BlockPE { .. },
-            ..
-        })
-    if i_str.str == "i" && list_str.str == "myList"));
-}
-
-// Mirrors StatementTests.scala line 196
-#[test]
-fn test_foreach_with_borrow() {
-    let result = compile_statement_expect("foreach i in &myList { }");
-    
-    assert!(matches!(result,
-        IExpressionPE::Each(EachPE {
-            entry_pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref i_str, .. }),
-                    ..
-                }),
-                ..
-            },
-            iterable_expr: box IExpressionPE::Augment(AugmentPE {
-                target_ownership: OwnershipP::Borrow,
-                inner: box IExpressionPE::Lookup(LookupPE {
-                    name: IImpreciseNameP::LookupName(NameP { str: ref list_str, .. }),
-                    ..
-                }),
-                ..
-            }),
-            body: box BlockPE { .. },
-            ..
-        })
-    if i_str.str == "i" && list_str.str == "myList"));
-}
-
-// Mirrors StatementTests.scala line 207
-#[test]
-fn test_foreach_with_two_receivers() {
-    let result = compile_statement_expect("foreach [a, b] in myList { }");
-    
-    if let IExpressionPE::Each(EachPE {
-        entry_pattern: PatternPP {
-            destination: None,
-            templex: None,
-            destructure: Some(DestructureP { patterns: ref patterns, .. }),
-            ..
-        },
-        iterable_expr: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref list_str, .. }),
-            ..
-        }),
-        body: box BlockPE { .. },
-        ..
-    }) = result {
-        assert_eq!(patterns.len(), 2);
-        assert_eq!(list_str.str, "myList");
-        assert!(matches!(patterns[0],
-            PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                ..
-            }
-        if a_str.str == "a"));
-        assert!(matches!(patterns[1],
-            PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref b_str, .. }),
-                    ..
-                }),
-                ..
-            }
-        if b_str.str == "b"));
-    } else {
-        panic!("Expected Each expression");
+  test("Dot on function call's result") {
+    compileStatementExpect("Wizard(8).charges") shouldHave {
+      case DotPE(_,
+          FunctionCallPE(_,_,
+            LookupPE(LookupNameP(NameP(_, StrI("Wizard"))), None),
+            Vector(ConstantIntPE(_, 8, _))),
+        _,
+      NameP(_, StrI("charges"))) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 224
-#[test]
-fn test_foreach_complex_iterable() {
-    let result = compile_statement_expect("foreach i in myList = 3; myList { }");
-    
-    if let IExpressionPE::Each(EachPE {
-        entry_pattern: PatternPP {
-            destination: Some(DestinationLocalP {
-                decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref i_str, .. }),
-                ..
-            }),
-            ..
-        },
-        iterable_expr: box IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }),
-        body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        ..
-    }) = result {
-        assert_eq!(i_str.str, "i");
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0],
-            IExpressionPE::Let(LetPE {
-                pattern: PatternPP {
-                    destination: Some(DestinationLocalP {
-                        decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref list_str, .. }),
-                        ..
-                    }),
-                    ..
-                },
-                source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-                ..
-            }) if list_str.str == "myList"));
-        // Check the second element is a lookup of "myList"
-        if let IExpressionPE::Lookup(LookupPE { name: IImpreciseNameP::LookupName(NameP { str: ref list2_str, .. }), .. }) = &elems[1] {
-            assert_eq!(list2_str.str, "myList");
-        } else {
-            panic!("Expected Lookup expression");
-        }
-    } else {
-        panic!("Expected Each expression");
+  test("Let with pattern with only a capture") {
+    compileStatementExpect("a = m;") shouldHave {
+      case LetPE(_,Patterns.capture("a"),LookupPE(LookupNameP(NameP(_, StrI("m"))), None)) =>
     }
-}
+  }
 
-// TODO: Port test "Multiple statements" from StatementTests.scala line 238
-// Mirrors StatementTests.scala line 238
-#[test]
-fn test_multiple_statements_2() {
-    compile_block_contents_expect(
-        r#"
-42;
-43;
-"#);
-}
-
-// Mirrors StatementTests.scala line 246
-#[test]
-fn test_if_and_another_statement() {
-    compile_block_contents_expect(
-        r#"
-newCapacity = if (true) { 1 } else { 2 };
-newArray = 3;
-"#);
-}
-
-// Mirrors StatementTests.scala line 254
-#[test]
-fn test_block_trailing_void_presence() {
-    let result1 = compile_block_contents_expect("moo()");
-    assert!(matches!(result1, IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref moo_str, .. }),
-            ..
-        }),
-        arg_exprs: ref args,
-        ..
-    }) if moo_str.str == "moo" && args.is_empty()));
-
-    let result2 = compile_block_contents_expect("moo();");
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result2 {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::FunctionCall(FunctionCallPE {
-            callable_expr: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref moo_str, .. }),
-                ..
-            }),
-            ..
-        }) if moo_str.str == "moo"));
-        assert!(matches!(elems[1], IExpressionPE::Void(_)));
-    } else {
-        panic!("Expected Consecutor");
+  test("Let with simple pattern") {
+    compileStatementExpect("a Moo = m;") shouldHave {
+      case LetPE(_,
+        PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),Some(NameOrRunePT(NameP(_, StrI("Moo")))),None),
+        LookupPE(LookupNameP(NameP(_, StrI("m"))), None)) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 267
-#[test]
-fn test_block_with_statement_and_result() {
-    let result = compile_block_contents_expect(
-        r#"
-b;
-a
-"#);
-    
-    // Should return a vector with two elements
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref b_str, .. }),
-            ..
-        }) if b_str.str == "b"));
-        assert!(matches!(elems[1], IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref a_str, .. }),
-            ..
-        }) if a_str.str == "a"));
-    } else {
-        panic!("Expected Consecutor");
+  test("Let with simple pattern in destructure") {
+    compileStatementExpect("[a Moo] = m;") shouldHave {
+      case LetPE(_,
+          PatternPP(_,_,
+            None,
+            Some(DestructureP(_,Vector(PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),Some(NameOrRunePT(NameP(_, StrI("Moo")))),None))))),
+          LookupPE(LookupNameP(NameP(_, StrI("m"))), None)) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 278
-#[test]
-fn test_block_with_result() {
-    let result = compile_statement_expect("3");
-    
-    assert!(matches!(result, IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. })));
-}
+  test("Let with destructuring pattern") {
+    compileStatementExpect("Muta[ ] = m;") shouldHave {
+      case LetPE(_,PatternPP(_,None,Some(NameOrRunePT(NameP(_, StrI("Muta")))),Some(DestructureP(_,Vector()))),LookupPE(LookupNameP(NameP(_, StrI("m"))), None)) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 284
-#[test]
-fn test_block_with_result_that_could_be_an_expr() {
+  test("Destructure pattern with let and set") {
+    compileStatementExpect("[a, set x] = m;") shouldHave {
+      case LetPE(_,
+        PatternPP(_,
+          None,None,
+          Some(
+            DestructureP(_,
+              Vector(
+                PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_,StrI("a"))),None)),None,None),
+                PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_,StrI("x"))),Some(_))),None,None))))),
+        _) =>
+    }
+  }
+
+  test("Ret") {
+    compileStatementExpect("return 3;") shouldHave {
+      case ReturnPE(_,ConstantIntPE(_, 3, _)) =>
+    }
+  }
+
+  test("foreach") {
+    compileStatementExpect("foreach i in myList { }") shouldHave {
+      case EachPE(_,
+      None,
+      PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("i"))), None)),None,None),
+      _,
+      LookupPE(LookupNameP(NameP(_, StrI("myList"))),None),
+      BlockPE(_,None,None,_)) =>
+    }
+  }
+
+  test("foreach with borrow") {
+    compileStatementExpect("foreach i in &myList { }") shouldHave {
+      case EachPE(_,
+      None,
+      PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("i"))), None)),None,None),
+      _,
+      AugmentPE(_, BorrowP, LookupPE(LookupNameP(NameP(_, StrI("myList"))),None)),
+      BlockPE(_,None,None,_)) =>
+    }
+  }
+
+  test("foreach with two receivers") {
+    compileStatementExpect("foreach [a, b] in myList { }") shouldHave {
+      case EachPE(_,
+        None,
+        PatternPP(_,
+          None,None,
+          Some(
+            DestructureP(_,
+              Vector(
+                PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),None,None),
+                PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("b"))), None)),None,None))))),
+        _,
+        LookupPE(LookupNameP(NameP(_, StrI("myList"))),None),
+        BlockPE(_,None,None,_)) =>
+    }
+  }
+
+  test("foreach complex iterable") {
+    compileStatementExpect("foreach i in myList = 3; myList { }") shouldHave {
+      case EachPE(_,
+        None,
+        PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("i"))), None)),None,None),
+        _,
+        ConsecutorPE(
+          Vector(
+            LetPE(_,PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("myList"))), None)),None,None),ConstantIntPE(_,3,_)),
+            LookupPE(LookupNameP(NameP(_, StrI("myList"))),None))),
+        BlockPE(_,None,None,VoidPE(_))) =>
+    }
+  }
+
+  test("Multiple statements") {
+    compileBlockContentsExpect(
+      """
+        |42;
+        |43;
+        |""".stripMargin)
+  }
+
+  test("If and another statement") {
+    compileBlockContentsExpect(
+      """
+        |newCapacity = if (true) { 1 } else { 2 };
+        |newArray = 3;
+        |""".stripMargin)
+  }
+
+  test("Test block's trailing void presence") {
+    compileBlockContentsExpect(
+      "moo()") shouldHave {
+      case FunctionCallPE(_, _, LookupPE(LookupNameP(NameP(_, StrI("moo"))), None), Vector()) =>
+    }
+
+    compileBlockContentsExpect(
+      "moo();") shouldHave {
+      case ConsecutorPE(Vector(FunctionCallPE(_, _, LookupPE(LookupNameP(NameP(_, StrI("moo"))), None), Vector()), VoidPE(_))) =>
+    }
+  }
+
+
+  test("Block with statement and result") {
+    compileBlockContentsExpect(
+      """
+        |b;
+        |a
+      """.stripMargin) shouldHave {
+      case Vector(LookupPE(LookupNameP(NameP(_, StrI("b"))), None), LookupPE(LookupNameP(NameP(_, StrI("a"))), None)) =>
+    }
+  }
+
+
+  test("Block with result") {
+    compileStatementExpect("3") shouldHave {
+      case ConstantIntPE(_, 3, _) =>
+    }
+  }
+
+  test("Block with result that could be an expr") {
     // = doThings(a); could be misinterpreted as an expression doThings(=, a) if we're
     // not careful.
-    let result = compile_block_contents_expect(
-        r#"
-a = 2;
-doThings(a)
-"#);
-    
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                ..
-            },
-            source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
-            ..
-        }) if a_str.str == "a"));
-        assert!(matches!(elems[1], IExpressionPE::FunctionCall(FunctionCallPE {
-            callable_expr: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref do_str, .. }),
-                ..
-            }),
-            arg_exprs: ref args,
-            ..
-        }) if do_str.str == "doThings" && args.len() == 1));
-    } else {
-        panic!("Expected Consecutor");
+    compileBlockContentsExpect(
+      """
+        |a = 2;
+        |doThings(a)
+      """.stripMargin) shouldHave {
+      case Vector(
+        LetPE(_, PatternPP(_, Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)), None, None), ConstantIntPE(_, 2, _)),
+        FunctionCallPE(_, _, LookupPE(LookupNameP(NameP(_, StrI("doThings"))), None), Vector(LookupPE(LookupNameP(NameP(_, StrI("a"))), None)))) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 298
-#[test]
-fn test_mutating_as_statement() {
-    let result = compile_statement_expect("set x = 6;");
-    
-    assert!(matches!(result, IExpressionPE::Mutate(MutatePE {
-        mutatee: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref x_str, .. }),
-            ..
-        }),
-        source: box IExpressionPE::ConstantInt(ConstantIntPE { value: 6, .. }),
-        ..
-    }) if x_str.str == "x"));
-}
+  test("Mutating as statement") {
+    val program =
+      compileBlockContentsExpect(
+        "set x = 6;")
+    program shouldHave {
+      case MutatePE(_,LookupPE(LookupNameP(NameP(_, StrI("x"))), None),ConstantIntPE(_, 6, _)) =>
+    }
+  }
 
-// Mirrors StatementTests.scala line 307
-#[test]
-fn test_lone_block() {
-    let result = compile_block_contents_expect(
-        r#"
-block {
-  a
-}
-"#);
-    
-    assert!(matches!(result, IExpressionPE::Block(BlockPE {
-        maybe_pure: None,
-        maybe_default_region: None,
-        inner: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref a_str, .. }),
-            ..
-        }),
-        ..
-    }) if a_str.str == "a"));
-}
+  test("Lone block") {
+    compileBlockContentsExpect(
+      """
+        |block {
+        |  a
+        |}
+      """.stripMargin) shouldHave {
+      case BlockPE(_,None,None,LookupPE(LookupNameP(NameP(_, StrI("a"))),None)) =>
+    }
+  }
 
-// TODO: Port test "Pure block" from StatementTests.scala line 318
-// Mirrors StatementTests.scala line 318
-#[test]
-fn test_pure_block() {
+  test("Pure block") {
     // Just make sure it parses, so that we can highlight it.
     // The pure block feature doesn't actually exist yet.
-    compile_block_contents_expect(
-        r#"
-pure block {
-  a
-}
-"#);
-}
+    compileBlockContentsExpect(
+      """
+        |pure block {
+        |  a
+        |}
+      """.stripMargin)
+  }
 
-// Mirrors StatementTests.scala line 329
-#[test]
-fn test_unsafe_pure_block() {
+  test("Unsafe pure block") {
     // Just make sure it parses, so that we can highlight it.
     // The unsafe pure block feature doesn't actually exist yet.
-    compile_block_contents_expect(
-        r#"
-unsafe pure block {
-  a
-}
-"#);
-}
+    compileBlockContentsExpect(
+      """
+        |unsafe pure block {
+        |  a
+        |}
+      """.stripMargin)
+  }
 
-// Mirrors StatementTests.scala line 341
-#[test]
-fn test_report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
-    let result = compile_statement(
-        r#"
-block {
-  floop() ]
-}
-"#);
-    
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        ParseError::BadStartOfStatementError(_) => {},
-        e => panic!("Expected BadStartOfStatement, got {:?}", e),
+
+  test("Report leaving out semicolon or ending body after expression, for square") {
+    compileStatement(
+      """
+        |block {
+        |  floop() ]
+        |}
+        """.stripMargin).expectErr() match {
+      case BadStartOfStatementError(_) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 352
-#[test]
-fn test_empty_block() {
-    let result = compile_block_contents_expect(
-        r#"
-block {
-}
-return 3;
-"#);
-    
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result {
-        assert_eq!(elems.len(), 3);
-        assert!(matches!(elems[0], IExpressionPE::Block(BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        })));
-        assert!(matches!(elems[1], IExpressionPE::Return(ReturnPE {
-            expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
-            ..
-        })));
-        assert!(matches!(elems[2], IExpressionPE::Void(_)));
-    } else {
-        panic!("Expected Consecutor");
+  test("Empty block") {
+    compileBlockContentsExpect(
+      """
+        |block {
+        |}
+        |return 3;
+    """.stripMargin) match {
+      case ConsecutorPE(
+        Vector(
+          BlockPE(_,None,None,VoidPE(_)),
+          ReturnPE(_,ConstantIntPE(_,3,None)), VoidPE(_))) =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 366
-#[test]
-fn test_cant_use_set_as_a_local_name() {
-    let result = compile_statement(r#"[set] = (6,)"#);
-    
-    assert!(result.is_err());
-    match result.unwrap_err() {
-        ParseError::CantUseThatLocalName { name, .. } if name == "set" => {},
-        e => panic!("Expected CantUseThatLocalName with 'set', got {:?}", e),
+  test("Cant use set as a local name") {
+    val error = compileStatement(
+      """[set] = (6,)""".stripMargin).expectErr()
+    error match {
+      case CantUseThatLocalName(_, "set") =>
     }
-}
+  }
 
-// Mirrors StatementTests.scala line 374
-#[test]
-fn test_foreach_2() {
-    let result = compile_block_contents_expect(
-        r#"
-foreach i in a {
-  i
-}
-"#);
-    
-    assert!(matches!(result, IExpressionPE::Each(EachPE {
-        entry_pattern: PatternPP {
-            destination: Some(DestinationLocalP {
-                decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref i_str, .. }),
-                ..
-            }),
-            ..
-        },
-        iterable_expr: box IExpressionPE::Lookup(LookupPE {
-            name: IImpreciseNameP::LookupName(NameP { str: ref a_str, .. }),
-            ..
-        }),
-        body: box BlockPE {
-            inner: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str: ref i2_str, .. }),
-                ..
-            }),
-            ..
-        },
-        ..
-    }) if i_str.str == "i" && a_str.str == "a" && i2_str.str == "i"));
-}
-
-// Mirrors StatementTests.scala line 393
-#[test]
-fn test_foreach_expr() {
-    let result = compile_block_contents_expect(
-        r#"
-a = foreach i in c { i };
-"#);
-    
-    if let IExpressionPE::Consecutor(ConsecutorPE { inners: ref elems, .. }) = result {
-        assert_eq!(elems.len(), 2);
-        assert!(matches!(elems[0], IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
-                    ..
-                }),
-                ..
-            },
-            source: box IExpressionPE::Each(EachPE { .. }),
-            ..
-        }) if a_str.str == "a"));
-        assert!(matches!(elems[1], IExpressionPE::Void(_)));
-    } else {
-        panic!("Expected Consecutor");
+  test("foreach 2") {
+    val programS =
+      compileBlockContentsExpect(
+        """
+          |foreach i in a {
+          |  i
+          |}
+          |""".stripMargin)
+    programS shouldHave {
+      case EachPE(_,
+        None,
+        PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("i"))), None)),None,None),
+        _,
+        LookupPE(LookupNameP(NameP(_, StrI("a"))),None),
+        BlockPE(_,None,None,
+          LookupPE(LookupNameP(NameP(_, StrI("i"))),None))) =>
     }
+  }
+
+  test("foreach expr") {
+    val programS =
+      compileBlockContentsExpect(
+        """
+          |a = foreach i in c { i };
+          |""".stripMargin)
+    programS shouldHave {
+      case ConsecutorPE(Vector(
+        LetPE(_,
+          PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_,StrI("a"))), None)),None,None),
+          EachPE(_,_,_,_,_,_)),
+        VoidPE(_))) =>
+    }
+  }
+
 }

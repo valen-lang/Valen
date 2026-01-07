@@ -1,64 +1,55 @@
-/// Impl parsing tests
-/// Mirrors Frontend/ParsingPass/test/dev/vale/parsing/ImplTests.scala
+package dev.vale.parsing
 
-use crate::parsing::tests::test_parse_utils::*;
-use crate::parsing::ast::*;
-use crate::{should_have};
+import dev.vale.lexing.Lexer
+import dev.vale.{Collector, Interner, StrI, vassertOne, vimpl}
+import dev.vale.parsing.ast.{CallPT, IDenizenP, GenericParameterP, GenericParametersP, ImplP, MutabilityPT, MutableP, NameOrRunePT, NameP, TopLevelImplP}
+import dev.vale.options.GlobalOptions
+import org.scalatest._
 
-// Mirrors ImplTests.scala line 11
-#[test]
-fn test_normal_impl() {
-    let file = compile_file_expect(
-        r#"
-        impl MyInterface for SomeStruct;
-        "#
-    );
-    
-    assert_eq!(file.denizens.len(), 1);
-    should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
-        generic_params: None,
-        template_rules: None,
-        struct_: Some(ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. })),
-        interface: ITemplexPT::NameOrRune(NameP { str: ref interface_str, .. }),
-        ..
-    }) if struct_str.str == "SomeStruct" && interface_str.str == "MyInterface" => {});
+
+class ImplTests extends FunSuite with Matchers with Collector with TestParseUtils {
+  test("Normal impl") {
+    vassertOne(
+      compileFile(
+        """
+          |impl MyInterface for SomeStruct;
+      """.stripMargin).getOrDie().denizens) shouldHave {
+      case TopLevelImplP(ImplP(_,
+          None,
+          None,
+          Some(NameOrRunePT(NameP(_, StrI("SomeStruct")))),
+          NameOrRunePT(NameP(_, StrI("MyInterface"))),
+          Vector())) =>
+    }
+  }
+
+  test("Templated impl") {
+    vassertOne(
+      compileFile(
+        """
+          |impl<T> MyInterface<T> for SomeStruct<T>;
+      """.stripMargin).getOrDie().denizens) shouldHave {
+      case TopLevelImplP(ImplP(_,
+        Some(GenericParametersP(_, Vector(GenericParameterP(_, NameP(_, StrI("T")), _, _, Vector(), None)))),
+        None,
+        Some(CallPT(_,NameOrRunePT(NameP(_, StrI("SomeStruct"))), Vector(NameOrRunePT(NameP(_, StrI("T")))))),
+        CallPT(_,NameOrRunePT(NameP(_, StrI("MyInterface"))), Vector(NameOrRunePT(NameP(_, StrI("T"))))),
+        Vector())) =>
+    }
+  }
+
+  test("Impling a template call") {
+    vassertOne(
+      compileFile(
+        """
+          |impl IFunction1<mut, int, int> for MyIntIdentity;
+          |""".stripMargin).getOrDie().denizens) shouldHave {
+      case TopLevelImplP(ImplP(_,
+        None,
+        None,
+        Some(NameOrRunePT(NameP(_, StrI("MyIntIdentity")))),
+        CallPT(_,NameOrRunePT(NameP(_, StrI("IFunction1"))), Vector(MutabilityPT(_,MutableP), NameOrRunePT(NameP(_, StrI("int"))), NameOrRunePT(NameP(_, StrI("int"))))),
+        Vector())) =>
+    }
+  }
 }
-
-// Mirrors ImplTests.scala line 26
-#[test]
-fn test_templated_impl() {
-    let file = compile_file_expect(
-        r#"
-        impl<T> MyInterface<T> for SomeStruct<T>;
-        "#
-    );
-    
-    assert_eq!(file.denizens.len(), 1);
-    should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
-        generic_params: Some(GenericParametersP { params: ref params, .. }),
-        template_rules: None,
-        struct_: Some(ITemplexPT::Call { .. }),
-        interface: ITemplexPT::Call { .. },
-        ..
-    }) if params.len() == 1 => {});
-}
-
-// Mirrors ImplTests.scala line 41
-#[test]
-fn test_impling_a_template_call() {
-    let file = compile_file_expect(
-        r#"
-        impl IFunction1<mut, int, int> for MyIntIdentity;
-        "#
-    );
-    
-    assert_eq!(file.denizens.len(), 1);
-    should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
-        generic_params: None,
-        template_rules: None,
-        struct_: Some(ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. })),
-        interface: ITemplexPT::Call { args: ref args, .. },
-        ..
-    }) if struct_str.str == "MyIntIdentity" && args.len() == 3 => {});
-}
-

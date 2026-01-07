@@ -1,102 +1,65 @@
-/// If statement parsing tests
-/// Mirrors Frontend/ParsingPass/test/dev/vale/parsing/IfTests.scala
+package dev.vale.parsing
 
-use crate::parsing::tests::test_parse_utils::*;
-use crate::parsing::tests::test_parse_utils::compile_expression_expect;
-use crate::parsing::ast::*;
-use crate::{should_have};
+import dev.vale.{Collector, StrI, vimpl}
+import dev.vale.parsing.ast.{AugmentPE, BinaryCallPE, BlockPE, BorrowP, ConsecutorPE, ConstantBoolPE, ConstantIntPE, DestructureP, FunctionCallPE, IfPE, LetPE, LocalNameDeclarationP, LookupNameP, LookupPE, MethodCallPE, NameP, NotPE, PatternPP, VoidPE}
+import dev.vale.parsing.ast._
+import dev.vale.options.GlobalOptions
+import org.scalatest._
 
-// Mirrors IfTests.scala line 11
-#[test]
-fn test_ifs() {
-    let result = compile_expression_expect("if true { doBlarks(&x) } else { }");
-    
-    should_have!(result, IExpressionPE::If(IfPE {
-        condition: box IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. }),
-        then_body: box BlockPE {
-            inner: box IExpressionPE::FunctionCall(FunctionCallPE {
-                callable_expr: box IExpressionPE::Lookup(LookupPE {
-                    name: IImpreciseNameP::LookupName(NameP { str, .. }),
-                    ..
-                }),
-                arg_exprs: ref args,
-                ..
-            }),
-            ..
-        },
-        else_body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        ..
-    }) if str.str == "doBlarks" && args.len() == 1 => {});
+
+class IfTests extends FunSuite with Matchers with Collector with TestParseUtils {
+  test("ifs") {
+    compileExpressionExpect("if true { doBlarks(&x) } else { }") shouldHave {
+
+      case IfPE(_,
+        ConstantBoolPE(_, true),
+        BlockPE(_,None,None,
+          FunctionCallPE(_,_,LookupPE(LookupNameP(NameP(_, StrI("doBlarks"))),None),
+            Vector(
+              AugmentPE(_,BorrowP,LookupPE(LookupNameP(NameP(_, StrI("x"))),None))))),
+        BlockPE(_,None,None,VoidPE(_))) =>
+    }
+  }
+
+  test("if let") {
+    compileExpressionExpect("if [u] = a {}") shouldHave {
+      case IfPE(_,
+        LetPE(_,
+          PatternPP(_,None,None,
+            Some(
+              DestructureP(_,
+                Vector(
+                  PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("u"))), None)),None,None))))),
+          LookupPE(LookupNameP(NameP(_, StrI("a"))),None)),
+        BlockPE(_,None,None,VoidPE(_)),
+        BlockPE(_,None,None,VoidPE(_))) =>
+    }
+  }
+
+  test("If with condition declarations") {
+    compileExpressionExpect("if x = 4; not x.isEmpty() { }") shouldHave {
+      case IfPE(_,
+        ConsecutorPE(
+          Vector(
+            LetPE(_,PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("x"))), None)),None,None),ConstantIntPE(_,4,None)),
+            NotPE(_,MethodCallPE(_,LookupPE(LookupNameP(NameP(_, StrI("x"))),None),_,LookupPE(LookupNameP(NameP(_, StrI("isEmpty"))),None),Vector())))),
+        BlockPE(_,None,None,VoidPE(_)),
+        BlockPE(_,None,None,VoidPE(_))) =>
+    }
+  }
+
+  test("19") {
+    compileBlockContentsExpect(
+      "newLen = if num == 0 { 1 } else { 2 };") shouldHave {
+      case ConsecutorPE(
+        Vector(
+          LetPE(_,
+            PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("newLen"))), None)),None,None),
+            IfPE(_,
+              BinaryCallPE(_,NameP(_,StrI("==")),LookupPE(LookupNameP(NameP(_, StrI("num"))),None),ConstantIntPE(_,0,_)),
+              BlockPE(_,None,None,ConstantIntPE(_,1,_)),
+              BlockPE(_,None,None,ConstantIntPE(_,2,None)))),
+          VoidPE(_))) =>
+    }
+  }
 }
-
-// Mirrors IfTests.scala line 24
-#[test]
-fn test_if_let() {
-    let result = compile_expression_expect("if [u] = a {}");
-    
-    should_have!(result, IExpressionPE::If(IfPE {
-        condition: box IExpressionPE::Let(LetPE {
-            pattern: PatternPP {
-                destination: None,
-                templex: None,
-                destructure: Some(DestructureP {
-                    patterns: ref patterns,
-                    ..
-                }),
-                ..
-            },
-            source: box IExpressionPE::Lookup(LookupPE {
-                name: IImpreciseNameP::LookupName(NameP { str, .. }),
-                ..
-            }),
-            ..
-        }),
-        then_body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        else_body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        ..
-    }) if str.str == "a" && patterns.len() == 1 => {});
-}
-
-// Mirrors IfTests.scala line 39
-#[test]
-fn test_if_with_condition_declarations() {
-    let result = compile_expression_expect("if x = 4; not x.isEmpty() { }");
-    
-    should_have!(result, IExpressionPE::If(IfPE {
-        condition: box IExpressionPE::Consecutor(ConsecutorPE {
-            inners: ref inners,
-        }),
-        then_body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        else_body: box BlockPE {
-            inner: box IExpressionPE::Void(_),
-            ..
-        },
-        ..
-    }) if inners.len() == 2 => {});
-}
-
-// Mirrors IfTests.scala line 51
-#[test]
-fn test_19() {
-    let result = compile_block_contents_expect("newLen = if num == 0 { 1 } else { 2 };");
-    
-    should_have!(result, IExpressionPE::Consecutor(ConsecutorPE {
-        inners: ref inners,
-    }) if inners.len() == 2 && matches!(inners[0], IExpressionPE::Let(LetPE {
-        source: box IExpressionPE::If(_),
-        ..
-    })) => {});
-}
-
