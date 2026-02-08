@@ -10,14 +10,14 @@ use crate::parsing::ast::*;
 #[test]
 fn test_ownership() {
     let result1 = compile_rulex_expect("X");
-    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })) if x_str.str == "X"));
+    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } }) ) if x_str.str == "X"));
     
     let result2 = compile_rulex_expect("X Ownership");
     assert!(matches!(result2, IRulexPR::Typed { rune: Some(NameP { str: ref x_str, .. }), tyype: ITypePR::OwnershipType, .. } if x_str.str == "X"));
     
     let result3 = compile_rulex_expect("X = own");
     assert!(matches!(result3, IRulexPR::Equals {
-        left: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })),
+        left: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } })),
         right: box IRulexPR::Templex(ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. })),
         ..
     } if x_str.str == "X"));
@@ -63,22 +63,22 @@ fn test_ownership() {
 #[test]
 fn test_mutability() {
     let result1 = compile_rulex_expect("X");
-    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })) if x_str.str == "X"));
+    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } }) ) if x_str.str == "X"));
     
     let result2 = compile_rulex_expect("X Mutability");
     assert!(matches!(result2, IRulexPR::Typed { rune: Some(NameP { str: ref x_str, .. }), tyype: ITypePR::MutabilityType, .. } if x_str.str == "X"));
     
     let result3 = compile_rulex_expect("X = mut");
     assert!(matches!(result3, IRulexPR::Equals {
-        left: box IRulexPR::Templex( ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })),
-        right: box IRulexPR::Templex( ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. }),
+        left: box IRulexPR::Templex( ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } })),
+        right: box IRulexPR::Templex( ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. })),
         ..
     } if x_str.str == "X"));
     
     let result4 = compile_rulex_expect("X Mutability = mut");
     assert!(matches!(result4, IRulexPR::Equals {
         left: box IRulexPR::Typed { rune: Some(NameP { str: ref x_str, .. }), tyype: ITypePR::MutabilityType, .. },
-        right: box IRulexPR::Templex( ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. }),
+        right: box IRulexPR::Templex( ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. })),
         ..
     } if x_str.str == "X"));
     
@@ -86,7 +86,7 @@ fn test_mutability() {
     assert!(matches!(result5, IRulexPR::Typed { rune: None, tyype: ITypePR::MutabilityType, .. }));
     
     let result6 = compile_rulex_expect("mut");
-    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. })));
+    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }))));
     
     let result7 = compile_rulex_expect("_ Mutability = any(mut, imm)");
     if let IRulexPR::Equals {
@@ -96,8 +96,8 @@ fn test_mutability() {
     } = result7 {
         assert_eq!(any_str.str, "any");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. })));
-        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Mutability { mutability: MutabilityP::Immutable, .. })));
+        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }))));
+        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }))));
     } else {
         panic!("Expected Equals with Typed and BuiltinCall");
     }
@@ -107,22 +107,22 @@ fn test_mutability() {
 #[test]
 fn test_location() {
     let result1 = compile_rulex_expect("X");
-    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })) if x_str.str == "X"));
+    assert!(matches!(result1, IRulexPR::Templex( ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } }) ) if x_str.str == "X"));
     
     let result2 = compile_rulex_expect("X Location");
     assert!(matches!(result2, IRulexPR::Typed { rune: Some(NameP { str: ref x_str, .. }), tyype: ITypePR::LocationType, .. } if x_str.str == "X"));
     
     let result3 = compile_rulex_expect("X = inl");
     assert!(matches!(result3, IRulexPR::Equals {
-        left: box IRulexPR::Templex( ITemplexPT::NameOrRune(NameP { str: ref x_str, .. })),
-        right: box IRulexPR::Templex( ITemplexPT::Location { location: LocationP::Inline, .. }),
+        left: box IRulexPR::Templex( ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref x_str, .. } })),
+        right: box IRulexPR::Templex( ITemplexPT::Location(LocationPT { location: LocationP::Inline, .. })),
         ..
     } if x_str.str == "X"));
     
     let result4 = compile_rulex_expect("X Location = inl");
     assert!(matches!(result4, IRulexPR::Equals {
         left: box IRulexPR::Typed { rune: Some(NameP { str: ref x_str, .. }), tyype: ITypePR::LocationType, .. },
-        right: box IRulexPR::Templex( ITemplexPT::Location { location: LocationP::Inline, .. }),
+        right: box IRulexPR::Templex( ITemplexPT::Location(LocationPT { location: LocationP::Inline, .. })),
         ..
     } if x_str.str == "X"));
     
@@ -130,7 +130,7 @@ fn test_location() {
     assert!(matches!(result5, IRulexPR::Typed { rune: None, tyype: ITypePR::LocationType, .. }));
     
     let result6 = compile_rulex_expect("inl");
-    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Location { location: LocationP::Inline, .. })));
+    assert!(matches!(result6, IRulexPR::Templex( ITemplexPT::Location(LocationPT { location: LocationP::Inline, .. }))));
     
     let result7 = compile_rulex_expect("_ Location = any(inl, heap)");
     if let IRulexPR::Equals {
@@ -140,8 +140,8 @@ fn test_location() {
     } = result7 {
         assert_eq!(any_str.str, "any");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Location { location: LocationP::Inline, .. })));
-        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Location { location: LocationP::Yonder, .. })));
+        assert!(matches!(&args[0], IRulexPR::Templex( ITemplexPT::Location(LocationPT { location: LocationP::Inline, .. }))));
+        assert!(matches!(&args[1], IRulexPR::Templex( ITemplexPT::Location(LocationPT { location: LocationP::Yonder, .. }))));
     } else {
         panic!("Expected Equals with Typed and BuiltinCall");
     }
@@ -157,8 +157,8 @@ fn test_relations() {
     if let IRulexPR::BuiltinCall { name: NameP { str: ref name_str, .. }, args: ref args, .. } = result1 {
         assert_eq!(name_str.str, "implements");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "MyObject"));
-        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "IObject"));
+        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "MyObject"));
+        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "IObject"));
     } else {
         panic!("Expected BuiltinCall for implements");
     }
@@ -167,8 +167,8 @@ fn test_relations() {
     if let IRulexPR::BuiltinCall { name: NameP { str: ref name_str, .. }, args: ref args, .. } = result2 {
         assert_eq!(name_str.str, "implements");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "R"));
-        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "IObject"));
+        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "R"));
+        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "IObject"));
     } else {
         panic!("Expected BuiltinCall for implements");
     }
@@ -177,8 +177,8 @@ fn test_relations() {
     if let IRulexPR::BuiltinCall { name: NameP { str: ref name_str, .. }, args: ref args, .. } = result3 {
         assert_eq!(name_str.str, "implements");
         assert_eq!(args.len(), 2);
-        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "MyObject"));
-        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "T"));
+        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "MyObject"));
+        assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "T"));
     } else {
         panic!("Expected BuiltinCall for implements");
     }
@@ -188,12 +188,12 @@ fn test_relations() {
     if let IRulexPR::BuiltinCall { name: NameP { str: ref name_str, .. }, args: ref args, .. } = result4 {
         assert_eq!(name_str.str, "exists");
         assert_eq!(args.len(), 1);
-        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::Func {
+        assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::Func(FuncPT {
             name: NameP { str: ref func_name, .. },
             parameters: ref params,
-            return_type: box ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. }),
+            return_type: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } }),
             ..
-        }) if func_name.str == "+" && params.len() == 1 && ret_str.str == "int"));
+        })) if func_name.str == "+" && params.len() == 1 && ret_str.str == "int"));
     } else {
         panic!("Expected BuiltinCall for exists");
     }
@@ -216,13 +216,13 @@ fn test_destructure_prototype() {
             components: ref comps,
             ..
         },
-        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
+        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref moo_str, .. } })),
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref t_str, .. })) if t_str.str == "T"));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t_str, .. } })) if t_str.str == "T"));
         assert_eq!(moo_str.str, "moo");
     } else {
         panic!("Expected Equals with Components and Templex");
@@ -233,12 +233,12 @@ fn test_destructure_prototype() {
 #[test]
 fn test_func() {
     let result = compile_rulex_expect("func moo()T");
-    if let IRulexPR::Templex(ITemplexPT::Func {
+    if let IRulexPR::Templex(ITemplexPT::Func(FuncPT {
         name: NameP { str: ref func_name, .. },
         parameters: ref params,
-        return_type: box ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. }),
+        return_type: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } }),
         ..
-    }) = result {
+    })) = result {
         assert_eq!(func_name.str, "moo");
         assert_eq!(params.len(), 0);
         assert_eq!(ret_str.str, "T");
@@ -257,19 +257,19 @@ fn test_prototype_with_coords() {
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
         
         // Check the pack builtin call
         if let IRulexPR::BuiltinCall { name: NameP { str: ref pack_str, .. }, args: ref args, .. } = &comps[1] {
             assert_eq!(pack_str.str, "pack");
             assert_eq!(args.len(), 2);
-            assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "int"));
-            assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "bool"));
+            assert!(matches!(&args[0], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "int"));
+            assert!(matches!(&args[1], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "bool"));
         } else {
             panic!("Expected BuiltinCall for pack");
         }
         
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
     } else {
         panic!("Expected Components with PrototypeType");
     }

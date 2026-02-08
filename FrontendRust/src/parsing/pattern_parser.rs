@@ -22,6 +22,7 @@ type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
 pub struct PatternParser {
+    #[allow(dead_code)]
     interner: Arc<Interner>,
     keywords: Arc<Keywords>,
 }

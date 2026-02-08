@@ -44,16 +44,16 @@ fn test_17a() {
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::Interpreted {
+            tyype: ITemplexPT::Interpreted(InterpretedPT {
                 maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Share, .. }),
                 maybe_region: None,
-                inner: box ITemplexPT::Call {
-                    template: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+                inner: box ITemplexPT::Call(CallPT {
+                    template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                     args: ref a,
                     ..
-                },
+                }),
                 ..
-            },
+            }),
             ..
         } if n.str == "a" && t.str == "ListNode" => {
             assert_eq!(a.len(), 1);
@@ -83,7 +83,7 @@ fn imm_generic_param() {
     should_have!(&s.members.contents[0], IStructContent::NormalStructMember {
         name: NameP { str: ref n, .. },
         variability: VariabilityP::Final,
-        tyype: ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+        tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
         ..
     } if n.str == "value" && t.str == "T" => {});
 }
@@ -108,11 +108,11 @@ fn test_18() {
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::RuntimeSizedArray {
-                mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Immutable, .. },
-                element: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+                mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "a" && t.str == "T" => {});
     });
@@ -131,7 +131,7 @@ fn variadic_struct() {
     }) => {
         should_have!(&m[0], IStructContent::VariadicStructMember {
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
             ..
         } if t.str == "T" => {});
     });
@@ -150,7 +150,7 @@ fn variadic_struct_with_varying() {
     }) => {
         should_have!(&m[0], IStructContent::VariadicStructMember {
             variability: VariabilityP::Varying,
-            tyype: ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
             ..
         } if t.str == "T" => {});
     });
@@ -171,11 +171,11 @@ fn struct_with_weak() {
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::Interpreted {
+            tyype: ITemplexPT::Interpreted(InterpretedPT {
                 maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Weak, .. }),
-                inner: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+                inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "x" && t.str == "int" => {});
     });
@@ -196,11 +196,11 @@ fn struct_with_heap() {
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
             variability: VariabilityP::Final,
-            tyype: ITemplexPT::Interpreted {
+            tyype: ITemplexPT::Interpreted(InterpretedPT {
                 maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Own, .. }),
-                inner: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+                inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "x" && t.str == "Marine" => {});
     });
@@ -223,11 +223,11 @@ fn export_struct() {
         should_have!(&attrs[0], IAttributeP::ExportAttribute(_) => {});
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
-            tyype: ITemplexPT::Interpreted {
+            tyype: ITemplexPT::Interpreted(InterpretedPT {
                 maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Borrow, .. }),
-                inner: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+                inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "x" && t.str == "int" => {});
     });
@@ -259,17 +259,17 @@ fn struct_with_rune() {
         assert_eq!(m.len(), 2);
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
-            tyype: ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
             ..
         } if n.str == "value" && t.str == "E" => {});
         
         should_have!(&m[1], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
-            tyype: ITemplexPT::Call {
-                template: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::Call(CallPT {
+                template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 args: ref a,
                 ..
-            },
+            }),
             ..
         } if n.str == "next" && t.str == "ListNode" => {
             assert_eq!(a.len(), 1);
@@ -311,13 +311,13 @@ fn struct_with_int_rune() {
         assert_eq!(m.len(), 1);
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
-            tyype: ITemplexPT::StaticSizedArray {
-                mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. },
-                variability: box ITemplexPT::Variability { variability: VariabilityP::Final, .. },
-                size: box ITemplexPT::NameOrRune(NameP { str: ref sz, .. }),
-                element: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+                mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }),
+                variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Final, .. }),
+                size: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref sz, .. } }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "values" && sz.str == "N" && t.str == "float" => {});
     });
@@ -357,13 +357,13 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
         assert_eq!(m.len(), 1);
         should_have!(&m[0], IStructContent::NormalStructMember {
             name: NameP { str: ref n, .. },
-            tyype: ITemplexPT::StaticSizedArray {
-                mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. },
-                variability: box ITemplexPT::Variability { variability: VariabilityP::Final, .. },
-                size: box ITemplexPT::NameOrRune(NameP { str: ref sz, .. }),
-                element: box ITemplexPT::NameOrRune(NameP { str: ref t, .. }),
+            tyype: ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+                mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }),
+                variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Final, .. }),
+                size: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref sz, .. } }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t, .. } }),
                 ..
-            },
+            }),
             ..
         } if n.str == "values" && sz.str == "N" && t.str == "float" => {});
     });

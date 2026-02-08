@@ -497,16 +497,16 @@ impl Parser {
                 return Err(ParseError::VariadicStructMemberHasName(iter.get_pos()));
             }
 
-            Ok(IStructContent::VariadicStructMember {
+            Ok(IStructContent::VariadicStructMember(VariadicStructMemberP {
                 range: RangeL {
                     begin,
                     end: iter.get_prev_end_pos(),
                 },
                 variability,
                 tyype,
-            })
+            }))
         } else {
-            Ok(IStructContent::NormalStructMember {
+            Ok(IStructContent::NormalStructMember(NormalStructMemberP {
                 range: RangeL {
                     begin,
                     end: iter.get_prev_end_pos(),
@@ -514,7 +514,7 @@ impl Parser {
                 name,
                 variability,
                 tyype,
-            })
+            }))
         }
     }
     /*
@@ -1601,23 +1601,29 @@ impl Parser {
     /// Parse an attribute
     fn parse_attribute(&mut self, attr_l: IAttributeL) -> ParseResult<IAttributeP> {
         match attr_l {
-            IAttributeL::WeakableAttribute(range) => Ok(IAttributeP::WeakableAttribute(range)),
-            IAttributeL::SealedAttribute(range) => Ok(IAttributeP::SealedAttribute(range)),
+            IAttributeL::WeakableAttribute(range) => {
+                Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
+            }
+            IAttributeL::SealedAttribute(range) => {
+                Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
+            }
             IAttributeL::MacroCall { range, inclusion, name } => {
-                Ok(IAttributeP::MacroCall {
+                Ok(IAttributeP::MacroCall(MacroCallP {
                     range,
                     inclusion: match inclusion {
                         IMacroInclusionL::CallMacro => IMacroInclusionP::CallMacro,
                         IMacroInclusionL::DontCallMacro => IMacroInclusionP::DontCallMacro,
                     },
                     name: self.to_name(name),
-                })
+                }))
             }
-            IAttributeL::AbstractAttribute(range) => Ok(IAttributeP::AbstractAttribute(range)),
+            IAttributeL::AbstractAttribute(range) => {
+                Ok(IAttributeP::AbstractAttribute(AbstractAttributeP { range }))
+            }
             IAttributeL::ExternAttribute { range, maybe_custom_name } => {
                 // Mirrors Parser.scala parseAttribute handling of ExternAttribute
                 match maybe_custom_name {
-                    None => Ok(IAttributeP::ExternAttribute(range)),
+                    None => Ok(IAttributeP::ExternAttribute(ExternAttributeP { range })),
                     Some(parend) => {
                         // extern("name") becomes BuiltinAttribute
                         let iter = ScrambleIterator::new(parend.contents.clone());
@@ -1630,10 +1636,10 @@ impl Parser {
                                         range: string_le.range,
                                         str: self.interner.intern(s),
                                     };
-                                    return Ok(IAttributeP::BuiltinAttribute {
+                                    return Ok(IAttributeP::BuiltinAttribute(BuiltinAttributeP {
                                         range,
                                         generator_name: name,
-                                    });
+                                    }));
                                 }
                             }
                             Err(ParseError::BadExternAttribute(range.begin))
@@ -1643,10 +1649,14 @@ impl Parser {
                     }
                 }
             }
-            IAttributeL::ExportAttribute(range) => Ok(IAttributeP::ExportAttribute(range)),
-            IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(range)),
-            IAttributeL::AdditiveAttribute(range) => Ok(IAttributeP::AdditiveAttribute(range)),
-            IAttributeL::LinearAttribute(range) => Ok(IAttributeP::LinearAttribute(range)),
+            IAttributeL::ExportAttribute(range) => {
+                Ok(IAttributeP::ExportAttribute(ExportAttributeP { range }))
+            }
+            IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(PureAttributeP { range })),
+            IAttributeL::AdditiveAttribute(range) => {
+                Ok(IAttributeP::AdditiveAttribute(AdditiveAttributeP { range }))
+            }
+            IAttributeL::LinearAttribute(range) => Ok(IAttributeP::LinearAttribute(LinearAttributeP { range })),
         }
     }
     /*
@@ -1782,7 +1792,7 @@ class ParserCompilation(
         // From Parser.scala lines 717-740: Load .vpst files directly
         for package_coord in needed_packages {
             if let Some(filepath_to_code) = resolver.resolve(package_coord) {
-                for (filepath, code) in filepath_to_code {
+                for (filepath, _code) in filepath_to_code {
                     if filepath.ends_with(".vpst") {
                         panic!("ParsedLoader not yet implemented - see Parser.scala lines 724-735. Need to load .vpst file: {}", filepath);
                     }
@@ -1965,7 +1975,7 @@ class ParserCompilation(
     // From Parser.scala lines 818-826: expectParseds
     pub fn expect_parseds(&mut self) -> FileCoordinateMap<(FileP, Vec<RangeL>)> {
         match self.get_parseds() {
-            Err(FailedParse { code, file_coord, error }) => {
+            Err(FailedParse { code: _code, file_coord: _file_coord, error }) => {
                 panic!("Parse error: {:?} - need ParseErrorHumanizer.humanize - see Parser.scala lines 818-826", error)
             }
             Ok(x) => x,
@@ -1988,7 +1998,7 @@ class ParserCompilation(
             return Ok(vpst.clone());
         }
 
-        let parseds = self.get_parseds()?;
+        let _parseds = self.get_parseds()?;
         panic!("ParserCompilation.get_vpst_map not yet fully implemented - need to vonify and print. See Parser.scala lines 829-846")
     }
 /*

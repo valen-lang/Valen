@@ -157,7 +157,7 @@ mod tests {
 
     #[test]
     fn test_short_string_encoding() {
-        let mut interner = Interner::new();
+        let interner = Interner::new();
         let s1 = interner.intern("hello");
         let s2 = interner.intern("hello");
         
@@ -171,7 +171,7 @@ mod tests {
 
     #[test]
     fn test_long_string_interning() {
-        let mut interner = Interner::new();
+        let interner = Interner::new();
         let s1 = interner.intern("this is a long string");
         let s2 = interner.intern("this is a long string");
         
@@ -185,7 +185,7 @@ mod tests {
 
     #[test]
     fn test_different_strings() {
-        let mut interner = Interner::new();
+        let interner = Interner::new();
         let s1 = interner.intern("foo");
         let s2 = interner.intern("bar");
         

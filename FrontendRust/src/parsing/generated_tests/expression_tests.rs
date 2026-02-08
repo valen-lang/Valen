@@ -311,7 +311,7 @@ mod expression_tests {
             }),
             arg_exprs
         }) if name.str == "toArray" && args.len() == 1 && arg_exprs.len() == 1 => {
-            should_have!(args[0], ITemplexPT::Mutability { range: _, mutability: MutabilityP::Immutable } => {});
+            should_have!(args[0], ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Immutable }) => {});
             should_have!(arg_exprs[0], IExpressionPE::Augment(AugmentPE {
                 target_ownership: OwnershipP::Borrow,
                 inner: box IExpressionPE::Lookup(LookupPE { 
@@ -343,7 +343,7 @@ mod expression_tests {
             },
             arg_exprs
         }) if result.str == "result" && to_array.str == "toArray" && args.len() == 1 && arg_exprs.is_empty() => {
-            should_have!(args[0], ITemplexPT::Mutability { range: _, mutability: MutabilityP::Immutable } => {});
+            should_have!(args[0], ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Immutable }) => {});
         });
     }
 
@@ -420,7 +420,7 @@ mod expression_tests {
             arg_exprs,
             ..
         }) if my_none.str == "MyNone" && args.len() == 1 && arg_exprs.is_empty() => {
-            should_have!(args[0], ITemplexPT::NameOrRune(NameP { str: ref int, .. }) if int.str == "int" => {});
+            should_have!(args[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int, .. } }) if int.str == "int" => {});
         });
 
         let expr2 = compile_expression_expect("MySome< MyNone <int> >()");
@@ -435,12 +435,12 @@ mod expression_tests {
             arg_exprs,
             ..
         }) if my_some.str == "MySome" && args.len() == 1 && arg_exprs.is_empty() => {
-            should_have!(args[0], ITemplexPT::Call { 
+            should_have!(args[0], ITemplexPT::Call(CallPT { 
                 range: _, 
-                template: box ITemplexPT::NameOrRune(NameP { str: ref my_none, .. }), 
+                template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref my_none, .. } }), 
                 args: ref inner_args 
-            } if my_none.str == "MyNone" && inner_args.len() == 1 => {
-                should_have!(inner_args[0], ITemplexPT::NameOrRune(NameP { str: ref int, .. }) if int.str == "int" => {});
+            }) if my_none.str == "MyNone" && inner_args.len() == 1 => {
+                should_have!(inner_args[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int, .. } }) if int.str == "int" => {});
             });
         });
     }
@@ -582,7 +582,7 @@ mod expression_tests {
                         decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref x, .. }),
                         ..
                     }),
-                    templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int, .. })),
+                    templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int, .. } })),
                     destructure: None,
                     ..
                 }),
@@ -908,7 +908,7 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
             size: IArraySizeP::StaticSized { size_pt: None },
             initializing_individual_elements: true,
@@ -930,9 +930,9 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
-            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::NameOrRune(NameP { str: ref n, .. })) },
+            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref n, .. } })) },
             initializing_individual_elements: false,
             args
         }) if n.str == "N" && args.len() == 1 => {
@@ -965,9 +965,9 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
-            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::Int { range: _, value: 3 }) },
+            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::Int(IntPT { range: _, value: 3 })) },
             initializing_individual_elements: false,
             args
         }) if args.len() == 1 => {});
@@ -980,9 +980,9 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Immutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Immutable })),
             variability_pt: None,
-            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::Int { range: _, value: 3 }) },
+            size: IArraySizeP::StaticSized { size_pt: Some(ITemplexPT::Int(IntPT { range: _, value: 3 })) },
             initializing_individual_elements: false,
             args
         }) if args.len() == 1 => {});
@@ -995,7 +995,7 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Immutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Immutable })),
             variability_pt: None,
             size: IArraySizeP::StaticSized { size_pt: None },
             initializing_individual_elements: true,
@@ -1010,7 +1010,7 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
             size: IArraySizeP::RuntimeSized,
             initializing_individual_elements: false,
@@ -1025,7 +1025,7 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
             size: IArraySizeP::RuntimeSized,
             initializing_individual_elements: false,
@@ -1039,12 +1039,12 @@ mod expression_tests {
         let expr = compile_expression_expect("[][]bool(42)");
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
-            type_pt: Some(ITemplexPT::RuntimeSizedArray {
+            type_pt: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
                 range: _,
-                mutability: box ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable },
-                element: box ITemplexPT::NameOrRune(NameP { str: ref bool_, .. })
-            }),
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Mutable }),
+                mutability: box ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_, .. } })
+            })),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Mutable })),
             variability_pt: None,
             size: IArraySizeP::RuntimeSized,
             initializing_individual_elements: false,
@@ -1061,7 +1061,7 @@ mod expression_tests {
         should_have!(expr, IExpressionPE::ConstructArray(ConstructArrayPE {
             range: _,
             type_pt: None,
-            mutability_pt: Some(ITemplexPT::Mutability { range: _, mutability: MutabilityP::Immutable }),
+            mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT { range: _, mutability: MutabilityP::Immutable })),
             variability_pt: None,
             size: IArraySizeP::RuntimeSized,
             initializing_individual_elements: false,

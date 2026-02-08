@@ -1,7 +1,7 @@
 use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
 use crate::lexing::lex_and_explore;
-use crate::parsing::ast::{FileP, IDenizenP};
+use crate::parsing::ast::IDenizenP;
 use crate::parsing::Parser;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::{Interner, Keywords};
@@ -28,7 +28,7 @@ object ParseAndExplore {
   def parseAndExploreAndCollect(
     interner: Interner,
     keywords: Keywords,
-    opts: GlobalOptions,
+    _opts: GlobalOptions,
     parser: Parser,
     packages: Vector[PackageCoordinate],
     resolver: IPackageResolver[Map[String, String]]):
@@ -46,7 +46,7 @@ object ParseAndExplore {
 pub fn parse_and_explore<D, F, R, HandleParsedDenizen, FileHandler>(
     interner: Arc<Interner>,
     keywords: Arc<Keywords>,
-    opts: GlobalOptions,
+    _opts: GlobalOptions,
     parser: &mut Parser,
     packages: Vec<Arc<PackageCoordinate>>,
     resolver: &R,

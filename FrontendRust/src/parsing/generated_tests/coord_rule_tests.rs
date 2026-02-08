@@ -32,9 +32,9 @@ fn test_coord_with_destructure_only() {
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
     } else {
         panic!("Expected Components with CoordType");
     }
@@ -53,9 +53,9 @@ fn test_coord_with_rune_and_destructure() {
         ..
     } = result1 {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
     } else {
         panic!("Expected Components with CoordType {:?}", result1);
     }
@@ -71,8 +71,8 @@ fn test_coord_with_rune_and_destructure() {
     } = result2 {
         assert_eq!(comps.len(), 3);
         assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::Ownership(OwnershipPT { ownership: OwnershipP::Own, .. }))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
     } else {
         panic!("Expected Components with CoordType {:?}", result2);
     }
@@ -82,7 +82,7 @@ fn test_coord_with_rune_and_destructure() {
 #[test]
 fn test_coord_matches_plain_int() {
     let result = compile_rulex_expect("int");
-    assert!(matches!(result, IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "int"));
+    assert!(matches!(result, IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "int"));
 }
 
 // Mirrors CoordRuleTests.scala line 62
@@ -95,9 +95,9 @@ fn test_coord_with_int_in_kind_rule() {
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref s, .. })) if s.str == "int"));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } })) if s.str == "int"));
     } else {
         panic!("Expected Components with CoordType");
     }
@@ -113,8 +113,8 @@ fn test_coord_with_specific_kind_rule() {
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
         
         // Check the Kind destructure
         if let IRulexPR::Components {
@@ -123,7 +123,7 @@ fn test_coord_with_specific_kind_rule() {
             ..
         } = &comps[2] {
             assert_eq!(kind_comps.len(), 1);
-            assert!(matches!(&kind_comps[0], IRulexPR::Templex(ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. })));
+            assert!(matches!(&kind_comps[0], IRulexPR::Templex(ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }))));
         } else {
             panic!("Expected Components with KindType");
         }
@@ -142,7 +142,7 @@ fn test_coord_with_value() {
             tyype: ITypePR::CoordType,
             ..
         },
-        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         ..
     } = result {
         assert_eq!(t_str.str, "T");
@@ -162,13 +162,13 @@ fn test_coord_with_destructure_and_value() {
             components: ref comps,
             ..
         },
-        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        right: box IRulexPR::Templex(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         ..
     } = result {
         assert_eq!(comps.len(), 3);
-        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
-        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(_))));
+        assert!(matches!(&comps[0], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[1], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
+        assert!(matches!(&comps[2], IRulexPR::Templex(ITemplexPT::AnonymousRune(AnonymousRunePT { .. }))));
         assert_eq!(int_str.str, "int");
     } else {
         panic!("Expected Equals with Components and Templex");
@@ -185,13 +185,13 @@ fn test_coord_with_sequence_in_value_spot() {
             tyype: ITypePR::CoordType,
             ..
         },
-        right: box IRulexPR::Templex(ITemplexPT::Tuple { elements: ref elems, .. }),
+        right: box IRulexPR::Templex(ITemplexPT::Tuple(TuplePT { elements: ref elems, .. })),
         ..
     } = result {
         assert_eq!(t_str.str, "T");
         assert_eq!(elems.len(), 2);
-        assert!(matches!(&elems[0], ITemplexPT::NameOrRune(NameP { str: ref s, .. }) if s.str == "int"));
-        assert!(matches!(&elems[1], ITemplexPT::NameOrRune(NameP { str: ref s, .. }) if s.str == "bool"));
+        assert!(matches!(&elems[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }) if s.str == "int"));
+        assert!(matches!(&elems[1], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }) if s.str == "bool"));
     } else {
         panic!("Expected Equals with Typed and Tuple");
     }
@@ -201,10 +201,10 @@ fn test_coord_with_sequence_in_value_spot() {
 #[test]
 fn test_lone_tuple_is_sequence() {
     let result = compile_rulex_expect("(int, bool)");
-    if let IRulexPR::Templex(ITemplexPT::Tuple { elements: ref elems, .. }) = result {
+    if let IRulexPR::Templex(ITemplexPT::Tuple(TuplePT { elements: ref elems, .. })) = result {
         assert_eq!(elems.len(), 2);
-        assert!(matches!(&elems[0], ITemplexPT::NameOrRune(NameP { str: ref s, .. }) if s.str == "int"));
-        assert!(matches!(&elems[1], ITemplexPT::NameOrRune(NameP { str: ref s, .. }) if s.str == "bool"));
+        assert!(matches!(&elems[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }) if s.str == "int"));
+        assert!(matches!(&elems[1], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }) if s.str == "bool"));
     } else {
         panic!("Expected Templex with Tuple");
     }

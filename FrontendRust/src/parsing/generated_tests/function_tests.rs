@@ -153,7 +153,7 @@ fn test_extern_function_generated() {
         body: None,
         ..
     }) if func_str.str == "sum" && params.is_empty() && attrs.iter().any(|a| {
-        matches!(a, IAttributeP::BuiltinAttribute { generator_name: NameP { str, .. }, .. } if str.str == "bork")
+        matches!(a, IAttributeP::BuiltinAttribute(BuiltinAttributeP { generator_name: NameP { str, .. }, .. }) if str.str == "bork")
     }) => {});
 }
 
@@ -168,7 +168,10 @@ fn test_extern_function_with_return() {
             name: Some(NameP { str, .. }),
             attributes: ref attrs,
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { ret_type: Some(ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. })), .. },
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } })),
+                ..
+            },
             ..
         },
         body: None,
@@ -203,12 +206,12 @@ fn test_pure_and_default_region() {
             name: Some(NameP { str, .. }),
             attributes: ref attrs,
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { 
-                ret_type: Some(ITemplexPT::Interpreted { 
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::Interpreted(InterpretedPT {
                     maybe_region: Some(box RegionRunePT { name: Some(NameP { str: ref region_str, .. }), .. }),
-                    inner: box ITemplexPT::NameOrRune(NameP { str: ref type_str, .. }),
+                    inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref type_str, .. } }),
                     ..
-                }), 
+                })),
                 .. 
             },
             ..
@@ -233,12 +236,12 @@ fn test_return_isolate() {
         header: FunctionHeaderP {
             name: Some(NameP { str, .. }),
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { 
-                ret_type: Some(ITemplexPT::Interpreted { 
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::Interpreted(InterpretedPT {
                     maybe_region: Some(box RegionRunePT { name: None, .. }),
-                    inner: box ITemplexPT::NameOrRune(NameP { str: ref type_str, .. }),
+                    inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref type_str, .. } }),
                     ..
-                }), 
+                })),
                 .. 
             },
             ..
@@ -282,7 +285,10 @@ fn test_attribute_after_return() {
             name: Some(NameP { str, .. }),
             attributes: ref attrs,
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { ret_type: Some(ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. })), .. },
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } })),
+                ..
+            },
             ..
         },
         body: None,
@@ -301,7 +307,10 @@ fn test_attribute_before_return() {
             name: Some(NameP { str, .. }),
             attributes: ref attrs,
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { ret_type: Some(ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. })), .. },
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } })),
+                ..
+            },
             ..
         },
         body: None,
@@ -420,7 +429,7 @@ fn test_pool_region() {
          matches!(&gen_params[0], GenericParameterP { 
              name: NameP { str, .. }, 
              maybe_type: Some(GenericParameterTypeP { tyype: ITypePR::RegionType, .. }),
-             maybe_default: Some(ITemplexPT::NameOrRune(NameP { str: ref default_str, .. })),
+             maybe_default: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref default_str, .. } })),
              ..
          } if str.str == "r" && default_str.str == "pool") => {});
 }
@@ -441,7 +450,7 @@ fn test_pool_readonly_region() {
              name: NameP { str, .. }, 
              maybe_type: Some(GenericParameterTypeP { tyype: ITypePR::RegionType, .. }),
              attributes: ref attrs,
-             maybe_default: Some(ITemplexPT::NameOrRune(NameP { str: ref default_str, .. })),
+             maybe_default: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref default_str, .. } })),
              ..
          } if str.str == "r" && default_str.str == "pool" && 
               attrs.iter().any(|a| matches!(a, IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)))) => {});
@@ -462,7 +471,7 @@ fn test_arena_region() {
          matches!(&gen_params[0], GenericParameterP { 
              name: NameP { str, .. }, 
              maybe_type: Some(GenericParameterTypeP { tyype: ITypePR::RegionType, .. }),
-             maybe_default: Some(ITemplexPT::NameOrRune(NameP { str: ref default_str, .. })),
+             maybe_default: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref default_str, .. } })),
              ..
          } if str.str == "x" && default_str.str == "arena") => {});
 }
@@ -496,7 +505,10 @@ fn test_virtual_function() {
         header: FunctionHeaderP {
             name: Some(NameP { str, .. }),
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { ret_type: Some(ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. })), .. },
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } })),
+                ..
+            },
             ..
         },
         body: None,
@@ -506,7 +518,7 @@ fn test_virtual_function() {
              virtuality: Some(AbstractP { .. }),
              pattern: Some(PatternPP {
                  destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
-                 templex: Some(ITemplexPT::NameOrRune(NameP { str: ref type_name, .. })),
+                 templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref type_name, .. } })),
                  ..
              }),
              ..
@@ -537,7 +549,10 @@ fn test_function_with_parameter_and_return() {
         header: FunctionHeaderP {
             name: Some(NameP { str, .. }),
             params: Some(ParamsP { params: ref params, .. }),
-            ret: FunctionReturnP { ret_type: Some(ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. })), .. },
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } })),
+                ..
+            },
             ..
         },
         body: Some(box BlockPE {
@@ -548,7 +563,7 @@ fn test_function_with_parameter_and_return() {
     }) if str.str == "main" && ret_str.str == "T" && params.len() == 1 &&
          matches!(&params[0].pattern, Some(PatternPP {
              destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
-             templex: Some(ITemplexPT::NameOrRune(NameP { str: ref param_type, .. })),
+             templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref param_type, .. } })),
              ..
          }) if param_name.str == "moo" && param_type.str == "T") => {});
 }
@@ -594,7 +609,7 @@ fn test_impl_function() {
              virtuality: Some(AbstractP { .. }),
              pattern: Some(PatternPP {
                  destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
-                 templex: Some(ITemplexPT::NameOrRune(NameP { str: ref type_name, .. })),
+                 templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref type_name, .. } })),
                  ..
              }),
              ..
@@ -615,7 +630,7 @@ fn test_param() {
     }) if params.len() == 1 &&
          matches!(&params[0].pattern, Some(PatternPP {
              destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
-             templex: Some(ITemplexPT::NameOrRune(NameP { str: ref type_name, .. })),
+             templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref type_name, .. } })),
              ..
          }) if param_name.str == "f" && type_name.str == "F") => {});
 }
@@ -651,12 +666,12 @@ fn test_func_with_func_bound() {
         },
         ..
     }) if rules.len() == 1 &&
-         matches!(&rules[0], IRulexPR::Templex(ITemplexPT::Func {
+         matches!(&rules[0], IRulexPR::Templex(ITemplexPT::Func(FuncPT {
              name: NameP { str: ref func_name, .. },
              parameters: ref params,
-             return_type: box ITemplexPT::NameOrRune(NameP { str: ref ret_str, .. }),
+             return_type: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_str, .. } }),
              ..
-         }) if func_name.str == "moo" && ret_str.str == "void" && params.len() == 1) => {});
+         })) if func_name.str == "moo" && ret_str.str == "void" && params.len() == 1) => {});
 }
 // Mirrors FunctionTests.scala line 389
 #[test]
@@ -679,9 +694,9 @@ fn test_identifying_runes() {
     }) if str.str == "wrap" && gen_params.len() == 2 && params.len() == 1 &&
          matches!(&gen_params[0], GenericParameterP { name: NameP { str: ref name0, .. }, .. } if name0.str == "A") &&
          matches!(&gen_params[1], GenericParameterP { name: NameP { str: ref name1, .. }, .. } if name1.str == "F") &&
-         matches!(&params[0].pattern, Some(PatternPP {
-             destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
-             templex: Some(ITemplexPT::NameOrRune(NameP { str: ref param_type, .. })),
+        matches!(&params[0].pattern, Some(PatternPP {
+            destination: Some(DestinationLocalP { decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref param_name, .. }), .. }),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref param_type, .. } })),
              ..
          }) if param_name.str == "a" && param_type.str == "A") => {});
 }
@@ -695,9 +710,9 @@ fn test_never_signature() {
     
     should_have!(denizen, IDenizenP::TopLevelFunction(FunctionP {
         header: FunctionHeaderP {
-            ret: FunctionReturnP { 
-                ret_type: Some(ITemplexPT::NameOrRune(NameP { str, .. })), 
-                .. 
+            ret: FunctionReturnP {
+                ret_type: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str, .. } })),
+                ..
             },
             ..
         },

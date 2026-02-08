@@ -602,7 +602,7 @@ impl ParserVonifier {
     /// Mirrors vonifyAttribute in ParserVonifier.scala lines 381-409
     fn vonify_attribute(thing: &IAttributeP) -> IVonData {
         match thing {
-            IAttributeP::WeakableAttribute(range) => {
+            IAttributeP::WeakableAttribute(WeakableAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "WeakableAttribute".to_string(),
                     id: None,
@@ -612,7 +612,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::SealedAttribute(range) => {
+            IAttributeP::SealedAttribute(SealedAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "SealedAttribute".to_string(),
                     id: None,
@@ -622,7 +622,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::LinearAttribute(range) => {
+            IAttributeP::LinearAttribute(LinearAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "LinearAttribute".to_string(),
                     id: None,
@@ -632,7 +632,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::ExportAttribute(range) => {
+            IAttributeP::ExportAttribute(ExportAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "ExportAttribute".to_string(),
                     id: None,
@@ -642,7 +642,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::MacroCall { range, inclusion, name } => {
+            IAttributeP::MacroCall(MacroCallP { range, inclusion, name }) => {
                 IVonData::Object(VonObject {
                     tyype: "MacroCall".to_string(),
                     id: None,
@@ -664,7 +664,7 @@ impl ParserVonifier {
                     ],
                 })
             }
-            IAttributeP::AbstractAttribute(range) => {
+            IAttributeP::AbstractAttribute(AbstractAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "AbstractAttribute".to_string(),
                     id: None,
@@ -674,7 +674,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::ExternAttribute(range) => {
+            IAttributeP::ExternAttribute(ExternAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "ExternAttribute".to_string(),
                     id: None,
@@ -684,7 +684,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::PureAttribute(range) => {
+            IAttributeP::PureAttribute(PureAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "PureAttribute".to_string(),
                     id: None,
@@ -694,7 +694,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::AdditiveAttribute(range) => {
+            IAttributeP::AdditiveAttribute(AdditiveAttributeP { range }) => {
                 IVonData::Object(VonObject {
                     tyype: "AdditiveAttribute".to_string(),
                     id: None,
@@ -704,7 +704,7 @@ impl ParserVonifier {
                     }],
                 })
             }
-            IAttributeP::BuiltinAttribute { range, generator_name } => {
+            IAttributeP::BuiltinAttribute(BuiltinAttributeP { range, generator_name }) => {
                 IVonData::Object(VonObject {
                     tyype: "BuiltinAttribute".to_string(),
                     id: None,
@@ -758,12 +758,12 @@ impl ParserVonifier {
                     value: Self::vonify_function(function),
                 }],
             }),
-            IStructContent::NormalStructMember {
+            IStructContent::NormalStructMember(NormalStructMemberP {
                 range,
                 name,
                 variability,
                 tyype,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "NormalStructMember".to_string(),
                 id: None,
                 members: vec![
@@ -785,11 +785,11 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            IStructContent::VariadicStructMember {
+            IStructContent::VariadicStructMember(VariadicStructMemberP {
                 range,
                 variability,
                 tyype,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "VariadicStructMember".to_string(),
                 id: None,
                 members: vec![
@@ -1342,7 +1342,7 @@ impl ParserVonifier {
     fn vonify_templex(thing: &ITemplexPT) -> IVonData {
         match thing {
             ITemplexPT::RegionRune(r) => Self::vonify_region_rune(r),
-            ITemplexPT::AnonymousRune(range) => IVonData::Object(VonObject {
+            ITemplexPT::AnonymousRune(AnonymousRunePT { range }) => IVonData::Object(VonObject {
                 tyype: "AnonymousRuneT".to_string(),
                 id: None,
                 members: vec![VonMember {
@@ -1350,7 +1350,7 @@ impl ParserVonifier {
                     value: Self::vonify_range(range),
                 }],
             }),
-            ITemplexPT::Point { range, inner } => IVonData::Object(VonObject {
+            ITemplexPT::Point(PointPT { range, inner }) => IVonData::Object(VonObject {
                 tyype: "PointT".to_string(),
                 id: None,
                 members: vec![
@@ -1364,7 +1364,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Bool { range, value } => IVonData::Object(VonObject {
+            ITemplexPT::Bool(BoolPT { range, value }) => IVonData::Object(VonObject {
                 tyype: "BoolT".to_string(),
                 id: None,
                 members: vec![
@@ -1378,7 +1378,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Call { range, template, args } => IVonData::Object(VonObject {
+            ITemplexPT::Call(CallPT { range, template, args }) => IVonData::Object(VonObject {
                 tyype: "CallT".to_string(),
                 id: None,
                 members: vec![
@@ -1399,7 +1399,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Inline { range, inner } => IVonData::Object(VonObject {
+            ITemplexPT::Inline(InlinePT { range, inner }) => IVonData::Object(VonObject {
                 tyype: "InlineT".to_string(),
                 id: None,
                 members: vec![
@@ -1413,7 +1413,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Int { range, value } => IVonData::Object(VonObject {
+            ITemplexPT::Int(IntPT { range, value }) => IVonData::Object(VonObject {
                 tyype: "IntT".to_string(),
                 id: None,
                 members: vec![
@@ -1429,7 +1429,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Location { range, location } => IVonData::Object(VonObject {
+            ITemplexPT::Location(LocationPT { range, location }) => IVonData::Object(VonObject {
                 tyype: "LocationT".to_string(),
                 id: None,
                 members: vec![
@@ -1443,7 +1443,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Tuple { range, elements } => IVonData::Object(VonObject {
+            ITemplexPT::Tuple(TuplePT { range, elements }) => IVonData::Object(VonObject {
                 tyype: "ManualSequenceT".to_string(),
                 id: None,
                 members: vec![
@@ -1460,7 +1460,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Mutability { range, mutability } => IVonData::Object(VonObject {
+            ITemplexPT::Mutability(MutabilityPT { range, mutability }) => IVonData::Object(VonObject {
                 tyype: "MutabilityT".to_string(),
                 id: None,
                 members: vec![
@@ -1474,7 +1474,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::NameOrRune(rune) => IVonData::Object(VonObject {
+            ITemplexPT::NameOrRune(NameOrRunePT { name: rune }) => IVonData::Object(VonObject {
                 tyype: "NameOrRuneT".to_string(),
                 id: None,
                 members: vec![VonMember {
@@ -1482,12 +1482,12 @@ impl ParserVonifier {
                     value: Self::vonify_name(rune),
                 }],
             }),
-            ITemplexPT::Interpreted {
+            ITemplexPT::Interpreted(InterpretedPT {
                 range,
                 maybe_ownership,
                 maybe_region,
                 inner,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "InterpretedT".to_string(),
                 id: None,
                 members: vec![
@@ -1529,13 +1529,13 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::StaticSizedArray {
+            ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
                 range,
                 mutability,
                 variability,
                 size,
                 element,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "StaticSizedArrayT".to_string(),
                 id: None,
                 members: vec![
@@ -1561,7 +1561,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::RuntimeSizedArray { range, mutability, element } => {
+            ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT { range, mutability, element }) => {
                 IVonData::Object(VonObject {
                     tyype: "RuntimeSizedArrayT".to_string(),
                     id: None,
@@ -1581,12 +1581,12 @@ impl ParserVonifier {
                     ],
                 })
             }
-            ITemplexPT::Function {
+            ITemplexPT::Function(FunctionPT {
                 range,
                 mutability,
                 parameters,
                 return_type,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "FunctionT".to_string(),
                 id: None,
                 members: vec![
@@ -1612,13 +1612,13 @@ impl ParserVonifier {
                 ],
             }),
             ITemplexPT::Pack(pack_pt) => Self::vonify_pack(pack_pt),
-            ITemplexPT::Func {
+            ITemplexPT::Func(FuncPT {
                 range,
                 name,
                 params_range,
                 parameters,
                 return_type,
-            } => IVonData::Object(VonObject {
+            }) => IVonData::Object(VonObject {
                 tyype: "PrototypeT".to_string(),
                 id: None,
                 members: vec![
@@ -1647,7 +1647,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Share { range, inner } => IVonData::Object(VonObject {
+            ITemplexPT::Share(SharePT { range, inner }) => IVonData::Object(VonObject {
                 tyype: "ShareT".to_string(),
                 id: None,
                 members: vec![
@@ -1661,7 +1661,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::String { range, str } => IVonData::Object(VonObject {
+            ITemplexPT::String(StringPT { range, str }) => IVonData::Object(VonObject {
                 tyype: "StringT".to_string(),
                 id: None,
                 members: vec![
@@ -1677,7 +1677,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::TypedRune { range, rune, tyype } => IVonData::Object(VonObject {
+            ITemplexPT::TypedRune(TypedRunePT { range, rune, tyype }) => IVonData::Object(VonObject {
                 tyype: "TypedRuneT".to_string(),
                 id: None,
                 members: vec![
@@ -1695,7 +1695,7 @@ impl ParserVonifier {
                     },
                 ],
             }),
-            ITemplexPT::Variability { range, variability } => IVonData::Object(VonObject {
+            ITemplexPT::Variability(VariabilityPT { range, variability }) => IVonData::Object(VonObject {
                 tyype: "VariabilityT".to_string(),
                 id: None,
                 members: vec![

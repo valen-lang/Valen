@@ -18,8 +18,8 @@ fn test_normal_impl() {
     should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
         generic_params: None,
         template_rules: None,
-        struct_: Some(ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. })),
-        interface: ITemplexPT::NameOrRune(NameP { str: ref interface_str, .. }),
+        struct_: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } })),
+        interface: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref interface_str, .. } }),
         ..
     }) if struct_str.str == "SomeStruct" && interface_str.str == "MyInterface" => {});
 }
@@ -37,8 +37,8 @@ fn test_templated_impl() {
     should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
         generic_params: Some(GenericParametersP { params: ref params, .. }),
         template_rules: None,
-        struct_: Some(ITemplexPT::Call { .. }),
-        interface: ITemplexPT::Call { .. },
+        struct_: Some(ITemplexPT::Call(CallPT { .. })),
+        interface: ITemplexPT::Call(CallPT { .. }),
         ..
     }) if params.len() == 1 => {});
 }
@@ -56,8 +56,8 @@ fn test_impling_a_template_call() {
     should_have!(file.denizens[0], IDenizenP::TopLevelImpl(ImplP {
         generic_params: None,
         template_rules: None,
-        struct_: Some(ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. })),
-        interface: ITemplexPT::Call { args: ref args, .. },
+        struct_: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } })),
+        interface: ITemplexPT::Call(CallPT { args: ref args, .. }),
         ..
     }) if struct_str.str == "MyIntIdentity" && args.len() == 3 => {});
 }

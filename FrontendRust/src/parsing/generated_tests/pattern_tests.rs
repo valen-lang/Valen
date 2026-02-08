@@ -27,7 +27,7 @@ fn test_capture_with_destructure_with_type_inside() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a2_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
             ..
         } if a2_str.str == "a" && int_str.str == "int"));
         assert!(matches!(patterns[1], PatternPP {
@@ -35,7 +35,7 @@ fn test_capture_with_destructure_with_type_inside() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref b_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } })),
             ..
         } if b_str.str == "b" && bool_str.str == "bool"));
     } else {
@@ -53,7 +53,7 @@ fn test_capture_with_empty_sequence_type() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             ..
         }),
-        templex: Some(ITemplexPT::Tuple { elements: ref elems, .. }),
+        templex: Some(ITemplexPT::Tuple(TuplePT { elements: ref elems, .. })),
         destructure: None,
         ..
     } if a_str.str == "a" && elems.is_empty()));
@@ -110,7 +110,7 @@ fn test_destructure_with_nested_atom() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref b_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
             ..
         } if b_str.str == "b" && int_str.str == "int"));
     } else {
@@ -130,7 +130,7 @@ fn test_no_capture_with_type() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         destructure: None,
         ..
     } if int_str.str == "int"));
@@ -146,7 +146,7 @@ fn test_capture_with_type() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         destructure: None,
         ..
     } if a_str.str == "a" && int_str.str == "int"));
@@ -162,7 +162,7 @@ fn test_simple_capture_with_tame() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref t_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t_str, .. } })),
         destructure: None,
         ..
     } if a_str.str == "a" && t_str.str == "T"));
@@ -178,12 +178,12 @@ fn test_capture_with_borrow_tame() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref arr_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Interpreted {
+        templex: Some(ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Borrow, .. }),
             maybe_region: None,
-            inner: box ITemplexPT::NameOrRune(NameP { str: ref r_str, .. }),
+            inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref r_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if arr_str.str == "arr" && r_str.str == "R"));
@@ -199,12 +199,12 @@ fn test_capture_with_self_in_front() {
             decl: INameDeclarationP::ConstructingMemberNameDeclaration(NameP { str: ref arr_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Interpreted {
+        templex: Some(ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Weak, .. }),
             maybe_region: None,
-            inner: box ITemplexPT::NameOrRune(NameP { str: ref r_str, .. }),
+            inner: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref r_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if arr_str.str == "arr" && r_str.str == "R"));
@@ -266,7 +266,7 @@ fn test_one_typed_element_destructure() {
                 decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref a_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref a_str, .. } })),
             ..
         } if a_str.str == "A"));
     } else {
@@ -380,7 +380,7 @@ fn test_type_with_destructure() {
     
     if let PatternPP {
         destination: None,
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref a_type_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref a_type_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -415,7 +415,7 @@ fn test_capture_and_type_with_destructure() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref a_type_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref a_type_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -462,7 +462,7 @@ fn test_capture_with_types_inside() {
                 decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
             ..
         } if int_str.str == "int"));
         assert!(matches!(patterns[1], PatternPP {
@@ -470,7 +470,7 @@ fn test_capture_with_types_inside() {
                 decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } })),
             ..
         } if bool_str.str == "bool"));
     } else {
@@ -495,7 +495,7 @@ fn test_destructure_with_type_inside() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
             ..
         } if a_str.str == "a" && int_str.str == "int"));
         assert!(matches!(patterns[1], PatternPP {
@@ -503,7 +503,7 @@ fn test_destructure_with_type_inside() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref b_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } })),
             ..
         } if b_str.str == "b" && bool_str.str == "bool"));
     } else {
@@ -661,7 +661,7 @@ fn test_simple_int() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         destructure: None,
         ..
     } if int_str.str == "int"));
@@ -709,7 +709,7 @@ fn test_capture_with_type_with_destructure() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref moo_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -748,7 +748,7 @@ fn test_cstodts() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref moo_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref t_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref t_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -761,7 +761,7 @@ fn test_cstodts() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
                 ..
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
             destructure: None,
             ..
         } if a_str.str == "a" && int_str.str == "int"));
@@ -780,15 +780,15 @@ fn test_capture_with_destructure_with_type_outside() {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Tuple { elements: ref tuple_elements, .. }),
+        templex: Some(ITemplexPT::Tuple(TuplePT { elements: ref tuple_elements, .. })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
         assert_eq!(a_str.str, "a");
         assert_eq!(tuple_elements.len(), 2);
         
-        assert!(matches!(tuple_elements[0], ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }) if int_str.str == "int"));
-        assert!(matches!(tuple_elements[1], ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. }) if bool_str.str == "bool"));
+        assert!(matches!(tuple_elements[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }) if int_str.str == "int"));
+        assert!(matches!(tuple_elements[1], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } }) if bool_str.str == "bool"));
         
         assert_eq!(patterns.len(), 2);
         
@@ -824,7 +824,7 @@ fn test_empty_destructure_with_type() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } if muta_str.str == "Muta" && patterns.is_empty()));
@@ -840,15 +840,15 @@ fn test_templated_destructure() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Call {
-            template: box ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. }),
+        templex: Some(ITemplexPT::Call(CallPT {
+            template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } }),
             args: ref args,
             ..
-        }),
+        })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } if muta_str.str == "Muta" && args.len() == 1 && patterns.is_empty() &&
-         matches!(&args[0], ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }) if int_str.str == "int")));
+         matches!(&args[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }) if int_str.str == "int")));
     
     let result2 = compile_pattern_expect("_ Muta<R>[]");
     
@@ -857,15 +857,15 @@ fn test_templated_destructure() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Call {
-            template: box ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. }),
+        templex: Some(ITemplexPT::Call(CallPT {
+            template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } }),
             args: ref args,
             ..
-        }),
+        })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } if muta_str.str == "Muta" && args.len() == 1 && patterns.is_empty() &&
-         matches!(&args[0], ITemplexPT::NameOrRune(NameP { str: ref r_str, .. }) if r_str.str == "R")));
+         matches!(&args[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref r_str, .. } }) if r_str.str == "R")));
 }
 
 // Mirrors TypeAndDestructureTests.scala line 47
@@ -878,13 +878,13 @@ fn test_destructure_with_type_outside() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Tuple { elements: ref tuple_elements, .. }),
+        templex: Some(ITemplexPT::Tuple(TuplePT { elements: ref tuple_elements, .. })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
         assert_eq!(tuple_elements.len(), 2);
-        assert!(matches!(tuple_elements[0], ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }) if int_str.str == "int"));
-        assert!(matches!(tuple_elements[1], ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. }) if bool_str.str == "bool"));
+        assert!(matches!(tuple_elements[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }) if int_str.str == "int"));
+        assert!(matches!(tuple_elements[1], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } }) if bool_str.str == "bool"));
         
         assert_eq!(patterns.len(), 2);
         assert!(matches!(patterns[0], PatternPP {
@@ -916,7 +916,7 @@ fn test_destructure_with_typeless_capture() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -946,7 +946,7 @@ fn test_destructure_with_typed_capture() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -957,7 +957,7 @@ fn test_destructure_with_typed_capture() {
                 decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref b_str, .. }),
                 mutate: None,
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref marine_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref marine_str, .. } })),
             destructure: None,
             ..
         } if b_str.str == "b" && marine_str.str == "Marine"));
@@ -976,7 +976,7 @@ fn test_destructure_with_unnamed_capture() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -987,7 +987,7 @@ fn test_destructure_with_unnamed_capture() {
                 decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
                 mutate: None,
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref marine_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref marine_str, .. } })),
             destructure: None,
             ..
         } if marine_str.str == "Marine"));
@@ -1006,7 +1006,7 @@ fn test_destructure_with_runed_capture() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
         destructure: Some(DestructureP { patterns: ref patterns, .. }),
         ..
     } = result {
@@ -1017,7 +1017,7 @@ fn test_destructure_with_runed_capture() {
                 decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
                 mutate: None,
             }),
-            templex: Some(ITemplexPT::NameOrRune(NameP { str: ref r_str, .. })),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref r_str, .. } })),
             destructure: None,
             ..
         } if r_str.str == "R"));
@@ -1038,7 +1038,7 @@ fn test_ignoring_name() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::NameOrRune(NameP { str: ref int_str, .. })),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } })),
         destructure: None,
         ..
     } if int_str.str == "int"));
@@ -1054,13 +1054,13 @@ fn test_15a() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::StaticSizedArray {
-            mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. },
-            variability: box ITemplexPT::Variability { variability: VariabilityP::Final, .. },
-            size: box ITemplexPT::Int { value: 3, .. },
-            element: box ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. }),
+        templex: Some(ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+            mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }),
+            variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Final, .. }),
+            size: box ITemplexPT::Int(IntPT { value: 3, .. }),
+            element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if struct_str.str == "MutableStruct"));
@@ -1076,13 +1076,13 @@ fn test_15b() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::StaticSizedArray {
-            mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Immutable, .. },
-            variability: box ITemplexPT::Variability { variability: VariabilityP::Final, .. },
-            size: box ITemplexPT::Int { value: 3, .. },
-            element: box ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. }),
+        templex: Some(ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+            mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }),
+            variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Final, .. }),
+            size: box ITemplexPT::Int(IntPT { value: 3, .. }),
+            element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if struct_str.str == "MutableStruct"));
@@ -1098,13 +1098,13 @@ fn test_15c() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::StaticSizedArray {
-            mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Immutable, .. },
-            variability: box ITemplexPT::Variability { variability: VariabilityP::Varying, .. },
-            size: box ITemplexPT::Int { value: 3, .. },
-            element: box ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. }),
+        templex: Some(ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+            mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }),
+            variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Varying, .. }),
+            size: box ITemplexPT::Int(IntPT { value: 3, .. }),
+            element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if struct_str.str == "MutableStruct"));
@@ -1120,11 +1120,11 @@ fn test_15d() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::RuntimeSizedArray {
-            mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Immutable, .. },
-            element: box ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }),
+        templex: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+            mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }),
+            element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if int_str.str == "int"));
@@ -1140,12 +1140,12 @@ fn test_sequence_type() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             ..
         }),
-        templex: Some(ITemplexPT::Tuple { elements: ref elems, .. }),
+        templex: Some(ITemplexPT::Tuple(TuplePT { elements: ref elems, .. })),
         destructure: None,
         ..
     } if elems.len() == 2 &&
-         matches!(&elems[0], ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }) if int_str.str == "int") &&
-         matches!(&elems[1], ITemplexPT::NameOrRune(NameP { str: ref bool_str, .. }) if bool_str.str == "bool")));
+         matches!(&elems[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }) if int_str.str == "int") &&
+         matches!(&elems[1], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref bool_str, .. } }) if bool_str.str == "bool")));
 }
 
 // Mirrors TypeTests.scala line 74
@@ -1158,18 +1158,18 @@ fn test_15() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Interpreted {
+        templex: Some(ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Borrow, .. }),
             maybe_region: None,
-            inner: box ITemplexPT::StaticSizedArray {
-                mutability: box ITemplexPT::Mutability { mutability: MutabilityP::Mutable, .. },
-                variability: box ITemplexPT::Variability { variability: VariabilityP::Final, .. },
-                size: box ITemplexPT::Int { value: 3, .. },
-                element: box ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. }),
+            inner: box ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+                mutability: box ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Mutable, .. }),
+                variability: box ITemplexPT::Variability(VariabilityPT { variability: VariabilityP::Final, .. }),
+                size: box ITemplexPT::Int(IntPT { value: 3, .. }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } }),
                 ..
-            },
+            }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if struct_str.str == "MutableStruct"));
@@ -1185,18 +1185,18 @@ fn test_15m() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Interpreted {
+        templex: Some(ITemplexPT::Interpreted(InterpretedPT {
             maybe_ownership: Some(box OwnershipPT { ownership: OwnershipP::Weak, .. }),
             maybe_region: None,
-            inner: box ITemplexPT::StaticSizedArray {
-                mutability: box ITemplexPT::AnonymousRune(_),
-                variability: box ITemplexPT::AnonymousRune(_),
-                size: box ITemplexPT::Int { value: 3, .. },
-                element: box ITemplexPT::NameOrRune(NameP { str: ref struct_str, .. }),
+            inner: box ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+                mutability: box ITemplexPT::AnonymousRune(AnonymousRunePT { .. }),
+                variability: box ITemplexPT::AnonymousRune(AnonymousRunePT { .. }),
+                size: box ITemplexPT::Int(IntPT { value: 3, .. }),
+                element: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref struct_str, .. } }),
                 ..
-            },
+            }),
             ..
-        }),
+        })),
         destructure: None,
         ..
     } if struct_str.str == "MutableStruct"));
@@ -1212,23 +1212,23 @@ fn test_15z() {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(_),
             mutate: None,
         }),
-        templex: Some(ITemplexPT::Call {
-            template: box ITemplexPT::NameOrRune(NameP { str: ref option_str, .. }),
+        templex: Some(ITemplexPT::Call(CallPT {
+            template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref option_str, .. } }),
             args: ref args,
             ..
-        }),
+        })),
         destructure: None,
         ..
     } = result {
         assert_eq!(option_str.str, "MyOption");
         assert_eq!(args.len(), 1);
         
-        assert!(matches!(&args[0], ITemplexPT::Call {
-            template: box ITemplexPT::NameOrRune(NameP { str: ref list_str, .. }),
+        assert!(matches!(&args[0], ITemplexPT::Call(CallPT {
+            template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref list_str, .. } }),
             args: ref inner_args,
             ..
-        } if list_str.str == "MyList" && inner_args.len() == 1 &&
-             matches!(&inner_args[0], ITemplexPT::NameOrRune(NameP { str: ref int_str, .. }) if int_str.str == "int")));
+        }) if list_str.str == "MyList" && inner_args.len() == 1 &&
+             matches!(&inner_args[0], ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref int_str, .. } }) if int_str.str == "int")));
     } else {
         panic!("Expected nested generic pattern");
     }

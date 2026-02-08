@@ -361,7 +361,7 @@ fn test_let_with_simple_pattern() {
                     decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
                     ..
                 }),
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
+                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref moo_str, .. } })),
                 destructure: None,
                 ..
             },
@@ -401,7 +401,7 @@ fn test_let_with_simple_pattern_in_destructure() {
                     decl: INameDeclarationP::LocalNameDeclaration(NameP { str: ref a_str, .. }),
                     ..
                 }),
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref moo_str, .. })),
+                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref moo_str, .. } })),
                 ..
             }
         if a_str.str == "a" && moo_str.str == "Moo"));
@@ -419,7 +419,7 @@ fn test_let_with_destructuring_pattern() {
         IExpressionPE::Let(LetPE {
             pattern: PatternPP {
                 destination: None,
-                templex: Some(ITemplexPT::NameOrRune(NameP { str: ref muta_str, .. })),
+                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref muta_str, .. } })),
                 destructure: Some(DestructureP { patterns: ref patterns, .. }),
                 ..
             },

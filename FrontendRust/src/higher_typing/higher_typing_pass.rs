@@ -13,6 +13,7 @@ use std::sync::Arc;
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
 pub struct HigherTypingCompilation {
     scout_compilation: ScoutCompilation,
+    #[allow(dead_code)]
     astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
 }
 

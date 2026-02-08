@@ -24,6 +24,7 @@ pub struct TypingPassOptions {
 // From Compilation.scala lines 22-78: TypingPassCompilation class
 pub struct TypingPassCompilation {
     higher_typing_compilation: HigherTypingCompilation,
+    #[allow(dead_code)]
     hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 

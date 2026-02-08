@@ -23,7 +23,9 @@ pub struct HammerCompilationOptions {
 // From HammerCompilation.scala lines 25-66: HammerCompilation class
 pub struct HammerCompilation {
     instantiated_compilation: InstantiatedCompilation,
+    #[allow(dead_code)]
     hamuts_cache: Option<()>, // ProgramH not yet ported
+    #[allow(dead_code)]
     von_hammer_cache: Option<()>, // VonHammer not yet ported
 }
 

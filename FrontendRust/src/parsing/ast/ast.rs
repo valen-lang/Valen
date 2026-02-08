@@ -1,3 +1,9 @@
+// # Enums Shouldn't Contain Complex Data (ESCCD)
+// We generally don't like enums that contain complex data as direct fields. We prefer the enum
+// variant to contain a struct with the fields. This is so that data can be in a NodeRefP entry,
+// so it's easier for tests to look directly for them. It also makes it so we can more easily
+// make a cast! macro to "cast" an enum to its inner type.
+
 use crate::interner::StrI;
 use crate::lexing::RangeL;
 use std::sync::Arc;
@@ -129,39 +135,94 @@ case class ImportP(
 */
 
 #[derive(Clone, Debug, PartialEq)]
+pub struct WeakableAttributeP {
+    pub range: RangeL,
+}
+/*
+case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct SealedAttributeP {
+    pub range: RangeL,
+}
+/*
+case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct MacroCallP {
+    pub range: RangeL,
+    pub inclusion: IMacroInclusionP,
+    pub name: NameP,
+}
+/*
+case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct AbstractAttributeP {
+    pub range: RangeL,
+}
+/*
+case class AbstractAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExternAttributeP {
+    pub range: RangeL,
+}
+/*
+case class ExternAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct BuiltinAttributeP {
+    pub range: RangeL,
+    pub generator_name: NameP,
+}
+/*
+case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExportAttributeP {
+    pub range: RangeL,
+}
+/*
+case class ExportAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct PureAttributeP {
+    pub range: RangeL,
+}
+/*
+case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdditiveAttributeP {
+    pub range: RangeL,
+}
+/*
+case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct LinearAttributeP {
+    pub range: RangeL,
+}
+/*
+case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+
+#[derive(Clone, Debug, PartialEq)]
 pub enum IAttributeP {
-    WeakableAttribute(RangeL),
-    /*
-    //sealed trait IAttributeP
-    //case class ExportP(range: RangeP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    SealedAttribute(RangeL),
-    /*
-    case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    MacroCall { range: RangeL, inclusion: IMacroInclusionP, name: NameP },
-    /*
-    case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    AbstractAttribute(RangeL),
-    ExternAttribute(RangeL),
-    BuiltinAttribute { range: RangeL, generator_name: NameP },
-    ExportAttribute(RangeL),
-    PureAttribute(RangeL),
-    AdditiveAttribute(RangeL),
-    LinearAttribute(RangeL),
+    WeakableAttribute(WeakableAttributeP),
+    SealedAttribute(SealedAttributeP),
+    MacroCall(MacroCallP),
+    AbstractAttribute(AbstractAttributeP),
+    ExternAttribute(ExternAttributeP),
+    BuiltinAttribute(BuiltinAttributeP),
+    ExportAttribute(ExportAttributeP),
+    PureAttribute(PureAttributeP),
+    AdditiveAttribute(AdditiveAttributeP),
+    LinearAttribute(LinearAttributeP),
 }
 /*
 sealed trait IAttributeP
-case class AbstractAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class ExternAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class ExportAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-//case class RuleAttributeP(rule: IRulexPR) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
 

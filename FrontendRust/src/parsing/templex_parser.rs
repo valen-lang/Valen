@@ -32,6 +32,7 @@ type ParseResult<T> = Result<T, ParseError>;
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 #[derive(Clone)]
 pub struct TemplexParser {
+    #[allow(dead_code)]
     interner: Arc<Interner>,
     keywords: Arc<Keywords>,
 }
@@ -89,14 +90,14 @@ impl TemplexParser {
         let mutability = match (immutable, maybe_template_args.as_ref().and_then(|v| v.get(0))) {
             (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
             (false, Some(templex)) => templex.clone(),
-            (true, None) => ITemplexPT::Mutability {
+            (true, None) => ITemplexPT::Mutability(MutabilityPT {
                 range: RangeL { begin: template_args_begin, end: template_args_end },
                 mutability: MutabilityP::Immutable,
-            },
-            (false, None) => ITemplexPT::Mutability {
+            }),
+            (false, None) => ITemplexPT::Mutability(MutabilityPT {
                 range: RangeL { begin: template_args_begin, end: template_args_end },
                 mutability: MutabilityP::Mutable,
-            },
+            }),
         };
 
         let variability = maybe_template_args
@@ -104,27 +105,27 @@ impl TemplexParser {
             .and_then(|v| v.get(1))
             .cloned()
             .unwrap_or_else(|| {
-                ITemplexPT::Variability {
+                ITemplexPT::Variability(VariabilityPT {
                     range: RangeL { begin: template_args_begin, end: template_args_end },
                     variability: VariabilityP::Final,
-                }
+                })
             });
 
         let element_type = self.parse_templex(iter)?;
 
         let result = match maybe_size_templex {
-            None => ITemplexPT::RuntimeSizedArray {
+            None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
                 range: RangeL { begin, end: iter.get_prev_end_pos() },
                 mutability: Box::new(mutability),
                 element: Box::new(element_type),
-            },
-            Some(size_templex) => ITemplexPT::StaticSizedArray {
+            }),
+            Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
                 range: RangeL { begin, end: iter.get_prev_end_pos() },
                 mutability: Box::new(mutability),
                 variability: Box::new(variability),
                 size: Box::new(size_templex),
                 element: Box::new(element_type),
-            },
+            }),
         };
 
         Ok(Some(result))
@@ -428,20 +429,20 @@ impl TemplexParser {
         let args_begin = iter.get_pos();
         let args = match self.parse_tuple(iter)? {
             None => return Err(ParseError::BadPrototypeParams(iter.get_pos())),
-            Some(ITemplexPT::Tuple { elements, .. }) => elements,
+            Some(ITemplexPT::Tuple(TuplePT { elements, .. })) => elements,
             Some(_) => return Err(ParseError::BadPrototypeParams(iter.get_pos())),
         };
         let args_end = iter.get_prev_end_pos();
 
         let return_type = self.parse_templex(iter)?;
 
-        let result = ITemplexPT::Func {
+        let result = ITemplexPT::Func(FuncPT {
             range: RangeL { begin, end: iter.get_prev_end_pos() },
             name,
             params_range: RangeL { begin: args_begin, end: args_end },
             parameters: args,
             return_type: Box::new(return_type),
-        };
+        });
 
         Ok(Some(result))
     }
@@ -539,7 +540,7 @@ impl TemplexParser {
                     elements.push(self.parse_templex(&mut iter)?);
                 }
                 
-                Ok(Some(ITemplexPT::Tuple { range, elements }))
+                Ok(Some(ITemplexPT::Tuple(TuplePT { range, elements })))
             }
             _ => Ok(None),
         }
@@ -608,12 +609,12 @@ impl TemplexParser {
         // Parse the inner templex
         let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
 
-        Ok(Some(ITemplexPT::Interpreted {
+        Ok(Some(ITemplexPT::Interpreted(InterpretedPT {
             range: RangeL { begin, end: iter.get_prev_end_pos() },
             maybe_ownership: maybe_ownership.map(Box::new),
             maybe_region: maybe_region.map(Box::new),
             inner: Box::new(inner),
-        }))
+        })))
     }
     /*
       def parseInterpreted(iter: ScrambleIterator): Result[Option[InterpretedPT], IParseError] = {
@@ -750,13 +751,13 @@ impl TemplexParser {
 
         // Try keywords first (lines 340-403)
         if let Some(range) = iter.try_skip_word(&self.keywords.underscore) {
-            return Ok(ITemplexPT::AnonymousRune(range));
+            return Ok(ITemplexPT::AnonymousRune(AnonymousRunePT { range }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.truue) {
-            return Ok(ITemplexPT::Bool { range, value: true });
+            return Ok(ITemplexPT::Bool(BoolPT { range, value: true }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.faalse) {
-            return Ok(ITemplexPT::Bool { range, value: false });
+            return Ok(ITemplexPT::Bool(BoolPT { range, value: false }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.own) {
             return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Own }));
@@ -771,22 +772,22 @@ impl TemplexParser {
             return Ok(ITemplexPT::Ownership(OwnershipPT { range, ownership: OwnershipP::Share }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.inl) {
-            return Ok(ITemplexPT::Location { range, location: LocationP::Inline });
+            return Ok(ITemplexPT::Location(LocationPT { range, location: LocationP::Inline }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.heap) {
-            return Ok(ITemplexPT::Location { range, location: LocationP::Yonder });
+            return Ok(ITemplexPT::Location(LocationPT { range, location: LocationP::Yonder }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.imm) {
-            return Ok(ITemplexPT::Mutability { range, mutability: MutabilityP::Immutable });
+            return Ok(ITemplexPT::Mutability(MutabilityPT { range, mutability: MutabilityP::Immutable }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.r#mut) {
-            return Ok(ITemplexPT::Mutability { range, mutability: MutabilityP::Mutable });
+            return Ok(ITemplexPT::Mutability(MutabilityPT { range, mutability: MutabilityP::Mutable }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.vary) {
-            return Ok(ITemplexPT::Variability { range, variability: VariabilityP::Varying });
+            return Ok(ITemplexPT::Variability(VariabilityPT { range, variability: VariabilityP::Varying }));
         }
         if let Some(range) = iter.try_skip_word(&self.keywords.fiinal) {
-            return Ok(ITemplexPT::Variability { range, variability: VariabilityP::Final });
+            return Ok(ITemplexPT::Variability(VariabilityPT { range, variability: VariabilityP::Final }));
         }
         // Duplicate checks for weak, own, share (lines 392-403 in Scala)
         if let Some(range) = iter.try_skip_word(&self.keywords.weak) {
@@ -822,7 +823,7 @@ impl TemplexParser {
                 iter.advance();
                 match parts.as_slice() {
                     [StringPart::Literal { range, s }] => {
-                        Ok(ITemplexPT::String { range: *range, str: s.clone() })
+                        Ok(ITemplexPT::String(StringPT { range: *range, str: s.clone() }))
                     }
                     _ => Err(ParseError::BadStringInTemplex(range.begin)),
                 }
@@ -831,7 +832,7 @@ impl TemplexParser {
                 let range = *range;
                 let value = *value;
                 iter.advance();
-                Ok(ITemplexPT::Int { range, value })
+                Ok(ITemplexPT::Int(IntPT { range, value }))
             }
             INodeLEEnum::ParsedDouble(ParsedDoubleLE { range, .. }) => {
                 let pos = range.begin;
@@ -845,9 +846,8 @@ impl TemplexParser {
                 let range = *range;
                 let str = str.clone();
                 iter.advance();
-                Ok(ITemplexPT::NameOrRune(NameP {
-                    range,
-                    str,
+                Ok(ITemplexPT::NameOrRune(NameOrRunePT {
+                    name: NameP { range, str },
                 }))
             }
             _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
@@ -971,11 +971,11 @@ impl TemplexParser {
 
         match self.parse_template_call_args(iter)? {
             Some(args) => {
-                return Ok(ITemplexPT::Call {
+                return Ok(ITemplexPT::Call(CallPT {
                     range: RangeL { begin, end: iter.get_prev_end_pos() },
                     template: Box::new(atom),
                     args,
-                });
+                }));
             }
             None => {}
         }

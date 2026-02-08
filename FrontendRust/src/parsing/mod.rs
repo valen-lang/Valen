@@ -11,6 +11,8 @@ pub mod parse_utils;
 pub mod formatter;
 pub mod string_parser;
 pub mod parse_error_humanizer;
+#[cfg(test)]
+pub mod generated_tests;
 
 pub use ast::*;
 pub use scramble_iterator::*;

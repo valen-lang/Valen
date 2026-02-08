@@ -28,6 +28,7 @@ import scala.collection.immutable.List
 // From PostParser.scala lines 922-965: ScoutCompilation class
 pub struct ScoutCompilation {
     parser_compilation: ParserCompilation,
+    #[allow(dead_code)]
     scoutput_cache: Option<()>, // FileCoordinateMap[ProgramS] not yet ported
 }
 

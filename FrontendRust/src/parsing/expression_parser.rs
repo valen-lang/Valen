@@ -2353,18 +2353,18 @@ impl ExpressionParser {
         let begin = tentative_iter.get_pos();
         
         let mutability = if tentative_iter.try_skip_symbol('#') {
-            ITemplexPT::Mutability {
+            ITemplexPT::Mutability(MutabilityPT {
                 range: RangeL {
                     begin,
                     end: tentative_iter.get_prev_end_pos(),
                 },
                 mutability: MutabilityP::Immutable,
-            }
+            })
         } else {
-            ITemplexPT::Mutability {
+            ITemplexPT::Mutability(MutabilityPT {
                 range: RangeL { begin, end: begin },
                 mutability: MutabilityP::Mutable,
-            }
+            })
         };
         
         // If there's no square, we're not making an array.

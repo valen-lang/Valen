@@ -169,7 +169,7 @@ fn exporting_int() {
         &program.denizens[0],
         IDenizenP::TopLevelExportAs(
             ExportAsP {
-                struct_: ITemplexPT::NameOrRune(NameP { str: ref s, .. }),
+                struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }),
                 exported_name: NameP { str: ref e, .. },
                 ..
             }
