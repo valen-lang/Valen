@@ -220,6 +220,7 @@ case class PackPE(range: RangeL, inners: Vector[IExpressionPE]) extends IExpress
 }
 */
 
+// Parens that we use for precedence
 #[derive(Clone, Debug, PartialEq)]
 pub struct SubExpressionPE {
     pub range: RangeL,

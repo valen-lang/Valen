@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing
 
 import dev.vale.lexing.{BadExpressionEnd, BadStartOfStatementError, ForgotSetKeyword}
@@ -29,3 +30,4 @@ class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
   }
 
 }
+*/
