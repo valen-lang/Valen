@@ -1,3 +1,5 @@
+// cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::statement_tests
+
 /*
 package dev.vale.parsing
 
