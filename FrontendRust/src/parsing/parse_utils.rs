@@ -1,8 +1,8 @@
-use crate::parsing::ScrambleIterator;
-use crate::lexing::ast::INodeLEEnum;
 use crate::lexing::ast::INodeLE;
+use crate::lexing::ast::INodeLEEnum;
 use crate::lexing::ast::SymbolLE;
 use crate::lexing::WordLE;
+use crate::parsing::ScrambleIterator;
 /*
 package dev.vale.parsing
 
@@ -19,33 +19,32 @@ pub fn try_skip_past_equals_while<F>(
   continue_while: F,
 ) -> Option<ScrambleIterator>
 where
-    F: Fn(&ScrambleIterator) -> bool,
+  F: Fn(&ScrambleIterator) -> bool,
 {
-    let mut scouting_iter = iter.clone();
-    while continue_while(&scouting_iter) {
-        match scouting_iter.peek3() {
-            (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
-                let surrounded_by_spaces =
-                    prev.range().end < range.begin && range.end < next.range().begin;
-                if surrounded_by_spaces {
-                    // We'll return this iterator for the things that come before the =
-                    let mut before_iter = iter.clone();
-                    before_iter.end = scouting_iter.index + 1;
-                    
-                    // Now modify iter to skip past it
-                    iter.skip_to(&scouting_iter);
-                    iter.advance();
-                    iter.advance();
-                    
-                    return Some(before_iter);
-                }
-            }
-            _ => {}
+  let mut scouting_iter = iter.clone();
+  while continue_while(&scouting_iter) {
+    match scouting_iter.peek3() {
+      (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
+        let surrounded_by_spaces = prev.range().end < range.begin && range.end < next.range().begin;
+        if surrounded_by_spaces {
+          // We'll return this iterator for the things that come before the =
+          let mut before_iter = iter.clone();
+          before_iter.end = scouting_iter.index + 1;
+
+          // Now modify iter to skip past it
+          iter.skip_to(&scouting_iter);
+          iter.advance();
+          iter.advance();
+
+          return Some(before_iter);
         }
-        scouting_iter.advance();
+      }
+      _ => {}
     }
-    
-    None
+    scouting_iter.advance();
+  }
+
+  None
 }
 
 /*
@@ -91,37 +90,37 @@ pub fn try_skip_past_keyword_while<F>(
   continue_while: F,
 ) -> Option<(WordLE, ScrambleIterator)>
 where
-    F: Fn(&ScrambleIterator) -> bool,
+  F: Fn(&ScrambleIterator) -> bool,
 {
-    // Mirrors ParseUtils.scala line 82
-    let mut scouting_iter = iter.clone();
-    
-    // Mirrors ParseUtils.scala line 83
-    while continue_while(&scouting_iter) {
-        // Mirrors ParseUtils.scala lines 84-98
-        match scouting_iter.peek() {
-            Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
-                // Mirrors ParseUtils.scala lines 86-88
-                // We'll return this iterator for the things that come before the keyword
-                let mut before_iter = iter.clone();
-                before_iter.end = scouting_iter.index;
-                
-                // Mirrors ParseUtils.scala lines 90-92
-                // Now modify self to skip past it.
-                iter.skip_to(&scouting_iter);
-                iter.advance();
-                
-                // Mirrors ParseUtils.scala line 94
-                return Some((w.clone(), before_iter));
-            }
-            _ => {}
-        }
-        // Mirrors ParseUtils.scala line 98
-        scouting_iter.advance();
+  // Mirrors ParseUtils.scala line 82
+  let mut scouting_iter = iter.clone();
+
+  // Mirrors ParseUtils.scala line 83
+  while continue_while(&scouting_iter) {
+    // Mirrors ParseUtils.scala lines 84-98
+    match scouting_iter.peek() {
+      Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
+        // Mirrors ParseUtils.scala lines 86-88
+        // We'll return this iterator for the things that come before the keyword
+        let mut before_iter = iter.clone();
+        before_iter.end = scouting_iter.index;
+
+        // Mirrors ParseUtils.scala lines 90-92
+        // Now modify self to skip past it.
+        iter.skip_to(&scouting_iter);
+        iter.advance();
+
+        // Mirrors ParseUtils.scala line 94
+        return Some((w.clone(), before_iter));
+      }
+      _ => {}
     }
-    
-    // Mirrors ParseUtils.scala line 101
-    None
+    // Mirrors ParseUtils.scala line 98
+    scouting_iter.advance();
+  }
+
+  // Mirrors ParseUtils.scala line 101
+  None
 }
 /*
   // This method modifies the current iterator to skip it past the next = symbol
@@ -159,7 +158,6 @@ where
     return None
   }
 */
-
 
 /*
   // This method modifies the current iterator to skip it past the next = symbol

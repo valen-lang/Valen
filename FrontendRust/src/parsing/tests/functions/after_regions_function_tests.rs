@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing.functions
 
 import dev.vale.lexing.{BadFunctionBodyError, LightFunctionMustHaveParamTypes}
@@ -18,3 +19,4 @@ class AfterRegionsFunctionTests extends FunSuite with Collector with TestParseUt
   }
 
 }
+*/

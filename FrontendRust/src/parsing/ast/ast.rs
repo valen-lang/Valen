@@ -1,17 +1,11 @@
-// # Enums Shouldn't Contain Complex Data (ESCCD)
-// We generally don't like enums that contain complex data as direct fields. We prefer the enum
-// variant to contain a struct with the fields. This is so that data can be in a NodeRefP entry,
-// so it's easier for tests to look directly for them. It also makes it so we can more easily
-// make a cast! macro to "cast" an enum to its inner type.
-
+use super::expressions::BlockPE;
+use super::pattern::ParameterP;
+use super::rules::{IRulexPR, ITypePR};
+use super::templex::{ITemplexPT, RegionRunePT};
 use crate::interner::StrI;
 use crate::lexing::RangeL;
+use crate::utils::code_hierarchy::FileCoordinate;
 use std::sync::Arc;
-use crate::utils::code_hierarchy::{FileCoordinate};
-use super::templex::{ITemplexPT, RegionRunePT};
-use super::expressions::BlockPE;
-use super::pattern::{ParameterP};
-use super::rules::{IRulexPR, ITypePR};
 /*
 package dev.vale.parsing.ast
 
@@ -23,7 +17,7 @@ import dev.vale.{FileCoordinate, StrI, vassert, vcurious, vpass}
 /// because it also contains the range it was found.
 #[derive(Clone, Debug, PartialEq)]
 pub struct UnitP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 // Something that exists in the source code. An Option[UnitP] is better than a boolean
@@ -34,8 +28,8 @@ case class UnitP(range: RangeL) { override def equals(obj: Any): Boolean = vcuri
 /// Name in source code
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameP {
-    pub range: RangeL,
-    pub str: Arc<StrI>,
+  pub range: RangeL,
+  pub str: Arc<StrI>,
 }
 /*
 case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -44,9 +38,9 @@ case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Bool
 /// Parsed file
 #[derive(Clone, Debug, PartialEq)]
 pub struct FileP {
-    pub file_coord: Arc<FileCoordinate>,
-    pub comments_ranges: Vec<RangeL>,
-    pub denizens: Vec<IDenizenP>,
+  pub file_coord: Arc<FileCoordinate>,
+  pub comments_ranges: Vec<RangeL>,
+  pub denizens: Vec<IDenizenP>,
 }
 /*
 case class FileP(
@@ -67,12 +61,12 @@ case class FileP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IDenizenP {
-    TopLevelFunction(FunctionP),
-    TopLevelStruct(StructP),
-    TopLevelInterface(InterfaceP),
-    TopLevelImpl(ImplP),
-    TopLevelExportAs(ExportAsP),
-    TopLevelImport(ImportP),
+  TopLevelFunction(FunctionP),
+  TopLevelStruct(StructP),
+  TopLevelInterface(InterfaceP),
+  TopLevelImpl(ImplP),
+  TopLevelExportAs(ExportAsP),
+  TopLevelImport(ImportP),
 }
 /*
 sealed trait IDenizenP
@@ -86,13 +80,13 @@ case class TopLevelImportP(imporrt: ImportP) extends IDenizenP { override def eq
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ImplP {
-    pub range: RangeL,
-    pub generic_params: Option<GenericParametersP>,
-    pub template_rules: Option<TemplateRulesP>,
-    // Option because we can say `impl MyInterface;` inside a struct.
-    pub struct_: Option<ITemplexPT>,
-    pub interface: ITemplexPT,
-    pub attributes: Vec<IAttributeP>,
+  pub range: RangeL,
+  pub generic_params: Option<GenericParametersP>,
+  pub template_rules: Option<TemplateRulesP>,
+  // Option because we can say `impl MyInterface;` inside a struct.
+  pub struct_: Option<ITemplexPT>,
+  pub interface: ITemplexPT,
+  pub attributes: Vec<IAttributeP>,
 }
 /*
 case class ImplP(
@@ -108,9 +102,9 @@ case class ImplP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExportAsP {
-    pub range: RangeL,
-    pub struct_: ITemplexPT,
-    pub exported_name: NameP,
+  pub range: RangeL,
+  pub struct_: ITemplexPT,
+  pub exported_name: NameP,
 }
 /*
 case class ExportAsP(
@@ -121,10 +115,10 @@ case class ExportAsP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ImportP {
-    pub range: RangeL,
-    pub module_name: NameP,
-    pub package_steps: Vec<NameP>,
-    pub importee_name: NameP,
+  pub range: RangeL,
+  pub module_name: NameP,
+  pub package_steps: Vec<NameP>,
+  pub importee_name: NameP,
 }
 /*
 case class ImportP(
@@ -136,73 +130,73 @@ case class ImportP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct WeakableAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct SealedAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct MacroCallP {
-    pub range: RangeL,
-    pub inclusion: IMacroInclusionP,
-    pub name: NameP,
+  pub range: RangeL,
+  pub inclusion: IMacroInclusionP,
+  pub name: NameP,
 }
 /*
 case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AbstractAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class AbstractAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExternAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class ExternAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuiltinAttributeP {
-    pub range: RangeL,
-    pub generator_name: NameP,
+  pub range: RangeL,
+  pub generator_name: NameP,
 }
 /*
 case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExportAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class ExportAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct PureAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdditiveAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinearAttributeP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -210,26 +204,25 @@ case class LinearAttributeP(range: RangeL) extends IAttributeP { override def eq
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IAttributeP {
-    WeakableAttribute(WeakableAttributeP),
-    SealedAttribute(SealedAttributeP),
-    MacroCall(MacroCallP),
-    AbstractAttribute(AbstractAttributeP),
-    ExternAttribute(ExternAttributeP),
-    BuiltinAttribute(BuiltinAttributeP),
-    ExportAttribute(ExportAttributeP),
-    PureAttribute(PureAttributeP),
-    AdditiveAttribute(AdditiveAttributeP),
-    LinearAttribute(LinearAttributeP),
+  WeakableAttribute(WeakableAttributeP),
+  SealedAttribute(SealedAttributeP),
+  MacroCall(MacroCallP),
+  AbstractAttribute(AbstractAttributeP),
+  ExternAttribute(ExternAttributeP),
+  BuiltinAttribute(BuiltinAttributeP),
+  ExportAttribute(ExportAttributeP),
+  PureAttribute(PureAttributeP),
+  AdditiveAttribute(AdditiveAttributeP),
+  LinearAttribute(LinearAttributeP),
 }
 /*
 sealed trait IAttributeP
 */
 
-
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum IMacroInclusionP {
-    CallMacro,
-    DontCallMacro,
+  CallMacro,
+  DontCallMacro,
 }
 /*
 sealed trait IMacroInclusionP
@@ -239,15 +232,15 @@ case object DontCallMacroP extends IMacroInclusionP
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IRuneAttributeP {
-    ImmutableRuneAttribute(RangeL),
-    MutableRuneAttribute(RangeL),
-    ReadOnlyRegionRuneAttribute(RangeL),
-    ReadWriteRegionRuneAttribute(RangeL),
-    ImmutableRegionRuneAttribute(RangeL),
-    AdditiveRegionRuneAttribute(RangeL),
-    PoolRuneAttribute(RangeL),
-    ArenaRuneAttribute(RangeL),
-    BumpRuneAttribute(RangeL),
+  ImmutableRuneAttribute(RangeL),
+  MutableRuneAttribute(RangeL),
+  ReadOnlyRegionRuneAttribute(RangeL),
+  ReadWriteRegionRuneAttribute(RangeL),
+  ImmutableRegionRuneAttribute(RangeL),
+  AdditiveRegionRuneAttribute(RangeL),
+  PoolRuneAttribute(RangeL),
+  ArenaRuneAttribute(RangeL),
+  BumpRuneAttribute(RangeL),
 }
 /*
 sealed trait IRuneAttributeP {
@@ -265,34 +258,33 @@ case class ArenaRuneAttributeP(range: RangeL) extends IRuneAttributeP { override
 case class BumpRuneAttributeP(range: RangeL) extends IRuneAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-
 impl IRuneAttributeP {
-    pub fn range(&self) -> RangeL {
-        match self {
-            IRuneAttributeP::ImmutableRuneAttribute(r) => *r,
-            IRuneAttributeP::MutableRuneAttribute(r) => *r,
-            IRuneAttributeP::ReadOnlyRegionRuneAttribute(r) => *r,
-            IRuneAttributeP::ReadWriteRegionRuneAttribute(r) => *r,
-            IRuneAttributeP::ImmutableRegionRuneAttribute(r) => *r,
-            IRuneAttributeP::AdditiveRegionRuneAttribute(r) => *r,
-            IRuneAttributeP::PoolRuneAttribute(r) => *r,
-            IRuneAttributeP::ArenaRuneAttribute(r) => *r,
-            IRuneAttributeP::BumpRuneAttribute(r) => *r,
-        }
+  pub fn range(&self) -> RangeL {
+    match self {
+      IRuneAttributeP::ImmutableRuneAttribute(r) => *r,
+      IRuneAttributeP::MutableRuneAttribute(r) => *r,
+      IRuneAttributeP::ReadOnlyRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::ReadWriteRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::ImmutableRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::AdditiveRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::PoolRuneAttribute(r) => *r,
+      IRuneAttributeP::ArenaRuneAttribute(r) => *r,
+      IRuneAttributeP::BumpRuneAttribute(r) => *r,
     }
+  }
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructP {
-    pub range: RangeL,
-    pub name: NameP,
-    pub attributes: Vec<IAttributeP>,
-    pub mutability: Option<ITemplexPT>,
-    pub identifying_runes: Option<GenericParametersP>,
-    pub template_rules: Option<TemplateRulesP>,
-    pub maybe_default_region_rune: Option<RegionRunePT>,
-    pub body_range: RangeL,
-    pub members: StructMembersP,
+  pub range: RangeL,
+  pub name: NameP,
+  pub attributes: Vec<IAttributeP>,
+  pub mutability: Option<ITemplexPT>,
+  pub identifying_runes: Option<GenericParametersP>,
+  pub template_rules: Option<TemplateRulesP>,
+  pub maybe_default_region_rune: Option<RegionRunePT>,
+  pub body_range: RangeL,
+  pub members: StructMembersP,
 }
 /*
 case class StructP(
@@ -309,8 +301,8 @@ case class StructP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StructMembersP {
-    pub range: RangeL,
-    pub contents: Vec<IStructContent>,
+  pub range: RangeL,
+  pub contents: Vec<IStructContent>,
 }
 /*
 case class StructMembersP(
@@ -320,22 +312,22 @@ case class StructMembersP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IStructContent {
-    StructMethod(FunctionP),
-    NormalStructMember(NormalStructMemberP),
-    VariadicStructMember(VariadicStructMemberP),
+  StructMethod(FunctionP),
+  NormalStructMember(NormalStructMemberP),
+  VariadicStructMember(VariadicStructMemberP),
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct NormalStructMemberP {
-    pub range: RangeL,
-    pub name: NameP,
-    pub variability: VariabilityP,
-    pub tyype: ITemplexPT,
+  pub range: RangeL,
+  pub name: NameP,
+  pub variability: VariabilityP,
+  pub tyype: ITemplexPT,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberP {
-    pub range: RangeL,
-    pub variability: VariabilityP,
-    pub tyype: ITemplexPT,
+  pub range: RangeL,
+  pub variability: VariabilityP,
+  pub tyype: ITemplexPT,
 }
 /*
 sealed trait IStructContent
@@ -355,15 +347,15 @@ case class VariadicStructMemberP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InterfaceP {
-    pub range: RangeL,
-    pub name: NameP,
-    pub attributes: Vec<IAttributeP>,
-    pub mutability: Option<ITemplexPT>,
-    pub maybe_identifying_runes: Option<GenericParametersP>,
-    pub template_rules: Option<TemplateRulesP>,
-    pub maybe_default_region_rune: Option<RegionRunePT>,
-    pub body_range: RangeL,
-    pub members: Vec<FunctionP>,
+  pub range: RangeL,
+  pub name: NameP,
+  pub attributes: Vec<IAttributeP>,
+  pub mutability: Option<ITemplexPT>,
+  pub maybe_identifying_runes: Option<GenericParametersP>,
+  pub template_rules: Option<TemplateRulesP>,
+  pub maybe_default_region_rune: Option<RegionRunePT>,
+  pub body_range: RangeL,
+  pub members: Vec<FunctionP>,
 }
 /*
 case class InterfaceP(
@@ -380,9 +372,9 @@ case class InterfaceP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionP {
-    pub range: RangeL,
-    pub header: FunctionHeaderP,
-    pub body: Option<Box<BlockPE>>,
+  pub range: RangeL,
+  pub header: FunctionHeaderP,
+  pub body: Option<Box<BlockPE>>,
 }
 /*
 case class FunctionP(
@@ -393,14 +385,14 @@ case class FunctionP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionHeaderP {
-    pub range: RangeL,
-    pub name: Option<NameP>,
-    pub attributes: Vec<IAttributeP>,
-    // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
-    pub generic_parameters: Option<GenericParametersP>,
-    pub template_rules: Option<TemplateRulesP>,
-    pub params: Option<ParamsP>,
-    pub ret: FunctionReturnP,
+  pub range: RangeL,
+  pub name: Option<NameP>,
+  pub attributes: Vec<IAttributeP>,
+  // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
+  pub generic_parameters: Option<GenericParametersP>,
+  pub template_rules: Option<TemplateRulesP>,
+  pub params: Option<ParamsP>,
+  pub ret: FunctionReturnP,
 }
 /*
 case class FunctionHeaderP(
@@ -420,8 +412,8 @@ case class FunctionHeaderP(
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionReturnP {
-    pub range: RangeL,
-    pub ret_type: Option<ITemplexPT>,
+  pub range: RangeL,
+  pub ret_type: Option<ITemplexPT>,
 }
 /*
 case class FunctionReturnP(
@@ -432,12 +424,12 @@ case class FunctionReturnP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenericParameterP {
-    pub range: RangeL,
-    pub name: NameP,
-    pub maybe_type: Option<GenericParameterTypeP>,
-    pub coord_region: Option<RegionRunePT>,
-    pub attributes: Vec<IRuneAttributeP>,
-    pub maybe_default: Option<ITemplexPT>,
+  pub range: RangeL,
+  pub name: NameP,
+  pub maybe_type: Option<GenericParameterTypeP>,
+  pub coord_region: Option<RegionRunePT>,
+  pub attributes: Vec<IRuneAttributeP>,
+  pub maybe_default: Option<ITemplexPT>,
 }
 /*
 case class GenericParameterP(
@@ -452,8 +444,8 @@ case class GenericParameterP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenericParameterTypeP {
-    pub range: RangeL,
-    pub tyype: ITypePR,
+  pub range: RangeL,
+  pub tyype: ITypePR,
 }
 /*
 case class GenericParameterTypeP(
@@ -464,8 +456,8 @@ case class GenericParameterTypeP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenericParametersP {
-    pub range: RangeL,
-    pub params: Vec<GenericParameterP>,
+  pub range: RangeL,
+  pub params: Vec<GenericParameterP>,
 }
 /*
 case class GenericParametersP(range: RangeL, params: Vector[GenericParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -473,8 +465,8 @@ case class GenericParametersP(range: RangeL, params: Vector[GenericParameterP]) 
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct TemplateRulesP {
-    pub range: RangeL,
-    pub rules: Vec<IRulexPR>,
+  pub range: RangeL,
+  pub rules: Vec<IRulexPR>,
 }
 /*
 case class TemplateRulesP(range: RangeL, rules: Vector[IRulexPR]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -482,8 +474,8 @@ case class TemplateRulesP(range: RangeL, rules: Vector[IRulexPR]) { override def
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParamsP {
-    pub range: RangeL,
-    pub params: Vec<ParameterP>,
+  pub range: RangeL,
+  pub params: Vec<ParameterP>,
 }
 /*
 case class ParamsP(range: RangeL, params: Vector[ParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -491,8 +483,8 @@ case class ParamsP(range: RangeL, params: Vector[ParameterP]) { override def equ
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum MutabilityP {
-    Mutable,
-    Immutable,
+  Mutable,
+  Immutable,
 }
 /*
 sealed trait MutabilityP
@@ -502,8 +494,8 @@ case object ImmutableP extends MutabilityP { override def toString: String = "im
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum VariabilityP {
-    Final,
-    Varying,
+  Final,
+  Varying,
 }
 /*
 sealed trait VariabilityP
@@ -513,11 +505,11 @@ case object VaryingP extends VariabilityP { override def toString: String = "var
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum OwnershipP {
-    Own,
-    Borrow,
-    Live,
-    Weak,
-    Share,
+  Own,
+  Borrow,
+  Live,
+  Weak,
+  Share,
 }
 /*
 sealed trait OwnershipP
@@ -528,22 +520,21 @@ case object WeakP extends OwnershipP { override def toString: String = "weak" }
 case object ShareP extends OwnershipP { override def toString: String = "share" }
 */
 
-
 /// This represents how to load something.
 /// If something's a Share, then nothing will happen,
 /// so this only applies to mutables.
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LoadAsP {
-    // This means we want to move it. Thisll become a OwnP or ShareP.
-    Move,
-    // This means we want to use it, and want to make sure that it doesn't drop.
-    // If permission is None, then we're probably in a dot. For example, x.launch()
-    // should be mapped to launch(&!x) if x is mutable, or launch(&x) if it's readonly.
-    LoadAsBorrow,
-    // This means we want to get a weak reference to it. Thisll become a WeakP.
-    LoadAsWeak,
-    // This represents unspecified. It basically means, use whatever ownership already there.
-    Use,
+  // This means we want to move it. Thisll become a OwnP or ShareP.
+  Move,
+  // This means we want to use it, and want to make sure that it doesn't drop.
+  // If permission is None, then we're probably in a dot. For example, x.launch()
+  // should be mapped to launch(&!x) if x is mutable, or launch(&x) if it's readonly.
+  LoadAsBorrow,
+  // This means we want to get a weak reference to it. Thisll become a WeakP.
+  LoadAsWeak,
+  // This represents unspecified. It basically means, use whatever ownership already there.
+  Use,
 }
 /*
 // This represents how to load something.
@@ -564,8 +555,8 @@ case object UseP extends LoadAsP
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum LocationP {
-    Inline,
-    Yonder,
+  Inline,
+  Yonder,
 }
 /*
 sealed trait LocationP

@@ -1,6 +1,6 @@
-use crate::lexing::RangeL;
 use super::ast::NameP;
 use super::templex::ITemplexPT;
+use crate::lexing::RangeL;
 /*
 package dev.vale.parsing.ast
 
@@ -10,7 +10,7 @@ import dev.vale._
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct AbstractP {
-    pub range: RangeL,
+  pub range: RangeL,
 }
 /*
 //sealed trait IVirtualityP
@@ -20,11 +20,11 @@ case class AbstractP(range: RangeL)// extends IVirtualityP
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct ParameterP {
-    pub range: RangeL,
-    pub virtuality: Option<AbstractP>,
-    pub maybe_pre_checked: Option<RangeL>,
-    pub self_borrow: Option<RangeL>,
-    pub pattern: Option<PatternPP>,
+  pub range: RangeL,
+  pub virtuality: Option<AbstractP>,
+  pub maybe_pre_checked: Option<RangeL>,
+  pub self_borrow: Option<RangeL>,
+  pub pattern: Option<PatternPP>,
 }
 /*
 case class ParameterP(
@@ -40,8 +40,8 @@ case class ParameterP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DestinationLocalP {
-    pub decl: INameDeclarationP,
-    pub mutate: Option<RangeL>,
+  pub decl: INameDeclarationP,
+  pub mutate: Option<RangeL>,
 }
 /*
 case class DestinationLocalP(decl: INameDeclarationP, mutate: Option[RangeL])
@@ -49,10 +49,10 @@ case class DestinationLocalP(decl: INameDeclarationP, mutate: Option[RangeL])
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct PatternPP {
-    pub range: RangeL,
-    pub destination: Option<DestinationLocalP>,
-    pub templex: Option<ITemplexPT>,
-    pub destructure: Option<DestructureP>,
+  pub range: RangeL,
+  pub destination: Option<DestinationLocalP>,
+  pub templex: Option<ITemplexPT>,
+  pub destructure: Option<DestructureP>,
 }
 /*
 case class PatternPP(
@@ -74,8 +74,8 @@ case class PatternPP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct DestructureP {
-    pub range: RangeL,
-    pub patterns: Vec<PatternPP>,
+  pub range: RangeL,
+  pub patterns: Vec<PatternPP>,
 }
 /*
 case class DestructureP(
@@ -88,24 +88,24 @@ case class DestructureP(
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum INameDeclarationP {
-    LocalNameDeclaration(NameP),
-    IgnoredLocalNameDeclaration(RangeL),
-    IterableNameDeclaration(RangeL),
-    IteratorNameDeclaration(RangeL),
-    IterationOptionNameDeclaration(RangeL),
-    ConstructingMemberNameDeclaration(NameP),
+  LocalNameDeclaration(NameP),
+  IgnoredLocalNameDeclaration(RangeL),
+  IterableNameDeclaration(RangeL),
+  IteratorNameDeclaration(RangeL),
+  IterationOptionNameDeclaration(RangeL),
+  ConstructingMemberNameDeclaration(NameP),
 }
 impl INameDeclarationP {
-    pub fn range(&self) -> RangeL {
-        match self {
-            INameDeclarationP::LocalNameDeclaration(n) => n.range,
-            INameDeclarationP::IgnoredLocalNameDeclaration(r) => *r,
-            INameDeclarationP::IterableNameDeclaration(r) => *r,
-            INameDeclarationP::IteratorNameDeclaration(r) => *r,
-            INameDeclarationP::IterationOptionNameDeclaration(r) => *r,
-            INameDeclarationP::ConstructingMemberNameDeclaration(n) => n.range,
-        }
+  pub fn range(&self) -> RangeL {
+    match self {
+      INameDeclarationP::LocalNameDeclaration(n) => n.range,
+      INameDeclarationP::IgnoredLocalNameDeclaration(r) => *r,
+      INameDeclarationP::IterableNameDeclaration(r) => *r,
+      INameDeclarationP::IteratorNameDeclaration(r) => *r,
+      INameDeclarationP::IterationOptionNameDeclaration(r) => *r,
+      INameDeclarationP::ConstructingMemberNameDeclaration(n) => n.range,
     }
+  }
 }
 /*
 sealed trait INameDeclarationP {
@@ -123,7 +123,6 @@ case class IteratorNameDeclarationP(range: RangeL) extends INameDeclarationP { o
 case class IterationOptionNameDeclarationP(range: RangeL) extends INameDeclarationP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class ConstructingMemberNameDeclarationP(name: NameP) extends INameDeclarationP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious(); override def range: RangeL = name.range }
 */
-
 
 /*
 object Patterns {

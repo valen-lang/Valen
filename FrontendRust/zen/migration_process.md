@@ -49,7 +49,7 @@ Stop and ask the human when you're about to implement Clone for a potentially la
 
 Default to making Scala sealed traits into Rust enums, but it's also fine if you instead want to make them into Rust traits.
 
-If you make them into Rust enums, be sure to adhere to ESCCD.
+If you make them into Rust enums, and the enums have fields in them, adhere to ESCCD.
 
 
 # P10: Port structure exactly

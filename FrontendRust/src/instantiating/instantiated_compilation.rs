@@ -3,95 +3,95 @@
 
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::utils::code_hierarchy::{PackageCoordinate, IPackageResolver};
-use crate::typing::TypingPassCompilation;
-use crate::simplifying::HammerCompilationOptions;
-use crate::lexing::errors::FailedParse;
-use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::parsing::ast::FileP;
 use crate::lexing::ast::RangeL;
+use crate::lexing::errors::FailedParse;
+use crate::parsing::ast::FileP;
+use crate::simplifying::HammerCompilationOptions;
+use crate::typing::TypingPassCompilation;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 
 // From InstantiatedCompilation.scala lines 12-17: InstantiatorCompilationOptions
 pub struct InstantiatorCompilationOptions {
-    pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
+  pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
 pub struct InstantiatedCompilation {
-    typing_pass_compilation: TypingPassCompilation,
-    #[allow(dead_code)]
-    monouts_cache: Option<()>, // HinputsI not yet ported
+  typing_pass_compilation: TypingPassCompilation,
+  #[allow(dead_code)]
+  monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
 impl InstantiatedCompilation {
-    // From InstantiatedCompilation.scala lines 19-34
-    pub fn new(
-        interner: Arc<Interner>,
-        keywords: Arc<Keywords>,
-        packages_to_build: Vec<Arc<PackageCoordinate>>,
-        package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
-        options: HammerCompilationOptions,
-    ) -> Self {
-        let typing_options = InstantiatorCompilationOptions {
-            debug_out: options.debug_out.clone(),
-        };
-        
-        let typing_pass_compilation = TypingPassCompilation::new(
-            interner,
-            keywords,
-            packages_to_build,
-            package_to_contents_resolver,
-            options.global_options,
-            typing_options,
-        );
-        
-        InstantiatedCompilation {
-            typing_pass_compilation,
-            monouts_cache: None,
-        }
-    }
+  // From InstantiatedCompilation.scala lines 19-34
+  pub fn new(
+    interner: Arc<Interner>,
+    keywords: Arc<Keywords>,
+    packages_to_build: Vec<Arc<PackageCoordinate>>,
+    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    options: HammerCompilationOptions,
+  ) -> Self {
+    let typing_options = InstantiatorCompilationOptions {
+      debug_out: options.debug_out.clone(),
+    };
 
-    // From InstantiatedCompilation.scala line 36: getCodeMap
-    pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
-        self.typing_pass_compilation.get_code_map()
-    }
+    let typing_pass_compilation = TypingPassCompilation::new(
+      interner,
+      keywords,
+      packages_to_build,
+      package_to_contents_resolver,
+      options.global_options,
+      typing_options,
+    );
 
-    // From InstantiatedCompilation.scala line 37: getParseds
-    pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
-        self.typing_pass_compilation.get_parseds()
+    InstantiatedCompilation {
+      typing_pass_compilation,
+      monouts_cache: None,
     }
+  }
 
-    // From InstantiatedCompilation.scala line 38: getVpstMap
-    pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
-        self.typing_pass_compilation.get_vpst_map()
-    }
+  // From InstantiatedCompilation.scala line 36: getCodeMap
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+    self.typing_pass_compilation.get_code_map()
+  }
 
-    // From InstantiatedCompilation.scala line 39: getScoutput
-    pub fn get_scoutput(&mut self) -> Result<(), String> {
-        panic!("InstantiatedCompilation.get_scoutput not yet implemented - see InstantiatedCompilation.scala line 39")
-    }
+  // From InstantiatedCompilation.scala line 37: getParseds
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+    self.typing_pass_compilation.get_parseds()
+  }
 
-    // From InstantiatedCompilation.scala line 40: getAstrouts
-    pub fn get_astrouts(&mut self) -> Result<(), String> {
-        panic!("InstantiatedCompilation.get_astrouts not yet implemented - see InstantiatedCompilation.scala line 40")
-    }
+  // From InstantiatedCompilation.scala line 38: getVpstMap
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+    self.typing_pass_compilation.get_vpst_map()
+  }
 
-    // From InstantiatedCompilation.scala line 41: getCompilerOutputs
-    pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
-        panic!("InstantiatedCompilation.get_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 41")
-    }
+  // From InstantiatedCompilation.scala line 39: getScoutput
+  pub fn get_scoutput(&mut self) -> Result<(), String> {
+    panic!("InstantiatedCompilation.get_scoutput not yet implemented - see InstantiatedCompilation.scala line 39")
+  }
 
-    // From InstantiatedCompilation.scala line 42: expectCompilerOutputs
-    pub fn expect_compiler_outputs(&mut self) -> () {
-        panic!("InstantiatedCompilation.expect_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 42")
-    }
+  // From InstantiatedCompilation.scala line 40: getAstrouts
+  pub fn get_astrouts(&mut self) -> Result<(), String> {
+    panic!("InstantiatedCompilation.get_astrouts not yet implemented - see InstantiatedCompilation.scala line 40")
+  }
 
-    // From InstantiatedCompilation.scala lines 44-55: getMonouts
-    pub fn get_monouts(&mut self) -> () {
-        panic!("InstantiatedCompilation.get_monouts not yet implemented - see InstantiatedCompilation.scala lines 44-55")
-    }
+  // From InstantiatedCompilation.scala line 41: getCompilerOutputs
+  pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
+    panic!("InstantiatedCompilation.get_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 41")
+  }
+
+  // From InstantiatedCompilation.scala line 42: expectCompilerOutputs
+  pub fn expect_compiler_outputs(&mut self) -> () {
+    panic!("InstantiatedCompilation.expect_compiler_outputs not yet implemented - see InstantiatedCompilation.scala line 42")
+  }
+
+  // From InstantiatedCompilation.scala lines 44-55: getMonouts
+  pub fn get_monouts(&mut self) -> () {
+    panic!("InstantiatedCompilation.get_monouts not yet implemented - see InstantiatedCompilation.scala lines 44-55")
+  }
 }
 
 /*

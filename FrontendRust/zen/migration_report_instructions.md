@@ -8,20 +8,20 @@ Your goal is to find all logic differences between the Rust code and the Scala c
 
 Read the *entire* file, not just pieces of it. Even if it's large, read the entire file.
 
-Please assemble me a report, that lists all the functions/structs in the file, with a list of checks performed plus possible differences between them.
+Please assemble me a report, that lists all the checks performed for a specific function/struct in the file.
 
 For example, if I gave you these four checks:
 
 ```
 Check for:
 
-1. There shouldn't be places where Rust uses an iterator where Scala used an index.
+M1: There shouldn't be places where Rust uses an iterator where Scala used an index.
 
-2. There shouldn't be any "placeholder" comments or "ignore for now" comments. There should instead be panic!("unimplemented") calls.
+M2: There shouldn't be any "placeholder" comments or "ignore for now" comments. There should instead be panic!("unimplemented") calls.
 
-3. Seemingly dead code in Scala should still have corresponding Rust, which either has similar dead Rust code, or at least a `panic!("seemingly dead code ...` in the Rust version instead.
+DCSSHCR: Seemingly dead code in Scala should still have corresponding Rust, which either has similar dead Rust code, or at least a `panic!("seemingly dead code ...` in the Rust version instead.
 
-4. There shouldn't be any Rust code that doesn't have a /* ... */ underneath it with Scala code.
+NNRC: There shouldn't be any Rust code that doesn't have a /* ... */ underneath it with Scala code.
 ```
 
 If those were the four checks, and this was the code:
@@ -84,22 +84,20 @@ def lexAngled(iter: LexingIterator): Result[Option[AngledLE], IParseError] = {
 */
 ```
 
-If those were the four checks, and the above was the code, then your report for each function would be like this:
+If those were the four checks, and the above was the code, then your report for the function would be like this:
 
 ```
 lex_angled:
-1 ok
-2 difference: There's a placeholder instead of a report_advance call!
-3 ok
-4 ok
+M1 ok
+M2 difference: There's a placeholder instead of a report_advance call!
+DCSSHCR ok
+NNRC ok
 Other Differences:
 - Rust isn't checking for the ending '>'
 - Rust has an extra iter.consume_comments_and_whitespace() call
 ```
 
-Of course, there are more checks in reality, so your report will be longer.
-
-Your file should be a bunch of these, one after the other, one for each function/struct.
+Of course, there are more than four checks in reality, so your report will be longer.
 
 Notes on format:
 

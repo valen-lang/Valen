@@ -1,6 +1,6 @@
-use crate::lexing::RangeL;
 use super::ast::NameP;
 use super::templex::ITemplexPT;
+use crate::lexing::RangeL;
 /*
 package dev.vale.parsing.ast
 
@@ -10,60 +10,108 @@ import dev.vale.vcurious
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IRulexPR {
-    Equals { range: RangeL, left: Box<IRulexPR>, right: Box<IRulexPR> },
-    /*
-    case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    Or { range: RangeL, possibilities: Vec<IRulexPR> },
-    /*
-    case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    Dot { range: RangeL, container: Box<IRulexPR>, member_name: NameP },
-    /*
-    case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    Components { range: RangeL, container: ITypePR, components: Vec<IRulexPR> },
-    /*
-    case class ComponentsPR(
-      range: RangeL,
-      container: ITypePR,
-      components: Vector[IRulexPR]
-    ) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-     */
-    Typed { range: RangeL, rune: Option<NameP>, tyype: ITypePR },
-    /*
-    case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    Templex(ITemplexPT),
-    /*
-    case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
-      def range = templex.range
-    }
-    */
-    BuiltinCall { range: RangeL, name: NameP, args: Vec<IRulexPR> },
-    /*
-    // This is for built-in parser functions, such as exists() or isBaseOf() etc.
-    case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
-    Pack { range: RangeL, elements: Vec<IRulexPR> },
-    /*
-    //case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-    */
+  Equals(EqualsPR),
+  /*
+  case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
+  Or(OrPR),
+  /*
+  case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
+  Dot(DotPR),
+  /*
+  case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
+  Components(ComponentsPR),
+  /*
+  case class ComponentsPR(
+    range: RangeL,
+    container: ITypePR,
+    components: Vector[IRulexPR]
+  ) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+   */
+  Typed(TypedPR),
+  /*
+  case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
+  Templex(ITemplexPT),
+  /*
+  case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
+    def range = templex.range
+  }
+  */
+  BuiltinCall(BuiltinCallPR),
+  /*
+  // This is for built-in parser functions, such as exists() or isBaseOf() etc.
+  case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
+  Pack(PackPR),
+  /*
+  //case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  */
 }
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EqualsPR {
+  pub range: RangeL,
+  pub left: Box<IRulexPR>,
+  pub right: Box<IRulexPR>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct OrPR {
+  pub range: RangeL,
+  pub possibilities: Vec<IRulexPR>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct DotPR {
+  pub range: RangeL,
+  pub container: Box<IRulexPR>,
+  pub member_name: NameP,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ComponentsPR {
+  pub range: RangeL,
+  pub container: ITypePR,
+  pub components: Vec<IRulexPR>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct TypedPR {
+  pub range: RangeL,
+  pub rune: Option<NameP>,
+  pub tyype: ITypePR,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BuiltinCallPR {
+  pub range: RangeL,
+  pub name: NameP,
+  pub args: Vec<IRulexPR>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PackPR {
+  pub range: RangeL,
+  pub elements: Vec<IRulexPR>,
+}
+
 impl IRulexPR {
-    pub fn range(&self) -> RangeL {
-        match self {
-            IRulexPR::Equals { range, .. } => *range,
-            IRulexPR::Or { range, .. } => *range,
-            IRulexPR::Dot { range, .. } => *range,
-            IRulexPR::Components { range, .. } => *range,
-            IRulexPR::Typed { range, .. } => *range,
-            IRulexPR::Templex(t) => t.range(),
-            IRulexPR::BuiltinCall { range, .. } => *range,
-            IRulexPR::Pack { range, .. } => *range,
-        }
+  pub fn range(&self) -> RangeL {
+    match self {
+      IRulexPR::Equals(inner) => inner.range,
+      IRulexPR::Or(inner) => inner.range,
+      IRulexPR::Dot(inner) => inner.range,
+      IRulexPR::Components(inner) => inner.range,
+      IRulexPR::Typed(inner) => inner.range,
+      IRulexPR::Templex(t) => t.range(),
+      IRulexPR::BuiltinCall(inner) => inner.range,
+      IRulexPR::Pack(inner) => inner.range,
     }
+  }
 }
 /*
 sealed trait IRulexPR {
@@ -73,18 +121,18 @@ sealed trait IRulexPR {
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ITypePR {
-    IntType,
-    BoolType,
-    OwnershipType,
-    MutabilityType,
-    VariabilityType,
-    LocationType,
-    CoordType,
-    CoordListType,
-    PrototypeType,
-    KindType,
-    RegionType,
-    CitizenTemplateType,
+  IntType,
+  BoolType,
+  OwnershipType,
+  MutabilityType,
+  VariabilityType,
+  LocationType,
+  CoordType,
+  CoordListType,
+  PrototypeType,
+  KindType,
+  RegionType,
+  CitizenTemplateType,
 }
 /*
 sealed trait ITypePR

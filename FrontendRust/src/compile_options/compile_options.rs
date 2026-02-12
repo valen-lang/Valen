@@ -1,10 +1,10 @@
 #[derive(Clone)]
 pub struct GlobalOptions {
-    pub sanity_check: bool,
-    pub use_overload_index: bool,
-    pub use_optimized_solver: bool,
-    pub verbose_errors: bool,
-    pub debug_output: bool,
+  pub sanity_check: bool,
+  pub use_overload_index: bool,
+  pub use_optimized_solver: bool,
+  pub verbose_errors: bool,
+  pub debug_output: bool,
 }
 /*
 package dev.vale.options

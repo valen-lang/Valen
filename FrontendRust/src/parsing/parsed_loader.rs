@@ -1,6 +1,21 @@
 // From Frontend/ParsingPass/src/dev/vale/parsing/ParsedLoader.scala
 // Loads .vpst files from JSON
+//
+// MIGRATION GUIDELINES FOR THIS FILE
+// 1) Keep Rust structure/order close to the Scala reference below.
+// 2) Use serde_json types directly (`Value`, `Map<String, Value>`), not lift-json names.
+// 3) Prefer borrowed JSON inputs (`&Value`, `&Map<String, Value>`) to avoid cloning.
+// 4) Match "__type" tags exactly and map each case to the corresponding Rust AST variant.
+// 5) Keep helper error messages explicit so bad VPST shapes fail at the exact field/type.
+// 6) Keep new Rust code above the equivalent Scala comment block.
+// 7) If a Scala case is not ported yet, leave an explicit `panic!`/`vimpl` marker.
 
+use crate::interner::Interner;
+use crate::lexing::{ParseError, RangeL};
+use crate::parsing::ast::*;
+use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use serde_json::{Map, Value, from_str};
+use std::sync::{Arc, OnceLock};
 
 /*
 package dev.vale.parsing
@@ -12,24 +27,58 @@ import net.liftweb.json._
 import dev.vale.parsing.ast._
 
 class ParsedLoader(interner: Interner) {
+*/
+fn expect_object<'a>(obj: &'a Value) -> &'a Map<String, Value> {
+  obj
+    .as_object()
+    .unwrap_or_else(|| panic!("BadVPSTError: Expected JSON object, got: {:?}", obj))
+}
+/*
   def expectObject(obj: Object): JObject = {
     if (!obj.isInstanceOf[JObject]) {
       throw BadVPSTException(BadVPSTError("Expected JSON object, got: " + obj.getClass.getSimpleName))
     }
     obj.asInstanceOf[JObject]
   }
+*/
+fn expect_string<'a>(obj: &'a Value) -> &'a str {
+  obj
+    .as_str()
+    .unwrap_or_else(|| panic!("BadVPSTError: Expected JSON string, got: {:?}", obj))
+}
+/*
   def expectString(obj: Object): JString = {
     if (!obj.isInstanceOf[JString]) {
       throw BadVPSTException(BadVPSTError("Expected JSON string, got: " + obj.getClass.getSimpleName))
     }
     obj.asInstanceOf[JString]
   }
+*/
+fn expect_number(obj: &Value) -> i64 {
+  obj
+    .as_i64()
+    .unwrap_or_else(|| panic!("BadVPSTError: Expected JSON number, got: {:?}", obj))
+}
+/*
   def expectNumber(obj: Object): BigInt = {
     if (!obj.isInstanceOf[JInt]) {
       throw BadVPSTException(BadVPSTError("Expected JSON number, got: " + obj.getClass.getSimpleName))
     }
     obj.asInstanceOf[JInt].num
   }
+*/
+fn expect_object_typed<'a>(obj: &'a Value, expected_type: &str) -> &'a Map<String, Value> {
+  let jobj = expect_object(obj);
+  let actual_type = get_string_field(jobj, "__type");
+  if actual_type != expected_type {
+    panic!(
+      "BadVPSTError: Expected {} but got a {}",
+      expected_type, actual_type
+    );
+  }
+  jobj
+}
+/*
   def expectObjectTyped(obj: JValue, expectedType: String): JObject = {
     val jobj = expectObject(obj)
     val actualType = getStringField(jobj, "__type")
@@ -38,20 +87,51 @@ class ParsedLoader(interner: Interner) {
     }
     jobj
   }
+*/
+fn get_field<'a>(jobj: &'a Map<String, Value>, field_name: &str) -> &'a Value {
+  jobj
+    .get(field_name)
+    .unwrap_or_else(|| panic!("BadVPSTError: Object had no field named {}", field_name))
+}
+/*
   def getField(jobj: JValue, fieldName: String): JValue = {
     (jobj \ fieldName) match {
       case JNothing => throw BadVPSTException(BadVPSTError("Object had no field named " + fieldName))
       case other => other
     }
   }
+*/
+fn get_object_field<'a>(
+  container_jobj: &'a Map<String, Value>,
+  field_name: &str,
+) -> &'a Map<String, Value> {
+  expect_object(get_field(container_jobj, field_name))
+}
+/*
   def getObjectField(containerJobj: JObject, fieldName: String): JObject = {
     expectObject(getField(containerJobj, fieldName))
   }
+*/
+// fn get_object_field_with_expected_type<'a>(
+//   container_jobj: &'a Map<String, Value>,
+//   field_name: &str,
+//   expected_type: &str,
+// ) -> &'a Map<String, Value> {
+//   let jobj = expect_object(get_field(container_jobj, field_name));
+//   expect_type(jobj, expected_type);
+//   jobj
+// }
+/*
   def getObjectField(containerJobj: JObject, fieldName: String, expectedType: String): JObject = {
     val jobj = expectObject(getField(containerJobj, fieldName))
     expectType(jobj, expectedType)
     jobj
   }
+*/
+fn get_string_field<'a>(jobj: &'a Map<String, Value>, field_name: &str) -> &'a str {
+  expect_string(get_field(jobj, field_name))
+}
+/*
   def getStringField(jobj: JObject, fieldName: String): String = {
     getField(jobj, fieldName) match {
       case JString(s) => {
@@ -60,12 +140,37 @@ class ParsedLoader(interner: Interner) {
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't a string!"))
     }
   }
+*/
+fn get_int_field(jobj: &Map<String, Value>, field_name: &str) -> i32 {
+  get_field(jobj, field_name)
+    .as_i64()
+    .unwrap_or_else(|| panic!("BadVPSTError: Field {} wasn't a number!", field_name))
+    as i32
+}
+/*
   def getIntField(jobj: JObject, fieldName: String): Int = {
     getField(jobj, fieldName) match {
       case JInt(s) => s.toInt
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't a number!"))
     }
   }
+*/
+fn get_long_field(jobj: &Map<String, Value>, field_name: &str) -> i64 {
+  let field = get_field(jobj, field_name);
+  if let Some(n) = field.as_i64() {
+    return n;
+  }
+  if let Some(s) = field.as_str() {
+    let parsed = s
+      .parse::<i64>()
+      .unwrap_or_else(|_| panic!("BadVPSTError: Field {} wasn't a number!", field_name));
+    if parsed.to_string() == s {
+      return parsed;
+    }
+  }
+  panic!("BadVPSTError: Field {} wasn't a number!", field_name);
+}
+/*
   def getLongField(jobj: JObject, fieldName: String): Long = {
     getField(jobj, fieldName) match {
       case JInt(s) => s.toLong
@@ -73,39 +178,95 @@ class ParsedLoader(interner: Interner) {
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't a number!"))
     }
   }
+*/
+fn get_float_field(jobj: &Map<String, Value>, field_name: &str) -> f64 {
+  get_field(jobj, field_name)
+    .as_f64()
+    .unwrap_or_else(|| panic!("BadVPSTError: Field {} wasn't a double!", field_name))
+}
+/*
   def getFloatField(jobj: JObject, fieldName: String): Double = {
     getField(jobj, fieldName) match {
       case JDouble(s) => s
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't a double!"))
     }
   }
+*/
+fn get_boolean_field(jobj: &Map<String, Value>, field_name: &str) -> bool {
+  get_field(jobj, field_name)
+    .as_bool()
+    .unwrap_or_else(|| panic!("BadVPSTError: Field {} wasn't a boolean!", field_name))
+}
+/*
   def getBooleanField(jobj: JObject, fieldName: String): Boolean = {
     getField(jobj, fieldName) match {
       case JBool(b) => b
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't a boolean!"))
     }
   }
+*/
+fn get_array_field<'a>(jobj: &'a Map<String, Value>, field_name: &str) -> &'a [Value] {
+  get_field(jobj, field_name)
+    .as_array()
+    .map(|v| v.as_slice())
+    .unwrap_or_else(|| panic!("BadVPSTError: Field {} wasn't an array!", field_name))
+}
+/*
   def getArrayField(jobj: JObject, fieldName: String): Vector[JValue] = {
     getField(jobj, fieldName) match {
       case JArray(arr) => arr.toVector
       case _ => throw BadVPSTException(BadVPSTError("Field " + fieldName + " wasn't an array!"))
     }
   }
+*/
+fn expect_type(jobj: &Map<String, Value>, expected_type: &str) -> () {
+  let actual_type = get_type(jobj);
+  if actual_type != expected_type {
+    panic!(
+      "BadVPSTError: Expected {} but got a {}",
+      expected_type, actual_type
+    );
+  }
+}
+/*
   def expectType(jobj: JObject, expectedType: String): Unit = {
     val actualType = getType(jobj)
     if (!actualType.equals(expectedType)) {
       throw BadVPSTException(BadVPSTError("Expected " + expectedType + " but got a " + actualType))
     }
   }
+*/
+fn get_type<'a>(jobj: &'a Map<String, Value>) -> &'a str {
+  get_string_field(jobj, "__type")
+}
+/*
   def getType(jobj: JObject): String = {
     getStringField(jobj, "__type")
   }
+*/
+fn load_range(jobj: &Map<String, Value>) -> RangeL {
+  expect_type(jobj, "Range");
+  RangeL {
+    begin: get_int_field(jobj, "begin"),
+    end: get_int_field(jobj, "end"),
+  }
+}
+/*
   def loadRange(jobj: JObject): RangeL = {
     expectType(jobj, "Range")
     RangeL(
       getIntField(jobj, "begin"),
       getIntField(jobj, "end"))
   }
+*/
+fn load_name(jobj: &Map<String, Value>) -> NameP {
+  expect_type(jobj, "Name");
+  NameP {
+    range: load_range(get_object_field(jobj, "range")),
+    str: parsed_loader_interner().intern(get_string_field(jobj, "name")),
+  }
+}
+/*
   def loadName(jobj: JObject): NameP = {
     expectType(jobj, "Name")
     NameP(
@@ -113,6 +274,35 @@ class ParsedLoader(interner: Interner) {
       interner.intern(StrI(getStringField(jobj, "name"))))
   }
 
+*/
+pub fn load(source: &str) -> Result<FileP, ParseError> {
+  let parsed: Value = from_str(source).map_err(|err| ParseError::BadVPSTError {
+    message: format!("Failed to parse VPST JSON: {}", err),
+  })?;
+  let jfile = expect_object_typed(&parsed, "File");
+  Ok(FileP {
+    file_coord: Arc::new(load_file_coord(get_object_field(jfile, "fileCoord"))),
+    comments_ranges: get_array_field(jfile, "commentsRanges")
+      .iter()
+      .map(expect_object)
+      .map(load_range)
+      .collect(),
+    denizens: get_array_field(jfile, "denizens")
+      .iter()
+      .map(expect_object)
+      .map(|denizen| match get_type(denizen) {
+        "Struct" => IDenizenP::TopLevelStruct(load_struct(denizen)),
+        "Interface" => IDenizenP::TopLevelInterface(load_interface(denizen)),
+        "Function" => IDenizenP::TopLevelFunction(load_function(denizen)),
+        "Impl" => IDenizenP::TopLevelImpl(load_impl(denizen)),
+        "Import" => IDenizenP::TopLevelImport(load_import(denizen)),
+        "ExportAs" => IDenizenP::TopLevelExportAs(load_export_as(denizen)),
+        other => panic!("Not implemented: unknown denizen type {}", other),
+      })
+      .collect(),
+  })
+}
+/*
   def load(source: String): Result[FileP, IParseError] = {
     Profiler.frame(() => {
       try {
@@ -138,6 +328,15 @@ class ParsedLoader(interner: Interner) {
     })
   }
 
+*/
+fn load_function(denizen: &Map<String, Value>) -> FunctionP {
+  FunctionP {
+    range: load_range(get_object_field(denizen, "range")),
+    header: load_function_header(get_object_field(denizen, "header")),
+    body: load_optional_object(get_object_field(denizen, "body"), load_block).map(Box::new),
+  }
+}
+/*
   def loadFunction(denizen: JObject) = {
     FunctionP(
       loadRange(getObjectField(denizen, "range")),
@@ -145,6 +344,22 @@ class ParsedLoader(interner: Interner) {
       loadOptionalObject(getObjectField(denizen, "body"), loadBlock))
   }
 
+*/
+fn load_impl(jobj: &Map<String, Value>) -> ImplP {
+  ImplP {
+    range: load_range(get_object_field(jobj, "range")),
+    generic_params: load_optional_object(get_object_field(jobj, "identifyingRunes"), load_identifying_runes),
+    template_rules: load_optional_object(get_object_field(jobj, "templateRules"), load_template_rules),
+    struct_: load_optional_object(get_object_field(jobj, "struct"), load_templex),
+    interface: load_templex(get_object_field(jobj, "interface")),
+    attributes: get_array_field(jobj, "attributes")
+      .iter()
+      .map(expect_object)
+      .map(load_attribute)
+      .collect(),
+  }
+}
+/*
   private def loadImpl(jobj: JObject) = {
     ImplP(
       loadRange(getObjectField(jobj, "range")),
@@ -154,6 +369,15 @@ class ParsedLoader(interner: Interner) {
       loadTemplex(getObjectField(jobj, "interface")),
       getArrayField(jobj, "attributes").map(expectObject).map(loadAttribute))
   }
+*/
+fn load_export_as(jobj: &Map<String, Value>) -> ExportAsP {
+  ExportAsP {
+    range: load_range(get_object_field(jobj, "range")),
+    struct_: load_templex(get_object_field(jobj, "struct")),
+    exported_name: load_name(get_object_field(jobj, "exportedName")),
+  }
+}
+/*
 
   private def loadExportAs(jobj: JObject) = {
     ExportAsP(
@@ -161,7 +385,20 @@ class ParsedLoader(interner: Interner) {
       loadTemplex(getObjectField(jobj, "struct")),
       loadName(getObjectField(jobj, "exportedName")))
   }
-
+*/
+fn load_import(jobj: &Map<String, Value>) -> ImportP {
+  ImportP {
+    range: load_range(get_object_field(jobj, "range")),
+    module_name: load_name(get_object_field(jobj, "moduleName")),
+    package_steps: get_array_field(jobj, "packageSteps")
+      .iter()
+      .map(expect_object)
+      .map(load_name)
+      .collect(),
+    importee_name: load_name(get_object_field(jobj, "importeeName")),
+  }
+}
+/*
   private def loadImport(jobj: JObject) = {
     ImportP(
       loadRange(getObjectField(jobj, "range")),
@@ -169,7 +406,31 @@ class ParsedLoader(interner: Interner) {
       getArrayField(jobj, "packageSteps").map(expectObject).map(loadName),
       loadName(getObjectField(jobj, "importeeName")))
   }
-
+*/
+fn load_struct(jobj: &Map<String, Value>) -> StructP {
+  StructP {
+    range: load_range(get_object_field(jobj, "range")),
+    name: load_name(get_object_field(jobj, "name")),
+    attributes: get_array_field(jobj, "attributes")
+      .iter()
+      .map(expect_object)
+      .map(load_attribute)
+      .collect(),
+    mutability: load_optional_object(get_object_field(jobj, "mutability"), load_templex),
+    identifying_runes: load_optional_object(
+      get_object_field(jobj, "identifyingRunes"),
+      load_identifying_runes,
+    ),
+    template_rules: load_optional_object(get_object_field(jobj, "templateRules"), load_template_rules),
+    maybe_default_region_rune: load_optional_object(
+      get_object_field(jobj, "maybeDefaultRegion"),
+      load_region_rune,
+    ),
+    body_range: load_range(get_object_field(jobj, "bodyRange")),
+    members: load_struct_members(get_object_field(jobj, "members")),
+  }
+}
+/*
   private def loadStruct(jobj: JObject) = {
     StructP(
       loadRange(getObjectField(jobj, "range")),
@@ -182,7 +443,35 @@ class ParsedLoader(interner: Interner) {
       loadRange(getObjectField(jobj, "bodyRange")),
       loadStructMembers(getObjectField(jobj, "members")))
   }
-
+*/
+fn load_interface(denizen: &Map<String, Value>) -> InterfaceP {
+  InterfaceP {
+    range: load_range(get_object_field(denizen, "range")),
+    name: load_name(get_object_field(denizen, "name")),
+    attributes: get_array_field(denizen, "attributes")
+      .iter()
+      .map(expect_object)
+      .map(load_attribute)
+      .collect(),
+    mutability: load_optional_object(get_object_field(denizen, "mutability"), load_templex),
+    maybe_identifying_runes: load_optional_object(
+      get_object_field(denizen, "maybeIdentifyingRunes"),
+      load_identifying_runes,
+    ),
+    template_rules: load_optional_object(get_object_field(denizen, "templateRules"), load_template_rules),
+    maybe_default_region_rune: load_optional_object(
+      get_object_field(denizen, "maybeDefaultRegion"),
+      load_region_rune,
+    ),
+    body_range: load_range(get_object_field(denizen, "bodyRange")),
+    members: get_array_field(denizen, "members")
+      .iter()
+      .map(expect_object)
+      .map(load_function)
+      .collect(),
+  }
+}
+/*
   private def loadInterface(denizen: JObject) = {
     InterfaceP(
       loadRange(getObjectField(denizen, "range")),
@@ -196,7 +485,26 @@ class ParsedLoader(interner: Interner) {
       loadRange(getObjectField(denizen, "bodyRange")),
       getArrayField(denizen, "members").map(expectObject).map(loadFunction))
   }
-
+*/
+fn load_function_header(jobj: &Map<String, Value>) -> FunctionHeaderP {
+  FunctionHeaderP {
+    range: load_range(get_object_field(jobj, "range")),
+    name: load_optional_object(get_object_field(jobj, "name"), load_name),
+    attributes: get_array_field(jobj, "attributes")
+      .iter()
+      .map(expect_object)
+      .map(load_attribute)
+      .collect(),
+    generic_parameters: load_optional_object(
+      get_object_field(jobj, "maybeUserSpecifiedIdentifyingRunes"),
+      load_identifying_runes,
+    ),
+    template_rules: load_optional_object(get_object_field(jobj, "templateRules"), load_template_rules),
+    params: load_optional_object(get_object_field(jobj, "params"), load_params),
+    ret: load_function_return(get_object_field(jobj, "return")),
+  }
+}
+/*
   def loadFunctionHeader(jobj: JObject): FunctionHeaderP = {
     FunctionHeaderP(
       loadRange(getObjectField(jobj, "range")),
@@ -208,25 +516,74 @@ class ParsedLoader(interner: Interner) {
       loadFunctionReturn(getObjectField(jobj, "return")))
 //      loadOptionalObject(getObjectField(jobj, "maybeDefaultRegion"), loadName))
   }
-
+*/
+fn load_file_coord(jobj: &Map<String, Value>) -> FileCoordinate {
+  let interner = parsed_loader_interner();
+  interner
+    .intern_file_coordinate(FileCoordinate {
+      package_coord: load_package_coord(get_object_field(jobj, "packageCoord")),
+      filepath: get_string_field(jobj, "filepath").to_string(),
+    })
+    .as_ref()
+    .clone()
+}
+/*
   def loadFileCoord(jobj: JObject): FileCoordinate = {
     FileCoordinate(
       loadPackageCoord(getObjectField(jobj, "packageCoord")),
       getStringField(jobj, "filepath"))
   }
+*/
+fn load_package_coord(jobj: &Map<String, Value>) -> Arc<PackageCoordinate> {
+  let interner = parsed_loader_interner();
+  interner.intern_package_coordinate(PackageCoordinate {
+    module: interner.intern(get_string_field(jobj, "module")),
+    packages: get_array_field(jobj, "packages")
+      .iter()
+      .map(expect_string)
+      .map(|s| interner.intern(s))
+      .collect(),
+  })
+}
 
+fn parsed_loader_interner() -> &'static Arc<Interner> {
+  static PARSED_LOADER_INTERNER: OnceLock<Arc<Interner>> = OnceLock::new();
+  PARSED_LOADER_INTERNER.get_or_init(|| Arc::new(Interner::new()))
+}
+/*
   def loadPackageCoord(jobj: JObject): PackageCoordinate = {
     interner.intern(PackageCoordinate(
       interner.intern(StrI(getStringField(jobj, "module"))),
       getArrayField(jobj, "packages").map(expectString).map(s => interner.intern(StrI(s.s)))))
   }
-
+*/
+fn load_params(jobj: &Map<String, Value>) -> ParamsP {
+  ParamsP {
+    range: load_range(get_object_field(jobj, "range")),
+    params: get_array_field(jobj, "params")
+      .iter()
+      .map(expect_object)
+      .map(load_parameter)
+      .collect(),
+  }
+}
+/*
   def loadParams(jobj: JObject): ParamsP = {
     ast.ParamsP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "params").map(expectObject).map(loadParameter))
   }
-
+*/
+fn load_parameter(jobj: &Map<String, Value>) -> ParameterP {
+  ParameterP {
+    range: load_range(get_object_field(jobj, "range")),
+    virtuality: load_optional_object(get_object_field(jobj, "virtuality"), load_virtuality),
+    maybe_pre_checked: load_optional_object(get_object_field(jobj, "maybePreChecked"), load_range),
+    self_borrow: load_optional_object(get_object_field(jobj, "selfBorrow"), load_range),
+    pattern: load_optional_object(get_object_field(jobj, "pattern"), load_pattern),
+  }
+}
+/*
   def loadParameter(jobj: JObject): ParameterP = {
     ast.ParameterP(
       loadRange(getObjectField(jobj, "range")),
@@ -235,6 +592,16 @@ class ParsedLoader(interner: Interner) {
       loadOptionalObject(getObjectField(jobj, "selfBorrow"), loadRange),
       loadOptionalObject(getObjectField(jobj, "pattern"), loadPattern))
   }
+*/
+fn load_pattern(jobj: &Map<String, Value>) -> PatternPP {
+  PatternPP {
+    range: load_range(get_object_field(jobj, "range")),
+    destination: load_optional_object(get_object_field(jobj, "capture"), load_destination_local),
+    templex: load_optional_object(get_object_field(jobj, "templex"), load_templex),
+    destructure: load_optional_object(get_object_field(jobj, "destructure"), load_destructure),
+  }
+}
+/*
 
   def loadPattern(jobj: JObject): PatternPP = {
     ast.PatternPP(
@@ -244,19 +611,62 @@ class ParsedLoader(interner: Interner) {
       loadOptionalObject(getObjectField(jobj, "destructure"), loadDestructure))
 //      loadOptionalObject(getObjectField(jobj, "virtuality"), loadVirtuality))
   }
-
+*/
+fn load_destructure(jobj: &Map<String, Value>) -> DestructureP {
+  DestructureP {
+    range: load_range(get_object_field(jobj, "range")),
+    patterns: get_array_field(jobj, "patterns")
+      .iter()
+      .map(expect_object)
+      .map(load_pattern)
+      .collect(),
+  }
+}
+/*
   def loadDestructure(jobj: JObject): DestructureP = {
     DestructureP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "patterns").map(expectObject).map(loadPattern))
   }
-
+*/
+fn load_destination_local(jobj: &Map<String, Value>) -> DestinationLocalP {
+  DestinationLocalP {
+    decl: load_name_declaration(get_object_field(jobj, "name")),
+    mutate: load_optional_object(get_object_field(jobj, "mutate"), load_range),
+  }
+}
+/*
   def loadDestinationLocal(jobj: JObject): DestinationLocalP = {
     DestinationLocalP(
       loadNameDeclaration(getObjectField(jobj, "name")),
       loadOptionalObject(getObjectField(jobj, "mutate"), loadRange))
   }
+*/
 
+fn load_name_declaration(jobj: &Map<String, Value>) -> INameDeclarationP {
+  match get_type(jobj) {
+    "IgnoredLocalNameDeclaration" => {
+      INameDeclarationP::IgnoredLocalNameDeclaration(load_range(get_object_field(jobj, "range")))
+    }
+    "LocalNameDeclaration" => {
+      INameDeclarationP::LocalNameDeclaration(load_name(get_object_field(jobj, "name")))
+    }
+    "IterableNameDeclaration" => {
+      INameDeclarationP::IterableNameDeclaration(load_range(get_object_field(jobj, "range")))
+    }
+    "IteratorNameDeclaration" => {
+      INameDeclarationP::IteratorNameDeclaration(load_range(get_object_field(jobj, "range")))
+    }
+    "IterationOptionNameDeclaration" => INameDeclarationP::IterationOptionNameDeclaration(
+      load_range(get_object_field(jobj, "range")),
+    ),
+    "ConstructingMemberNameDeclaration" => {
+      INameDeclarationP::ConstructingMemberNameDeclaration(load_name(get_object_field(jobj, "name")))
+    }
+    other => panic!("Not implemented: load_name_declaration {}", other),
+  }
+}
+/*
   def loadNameDeclaration(jobj: JObject): INameDeclarationP = {
     getType(jobj) match {
       case "IgnoredLocalNameDeclaration" => IgnoredLocalNameDeclarationP(loadRange(getObjectField(jobj, "range")))
@@ -267,7 +677,19 @@ class ParsedLoader(interner: Interner) {
       case "ConstructingMemberNameDeclaration" => ConstructingMemberNameDeclarationP(loadName(getObjectField(jobj, "name")))
     }
   }
-
+*/
+fn load_imprecise_name(jobj: &Map<String, Value>) -> IImpreciseNameP {
+  match get_type(jobj) {
+    "LookupName" => IImpreciseNameP::LookupName(load_name(get_object_field(jobj, "name"))),
+    "IterableName" => IImpreciseNameP::IterableName(load_range(get_object_field(jobj, "range"))),
+    "IteratorName" => IImpreciseNameP::IteratorName(load_range(get_object_field(jobj, "range"))),
+    "IterationOptionName" => {
+      IImpreciseNameP::IterationOptionName(load_range(get_object_field(jobj, "range")))
+    }
+    other => panic!("Not implemented: load_imprecise_name {}", other),
+  }
+}
+/*
   def loadImpreciseName(jobj: JObject): IImpreciseNameP = {
     getType(jobj) match {
       case "LookupName" => LookupNameP(loadName(getObjectField(jobj, "name")))
@@ -276,7 +698,11 @@ class ParsedLoader(interner: Interner) {
       case "IterationOptionName" => IterationOptionNameP(loadRange(getObjectField(jobj, "range")))
     }
   }
-
+*/
+// fn load_capture_name(jobj: &Map<String, Value>) -> INameDeclarationP {
+//   panic!("Not implemented");
+// }
+/*
   def loadCaptureName(jobj: JObject): INameDeclarationP = {
     getType(jobj) match {
       case "LocalName" => {
@@ -289,7 +715,19 @@ class ParsedLoader(interner: Interner) {
       }
     }
   }
-
+*/
+fn load_block(jobj: &Map<String, Value>) -> BlockPE {
+  BlockPE {
+    range: load_range(get_object_field(jobj, "range")),
+    maybe_pure: load_optional_object(get_object_field(jobj, "maybePure"), load_range),
+    maybe_default_region: load_optional_object(
+      get_object_field(jobj, "maybeDefaultRegion"),
+      load_region_rune,
+    ),
+    inner: Box::new(load_expression(get_object_field(jobj, "inner"))),
+  }
+}
+/*
   def loadBlock(jobj: JObject): BlockPE = {
     BlockPE(
       loadRange(getObjectField(jobj, "range")),
@@ -297,29 +735,225 @@ class ParsedLoader(interner: Interner) {
       loadOptionalObject(getObjectField(jobj, "maybeDefaultRegion"), loadRegionRune),
       loadExpression(getObjectField(jobj, "inner")))
   }
-
+*/
+fn load_consecutor(jobj: &Map<String, Value>) -> ConsecutorPE {
+  ConsecutorPE {
+    inners: get_array_field(jobj, "inners")
+      .iter()
+      .map(expect_object)
+      .map(load_expression)
+      .collect(),
+  }
+}
+/*
   def loadConsecutor(jobj: JObject): ConsecutorPE = {
     ConsecutorPE(
       getArrayField(jobj, "inners").map(expectObject).map(loadExpression))
   }
-
+*/
+fn load_function_return(jobj: &Map<String, Value>) -> FunctionReturnP {
+  FunctionReturnP {
+    range: load_range(get_object_field(jobj, "range")),
+    ret_type: load_optional_object(get_object_field(jobj, "retType"), load_templex),
+  }
+}
+/*
   def loadFunctionReturn(jobj: JObject): FunctionReturnP = {
     FunctionReturnP(
       loadRange(getObjectField(jobj, "range")),
       loadOptionalObject(getObjectField(jobj, "retType"), loadTemplex))
   }
-
+*/
+fn load_unit(_jobj: &Map<String, Value>) -> UnitP {
+  panic!("Not implemented");
+}
+/*
   def loadUnit(jobj: JObject): UnitP = {
     UnitP(
       loadRange(getObjectField(jobj, "range")))
   }
-
+*/
+fn load_struct_members(jobj: &Map<String, Value>) -> StructMembersP {
+  StructMembersP {
+    range: load_range(get_object_field(jobj, "range")),
+    contents: get_array_field(jobj, "members")
+      .iter()
+      .map(expect_object)
+      .map(load_struct_content)
+      .collect(),
+  }
+}
+/*
   def loadStructMembers(jobj: JObject): StructMembersP = {
     StructMembersP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "members").map(expectObject).map(loadStructContent))
   }
-
+*/
+fn load_expression(jobj: &Map<String, Value>) -> IExpressionPE {
+  match get_type(jobj) {
+    "Return" => IExpressionPE::Return(ReturnPE {
+      range: load_range(get_object_field(jobj, "range")),
+      expr: Box::new(load_expression(get_object_field(jobj, "expr"))),
+    }),
+    "Void" => IExpressionPE::Void(VoidPE {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "ConstantInt" => IExpressionPE::ConstantInt(ConstantIntPE {
+      range: load_range(get_object_field(jobj, "range")),
+      value: get_long_field(jobj, "value"),
+      bits: {
+        let bits = get_object_field(jobj, "bits");
+        match get_type(bits) {
+          "None" => None,
+          "Some" => Some(expect_number(get_field(bits, "value"))),
+          other => panic!("BadVPSTError: Expected None/Some for bits but got {}", other),
+        }
+      },
+    }),
+    "ConstantStr" => IExpressionPE::ConstantStr(ConstantStrPE {
+      range: load_range(get_object_field(jobj, "range")),
+      value: get_string_field(jobj, "value").to_string(),
+    }),
+    "ConstantFloat" => IExpressionPE::ConstantFloat(ConstantFloatPE {
+      range: load_range(get_object_field(jobj, "range")),
+      value: get_float_field(jobj, "value"),
+    }),
+    "ConstantBool" => IExpressionPE::ConstantBool(ConstantBoolPE {
+      range: load_range(get_object_field(jobj, "range")),
+      value: get_boolean_field(jobj, "value"),
+    }),
+    "StrInterpolate" => IExpressionPE::StrInterpolate(StrInterpolatePE {
+      range: load_range(get_object_field(jobj, "range")),
+      parts: get_array_field(jobj, "parts")
+        .iter()
+        .map(expect_object)
+        .map(load_expression)
+        .collect(),
+    }),
+    "Dot" => IExpressionPE::Dot(DotPE {
+      range: load_range(get_object_field(jobj, "range")),
+      left: Box::new(load_expression(get_object_field(jobj, "left"))),
+      operator_range: load_range(get_object_field(jobj, "operatorRange")),
+      member: load_name(get_object_field(jobj, "member")),
+    }),
+    "FunctionCall" => IExpressionPE::FunctionCall(FunctionCallPE {
+      range: load_range(get_object_field(jobj, "range")),
+      operator_range: load_range(get_object_field(jobj, "operatorRange")),
+      callable_expr: Box::new(load_expression(get_object_field(jobj, "callableExpr"))),
+      arg_exprs: get_array_field(jobj, "argExprs")
+        .iter()
+        .map(expect_object)
+        .map(load_expression)
+        .collect(),
+    }),
+    "BinaryCall" => IExpressionPE::BinaryCall(BinaryCallPE {
+      range: load_range(get_object_field(jobj, "range")),
+      function_name: load_name(get_object_field(jobj, "functionName")),
+      left_expr: Box::new(load_expression(get_object_field(jobj, "leftExpr"))),
+      right_expr: Box::new(load_expression(get_object_field(jobj, "rightExpr"))),
+    }),
+    "Lambda" => IExpressionPE::Lambda(LambdaPE {
+      captures: load_optional_object(get_object_field(jobj, "captures"), load_unit),
+      function: load_function(get_object_field(jobj, "function")),
+    }),
+    "MagicParamLookup" => IExpressionPE::MagicParamLookup(MagicParamLookupPE {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "If" => IExpressionPE::If(IfPE {
+      range: load_range(get_object_field(jobj, "range")),
+      condition: Box::new(load_expression(get_object_field(jobj, "condition"))),
+      then_body: Box::new(load_block(get_object_field(jobj, "thenBody"))),
+      else_body: Box::new(load_block(get_object_field(jobj, "elseBody"))),
+    }),
+    "SubExpression" => IExpressionPE::SubExpression(SubExpressionPE {
+      range: load_range(get_object_field(jobj, "range")),
+      inner: Box::new(load_expression(get_object_field(jobj, "innerExpr"))),
+    }),
+    "Let" => IExpressionPE::Let(LetPE {
+      range: load_range(get_object_field(jobj, "range")),
+      pattern: load_pattern(get_object_field(jobj, "pattern")),
+      source: Box::new(load_expression(get_object_field(jobj, "source"))),
+    }),
+    "While" => IExpressionPE::While(WhilePE {
+      range: load_range(get_object_field(jobj, "range")),
+      condition: Box::new(load_expression(get_object_field(jobj, "condition"))),
+      body: Box::new(load_block(get_object_field(jobj, "body"))),
+    }),
+    "Mutate" => IExpressionPE::Mutate(MutatePE {
+      range: load_range(get_object_field(jobj, "range")),
+      mutatee: Box::new(load_expression(get_object_field(jobj, "mutatee"))),
+      source: Box::new(load_expression(get_object_field(jobj, "source"))),
+    }),
+    "MethodCall" => IExpressionPE::MethodCall(MethodCallPE {
+      range: load_range(get_object_field(jobj, "range")),
+      subject_expr: Box::new(load_expression(get_object_field(jobj, "subjectExpr"))),
+      operator_range: load_range(get_object_field(jobj, "operatorRange")),
+      method_lookup: Box::new(load_lookup(get_object_field(jobj, "method"))),
+      arg_exprs: get_array_field(jobj, "argExprs")
+        .iter()
+        .map(expect_object)
+        .map(load_expression)
+        .collect(),
+    }),
+    "Tuple" => IExpressionPE::Tuple(TuplePE {
+      range: load_range(get_object_field(jobj, "range")),
+      elements: get_array_field(jobj, "elements")
+        .iter()
+        .map(expect_object)
+        .map(load_expression)
+        .collect(),
+    }),
+    "Augment" => IExpressionPE::Augment(AugmentPE {
+      range: load_range(get_object_field(jobj, "range")),
+      target_ownership: load_ownership(get_object_field(jobj, "targetOwnership")),
+      inner: Box::new(load_expression(get_object_field(jobj, "inner"))),
+    }),
+    "Each" => IExpressionPE::Each(EachPE {
+      range: load_range(get_object_field(jobj, "range")),
+      maybe_pure: load_optional_object(get_object_field(jobj, "maybePure"), load_range),
+      entry_pattern: load_pattern(get_object_field(jobj, "entryPattern")),
+      in_keyword_range: load_range(get_object_field(jobj, "inRange")),
+      iterable_expr: Box::new(load_expression(get_object_field(jobj, "iterableExpr"))),
+      body: Box::new(load_block(get_object_field(jobj, "body"))),
+    }),
+    "Destruct" => IExpressionPE::Destruct(DestructPE {
+      range: load_range(get_object_field(jobj, "range")),
+      inner: Box::new(load_expression(get_object_field(jobj, "inner"))),
+    }),
+    "And" => IExpressionPE::And(AndPE {
+      range: load_range(get_object_field(jobj, "range")),
+      left: Box::new(load_expression(get_object_field(jobj, "left"))),
+      right: Box::new(load_block(get_object_field(jobj, "right"))),
+    }),
+    "Range" => IExpressionPE::Range(RangePE {
+      range: load_range(get_object_field(jobj, "range")),
+      from_expr: Box::new(load_expression(get_object_field(jobj, "begin"))),
+      to_expr: Box::new(load_expression(get_object_field(jobj, "end"))),
+    }),
+    "BraceCall" => IExpressionPE::BraceCall(BraceCallPE {
+      range: load_range(get_object_field(jobj, "range")),
+      operator_range: load_range(get_object_field(jobj, "operatorRange")),
+      subject_expr: Box::new(load_expression(get_object_field(jobj, "callableExpr"))),
+      arg_exprs: get_array_field(jobj, "argExprs")
+        .iter()
+        .map(expect_object)
+        .map(load_expression)
+        .collect(),
+      callable_readwrite: get_boolean_field(jobj, "callableReadwrite"),
+    }),
+    "Not" => IExpressionPE::Not(NotPE {
+      range: load_range(get_object_field(jobj, "range")),
+      inner: Box::new(load_expression(get_object_field(jobj, "innerExpr"))),
+    }),
+    "ConstructArray" => IExpressionPE::ConstructArray(load_construct_array(jobj)),
+    "Lookup" => IExpressionPE::Lookup(load_lookup(jobj)),
+    "Consecutor" => IExpressionPE::Consecutor(load_consecutor(jobj)),
+    "Block" => IExpressionPE::Block(load_block(jobj)),
+    other => panic!("Not implemented: load_expression {}", other),
+  }
+}
+/*
   def loadExpression(jobj: JObject): IExpressionPE = {
     getType(jobj) match {
       case "Pack" => {
@@ -537,7 +1171,17 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_array_size(jobj: &Map<String, Value>) -> IArraySizeP {
+  match get_type(jobj) {
+    "RuntimeSized" => IArraySizeP::RuntimeSized,
+    "StaticSized" => IArraySizeP::StaticSized(StaticSizedArraySizeP {
+      size_pt: load_optional_object(get_object_field(jobj, "size"), load_templex),
+    }),
+    other => panic!("Not implemented: load_array_size {}", other),
+  }
+}
+/*
   private def loadArraySize(jobj: JObject): IArraySizeP = {
     getType(jobj) match {
       case "RuntimeSized" => RuntimeSizedP
@@ -546,6 +1190,23 @@ class ParsedLoader(interner: Interner) {
       }
     }
   }
+*/
+fn load_construct_array(jobj: &Map<String, Value>) -> ConstructArrayPE {
+  ConstructArrayPE {
+    range: load_range(get_object_field(jobj, "range")),
+    type_pt: load_optional_object(get_object_field(jobj, "type"), load_templex),
+    mutability_pt: load_optional_object(get_object_field(jobj, "mutability"), load_templex),
+    variability_pt: load_optional_object(get_object_field(jobj, "variability"), load_templex),
+    size: load_array_size(get_object_field(jobj, "size")),
+    initializing_individual_elements: get_boolean_field(jobj, "initializingIndividualElements"),
+    args: get_array_field(jobj, "args")
+      .iter()
+      .map(expect_object)
+      .map(load_expression)
+      .collect(),
+  }
+}
+/*
   private def loadConstructArray(jobj: JObject) = {
     ConstructArrayPE(
       loadRange(getObjectField(jobj, "range")),
@@ -556,19 +1217,47 @@ class ParsedLoader(interner: Interner) {
       getBooleanField(jobj, "initializingIndividualElements"),
       getArrayField(jobj, "args").map(expectObject).map(loadExpression))
   }
-
+*/
+fn load_lookup(jobj: &Map<String, Value>) -> LookupPE {
+  LookupPE {
+    name: load_imprecise_name(get_object_field(jobj, "name")),
+    template_args: load_optional_object(get_object_field(jobj, "templateArgs"), load_template_args),
+  }
+}
+/*
   private def loadLookup(jobj: JObject) = {
     LookupPE(
       loadImpreciseName(getObjectField(jobj, "name")),
       loadOptionalObject(getObjectField(jobj, "templateArgs"), loadTemplateArgs))
   }
-
+*/
+fn load_template_args(jobj: &Map<String, Value>) -> TemplateArgsP {
+  TemplateArgsP {
+    range: load_range(get_object_field(jobj, "range")),
+    args: get_array_field(jobj, "args")
+      .iter()
+      .map(expect_object)
+      .map(load_templex)
+      .collect(),
+  }
+}
+/*
   def loadTemplateArgs(jobj: JObject): TemplateArgsP = {
     ast.TemplateArgsP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "args").map(expectObject).map(loadTemplex))
   }
-
+*/
+// fn load_load_as(jobj: &Map<String, Value>) -> LoadAsP {
+//   match get_type(jobj) {
+//     "Move" => LoadAsP::Move,
+//     "Use" => LoadAsP::Use,
+//     "LoadAsBorrow" => LoadAsP::LoadAsBorrow,
+//     "LoadAsWeak" => LoadAsP::LoadAsWeak,
+//     other => panic!("Not implemented: load_load_as {}", other),
+//   }
+// }
+/*
   def loadLoadAs(jobj: JObject): LoadAsP = {
     getType(jobj) match {
       case "Move" => MoveP
@@ -578,7 +1267,13 @@ class ParsedLoader(interner: Interner) {
       case other => vwat(other)
     }
   }
-
+*/
+fn load_virtuality(jobj: &Map<String, Value>) -> AbstractP {
+  AbstractP {
+    range: load_range(get_object_field(jobj, "range")),
+  }
+}
+/*
   def loadVirtuality(jobj: JObject): AbstractP = {
 //    getType(jobj) match {
 //      case "Override" => {
@@ -592,7 +1287,25 @@ class ParsedLoader(interner: Interner) {
 //      }
 //    }
   }
-
+*/
+fn load_struct_content(jobj: &Map<String, Value>) -> IStructContent {
+  match get_type(jobj) {
+    "NormalStructMember" => IStructContent::NormalStructMember(NormalStructMemberP {
+      range: load_range(get_object_field(jobj, "range")),
+      name: load_name(get_object_field(jobj, "name")),
+      variability: load_variability(get_object_field(jobj, "variability")),
+      tyype: load_templex(get_object_field(jobj, "type")),
+    }),
+    "VariadicStructMember" => IStructContent::VariadicStructMember(VariadicStructMemberP {
+      range: load_range(get_object_field(jobj, "range")),
+      variability: load_variability(get_object_field(jobj, "variability")),
+      tyype: load_templex(get_object_field(jobj, "type")),
+    }),
+    "StructMethod" => IStructContent::StructMethod(load_function(get_object_field(jobj, "function"))),
+    other => panic!("Not implemented: load_struct_content {}", other),
+  }
+}
+/*
   def loadStructContent(jobj: JObject): IStructContent = {
     getType(jobj) match {
       case "NormalStructMember" => {
@@ -614,27 +1327,100 @@ class ParsedLoader(interner: Interner) {
       }
     }
   }
-
+*/
+fn load_optional_object<T, F>(jobj: &Map<String, Value>, load_contents: F) -> Option<T>
+where
+  F: Fn(&Map<String, Value>) -> T,
+{
+  match get_type(jobj) {
+    "None" => None,
+    "Some" => Some(load_contents(get_object_field(jobj, "value"))),
+    other => panic!("BadVPSTError: Expected None/Some but got {}", other),
+  }
+}
+/*
   def loadOptionalObject[T](jobj: JObject, loadContents: JObject => T): Option[T] = {
     getType(jobj) match {
       case "None" => None
       case "Some" => Some(loadContents(getObjectField(jobj, "value")))
     }
   }
-
+*/
+// fn load_optional<T, F>(jobj: &Map<String, Value>, load_contents: F) -> Option<T>
+// where
+//   F: Fn(&Value) -> T,
+// {
+//   panic!("Not implemented");
+// }
+/*
   def loadOptional[T](jobj: JObject, loadContents: JValue => T): Option[T] = {
     getType(jobj) match {
       case "None" => None
       case "Some" => Some(loadContents(getField(jobj, "value")))
     }
   }
-
+*/
+fn load_template_rules(jobj: &Map<String, Value>) -> TemplateRulesP {
+  TemplateRulesP {
+    range: load_range(get_object_field(jobj, "range")),
+    rules: get_array_field(jobj, "rules")
+      .iter()
+      .map(expect_object)
+      .map(load_rulex)
+      .collect(),
+  }
+}
+/*
   def loadTemplateRules(jobj: JObject): TemplateRulesP = {
     ast.TemplateRulesP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "rules").map(expectObject).map(loadRulex))
   }
-
+*/
+fn load_rulex(jobj: &Map<String, Value>) -> IRulexPR {
+  match get_type(jobj) {
+    "TypedPR" => IRulexPR::Typed(load_typed_pr(jobj)),
+    "ComponentsPR" => IRulexPR::Components(ComponentsPR {
+      range: load_range(get_object_field(jobj, "range")),
+      container: load_rulex_type(get_object_field(jobj, "container")),
+      components: get_array_field(jobj, "components")
+        .iter()
+        .map(expect_object)
+        .map(load_rulex)
+        .collect(),
+    }),
+    "OrPR" => IRulexPR::Or(OrPR {
+      range: load_range(get_object_field(jobj, "range")),
+      possibilities: get_array_field(jobj, "possibilities")
+        .iter()
+        .map(expect_object)
+        .map(load_rulex)
+        .collect(),
+    }),
+    "DotPR" => IRulexPR::Dot(DotPR {
+      range: load_range(get_object_field(jobj, "range")),
+      container: Box::new(load_rulex(get_object_field(jobj, "container"))),
+      member_name: load_name(get_object_field(jobj, "memberName")),
+    }),
+    "TemplexPR" => IRulexPR::Templex(load_templex(get_object_field(jobj, "templex"))),
+    "EqualsPR" => IRulexPR::Equals(EqualsPR {
+      range: load_range(get_object_field(jobj, "range")),
+      left: Box::new(load_rulex(get_object_field(jobj, "left"))),
+      right: Box::new(load_rulex(get_object_field(jobj, "right"))),
+    }),
+    "BuiltinCallPR" => IRulexPR::BuiltinCall(BuiltinCallPR {
+      range: load_range(get_object_field(jobj, "range")),
+      name: load_name(get_object_field(jobj, "name")),
+      args: get_array_field(jobj, "args")
+        .iter()
+        .map(expect_object)
+        .map(load_rulex)
+        .collect(),
+    }),
+    other => panic!("Not implemented: load_rulex {}", other),
+  }
+}
+/*
   def loadRulex(jobj: JObject): IRulexPR = {
     getType(jobj) match {
       case "TypedPR" => {
@@ -670,14 +1456,40 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_typed_pr(jobj: &Map<String, Value>) -> TypedPR {
+  TypedPR {
+    range: load_range(get_object_field(jobj, "range")),
+    rune: load_optional_object(get_object_field(jobj, "rune"), load_name),
+    tyype: load_rulex_type(get_object_field(jobj, "type")),
+  }
+}
+/*
   private def loadTypedPR(jobj: JObject) = {
     TypedPR(
       loadRange(getObjectField(jobj, "range")),
       loadOptionalObject(getObjectField(jobj, "rune"), loadName),
       loadRulexType(getObjectField(jobj, "type")))
   }
-
+*/
+fn load_rulex_type(jobj: &Map<String, Value>) -> ITypePR {
+  match get_type(jobj) {
+    "IntTypePR" => ITypePR::IntType,
+    "BoolTypePR" => ITypePR::BoolType,
+    "OwnershipTypePR" => ITypePR::OwnershipType,
+    "MutabilityTypePR" => ITypePR::MutabilityType,
+    "VariabilityTypePR" => ITypePR::VariabilityType,
+    "LocationTypePR" => ITypePR::LocationType,
+    "CoordTypePR" => ITypePR::CoordType,
+    "CoordListTypePR" => ITypePR::CoordListType,
+    "PrototypeTypePR" => ITypePR::PrototypeType,
+    "KindTypePR" => ITypePR::KindType,
+    "RegionTypePR" => ITypePR::RegionType,
+    "CitizenTemplateTypePR" => ITypePR::CitizenTemplateType,
+    other => panic!("Not implemented: load_rulex_type {}", other),
+  }
+}
+/*
   def loadRulexType(jobj: JObject): ITypePR = {
     getType(jobj) match {
       case "IntTypePR" => IntTypePR
@@ -695,13 +1507,53 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_generic_parameter_type(jobj: &Map<String, Value>) -> GenericParameterTypeP {
+  GenericParameterTypeP {
+    range: load_range(get_object_field(jobj, "range")),
+    tyype: load_rulex_type(get_object_field(jobj, "type")),
+  }
+}
+/*
   def loadGenericParameterType(jobj: JObject): GenericParameterTypeP = {
     GenericParameterTypeP(
       loadRange(getObjectField(jobj, "range")),
       loadRulexType(getObjectField(jobj, "type")))
   }
-
+*/
+fn load_rune_attribute(jobj: &Map<String, Value>) -> IRuneAttributeP {
+  match get_type(jobj) {
+    "ReadOnlyRuneAttribute" => {
+      IRuneAttributeP::ReadOnlyRegionRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "ReadWriteRuneAttribute" => {
+      IRuneAttributeP::ReadWriteRegionRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "ImmutableRuneAttribute" => {
+      IRuneAttributeP::ImmutableRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "MutableRuneAttribute" => {
+      IRuneAttributeP::MutableRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "ImmutableRegionRuneAttribute" => {
+      IRuneAttributeP::ImmutableRegionRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "AdditiveRuneAttribute" => {
+      IRuneAttributeP::AdditiveRegionRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "PoolRuneAttribute" => {
+      IRuneAttributeP::PoolRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "ArenaRuneAttribute" => {
+      IRuneAttributeP::ArenaRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    "BumpRuneAttribute" => {
+      IRuneAttributeP::BumpRuneAttribute(load_range(get_object_field(jobj, "range")))
+    }
+    other => panic!("Not implemented: load_rune_attribute {}", other),
+  }
+}
+/*
   def loadRuneAttribute(jobj: JObject): IRuneAttributeP = {
     getType(jobj) match {
       case "ReadOnlyRuneAttribute" => ReadOnlyRegionRuneAttributeP(loadRange(getObjectField(jobj, "range")))
@@ -716,7 +1568,50 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_attribute(jobj: &Map<String, Value>) -> IAttributeP {
+  match get_type(jobj) {
+    "AbstractAttribute" => IAttributeP::AbstractAttribute(AbstractAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "PureAttribute" => IAttributeP::PureAttribute(PureAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "AdditiveAttribute" => IAttributeP::AdditiveAttribute(AdditiveAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "ExportAttribute" => IAttributeP::ExportAttribute(ExportAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "ExternAttribute" => IAttributeP::ExternAttribute(ExternAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "LinearAttribute" => IAttributeP::LinearAttribute(LinearAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "BuiltinAttribute" => IAttributeP::BuiltinAttribute(BuiltinAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+      generator_name: load_name(get_object_field(jobj, "generatorName")),
+    }),
+    "SealedAttribute" => IAttributeP::SealedAttribute(SealedAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "WeakableAttribute" => IAttributeP::WeakableAttribute(WeakableAttributeP {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "MacroCall" => IAttributeP::MacroCall(MacroCallP {
+      range: load_range(get_object_field(jobj, "range")),
+      inclusion: if get_boolean_field(jobj, "dontCall") {
+        IMacroInclusionP::DontCallMacro
+      } else {
+        IMacroInclusionP::CallMacro
+      },
+      name: load_name(get_object_field(jobj, "name")),
+    }),
+    other => panic!("Not implemented: unknown attribute type {}", other),
+  }
+}
+/*
   def loadAttribute(jobj: JObject): IAttributeP = {
     getType(jobj) match {
       case "AbstractAttribute" => AbstractAttributeP(loadRange(getObjectField(jobj, "range")))
@@ -742,21 +1637,48 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_mutability(jobj: &Map<String, Value>) -> MutabilityP {
+  match get_type(jobj) {
+    "Mutable" => MutabilityP::Mutable,
+    "Immutable" => MutabilityP::Immutable,
+    other => panic!("Not implemented: load_mutability {}", other),
+  }
+}
+/*
   def loadMutability(jobj: JObject): MutabilityP = {
     getType(jobj) match {
       case "Mutable" => MutableP
       case "Immutable" => ImmutableP
     }
   }
-
+*/
+fn load_variability(jobj: &Map<String, Value>) -> VariabilityP {
+  match get_type(jobj) {
+    "Varying" => VariabilityP::Varying,
+    "Final" => VariabilityP::Final,
+    other => panic!("Not implemented: load_variability {}", other),
+  }
+}
+/*
   def loadVariability(jobj: JObject): VariabilityP = {
     getType(jobj) match {
       case "Varying" => VaryingP
       case "Final" => FinalP
     }
   }
-
+*/
+fn load_ownership(jobj: &Map<String, Value>) -> OwnershipP {
+  match get_type(jobj) {
+    "Own" => OwnershipP::Own,
+    "Borrow" => OwnershipP::Borrow,
+    "Live" => OwnershipP::Live,
+    "Weak" => OwnershipP::Weak,
+    "Share" => OwnershipP::Share,
+    other => panic!("Not implemented: load_ownership {}", other),
+  }
+}
+/*
   def loadOwnership(jobj: JObject): OwnershipP = {
     getType(jobj) match {
       case "Own" => OwnP
@@ -765,7 +1687,82 @@ class ParsedLoader(interner: Interner) {
       case "Share" => ShareP
     }
   }
-
+*/
+fn load_templex(jobj: &Map<String, Value>) -> ITemplexPT {
+  match get_type(jobj) {
+    "NameOrRuneT" => ITemplexPT::NameOrRune(NameOrRunePT {
+      name: load_name(get_object_field(jobj, "rune")),
+    }),
+    "InterpretedT" => ITemplexPT::Interpreted(InterpretedPT {
+      range: load_range(get_object_field(jobj, "range")),
+      maybe_ownership: load_optional_object(
+        get_object_field(jobj, "maybeOwnership"),
+        load_ownership_pt,
+      )
+      .map(Box::new),
+      maybe_region: load_optional_object(get_object_field(jobj, "maybeRegion"), load_region_rune)
+        .map(Box::new),
+      inner: Box::new(load_templex(get_object_field(jobj, "inner"))),
+    }),
+    "CallT" => ITemplexPT::Call(CallPT {
+      range: load_range(get_object_field(jobj, "range")),
+      template: Box::new(load_templex(get_object_field(jobj, "template"))),
+      args: get_array_field(jobj, "args")
+        .iter()
+        .map(expect_object)
+        .map(load_templex)
+        .collect(),
+    }),
+    "MutabilityT" => ITemplexPT::Mutability(MutabilityPT {
+      range: load_range(get_object_field(jobj, "range")),
+      mutability: load_mutability(get_object_field(jobj, "mutability")),
+    }),
+    "VariabilityT" => ITemplexPT::Variability(VariabilityPT {
+      range: load_range(get_object_field(jobj, "range")),
+      variability: load_variability(get_object_field(jobj, "variability")),
+    }),
+    "IntT" => ITemplexPT::Int(IntPT {
+      range: load_range(get_object_field(jobj, "range")),
+      value: get_long_field(jobj, "inner"),
+    }),
+    "AnonymousRuneT" => ITemplexPT::AnonymousRune(AnonymousRunePT {
+      range: load_range(get_object_field(jobj, "range")),
+    }),
+    "RuntimeSizedArrayT" => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+      range: load_range(get_object_field(jobj, "range")),
+      mutability: Box::new(load_templex(get_object_field(jobj, "mutability"))),
+      element: Box::new(load_templex(get_object_field(jobj, "element"))),
+    }),
+    "StaticSizedArrayT" => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
+      range: load_range(get_object_field(jobj, "range")),
+      mutability: Box::new(load_templex(get_object_field(jobj, "mutability"))),
+      variability: Box::new(load_templex(get_object_field(jobj, "variability"))),
+      size: Box::new(load_templex(get_object_field(jobj, "size"))),
+      element: Box::new(load_templex(get_object_field(jobj, "element"))),
+    }),
+    "ManualSequenceT" => ITemplexPT::Tuple(TuplePT {
+      range: load_range(get_object_field(jobj, "range")),
+      elements: get_array_field(jobj, "members")
+        .iter()
+        .map(expect_object)
+        .map(load_templex)
+        .collect(),
+    }),
+    "PrototypeT" => ITemplexPT::Func(FuncPT {
+      range: load_range(get_object_field(jobj, "range")),
+      name: load_name(get_object_field(jobj, "name")),
+      params_range: load_range(get_object_field(jobj, "paramsRange")),
+      parameters: get_array_field(jobj, "params")
+        .iter()
+        .map(expect_object)
+        .map(load_templex)
+        .collect(),
+      return_type: Box::new(load_templex(get_object_field(jobj, "returnType"))),
+    }),
+    other => panic!("Not implemented: load_templex {}", other),
+  }
+}
+/*
   def loadTemplex(jobj: JObject): ITemplexPT = {
     getType(jobj) match {
       case "NameOrRuneT" => {
@@ -855,24 +1852,65 @@ class ParsedLoader(interner: Interner) {
       case x => vimpl(x.toString)
     }
   }
-
+*/
+fn load_ownership_pt(jobj: &Map<String, Value>) -> OwnershipPT {
+  OwnershipPT {
+    range: load_range(get_object_field(jobj, "range")),
+    ownership: load_ownership(get_object_field(jobj, "ownership")),
+  }
+}
+/*
   private def loadOwnershipPT(jobj: JObject) = {
     OwnershipPT(
       loadRange(getObjectField(jobj, "range")),
       loadOwnership(getObjectField(jobj, "ownership")))
   }
-
+*/
+fn load_region_rune(_jobj: &Map<String, Value>) -> RegionRunePT {
+  panic!("Not implemented");
+}
+/*
   private def loadRegionRune(jobj: JObject): RegionRunePT = {
     RegionRunePT(
       loadRange(getObjectField(jobj, "range")),
       loadOptionalObject(getObjectField(jobj, "name"), loadName))
   }
-
+*/
+fn load_identifying_runes(jobj: &Map<String, Value>) -> GenericParametersP {
+  GenericParametersP {
+    range: load_range(get_object_field(jobj, "range")),
+    params: get_array_field(jobj, "identifyingRunes")
+      .iter()
+      .map(expect_object)
+      .map(load_identifying_rune)
+      .collect(),
+  }
+}
+/*
   def loadIdentifyingRunes(jobj: JObject): GenericParametersP = {
     GenericParametersP(
       loadRange(getObjectField(jobj, "range")),
       getArrayField(jobj, "identifyingRunes").map(expectObject).map(loadIdentifyingRune))
   }
+*/
+fn load_identifying_rune(jobj: &Map<String, Value>) -> GenericParameterP {
+  GenericParameterP {
+    range: load_range(get_object_field(jobj, "range")),
+    name: load_name(get_object_field(jobj, "name")),
+    maybe_type: load_optional_object(
+      get_object_field(jobj, "maybeType"),
+      load_generic_parameter_type,
+    ),
+    coord_region: load_optional_object(get_object_field(jobj, "maybeCoordRegion"), load_region_rune),
+    attributes: get_array_field(jobj, "attributes")
+      .iter()
+      .map(expect_object)
+      .map(load_rune_attribute)
+      .collect(),
+    maybe_default: load_optional_object(get_object_field(jobj, "maybeDefault"), load_templex),
+  }
+}
+/*
   def loadIdentifyingRune(jobj: JObject): GenericParameterP = {
     GenericParameterP(
       loadRange(getObjectField(jobj, "range")),
@@ -883,5 +1921,4 @@ class ParsedLoader(interner: Interner) {
       loadOptionalObject(getObjectField(jobj, "maybeDefault"), loadTemplex))
   }
 }
-
 */

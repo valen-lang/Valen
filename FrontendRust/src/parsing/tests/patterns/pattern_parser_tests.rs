@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing.patterns
 
 import dev.vale.{Collector, Err, StrI, vimpl}
@@ -23,7 +24,29 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
     vimpl()
 //    compileForRest(new PatternParser().parsePattern(_), code, expectedRest)
   }
+*/
+use crate::cast;
+use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
+use crate::parsing::tests::utils::{
+  assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
+};
 
+fn compile(code: &str) -> PatternPP {
+  compile_pattern_expect(code)
+}
+#[test]
+fn simple_int() {
+  let pattern = compile("_ int");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Simple Int") {
     // Make sure every pattern on the way down to kind can match Int
 //    compile(Parser.parseTypeName(_),"int") shouldHave { case "int" => }
@@ -31,15 +54,61 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
 //    compile(patternType,"int") shouldHave { case PatternTypePPI(None, NameOrRunePT(NameP(_, StrI("int")))) => }
     compile("_ int") shouldHave { case Patterns.fromEnv("int") => }
   }
+*/
+#[test]
+fn name_only_capture() {
+  let pattern = compile("a");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(destination, "a");
+  assert!(destination.mutate.is_none());
+  assert!(pattern.templex.is_none());
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Name-only Capture") {
     compile("a") match {
       case PatternPP(_, Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)), None, None) =>
     }
   }
+*/
+#[test]
+fn empty_pattern() {
+  let pattern = compile("_");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  assert!(pattern.templex.is_none());
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Empty pattern") {
     compile("_") match { case PatternPP(_, Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),None,None) => }
   }
-
+*/
+#[test]
+fn capture_with_type_with_destructure() {
+  let pattern = compile("a Moo[a, b]");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(destination, "a");
+  assert!(destination.mutate.is_none());
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "Moo");
+  let destructure = pattern.destructure.as_ref().unwrap();
+  let (a_pattern, b_pattern) = expect_2(&destructure.patterns);
+  let a_destination = a_pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(a_destination, "a");
+  assert!(a_destination.mutate.is_none());
+  assert!(a_pattern.templex.is_none());
+  assert!(a_pattern.destructure.is_none());
+  let b_destination = b_pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(b_destination, "b");
+  assert!(b_destination.mutate.is_none());
+  assert!(b_pattern.templex.is_none());
+  assert!(b_pattern.destructure.is_none());
+}
+/*
   test("Capture with type with destructure") {
     compile("a Moo[a, b]") shouldHave {
       case PatternPP(
@@ -49,7 +118,23 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
           Some(DestructureP(_,Vector(capture("a"),capture("b"))))) =>
     }
   }
-
+*/
+#[test]
+fn cstodts() {
+  let pattern = compile("moo T[a int]");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(destination, "moo");
+  assert!(destination.mutate.is_none());
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "T");
+  let destructure = pattern.destructure.as_ref().unwrap();
+  let a_pattern = expect_1(&destructure.patterns);
+  let a_destination = a_pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(a_destination, "a");
+  assert!(a_destination.mutate.is_none());
+  assert_templex_name(a_pattern.templex.as_ref().unwrap(), "int");
+  assert!(a_pattern.destructure.is_none());
+}
+/*
 
   test("CSTODTS") {
     // This tests us handling an ambiguity properly, see CSTODTS in docs.
@@ -61,7 +146,31 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
           Some(DestructureP(_,Vector(PatternPP(_,Some(DestinationLocalP(LocalNameDeclarationP(NameP(_, StrI("a"))), None)),Some(NameOrRunePT(NameP(_, StrI("int")))),None))))) =>
     }
   }
-
+*/
+#[test]
+fn capture_with_destructure_with_type_outside() {
+  let pattern = compile("a (int, bool)[a, b]");
+  let destination = pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(destination, "a");
+  assert!(destination.mutate.is_none());
+  let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
+  let (int_t, bool_t) = expect_2(&tuple.elements);
+  assert_templex_name(int_t, "int");
+  assert_templex_name(bool_t, "bool");
+  let destructure = pattern.destructure.as_ref().unwrap();
+  let (a_pattern, b_pattern) = expect_2(&destructure.patterns);
+  let a_destination = a_pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(a_destination, "a");
+  assert!(a_destination.mutate.is_none());
+  assert!(a_pattern.templex.is_none());
+  assert!(a_pattern.destructure.is_none());
+  let b_destination = b_pattern.destination.as_ref().unwrap();
+  assert_destination_local_name(b_destination, "b");
+  assert!(b_destination.mutate.is_none());
+  assert!(b_pattern.templex.is_none());
+  assert!(b_pattern.destructure.is_none());
+}
+/*
   test("Capture with destructure with type outside") {
     compile("a (int, bool)[a, b]") shouldHave {
       case PatternPP(
@@ -77,3 +186,4 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
   }
 
 }
+*/

@@ -2,4 +2,3 @@
 pub mod compilation;
 
 pub use compilation::{TypingPassCompilation, TypingPassOptions};
-

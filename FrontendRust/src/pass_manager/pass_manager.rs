@@ -1,16 +1,16 @@
 // From Frontend/PassManager/src/dev/vale/passmanager/PassManager.scala
 // Main entry point for the Vale compiler
 
-use crate::utils::code_hierarchy::{PackageCoordinate, IPackageResolver};
+use crate::compile_options::GlobalOptions;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::compile_options::GlobalOptions;
-use crate::pass_manager::FullCompilationOptions;
 use crate::pass_manager::FullCompilation;
+use crate::pass_manager::FullCompilationOptions;
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-use std::sync::{Arc};
-use std::path::PathBuf;
 use std::fs;
+use std::path::PathBuf;
+use std::sync::Arc;
 /*
 package dev.vale.passmanager
 
@@ -48,136 +48,145 @@ object PassManager {
 
 // From PassManager.scala lines 153-201: Resolver that reads .vale files from filesystem
 pub struct FileSystemResolver {
-    module_roots: HashMap<String, PathBuf>,
-    direct_file_inputs: HashMap<Arc<PackageCoordinate>, PathBuf>,
+  module_roots: HashMap<String, PathBuf>,
+  direct_file_inputs: HashMap<Arc<PackageCoordinate>, PathBuf>,
 }
 
 impl FileSystemResolver {
-    pub fn new(
-        module_roots: HashMap<String, PathBuf>,
-        direct_file_inputs: HashMap<Arc<PackageCoordinate>, PathBuf>,
-    ) -> Self {
-        FileSystemResolver {
-            module_roots,
-            direct_file_inputs,
-        }
+  pub fn new(
+    module_roots: HashMap<String, PathBuf>,
+    direct_file_inputs: HashMap<Arc<PackageCoordinate>, PathBuf>,
+  ) -> Self {
+    FileSystemResolver {
+      module_roots,
+      direct_file_inputs,
     }
+  }
 }
 
 impl IPackageResolver<HashMap<String, String>> for FileSystemResolver {
-    // From PassManager.scala lines 153-201
-    fn resolve(&self, package_coord: &Arc<PackageCoordinate>) -> Option<HashMap<String, String>> {
-        // From PassManager.scala lines 190-196: Check for DirectFilePathInput first
-        if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
-            if let Ok(code) = fs::read_to_string(file_path) {
-                let filepath = file_path.to_string_lossy().to_string();
-                let mut result = HashMap::new();
-                result.insert(filepath, code);
-                return Some(result);
-            }
-        }
-        
-        // From PassManager.scala lines 168-189: ModulePathInput - find all files in directory
-        let module_name = &package_coord.module.str;
-        let module_root = self.module_roots.get(module_name.as_str())?;
-        
-        // Build path: module_root/package1/package2/...
-        let mut dir_path = module_root.clone();
-        for package_step in &package_coord.packages {
-            dir_path.push(&package_step.str);
-        }
-        
-        // Find all .vale files in this directory
-        let mut results = HashMap::new();
-        
-        if let Ok(entries) = fs::read_dir(&dir_path) {
-            for entry in entries.flatten() {
-                let path = entry.path();
-                if path.extension().and_then(|s| s.to_str()) == Some("vale") {
-                    if let Ok(code) = fs::read_to_string(&path) {
-                        let filepath = path.to_string_lossy().to_string();
-                        results.insert(filepath, code);
-                    }
-                }
-            }
-        }
-        
-        if results.is_empty() {
-            None
-        } else {
-            Some(results)
-        }
+  // From PassManager.scala lines 153-201
+  fn resolve(&self, package_coord: &Arc<PackageCoordinate>) -> Option<HashMap<String, String>> {
+    // From PassManager.scala lines 190-196: Check for DirectFilePathInput first
+    if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
+      if let Ok(code) = fs::read_to_string(file_path) {
+        let filepath = file_path.to_string_lossy().to_string();
+        let mut result = HashMap::new();
+        result.insert(filepath, code);
+        return Some(result);
+      }
     }
-}
 
+    // From PassManager.scala lines 168-189: ModulePathInput - find all files in directory
+    let module_name = &package_coord.module.str;
+    let module_root = self.module_roots.get(module_name.as_str())?;
+
+    // Build path: module_root/package1/package2/...
+    let mut dir_path = module_root.clone();
+    for package_step in &package_coord.packages {
+      dir_path.push(&package_step.str);
+    }
+
+    // Find all .vale files in this directory
+    let mut results = HashMap::new();
+
+    if let Ok(entries) = fs::read_dir(&dir_path) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("vale") {
+          if let Ok(code) = fs::read_to_string(&path) {
+            let filepath = path.to_string_lossy().to_string();
+            results.insert(filepath, code);
+          }
+        }
+      }
+    }
+
+    if results.is_empty() {
+      None
+    } else {
+      Some(results)
+    }
+  }
+}
 
 // From PassManager.scala lines 153-201: resolvePackageContents
 fn resolve_package_contents(
-    interner: &Arc<Interner>,
-    inputs: &[IFrontendInput],
-    package_coord: &Arc<PackageCoordinate>,
+  interner: &Arc<Interner>,
+  inputs: &[IFrontendInput],
+  package_coord: &Arc<PackageCoordinate>,
 ) -> Option<HashMap<String, String>> {
-    // From PassManager.scala line 158
-    let module = &package_coord.module;
-    let packages = &package_coord.packages;
-    
-    // From PassManager.scala lines 162-197
-    let mut source_inputs: Vec<(String, String)> = Vec::new();
-    
-    for (index, input) in inputs.iter().enumerate() {
-        if input.package_coord(interner.clone()).module != *module {
-            continue;
-        }
-        
-        match input {
-            IFrontendInput::SourceInput { package_coord: _, name, code } => {
-                // From PassManager.scala lines 164-167: SourceInput (for .vpst and .vale direct inputs)
-                if packages.is_empty() {
-                    source_inputs.push((format!("{}({})", index, name), code.clone()));
-                }
-            }
-            IFrontendInput::ModulePathInput { module: _, module_path } => {
-                // From PassManager.scala lines 168-188: ModulePathInput
-                let mut directory_path = module_path.clone();
-                for package_step in packages {
-                    directory_path.push('/');
-                    directory_path.push_str(&package_step.str);
-                }
-                
-                let directory = std::path::Path::new(&directory_path);
-                if let Ok(entries) = fs::read_dir(directory) {
-                    for entry in entries.flatten() {
-                        let path = entry.path();
-                        if let Some(name) = path.file_name() {
-                            let name_str = name.to_string_lossy();
-                            if name_str.ends_with(".vale") || name_str.ends_with(".vpst") {
-                                if let Ok(code) = fs::read_to_string(&path) {
-                                    source_inputs.push((path.display().to_string(), code));
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-            IFrontendInput::DirectFilePathInput { package_coord: _, path } => {
-                // From PassManager.scala lines 190-196: DirectFilePathInput
-                if let Ok(code) = fs::read_to_string(path) {
-                    source_inputs.push((path.clone(), code));
-                }
-            }
-        }
+  // From PassManager.scala line 158
+  let module = &package_coord.module;
+  let packages = &package_coord.packages;
+
+  // From PassManager.scala lines 162-197
+  let mut source_inputs: Vec<(String, String)> = Vec::new();
+
+  for (index, input) in inputs.iter().enumerate() {
+    if input.package_coord(interner.clone()).module != *module {
+      continue;
     }
-    
-    // From PassManager.scala lines 198-200: Group by filepath and check for overlaps
-    let mut filepath_to_source: HashMap<String, String> = HashMap::new();
-    for (filepath, code) in source_inputs {
-        if filepath_to_source.contains_key(&filepath) {
-            panic!("Input filepaths overlap!");
+
+    match input {
+      IFrontendInput::SourceInput {
+        package_coord: _,
+        name,
+        code,
+      } => {
+        // From PassManager.scala lines 164-167: SourceInput (for .vpst and .vale direct inputs)
+        if packages.is_empty() {
+          source_inputs.push((format!("{}({})", index, name), code.clone()));
         }
-        filepath_to_source.insert(filepath, code);
+      }
+      IFrontendInput::ModulePathInput {
+        module: _,
+        module_path,
+      } => {
+        // From PassManager.scala lines 168-188: ModulePathInput
+        let mut directory_path = module_path.clone();
+        for package_step in packages {
+          directory_path.push('/');
+          directory_path.push_str(&package_step.str);
+        }
+
+        let directory = std::path::Path::new(&directory_path);
+        if let Ok(entries) = fs::read_dir(directory) {
+          for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name() {
+              let name_str = name.to_string_lossy();
+              if name_str.ends_with(".vale") || name_str.ends_with(".vpst") {
+                if let Ok(code) = fs::read_to_string(&path) {
+                  source_inputs.push((path.display().to_string(), code));
+                }
+              }
+            }
+          }
+        }
+      }
+      IFrontendInput::DirectFilePathInput {
+        package_coord: _,
+        path,
+      } => {
+        // From PassManager.scala lines 190-196: DirectFilePathInput
+        if let Ok(code) = fs::read_to_string(path) {
+          source_inputs.push((path.clone(), code));
+        }
+      }
     }
-    
-    Some(filepath_to_source)
+  }
+
+  // From PassManager.scala lines 198-200: Group by filepath and check for overlaps
+  let mut filepath_to_source: HashMap<String, String> = HashMap::new();
+  for (filepath, code) in source_inputs {
+    if filepath_to_source.contains_key(&filepath) {
+      panic!("Input filepaths overlap!");
+    }
+    filepath_to_source.insert(filepath, code);
+  }
+
+  Some(filepath_to_source)
 }
 
 /*
@@ -242,33 +251,33 @@ fn resolve_package_contents(
 */
 #[derive(Clone)]
 pub enum IFrontendInput {
-    SourceInput {
-        package_coord: Arc<PackageCoordinate>,
-        name: String,
-        code: String,
-    },
-    ModulePathInput {
-        module: Arc<crate::interner::StrI>,
-        module_path: String,
-    },
-    DirectFilePathInput {
-        package_coord: Arc<PackageCoordinate>,
-        path: String,
-    },
+  SourceInput {
+    package_coord: Arc<PackageCoordinate>,
+    name: String,
+    code: String,
+  },
+  ModulePathInput {
+    module: Arc<crate::interner::StrI>,
+    module_path: String,
+  },
+  DirectFilePathInput {
+    package_coord: Arc<PackageCoordinate>,
+    path: String,
+  },
 }
 impl IFrontendInput {
-    pub fn package_coord(&self, interner: Arc<Interner>) -> Arc<PackageCoordinate> {
-        match self {
-            IFrontendInput::SourceInput { package_coord, .. } => package_coord.clone(),
-            IFrontendInput::ModulePathInput { module, .. } => {
-                interner.intern_package_coordinate(PackageCoordinate {
-                    module: module.clone(),
-                    packages: vec![],
-                })
-            }
-            IFrontendInput::DirectFilePathInput { package_coord, .. } => package_coord.clone(),
-        }
+  pub fn package_coord(&self, interner: Arc<Interner>) -> Arc<PackageCoordinate> {
+    match self {
+      IFrontendInput::SourceInput { package_coord, .. } => package_coord.clone(),
+      IFrontendInput::ModulePathInput { module, .. } => {
+        interner.intern_package_coordinate(PackageCoordinate {
+          module: module.clone(),
+          packages: vec![],
+        })
+      }
+      IFrontendInput::DirectFilePathInput { package_coord, .. } => package_coord.clone(),
     }
+  }
 }
 /*
 
@@ -295,15 +304,15 @@ impl IFrontendInput {
 
 // From PassManager.scala lines 356-366: buildAndOutput
 fn build_and_output(interner: Arc<Interner>, keywords: Arc<Keywords>, opts: &Options) {
-    match build(interner, keywords, opts) {
-        Ok(_) => {
-            // Success
-        }
-        Err(error) => {
-            eprintln!("Error: {}", error);
-            std::process::exit(22);
-        }
+  match build(interner, keywords, opts) {
+    Ok(_) => {
+      // Success
     }
+    Err(error) => {
+      eprintln!("Error: {}", error);
+      std::process::exit(22);
+    }
+  }
 }
 
 /*
@@ -322,128 +331,134 @@ fn build_and_output(interner: Arc<Interner>, keywords: Arc<Keywords>, opts: &Opt
 
 // From PassManager.scala lines 203-342: build function
 pub fn build(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    opts: &Options,
+  interner: Arc<Interner>,
+  keywords: Arc<Keywords>,
+  opts: &Options,
 ) -> Result<(), String> {
-    // From PassManager.scala lines 205-207: Create output directories
-    let output_dir_path = opts.output_dir_path.as_ref().unwrap();
-    fs::create_dir_all(output_dir_path)
-        .map_err(|e| format!("Failed to create output directory: {}", e))?;
-    fs::create_dir_all(format!("{}/vast", output_dir_path))
-        .map_err(|e| format!("Failed to create vast directory: {}", e))?;
-    fs::create_dir_all(format!("{}/vpst", output_dir_path))
-        .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
-    
-    // From PassManager.scala line 209
-    let _start_time = std::time::Instant::now();
-    
-    // From PassManager.scala lines 211-227: Load .vpst files if --input_vpst is provided
-    if opts.input_vpst_dir.is_some() {
-        panic!("Loading .vpst files not yet implemented - see PassManager.scala lines 213-225. Need ParsedLoader and SourceInput")
+  // From PassManager.scala lines 205-207: Create output directories
+  let output_dir_path = opts.output_dir_path.as_ref().unwrap();
+  fs::create_dir_all(output_dir_path)
+    .map_err(|e| format!("Failed to create output directory: {}", e))?;
+  fs::create_dir_all(format!("{}/vast", output_dir_path))
+    .map_err(|e| format!("Failed to create vast directory: {}", e))?;
+  fs::create_dir_all(format!("{}/vpst", output_dir_path))
+    .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
+
+  // From PassManager.scala line 209
+  let _start_time = std::time::Instant::now();
+
+  // From PassManager.scala lines 211-227: Load .vpst files if --input_vpst is provided
+  if opts.input_vpst_dir.is_some() {
+    panic!("Loading .vpst files not yet implemented - see PassManager.scala lines 213-225. Need ParsedLoader and SourceInput")
+  }
+  let all_inputs = &opts.inputs;
+
+  // From PassManager.scala line 229: Get distinct package coordinates
+  let package_coords: Vec<Arc<PackageCoordinate>> = all_inputs
+    .iter()
+    .map(|input| input.package_coord(interner.clone()))
+    .collect::<std::collections::HashSet<_>>()
+    .into_iter()
+    .collect();
+
+  // From PassManager.scala lines 231-253: Create FullCompilation
+  // Note: Builtins are needed but we don't have builtins_dir available yet.
+  // For now, create an empty builtins map. This will need to be fixed when
+  // builtins are actually required for parsing.
+  let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
+
+  // From PassManager.scala line 235: Add BUILTIN package coordinate
+  let mut packages_to_build = vec![PackageCoordinate::builtin(&interner, &keywords)];
+  packages_to_build.extend(package_coords);
+
+  // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
+  let all_inputs_clone = all_inputs.clone();
+  let interner_clone = interner.clone();
+  let resolver = builtins_code_map.or(move |package_coord: &Arc<PackageCoordinate>| {
+    resolve_package_contents(&interner_clone, &all_inputs_clone, package_coord)
+  });
+
+  // From PassManager.scala lines 238-253: Create FullCompilationOptions
+  let options = FullCompilationOptions {
+    global_options: GlobalOptions {
+      sanity_check: opts.sanity_check,
+      use_overload_index: opts.use_overload_index,
+      use_optimized_solver: opts.use_optimized_solver,
+      verbose_errors: opts.verbose_errors,
+      debug_output: opts.debug_output,
+    },
+    debug_out: if opts.debug_output {
+      Arc::new(|s: &str| println!("#: {}", s))
+    } else {
+      Arc::new(|_: &str| {})
+    },
+  };
+
+  // From PassManager.scala lines 231-233: Create FullCompilation
+  let mut compilation = FullCompilation::new(
+    interner.clone(),
+    keywords.clone(),
+    packages_to_build,
+    Arc::new(resolver),
+    options,
+  );
+
+  // From PassManager.scala line 255
+  let _start_load_and_parse_time = std::time::Instant::now();
+
+  // From PassManager.scala lines 257-263: Get parsed files
+  let parseds = match compilation.get_parseds() {
+    Err(failed_parse) => {
+      // From PassManager.scala lines 259-261
+      panic!(
+        "ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}",
+        failed_parse
+      );
     }
-    let all_inputs = &opts.inputs;
-    
-    // From PassManager.scala line 229: Get distinct package coordinates
-    let package_coords: Vec<Arc<PackageCoordinate>> = all_inputs
-        .iter()
-        .map(|input| input.package_coord(interner.clone()))
-        .collect::<std::collections::HashSet<_>>()
-        .into_iter()
-        .collect();
-    
-    // From PassManager.scala lines 231-253: Create FullCompilation
-    // Note: Builtins are needed but we don't have builtins_dir available yet.
-    // For now, create an empty builtins map. This will need to be fixed when
-    // builtins are actually required for parsing.
-    let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
-    
-    // From PassManager.scala line 235: Add BUILTIN package coordinate
-    let mut packages_to_build = vec![PackageCoordinate::builtin(&interner, &keywords)];
-    packages_to_build.extend(package_coords);
-    
-    // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
-    let all_inputs_clone = all_inputs.clone();
-    let interner_clone = interner.clone();
-    let resolver = builtins_code_map.or(move |package_coord: &Arc<PackageCoordinate>| {
-        resolve_package_contents(&interner_clone, &all_inputs_clone, package_coord)
-    });
-    
-    // From PassManager.scala lines 238-253: Create FullCompilationOptions
-    let options = FullCompilationOptions {
-        global_options: GlobalOptions {
-            sanity_check: opts.sanity_check,
-            use_overload_index: opts.use_overload_index,
-            use_optimized_solver: opts.use_optimized_solver,
-            verbose_errors: opts.verbose_errors,
-            debug_output: opts.debug_output,
-        },
-        debug_out: if opts.debug_output {
-            Arc::new(|s: &str| println!("#: {}", s))
-        } else {
-            Arc::new(|_: &str| {})
-        },
-    };
-    
-    // From PassManager.scala lines 231-233: Create FullCompilation
-    let mut compilation = FullCompilation::new(
-        interner.clone(),
-        keywords.clone(),
-        packages_to_build,
-        Arc::new(resolver),
-        options,
+    Ok(p) => p,
+  };
+  let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
+
+  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
+  // These will be needed when we implement error humanization
+  let _ = vale_code_map; // Suppress unused warning
+
+  // From PassManager.scala lines 271-279: Write VPST files if requested
+  if opts.output_vpst {
+    use crate::parsing::vonifier::ParserVonifier;
+    use crate::von::printer::VonPrinter;
+
+    for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
+      // From PassManager.scala line 273
+      let von = ParserVonifier::vonify_file(program_p);
+      // From PassManager.scala line 274
+      let vpst_json = VonPrinter::new().print(&von);
+      // From PassManager.scala lines 275-276
+      let parts: Vec<&str> = file_coord.filepath.split(&['/', '\\'][..]).collect();
+      let filename = parts.last().unwrap().replace(".vale", ".vpst");
+      let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
+      // From PassManager.scala line 277
+      std::fs::write(&vpst_filepath, vpst_json)
+        .unwrap_or_else(|e| panic!("Failed to write VPST file {}: {}", vpst_filepath, e));
+    }
+  }
+
+  // From PassManager.scala lines 281-284: Benchmark timing
+  let _start_scout_time = std::time::Instant::now();
+  if opts.benchmark {
+    println!(
+      "Loading and parsing duration: {:?}",
+      _start_scout_time.duration_since(_start_load_and_parse_time)
     );
-    
-    // From PassManager.scala line 255
-    let _start_load_and_parse_time = std::time::Instant::now();
-    
-    // From PassManager.scala lines 257-263: Get parsed files
-    let parseds = match compilation.get_parseds() {
-        Err(failed_parse) => {
-            // From PassManager.scala lines 259-261
-            panic!("ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}", failed_parse);
-        }
-        Ok(p) => p,
-    };
-    let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
-    
-    // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
-    // These will be needed when we implement error humanization
-    let _ = vale_code_map; // Suppress unused warning
-    
-    // From PassManager.scala lines 271-279: Write VPST files if requested
-    if opts.output_vpst {
-        use crate::parsing::vonifier::ParserVonifier;
-        use crate::von::printer::VonPrinter;
-        
-        for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
-            // From PassManager.scala line 273
-            let von = ParserVonifier::vonify_file(program_p);
-            // From PassManager.scala line 274
-            let vpst_json = VonPrinter::new().print(&von);
-            // From PassManager.scala lines 275-276
-            let parts: Vec<&str> = file_coord.filepath.split(&['/', '\\'][..]).collect();
-            let filename = parts.last().unwrap().replace(".vale", ".vpst");
-            let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
-            // From PassManager.scala line 277
-            std::fs::write(&vpst_filepath, vpst_json)
-                .unwrap_or_else(|e| panic!("Failed to write VPST file {}: {}", vpst_filepath, e));
-        }
-    }
-    
-    // From PassManager.scala lines 281-284: Benchmark timing
-    let _start_scout_time = std::time::Instant::now();
-    if opts.benchmark {
-        println!("Loading and parsing duration: {:?}", _start_scout_time.duration_since(_start_load_and_parse_time));
-    }
-    
-    // From PassManager.scala lines 286-341: Full compilation (scout, typing, hammer) - only if outputVAST
-    if opts.output_vast {
-        // From PassManager.scala lines 287-290: Scout phase
-        panic!("Scout phase not yet implemented - see PassManager.scala lines 287-341. Need getScoutput, getAstrouts, getCompilerOutputs, getHamuts");
-    }
-    
-    Ok(())
+  }
+
+  // From PassManager.scala lines 286-341: Full compilation (scout, typing, hammer) - only if outputVAST
+  if opts.output_vast {
+    // From PassManager.scala lines 287-290: Scout phase
+    panic!("Scout phase not yet implemented - see PassManager.scala lines 287-341. Need getScoutput, getAstrouts, getCompilerOutputs, getHamuts");
+  }
+
+  Ok(())
 }
 
 /*
@@ -591,20 +606,20 @@ pub fn build(
 
 // From PassManager.scala lines 52-68: Options
 pub struct Options {
-    pub inputs: Vec<IFrontendInput>,
-    pub output_dir_path: Option<String>,
-    pub input_vpst_dir: Option<String>,
-    pub benchmark: bool,
-    pub output_vpst: bool,
-    pub output_vast: bool,
-    pub output_highlights: bool,
-    pub include_builtins: bool,
-    pub mode: Option<String>,
-    pub sanity_check: bool,
-    pub use_optimized_solver: bool,
-    pub use_overload_index: bool,
-    pub verbose_errors: bool,
-    pub debug_output: bool,
+  pub inputs: Vec<IFrontendInput>,
+  pub output_dir_path: Option<String>,
+  pub input_vpst_dir: Option<String>,
+  pub benchmark: bool,
+  pub output_vpst: bool,
+  pub output_vast: bool,
+  pub output_highlights: bool,
+  pub include_builtins: bool,
+  pub mode: Option<String>,
+  pub sanity_check: bool,
+  pub use_optimized_solver: bool,
+  pub use_overload_index: bool,
+  pub verbose_errors: bool,
+  pub debug_output: bool,
 }
 /*
   case class Options(
@@ -628,211 +643,204 @@ pub struct Options {
 */
 
 // From PassManager.scala lines 71-150: parseOpts
-pub fn parse_opts(
-    interner: Arc<Interner>,
-    opts: Options,
-    list: Vec<String>,
-) -> Options {
-    parse_opts_recursive(interner, opts, &list, 0)
+pub fn parse_opts(interner: Arc<Interner>, opts: Options, list: Vec<String>) -> Options {
+  parse_opts_recursive(interner, opts, &list, 0)
 }
 
 fn parse_opts_recursive(
-    interner: Arc<Interner>,
-    mut opts: Options,
-    list: &[String],
-    index: usize,
+  interner: Arc<Interner>,
+  mut opts: Options,
+  list: &[String],
+  index: usize,
 ) -> Options {
-    // From PassManager.scala line 72-73: case Nil => opts
-    if index >= list.len() {
-        return opts;
+  // From PassManager.scala line 72-73: case Nil => opts
+  if index >= list.len() {
+    return opts;
+  }
+
+  let arg = &list[index];
+
+  // From PassManager.scala lines 74-111: Handle flags
+  match arg.as_str() {
+    "--output_dir" => {
+      // From PassManager.scala lines 74-77
+      if index + 1 >= list.len() {
+        eprintln!("--output_dir requires a value");
+        std::process::exit(22);
+      }
+      if opts.output_dir_path.is_some() {
+        eprintln!("Multiple output files specified!");
+        std::process::exit(22);
+      }
+      opts.output_dir_path = Some(list[index + 1].clone());
+      parse_opts_recursive(interner, opts, list, index + 2)
     }
-    
-    let arg = &list[index];
-    
-    // From PassManager.scala lines 74-111: Handle flags
-    match arg.as_str() {
-        "--output_dir" => {
-            // From PassManager.scala lines 74-77
-            if index + 1 >= list.len() {
-                eprintln!("--output_dir requires a value");
-                std::process::exit(22);
-            }
-            if opts.output_dir_path.is_some() {
-                eprintln!("Multiple output files specified!");
-                std::process::exit(22);
-            }
-            opts.output_dir_path = Some(list[index + 1].clone());
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--input_vpst" => {
-            // From PassManager.scala lines 78-81
-            if index + 1 >= list.len() {
-                eprintln!("--input_vpst requires a value");
-                std::process::exit(22);
-            }
-            if opts.input_vpst_dir.is_some() {
-                eprintln!("Multiple --input_vpst specified!");
-                std::process::exit(22);
-            }
-            opts.input_vpst_dir = Some(list[index + 1].clone());
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--output_vpst" => {
-            // From PassManager.scala lines 82-84
-            if index + 1 >= list.len() {
-                eprintln!("--output_vpst requires a value");
-                std::process::exit(22);
-            }
-            opts.output_vpst = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--output_vast" => {
-            // From PassManager.scala lines 85-87
-            if index + 1 >= list.len() {
-                eprintln!("--output_vast requires a value");
-                std::process::exit(22);
-            }
-            opts.output_vast = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--sanity_check" => {
-            // From PassManager.scala lines 88-90
-            if index + 1 >= list.len() {
-                eprintln!("--sanity_check requires a value");
-                std::process::exit(22);
-            }
-            opts.sanity_check = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--include_builtins" => {
-            // From PassManager.scala lines 91-93
-            if index + 1 >= list.len() {
-                eprintln!("--include_builtins requires a value");
-                std::process::exit(22);
-            }
-            opts.include_builtins = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--use_overload_index" => {
-            // From PassManager.scala lines 94-96
-            if index + 1 >= list.len() {
-                eprintln!("--use_overload_index requires a value");
-                std::process::exit(22);
-            }
-            opts.use_overload_index = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--simple_solver" => {
-            // From PassManager.scala lines 97-99
-            if index + 1 >= list.len() {
-                eprintln!("--simple_solver requires a value");
-                std::process::exit(22);
-            }
-            opts.use_optimized_solver = !list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "--benchmark" => {
-            // From PassManager.scala lines 100-102
-            opts.benchmark = true;
-            parse_opts_recursive(interner, opts, list, index + 1)
-        }
-        "--output_highlights" => {
-            // From PassManager.scala lines 103-105
-            if index + 1 >= list.len() {
-                eprintln!("--output_highlights requires a value");
-                std::process::exit(22);
-            }
-            opts.output_highlights = list[index + 1].parse().unwrap_or(false);
-            parse_opts_recursive(interner, opts, list, index + 2)
-        }
-        "-v" | "--verbose" => {
-            // From PassManager.scala lines 106-108
-            opts.verbose_errors = true;
-            parse_opts_recursive(interner, opts, list, index + 1)
-        }
-        "--debug_output" => {
-            // From PassManager.scala lines 109-111
-            opts.debug_output = true;
-            parse_opts_recursive(interner, opts, list, index + 1)
-        }
-        _ if arg.starts_with("-") => {
-            // From PassManager.scala line 112
-            eprintln!("Unknown option {}", arg);
+    "--input_vpst" => {
+      // From PassManager.scala lines 78-81
+      if index + 1 >= list.len() {
+        eprintln!("--input_vpst requires a value");
+        std::process::exit(22);
+      }
+      if opts.input_vpst_dir.is_some() {
+        eprintln!("Multiple --input_vpst specified!");
+        std::process::exit(22);
+      }
+      opts.input_vpst_dir = Some(list[index + 1].clone());
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--output_vpst" => {
+      // From PassManager.scala lines 82-84
+      if index + 1 >= list.len() {
+        eprintln!("--output_vpst requires a value");
+        std::process::exit(22);
+      }
+      opts.output_vpst = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--output_vast" => {
+      // From PassManager.scala lines 85-87
+      if index + 1 >= list.len() {
+        eprintln!("--output_vast requires a value");
+        std::process::exit(22);
+      }
+      opts.output_vast = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--sanity_check" => {
+      // From PassManager.scala lines 88-90
+      if index + 1 >= list.len() {
+        eprintln!("--sanity_check requires a value");
+        std::process::exit(22);
+      }
+      opts.sanity_check = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--include_builtins" => {
+      // From PassManager.scala lines 91-93
+      if index + 1 >= list.len() {
+        eprintln!("--include_builtins requires a value");
+        std::process::exit(22);
+      }
+      opts.include_builtins = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--use_overload_index" => {
+      // From PassManager.scala lines 94-96
+      if index + 1 >= list.len() {
+        eprintln!("--use_overload_index requires a value");
+        std::process::exit(22);
+      }
+      opts.use_overload_index = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--simple_solver" => {
+      // From PassManager.scala lines 97-99
+      if index + 1 >= list.len() {
+        eprintln!("--simple_solver requires a value");
+        std::process::exit(22);
+      }
+      opts.use_optimized_solver = !list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "--benchmark" => {
+      // From PassManager.scala lines 100-102
+      opts.benchmark = true;
+      parse_opts_recursive(interner, opts, list, index + 1)
+    }
+    "--output_highlights" => {
+      // From PassManager.scala lines 103-105
+      if index + 1 >= list.len() {
+        eprintln!("--output_highlights requires a value");
+        std::process::exit(22);
+      }
+      opts.output_highlights = list[index + 1].parse().unwrap_or(false);
+      parse_opts_recursive(interner, opts, list, index + 2)
+    }
+    "-v" | "--verbose" => {
+      // From PassManager.scala lines 106-108
+      opts.verbose_errors = true;
+      parse_opts_recursive(interner, opts, list, index + 1)
+    }
+    "--debug_output" => {
+      // From PassManager.scala lines 109-111
+      opts.debug_output = true;
+      parse_opts_recursive(interner, opts, list, index + 1)
+    }
+    _ if arg.starts_with("-") => {
+      // From PassManager.scala line 112
+      eprintln!("Unknown option {}", arg);
+      std::process::exit(22);
+    }
+    _ => {
+      // From PassManager.scala lines 113-149: Handle positional arguments
+      if opts.mode.is_none() {
+        // From PassManager.scala lines 114-115
+        opts.mode = Some(arg.clone());
+        parse_opts_recursive(interner, opts, list, index + 1)
+      } else {
+        // From PassManager.scala lines 116-148
+        if arg.contains("=") {
+          // From PassManager.scala lines 117-144
+          let parts: Vec<&str> = arg.split('=').collect();
+          if parts.len() != 2 {
+            eprintln!("Arguments can only have 1 equals. Saw: {}", arg);
             std::process::exit(22);
-        }
-        _ => {
-            // From PassManager.scala lines 113-149: Handle positional arguments
-            if opts.mode.is_none() {
-                // From PassManager.scala lines 114-115
-                opts.mode = Some(arg.clone());
-                parse_opts_recursive(interner, opts, list, index + 1)
-            } else {
-                // From PassManager.scala lines 116-148
-                if arg.contains("=") {
-                    // From PassManager.scala lines 117-144
-                    let parts: Vec<&str> = arg.split('=').collect();
-                    if parts.len() != 2 {
-                        eprintln!("Arguments can only have 1 equals. Saw: {}", arg);
-                        std::process::exit(22);
-                    }
-                    if parts[0].is_empty() {
-                        eprintln!("Must have a module name before equals. Saw: {}", arg);
-                        std::process::exit(22);
-                    }
-                    if parts[1].is_empty() {
-                        eprintln!("Must have a file path after equals. Saw: {}", arg);
-                        std::process::exit(22);
-                    }
-                    
-                    let package_coord_str = parts[0];
-                    let path = parts[1];
-                    
-                    // From PassManager.scala lines 123-134
-                    let package_coordinate = if package_coord_str.contains(".") {
-                        let package_coord_parts: Vec<&str> = package_coord_str.split('.').collect();
-                        let module = interner.intern(package_coord_parts[0]);
-                        let packages: Vec<Arc<crate::StrI>> = package_coord_parts[1..]
-                            .iter()
-                            .map(|s| interner.intern(s))
-                            .collect();
-                        interner.intern_package_coordinate(PackageCoordinate {
-                            module,
-                            packages,
-                        })
-                    } else {
-                        interner.intern_package_coordinate(PackageCoordinate {
-                            module: interner.intern(package_coord_str),
-                            packages: vec![],
-                        })
-                    };
-                    
-                    // From PassManager.scala lines 135-143
-                    let input = if path.ends_with(".vale") || path.ends_with(".vpst") {
-                        IFrontendInput::DirectFilePathInput {
-                            package_coord: package_coordinate,
-                            path: path.to_string(),
-                        }
-                    } else {
-                        if !package_coordinate.packages.is_empty() {
-                            eprintln!("Cannot define a directory for a specific package, only for a module.");
-                            std::process::exit(22);
-                        }
-                        IFrontendInput::ModulePathInput {
-                            module: package_coordinate.module.clone(),
-                            module_path: path.to_string(),
-                        }
-                    };
-                    
-                    opts.inputs.push(input);
-                    parse_opts_recursive(interner, opts, list, index + 1)
-                } else {
-                    // From PassManager.scala lines 145-147
-                    eprintln!("Unrecognized input: {}", arg);
-                    std::process::exit(22);
-                }
+          }
+          if parts[0].is_empty() {
+            eprintln!("Must have a module name before equals. Saw: {}", arg);
+            std::process::exit(22);
+          }
+          if parts[1].is_empty() {
+            eprintln!("Must have a file path after equals. Saw: {}", arg);
+            std::process::exit(22);
+          }
+
+          let package_coord_str = parts[0];
+          let path = parts[1];
+
+          // From PassManager.scala lines 123-134
+          let package_coordinate = if package_coord_str.contains(".") {
+            let package_coord_parts: Vec<&str> = package_coord_str.split('.').collect();
+            let module = interner.intern(package_coord_parts[0]);
+            let packages: Vec<Arc<crate::StrI>> = package_coord_parts[1..]
+              .iter()
+              .map(|s| interner.intern(s))
+              .collect();
+            interner.intern_package_coordinate(PackageCoordinate { module, packages })
+          } else {
+            interner.intern_package_coordinate(PackageCoordinate {
+              module: interner.intern(package_coord_str),
+              packages: vec![],
+            })
+          };
+
+          // From PassManager.scala lines 135-143
+          let input = if path.ends_with(".vale") || path.ends_with(".vpst") {
+            IFrontendInput::DirectFilePathInput {
+              package_coord: package_coordinate,
+              path: path.to_string(),
             }
+          } else {
+            if !package_coordinate.packages.is_empty() {
+              eprintln!("Cannot define a directory for a specific package, only for a module.");
+              std::process::exit(22);
+            }
+            IFrontendInput::ModulePathInput {
+              module: package_coordinate.module.clone(),
+              module_path: path.to_string(),
+            }
+          };
+
+          opts.inputs.push(input);
+          parse_opts_recursive(interner, opts, list, index + 1)
+        } else {
+          // From PassManager.scala lines 145-147
+          eprintln!("Unrecognized input: {}", arg);
+          std::process::exit(22);
         }
+      }
     }
+  }
 }
 /*
   def parseOpts(interner: Interner, opts: Options, list: List[String]) : Options = {
@@ -920,65 +928,65 @@ fn parse_opts_recursive(
 
 // From PassManager.scala lines 390-481: main
 pub fn main(args: Vec<String>) {
-    // From PassManager.scala lines 391-393
-    let interner = Arc::new(Interner::new());
-    let keywords = Arc::new(Keywords::new(&interner));
-    
-    // From PassManager.scala lines 395-413
-    let opts = parse_opts(
-        interner.clone(),
-        Options {
-            inputs: vec![],
-            output_dir_path: None,
-            input_vpst_dir: None,
-            benchmark: false,
-            output_vpst: true,
-            output_vast: true,
-            output_highlights: false,
-            include_builtins: true,
-            mode: None,
-            sanity_check: false,
-            use_optimized_solver: true,
-            use_overload_index: true,
-            verbose_errors: false,
-            debug_output: false,
-        },
-        args,
-    );
-    
-    // From PassManager.scala lines 414-415
-    if opts.mode.is_none() {
-        eprintln!("No mode!");
+  // From PassManager.scala lines 391-393
+  let interner = Arc::new(Interner::new());
+  let keywords = Arc::new(Keywords::new(&interner));
+
+  // From PassManager.scala lines 395-413
+  let opts = parse_opts(
+    interner.clone(),
+    Options {
+      inputs: vec![],
+      output_dir_path: None,
+      input_vpst_dir: None,
+      benchmark: false,
+      output_vpst: true,
+      output_vast: true,
+      output_highlights: false,
+      include_builtins: true,
+      mode: None,
+      sanity_check: false,
+      use_optimized_solver: true,
+      use_overload_index: true,
+      verbose_errors: false,
+      debug_output: false,
+    },
+    args,
+  );
+
+  // From PassManager.scala lines 414-415
+  if opts.mode.is_none() {
+    eprintln!("No mode!");
+    std::process::exit(22);
+  }
+  if opts.inputs.is_empty() && opts.input_vpst_dir.is_none() {
+    eprintln!("No input files!");
+    std::process::exit(22);
+  }
+
+  // From PassManager.scala lines 417-474
+  match opts.mode.as_ref().unwrap().as_str() {
+    "highlight" => {
+      panic!("highlight mode not yet implemented - see PassManager.scala lines 418-466")
+    }
+    "build" => {
+      // From PassManager.scala lines 467-469
+      if opts.output_dir_path.is_none() {
+        eprintln!("Must specify --output-dir!");
         std::process::exit(22);
+      }
+      build_and_output(interner, keywords, &opts);
     }
-    if opts.inputs.is_empty() && opts.input_vpst_dir.is_none() {
-        eprintln!("No input files!");
-        std::process::exit(22);
+    "run" => {
+      // From PassManager.scala lines 471-473
+      eprintln!("Run command has been disabled.");
+      std::process::exit(22);
     }
-    
-    // From PassManager.scala lines 417-474
-    match opts.mode.as_ref().unwrap().as_str() {
-        "highlight" => {
-            panic!("highlight mode not yet implemented - see PassManager.scala lines 418-466")
-        }
-        "build" => {
-            // From PassManager.scala lines 467-469
-            if opts.output_dir_path.is_none() {
-                eprintln!("Must specify --output-dir!");
-                std::process::exit(22);
-            }
-            build_and_output(interner, keywords, &opts);
-        }
-        "run" => {
-            // From PassManager.scala lines 471-473
-            eprintln!("Run command has been disabled.");
-            std::process::exit(22);
-        }
-        _ => {
-            eprintln!("Unknown mode: {}", opts.mode.as_ref().unwrap());
-            std::process::exit(22);
-        }
+    _ => {
+      eprintln!("Unknown mode: {}", opts.mode.as_ref().unwrap());
+      std::process::exit(22);
     }
+  }
 }
 /*
   def main(args: Array[String]): Unit = {

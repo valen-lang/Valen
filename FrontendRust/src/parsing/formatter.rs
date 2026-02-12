@@ -1,7 +1,6 @@
 // From Frontend/ParsingPass/src/dev/vale/parsing/Formatter.scala
 // Code formatting utilities
 
-
 /*
 package dev.vale.parsing
 

@@ -4,12 +4,8 @@ please read:
 3. migration_differences.md
 4. testing.md
 
-and assemble me a report per migration_report_instructions.md, using checks described in migration_checks.md and in testing.md, and feel free to ignore allowable differences mentioned in migration_differences.md.
+now assemble me a report per migration_report_instructions.md, using those exact checks for each struct and function, and feel free to ignore allowable differences mentioned in migration_differences.md.
 
-the code in question is:
+do ALL those checks that you just listed, and remember to include any Other Differences if you see any.
 
-start by using todo_write to add todo items for each function, and then iteratively give me a report for each one.
-
-
-
-now list for me all the non-ok things
+the function/data in question is here: 

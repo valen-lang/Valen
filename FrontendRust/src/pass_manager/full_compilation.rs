@@ -1,15 +1,15 @@
 // From Frontend/PassManager/src/dev/vale/passmanager/FullCompilation.scala
 // Coordinates the full compilation pipeline
 
+use crate::compile_options::GlobalOptions;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::utils::code_hierarchy::{PackageCoordinate, IPackageResolver};
-use crate::simplifying::HammerCompilation;
-use crate::lexing::errors::FailedParse;
-use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::parsing::ast::FileP;
 use crate::lexing::ast::RangeL;
-use crate::compile_options::GlobalOptions;
+use crate::lexing::errors::FailedParse;
+use crate::parsing::ast::FileP;
+use crate::simplifying::HammerCompilation;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::sync::Arc;
 
@@ -39,80 +39,78 @@ import scala.collection.immutable.List
 
 // From FullCompilation.scala lines 23-28: FullCompilationOptions
 pub struct FullCompilationOptions {
-    pub global_options: GlobalOptions,
-    pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
+  pub global_options: GlobalOptions,
+  pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
 pub struct FullCompilation {
-    hammer_compilation: HammerCompilation,
+  hammer_compilation: HammerCompilation,
 }
 
 impl FullCompilation {
-    // From FullCompilation.scala lines 30-45
-    pub fn new(
-        interner: Arc<Interner>,
-        keywords: Arc<Keywords>,
-        packages_to_build: Vec<Arc<PackageCoordinate>>,
-        package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
-        options: FullCompilationOptions,
-    ) -> Self {
-        let hammer_compilation = HammerCompilation::new(
-            interner,
-            keywords,
-            packages_to_build,
-            package_to_contents_resolver,
-            options,
-        );
-        FullCompilation {
-            hammer_compilation,
-        }
-    }
+  // From FullCompilation.scala lines 30-45
+  pub fn new(
+    interner: Arc<Interner>,
+    keywords: Arc<Keywords>,
+    packages_to_build: Vec<Arc<PackageCoordinate>>,
+    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    options: FullCompilationOptions,
+  ) -> Self {
+    let hammer_compilation = HammerCompilation::new(
+      interner,
+      keywords,
+      packages_to_build,
+      package_to_contents_resolver,
+      options,
+    );
+    FullCompilation { hammer_compilation }
+  }
 
-    // From FullCompilation.scala line 48: getCodeMap
-    pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
-        self.hammer_compilation.get_code_map()
-    }
+  // From FullCompilation.scala line 48: getCodeMap
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+    self.hammer_compilation.get_code_map()
+  }
 
-    // From FullCompilation.scala line 49: getParseds
-    pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
-        self.hammer_compilation.get_parseds()
-    }
+  // From FullCompilation.scala line 49: getParseds
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+    self.hammer_compilation.get_parseds()
+  }
 
-    // From FullCompilation.scala line 50: getVpstMap
-    pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
-        self.hammer_compilation.get_vpst_map()
-    }
+  // From FullCompilation.scala line 50: getVpstMap
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+    self.hammer_compilation.get_vpst_map()
+  }
 
-    // From FullCompilation.scala line 51: getScoutput
-    pub fn get_scoutput(&mut self) -> Result<(), String> {
-        panic!("FullCompilation.get_scoutput not yet implemented - see FullCompilation.scala line 51")
-    }
+  // From FullCompilation.scala line 51: getScoutput
+  pub fn get_scoutput(&mut self) -> Result<(), String> {
+    panic!("FullCompilation.get_scoutput not yet implemented - see FullCompilation.scala line 51")
+  }
 
-    // From FullCompilation.scala line 52: getAstrouts
-    pub fn get_astrouts(&mut self) -> Result<(), String> {
-        panic!("FullCompilation.get_astrouts not yet implemented - see FullCompilation.scala line 52")
-    }
+  // From FullCompilation.scala line 52: getAstrouts
+  pub fn get_astrouts(&mut self) -> Result<(), String> {
+    panic!("FullCompilation.get_astrouts not yet implemented - see FullCompilation.scala line 52")
+  }
 
-    // From FullCompilation.scala line 53: getCompilerOutputs
-    pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
-        panic!("FullCompilation.get_compiler_outputs not yet implemented - see FullCompilation.scala line 53")
-    }
+  // From FullCompilation.scala line 53: getCompilerOutputs
+  pub fn get_compiler_outputs(&mut self) -> Result<(), String> {
+    panic!("FullCompilation.get_compiler_outputs not yet implemented - see FullCompilation.scala line 53")
+  }
 
-    // From FullCompilation.scala line 54: expectCompilerOutputs
-    pub fn expect_compiler_outputs(&mut self) -> () {
-        panic!("FullCompilation.expect_compiler_outputs not yet implemented - see FullCompilation.scala line 54")
-    }
+  // From FullCompilation.scala line 54: expectCompilerOutputs
+  pub fn expect_compiler_outputs(&mut self) -> () {
+    panic!("FullCompilation.expect_compiler_outputs not yet implemented - see FullCompilation.scala line 54")
+  }
 
-    // From FullCompilation.scala line 55: getHamuts
-    pub fn get_hamuts(&mut self) -> () {
-        panic!("FullCompilation.get_hamuts not yet implemented - see FullCompilation.scala line 55")
-    }
+  // From FullCompilation.scala line 55: getHamuts
+  pub fn get_hamuts(&mut self) -> () {
+    panic!("FullCompilation.get_hamuts not yet implemented - see FullCompilation.scala line 55")
+  }
 
-    // From FullCompilation.scala line 56: getMonouts
-    pub fn get_monouts(&mut self) -> () {
-        panic!("FullCompilation.get_monouts not yet implemented - see FullCompilation.scala line 56")
-    }
+  // From FullCompilation.scala line 56: getMonouts
+  pub fn get_monouts(&mut self) -> () {
+    panic!("FullCompilation.get_monouts not yet implemented - see FullCompilation.scala line 56")
+  }
 }
 
 /*

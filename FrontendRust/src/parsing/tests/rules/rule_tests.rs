@@ -1,3 +1,6 @@
+// Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::rule_tests
+
+/*
 package dev.vale.parsing.rules
 
 import dev.vale.{Collector, StrI}
@@ -13,7 +16,68 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
     compileRulex(code)
 //    compile(new TemplexParser().parseRule(_), code)
   }
+*/
+use crate::cast;
+use crate::parsing::ast::*;
+use crate::parsing::tests::traverse::NodeRefP;
+use crate::parsing::tests::utils::*;
 
+fn compile(code: &str) -> IRulexPR {
+  compile_rulex_expect(code)
+}
+
+#[test]
+fn relations() {
+  {
+    let rule = compile("implements(MyObject, IObject)");
+    let builtin = crate::collect_only_rulex!(
+      &rule,
+      NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
+    );
+    assert_eq!(builtin.name.str.str, "implements");
+    let (myobject_, iobject_) = expect_2(&builtin.args);
+    assert_templex_name(cast!(myobject_, IRulexPR::Templex), "MyObject");
+    assert_templex_name(cast!(iobject_, IRulexPR::Templex), "IObject");
+  }
+
+  {
+    let rule = compile("implements(R, IObject)");
+    let builtin = crate::collect_only_rulex!(
+      &rule,
+      NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
+    );
+    assert_eq!(builtin.name.str.str, "implements");
+    let (r_, iobject_) = expect_2(&builtin.args);
+    assert_templex_name(cast!(r_, IRulexPR::Templex), "R");
+    assert_templex_name(cast!(iobject_, IRulexPR::Templex), "IObject");
+  }
+
+  {
+    let rule = compile("implements(MyObject, T)");
+    let builtin = crate::collect_only_rulex!(
+      &rule,
+      NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
+    );
+    assert_eq!(builtin.name.str.str, "implements");
+    let (myobject_, t_) = expect_2(&builtin.args);
+    assert_templex_name(cast!(myobject_, IRulexPR::Templex), "MyObject");
+    assert_templex_name(cast!(t_, IRulexPR::Templex), "T");
+  }
+
+  {
+    let rule = compile("exists(func +(T)int)");
+    let builtin = crate::collect_only_rulex!(
+      &rule,
+      NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
+    );
+    assert_eq!(builtin.name.str.str, "exists");
+    let func = cast!(cast!(expect_1(&builtin.args), IRulexPR::Templex), ITemplexPT::Func);
+    assert_eq!(func.name.str.str, "+");
+    assert_templex_name(expect_1(&func.parameters), "T");
+    assert_templex_name(func.return_type.as_ref(), "int");
+  }
+}
+/*
   test("Relations") {
     compile("implements(MyObject, IObject)") shouldHave {
       case BuiltinCallPR(_, NameP(_, StrI("implements")),Vector(TemplexPR(NameOrRunePT(NameP(_, StrI("MyObject")))), TemplexPR(NameOrRunePT(NameP(_, StrI("IObject")))))) =>
@@ -28,11 +92,31 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
         case BuiltinCallPR(_, NameP(_, StrI("exists")), Vector(TemplexPR(FuncPT(_,NameP(_, StrI("+")), _, Vector(NameOrRunePT(NameP(_, StrI("T")))), NameOrRunePT(NameP(_, StrI("int"))))))) =>
     }
   }
+*/
 
+#[test]
+fn super_complicated() {
+  compile("C = any([#I]X, [#N]T)");
+}
+/*
   test("Super complicated") {
     compile("C = any([#I]X, [#N]T)") // succeeds
   }
+*/
 
+#[test]
+fn destructure_prototype() {
+  let rule = compile("Prot[_, _, T] = moo");
+  let equals = crate::collect_only_rulex!(&rule, NodeRefP::Rulex(IRulexPR::Equals(equals)) => Some(equals));
+  let left = cast!(equals.left.as_ref(), IRulexPR::Components);
+  assert_eq!(left.container, ITypePR::PrototypeType);
+  let (first_, second_, t_) = expect_3(&left.components);
+  cast!(cast!(first_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
+  cast!(cast!(second_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
+  assert_templex_name(cast!(t_, IRulexPR::Templex), "T");
+  assert_templex_name(cast!(equals.right.as_ref(), IRulexPR::Templex), "moo");
+}
+/*
   test("destructure prototype") {
     compile("Prot[_, _, T] = moo") shouldHave {
       case EqualsPR(_,
@@ -42,7 +126,17 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
         TemplexPR(NameOrRunePT(NameP(_, StrI("moo"))))) =>
     }
   }
+*/
 
+#[test]
+fn func() {
+  let rule = compile("func moo()T");
+  let func = crate::collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
+  assert_eq!(func.name.str.str, "moo");
+  assert!(func.parameters.is_empty());
+  assert_templex_name(func.return_type.as_ref(), "T");
+}
+/*
   test("func") {
     compile("func moo()T") shouldHave {
       case TemplexPR(
@@ -53,7 +147,26 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
           NameOrRunePT(NameP(_,StrI("T"))))) =>
     }
   }
+*/
 
+#[test]
+fn prototype_with_coords() {
+  let rule = compile("Prot[_, pack(int, bool), _]");
+  let components = crate::collect_only_rulex!(
+    &rule,
+    NodeRefP::Rulex(IRulexPR::Components(components)) => Some(components)
+  );
+  assert_eq!(components.container, ITypePR::PrototypeType);
+  let (first_, pack_, third_) = expect_3(&components.components);
+  cast!(cast!(first_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
+  let pack_call = cast!(pack_, IRulexPR::BuiltinCall);
+  assert_eq!(pack_call.name.str.str, "pack");
+  let (int_, bool_) = expect_2(&pack_call.args);
+  assert_templex_name(cast!(int_, IRulexPR::Templex), "int");
+  assert_templex_name(cast!(bool_, IRulexPR::Templex), "bool");
+  cast!(cast!(third_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
+}
+/*
   test("prototype with coords") {
     compile("Prot[_, pack(int, bool), _]") shouldHave {
       case ComponentsPR(_,
@@ -65,3 +178,4 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
     }
   }
 }
+*/

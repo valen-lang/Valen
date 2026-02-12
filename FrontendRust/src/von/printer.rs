@@ -1,166 +1,11 @@
+// Run with: cargo test 
+
 use super::ast::*;
 
-/// Von printer for JSON serialization
-/// Matches Scala's VonPrinter with JsonSyntax
 pub struct VonPrinter {
-    #[allow(dead_code)]
-    line_width: usize,
+  #[allow(dead_code)]
+  line_width: usize,
 }
-
-impl VonPrinter {
-    pub fn new() -> Self {
-        VonPrinter { line_width: 120 }
-    }
-
-    pub fn print(&self, data: &IVonData) -> String {
-        let mut result = String::new();
-        self.print_multiline(&mut result, data, 0);
-        result
-    }
-
-    fn escape(&self, value: &str) -> String {
-        value
-            .replace('\\', "\\\\")
-            .replace('"', "\\\"")
-            .replace('\n', "\\n")
-            .replace('\r', "\\r")
-            .replace('\t', "\\t")
-    }
-
-    fn print_multiline(&self, builder: &mut String, data: &IVonData, indentation: usize) {
-        match data {
-            IVonData::Int(VonInt { value }) => {
-                builder.push_str(&value.to_string());
-            }
-            IVonData::Float(VonFloat { value }) => {
-                builder.push_str(&value.to_string());
-            }
-            IVonData::Bool(VonBool { value }) => {
-                builder.push_str(&value.to_string());
-            }
-            IVonData::Str(VonStr { value }) => {
-                builder.push('"');
-                builder.push_str(&self.escape(value));
-                builder.push('"');
-            }
-            IVonData::Object(obj) => {
-                self.print_object_multiline(builder, obj, indentation);
-            }
-            IVonData::Array(arr) => {
-                self.print_array_multiline(builder, arr, indentation);
-            }
-        }
-    }
-
-    fn print_object_multiline(&self, builder: &mut String, obj: &VonObject, indentation: usize) {
-        let members = &obj.members;
-
-        // JSON: {"__type": "TypeName", "field1": value1, ...}
-        builder.push_str("{\"__type\": \"");
-        builder.push_str(&self.escape(&obj.tyype));
-        builder.push('"');
-        
-        if !members.is_empty() {
-            builder.push_str(", ");
-            builder.push('\n');
-
-            for (index, member) in members.iter().enumerate() {
-                self.print_indent(builder, indentation + 1);
-                self.print_member_multiline(builder, member, indentation + 1);
-                if index < members.len() - 1 {
-                    builder.push(',');
-                }
-                builder.push('\n');
-            }
-            
-            self.print_indent(builder, indentation);
-        }
-        
-        builder.push('}');
-    }
-
-    fn print_array_multiline(&self, builder: &mut String, arr: &VonArray, indentation: usize) {
-        let members = &arr.members;
-
-        builder.push('[');
-        
-        if !members.is_empty() {
-            builder.push('\n');
-
-            for (index, member) in members.iter().enumerate() {
-                self.print_indent(builder, indentation + 1);
-                self.print_multiline(builder, member, indentation + 1);
-                if index < members.len() - 1 {
-                    builder.push(',');
-                }
-                builder.push('\n');
-            }
-            
-            self.print_indent(builder, indentation);
-        }
-        
-        builder.push(']');
-    }
-
-    fn print_member_multiline(&self, builder: &mut String, member: &VonMember, indentation: usize) {
-        builder.push('"');
-        builder.push_str(&member.field_name);
-        builder.push_str("\": ");
-        self.print_multiline(builder, &member.value, indentation);
-    }
-
-    fn print_indent(&self, builder: &mut String, indentation: usize) {
-        for _ in 0..indentation {
-            builder.push_str("  ");
-        }
-    }
-}
-
-impl Default for VonPrinter {
-    fn default() -> Self {
-        Self::new()
-    }
-}
-
-#[cfg(test)]
-mod tests {
-    use super::*;
-
-    #[test]
-    fn test_simple_object() {
-        let printer = VonPrinter::new();
-        let obj = IVonData::object(
-            "TestType".to_string(),
-            vec![
-                VonMember::new("field1".to_string(), IVonData::int(42)),
-                VonMember::new("field2".to_string(), IVonData::str("hello".to_string())),
-            ],
-        );
-        
-        let json = printer.print(&obj);
-        assert!(json.contains("\"__type\": \"TestType\""));
-        assert!(json.contains("\"field1\": 42"));
-        assert!(json.contains("\"field2\": \"hello\""));
-    }
-
-    #[test]
-    fn test_array() {
-        let printer = VonPrinter::new();
-        let arr = IVonData::array(vec![
-            IVonData::int(1),
-            IVonData::int(2),
-            IVonData::int(3),
-        ]);
-        
-        let json = printer.print(&arr);
-        assert!(json.contains("["));
-        assert!(json.contains("1"));
-        assert!(json.contains("2"));
-        assert!(json.contains("3"));
-        assert!(json.contains("]"));
-    }
-}
-
 /*
 package dev.vale.von
 
@@ -176,14 +21,28 @@ case class VonSyntax(
 ) extends ISyntax { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
 case object JsonSyntax extends ISyntax
 
-class VonPrinter(
-    syntax: ISyntax,
-    lineWidth: Int,
-    typeNameMap: Map[String, String] = Map(),
-    includeSpaceAfterComma: Boolean = true,
-) {
-  val memberSeparator = if (includeSpaceAfterComma) ", " else ","
+*/
 
+impl VonPrinter {
+  pub fn new() -> Self {
+    VonPrinter { line_width: 120 }
+  }
+  /*
+  class VonPrinter(
+      syntax: ISyntax,
+      lineWidth: Int,
+      typeNameMap: Map[String, String] = Map(),
+      includeSpaceAfterComma: Boolean = true,
+  ) {
+    val memberSeparator = if (includeSpaceAfterComma) ", " else ","
+    */
+
+  pub fn print(&self, data: &IVonData) -> String {
+    let mut result = String::new();
+    self.print_multiline(&mut result, data, 0);
+    result
+  }
+  /*
   def print(data: IVonData): String = {
     val builder = new StringBuilder()
     printSingleLine(data, lineWidth) match {
@@ -192,7 +51,32 @@ class VonPrinter(
     }
     builder.toString()
   }
+  */
 
+  fn escape(&self, value: &str) -> String {
+    let mut escaped = String::with_capacity(value.len());
+    for ch in value.chars() {
+      match ch {
+        '\\' => escaped.push_str("\\\\"),
+        '"' => escaped.push_str("\\\""),
+        '\u{0008}' => escaped.push_str("\\b"),
+        '\n' => escaped.push_str("\\n"),
+        '\u{000C}' => escaped.push_str("\\f"),
+        '\r' => escaped.push_str("\\r"),
+        '\t' => escaped.push_str("\\t"),
+        c if c <= '\u{001F}' || c > '\u{007F}' => {
+          let mut units = [0u16; 2];
+          for unit in c.encode_utf16(&mut units).iter() {
+            escaped.push_str(&format!("\\u{:04X}", unit));
+          }
+        }
+        c => escaped.push(c),
+      }
+    }
+    escaped
+  }
+
+  /*
   def escape(value: String): String = {
     syntax match {
       case VonSyntax(_, _, _, _) => StringEscapeUtils.escapeJava(value)
@@ -203,7 +87,34 @@ class VonPrinter(
       }
     }
   }
+  */
 
+  fn print_multiline(&self, builder: &mut String, data: &IVonData, indentation: usize) {
+    match data {
+      IVonData::Int(VonInt { value }) => {
+        builder.push_str(&value.to_string());
+      }
+      IVonData::Float(VonFloat { value }) => {
+        builder.push_str(&value.to_string());
+      }
+      IVonData::Bool(VonBool { value }) => {
+        builder.push_str(&value.to_string());
+      }
+      IVonData::Str(VonStr { value }) => {
+        builder.push('"');
+        builder.push_str(&self.escape(value));
+        builder.push('"');
+      }
+      IVonData::Object(obj) => {
+        self.print_object_multiline(builder, obj, indentation);
+      }
+      IVonData::Array(arr) => {
+        self.print_array_multiline(builder, arr, indentation);
+      }
+    }
+  }
+
+  /*
   def printMultiline(
     builder: StringBuilder,
     data: IVonData,
@@ -226,7 +137,14 @@ class VonPrinter(
       }
     })
   }
+  */
+  fn print_indent(&self, builder: &mut String, indentation: usize) {
+    for _ in 0..indentation {
+      builder.push_str("  ");
+    }
+  }
 
+  /*
   def repeatStr(str: String, n: Int): String = {
     val resultBuilder = new StringBuilder()
     (0 until n).foreach(i => {
@@ -234,7 +152,35 @@ class VonPrinter(
     })
     resultBuilder.toString()
   }
+  */
+  fn print_object_multiline(&self, builder: &mut String, obj: &VonObject, indentation: usize) {
+    let members = &obj.members;
 
+    // JSON: {"__type": "TypeName", "field1": value1, ...}
+    builder.push_str("{\"__type\": \"");
+    builder.push_str(&self.escape(&obj.tyype));
+    builder.push('"');
+
+    if !members.is_empty() {
+      builder.push_str(", ");
+      builder.push('\n');
+
+      for (index, member) in members.iter().enumerate() {
+        self.print_indent(builder, indentation + 1);
+        self.print_member_multiline(builder, member, indentation + 1);
+        if index < members.len() - 1 {
+          builder.push(',');
+        }
+        builder.push('\n');
+      }
+
+      self.print_indent(builder, indentation);
+    }
+
+    builder.push('}');
+  }
+
+  /*
   def printObjectMultiline(builder: StringBuilder, obbject: VonObject, indentation: Int): Unit = {
     val VonObject(tyype, None, unfilteredMembers) = obbject
 
@@ -256,7 +202,8 @@ class VonPrinter(
     })
     builder ++= printObjectEnd(members.nonEmpty)
   }
-
+  */
+  /*
   def printObjectStart(originalType: String, hasMembers: Boolean): String = {
     val mappedType = typeNameMap.getOrElse(originalType, originalType)
     syntax match {
@@ -274,7 +221,8 @@ class VonPrinter(
       case JsonSyntax => "}"
     }
   }
-
+  */
+  /*
   def printArrayStart(): String = {
     syntax match {
       case VonSyntax(_, false, _, _) => "Array("
@@ -289,7 +237,31 @@ class VonPrinter(
       case JsonSyntax => "]"
     }
   }
+  */
+  fn print_array_multiline(&self, builder: &mut String, arr: &VonArray, indentation: usize) {
+    let members = &arr.members;
 
+    builder.push('[');
+
+    if !members.is_empty() {
+      builder.push('\n');
+
+      for (index, member) in members.iter().enumerate() {
+        self.print_indent(builder, indentation + 1);
+        self.print_multiline(builder, member, indentation + 1);
+        if index < members.len() - 1 {
+          builder.push(',');
+        }
+        builder.push('\n');
+      }
+
+      self.print_indent(builder, indentation);
+    }
+
+    builder.push(']');
+  }
+
+  /*
   def printArrayMultiline(builder: StringBuilder, array: VonArray, indentation: Int): Unit = {
     val VonArray(None, members) = array
 
@@ -308,7 +280,16 @@ class VonPrinter(
     })
     builder ++= printArrayEnd()
   }
+  */
 
+  fn print_member_multiline(&self, builder: &mut String, member: &VonMember, indentation: usize) {
+    builder.push('"');
+    builder.push_str(&member.field_name);
+    builder.push_str("\": ");
+    self.print_multiline(builder, &member.value, indentation);
+  }
+
+  /*
   def printMemberMultiline(
     builder: StringBuilder,
     member: VonMember,
@@ -317,14 +298,16 @@ class VonPrinter(
     builder ++= getMemberPrefix(member)
     printMultiline(builder, member.value, indentation)
   }
-
+  */
+  /*
   def getMemberPrefix(member: VonMember):
   // None if we failed to put it on the one line.
   String = {
     val VonMember(fieldName, _) = member
     printMemberPrefix(fieldName)
   }
-
+  */
+  /*
 
   def printSingleLine(
     data: IVonData,
@@ -350,7 +333,8 @@ class VonPrinter(
       }
     })
   }
-
+  */
+  /*
   def objectIsEmpty(data: IVonData): Boolean = {
     data match {
       case VonInt(value) => value == 0
@@ -361,7 +345,8 @@ class VonPrinter(
       case VonObject(_, _, members) => false
     }
   }
-
+  */
+  /*
   def filterMembers(members: Vector[VonMember]): Vector[VonMember] = {
     syntax match {
       case JsonSyntax => members
@@ -375,7 +360,8 @@ class VonPrinter(
       }
     }
   }
-
+  */
+  /*
   def printObjectSingleLine(
     obbject: VonObject,
     lineWidthRemainingForWholeObject: Int):
@@ -426,7 +412,8 @@ class VonPrinter(
       }
     }
   }
-
+  */
+  /*
   def printArraySingleLine(
     array: VonArray,
     lineWidthRemainingForWholeObject: Int):
@@ -475,7 +462,8 @@ class VonPrinter(
       }
     }
   }
-
+  */
+  /*
   def printMemberPrefix(name: String): String = {
     syntax match {
       case VonSyntax(true, _, _, _) => name + " = "
@@ -483,7 +471,8 @@ class VonPrinter(
       case JsonSyntax => "\"" + name + "\": "
     }
   }
-
+  */
+  /*
   def printMemberSingleLine(
     member: VonMember,
     // None means it will get its own line.
@@ -516,7 +505,58 @@ class VonPrinter(
       }
     }
   }
-
+  */
 }
 
-*/
+impl Default for VonPrinter {
+  fn default() -> Self {
+    Self::new()
+  }
+}
+
+#[cfg(test)]
+mod tests {
+  use super::*;
+
+  #[test]
+  fn test_simple_object() {
+    let printer = VonPrinter::new();
+    let obj = IVonData::object(
+      "TestType".to_string(),
+      vec![
+        VonMember::new("field1".to_string(), IVonData::int(42)),
+        VonMember::new("field2".to_string(), IVonData::str("hello".to_string())),
+      ],
+    );
+
+    let json = printer.print(&obj);
+    assert!(json.contains("\"__type\": \"TestType\""));
+    assert!(json.contains("\"field1\": 42"));
+    assert!(json.contains("\"field2\": \"hello\""));
+  }
+
+  #[test]
+  fn test_array() {
+    let printer = VonPrinter::new();
+    let arr = IVonData::array(vec![IVonData::int(1), IVonData::int(2), IVonData::int(3)]);
+
+    let json = printer.print(&arr);
+    assert!(json.contains("["));
+    assert!(json.contains("1"));
+    assert!(json.contains("2"));
+    assert!(json.contains("3"));
+    assert!(json.contains("]"));
+  }
+
+  #[test]
+  fn test_escape_java_style_sequences() {
+    let printer = VonPrinter::new();
+    let raw = "\u{0008}\u{000C}\u{001B}\"\n\r\t\\\u{00E9}\u{1F600}";
+    assert_eq!(printer.escape(raw), "\\b\\f\\u001B\\\"\\n\\r\\t\\\\\\u00E9\\uD83D\\uDE00");
+  }
+}
+
+/*
+}
+
+  */

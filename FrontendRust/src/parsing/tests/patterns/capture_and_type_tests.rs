@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing.patterns
 
 import dev.vale.{Collector, StrI}
@@ -26,22 +27,71 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
     compilePattern(code)
 //    compile(new PatternParser().parsePattern(_), code)
   }
+*/
+use crate::cast;
+use crate::parsing::ast::{INameDeclarationP, ITemplexPT, OwnershipP, PatternPP};
+use crate::parsing::tests::utils::{
+  assert_destination_local_name, assert_templex_name, compile_pattern_expect,
+};
 
+fn compile(code: &str) -> PatternPP {
+  compile_pattern_expect(code)
+}
+#[test]
+fn no_capture_with_type() {
+  let pattern = compile("_ int");
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("No capture, with type") {
     compile("_ int") shouldHave {
       case PatternPP(_, _, Some(NameOrRunePT(NameP(_, StrI("int")))), None) =>
     }
   }
+*/
+#[test]
+fn capture_with_type() {
+  let pattern = compile("a int");
+  assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Capture with type") {
     compile("a int") shouldHave {
       case capturedWithType("a", NameOrRunePT(NameP(_, StrI("int")))) =>
     }
   }
+*/
+#[test]
+fn simple_capture_with_tame() {
+  let pattern = compile("a T");
+  assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "T");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Simple capture with tame") {
     compile("a T") shouldHave {
       case capturedWithTypeRune("a","T") =>
     }
   }
+*/
+#[test]
+fn capture_with_borrow_tame() {
+  let pattern = compile("arr &R");
+  assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
+  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
+  assert_eq!(
+    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    OwnershipP::Borrow
+  );
+  assert!(interpreted.maybe_region.is_none());
+  assert_templex_name(interpreted.inner.as_ref(), "R");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Capture with borrow tame") {
     compile("arr &R") shouldHave {
       case PatternPP(_,
@@ -50,6 +100,27 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
         None) =>
     }
   }
+*/
+#[test]
+fn capture_with_self_in_front() {
+  let pattern = compile("self.arr &&R");
+  let destination = pattern.destination.as_ref().unwrap();
+  let member_name = cast!(
+    &destination.decl,
+    INameDeclarationP::ConstructingMemberNameDeclaration
+  );
+  assert_eq!(member_name.str.str, "arr");
+  assert!(destination.mutate.is_none());
+  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
+  assert_eq!(
+    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    OwnershipP::Weak
+  );
+  assert!(interpreted.maybe_region.is_none());
+  assert_templex_name(interpreted.inner.as_ref(), "R");
+  assert!(pattern.destructure.is_none());
+}
+/*
   test("Capture with self. in front") {
     compile("self.arr &&R") shouldHave {
       case PatternPP(_,
@@ -59,3 +130,4 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
     }
   }
 }
+*/

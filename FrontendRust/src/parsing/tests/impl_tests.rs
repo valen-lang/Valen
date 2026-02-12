@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing
 
 import dev.vale.lexing.Lexer
@@ -8,6 +9,24 @@ import org.scalatest._
 
 
 class ImplTests extends FunSuite with Matchers with Collector with TestParseUtils {
+*/
+use crate::cast;
+use crate::parsing::ast::*;
+use crate::parsing::tests::utils::*;
+
+#[test]
+fn normal_impl() {
+  let file = compile("impl MyInterface for SomeStruct;");
+  let denizen = expect_1(&file.denizens);
+  let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
+
+  assert!(impl_.generic_params.is_none());
+  assert!(impl_.template_rules.is_none());
+  assert_templex_name(impl_.struct_.as_ref().unwrap(), "SomeStruct");
+  assert_templex_name(&impl_.interface, "MyInterface");
+  assert_eq!(impl_.attributes.len(), 0);
+}
+/*
   test("Normal impl") {
     vassertOne(
       compileFile(
@@ -22,7 +41,35 @@ class ImplTests extends FunSuite with Matchers with Collector with TestParseUtil
           Vector())) =>
     }
   }
+*/
 
+#[test]
+fn templated_impl() {
+  let file = compile("impl<T> MyInterface<T> for SomeStruct<T>;");
+  let denizen = expect_1(&file.denizens);
+  let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
+
+  let generic_params = impl_.generic_params.as_ref().unwrap();
+  let generic_param = expect_1(&generic_params.params);
+  assert_eq!(generic_param.name.str.str, "T");
+  assert!(generic_param.maybe_type.is_none());
+  assert!(generic_param.coord_region.is_none());
+  assert_eq!(generic_param.attributes.len(), 0);
+  assert!(generic_param.maybe_default.is_none());
+  assert!(impl_.template_rules.is_none());
+
+  let struct_ = cast!(impl_.struct_.as_ref().unwrap(), ITemplexPT::Call);
+  assert_templex_name(struct_.template.as_ref(), "SomeStruct");
+  let struct_template_arg = expect_1(&struct_.args);
+  assert_templex_name(struct_template_arg, "T");
+
+  let interface = cast!(&impl_.interface, ITemplexPT::Call);
+  assert_templex_name(interface.template.as_ref(), "MyInterface");
+  let interface_template_arg = expect_1(&interface.args);
+  assert_templex_name(interface_template_arg, "T");
+  assert_eq!(impl_.attributes.len(), 0);
+}
+/*
   test("Templated impl") {
     vassertOne(
       compileFile(
@@ -37,7 +84,30 @@ class ImplTests extends FunSuite with Matchers with Collector with TestParseUtil
         Vector())) =>
     }
   }
+*/
 
+#[test]
+fn impling_a_template_call() {
+  let file = compile("impl IFunction1<mut, int, int> for MyIntIdentity;");
+  let denizen = expect_1(&file.denizens);
+  let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
+
+  assert!(impl_.generic_params.is_none());
+  assert!(impl_.template_rules.is_none());
+  assert_templex_name(impl_.struct_.as_ref().unwrap(), "MyIntIdentity");
+
+  let interface = cast!(&impl_.interface, ITemplexPT::Call);
+  assert_templex_name(interface.template.as_ref(), "IFunction1");
+  let (mutability_arg, int_arg1, int_arg2) = expect_3(&interface.args);
+  assert_eq!(
+    cast!(mutability_arg, ITemplexPT::Mutability).mutability,
+    MutabilityP::Mutable
+  );
+  assert_templex_name(int_arg1, "int");
+  assert_templex_name(int_arg2, "int");
+  assert_eq!(impl_.attributes.len(), 0);
+}
+/*
   test("Impling a template call") {
     vassertOne(
       compileFile(
@@ -53,3 +123,4 @@ class ImplTests extends FunSuite with Matchers with Collector with TestParseUtil
     }
   }
 }
+*/

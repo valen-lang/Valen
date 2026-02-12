@@ -1,3 +1,6 @@
+// Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::rules_enums_tests
+
+/*
 package dev.vale.parsing.rules
 
 import dev.vale.{Collector, StrI, parsing}
@@ -13,7 +16,88 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
     compileRulex(code)
 //    compile(new TemplexParser().parseRule(_), code)
   }
+*/
+use crate::cast;
+use crate::parsing::ast::*;
+use crate::parsing::tests::utils::*;
 
+fn compile(code: &str) -> IRulexPR {
+  compile_rulex_expect(code)
+}
+
+#[test]
+fn ownership() {
+  {
+    let rule = compile("X");
+    let templex = cast!(rule, IRulexPR::Templex);
+    assert_templex_name(&templex, "X");
+  }
+  {
+    let rule = compile("X Ownership");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::OwnershipType);
+  }
+  {
+    let rule = compile("X = own");
+    let equals = cast!(rule, IRulexPR::Equals);
+    assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
+    let ownership = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Ownership);
+    assert_eq!(ownership.ownership, OwnershipP::Own);
+  }
+  {
+    let rule = compile("X Ownership = any(own, borrow, weak)");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::OwnershipType);
+    let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
+    assert_eq!(any_.name.str.str, "any");
+    let (own_, borrow_, weak_) = expect_3(&any_.args);
+    assert_eq!(
+      cast!(cast!(own_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
+      OwnershipP::Own
+    );
+    assert_eq!(
+      cast!(cast!(borrow_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
+      OwnershipP::Borrow
+    );
+    assert_eq!(
+      cast!(cast!(weak_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
+      OwnershipP::Weak
+    );
+  }
+  {
+    let rule = compile("_ Ownership");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::OwnershipType);
+  }
+  {
+    let rule = compile("own");
+    let ownership = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Ownership);
+    assert_eq!(ownership.ownership, OwnershipP::Own);
+  }
+  {
+    let rule = compile("_ Ownership = any(own, share)");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::OwnershipType);
+    let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
+    assert_eq!(any_.name.str.str, "any");
+    let (own_, share_) = expect_2(&any_.args);
+    assert_eq!(
+      cast!(cast!(own_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
+      OwnershipP::Own
+    );
+    assert_eq!(
+      cast!(cast!(share_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
+      OwnershipP::Share
+    );
+  }
+}
+/*
   test("Ownership") {
     compile("X") shouldHave { case TemplexPR(NameOrRunePT(NameP(_, StrI("X")))) => }
     compile("X Ownership") shouldHave { case TypedPR(_,Some(NameP(_, StrI("X"))),OwnershipTypePR) => }
@@ -31,7 +115,67 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
           BuiltinCallPR(_,NameP(_, StrI("any")),Vector(TemplexPR(OwnershipPT(_,OwnP)), TemplexPR(OwnershipPT(_,ShareP))))) =>
     }
   }
-
+*/
+#[test]
+fn mutability() {
+  {
+    let rule = compile("X");
+    let templex = cast!(rule, IRulexPR::Templex);
+    assert_templex_name(&templex, "X");
+  }
+  {
+    let rule = compile("X Mutability");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::MutabilityType);
+  }
+  {
+    let rule = compile("X = mut");
+    let equals = cast!(rule, IRulexPR::Equals);
+    assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
+    let mutability = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Mutability);
+    assert_eq!(mutability.mutability, MutabilityP::Mutable);
+  }
+  {
+    let rule = compile("X Mutability = mut");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::MutabilityType);
+    let mutability = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Mutability);
+    assert_eq!(mutability.mutability, MutabilityP::Mutable);
+  }
+  {
+    let rule = compile("_ Mutability");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::MutabilityType);
+  }
+  {
+    let rule = compile("mut");
+    let mutability = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Mutability);
+    assert_eq!(mutability.mutability, MutabilityP::Mutable);
+  }
+  {
+    let rule = compile("_ Mutability = any(mut, imm)");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::MutabilityType);
+    let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
+    assert_eq!(any_.name.str.str, "any");
+    let (mut_, imm_) = expect_2(&any_.args);
+    assert_eq!(
+      cast!(cast!(mut_, IRulexPR::Templex), ITemplexPT::Mutability).mutability,
+      MutabilityP::Mutable
+    );
+    assert_eq!(
+      cast!(cast!(imm_, IRulexPR::Templex), ITemplexPT::Mutability).mutability,
+      MutabilityP::Immutable
+    );
+  }
+}
+/*
   test("Mutability") {
     compile("X") shouldHave { case TemplexPR(NameOrRunePT(NameP(_, StrI("X")))) => }
     compile("X Mutability") shouldHave { case TypedPR(_,Some(NameP(_, StrI("X"))),MutabilityTypePR) => }
@@ -49,7 +193,67 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
           BuiltinCallPR(_,NameP(_, StrI("any")),Vector(TemplexPR(MutabilityPT(_,MutableP)), TemplexPR(MutabilityPT(_,ImmutableP))))) =>
     }
   }
-
+*/
+#[test]
+fn location() {
+  {
+    let rule = compile("X");
+    let templex = cast!(rule, IRulexPR::Templex);
+    assert_templex_name(&templex, "X");
+  }
+  {
+    let rule = compile("X Location");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::LocationType);
+  }
+  {
+    let rule = compile("X = inl");
+    let equals = cast!(rule, IRulexPR::Equals);
+    assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
+    let location = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Location);
+    assert_eq!(location.location, LocationP::Inline);
+  }
+  {
+    let rule = compile("X Location = inl");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.tyype, ITypePR::LocationType);
+    let location = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Location);
+    assert_eq!(location.location, LocationP::Inline);
+  }
+  {
+    let rule = compile("_ Location");
+    let typed = cast!(rule, IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::LocationType);
+  }
+  {
+    let rule = compile("inl");
+    let location = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Location);
+    assert_eq!(location.location, LocationP::Inline);
+  }
+  {
+    let rule = compile("_ Location = any(inl, heap)");
+    let equals = cast!(rule, IRulexPR::Equals);
+    let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+    assert!(typed.rune.is_none());
+    assert_eq!(typed.tyype, ITypePR::LocationType);
+    let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
+    assert_eq!(any_.name.str.str, "any");
+    let (inl_, heap_) = expect_2(&any_.args);
+    assert_eq!(
+      cast!(cast!(inl_, IRulexPR::Templex), ITemplexPT::Location).location,
+      LocationP::Inline
+    );
+    assert_eq!(
+      cast!(cast!(heap_, IRulexPR::Templex), ITemplexPT::Location).location,
+      LocationP::Yonder
+    );
+  }
+}
+/*
   test("Location") {
     compile("X") shouldHave { case TemplexPR(NameOrRunePT(NameP(_, StrI("X")))) => }
     compile("X Location") shouldHave { case TypedPR(_,Some(NameP(_, StrI("X"))),LocationTypePR) => }
@@ -68,3 +272,4 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
     }
   }
 }
+*/

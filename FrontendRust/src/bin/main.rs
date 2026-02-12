@@ -5,7 +5,6 @@
 use std::env;
 
 fn main() {
-    let args: Vec<String> = env::args().skip(1).collect();
-    frontend_rust::pass_manager::main(args);
+  let args: Vec<String> = env::args().skip(1).collect();
+  frontend_rust::pass_manager::main(args);
 }
-

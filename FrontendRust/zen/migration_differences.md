@@ -44,5 +44,7 @@ These aren't worth mentioning:
  * If there's an unused Scala variable, and Rust also has it but underscored, that's fine.
  * Scala's Accumulator is equivalent to Rust Vec
  * Scala's Either vs equivalent custom Rust enums
-
-
+ * Using multi-line strings vs single-line strings.
+ * Using triple-quote strings instead of single-quote strings.
+ * Checking via `match` statement vs `assert!(matches!(...` statement, as long as they're doing logically equivalent checks.
+ * Method of asserting length, like asserting args.len() == 3 vs Scala pattern Vector(_, _, _).

@@ -1,3 +1,4 @@
+use crate::compile_options::GlobalOptions;
 use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
 use crate::lexing::lex_and_explore;
@@ -5,7 +6,6 @@ use crate::parsing::ast::IDenizenP;
 use crate::parsing::Parser;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::{Interner, Keywords};
-use crate::compile_options::GlobalOptions;
 use std::collections::HashMap;
 use std::sync::Arc;
 /*
@@ -44,74 +44,94 @@ object ParseAndExplore {
 
 // From ParseAndExplore.scala lines 35-101: parseAndExplore
 pub fn parse_and_explore<D, F, R, HandleParsedDenizen, FileHandler>(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    _opts: GlobalOptions,
-    parser: &mut Parser,
-    packages: Vec<Arc<PackageCoordinate>>,
-    resolver: &R,
-    mut handle_parsed_denizen: HandleParsedDenizen,
-    mut file_handler: FileHandler,
+  interner: Arc<Interner>,
+  keywords: Arc<Keywords>,
+  _opts: GlobalOptions,
+  parser: &mut Parser,
+  packages: Vec<Arc<PackageCoordinate>>,
+  resolver: &R,
+  mut handle_parsed_denizen: HandleParsedDenizen,
+  mut file_handler: FileHandler,
 ) -> Result<Vec<F>, FailedParse>
 where
-    R: IPackageResolver<HashMap<String, String>>,
-    HandleParsedDenizen: FnMut(&Arc<FileCoordinate>, &str, &[ImportL], IDenizenP) -> D,
-    FileHandler: FnMut(&Arc<FileCoordinate>, &str, &[RangeL], &[D]) -> F,
+  R: IPackageResolver<HashMap<String, String>>,
+  HandleParsedDenizen: FnMut(&Arc<FileCoordinate>, &str, &[ImportL], IDenizenP) -> D,
+  FileHandler: FnMut(&Arc<FileCoordinate>, &str, &[RangeL], &[D]) -> F,
 {
-    // From ParseAndExplore.scala lines 45-100: Call lexAndExplore with parsing logic
-    lex_and_explore::lex_and_explore(
-        interner,
-        keywords,
-        packages,
-        resolver,
-        |file_coord: &Arc<FileCoordinate>, code: &str, imports: &[ImportL], denizen_l: &IDenizenL| -> D {
-            // From ParseAndExplore.scala lines 51-95: Parse each denizen type
-            let denizen_p: IDenizenP = match denizen_l {
-                IDenizenL::TopLevelImport(import) => {
-                    // From ParseAndExplore.scala lines 53-59
-                    IDenizenP::TopLevelImport(
-                        parser.parse_import(import.clone()).expect("parse_import failed - error handling not yet fully implemented")
-                    )
-                }
-                IDenizenL::TopLevelFunction(function_l) => {
-                    // From ParseAndExplore.scala lines 60-66
-                    IDenizenP::TopLevelFunction(
-                        parser.parse_function(function_l.clone(), false).expect("parse_function failed - error handling not yet fully implemented")
-                    )
-                }
-                IDenizenL::TopLevelStruct(struct_l) => {
-                    // From ParseAndExplore.scala lines 67-73
-                    IDenizenP::TopLevelStruct(
-                        parser.parse_struct(struct_l.clone()).expect("parse_struct failed - error handling not yet fully implemented")
-                    )
-                }
-                IDenizenL::TopLevelInterface(interface_l) => {
-                    // From ParseAndExplore.scala lines 74-80
-                    IDenizenP::TopLevelInterface(
-                        parser.parse_interface(interface_l.clone()).expect("parse_interface failed - error handling not yet fully implemented")
-                    )
-                }
-                IDenizenL::TopLevelImpl(impl_l) => {
-                    // From ParseAndExplore.scala lines 81-87
-                    IDenizenP::TopLevelImpl(
-                        parser.parse_impl(impl_l.clone()).expect("parse_impl failed - error handling not yet fully implemented")
-                    )
-                }
-                IDenizenL::TopLevelExportAs(export) => {
-                    // From ParseAndExplore.scala lines 88-94
-                    IDenizenP::TopLevelExportAs(
-                        parser.parse_export_as(export.clone()).expect("parse_export_as failed - error handling not yet fully implemented")
-                    )
-                }
-            };
-            // From ParseAndExplore.scala line 96
-            handle_parsed_denizen(file_coord, code, imports, denizen_p)
-        },
-        |file_coord: &Arc<FileCoordinate>, code: &str, comment_ranges: &[RangeL], denizens: &[D]| -> F {
-            // From ParseAndExplore.scala lines 98-100
-            file_handler(file_coord, code, comment_ranges, denizens)
-        },
-    )
+  // From ParseAndExplore.scala lines 45-100: Call lexAndExplore with parsing logic
+  lex_and_explore::lex_and_explore(
+    interner,
+    keywords,
+    packages,
+    resolver,
+    |file_coord: &Arc<FileCoordinate>,
+     code: &str,
+     imports: &[ImportL],
+     denizen_l: &IDenizenL|
+     -> D {
+      // From ParseAndExplore.scala lines 51-95: Parse each denizen type
+      let denizen_p: IDenizenP = match denizen_l {
+        IDenizenL::TopLevelImport(import) => {
+          // From ParseAndExplore.scala lines 53-59
+          IDenizenP::TopLevelImport(
+            parser
+              .parse_import(import.clone())
+              .expect("parse_import failed - error handling not yet fully implemented"),
+          )
+        }
+        IDenizenL::TopLevelFunction(function_l) => {
+          // From ParseAndExplore.scala lines 60-66
+          IDenizenP::TopLevelFunction(
+            parser
+              .parse_function(function_l.clone(), false)
+              .expect("parse_function failed - error handling not yet fully implemented"),
+          )
+        }
+        IDenizenL::TopLevelStruct(struct_l) => {
+          // From ParseAndExplore.scala lines 67-73
+          IDenizenP::TopLevelStruct(
+            parser
+              .parse_struct(struct_l.clone())
+              .expect("parse_struct failed - error handling not yet fully implemented"),
+          )
+        }
+        IDenizenL::TopLevelInterface(interface_l) => {
+          // From ParseAndExplore.scala lines 74-80
+          IDenizenP::TopLevelInterface(
+            parser
+              .parse_interface(interface_l.clone())
+              .expect("parse_interface failed - error handling not yet fully implemented"),
+          )
+        }
+        IDenizenL::TopLevelImpl(impl_l) => {
+          // From ParseAndExplore.scala lines 81-87
+          IDenizenP::TopLevelImpl(
+            parser
+              .parse_impl(impl_l.clone())
+              .expect("parse_impl failed - error handling not yet fully implemented"),
+          )
+        }
+        IDenizenL::TopLevelExportAs(export) => {
+          // From ParseAndExplore.scala lines 88-94
+          IDenizenP::TopLevelExportAs(
+            parser
+              .parse_export_as(export.clone())
+              .expect("parse_export_as failed - error handling not yet fully implemented"),
+          )
+        }
+      };
+      // From ParseAndExplore.scala line 96
+      handle_parsed_denizen(file_coord, code, imports, denizen_p)
+    },
+    |file_coord: &Arc<FileCoordinate>,
+     code: &str,
+     comment_ranges: &[RangeL],
+     denizens: &[D]|
+     -> F {
+      // From ParseAndExplore.scala lines 98-100
+      file_handler(file_coord, code, comment_ranges, denizens)
+    },
+  )
 }
 /*
   def parseAndExplore[D, F](

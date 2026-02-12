@@ -1,3 +1,4 @@
+/*
 package dev.vale.parsing
 
 import dev.vale.lexing.{Lexer, LexingIterator}
@@ -13,33 +14,28 @@ import java.nio.charset.Charset
 
 
 class LoadTests extends FunSuite with Matchers with Collector with TestParseUtils {
-//  private def compileProgramWithComments(code: String): FileP = {
-//    Parser.runParserForProgramAndCommentRanges(code) match {
-//      case ParseFailure(err) => fail(err.toString)
-//      case ParseSuccess(result) => result._1
-//    }
-//  }
-//  private def compileProgram(code: String): FileP = {
-//    // The strip is in here because things inside the parser don't expect whitespace before and after
-//    Parser.runParser(code) match {
-//      case ParseFailure(err) => fail(err.toString)
-//      case ParseSuccess(result) => result
-//    }
-//  }
-//
-//  private def compile[T](parser: CombinatorParsers.Parser[T], code: String): T = {
-//    // The strip is in here because things inside the parser don't expect whitespace before and after
-//    CombinatorParsers.parse(parser, code.strip().toCharArray()) match {
-//      case CombinatorParsers.NoSuccess(msg, input) => {
-//        fail("Couldn't parse!\n" + input.pos.longString);
-//      }
-//      case CombinatorParsers.Success(expr, rest) => {
-//        vassert(rest.atEnd)
-//        expr
-//      }
-//    }
-//  }
+*/
 
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::lexing::lexing_iterator::LexingIterator;
+use crate::lexing::lexer::Lexer;
+use crate::parsing::parsed_loader;
+use crate::parsing::tests::utils::compile_file;
+use crate::parsing::vonifier::ParserVonifier;
+use crate::von::printer::VonPrinter;
+use std::sync::Arc;
+
+#[test]
+fn simple_program() {
+  let original_file = compile_file("exported func main() int { return 42; }").unwrap();
+  let von = ParserVonifier::vonify_file(&original_file);
+  let json = VonPrinter::new().print(&von);
+  let loaded_file = parsed_loader::load(&json).unwrap();
+  // This is because we don't want to enable .equals, see EHCFBD.
+  assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
+}
+/*
   test("Simple program") {
     val interner = new Interner()
     val originalFile = compileFile("""exported func main() int { return 42; }""").getOrDie()
@@ -49,7 +45,44 @@ class LoadTests extends FunSuite with Matchers with Collector with TestParseUtil
     // This is because we don't want to enable .equals, see EHCFBD.
     originalFile.toString == loadedFile.toString
   }
+*/
 
+#[test]
+fn strings_with_special_characters() {
+  let interner = Arc::new(Interner::new());
+  let keywords = Arc::new(Keywords::new(&interner));
+  let lexer = Lexer::new(interner.clone(), keywords);
+  let mut iter = LexingIterator::new("000a".to_string());
+  assert_eq!(lexer.parse_four_digit_hex_num(&mut iter, 0), Some(10));
+
+  let code = "exported func main() str { \"hello\\u001bworld\" }";
+  // FALL NOT TO TEMPTATION
+  // Scala has some issues here.
+  // The above "\"\\u001b\"" seems like it could be expressed """"\\u001b"""" but it can't.
+  // Nothing seems to work:
+  // - vassert("\"\\u001b\"" == """"\u001b"""") fails
+  // - vassert("\"\\u001b\"" == """"\\u001b"""") fails
+  // - vassert("\"\\u001b\"" == """\"\\u001b\"""") fails
+  // This took quite a while to figure out.
+  // So, just stick with regular scala string literals, scala's good with those.
+  // Other tests have this, search TEMPTATION.
+  // NOW GO YE AND PROSPER
+
+  // This assert makes sure the above is making the input we actually intend.
+  // Real source files from disk are going to have a backslash character and then a u,
+  // they won't have the 0x1b byte.
+  assert!(code.contains("\\u001b"));
+
+  let original_file = compile_file(code).unwrap();
+  let von = ParserVonifier::vonify_file(&original_file);
+  let generated_json_str = VonPrinter::new().print(&von);
+  let generated_bytes = generated_json_str.as_bytes();
+  let loaded_json_str = String::from_utf8(generated_bytes.to_vec()).unwrap();
+  let loaded_file = parsed_loader::load(&loaded_json_str).unwrap();
+  // This is because we don't want to enable .equals, see EHCFBD.
+  assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
+}
+/*
   test("Strings with special characters") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -90,3 +123,4 @@ class LoadTests extends FunSuite with Matchers with Collector with TestParseUtil
     expr.toString shouldEqual loadedExpr.toString
   }
 }
+*/
