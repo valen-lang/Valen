@@ -44,7 +44,6 @@ fn parse(path: &str) {
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
 }
 
-// NOVEL CODE: Macro-generated declarations mirroring ParseSamplesTests.scala's test list.
 macro_rules! parse_sample_test {
   ($name:ident, $path:literal) => {
     #[test]

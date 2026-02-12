@@ -6,7 +6,11 @@ Please do not use scripts to update the code, prefer edit, search_replace, and y
 
 # P2: Provenance
 
-I've left the old Scala code in as comments. For any new piece of Rust, try to put it as close as possible to the old Scala comment.
+I've left the old Scala code in as comments.
+
+IMPORTANT: For every new piece of Rust code, put it directly above the old Scala comment. New Rust code should be interleaved with old Scala code.
+
+IMPORTANT: Do not change or remove any Scala comments.
 
 If there's no equivalent Scala code, please write a "// NOVEL CODE" comment and explain what the closest equivalent Scala code in the old compiler was. You can find the old compiler in /Frontend.
 
@@ -49,7 +53,8 @@ Stop and ask the human when you're about to implement Clone for a potentially la
 
 Default to making Scala sealed traits into Rust enums, but it's also fine if you instead want to make them into Rust traits.
 
-If you make them into Rust enums, and the enums have fields in them, adhere to ESCCD.
+If you make them into Rust enums, and the enums have fields in them, adhere to ESCCD. Enums themselves should never be interned; only their contents should be interned.
+
 
 
 # P10: Port structure exactly

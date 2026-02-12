@@ -1,3 +1,6 @@
+use crate::utils::code_hierarchy::FileCoordinate;
+use std::sync::Arc;
+
 /*
 package dev.vale
 
@@ -33,7 +36,15 @@ object RangeS {
     RangeS(CodeLocationS.internal(interner, internalNum), CodeLocationS.internal(interner, internalNum))
   }
 }
+*/
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CodeLocationS {
+  pub file: Arc<FileCoordinate>,
+  pub offset: i32,
+}
+
+/*
 case class CodeLocationS(
   // The index in the original source code files list.
   // If negative, it means it came from some internal non-file code.
@@ -50,7 +61,21 @@ case class CodeLocationS(
     }
   }
 }
+*/
 
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RangeS {
+  pub begin: CodeLocationS,
+  pub end: CodeLocationS,
+}
+
+impl RangeS {
+  pub fn file(&self) -> &Arc<FileCoordinate> {
+    &self.begin.file
+  }
+}
+
+/*
 case class RangeS(begin: CodeLocationS, end: CodeLocationS) {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
   vassert(begin.file == end.file)

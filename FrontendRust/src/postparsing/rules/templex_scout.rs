@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing.rules
 
 import dev.vale.lexing.RangeL
@@ -9,10 +10,13 @@ import dev.vale.postparsing._
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
+*/
+/*
 class TemplexScout(
     interner: Interner,
   keywords: Keywords) {
+*/
+/*
   def addLiteralRule(
     lidb: LocationInDenizenBuilder,
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -23,7 +27,8 @@ class TemplexScout(
     ruleBuilder += LiteralSR(rangeS, runeS, valueSR)
     runeS
   }
-
+*/
+/*
   def addRuneParentEnvLookupRule(
     lidb: LocationInDenizenBuilder,
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -34,7 +39,8 @@ class TemplexScout(
     ruleBuilder += RuneParentEnvLookupSR(rangeS, usage)
     usage
   }
-
+*/
+/*
   def addLookupRule(
     lidb: LocationInDenizenBuilder,
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -46,7 +52,8 @@ class TemplexScout(
     ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, runeS, nameSN)
     runeS
   }
-
+*/
+/*
   def translateValueTemplex(templex: ITemplexPT): Option[ILiteralSL] = {
     templex match {
       case IntPT(_, value) => Some(IntLiteralSL(value))
@@ -59,7 +66,8 @@ class TemplexScout(
       case _ => None
     }
   }
-
+*/
+/*
   // Returns:
   // - Rune for this type
   def translateTemplex(
@@ -302,7 +310,8 @@ class TemplexScout(
       }
     })
   }
-
+*/
+/*
   // Returns:
   // - Rune for this type
   def translateTypeIntoRune(
@@ -324,7 +333,8 @@ class TemplexScout(
       }
     }
   }
-
+*/
+/*
   // Returns:
   // - Rune for this type
   def translateMaybeTypeIntoRune(
@@ -345,7 +355,8 @@ class TemplexScout(
       }
     }
   }
-
+*/
+/*
   def translateMaybeTypeIntoMaybeRune(
     env: IEnvironmentS,
     lidb: LocationInDenizenBuilder,
@@ -364,3 +375,4 @@ class TemplexScout(
     }
   }
 }
+*/

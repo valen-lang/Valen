@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing.patterns
 
 import dev.vale._
@@ -107,3 +108,4 @@ class PatternScout(
   }
 
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing
 
 import dev.vale.parsing.ast.{FinalP, LoadAsBorrowP, MutableP, UseP}
@@ -76,3 +77,4 @@ class AfterRegionsErrorTests extends FunSuite with Matchers with Collector {
     vimpl()
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing
 
 import dev.vale._
@@ -9,6 +10,8 @@ import org.scalatest._
 import scala.collection.immutable.List
 
 class PostParsingRuleTests extends FunSuite with Matchers {
+*/
+/*
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
     val compile = PostParserTestCompilation.test(code, interner)
     compile.getScoutput() match {
@@ -24,14 +27,16 @@ class PostParsingRuleTests extends FunSuite with Matchers {
       case Ok(t) => t.expectOne()
     }
   }
-
+*/
+/*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e
       case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
     }
   }
-
+*/
+/*
   test("Predict simple templex") {
     val program =
       compile(
@@ -43,7 +48,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     vassertSome(main.runeToPredictedType.get(main.params.head.pattern.coordRune.get.rune)) shouldEqual
       CoordTemplataType()
   }
-
+*/
+/*
   test("Can know rune type from simple equals") {
     val interner = new Interner()
     val program =
@@ -59,7 +65,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("Y"))))) shouldEqual
       CoordTemplataType()
   }
-
+*/
+/*
   test("Predict knows type from Or rule") {
     val interner = new Interner()
     val program =
@@ -73,7 +80,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("M"))))) shouldEqual
       OwnershipTemplataType()
   }
-
+*/
+/*
   test("Predict CoordComponent types") {
     val interner = new Interner()
     vregionmut() // Put back in with regions
@@ -98,7 +106,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     // vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("R"))))) shouldEqual RegionTemplataType()
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("K"))))) shouldEqual KindTemplataType()
   }
-
+*/
+/*
   test("Predict Call types") {
     val interner = new Interner()
     val program =
@@ -114,7 +123,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     // We can't know if T it's a Coord->Coord or a Coord->Kind type.
     main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T")))) shouldEqual None
   }
-
+*/
+/*
   // Not sure if this test is useful anymore, since we say M, V, N's types up-front now
   test("Predict array sequence types") {
     val interner = new Interner()
@@ -132,7 +142,8 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("E"))))) shouldEqual CoordTemplataType()
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T"))))) shouldEqual CoordTemplataType()
   }
-
+*/
+/*
   // Not sure if this test is useful anymore, since we say Kind up-front now
   test("Predict for isInterface") {
     val interner = new Interner()
@@ -147,4 +158,7 @@ class PostParsingRuleTests extends FunSuite with Matchers {
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("A"))))) shouldEqual KindTemplataType()
     vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("B"))))) shouldEqual KindTemplataType()
   }
+*/
+/*
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing.patterns
 
 import dev.vale.postparsing.IVarNameS
@@ -6,13 +7,33 @@ import dev.vale._
 import dev.vale.postparsing._
 
 import scala.collection.immutable.List
+*/
+use crate::postparsing::names::IVarNameS;
+use crate::postparsing::rules::RuneUsage;
+use crate::utils::range::RangeS;
 
+#[derive(Clone, Debug, PartialEq)]
+pub struct CaptureS {
+  pub name: IVarNameS,
+  pub mutate: bool,
+}
+
+/*
 case class CaptureS(
     name: IVarNameS,
     mutate: Boolean) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+*/
+#[derive(Clone, Debug, PartialEq)]
+pub struct AtomSP {
+  pub range: RangeS,
+  pub name: Option<CaptureS>,
+  pub coord_rune: Option<RuneUsage>,
+  pub destructure: Option<Vec<AtomSP>>,
+}
 
+/*
 case class AtomSP(
   range: RangeS,
   // This is an option because in PatternCompiler, if it's None, we'll explode the
@@ -32,3 +53,5 @@ case class AtomSP(
     case _ =>
   }
 }
+
+*/

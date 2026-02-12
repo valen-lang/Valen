@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing
 
 import dev.vale.{Collector, Err, FileCoordinateMap, Interner, Ok, SourceCodeUtils, StrI, vassert, vfail}
@@ -8,14 +9,16 @@ import org.scalatest._
 import scala.runtime.Nothing$
 
 class PostParserVariableTests extends FunSuite with Matchers {
-
+*/
+/*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e
       case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
     }
   }
-
+*/
+/*
   private def compile(code: String): ProgramS = {
     val interner = new Interner()
     PostParserTestCompilation.test(code).getScoutput() match {
@@ -32,7 +35,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       case Ok(t) => t.expectOne()
     }
   }
-
+*/
+/*
   test("Regular variable") {
     val program1 = compile("exported func main() int { x = 4; }")
     val main = program1.lookupFunction("main")
@@ -44,20 +48,23 @@ class PostParserVariableTests extends FunSuite with Matchers {
       NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Type-less local has no coord rune") {
     val program1 = compile("exported func main() int { x = 4; }")
     val main = program1.lookupFunction("main")
     val local = Collector.only(main, { case let @ LetSE(_, rules, pattern, _) => let })
     local.pattern.coordRune shouldEqual None
   }
-
+*/
+/*
   test("Reports defining same-name variable") {
     compileForError("exported func main() { x = 4; x = 5; }") match {
       case VariableNameAlreadyExists(_, CodeVarNameS(StrI("x"))) =>
     }
   }
-
+*/
+/*
   test("Self is pointing to function") {
     val program1 = compile("exported func main() int { x = 4; doBlarks(&x); }")
     val main = program1.lookupFunction("main")
@@ -68,7 +75,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self is pointing to method") {
     val program1 = compile("exported func main() int { x = 4; x.doBlarks(); }")
     val main = program1.lookupFunction("main")
@@ -79,7 +87,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self is moving to function") {
     val program1 = compile("exported func main() int { x = 4; doBlarks(x); }")
     val main = program1.lookupFunction("main")
@@ -90,7 +99,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self is moving to method") {
     val program1 = compile("exported func main() int { x = 4; (x).doBlarks(); }")
     val main = program1.lookupFunction("main")
@@ -101,7 +111,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self is mutating mutable") {
     val program1 = compile("exported func main() int { x = 4; set x = 6; }")
     val main = program1.lookupFunction("main")
@@ -112,7 +123,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
        NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self is moving and mutating same variable") {
     val program1 = compile("exported func main() int { x = 4; set x = +(x, 1); }")
     val main = program1.lookupFunction("main")
@@ -123,7 +135,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
        NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Child is pointing") {
     val program1 = compile(
       """
@@ -140,7 +153,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Child is moving") {
     val program1 = compile(
       """
@@ -157,7 +171,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Child is mutating") {
     val program1 = compile(
       """
@@ -174,7 +189,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
     }
   }
-
+*/
+/*
   test("Self maybe pointing") {
     val program1 = compile(
       """
@@ -189,7 +205,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       case LocalS(CodeVarNameS(StrI("x")), Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self maybe moving") {
     val program1 = compile(
       """
@@ -206,7 +223,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self maybe mutating") {
     val program1 = compile(
       """
@@ -223,7 +241,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children maybe pointing") {
     val program1 = compile(
       """
@@ -240,7 +259,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children maybe moving") {
     val program1 = compile(
       """
@@ -257,7 +277,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children maybe mutating") {
     val program1 = compile(
       """
@@ -274,7 +295,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
     }
   }
-
+*/
+/*
   test("Self both pointing") {
     val program1 = compile(
       """
@@ -291,7 +313,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children both pointing") {
     val program1 = compile(
       """
@@ -308,7 +331,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self both moving") {
     val program1 = compile(
       """
@@ -325,7 +349,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children both moving") {
     val program1 = compile(
       """
@@ -342,7 +367,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, NotUsed, Used, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self both mutating") {
     val program1 = compile(
       """
@@ -359,7 +385,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children both mutating") {
     val program1 = compile(
       """
@@ -376,7 +403,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, Used) =>
     }
   }
-
+*/
+/*
   test("Self pointing or moving") {
     val program1 = compile(
       """
@@ -393,7 +421,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, Used, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children pointing or moving") {
     val program1 = compile(
       """
@@ -410,7 +439,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, Used, Used, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self mutating or moving") {
     val program1 = compile(
       """
@@ -427,7 +457,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children mutating or moving") {
     val program1 = compile(
       """
@@ -444,7 +475,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, NotUsed, Used, Used) =>
     }
   }
-
+*/
+/*
   test("Self moving and mutating same variable") {
     val program1 = compile("exported func main() int { x = 4; set x = +(x, 1); }")
     val main = program1.lookupFunction("main")
@@ -455,7 +487,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, Used, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children moving and mutating same variable") {
     val program1 = compile("exported func main() int { x = 4; { set x = +(x, 1); }(); }")
     val main = program1.lookupFunction("main")
@@ -466,7 +499,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, NotUsed, Used, Used) =>
     }
   }
-
+*/
+/*
   test("Self borrowing param") {
     val program1 = compile(
       """
@@ -482,7 +516,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children borrowing param") {
     val program1 = compile(
       """
@@ -498,7 +533,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
           NotUsed, NotUsed, NotUsed, Used, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Self loading or mutating or moving") {
     val program1 = compile(
       """
@@ -515,7 +551,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, Used, Used, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Children loading or mutating or moving") {
     val program1 = compile(
       """
@@ -532,7 +569,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            NotUsed, NotUsed, NotUsed, Used, Used, Used) =>
     }
   }
-
+*/
+/*
   test("While condition borrowing") {
     val program1 = compile(
       """
@@ -550,7 +588,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("While body maybe loading") {
     val program1 = compile(
       """
@@ -567,7 +606,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
            Used, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
-
+*/
+/*
   test("Include closure var in locals") {
     val program1 = compile(
       """
@@ -593,7 +633,8 @@ class PostParserVariableTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+/*
   test("Include _ in locals") {
     val program1 = compile(
       """
@@ -615,4 +656,7 @@ class PostParserVariableTests extends FunSuite with Matchers {
       case LocalS(ClosureParamNameS(_), NotUsed, NotUsed, NotUsed, NotUsed, NotUsed, NotUsed) =>
     }
   }
+*/
+/*
 }
+*/

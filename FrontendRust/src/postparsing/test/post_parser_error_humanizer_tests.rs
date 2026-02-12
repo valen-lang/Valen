@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing
 
 import dev.vale.{CodeLocationS, Err, FileCoordinateMap, Interner, Ok, RangeS, SourceCodeUtils, StrI, vassert, vfail}
@@ -7,7 +8,8 @@ import dev.vale.postparsing.rules._
 import org.scalatest._
 
 class PostParserErrorHumanizerTests extends FunSuite with Matchers {
-
+*/
+/*
   private def compile(code: String): ProgramS = {
     val interner = new Interner()
     PostParserTestCompilation.test(code).getScoutput() match {
@@ -24,14 +26,16 @@ class PostParserErrorHumanizerTests extends FunSuite with Matchers {
       case Ok(t) => t.expectOne()
     }
   }
-
+*/
+/*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e
       case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
     }
   }
-
+*/
+/*
   test("Humanize errors") {
     val interner = new Interner()
     val codeMap = FileCoordinateMap.test(interner, "blah blah blah\nblah blah blah")
@@ -56,3 +60,4 @@ class PostParserErrorHumanizerTests extends FunSuite with Matchers {
       .nonEmpty)
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.postparsing.rules
 
 import dev.vale.lexing.RangeL
@@ -11,8 +12,11 @@ import dev.vale.postparsing.rules.RuleScout.translateType
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
+*/
+/*
 class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexScout) {
+*/
+/*
   // Returns:
   // - new rules produced on the side while translating the given rules
   // - the translated versions of the given rules
@@ -26,7 +30,8 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
   Vector[RuneUsage] = {
     rulesP.map(translateRulex(env, lidb.child(), builder, runeToExplicitType, contextRegion, _))
   }
-
+*/
+/*
   def translateRulex(
     env: IEnvironmentS,
     lidb: LocationInDenizenBuilder,
@@ -202,11 +207,13 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
       }
     }
   }
-
+*/
+/*
 }
 
 object RuleScout {
-
+*/
+/*
   def translateType(tyype: ITypePR): ITemplataType = {
     tyype match {
       case PrototypeTypePR => PrototypeTemplataType()
@@ -222,7 +229,8 @@ object RuleScout {
       case RegionTypePR => RegionTemplataType()
     }
   }
-
+*/
+/*
   // Gets the template name (or the kind name if not template)
   def getRuneKindTemplate(rulesS: IndexedSeq[IRulexSR], rune: IRuneS) = {
     val equivalencies = new Equivalencies(rulesS)
@@ -242,10 +250,15 @@ object RuleScout {
     val templateName = templateNames.head
     templateName
   }
+*/
+/*
 }
-
+*/
+/*
 class Equivalencies(rules: IndexedSeq[IRulexSR]) {
   val runeToKindEquivalentRunes: mutable.HashMap[IRuneS, mutable.HashSet[IRuneS]] = mutable.HashMap()
+*/
+/*
   def markKindEquivalent(runeA: IRuneS, runeB: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElseUpdate(runeA, mutable.HashSet()) += runeB
     runeToKindEquivalentRunes.getOrElseUpdate(runeB, mutable.HashSet()) += runeA
@@ -274,7 +287,8 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) =>
     case other => vimpl(other)
   })
-
+*/
+/*
   private def findTransitivelyEquivalentInto(foundSoFar: mutable.HashSet[IRuneS], rune: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElse(rune, Vector()).foreach(r => {
       if (!foundSoFar.contains(r)) {
@@ -283,17 +297,22 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
       }
     })
   }
-
+*/
+/*
   def getKindEquivalentRunes(rune: IRuneS): Set[IRuneS] = {
     val set = mutable.HashSet[IRuneS]()
     set += rune
     findTransitivelyEquivalentInto(set, rune)
     set.toSet
   }
-
+*/
+/*
   def getKindEquivalentRunes(runes: Iterable[IRuneS]): Set[IRuneS] = {
     runes
       .map(getKindEquivalentRunes)
       .foldLeft(Set[IRuneS]())(_ ++ _)
   }
+*/
+/*
 }
+*/

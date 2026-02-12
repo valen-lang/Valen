@@ -37,3 +37,4 @@ Ensure that all comments in the Scala version are also in the Rust version.
 # M6. Enums Shouldn't Contain Complex Data (ESCCD)
 
 We generally don't like enums that contain complex data as direct fields. We prefer the enum variant to contain a struct with the fields. This is so that data can be in a NodeRefP entry, so it's easier for tests to look directly for them. It also makes it so we can more easily make a cast! macro to "cast" an enum to its inner type.
+Also, enums themselves should never be interned; only their contents should be interned.
