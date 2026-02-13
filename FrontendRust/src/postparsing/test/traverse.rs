@@ -6,7 +6,9 @@ use crate::postparsing::ast::{
   StructS, TopLevelExportAsS, TopLevelFunctionS, TopLevelImplS, TopLevelImportS, TopLevelInterfaceS,
   TopLevelStructS, UserFunctionS, VariadicStructMemberS,
 };
-use crate::postparsing::expressions::{BlockSE, BodySE, IExpressionSE, LocalS, PureSE};
+use crate::postparsing::expressions::{
+  BlockSE, BodySE, DotSE, IExpressionSE, LocalS, OutsideLoadSE, OwnershippedSE, PureSE, ReturnSE,
+};
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS, FunctionNameS,
   IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS, ImplDeclarationNameS,
@@ -94,7 +96,7 @@ pub enum NodeRefS<'a> {
   FunctionDeclarationName(&'a IFunctionDeclarationNameS),
   FunctionName(&'a FunctionNameS),
   LambdaDeclarationName(&'a LambdaDeclarationNameS),
-  TopLevelCitizenDeclarationName(&'a TopLevelCitizenDeclarationNameS),
+  TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS),
   TopLevelStructDeclarationName(&'a TopLevelStructDeclarationNameS),
   TopLevelInterfaceDeclarationName(&'a TopLevelInterfaceDeclarationNameS),
   ImplDeclarationName(&'a ImplDeclarationNameS),
@@ -149,6 +151,15 @@ where
 {
   let mut out = Vec::new();
   visit_citizen_denizen(predicate, &mut out, denizen);
+  out
+}
+
+pub fn collect_in_struct<'a, T, F>(strukt: &'a StructS, predicate: &F) -> Vec<T>
+where
+  F: Fn(NodeRefS<'a>) -> Option<T>,
+{
+  let mut out = Vec::new();
+  visit_struct(predicate, &mut out, strukt);
   out
 }
 
@@ -261,7 +272,11 @@ where
   F: Fn(NodeRefS<'a>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Struct(strukt));
-  collect_if(pred, out, NodeRefS::TopLevelCitizenDeclarationName(&strukt.name));
+  collect_if(
+    pred,
+    out,
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(&strukt.name)),
+  );
   collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(&strukt.name));
   for attribute in &strukt.attributes {
     visit_citizen_attribute(pred, out, attribute);
@@ -286,7 +301,11 @@ where
   F: Fn(NodeRefS<'a>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Interface(interface));
-  collect_if(pred, out, NodeRefS::TopLevelCitizenDeclarationName(&interface.name));
+  collect_if(
+    pred,
+    out,
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(&interface.name)),
+  );
   collect_if(pred, out, NodeRefS::TopLevelInterfaceDeclarationName(&interface.name));
   for attribute in &interface.attributes {
     visit_citizen_attribute(pred, out, attribute);
@@ -446,9 +465,70 @@ where
 {
   collect_if(pred, out, NodeRefS::Expression(expression));
   match expression {
+    IExpressionSE::Let(x) => {
+      for rule in &x.rules {
+        visit_rulex(pred, out, rule);
+      }
+      visit_pattern(pred, out, &x.pattern);
+      visit_expression(pred, out, x.expr.as_ref());
+    }
+    IExpressionSE::Consecutor(x) => {
+      for expr in &x.exprs {
+        visit_expression(pred, out, expr);
+      }
+    }
     IExpressionSE::Block(x) => visit_block(pred, out, x),
     IExpressionSE::Pure(x) => visit_pure(pred, out, x),
+    IExpressionSE::Return(x) => visit_return(pred, out, x),
+    IExpressionSE::ConstantInt(_) => {}
+    IExpressionSE::Dot(x) => visit_dot(pred, out, x),
+    IExpressionSE::FunctionCall(x) => {
+      visit_expression(pred, out, x.callable_expr.as_ref());
+      for arg in &x.arg_exprs {
+        visit_expression(pred, out, arg);
+      }
+    }
+    IExpressionSE::LocalLoad(x) => visit_var_name(pred, out, &x.name),
+    IExpressionSE::OutsideLoad(x) => visit_outside_load(pred, out, x),
+    IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
+    _ => panic!("POSTPARSING_TRAVERSE_EXPRESSION_VARIANT_NOT_YET_IMPLEMENTED"),
   }
+}
+
+fn visit_return<'a, T, F>(pred: &F, out: &mut Vec<T>, ret: &'a ReturnSE)
+where
+  F: Fn(NodeRefS<'a>) -> Option<T>,
+{
+  visit_expression(pred, out, ret.inner.as_ref());
+}
+
+fn visit_dot<'a, T, F>(pred: &F, out: &mut Vec<T>, dot: &'a DotSE)
+where
+  F: Fn(NodeRefS<'a>) -> Option<T>,
+{
+  visit_expression(pred, out, dot.left.as_ref());
+}
+
+fn visit_outside_load<'a, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'a OutsideLoadSE)
+where
+  F: Fn(NodeRefS<'a>) -> Option<T>,
+{
+  for rule in &outside_load.rules {
+    visit_rulex(pred, out, rule);
+  }
+  visit_imprecise_name(pred, out, &outside_load.name);
+  if let Some(template_args) = &outside_load.maybe_template_args {
+    for template_arg in template_args {
+      visit_rune_usage(pred, out, template_arg);
+    }
+  }
+}
+
+fn visit_ownershipped<'a, T, F>(pred: &F, out: &mut Vec<T>, ownershipped: &'a OwnershippedSE)
+where
+  F: Fn(NodeRefS<'a>) -> Option<T>,
+{
+  visit_expression(pred, out, ownershipped.inner_expr.as_ref());
 }
 
 fn visit_block<'a, T, F>(pred: &F, out: &mut Vec<T>, block: &'a BlockSE)
@@ -598,6 +678,7 @@ where
     IFunctionDeclarationNameS::LambdaDeclarationName(x) => {
       collect_if(pred, out, NodeRefS::LambdaDeclarationName(x))
     }
+    _ => panic!("POSTPARSING_TRAVERSE_FUNCTION_DECL_NAME_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -607,7 +688,8 @@ where
 {
   collect_if(pred, out, NodeRefS::ImpreciseName(name));
   match name {
-    IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x)),
+    IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x.as_ref())),
+    _ => panic!("POSTPARSING_TRAVERSE_IMPRECISE_NAME_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -637,6 +719,7 @@ where
       collect_if(pred, out, NodeRefS::DenizenDefaultRegionRune(x));
       visit_name(pred, out, &x.denizen_name);
     }
+    _ => panic!("POSTPARSING_TRAVERSE_RUNE_VARIANT_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -654,6 +737,7 @@ where
       collect_if(pred, out, NodeRefS::TopLevelInterfaceDeclarationName(x))
     }
     INameS::VarName(x) => visit_var_name(pred, out, x),
+    _ => panic!("POSTPARSING_TRAVERSE_NAME_VARIANT_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -688,15 +772,15 @@ macro_rules! collect_only_sprogram {
 }
 
 #[macro_export]
-macro_rules! collect_where_srulex {
+macro_rules! collect_where_sstruct {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_srulex($expr, &|node| match node {
+    $crate::postparsing::test::traverse::collect_in_struct($expr, &|node| match node {
       $pattern => $body,
       _ => None,
     })
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_srulex($expr, &|node| match node {
+    $crate::postparsing::test::traverse::collect_in_struct($expr, &|node| match node {
       $pattern if $guard => $body,
       _ => None,
     })
@@ -704,14 +788,14 @@ macro_rules! collect_where_srulex {
 }
 
 #[macro_export]
-macro_rules! collect_only_srulex {
+macro_rules! collect_only_sstruct {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    let mut matches = $crate::collect_where_srulex!($expr, $pattern => $body);
+    let mut matches = $crate::collect_where_sstruct!($expr, $pattern => $body);
     assert_eq!(1, matches.len());
     matches.remove(0)
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    let mut matches = $crate::collect_where_srulex!($expr, $pattern if $guard => $body);
+    let mut matches = $crate::collect_where_sstruct!($expr, $pattern if $guard => $body);
     assert_eq!(1, matches.len());
     matches.remove(0)
   }};

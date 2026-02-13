@@ -1,4 +1,5 @@
 #![feature(box_patterns)]
+#![feature(deref_patterns)]
 
 pub mod builtins;
 pub mod compile_options;

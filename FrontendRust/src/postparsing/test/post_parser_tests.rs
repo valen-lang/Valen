@@ -4,12 +4,15 @@ use crate::cast;
 use crate::compile_options::GlobalOptions;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::parsing::ast::VariabilityP;
+use crate::parsing::ast::{IMacroInclusionP, LoadAsP, VariabilityP};
 use crate::postparsing::ast::{IStructMemberS, ProgramS};
-use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::expressions::{IExpressionSE, IVariableUseCertainty};
+use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, IVarNameS};
 use crate::postparsing::post_parser::PostParser;
-use crate::postparsing::rules::rules::{ILiteralSL, IRulexSR};
+use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLookupSR};
+use crate::postparsing::test::traverse::NodeRefS;
 use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap, PackageCoordinate};
+use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
 use std::sync::Arc;
 
 /*
@@ -150,37 +153,30 @@ fn test_struct() {
   let program = compile("struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
-  let has_mutability_rule = imoo.header_rules.iter().any(|rule| {
-    matches!(
-      rule,
-      IRulexSR::Literal(literal_rule)
-        if matches!(
-          &literal_rule.literal,
-          ILiteralSL::MutabilityLiteral(mutability_literal)
-            if mutability_literal.mutability == crate::parsing::ast::MutabilityP::Mutable
-              && literal_rule.rune == imoo.mutability_rune
-        )
-    )
-  });
-  assert!(has_mutability_rule);
+  crate::collect_only_sstruct!(
+    imoo,
+    NodeRefS::LiteralRule(
+      literal_rule @ LiteralSR {
+        literal: ILiteralSL::MutabilityLiteral(mutability_literal),
+        ..
+      }
+    ) if mutability_literal.mutability == crate::parsing::ast::MutabilityP::Mutable
+      && literal_rule.rune == imoo.mutability_rune => Some(())
+  );
+  
+  let only_member = expect_1(&imoo.members);
+  crate::collect_only_sstruct!(
+    imoo,
+    NodeRefS::MaybeCoercingLookupRule(
+      MaybeCoercingLookupSR {
+        name: IImpreciseNameS::CodeName(code_name),
+        rune,
+        ..
+      }
+    ) if code_name.name.str == "int" && *rune == *only_member.type_rune() => Some(())
+  );
 
-  let only_member = &imoo.members[0];
-  let has_member_lookup_rule = imoo.member_rules.iter().any(|rule| {
-    matches!(
-      rule,
-      IRulexSR::MaybeCoercingLookup(lookup_rule)
-        if lookup_rule.rune == *only_member.type_rune()
-          && matches!(
-            &lookup_rule.name,
-            IImpreciseNameS::CodeName(code_name) if code_name.name.str == "int"
-          )
-    )
-  });
-  assert!(has_member_lookup_rule);
-
-  assert_eq!(imoo.members.len(), 1);
-  let member = &imoo.members[0];
-  let normal_member = crate::cast!(member, IStructMemberS::NormalStructMember);
+  let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
   assert_eq!(normal_member.name.str, "x");
   assert_eq!(normal_member.variability, VariabilityP::Final);
 }
@@ -200,6 +196,17 @@ fn test_struct() {
     }
   }
 */
+#[test]
+fn linear_struct() {
+  let program = compile("linear struct Moo { x int; }");
+  let moo_struct = program.lookup_struct("Moo");
+  crate::collect_only_sstruct!(
+    moo_struct,
+    NodeRefS::MacroCallAttribute(macro_call)
+      if macro_call.include == IMacroInclusionP::DontCallMacro
+        && macro_call.macro_name.str == "DeriveStructDrop" => Some(())
+  );
+}
 /*
   test("Linear struct") {
     val program1 = compile("linear struct Moo { x int; }")
@@ -234,6 +241,14 @@ fn test_struct() {
     vregionmut() // see above
   }
 */
+#[test]
+fn interface() {
+  let program = compile("interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
+  let imoo = program.lookup_interface("IMoo");
+  let blork = expect_1(&imoo.internal_methods);
+  let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
+  assert_eq!(function_name.name.str, "blork");
+}
 /*
   test("Interface") {
     val program1 = compile("interface IMoo { func blork(virtual this &IMoo, a bool)void; }")
@@ -438,6 +453,25 @@ fn test_struct() {
     }
   }
 */
+#[test]
+fn test_loading_from_member() {
+  let program = compile(
+    "func MyStruct() {
+      return moo.x;
+    }",
+  );
+  let mystruct = program.lookup_function("MyStruct");
+  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let ret = cast!(code_body.body.block.expr.as_ref(), IExpressionSE::Return);
+  let dot = cast!(ret.inner.as_ref(), IExpressionSE::Dot);
+  let outside_load = cast!(dot.left.as_ref(), IExpressionSE::OutsideLoad);
+  let outside_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
+  assert_eq!(outside_name.name.str, "moo");
+  assert!(outside_load.maybe_template_args.is_none());
+  assert_eq!(outside_load.target_ownership, LoadAsP::LoadAsBorrow);
+  assert_eq!(dot.member.str, "x");
+  assert!(dot.borrow_container);
+}
 /*
   test("Test loading from member") {
     val program1 = compile(
@@ -453,6 +487,27 @@ fn test_struct() {
 
   }
 */
+#[test]
+fn test_loading_from_member_2() {
+  let program = compile(
+    "func MyStruct() {
+      return &moo.x;
+    }",
+  );
+  let mystruct = program.lookup_function("MyStruct");
+  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let ret = cast!(code_body.body.block.expr.as_ref(), IExpressionSE::Return);
+  let ownershipped = cast!(ret.inner.as_ref(), IExpressionSE::Ownershipped);
+  assert_eq!(ownershipped.target_ownership, LoadAsP::LoadAsBorrow);
+  let dot = cast!(ownershipped.inner_expr.as_ref(), IExpressionSE::Dot);
+  let outside_load = cast!(dot.left.as_ref(), IExpressionSE::OutsideLoad);
+  let outside_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
+  assert_eq!(outside_name.name.str, "moo");
+  assert!(outside_load.maybe_template_args.is_none());
+  assert_eq!(outside_load.target_ownership, LoadAsP::LoadAsBorrow);
+  assert_eq!(dot.member.str, "x");
+  assert!(dot.borrow_container);
+}
 /*
   test("Test loading from member 2") {
     val program1 = compile(
@@ -468,6 +523,88 @@ fn test_struct() {
     })
   }
 */
+#[test]
+fn constructing_members_borrowing_another_member() {
+  let program = compile(
+    "func MyStruct() {
+      self.x = 4;
+      self.y = &self.x;
+    }",
+  );
+  let mystruct = program.lookup_function("MyStruct");
+  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let block = &code_body.body.block;
+
+  let (first_local, second_local) = expect_2(&block.locals);
+  assert!(matches!(
+    first_local.var_name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+  ));
+  assert_eq!(first_local.self_borrowed, IVariableUseCertainty::Used);
+  assert_eq!(first_local.self_moved, IVariableUseCertainty::Used);
+  assert_eq!(first_local.self_mutated, IVariableUseCertainty::NotUsed);
+  assert_eq!(first_local.child_borrowed, IVariableUseCertainty::NotUsed);
+  assert_eq!(first_local.child_moved, IVariableUseCertainty::NotUsed);
+  assert_eq!(first_local.child_mutated, IVariableUseCertainty::NotUsed);
+
+  assert!(matches!(
+    second_local.var_name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
+  ));
+  assert_eq!(second_local.self_borrowed, IVariableUseCertainty::NotUsed);
+  assert_eq!(second_local.self_moved, IVariableUseCertainty::Used);
+  assert_eq!(second_local.self_mutated, IVariableUseCertainty::NotUsed);
+  assert_eq!(second_local.child_borrowed, IVariableUseCertainty::NotUsed);
+  assert_eq!(second_local.child_moved, IVariableUseCertainty::NotUsed);
+  assert_eq!(second_local.child_mutated, IVariableUseCertainty::NotUsed);
+
+  let consecutor = cast!(block.expr.as_ref(), IExpressionSE::Consecutor);
+  let (first_expr, second_expr, third_expr) = expect_3(&consecutor.exprs);
+
+  let let_x = cast!(first_expr, IExpressionSE::Let);
+  let let_x_capture = let_x.pattern.name.as_ref().unwrap();
+  assert!(matches!(
+    let_x_capture.name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+  ));
+  assert_eq!(let_x_capture.mutate, false);
+  assert_eq!(cast!(let_x.expr.as_ref(), IExpressionSE::ConstantInt).value, 4);
+
+  let let_y = cast!(second_expr, IExpressionSE::Let);
+  let let_y_capture = let_y.pattern.name.as_ref().unwrap();
+  assert!(matches!(
+    let_y_capture.name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
+  ));
+  assert_eq!(let_y_capture.mutate, false);
+  let local_load_x_borrow = cast!(let_y.expr.as_ref(), IExpressionSE::LocalLoad);
+  assert!(matches!(
+    local_load_x_borrow.name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+  ));
+  assert_eq!(local_load_x_borrow.target_ownership, LoadAsP::LoadAsBorrow);
+
+  let constructor_call = cast!(third_expr, IExpressionSE::FunctionCall);
+  let callable_outside_load =
+    cast!(constructor_call.callable_expr.as_ref(), IExpressionSE::OutsideLoad);
+  let IImpreciseNameS::CodeName(callable_name) = &callable_outside_load.name else {
+    panic!("POSTPARSER_TEST_EXPECTED_CALLABLE_CODE_NAME");
+  };
+  assert_eq!(callable_name.name.str, "MyStruct");
+  let (constructor_arg_x, constructor_arg_y) = expect_2(&constructor_call.arg_exprs);
+  let constructor_local_x = cast!(constructor_arg_x, IExpressionSE::LocalLoad);
+  assert!(matches!(
+    constructor_local_x.name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+  ));
+  assert_eq!(constructor_local_x.target_ownership, LoadAsP::Move);
+  let constructor_local_y = cast!(constructor_arg_y, IExpressionSE::LocalLoad);
+  assert!(matches!(
+    constructor_local_y.name,
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
+  ));
+  assert_eq!(constructor_local_y.target_ownership, LoadAsP::Move);
+}
 /*
   test("Constructing members, borrowing another member") {
     val program1 = compile(
@@ -569,6 +706,38 @@ fn test_struct() {
     }
   }
 */
+#[test]
+fn this_isnt_special_if_was_explicit_param() {
+  let program = compile(
+    "func moo(self &MyStruct) {
+      println(self.x);
+    }",
+  );
+  let moo = program.lookup_function("moo");
+  let code_body = cast!(&moo.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let function_call = crate::collect_only_sprogram!(
+    &program,
+    NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
+  );
+  let outside_load = cast!(function_call.callable_expr.as_ref(), IExpressionSE::OutsideLoad);
+  let code_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
+  assert_eq!(code_name.name.str, "println");
+  let dot = cast!(expect_1(&function_call.arg_exprs), IExpressionSE::Dot);
+  assert_eq!(dot.member.str, "x");
+  assert!(dot.borrow_container);
+  let local_load = cast!(dot.left.as_ref(), IExpressionSE::LocalLoad);
+  let code_var_name = cast!(&local_load.name, IVarNameS::CodeVarName);
+  assert_eq!(code_var_name.str, "self");
+  assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);
+
+  let function_calls = crate::collect_where_sprogram!(
+    &program,
+    NodeRefS::Expression(IExpressionSE::FunctionCall(_)) => Some(())
+  );
+  assert_eq!(function_calls.len(), 1);
+
+  let _ = code_body;
+}
 /*
   test("this isnt special if was explicit param") {
     val program1 = compile(

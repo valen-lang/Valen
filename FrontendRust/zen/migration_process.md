@@ -10,7 +10,7 @@ I've left the old Scala code in as comments.
 
 IMPORTANT: For every new piece of Rust code, put it directly above the old Scala comment. New Rust code should be interleaved with old Scala code.
 
-IMPORTANT: Do not change or remove any Scala comments.
+IMPORTANT: Do not change or remove any Scala comments. But feel free to split any comment into two comments so you can put rust code between them.
 
 If there's no equivalent Scala code, please write a "// NOVEL CODE" comment and explain what the closest equivalent Scala code in the old compiler was. You can find the old compiler in /Frontend.
 

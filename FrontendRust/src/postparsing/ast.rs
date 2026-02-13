@@ -128,6 +128,8 @@ pub struct ExternS {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuiltinS {
+  // MIGTODO: can we give everything a lifetime into an arena so we can
+  // all have references instead of using Arc everywhere?
   pub generator_name: Arc<StrI>,
 }
 
@@ -201,10 +203,10 @@ pub enum ICitizenS {
 }
 
 impl ICitizenS {
-  pub fn name(&self) -> &TopLevelCitizenDeclarationNameS {
+  pub fn name(&self) -> TopLevelCitizenDeclarationNameS {
     match self {
-      ICitizenS::Struct(s) => &s.name,
-      ICitizenS::Interface(i) => &i.name,
+      ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(&s.name),
+      ICitizenS::Interface(i) => TopLevelCitizenDeclarationNameS::from(&i.name),
     }
   }
 
@@ -500,8 +502,8 @@ case class ImportS(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-pub fn interface_s_name(interface_s: &InterfaceS) -> &TopLevelCitizenDeclarationNameS {
-  &interface_s.name
+pub fn interface_s_name(interface_s: &InterfaceS) -> TopLevelCitizenDeclarationNameS {
+  TopLevelCitizenDeclarationNameS::from(&interface_s.name)
 }
 
 /*
@@ -512,8 +514,8 @@ object interfaceSName {
   }
 }
 */
-pub fn struct_s_name(struct_s: &StructS) -> &TopLevelCitizenDeclarationNameS {
-  &struct_s.name
+pub fn struct_s_name(struct_s: &StructS) -> TopLevelCitizenDeclarationNameS {
+  TopLevelCitizenDeclarationNameS::from(&struct_s.name)
 }
 
 /*

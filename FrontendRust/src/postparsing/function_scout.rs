@@ -1,3 +1,6 @@
+// MIGTODO: rename to function_post_parser.rs
+// MIGTODO: review scout_function
+
 /*
 package dev.vale.postparsing
 
@@ -21,6 +24,39 @@ import dev.vale._
 
 import scala.collection.immutable.{List, Range}
 */
+use crate::parsing::ast::{FunctionP, INameDeclarationP, LoadAsP};
+use crate::postparsing::ast::{
+  CodeBodyS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS, LocationInDenizenBuilder, UserFunctionS,
+};
+use crate::postparsing::expression_scout::ExpressionScout;
+use crate::postparsing::expressions::{
+  BlockSE, BodySE, ConsecutorSE, FunctionCallSE, IExpressionSE, LocalLoadSE, LocalS, OutsideLoadSE,
+};
+use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, TemplateTemplataType};
+use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IVarNameS};
+use crate::postparsing::post_parser::{
+  EnvironmentS, FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
+};
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
+use crate::utils::code_hierarchy::FileCoordinate;
+use std::collections::HashMap;
+use std::sync::Arc;
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum IFunctionParent {
+  FunctionNoParent,
+  ParentInterface {
+    interface_env: EnvironmentS,
+    interface_generic_params: Vec<GenericParameterS>,
+    interface_rules: Vec<IRulexSR>,
+    interface_rune_to_explicit_type: HashMap<IRuneS, ITemplataType>,
+  },
+  ParentFunction {
+    parent_stack_frame: StackFrame,
+  },
+}
+
 /*
 sealed trait IFunctionParent
 */
@@ -62,6 +98,244 @@ class FunctionScout(
       keywords
     )
 */
+pub struct FunctionScout;
+impl FunctionScout {
+  pub fn scout_function(
+    file_coordinate: &Arc<FileCoordinate>,
+    function: &FunctionP,
+    maybe_parent: IFunctionParent,
+  ) -> Result<(FunctionS, VariableUses), ICompileErrorS> {
+    match maybe_parent {
+      IFunctionParent::FunctionNoParent => {}
+      IFunctionParent::ParentInterface { .. } => {}
+      IFunctionParent::ParentFunction { .. } => {}
+    }
+    let function_name = function
+      .header
+      .name
+      .as_ref()
+      .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_NAME"));
+    if !function.header.attributes.is_empty() {
+      panic!("POSTPARSER_SCOUT_FUNCTION_ATTRIBUTES_NOT_YET_IMPLEMENTED");
+    }
+    if function.header.generic_parameters.is_some() {
+      panic!("POSTPARSER_SCOUT_FUNCTION_GENERICS_NOT_YET_IMPLEMENTED");
+    }
+    if function.header.template_rules.is_some() {
+      panic!("POSTPARSER_SCOUT_FUNCTION_TEMPLATE_RULES_NOT_YET_IMPLEMENTED");
+    }
+    let explicit_self_name = if let Some(params) = &function.header.params {
+      if params.params.is_empty() {
+        None
+      } else if params.params.len() == 1 {
+        let only_param = params.params.first().unwrap();
+        assert!(
+          only_param.virtuality.is_none(),
+          "POSTPARSER_SCOUT_FUNCTION_PARAM_VIRTUALITY_NOT_YET_IMPLEMENTED"
+        );
+        assert!(
+          only_param.maybe_pre_checked.is_none(),
+          "POSTPARSER_SCOUT_FUNCTION_PARAM_PRECHECKED_NOT_YET_IMPLEMENTED"
+        );
+        match (&only_param.self_borrow, &only_param.pattern) {
+          (Some(_), None) => None,
+          (None, Some(pattern)) => {
+            let destination = pattern
+              .destination
+              .as_ref()
+              .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_DESTINATION_NOT_YET_IMPLEMENTED"));
+            assert!(
+              destination.mutate.is_none(),
+              "POSTPARSER_SCOUT_FUNCTION_PARAM_MUTATE_NOT_YET_IMPLEMENTED"
+            );
+            let INameDeclarationP::LocalNameDeclaration(local_name) = &destination.decl else {
+              panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_DECL_NOT_YET_IMPLEMENTED");
+            };
+            assert_eq!(
+              local_name.str.str.as_str(),
+              "self",
+              "POSTPARSER_SCOUT_FUNCTION_PARAM_NON_SELF_NOT_YET_IMPLEMENTED"
+            );
+            assert!(
+              pattern.templex.is_some(),
+              "POSTPARSER_SCOUT_FUNCTION_SELF_PARAM_WITHOUT_TYPE_NOT_YET_IMPLEMENTED"
+            );
+            assert!(
+              pattern.destructure.is_none(),
+              "POSTPARSER_SCOUT_FUNCTION_PARAM_DESTRUCTURE_NOT_YET_IMPLEMENTED"
+            );
+            Some(local_name.str.clone())
+          }
+          _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
+        }
+      } else {
+        panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_COUNT_NOT_YET_IMPLEMENTED");
+      }
+    } else {
+      None
+    };
+    if function.header.ret.ret_type.is_some() {
+      panic!("POSTPARSER_SCOUT_FUNCTION_RETURN_TYPES_NOT_YET_IMPLEMENTED");
+    }
+    let body = function
+      .body
+      .as_ref()
+      .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_BODY"));
+    if body.maybe_pure.is_some() {
+      panic!("POSTPARSER_SCOUT_PURE_BLOCKS_NOT_YET_IMPLEMENTED");
+    }
+    if body.maybe_default_region.is_some() {
+      panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
+    }
+
+    let body_range = PostParser::eval_range(file_coordinate, body.range);
+    let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+      name: function_name.str.clone(),
+      code_location: PostParser::eval_pos(file_coordinate, function_name.range.begin),
+    });
+    let function_environment = FunctionEnvironmentS {
+      file: file_coordinate.clone(),
+      name: function_declaration_name.clone(),
+      parent_env: None,
+      declared_runes: Vec::new(),
+      num_explicit_params: 0,
+      is_interface_internal_method: false,
+    };
+    let default_region_rune = IRuneS::CodeRune(Arc::new(CodeRuneS {
+      name: function_name.str.clone(),
+    }));
+    let stack_frame = StackFrame {
+      file: file_coordinate.clone(),
+      name: function_declaration_name.clone(),
+      parent_env: function_environment,
+      maybe_parent: None,
+      context_region: default_region_rune,
+      pure_height: 0,
+      locals: {
+        let mut vars = Vec::<VariableDeclarationS>::new();
+        if let Some(explicit_self_name) = &explicit_self_name {
+          vars.push(VariableDeclarationS {
+            name: IVarNameS::CodeVarName(explicit_self_name.clone()),
+          });
+        }
+        VariableDeclarations { vars }
+      },
+    };
+    let mut lidb = LocationInDenizenBuilder::new(vec![]);
+    let (stack_frame_after_body, body_expr, self_uses_before_constructing, child_uses) =
+      ExpressionScout::scout_expression_and_coerce(
+      stack_frame,
+      &mut lidb,
+      body.inner.as_ref(),
+      LoadAsP::Use,
+    )?;
+    let expr_without_constructing_without_void =
+      match body_expr {
+        IExpressionSE::Consecutor(mut consecutor) => {
+          while matches!(consecutor.exprs.last(), Some(IExpressionSE::Void(_))) {
+            consecutor.exprs.pop();
+          }
+          assert!(
+            !consecutor.exprs.is_empty(),
+            "POSTPARSER_SCOUT_FUNCTION_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
+          );
+          if consecutor.exprs.len() == 1 {
+            consecutor.exprs.remove(0)
+          } else {
+            IExpressionSE::Consecutor(consecutor)
+          }
+        }
+        other => other,
+      };
+    let constructing_member_names = stack_frame_after_body
+      .locals
+      .vars
+      .iter()
+      .filter_map(|declared| match &declared.name {
+        IVarNameS::ConstructingMemberName(member_name) => Some(member_name.clone()),
+        _ => None,
+      })
+      .collect::<Vec<_>>();
+    let mut self_uses = self_uses_before_constructing;
+    let expr_with_constructor = if constructing_member_names.is_empty() {
+      expr_without_constructing_without_void
+    } else {
+      let constructor_expr = IExpressionSE::FunctionCall(FunctionCallSE {
+        range: body_range.clone(),
+        location: lidb.child().consume(),
+        callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
+          range: body_range.clone(),
+          rules: Vec::new(),
+          name: IImpreciseNameS::CodeName(Arc::new(CodeNameS {
+            name: function_name.str.clone(),
+          })),
+          maybe_template_args: None,
+          target_ownership: LoadAsP::LoadAsBorrow,
+        })),
+        arg_exprs: constructing_member_names
+          .iter()
+          .map(|member_name| {
+            IExpressionSE::LocalLoad(LocalLoadSE {
+              range: body_range.clone(),
+              name: IVarNameS::ConstructingMemberName(member_name.clone()),
+              target_ownership: LoadAsP::Move,
+            })
+          })
+          .collect::<Vec<_>>(),
+      });
+      for member_name in constructing_member_names {
+        self_uses = self_uses.mark_moved(IVarNameS::ConstructingMemberName(member_name));
+      }
+      match expr_without_constructing_without_void {
+        IExpressionSE::Consecutor(mut consecutor) => {
+          consecutor.exprs.push(constructor_expr);
+          IExpressionSE::Consecutor(consecutor)
+        }
+        other => IExpressionSE::Consecutor(ConsecutorSE {
+          exprs: vec![other, constructor_expr],
+        }),
+      }
+    };
+    let locals = stack_frame_after_body
+      .locals
+      .vars
+      .iter()
+      .map(|declared| LocalS {
+        var_name: declared.name.clone(),
+        self_borrowed: self_uses.is_borrowed(&declared.name),
+        self_moved: self_uses.is_moved(&declared.name),
+        self_mutated: self_uses.is_mutated(&declared.name),
+        child_borrowed: child_uses.is_borrowed(&declared.name),
+        child_moved: child_uses.is_moved(&declared.name),
+        child_mutated: child_uses.is_mutated(&declared.name),
+      })
+      .collect::<Vec<_>>();
+    Ok((FunctionS {
+      range: PostParser::eval_range(file_coordinate, function.range),
+      name: function_declaration_name,
+      attributes: vec![IFunctionAttributeS::UserFunction(UserFunctionS)],
+      generic_params: Vec::new(),
+      rune_to_predicted_type: HashMap::new(),
+      tyype: TemplateTemplataType {
+        param_types: Vec::new(),
+        return_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
+      },
+      params: Vec::new(),
+      maybe_ret_coord_rune: None,
+      rules: Vec::new(),
+      body: IBodyS::CodeBody(CodeBodyS {
+        body: BodySE {
+          range: body_range.clone(),
+          closured_names: Vec::new(),
+          block: BlockSE {
+            range: body_range,
+            locals,
+            expr: Box::new(expr_with_constructor),
+          },
+        },
+      }),
+    }, VariableUses::empty()))
+  }
 /*
   def scoutFunction(
     file: FileCoordinate,
@@ -757,6 +1031,7 @@ class FunctionScout(
     functionS
   }
 */
+}
 /*
   }
 */
