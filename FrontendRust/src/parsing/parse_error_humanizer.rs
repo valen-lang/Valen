@@ -20,7 +20,7 @@ impl ParseErrorHumanizer {
   }
 
   // Mirrors ParseErrorHumanizer.scala:humanize error messages
-  fn get_error_message(err: &ParseError) -> &'static str {
+  fn get_error_message(err: &ParseError) -> &str {
     match err {
       ParseError::RangedInternalError { .. } => "Internal error",
       ParseError::UnrecognizableExpressionAfterAugment(_) => "Unrecognizable expression",

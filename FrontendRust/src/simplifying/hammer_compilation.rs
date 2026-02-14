@@ -21,21 +21,21 @@ pub struct HammerCompilationOptions {
 }
 
 // From HammerCompilation.scala lines 25-66: HammerCompilation class
-pub struct HammerCompilation {
-  instantiated_compilation: InstantiatedCompilation,
+pub struct HammerCompilation<'a> {
+  instantiated_compilation: InstantiatedCompilation<'a>,
   #[allow(dead_code)]
   hamuts_cache: Option<()>, // ProgramH not yet ported
   #[allow(dead_code)]
   von_hammer_cache: Option<()>, // VonHammer not yet ported
 }
 
-impl HammerCompilation {
+impl<'a> HammerCompilation<'a> {
   // From HammerCompilation.scala lines 25-40
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
   ) -> Self {
     let hammer_options = HammerCompilationOptions {
@@ -66,17 +66,17 @@ impl HammerCompilation {
   }
 
   // From HammerCompilation.scala line 45: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.instantiated_compilation.get_code_map()
   }
 
   // From HammerCompilation.scala line 46: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.instantiated_compilation.get_parseds()
   }
 
   // From HammerCompilation.scala line 47: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.instantiated_compilation.get_vpst_map()
   }
 

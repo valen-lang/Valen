@@ -2,18 +2,19 @@
 
 use crate::cast;
 use crate::compile_options::GlobalOptions;
-use crate::interner::Interner;
-use crate::keywords::Keywords;
+use crate::{Interner, Keywords};
 use crate::parsing::ast::{IMacroInclusionP, LoadAsP, VariabilityP};
 use crate::postparsing::ast::{IStructMemberS, ProgramS};
-use crate::postparsing::expressions::{IExpressionSE, IVariableUseCertainty};
+use crate::postparsing::expressions::{
+  DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LocalLoadSE, OutsideLoadSE,
+  OwnershippedSE, ReturnSE,
+};
 use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, IVarNameS};
 use crate::postparsing::post_parser::PostParser;
 use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
-use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap, PackageCoordinate};
+use crate::parsing::tests::utils::compile_file;
 use crate::parsing::tests::utils::{expect_1, expect_2, expect_3};
-use std::sync::Arc;
 
 /*
 package dev.vale.postparsing
@@ -34,8 +35,8 @@ import org.scalatest._
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
 fn compile(code: &str) -> ProgramS {
-  let interner = Arc::new(Interner::new());
-  let keywords = Arc::new(Keywords::new(interner.as_ref()));
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let options = GlobalOptions {
     sanity_check: true,
     use_overload_index: true,
@@ -44,31 +45,11 @@ fn compile(code: &str) -> ProgramS {
     debug_output: false,
   };
 
-  let test_module = interner.intern("test");
-  let package_coord = interner.intern_package_coordinate(PackageCoordinate {
-    module: test_module,
-    packages: vec![],
-  });
-  let file_coord = interner.intern_file_coordinate(FileCoordinate {
-    package_coord: package_coord.clone(),
-    filepath: "test.vale".to_string(),
-  });
-
-  let mut file_map = FileCoordinateMap::new();
-  file_map.put(file_coord, code.to_string());
-
-  let mut compilation = crate::postparsing::ScoutCompilation::new(
-    interner.clone(),
-    keywords.clone(),
-    vec![package_coord],
-    Arc::new(file_map),
-    options.clone(),
-  );
-
-  let parseds = compilation.get_parseds().unwrap();
-  let (only_file_coord, (only_file, _)) = parseds.file_coord_to_contents.iter().next().unwrap();
-  let post_parser = PostParser::new(options, interner, keywords);
-  post_parser.scout_program(only_file_coord, only_file).unwrap()
+  let only_file = compile_file(&interner, &keywords, code).unwrap();
+  let post_parser = PostParser::new(options, &interner, &keywords);
+  post_parser
+    .scout_program(only_file.file_coord.as_ref(), &only_file)
+    .unwrap()
 }
 
 /*
@@ -462,15 +443,28 @@ fn test_loading_from_member() {
   );
   let mystruct = program.lookup_function("MyStruct");
   let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
-  let ret = cast!(code_body.body.block.expr.as_ref(), IExpressionSE::Return);
-  let dot = cast!(ret.inner.as_ref(), IExpressionSE::Dot);
-  let outside_load = cast!(dot.left.as_ref(), IExpressionSE::OutsideLoad);
-  let outside_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
-  assert_eq!(outside_name.name.str, "moo");
-  assert!(outside_load.maybe_template_args.is_none());
-  assert_eq!(outside_load.target_ownership, LoadAsP::LoadAsBorrow);
-  assert_eq!(dot.member.str, "x");
-  assert!(dot.borrow_container);
+  match code_body.body.block.expr.as_ref() {
+    IExpressionSE::Return(ReturnSE {
+      inner:
+        box IExpressionSE::Dot(DotSE {
+          left:
+            box IExpressionSE::OutsideLoad(OutsideLoadSE {
+              name: IImpreciseNameS::CodeName(outside_name),
+              maybe_template_args: None,
+              target_ownership: LoadAsP::LoadAsBorrow,
+              ..
+            }),
+          member,
+          borrow_container: true,
+          ..
+        }),
+      ..
+    }) => {
+      assert_eq!(outside_name.name.str, "moo");
+      assert_eq!(member.str, "x");
+    }
+    other => panic!("unexpected shape: {:?}", other),
+  }
 }
 /*
   test("Test loading from member") {
@@ -496,17 +490,33 @@ fn test_loading_from_member_2() {
   );
   let mystruct = program.lookup_function("MyStruct");
   let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
-  let ret = cast!(code_body.body.block.expr.as_ref(), IExpressionSE::Return);
-  let ownershipped = cast!(ret.inner.as_ref(), IExpressionSE::Ownershipped);
-  assert_eq!(ownershipped.target_ownership, LoadAsP::LoadAsBorrow);
-  let dot = cast!(ownershipped.inner_expr.as_ref(), IExpressionSE::Dot);
-  let outside_load = cast!(dot.left.as_ref(), IExpressionSE::OutsideLoad);
-  let outside_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
-  assert_eq!(outside_name.name.str, "moo");
-  assert!(outside_load.maybe_template_args.is_none());
-  assert_eq!(outside_load.target_ownership, LoadAsP::LoadAsBorrow);
-  assert_eq!(dot.member.str, "x");
-  assert!(dot.borrow_container);
+  match code_body.body.block.expr.as_ref() {
+    IExpressionSE::Return(ReturnSE {
+      inner:
+        box IExpressionSE::Ownershipped(OwnershippedSE {
+          target_ownership: LoadAsP::LoadAsBorrow,
+          inner_expr:
+            box IExpressionSE::Dot(DotSE {
+              left:
+                box IExpressionSE::OutsideLoad(OutsideLoadSE {
+                  name: IImpreciseNameS::CodeName(outside_name),
+                  maybe_template_args: None,
+                  target_ownership: LoadAsP::LoadAsBorrow,
+                  ..
+                }),
+              member,
+              borrow_container: true,
+              ..
+            }),
+          ..
+        }),
+      ..
+    }) => {
+      assert_eq!(outside_name.name.str, "moo");
+      assert_eq!(member.str, "x");
+    }
+    other => panic!("unexpected shape: {:?}", other),
+  }
 }
 /*
   test("Test loading from member 2") {
@@ -584,26 +594,38 @@ fn constructing_members_borrowing_another_member() {
   ));
   assert_eq!(local_load_x_borrow.target_ownership, LoadAsP::LoadAsBorrow);
 
-  let constructor_call = cast!(third_expr, IExpressionSE::FunctionCall);
-  let callable_outside_load =
-    cast!(constructor_call.callable_expr.as_ref(), IExpressionSE::OutsideLoad);
-  let IImpreciseNameS::CodeName(callable_name) = &callable_outside_load.name else {
-    panic!("POSTPARSER_TEST_EXPECTED_CALLABLE_CODE_NAME");
-  };
-  assert_eq!(callable_name.name.str, "MyStruct");
-  let (constructor_arg_x, constructor_arg_y) = expect_2(&constructor_call.arg_exprs);
-  let constructor_local_x = cast!(constructor_arg_x, IExpressionSE::LocalLoad);
-  assert!(matches!(
-    constructor_local_x.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
-  ));
-  assert_eq!(constructor_local_x.target_ownership, LoadAsP::Move);
-  let constructor_local_y = cast!(constructor_arg_y, IExpressionSE::LocalLoad);
-  assert!(matches!(
-    constructor_local_y.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
-  ));
-  assert_eq!(constructor_local_y.target_ownership, LoadAsP::Move);
+  match third_expr {
+    IExpressionSE::FunctionCall(FunctionCallSE {
+      callable_expr:
+        box IExpressionSE::OutsideLoad(OutsideLoadSE {
+          name: IImpreciseNameS::CodeName(callable_name),
+          ..
+        }),
+      arg_exprs,
+      ..
+    }) => {
+      assert_eq!(callable_name.name.str, "MyStruct");
+      match arg_exprs.as_slice() {
+        [
+          IExpressionSE::LocalLoad(LocalLoadSE {
+            name: IVarNameS::ConstructingMemberName(x_name),
+            target_ownership: LoadAsP::Move,
+            ..
+          }),
+          IExpressionSE::LocalLoad(LocalLoadSE {
+            name: IVarNameS::ConstructingMemberName(y_name),
+            target_ownership: LoadAsP::Move,
+            ..
+          }),
+        ] => {
+          assert_eq!(x_name.str, "x");
+          assert_eq!(y_name.str, "y");
+        }
+        other => panic!("unexpected constructor args: {:?}", other),
+      }
+    }
+    other => panic!("unexpected constructor call shape: {:?}", other),
+  }
 }
 /*
   test("Constructing members, borrowing another member") {

@@ -19,7 +19,11 @@ object ParserTestCompilation {
 
 /// MIGTODO: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
-pub fn test(interner: Arc<Interner>, keywords: Arc<Keywords>, code: &[&str]) -> ParserCompilation {
+pub fn test<'a>(
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  code: &[String],
+) -> ParserCompilation<'a, 'a> {
   let test_module = interner.intern("test");
   let test_package_coord = interner.intern_package_coordinate(PackageCoordinate {
     module: test_module,
@@ -34,17 +38,17 @@ pub fn test(interner: Arc<Interner>, keywords: Arc<Keywords>, code: &[&str]) -> 
       format!("{}.vale", index)
     };
     let file_coord = interner.intern_file_coordinate(FileCoordinate {
-      package_coord: test_package_coord.clone(),
+      package_coord: Arc::new(test_package_coord.clone()),
       filepath,
     });
-    code_map.put(file_coord, (*contents).to_string());
+    code_map.put(Arc::new(file_coord.clone()), contents.clone());
   }
 
-  struct ParserTestResolver {
-    code_map: FileCoordinateMap<String>,
+  struct ParserTestResolver<'a> {
+    code_map: FileCoordinateMap<'a, String>,
   }
-  impl IPackageResolver<HashMap<String, String>> for ParserTestResolver {
-    fn resolve(&self, package_coord: &Arc<PackageCoordinate>) -> Option<HashMap<String, String>> {
+  impl<'a> IPackageResolver<'a, HashMap<String, String>> for ParserTestResolver<'a> {
+    fn resolve(&self, package_coord: &std::sync::Arc<PackageCoordinate<'a>>) -> Option<HashMap<String, String>> {
       // For testing the parser, we dont want it to fetch things with import statements.
       Some(
         self
@@ -55,8 +59,8 @@ pub fn test(interner: Arc<Interner>, keywords: Arc<Keywords>, code: &[&str]) -> 
     }
   }
 
-  let resolver: Arc<dyn IPackageResolver<HashMap<String, String>>> =
-    Arc::new(ParserTestResolver { code_map });
+  let resolver: Box<dyn IPackageResolver<'a, HashMap<String, String>> + 'a> =
+    Box::new(ParserTestResolver { code_map });
   ParserCompilation::new(
     GlobalOptions {
       sanity_check: true,

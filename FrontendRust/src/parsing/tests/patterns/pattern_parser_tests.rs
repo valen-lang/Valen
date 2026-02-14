@@ -26,17 +26,21 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
   }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile(code: &str) -> PatternPP {
-  compile_pattern_expect(code)
+fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> PatternPP {
+  compile_pattern_expect(interner, keywords, code)
 }
 #[test]
 fn simple_int() {
-  let pattern = compile("_ int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -57,7 +61,9 @@ fn simple_int() {
 */
 #[test]
 fn name_only_capture() {
-  let pattern = compile("a");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "a");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());
@@ -73,7 +79,9 @@ fn name_only_capture() {
 */
 #[test]
 fn empty_pattern() {
-  let pattern = compile("_");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -90,7 +98,9 @@ fn empty_pattern() {
 */
 #[test]
 fn capture_with_type_with_destructure() {
-  let pattern = compile("a Moo[a, b]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "a Moo[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());
@@ -121,7 +131,9 @@ fn capture_with_type_with_destructure() {
 */
 #[test]
 fn cstodts() {
-  let pattern = compile("moo T[a int]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "moo T[a int]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "moo");
   assert!(destination.mutate.is_none());
@@ -149,7 +161,9 @@ fn cstodts() {
 */
 #[test]
 fn capture_with_destructure_with_type_outside() {
-  let pattern = compile("a (int, bool)[a, b]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "a (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());

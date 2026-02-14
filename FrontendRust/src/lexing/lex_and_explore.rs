@@ -8,7 +8,6 @@ use crate::utils::code_hierarchy::{
   FileCoordinate, FileCoordinateMap, IPackageResolver, PackageCoordinate,
 };
 use std::collections::{HashMap, HashSet};
-use std::sync::Arc;
 
 /*
 package dev.vale.lexing
@@ -26,19 +25,19 @@ object LexAndExplore {
 
 /// Main generic lexing function with import-driven package discovery
 /// From LexAndExplore.scala lines 43-150
-pub fn lex_and_explore<D, F, R>(
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
-  packages: Vec<Arc<PackageCoordinate>>,
+pub fn lex_and_explore<'a, D, F, R>(
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
-  mut denizen_handler: impl FnMut(&Arc<FileCoordinate>, &str, &[ImportL], &IDenizenL) -> D,
-  mut file_handler: impl FnMut(&Arc<FileCoordinate>, &str, &[RangeL], &[D]) -> F,
+  mut denizen_handler: impl FnMut(&FileCoordinate<'a>, &str, &[ImportL], &IDenizenL) -> D,
+  mut file_handler: impl FnMut(&FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,
 ) -> Result<Vec<F>, FailedParse>
 where
-  R: IPackageResolver<HashMap<String, String>>,
+  R: IPackageResolver<'a, HashMap<String, String>>,
 {
-  let mut unexplored_packages: HashSet<Arc<PackageCoordinate>> = packages.into_iter().collect();
-  let mut started_packages: HashSet<Arc<PackageCoordinate>> = HashSet::new();
+  let mut unexplored_packages: HashSet<&PackageCoordinate<'a>> = packages.into_iter().collect();
+  let mut started_packages: HashSet<&PackageCoordinate<'a>> = HashSet::new();
   let mut already_found_file_to_code = FileCoordinateMap::<String>::new();
 
   let mut files_acc = Vec::new();
@@ -65,7 +64,7 @@ where
       }
     };
 
-    let filepaths_map: HashMap<Arc<FileCoordinate>, String> = filepaths_and_contents
+    let filepaths_map: HashMap<&FileCoordinate<'a>, String> = filepaths_and_contents
       .iter()
       .map(|(fc, code)| (fc.clone(), code.clone()))
       .collect();
@@ -75,7 +74,7 @@ where
       let mut result_acc = Vec::new();
 
       let mut iter = LexingIterator::new(code.clone());
-      let mut lexer = Lexer::new(interner.clone(), keywords.clone());
+      let mut lexer = Lexer::new(interner, keywords);
 
       iter.consume_comments_and_whitespace();
 
@@ -272,20 +271,20 @@ where
 
 /// Helper function that collects all denizens and files
 /// From LexAndExplore.scala lines 12-40
-pub fn lex_and_explore_and_collect<R>(
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
-  packages: Vec<Arc<PackageCoordinate>>,
+pub fn lex_and_explore_and_collect<'a, R>(
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
 ) -> Result<
   (
-    Vec<(Arc<FileCoordinate>, String, Vec<ImportL>, IDenizenL)>,
-    Vec<(Arc<FileCoordinate>, String, Vec<RangeL>, Vec<IDenizenL>)>,
+    Vec<(&'a FileCoordinate<'a>, String, Vec<ImportL>, IDenizenL)>,
+    Vec<(&'a FileCoordinate<'a>, String, Vec<RangeL>, Vec<IDenizenL>)>,
   ),
   FailedParse,
 >
 where
-  R: IPackageResolver<HashMap<String, String>>,
+  R: IPackageResolver<'a, HashMap<String, String>>,
 {
   let mut denizens = Vec::new();
   let mut files = Vec::new();
@@ -297,7 +296,7 @@ where
     resolver,
     |file_coord, code, imports, denizen| {
       denizens.push((
-        file_coord.clone(),
+        file_coord,
         code.to_string(),
         imports.to_vec(),
         denizen.clone(),
@@ -306,7 +305,7 @@ where
     },
     |file_coord, code, ranges, denizens_in_file| {
       files.push((
-        file_coord.clone(),
+        file_coord,
         code.to_string(),
         ranges.to_vec(),
         denizens_in_file.to_vec(),

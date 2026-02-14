@@ -1,5 +1,4 @@
-use crate::StrI;
-use std::sync::Arc;
+use crate::interner::StrI;
 /*
 package dev.vale.lexing
 
@@ -410,11 +409,11 @@ case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 
 /// Word/identifier
 #[derive(Clone, Debug, PartialEq)]
-pub struct WordLE {
+pub struct WordLE<'a> {
   pub range: RangeL,
-  pub str: Arc<StrI>,
+  pub str: &'a StrI,
 }
-impl INodeLE for WordLE {
+impl INodeLE for WordLE<'_> {
   fn range(&self) -> RangeL {
     self.range
   }

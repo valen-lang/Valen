@@ -29,17 +29,21 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
   }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, OwnershipP, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
 
-fn compile(code: &str) -> PatternPP {
-  compile_pattern_expect(code)
+fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> PatternPP {
+  compile_pattern_expect(interner, keywords, code)
 }
 #[test]
 fn no_capture_with_type() {
-  let pattern = compile("_ int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ int");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
 }
@@ -52,7 +56,9 @@ fn no_capture_with_type() {
 */
 #[test]
 fn capture_with_type() {
-  let pattern = compile("a int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "a int");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
@@ -66,7 +72,9 @@ fn capture_with_type() {
 */
 #[test]
 fn simple_capture_with_tame() {
-  let pattern = compile("a T");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "a T");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "T");
   assert!(pattern.destructure.is_none());
@@ -80,7 +88,9 @@ fn simple_capture_with_tame() {
 */
 #[test]
 fn capture_with_borrow_tame() {
-  let pattern = compile("arr &R");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "arr &R");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
@@ -103,7 +113,9 @@ fn capture_with_borrow_tame() {
 */
 #[test]
 fn capture_with_self_in_front() {
-  let pattern = compile("self.arr &&R");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "self.arr &&R");
   let destination = pattern.destination.as_ref().unwrap();
   let member_name = cast!(
     &destination.decl,

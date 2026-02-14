@@ -13,12 +13,16 @@ import org.scalatest._
 class IfTests extends FunSuite with Matchers with Collector with TestParseUtils {
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn ifs() {
-  let expr = compile_expression_expect("if true { doBlarks(&x) } else { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "if true { doBlarks(&x) } else { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition.as_ref(), IExpressionPE::ConstantBool);
@@ -53,7 +57,9 @@ fn ifs() {
 */
 #[test]
 fn if_let() {
-  let expr = compile_expression_expect("if [u] = a {}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "if [u] = a {}");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let let_ = cast!(if_.condition.as_ref(), IExpressionPE::Let);
@@ -92,7 +98,9 @@ fn if_let() {
 */
 #[test]
 fn if_with_condition_declarations() {
-  let expr = compile_expression_expect("if x = 4; not x.isEmpty() { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "if x = 4; not x.isEmpty() { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition.as_ref(), IExpressionPE::Consecutor);
@@ -135,7 +143,13 @@ fn if_with_condition_declarations() {
 */
 #[test]
 fn if_with_condition_declarations_and_block_contents() {
-  let expr = compile_block_contents_expect("newLen = if num == 0 { 1 } else { 2 };");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_block_contents_expect(
+    &interner,
+    &keywords,
+    "newLen = if num == 0 { 1 } else { 2 };",
+  );
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (let_new_len, final_void) = expect_2(&consecutor.inners);
 

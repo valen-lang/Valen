@@ -2,7 +2,6 @@ use super::ast::*;
 use super::errors::*;
 use super::lexing_iterator::*;
 use crate::{Interner, Keywords};
-use std::sync::Arc;
 /*
 package dev.vale.lexing
 
@@ -15,15 +14,15 @@ type Result<T> = std::result::Result<T, ParseError>;
 
 /// Vale lexer
 /// Matches Scala's Lexer class
-pub struct Lexer {
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
+pub struct Lexer<'a> {
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
 }
-impl Lexer {
+impl<'a> Lexer<'a> {
   /*
   class Lexer(interner: Interner, keywords: Keywords) {
   */
-  pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
+  pub fn new(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>) -> Self {
     Lexer { interner, keywords }
   }
 

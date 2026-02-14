@@ -22,19 +22,19 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation {
-  higher_typing_compilation: HigherTypingCompilation,
+pub struct TypingPassCompilation<'a> {
+  higher_typing_compilation: HigherTypingCompilation<'a>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl TypingPassCompilation {
+impl<'a> TypingPassCompilation<'a> {
   // From Compilation.scala lines 22-30
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
   ) -> Self {
@@ -59,17 +59,17 @@ impl TypingPassCompilation {
   }
 
   // From Compilation.scala line 33: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.higher_typing_compilation.get_code_map()
   }
 
   // From Compilation.scala line 34: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.higher_typing_compilation.get_parseds()
   }
 
   // From Compilation.scala line 35: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.higher_typing_compilation.get_vpst_map()
   }
 

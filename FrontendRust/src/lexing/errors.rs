@@ -223,7 +223,7 @@ impl ParseError {
     }
   }
 
-  pub fn error_id(&self) -> &'static str {
+  pub fn error_id(&self) -> &str {
     match self {
       ParseError::BadStartOfStatementError(_) => "P1002",
       ParseError::BadExpressionEnd(_)

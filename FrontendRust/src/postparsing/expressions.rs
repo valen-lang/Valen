@@ -1,3 +1,4 @@
+use crate::interner::StrI;
 use crate::postparsing::ast::{FunctionS, LocationInDenizen};
 use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IRuneS, IVarNameS};
 use crate::postparsing::patterns::AtomSP;
@@ -107,9 +108,9 @@ case class ExprMutateSE(range: RangeS, mutatee: IExpressionSE, expr: IExpression
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct GlobalMutateSE {
+pub struct GlobalMutateSE<'a> {
   pub range: RangeS,
-  pub name: CodeNameS,
+  pub name: CodeNameS<'a>,
   pub expr: Box<IExpressionSE>,
 }
 /*
@@ -118,9 +119,9 @@ case class GlobalMutateSE(range: RangeS, name: CodeNameS, expr: IExpressionSE) e
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LocalMutateSE {
+pub struct LocalMutateSE<'a> {
   pub range: RangeS,
-  pub name: IVarNameS,
+  pub name: IVarNameS<'a>,
   pub expr: Box<IExpressionSE>,
 }
 /*
@@ -165,8 +166,8 @@ case object Used extends IVariableUseCertainty
 case object NotUsed extends IVariableUseCertainty
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LocalS {
-  pub var_name: IVarNameS,
+pub struct LocalS<'a> {
+  pub var_name: IVarNameS<'a>,
   pub self_borrowed: IVariableUseCertainty,
   pub self_moved: IVariableUseCertainty,
   pub self_mutated: IVariableUseCertainty,
@@ -188,9 +189,9 @@ case class LocalS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct BodySE {
+pub struct BodySE<'a> {
   pub range: RangeS,
-  pub closured_names: Vec<IVarNameS>,
+  pub closured_names: Vec<IVarNameS<'a>>,
   pub block: BlockSE,
 }
 
@@ -584,9 +585,9 @@ case class DestructSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct UnletSE {
+pub struct UnletSE<'a> {
   pub range: RangeS,
-  pub name: IVarNameS,
+  pub name: IVarNameS<'a>,
 }
 /*
 case class UnletSE(range: RangeS, name: IVarNameS) extends IExpressionSE {
@@ -603,10 +604,10 @@ case class FunctionSE(function: FunctionS) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct DotSE {
+pub struct DotSE<'a> {
   pub range: RangeS,
   pub left: Box<IExpressionSE>,
-  pub member: std::sync::Arc<crate::interner::StrI>,
+  pub member: &'a StrI,
   pub borrow_container: bool,
 }
 /*
@@ -644,16 +645,16 @@ case class LocalLoadSE(range: RangeS, name: IVarNameS, targetOwnership: LoadAsP)
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LocalLoadSE {
+pub struct LocalLoadSE<'a> {
   pub range: RangeS,
-  pub name: IVarNameS,
+  pub name: IVarNameS<'a>,
   pub target_ownership: LoadAsP,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct OutsideLoadSE {
+pub struct OutsideLoadSE<'a> {
   pub range: RangeS,
   pub rules: Vec<IRulexSR>,
-  pub name: IImpreciseNameS,
+  pub name: IImpreciseNameS<'a>,
   pub maybe_template_args: Option<Vec<crate::postparsing::rules::RuneUsage>>,
   pub target_ownership: LoadAsP,
 }
@@ -672,9 +673,9 @@ case class OutsideLoadSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RuneLookupSE {
+pub struct RuneLookupSE<'a> {
   pub range: RangeS,
-  pub rune: IRuneS,
+  pub rune: IRuneS<'a>,
 }
 /*
 case class RuneLookupSE(range: RangeS, rune: IRuneS) extends IExpressionSE {

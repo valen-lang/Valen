@@ -1,6 +1,9 @@
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::{CodeNameS, CodeRuneS, LetImplicitRuneS};
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::marker::PhantomData;
+use std::sync::Mutex;
 
 const MIN_INTERNING_ID: u64 = (1u64 << (7 * 8)) + 1;
 
@@ -66,86 +69,128 @@ impl StrI {
 
 /// Generic interning system with interior mutability
 /// Matches Scala's Interner
-pub struct Interner {
-  inner: Mutex<InternerInner>,
+pub struct Interner<'a> {
+  inner: Mutex<InternerInner<'a>>,
+  _marker: PhantomData<&'a StrI>,
 }
 
-struct InternerInner {
-  string_to_id: HashMap<String, u64>,
-  package_coord_to_id: HashMap<PackageCoordinate, u64>,
-  file_coord_to_id: HashMap<FileCoordinate, u64>,
+struct InternerInner<'a> {
+  string_to_stri: HashMap<String, &'a StrI>,
+  id_to_stri: HashMap<u64, &'a StrI>,
+  package_coord_to_ref: HashMap<PackageCoordinate<'a>, &'a PackageCoordinate<'a>>,
+  file_coord_to_ref: HashMap<FileCoordinate<'a>, &'a FileCoordinate<'a>>,
+  code_name_to_ref: HashMap<CodeNameS<'a>, &'a CodeNameS<'a>>,
+  code_rune_to_ref: HashMap<CodeRuneS<'a>, &'a CodeRuneS<'a>>,
+  let_implicit_rune_to_ref: HashMap<LetImplicitRuneS, &'a LetImplicitRuneS>,
   next_id: u64,
 }
 
-impl Interner {
+macro_rules! define_payload_interner_1arg {
+  ($method_name:ident, $ty:ty, $field:ident, $arg_name:ident : $arg_ty:ty, $ctor:expr) => {
+    pub fn $method_name(&'a self, $arg_name: $arg_ty) -> &'a $ty {
+      let mut inner = self.inner.lock().unwrap();
+      let key: $ty = $ctor;
+      if let Some(existing) = inner.$field.get(&key) {
+        return *existing;
+      }
+      let new_ref = Box::leak(Box::new(key.clone()));
+      inner.$field.insert(key, new_ref);
+      new_ref
+    }
+  };
+}
+
+impl<'a> Interner<'a> {
   pub fn new() -> Self {
     Interner {
       inner: Mutex::new(InternerInner {
-        string_to_id: HashMap::new(),
-        package_coord_to_id: HashMap::new(),
-        file_coord_to_id: HashMap::new(),
+        string_to_stri: HashMap::new(),
+        id_to_stri: HashMap::new(),
+        package_coord_to_ref: HashMap::new(),
+        file_coord_to_ref: HashMap::new(),
+        code_name_to_ref: HashMap::new(),
+        code_rune_to_ref: HashMap::new(),
+        let_implicit_rune_to_ref: HashMap::new(),
         next_id: MIN_INTERNING_ID,
       }),
+      _marker: PhantomData,
     }
   }
 
-  /// Intern a string, returning an Arc<StrI>
-  /// Matches Scala's interner.intern(StrI(s))
-  pub fn intern(&self, s: &str) -> Arc<StrI> {
+  /// Intern a string, returning a canonical shared StrI value.
+  pub fn intern(&'a self, s: &str) -> &'a StrI {
     let mut inner = self.inner.lock().unwrap();
-    // Try shortcut for short strings
-    if let Some(id) = StrI::try_encode_short_string(s) {
-      return Arc::new(StrI::new(id, s.to_string()));
+    if let Some(existing) = inner.string_to_stri.get(s) {
+      return *existing;
     }
 
-    // Look up existing
-    if let Some(&existing_id) = inner.string_to_id.get(s) {
-      return Arc::new(StrI::new(existing_id, s.to_string()));
-    }
+    let id = if let Some(encoded_id) = StrI::try_encode_short_string(s) {
+      encoded_id
+    } else {
+      let new_id = inner.next_id;
+      inner.next_id += 1;
+      new_id
+    };
 
-    // Create new
-    let new_id = inner.next_id;
-    inner.next_id += 1;
-    inner.string_to_id.insert(s.to_string(), new_id);
-    Arc::new(StrI::new(new_id, s.to_string()))
+    let value_ref: &'a StrI = Box::leak(Box::new(StrI::new(id, s.to_string())));
+    inner.string_to_stri.insert(s.to_string(), value_ref);
+    inner.id_to_stri.insert(id, value_ref);
+    value_ref
   }
 
-  /// Intern a PackageCoordinate
-  /// Matches Scala's interner.intern(PackageCoordinate(...))
-  pub fn intern_package_coordinate(&self, coord: PackageCoordinate) -> Arc<PackageCoordinate> {
+  /// Get StrI by id.
+  pub fn get_by_id(&'a self, id: u64) -> Option<&'a StrI> {
+    self.inner.lock().unwrap().id_to_stri.get(&id).cloned()
+  }
+
+  /// Intern a PackageCoordinate.
+  pub fn intern_package_coordinate(&'a self, coord: PackageCoordinate<'a>) -> &'a PackageCoordinate<'a> {
     let mut inner = self.inner.lock().unwrap();
-
-    // Look up existing
-    if let Some(&_existing_id) = inner.package_coord_to_id.get(&coord) {
-      return Arc::new(coord);
+    if let Some(existing) = inner.package_coord_to_ref.get(&coord) {
+      return *existing;
     }
-
-    // Create new
-    let new_id = inner.next_id;
-    inner.next_id += 1;
-    inner.package_coord_to_id.insert(coord.clone(), new_id);
-    Arc::new(coord)
+    let new_ref: &'a PackageCoordinate<'a> = Box::leak(Box::new(coord.clone()));
+    inner.package_coord_to_ref.insert(coord, new_ref);
+    new_ref
   }
 
   /// Intern a FileCoordinate
-  /// Matches Scala's interner.intern(FileCoordinate(...))
-  pub fn intern_file_coordinate(&self, coord: FileCoordinate) -> Arc<FileCoordinate> {
+  pub fn intern_file_coordinate(&'a self, coord: FileCoordinate<'a>) -> &'a FileCoordinate<'a> {
     let mut inner = self.inner.lock().unwrap();
-
-    // Look up existing
-    if let Some(&_existing_id) = inner.file_coord_to_id.get(&coord) {
-      return Arc::new(coord);
+    if let Some(existing) = inner.file_coord_to_ref.get(&coord) {
+      return *existing;
     }
-
-    // Create new
-    let new_id = inner.next_id;
-    inner.next_id += 1;
-    inner.file_coord_to_id.insert(coord.clone(), new_id);
-    Arc::new(coord)
+    let new_ref: &'a FileCoordinate<'a> = Box::leak(Box::new(coord.clone()));
+    inner.file_coord_to_ref.insert(coord, new_ref);
+    new_ref
   }
+
+  define_payload_interner_1arg!(
+    intern_code_name,
+    CodeNameS<'a>,
+    code_name_to_ref,
+    name: &'a StrI,
+    CodeNameS { name }
+  );
+
+  define_payload_interner_1arg!(
+    intern_code_rune,
+    CodeRuneS<'a>,
+    code_rune_to_ref,
+    name: &'a StrI,
+    CodeRuneS { name }
+  );
+
+  define_payload_interner_1arg!(
+    intern_let_implicit_rune,
+    LetImplicitRuneS,
+    let_implicit_rune_to_ref,
+    lid: LocationInDenizen,
+    LetImplicitRuneS { lid }
+  );
 }
 
-impl Default for Interner {
+impl<'a> Default for Interner<'a> {
   fn default() -> Self {
     Self::new()
   }
@@ -161,8 +206,9 @@ mod tests {
     let s1 = interner.intern("hello");
     let s2 = interner.intern("hello");
 
-    // Same string should have same ID
+    // Same string should have same ID and same canonical instance.
     assert_eq!(s1.id(), s2.id());
+    assert_eq!(s1, s2);
     assert_eq!(s1.str, "hello");
 
     // Short strings should use encoded ID
@@ -175,8 +221,9 @@ mod tests {
     let s1 = interner.intern("this is a long string");
     let s2 = interner.intern("this is a long string");
 
-    // Same string should have same ID
+    // Same string should have same ID and same canonical instance.
     assert_eq!(s1.id(), s2.id());
+    assert_eq!(s1, s2);
     assert_eq!(s1.str, "this is a long string");
 
     // Long strings should use regular interning

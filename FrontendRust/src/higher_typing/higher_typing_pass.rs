@@ -11,19 +11,19 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
-pub struct HigherTypingCompilation {
-  scout_compilation: ScoutCompilation,
+pub struct HigherTypingCompilation<'a> {
+  scout_compilation: ScoutCompilation<'a>,
   #[allow(dead_code)]
   astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
 }
 
-impl HigherTypingCompilation {
+impl<'a> HigherTypingCompilation<'a> {
   // From HigherTypingPass.scala lines 793-799
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
     let scout_compilation = ScoutCompilation::new(
@@ -41,17 +41,17 @@ impl HigherTypingCompilation {
   }
 
   // From HigherTypingPass.scala line 802: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.scout_compilation.get_code_map()
   }
 
   // From HigherTypingPass.scala line 803: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.scout_compilation.get_parseds()
   }
 
   // From HigherTypingPass.scala line 804: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.scout_compilation.get_vpst_map()
   }
 

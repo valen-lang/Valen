@@ -24,14 +24,15 @@ use crate::parsing::parsed_loader;
 use crate::parsing::tests::utils::compile_file;
 use crate::parsing::vonifier::ParserVonifier;
 use crate::von::printer::VonPrinter;
-use std::sync::Arc;
 
 #[test]
 fn simple_program() {
-  let original_file = compile_file("exported func main() int { return 42; }").unwrap();
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let original_file = compile_file(&interner, &keywords, "exported func main() int { return 42; }").unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let json = VonPrinter::new().print(&von);
-  let loaded_file = parsed_loader::load(&json).unwrap();
+  let loaded_file = parsed_loader::load(&interner, &json).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }
@@ -49,9 +50,9 @@ fn simple_program() {
 
 #[test]
 fn strings_with_special_characters() {
-  let interner = Arc::new(Interner::new());
-  let keywords = Arc::new(Keywords::new(&interner));
-  let lexer = Lexer::new(interner.clone(), keywords);
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let lexer = Lexer::new(&interner, &keywords);
   let mut iter = LexingIterator::new("000a".to_string());
   assert_eq!(lexer.parse_four_digit_hex_num(&mut iter, 0), Some(10));
 
@@ -73,12 +74,12 @@ fn strings_with_special_characters() {
   // they won't have the 0x1b byte.
   assert!(code.contains("\\u001b"));
 
-  let original_file = compile_file(code).unwrap();
+  let original_file = compile_file(&interner, &keywords, code).unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let generated_json_str = VonPrinter::new().print(&von);
   let generated_bytes = generated_json_str.as_bytes();
   let loaded_json_str = String::from_utf8(generated_bytes.to_vec()).unwrap();
-  let loaded_file = parsed_loader::load(&loaded_json_str).unwrap();
+  let loaded_file = parsed_loader::load(&interner, &loaded_json_str).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }

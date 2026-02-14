@@ -1,6 +1,4 @@
-use crate::interner::StrI;
 use crate::lexing::ast::*;
-use std::sync::Arc;
 
 /// Iterator over a scramble of lexed nodes
 /// Matches Scala's ScrambleIterator
@@ -254,7 +252,7 @@ impl ScrambleIterator {
   */
 
   /// Check if next element is a specific word
-  pub fn peek_word(&self, word: &Arc<StrI>) -> bool {
+  pub fn peek_word(&self, word: &&'_ StrI) -> bool {
     match self.peek() {
       Some(INodeLEEnum::Word(WordLE { str, .. })) => str == word,
       _ => false,
@@ -382,7 +380,7 @@ impl ScrambleIterator {
   */
 
   /// Expect a specific word (panics if not found)
-  pub fn expect_word(&mut self, str: &Arc<StrI>) {
+  pub fn expect_word(&mut self, str: &&'_ StrI) {
     let found = self.try_skip_word(str).is_some();
     assert!(found, "Expected word {:?}", str);
   }
@@ -394,7 +392,7 @@ impl ScrambleIterator {
   */
 
   /// Try to skip a specific word
-  pub fn try_skip_word(&mut self, str: &Arc<StrI>) -> Option<RangeL> {
+  pub fn try_skip_word(&mut self, str: &&'_ StrI) -> Option<RangeL> {
     match self.peek() {
       Some(INodeLEEnum::Word(WordLE { range, str: s })) if s == str => {
         let result = *range;

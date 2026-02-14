@@ -7,60 +7,59 @@ use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
-use std::sync::Arc;
 
 /*
 trait INameS extends IInterning
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum INameS {
-  FunctionDeclaration(IFunctionDeclarationNameS),
+pub enum INameS<'a> {
+  FunctionDeclaration(IFunctionDeclarationNameS<'a>),
   ImplDeclaration(ImplDeclarationNameS),
-  AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameS),
+  AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameS<'a>),
   ExportAsName(ExportAsNameS),
   LetName(LetNameS),
-  TopLevelStructDeclaration(TopLevelStructDeclarationNameS),
-  TopLevelInterfaceDeclaration(TopLevelInterfaceDeclarationNameS),
+  TopLevelStructDeclaration(TopLevelStructDeclarationNameS<'a>),
+  TopLevelInterfaceDeclaration(TopLevelInterfaceDeclarationNameS<'a>),
   LambdaStructDeclaration(LambdaStructDeclarationNameS),
-  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS),
-  RuneName(RuneNameS),
+  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'a>),
+  RuneName(RuneNameS<'a>),
   RuntimeSizedArrayDeclarationName(RuntimeSizedArrayDeclarationNameS),
   StaticSizedArrayDeclarationName(StaticSizedArrayDeclarationNameS),
   GlobalFunctionFamilyName(GlobalFunctionFamilyNameS),
   ArbitraryName(ArbitraryNameS),
-  VarName(IVarNameS),
+  VarName(IVarNameS<'a>),
 }
 
 /*
 trait IImpreciseNameS extends IInterning
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IImpreciseNameS {
-  CodeName(Arc<CodeNameS>),
-  LambdaImpreciseName(Arc<LambdaImpreciseNameS>),
-  PlaceholderImpreciseName(Arc<PlaceholderImpreciseNameS>),
-  LambdaStructImpreciseName(Arc<LambdaStructImpreciseNameS>),
-  ClosureParamImpreciseName(Arc<ClosureParamImpreciseNameS>),
-  PrototypeName(Arc<PrototypeNameS>),
-  AnonymousSubstructTemplateImpreciseName(Arc<AnonymousSubstructTemplateImpreciseNameS>),
+pub enum IImpreciseNameS<'a> {
+  CodeName(&'a CodeNameS<'a>),
+  LambdaImpreciseName(&'a LambdaImpreciseNameS),
+  PlaceholderImpreciseName(&'a PlaceholderImpreciseNameS),
+  LambdaStructImpreciseName(&'a LambdaStructImpreciseNameS<'a>),
+  ClosureParamImpreciseName(&'a ClosureParamImpreciseNameS),
+  PrototypeName(&'a PrototypeNameS),
+  AnonymousSubstructTemplateImpreciseName(&'a AnonymousSubstructTemplateImpreciseNameS<'a>),
   AnonymousSubstructConstructorTemplateImpreciseName(
-    Arc<AnonymousSubstructConstructorTemplateImpreciseNameS>,
+    &'a AnonymousSubstructConstructorTemplateImpreciseNameS<'a>,
   ),
-  ImplImpreciseName(Arc<ImplImpreciseNameS>),
-  ImplSubCitizenImpreciseName(Arc<ImplSubCitizenImpreciseNameS>),
-  ImplSuperInterfaceImpreciseName(Arc<ImplSuperInterfaceImpreciseNameS>),
-  SelfName(Arc<SelfNameS>),
-  RuneName(Arc<RuneNameS>),
-  ArbitraryName(Arc<ArbitraryNameS>),
+  ImplImpreciseName(&'a ImplImpreciseNameS<'a>),
+  ImplSubCitizenImpreciseName(&'a ImplSubCitizenImpreciseNameS<'a>),
+  ImplSuperInterfaceImpreciseName(&'a ImplSuperInterfaceImpreciseNameS<'a>),
+  SelfName(&'a SelfNameS),
+  RuneName(&'a RuneNameS<'a>),
+  ArbitraryName(&'a ArbitraryNameS),
 }
 
 /*
 sealed trait IVarNameS extends INameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IVarNameS {
-  CodeVarName(Arc<StrI>),
-  ConstructingMemberName(Arc<StrI>),
+pub enum IVarNameS<'a> {
+  CodeVarName(&'a StrI),
+  ConstructingMemberName(&'a StrI),
   ClosureParamName(CodeLocationS),
   MagicParamName(CodeLocationS),
   IterableName(RangeS),
@@ -72,13 +71,13 @@ pub enum IVarNameS {
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IFunctionDeclarationNameS {
-  FunctionName(FunctionNameS),
+pub enum IFunctionDeclarationNameS<'a> {
+  FunctionName(FunctionNameS<'a>),
   LambdaDeclarationName(LambdaDeclarationNameS),
-  ForwarderFunctionDeclarationName(Arc<ForwarderFunctionDeclarationNameS>),
-  ConstructorName(Arc<ConstructorNameS>),
-  ImmConcreteDestructorName(Arc<ImmConcreteDestructorNameS>),
-  ImmInterfaceDestructorName(Arc<ImmInterfaceDestructorNameS>),
+  ForwarderFunctionDeclarationName(&'a ForwarderFunctionDeclarationNameS<'a>),
+  ConstructorName(&'a ConstructorNameS<'a>),
+  ImmConcreteDestructorName(&'a ImmConcreteDestructorNameS<'a>),
+  ImmInterfaceDestructorName(&'a ImmInterfaceDestructorNameS<'a>),
 }
 
 /*
@@ -139,8 +138,8 @@ case class PlaceholderImpreciseNameS(index: Int) extends IImpreciseNameS {
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct FunctionNameS {
-  pub name: Arc<StrI>,
+pub struct FunctionNameS<'a> {
+  pub name: &'a StrI,
   pub code_location: CodeLocationS,
 }
 
@@ -159,8 +158,8 @@ case class FunctionNameS(name: StrI, codeLocation: CodeLocationS) extends IFunct
 //}
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ForwarderFunctionDeclarationNameS {
-  pub inner: IFunctionDeclarationNameS,
+pub struct ForwarderFunctionDeclarationNameS<'a> {
+  pub inner: IFunctionDeclarationNameS<'a>,
   pub index: i32,
 }
 /*
@@ -170,9 +169,9 @@ case class ForwarderFunctionDeclarationNameS(inner: IFunctionDeclarationNameS, i
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum TopLevelCitizenDeclarationNameS {
-  TopLevelStructDeclarationName(TopLevelStructDeclarationNameS),
-  TopLevelInterfaceDeclarationName(TopLevelInterfaceDeclarationNameS),
+pub enum TopLevelCitizenDeclarationNameS<'a> {
+  TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'a>),
+  TopLevelInterfaceDeclarationName(TopLevelInterfaceDeclarationNameS<'a>),
 }
 
 /*
@@ -194,8 +193,8 @@ object TopLevelCitizenDeclarationNameS {
 sealed trait IStructDeclarationNameS extends ICitizenDeclarationNameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TopLevelStructDeclarationNameS {
-  pub name: Arc<StrI>,
+pub struct TopLevelStructDeclarationNameS<'a> {
+  pub name: &'a StrI,
   pub range: RangeS,
 }
 /*
@@ -206,16 +205,16 @@ case class TopLevelStructDeclarationNameS(name: StrI, range: RangeS) extends ISt
 sealed trait IInterfaceDeclarationNameS extends ICitizenDeclarationNameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct TopLevelInterfaceDeclarationNameS {
-  pub name: Arc<StrI>,
+pub struct TopLevelInterfaceDeclarationNameS<'a> {
+  pub name: &'a StrI,
   pub range: RangeS,
 }
 /*
 case class TopLevelInterfaceDeclarationNameS(name: StrI, range: RangeS) extends IInterfaceDeclarationNameS with TopLevelCitizenDeclarationNameS {
 }
 */
-impl TopLevelCitizenDeclarationNameS {
-  pub fn name(&self) -> &Arc<StrI> {
+impl<'a> TopLevelCitizenDeclarationNameS<'a> {
+  pub fn name(&self) -> &&'a StrI {
     match self {
       TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => &x.name,
       TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => &x.name,
@@ -223,14 +222,14 @@ impl TopLevelCitizenDeclarationNameS {
   }
 }
 
-impl From<&TopLevelStructDeclarationNameS> for TopLevelCitizenDeclarationNameS {
-  fn from(value: &TopLevelStructDeclarationNameS) -> Self {
+impl<'a> From<&TopLevelStructDeclarationNameS<'a>> for TopLevelCitizenDeclarationNameS<'a> {
+  fn from(value: &TopLevelStructDeclarationNameS<'a>) -> Self {
     TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(value.clone())
   }
 }
 
-impl From<&TopLevelInterfaceDeclarationNameS> for TopLevelCitizenDeclarationNameS {
-  fn from(value: &TopLevelInterfaceDeclarationNameS) -> Self {
+impl<'a> From<&TopLevelInterfaceDeclarationNameS<'a>> for TopLevelCitizenDeclarationNameS<'a> {
+  fn from(value: &TopLevelInterfaceDeclarationNameS<'a>) -> Self {
     TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(value.clone())
   }
 }
@@ -244,8 +243,8 @@ case class LambdaStructDeclarationNameS(lambdaName: LambdaDeclarationNameS) exte
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LambdaStructImpreciseNameS {
-  pub lambda_name: Arc<IImpreciseNameS>,
+pub struct LambdaStructImpreciseNameS<'a> {
+  pub lambda_name: &'a IImpreciseNameS<'a>,
 }
 /*
 case class LambdaStructImpreciseNameS(lambdaName: LambdaImpreciseNameS) extends IImpreciseNameS {  }
@@ -261,8 +260,8 @@ case class ImplDeclarationNameS(codeLocation: CodeLocationS) extends IImplDeclar
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructImplDeclarationNameS {
-  pub interface: TopLevelInterfaceDeclarationNameS,
+pub struct AnonymousSubstructImplDeclarationNameS<'a> {
+  pub interface: TopLevelInterfaceDeclarationNameS<'a>,
 }
 /*
 case class AnonymousSubstructImplDeclarationNameS(interface: TopLevelInterfaceDeclarationNameS) extends IImplDeclarationNameS {
@@ -310,8 +309,8 @@ pub struct MagicParamNameS {
 case class MagicParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructTemplateNameS {
-  pub interface_name: TopLevelInterfaceDeclarationNameS,
+pub struct AnonymousSubstructTemplateNameS<'a> {
+  pub interface_name: TopLevelInterfaceDeclarationNameS<'a>,
 }
 /*
 case class AnonymousSubstructTemplateNameS(interfaceName: TopLevelInterfaceDeclarationNameS) extends IStructDeclarationNameS {
@@ -322,8 +321,8 @@ case class AnonymousSubstructTemplateNameS(interfaceName: TopLevelInterfaceDecla
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructTemplateImpreciseNameS {
-  pub interface_imprecise_name: Box<IImpreciseNameS>,
+pub struct AnonymousSubstructTemplateImpreciseNameS<'a> {
+  pub interface_imprecise_name: Box<IImpreciseNameS<'a>>,
 }
 /*
 case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -331,8 +330,8 @@ case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImp
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct AnonymousSubstructConstructorTemplateImpreciseNameS {
-  pub interface_imprecise_name: Box<IImpreciseNameS>,
+pub struct AnonymousSubstructConstructorTemplateImpreciseNameS<'a> {
+  pub interface_imprecise_name: Box<IImpreciseNameS<'a>>,
 }
 /*
 case class AnonymousSubstructConstructorTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -347,8 +346,8 @@ pub struct AnonymousSubstructMemberNameS {
 case class AnonymousSubstructMemberNameS(index: Int) extends IVarNameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CodeVarNameS {
-  pub name: Arc<StrI>,
+pub struct CodeVarNameS<'a> {
+  pub name: &'a StrI,
 }
 /*
 case class CodeVarNameS(name: StrI) extends IVarNameS {
@@ -357,8 +356,8 @@ case class CodeVarNameS(name: StrI) extends IVarNameS {
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ConstructingMemberNameS {
-  pub name: Arc<StrI>,
+pub struct ConstructingMemberNameS<'a> {
+  pub name: &'a StrI,
 }
 /*
 case class ConstructingMemberNameS(name: StrI) extends IVarNameS {  }
@@ -392,8 +391,8 @@ pub struct WhileCondResultNameS {
 case class WhileCondResultNameS(range: RangeS) extends IVarNameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RuneNameS {
-  pub rune: Box<IRuneS>,
+pub struct RuneNameS<'a> {
+  pub rune: Box<IRuneS<'a>>,
 }
 /*
 case class RuneNameS(rune: IRuneS) extends INameS with IImpreciseNameS {  }
@@ -409,75 +408,75 @@ pub struct StaticSizedArrayDeclarationNameS {}
 case class StaticSizedArrayDeclarationNameS() extends INameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IRuneS {
-  CodeRune(Arc<CodeRuneS>),
-  ImplDropCoordRune(Arc<ImplDropCoordRuneS>),
-  ImplDropVoidRune(Arc<ImplDropVoidRuneS>),
-  ImplicitRune(Arc<ImplicitRuneS>),
-  PureBlockRegionRune(Arc<PureBlockRegionRuneS>),
-  CallRegionRune(Arc<CallRegionRuneS>),
-  CallPureMergeRegionRune(Arc<CallPureMergeRegionRuneS>),
-  ImplicitRegionRune(Arc<ImplicitRegionRuneS>),
-  ReachablePrototypeRune(Arc<ReachablePrototypeRuneS>),
-  FreeOverrideStructTemplateRune(Arc<FreeOverrideStructTemplateRuneS>),
-  FreeOverrideStructRune(Arc<FreeOverrideStructRuneS>),
-  FreeOverrideInterfaceRune(Arc<FreeOverrideInterfaceRuneS>),
-  LetImplicitRune(Arc<LetImplicitRuneS>),
-  MagicParamRune(Arc<MagicParamRuneS>),
-  MemberRune(Arc<MemberRuneS>),
-  LocalDefaultRegionRune(Arc<LocalDefaultRegionRuneS>),
-  DenizenDefaultRegionRune(Arc<DenizenDefaultRegionRuneS>),
-  ExportDefaultRegionRune(Arc<ExportDefaultRegionRuneS>),
-  ExternDefaultRegionRune(Arc<ExternDefaultRegionRuneS>),
-  ImplicitCoercionOwnershipRune(Arc<ImplicitCoercionOwnershipRuneS>),
-  ImplicitCoercionKindRune(Arc<ImplicitCoercionKindRuneS>),
-  ImplicitCoercionTemplateRune(Arc<ImplicitCoercionTemplateRuneS>),
-  ArraySizeImplicitRune(Arc<ArraySizeImplicitRuneS>),
-  ArrayMutabilityImplicitRune(Arc<ArrayMutabilityImplicitRuneS>),
-  ArrayVariabilityImplicitRune(Arc<ArrayVariabilityImplicitRuneS>),
-  ReturnRune(Arc<ReturnRuneS>),
-  StructNameRune(Arc<StructNameRuneS>),
-  InterfaceNameRune(Arc<InterfaceNameRuneS>),
-  SelfRune(Arc<SelfRuneS>),
-  SelfOwnershipRune(Arc<SelfOwnershipRuneS>),
-  SelfKindRune(Arc<SelfKindRuneS>),
-  SelfKindTemplateRune(Arc<SelfKindTemplateRuneS>),
-  SelfCoordRune(Arc<SelfCoordRuneS>),
-  MacroVoidKindRune(Arc<MacroVoidKindRuneS>),
-  MacroVoidCoordRune(Arc<MacroVoidCoordRuneS>),
-  MacroSelfKindRune(Arc<MacroSelfKindRuneS>),
-  MacroSelfKindTemplateRune(Arc<MacroSelfKindTemplateRuneS>),
-  MacroSelfCoordRune(Arc<MacroSelfCoordRuneS>),
-  ArgumentRune(Arc<ArgumentRuneS>),
-  PatternInputRune(Arc<PatternInputRuneS>),
-  ExplicitTemplateArgRune(Arc<ExplicitTemplateArgRuneS>),
+pub enum IRuneS<'a> {
+  CodeRune(&'a CodeRuneS<'a>),
+  ImplDropCoordRune(&'a ImplDropCoordRuneS),
+  ImplDropVoidRune(&'a ImplDropVoidRuneS),
+  ImplicitRune(&'a ImplicitRuneS),
+  PureBlockRegionRune(&'a PureBlockRegionRuneS),
+  CallRegionRune(&'a CallRegionRuneS),
+  CallPureMergeRegionRune(&'a CallPureMergeRegionRuneS),
+  ImplicitRegionRune(&'a ImplicitRegionRuneS),
+  ReachablePrototypeRune(&'a ReachablePrototypeRuneS),
+  FreeOverrideStructTemplateRune(&'a FreeOverrideStructTemplateRuneS),
+  FreeOverrideStructRune(&'a FreeOverrideStructRuneS),
+  FreeOverrideInterfaceRune(&'a FreeOverrideInterfaceRuneS),
+  LetImplicitRune(&'a LetImplicitRuneS),
+  MagicParamRune(&'a MagicParamRuneS),
+  MemberRune(&'a MemberRuneS),
+  LocalDefaultRegionRune(&'a LocalDefaultRegionRuneS),
+  DenizenDefaultRegionRune(&'a DenizenDefaultRegionRuneS),
+  ExportDefaultRegionRune(&'a ExportDefaultRegionRuneS),
+  ExternDefaultRegionRune(&'a ExternDefaultRegionRuneS),
+  ImplicitCoercionOwnershipRune(&'a ImplicitCoercionOwnershipRuneS),
+  ImplicitCoercionKindRune(&'a ImplicitCoercionKindRuneS),
+  ImplicitCoercionTemplateRune(&'a ImplicitCoercionTemplateRuneS),
+  ArraySizeImplicitRune(&'a ArraySizeImplicitRuneS),
+  ArrayMutabilityImplicitRune(&'a ArrayMutabilityImplicitRuneS),
+  ArrayVariabilityImplicitRune(&'a ArrayVariabilityImplicitRuneS),
+  ReturnRune(&'a ReturnRuneS),
+  StructNameRune(&'a StructNameRuneS),
+  InterfaceNameRune(&'a InterfaceNameRuneS),
+  SelfRune(&'a SelfRuneS),
+  SelfOwnershipRune(&'a SelfOwnershipRuneS),
+  SelfKindRune(&'a SelfKindRuneS),
+  SelfKindTemplateRune(&'a SelfKindTemplateRuneS),
+  SelfCoordRune(&'a SelfCoordRuneS),
+  MacroVoidKindRune(&'a MacroVoidKindRuneS),
+  MacroVoidCoordRune(&'a MacroVoidCoordRuneS),
+  MacroSelfKindRune(&'a MacroSelfKindRuneS),
+  MacroSelfKindTemplateRune(&'a MacroSelfKindTemplateRuneS),
+  MacroSelfCoordRune(&'a MacroSelfCoordRuneS),
+  ArgumentRune(&'a ArgumentRuneS),
+  PatternInputRune(&'a PatternInputRuneS),
+  ExplicitTemplateArgRune(&'a ExplicitTemplateArgRuneS),
   AnonymousSubstructParentInterfaceTemplateRune(
-    Arc<AnonymousSubstructParentInterfaceTemplateRuneS>,
+    &'a AnonymousSubstructParentInterfaceTemplateRuneS,
   ),
-  AnonymousSubstructParentInterfaceKindRune(Arc<AnonymousSubstructParentInterfaceKindRuneS>),
-  AnonymousSubstructParentInterfaceCoordRune(Arc<AnonymousSubstructParentInterfaceCoordRuneS>),
-  AnonymousSubstructTemplateRune(Arc<AnonymousSubstructTemplateRuneS>),
-  AnonymousSubstructKindRune(Arc<AnonymousSubstructKindRuneS>),
-  AnonymousSubstructCoordRune(Arc<AnonymousSubstructCoordRuneS>),
-  AnonymousSubstructVoidKindRune(Arc<AnonymousSubstructVoidKindRuneS>),
-  AnonymousSubstructVoidCoordRune(Arc<AnonymousSubstructVoidCoordRuneS>),
-  AnonymousSubstructMemberRune(Arc<AnonymousSubstructMemberRuneS>),
-  AnonymousSubstructMethodSelfBorrowCoordRune(Arc<AnonymousSubstructMethodSelfBorrowCoordRuneS>),
-  AnonymousSubstructMethodSelfOwnCoordRune(Arc<AnonymousSubstructMethodSelfOwnCoordRuneS>),
-  AnonymousSubstructDropBoundPrototypeRune(Arc<AnonymousSubstructDropBoundPrototypeRuneS>),
-  AnonymousSubstructDropBoundParamsListRune(Arc<AnonymousSubstructDropBoundParamsListRuneS>),
-  AnonymousSubstructFunctionBoundPrototypeRune(Arc<AnonymousSubstructFunctionBoundPrototypeRuneS>),
-  AnonymousSubstructFunctionBoundParamsListRune(Arc<AnonymousSubstructFunctionBoundParamsListRuneS>),
+  AnonymousSubstructParentInterfaceKindRune(&'a AnonymousSubstructParentInterfaceKindRuneS),
+  AnonymousSubstructParentInterfaceCoordRune(&'a AnonymousSubstructParentInterfaceCoordRuneS),
+  AnonymousSubstructTemplateRune(&'a AnonymousSubstructTemplateRuneS),
+  AnonymousSubstructKindRune(&'a AnonymousSubstructKindRuneS),
+  AnonymousSubstructCoordRune(&'a AnonymousSubstructCoordRuneS),
+  AnonymousSubstructVoidKindRune(&'a AnonymousSubstructVoidKindRuneS),
+  AnonymousSubstructVoidCoordRune(&'a AnonymousSubstructVoidCoordRuneS),
+  AnonymousSubstructMemberRune(&'a AnonymousSubstructMemberRuneS),
+  AnonymousSubstructMethodSelfBorrowCoordRune(&'a AnonymousSubstructMethodSelfBorrowCoordRuneS),
+  AnonymousSubstructMethodSelfOwnCoordRune(&'a AnonymousSubstructMethodSelfOwnCoordRuneS),
+  AnonymousSubstructDropBoundPrototypeRune(&'a AnonymousSubstructDropBoundPrototypeRuneS),
+  AnonymousSubstructDropBoundParamsListRune(&'a AnonymousSubstructDropBoundParamsListRuneS),
+  AnonymousSubstructFunctionBoundPrototypeRune(&'a AnonymousSubstructFunctionBoundPrototypeRuneS),
+  AnonymousSubstructFunctionBoundParamsListRune(&'a AnonymousSubstructFunctionBoundParamsListRuneS),
   AnonymousSubstructFunctionInterfaceTemplateRune(
-    Arc<AnonymousSubstructFunctionInterfaceTemplateRuneS>,
+    &'a AnonymousSubstructFunctionInterfaceTemplateRuneS,
   ),
-  AnonymousSubstructFunctionInterfaceKindRune(Arc<AnonymousSubstructFunctionInterfaceKindRuneS>),
-  AnonymousSubstructMethodInheritedRune(Arc<AnonymousSubstructMethodInheritedRuneS>),
-  FunctorPrototypeRuneName(Arc<FunctorPrototypeRuneNameS>),
-  FunctorParamRuneName(Arc<FunctorParamRuneNameS>),
-  FunctorReturnRuneName(Arc<FunctorReturnRuneNameS>),
-  DispatcherRuneFromImpl(Arc<DispatcherRuneFromImplS>),
-  CaseRuneFromImpl(Arc<CaseRuneFromImplS>),
+  AnonymousSubstructFunctionInterfaceKindRune(&'a AnonymousSubstructFunctionInterfaceKindRuneS),
+  AnonymousSubstructMethodInheritedRune(&'a AnonymousSubstructMethodInheritedRuneS),
+  FunctorPrototypeRuneName(&'a FunctorPrototypeRuneNameS),
+  FunctorParamRuneName(&'a FunctorParamRuneNameS),
+  FunctorReturnRuneName(&'a FunctorReturnRuneNameS),
+  DispatcherRuneFromImpl(&'a DispatcherRuneFromImplS),
+  CaseRuneFromImpl(&'a CaseRuneFromImplS),
 }
 
 /*
@@ -494,8 +493,8 @@ pub enum IRuneS {
 trait IRuneS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CodeRuneS {
-  pub name: Arc<StrI>,
+pub struct CodeRuneS<'a> {
+  pub name: &'a StrI,
 }
 
 /*
@@ -750,8 +749,8 @@ pub struct MacroSelfCoordRuneS {}
 case class MacroSelfCoordRuneS() extends IRuneS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CodeNameS {
-  pub name: Arc<StrI>,
+pub struct CodeNameS<'a> {
+  pub name: &'a StrI,
 }
 
 /*
@@ -923,8 +922,8 @@ case class CaseRuneFromImplS(innerRune: IRuneS) extends IRuneS
 // Only made by typingpass, see if we can take these out
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ConstructorNameS {
-  pub tlcd: TopLevelCitizenDeclarationNameS,
+pub struct ConstructorNameS<'a> {
+  pub tlcd: TopLevelCitizenDeclarationNameS<'a>,
 }
 /*
 case class ConstructorNameS(tlcd: ICitizenDeclarationNameS) extends IFunctionDeclarationNameS {
@@ -933,8 +932,8 @@ case class ConstructorNameS(tlcd: ICitizenDeclarationNameS) extends IFunctionDec
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImmConcreteDestructorNameS {
-  pub package_coordinate: PackageCoordinate,
+pub struct ImmConcreteDestructorNameS<'a> {
+  pub package_coordinate: PackageCoordinate<'a>,
 }
 /*
 case class ImmConcreteDestructorNameS(packageCoordinate: PackageCoordinate) extends IFunctionDeclarationNameS {
@@ -942,8 +941,8 @@ case class ImmConcreteDestructorNameS(packageCoordinate: PackageCoordinate) exte
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImmInterfaceDestructorNameS {
-  pub package_coordinate: PackageCoordinate,
+pub struct ImmInterfaceDestructorNameS<'a> {
+  pub package_coordinate: PackageCoordinate<'a>,
 }
 /*
 case class ImmInterfaceDestructorNameS(packageCoordinate: PackageCoordinate) extends IFunctionDeclarationNameS {
@@ -952,17 +951,17 @@ case class ImmInterfaceDestructorNameS(packageCoordinate: PackageCoordinate) ext
 
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplImpreciseNameS {
-  pub sub_citizen_imprecise_name: Box<IImpreciseNameS>,
-  pub super_interface_imprecise_name: Box<IImpreciseNameS>,
+pub struct ImplImpreciseNameS<'a> {
+  pub sub_citizen_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub super_interface_imprecise_name: Box<IImpreciseNameS<'a>>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplSubCitizenImpreciseNameS {
-  pub sub_citizen_imprecise_name: Box<IImpreciseNameS>,
+pub struct ImplSubCitizenImpreciseNameS<'a> {
+  pub sub_citizen_imprecise_name: Box<IImpreciseNameS<'a>>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplSuperInterfaceImpreciseNameS {
-  pub super_interface_imprecise_name: Box<IImpreciseNameS>,
+pub struct ImplSuperInterfaceImpreciseNameS<'a> {
+  pub super_interface_imprecise_name: Box<IImpreciseNameS<'a>>,
 }
 /*
 case class ImplImpreciseNameS(subCitizenImpreciseName: IImpreciseNameS, superInterfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS { }

@@ -10,7 +10,6 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::parse_utils::try_skip_past_equals_while;
 use crate::parsing::scramble_iterator::ScrambleIterator;
-use std::sync::Arc;
 /*
 package dev.vale.parsing.templex
 
@@ -30,17 +29,17 @@ type ParseResult<T> = Result<T, ParseError>;
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 #[derive(Clone)]
-pub struct TemplexParser {
+pub struct TemplexParser<'a> {
   #[allow(dead_code)]
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
 }
 /*
 class TemplexParser(interner: Interner, keywords: Keywords) {
 */
 
-impl TemplexParser {
-  pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
+impl<'a> TemplexParser<'a> {
+  pub fn new(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>) -> Self {
     TemplexParser { interner, keywords }
   }
 

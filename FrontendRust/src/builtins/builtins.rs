@@ -56,11 +56,11 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 // bare minimum. For example, the most basic test is `func main() int { return 42; }`, and we don't want it
 // to fail just because the builtin-yet-unused `func as<T, X>(x X) Opt<T> { ... }` doesn't want to
 // work right now.
-pub fn get_modulized_code_map(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
+pub fn get_modulized_code_map<'a>(
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
     builtins_dir: &str,
-) -> Result<FileCoordinateMap<String>, String> {
+) -> Result<FileCoordinateMap<'a, String>, String> {
     let mut result = FileCoordinateMap::new();
     
     for (module_name, filename) in MODULE_TO_FILENAME {
@@ -72,8 +72,8 @@ pub fn get_modulized_code_map(
         let package_coord = {
             // Interner now has interior mutability
             interner.intern_package_coordinate(PackageCoordinate {
-                module: keywords.v.clone(),
-                packages: vec![keywords.builtins.clone(), module_name_stri.clone()],
+                module: keywords.v,
+                packages: vec![keywords.builtins, module_name_stri],
             })
         };
         
@@ -95,15 +95,15 @@ pub fn get_modulized_code_map(
 // From Builtins.scala lines 94-111: getCodeMap
 // Add an empty v.builtins.whatever so that the aforementioned imports still work.
 // But load the actual files all inside the root package.
-pub fn get_code_map(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
+pub fn get_code_map<'a>(
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
     builtins_dir: &str,
-) -> Result<FileCoordinateMap<String>, String> {
+) -> Result<FileCoordinateMap<'a, String>, String> {
     let builtin_namespace_coord = {
         // Interner now has interior mutability
         interner.intern_package_coordinate(PackageCoordinate {
-            module: keywords.empty_string.clone(),
+            module: keywords.empty_string,
             packages: vec![],
         })
     };
@@ -120,8 +120,8 @@ pub fn get_code_map(
         let modulized_package_coord = {
             // Interner now has interior mutability
             interner.intern_package_coordinate(PackageCoordinate {
-                module: keywords.v.clone(),
-                packages: vec![keywords.builtins.clone(), module_name_stri.clone()],
+                module: keywords.v,
+                packages: vec![keywords.builtins, module_name_stri],
             })
         };
         
@@ -139,7 +139,7 @@ pub fn get_code_map(
         let root_file_coord = {
             // Interner now has interior mutability
             interner.intern_file_coordinate(FileCoordinate {
-                package_coord: builtin_namespace_coord.clone(),
+                package_coord: builtin_namespace_coord,
                 filepath: filename.to_string(),
             })
         };

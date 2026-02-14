@@ -1,5 +1,4 @@
 use std::collections::HashMap;
-use std::sync::Arc;
 
 use crate::interner::StrI;
 use crate::parsing::ast::{IMacroInclusionP, MutabilityP, VariabilityP};
@@ -122,27 +121,27 @@ case class ProgramS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExternS {
-  pub package_coord: Arc<PackageCoordinate>,
+pub struct ExternS<'a> {
+  pub package_coord: &'a PackageCoordinate<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinS {
+pub struct BuiltinS<'a> {
   // MIGTODO: can we give everything a lifetime into an arena so we can
   // all have references instead of using Arc everywhere?
-  pub generator_name: Arc<StrI>,
+  pub generator_name: &'a StrI,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MacroCallS {
+pub struct MacroCallS<'a> {
   pub range: RangeS,
   pub include: IMacroInclusionP,
-  pub macro_name: Arc<StrI>,
+  pub macro_name: &'a StrI,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExportS {
-  pub package_coordinate: Arc<PackageCoordinate>,
+pub struct ExportS<'a> {
+  pub package_coordinate: &'a PackageCoordinate<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -158,21 +157,21 @@ pub struct SealedS;
 pub struct UserFunctionS;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ICitizenAttributeS {
-  Extern(Arc<ExternS>),
+pub enum ICitizenAttributeS<'a> {
+  Extern(ExternS<'a>),
   Sealed(SealedS),
-  Builtin(Arc<BuiltinS>),
-  MacroCall(Arc<MacroCallS>),
-  Export(Arc<ExportS>),
+  Builtin(BuiltinS<'a>),
+  MacroCall(MacroCallS<'a>),
+  Export(ExportS<'a>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IFunctionAttributeS {
-  Extern(Arc<ExternS>),
+pub enum IFunctionAttributeS<'a> {
+  Extern(ExternS<'a>),
   Pure(PureS),
   Additive(AdditiveS),
-  Builtin(Arc<BuiltinS>),
-  Export(Arc<ExportS>),
+  Builtin(BuiltinS<'a>),
+  Export(ExportS<'a>),
   UserFunction(UserFunctionS),
 }
 
@@ -338,9 +337,9 @@ sealed trait IStructMemberS {
 }
   */
 #[derive(Clone, Debug, PartialEq)]
-pub struct NormalStructMemberS {
+pub struct NormalStructMemberS<'a> {
   pub range: RangeS,
-  pub name: Arc<StrI>,
+  pub name: &'a StrI,
   pub variability: VariabilityP,
   pub type_rune: RuneUsage,
 }
@@ -467,12 +466,12 @@ case class ImplS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExportAsS {
+pub struct ExportAsS<'a> {
   pub range: RangeS,
   pub rules: Vec<IRulexSR>,
   pub export_name: ExportAsNameS,
   pub rune: RuneUsage,
-  pub exported_name: Arc<StrI>,
+  pub exported_name: &'a StrI,
 }
 
 /*
@@ -486,11 +485,11 @@ case class ExportAsS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ImportS {
+pub struct ImportS<'a> {
   pub range: RangeS,
-  pub module_name: Arc<StrI>,
-  pub package_names: Vec<Arc<StrI>>,
-  pub importee_name: Arc<StrI>,
+  pub module_name: &'a StrI,
+  pub package_names: Vec<&'a StrI>,
+  pub importee_name: &'a StrI,
 }
 
 /*
@@ -592,8 +591,8 @@ case class SimpleParameterS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct GeneratedBodyS {
-  pub generator_id: Arc<StrI>,
+pub struct GeneratedBodyS<'a> {
+  pub generator_id: &'a StrI,
 }
 
 #[derive(Clone, Debug, PartialEq)]

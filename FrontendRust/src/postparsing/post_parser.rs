@@ -21,7 +21,7 @@ use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS,
+  CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS,
   TopLevelInterfaceDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{
@@ -35,31 +35,31 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // From PostParser.scala lines 922-965: ScoutCompilation class
-pub struct ScoutCompilation {
+pub struct ScoutCompilation<'a> {
   #[allow(dead_code)]
   global_options: GlobalOptions,
   #[allow(dead_code)]
-  interner: Arc<Interner>,
+  interner: &'a Interner<'a>,
   #[allow(dead_code)]
-  keywords: Arc<Keywords>,
-  parser_compilation: ParserCompilation,
+  keywords: &'a Keywords<'a>,
+  parser_compilation: ParserCompilation<'a, 'a>,
   #[allow(dead_code)]
   scoutput_cache: Option<()>,
 }
 
-impl ScoutCompilation {
+impl<'a> ScoutCompilation<'a> {
   // From PostParser.scala lines 922-928
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: Box<dyn IPackageResolver<'a, HashMap<String, String>> + 'a>,
     global_options: GlobalOptions,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
       global_options.clone(),
-      interner.clone(),
-      keywords.clone(),
+      interner,
+      keywords,
       packages_to_build,
       package_to_contents_resolver,
     );
@@ -246,7 +246,7 @@ case class FunctionEnvironmentS(
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct EnvironmentS {
-  pub file: Arc<FileCoordinate>,
+  pub file: &'a FileCoordinate<'a>,
   pub parent_env: Option<Box<EnvironmentS>>,
   pub name: INameS,
   pub user_declared_runes: Vec<IRuneS>,
@@ -287,7 +287,7 @@ impl IEnvironmentS {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionEnvironmentS {
-  pub file: Arc<FileCoordinate>,
+  pub file: &'a FileCoordinate<'a>,
   pub name: IFunctionDeclarationNameS,
   pub parent_env: Option<Box<IEnvironmentS>>,
   pub declared_runes: Vec<IRuneS>,
@@ -314,7 +314,7 @@ impl FunctionEnvironmentS {
 
   pub fn child(&self) -> FunctionEnvironmentS {
     FunctionEnvironmentS {
-      file: self.file.clone(),
+      file: self.file,
       name: self.name.clone(),
       parent_env: Some(Box::new(IEnvironmentS::FunctionEnvironment(self.clone()))),
       declared_runes: Vec::new(),
@@ -326,10 +326,10 @@ impl FunctionEnvironmentS {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StackFrame {
-  pub file: Arc<FileCoordinate>,
+  pub file: &'a FileCoordinate<'a>,
   pub name: IFunctionDeclarationNameS,
   pub parent_env: FunctionEnvironmentS,
-  pub maybe_parent: Option<Arc<StackFrame>>,
+  pub maybe_parent: Option<&'a StackFrame<'a>>,
   pub context_region: IRuneS,
   pub pure_height: i32,
   pub locals: VariableDeclarations,
@@ -338,7 +338,7 @@ pub struct StackFrame {
 impl StackFrame {
   pub fn plus(&self, new_vars: &VariableDeclarations) -> StackFrame {
     StackFrame {
-      file: self.file.clone(),
+      file: self.file,
       name: self.name.clone(),
       parent_env: self.parent_env.clone(),
       maybe_parent: self.maybe_parent.clone(),
@@ -413,7 +413,7 @@ impl PostParser {
     VariableDeclarations { vars: Vec::<VariableDeclarationS>::new() }
   }
 
-  pub fn eval_range(file: &Arc<FileCoordinate>, range: RangeL) -> RangeS {
+  pub fn eval_range(file: &FileCoordinate<'a>, range: RangeL) -> RangeS {
     RangeS {
       begin: Self::eval_pos(file, range.begin),
       end: Self::eval_pos(file, range.end),
@@ -427,9 +427,9 @@ impl PostParser {
   }
 */
 impl PostParser {
-  pub fn eval_pos(file: &Arc<FileCoordinate>, pos: i32) -> CodeLocationS {
+  pub fn eval_pos(file: &FileCoordinate<'a>, pos: i32) -> CodeLocationS {
     CodeLocationS {
-      file: file.clone(),
+      file: Arc::new(file.clone()),
       offset: pos,
     }
   }
@@ -686,15 +686,15 @@ impl PostParser {
 */
 pub struct PostParser {
   pub global_options: GlobalOptions,
-  pub interner: Arc<Interner>,
-  pub keywords: Arc<Keywords>,
+  pub interner: &'a Interner<'a>,
+  pub keywords: &'a Keywords<'a>,
 }
 
 impl PostParser {
   pub fn new(
     global_options: GlobalOptions,
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
   ) -> Self {
     Self {
       global_options,
@@ -714,7 +714,7 @@ class PostParser(
 */
   pub fn scout_program(
     &self,
-    file_coordinate: &Arc<FileCoordinate>,
+    file_coordinate: &FileCoordinate<'a>,
     parsed: &FileP,
   ) -> Result<ProgramS, ICompileErrorS> {
     let mut structs = Vec::new();
@@ -741,8 +741,12 @@ class PostParser(
     let mut implemented_functions = Vec::new();
     for denizen in &parsed.denizens {
       if let IDenizenP::TopLevelFunction(function_p) = denizen {
-        let (function_s, function_uses) =
-          FunctionScout::scout_function(file_coordinate, function_p, IFunctionParent::FunctionNoParent)?;
+        let (function_s, function_uses) = FunctionScout::scout_function(
+          &self.interner,
+          file_coordinate,
+          function_p,
+          IFunctionParent::FunctionNoParent,
+        )?;
         assert!(function_uses.uses.is_empty());
         if let IBodyS::CodeBody(code_body_s) = &function_s.body {
           assert!(
@@ -983,7 +987,7 @@ class PostParser(
 */
   fn scout_struct(
     &self,
-    file: &Arc<FileCoordinate>,
+    file: &FileCoordinate<'a>,
     head: &StructP,
   ) -> Result<StructS, ICompileErrorS> {
     if head.mutability.is_some() {
@@ -1001,15 +1005,13 @@ class PostParser(
 
     let struct_range_s = Self::eval_range(file, head.range);
     let struct_name = crate::postparsing::names::TopLevelStructDeclarationNameS {
-      name: head.name.str.clone(),
+      name: head.name.str,
       range: Self::eval_range(file, head.name.range),
     };
 
     let mutability_rune = RuneUsage {
       range: struct_range_s.clone(),
-      rune: IRuneS::CodeRune(Arc::new(CodeRuneS {
-        name: self.interner.intern("__struct_mutability"),
-      })),
+      rune: IRuneS::CodeRune(self.interner.intern_code_rune(self.interner.intern("__struct_mutability"))),
     };
     let header_rules = vec![IRulexSR::Literal(LiteralSR {
       range: struct_range_s.clone(),
@@ -1028,15 +1030,15 @@ class PostParser(
           let member_range = Self::eval_range(file, member.range);
           let member_rune = RuneUsage {
             range: member_range.clone(),
-            rune: IRuneS::CodeRune(Arc::new(CodeRuneS {
-              name: self
+            rune: IRuneS::CodeRune(self.interner.intern_code_rune(
+              self
                 .interner
                 .intern(&format!("__member_{}", member.name.str.str)),
-            })),
+            )),
           };
           let lookup_name = match &member.tyype {
             ITemplexPT::NameOrRune(name_or_rune) => CodeNameS {
-              name: name_or_rune.name.str.clone(),
+              name: name_or_rune.name.str,
             },
             _ => {
               panic!("POSTPARSER_SCOUT_STRUCT_MEMBER_TYPE_NOT_YET_IMPLEMENTED");
@@ -1045,7 +1047,9 @@ class PostParser(
           member_rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
             range: Self::eval_range(file, member.tyype.range()),
             rune: member_rune.clone(),
-            name: crate::postparsing::names::IImpreciseNameS::CodeName(Arc::new(lookup_name)),
+            name: crate::postparsing::names::IImpreciseNameS::CodeName(
+              self.interner.intern_code_name(lookup_name.name),
+            ),
           }));
           members_rune_to_explicit_type.insert(
             member_rune.rune.clone(),
@@ -1053,7 +1057,7 @@ class PostParser(
           );
           members.push(IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: member_range,
-            name: member.name.str.clone(),
+            name: member.name.str,
             variability: member.variability,
             type_rune: member_rune,
           }));
@@ -1085,26 +1089,26 @@ class PostParser(
           attributes.push(ICitizenAttributeS::Sealed(SealedS));
         }
         IAttributeP::ExportAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Export(Arc::new(ExportS {
-            package_coordinate: file.package_coord.clone(),
-          })));
+          attributes.push(ICitizenAttributeS::Export(ExportS {
+            package_coordinate: file.package_coord.as_ref(),
+          }));
         }
         IAttributeP::MacroCall(attr) => {
-          attributes.push(ICitizenAttributeS::MacroCall(Arc::new(MacroCallS {
+          attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
             range: Self::eval_range(file, attr.range),
             include: attr.inclusion,
-            macro_name: attr.name.str.clone(),
-          })));
+            macro_name: attr.name.str,
+          }));
         }
         other => panic!("POSTPARSER_SCOUT_STRUCT_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
       }
     }
     if let Some(range) = first_linear_attr_range {
-      attributes.push(ICitizenAttributeS::MacroCall(Arc::new(MacroCallS {
+      attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
         range: Self::eval_range(file, range),
         include: IMacroInclusionP::DontCallMacro,
-        macro_name: self.keywords.derive_struct_drop.clone(),
-      })));
+        macro_name: self.keywords.derive_struct_drop,
+      }));
     }
 
     Ok(StructS {
@@ -1350,13 +1354,13 @@ class PostParser(
 */
   fn scout_interface(
     &self,
-    file: &Arc<FileCoordinate>,
+    file: &FileCoordinate<'a>,
     interface: &crate::parsing::ast::InterfaceP,
   ) -> Result<InterfaceS, ICompileErrorS> {
     let interface_range = Self::eval_range(file, interface.range);
     let _interface_body_range = Self::eval_range(file, interface.body_range);
     let interface_name = TopLevelInterfaceDeclarationNameS {
-      name: interface.name.str.clone(),
+      name: interface.name.str,
       range: Self::eval_range(file, interface.name.range),
     };
 
@@ -1394,26 +1398,26 @@ class PostParser(
           attributes.push(ICitizenAttributeS::Sealed(SealedS));
         }
         IAttributeP::ExportAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Export(Arc::new(ExportS {
-            package_coordinate: file.package_coord.clone(),
-          })));
+          attributes.push(ICitizenAttributeS::Export(ExportS {
+            package_coordinate: file.package_coord.as_ref(),
+          }));
         }
         IAttributeP::MacroCall(attr) => {
-          attributes.push(ICitizenAttributeS::MacroCall(Arc::new(MacroCallS {
+          attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
             range: Self::eval_range(file, attr.range),
             include: attr.inclusion,
-            macro_name: attr.name.str.clone(),
-          })));
+            macro_name: attr.name.str,
+          }));
         }
         other => panic!("POSTPARSER_SCOUT_INTERFACE_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
       }
     }
     if let Some(range) = first_linear_attr_range {
-      attributes.push(ICitizenAttributeS::MacroCall(Arc::new(MacroCallS {
+      attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
         range: Self::eval_range(file, range),
         include: IMacroInclusionP::DontCallMacro,
-        macro_name: self.keywords.derive_struct_drop.clone(),
-      })));
+        macro_name: self.keywords.derive_struct_drop,
+      }));
     }
 
     let generic_params = Vec::<GenericParameterS>::new();
@@ -1421,9 +1425,7 @@ class PostParser(
 
     let mutability_rune = RuneUsage {
       range: interface_range.clone(),
-      rune: IRuneS::CodeRune(Arc::new(CodeRuneS {
-        name: self.interner.intern("__interface_mutability"),
-      })),
+      rune: IRuneS::CodeRune(self.interner.intern_code_rune(self.interner.intern("__interface_mutability"))),
     };
 
     let internal_methods = interface
@@ -1454,7 +1456,7 @@ class PostParser(
         FunctionS {
           range: Self::eval_range(file, member.range),
           name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-            name: method_name.str.clone(),
+            name: method_name.str,
             code_location: Self::eval_pos(file, method_name.range.begin),
           }),
           attributes: Vec::new(),

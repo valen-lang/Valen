@@ -19,19 +19,19 @@ pub struct InstantiatorCompilationOptions {
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
-pub struct InstantiatedCompilation {
-  typing_pass_compilation: TypingPassCompilation,
+pub struct InstantiatedCompilation<'a> {
+  typing_pass_compilation: TypingPassCompilation<'a>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
-impl InstantiatedCompilation {
+impl<'a> InstantiatedCompilation<'a> {
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     options: HammerCompilationOptions,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
@@ -54,17 +54,17 @@ impl InstantiatedCompilation {
   }
 
   // From InstantiatedCompilation.scala line 36: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.typing_pass_compilation.get_code_map()
   }
 
   // From InstantiatedCompilation.scala line 37: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.typing_pass_compilation.get_parseds()
   }
 
   // From InstantiatedCompilation.scala line 38: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.typing_pass_compilation.get_vpst_map()
   }
 

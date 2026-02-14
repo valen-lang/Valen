@@ -1,4 +1,4 @@
-use crate::interner::{Interner, StrI};
+use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
@@ -8,7 +8,6 @@ use crate::parsing::parse_utils::try_skip_past_keyword_while;
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
-use std::sync::Arc;
 /*
 package dev.vale.parsing
 
@@ -35,9 +34,9 @@ enum ExpressionElement {
 }
 
 #[derive(Clone)]
-pub struct ExpressionParser {
-  interner: Arc<Interner>,
-  pub keywords: Arc<Keywords>,
+pub struct ExpressionParser<'a> {
+  interner: &'a Interner<'a>,
+  pub keywords: &'a Keywords<'a>,
 }
 /*
 class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptions, patternParser: PatternParser, templexParser: TemplexParser) {
@@ -48,8 +47,8 @@ case class DataElement(expr: IExpressionPE) extends IExpressionElement
 case class BinaryCallElement(symbol: NameP, precedence: Int) extends IExpressionElement
 */
 
-impl ExpressionParser {
-  pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
+impl<'a> ExpressionParser<'a> {
+  pub fn new(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>) -> Self {
     ExpressionParser { interner, keywords }
   }
 
@@ -189,7 +188,7 @@ impl ExpressionParser {
   /// Mirrors getPrecedence in ExpressionParser.scala lines 831-844
   /// Get operator precedence
   /// Mirrors getPrecedence in ExpressionParser.scala lines 831-843
-  pub fn get_precedence(&self, str: &Arc<StrI>) -> i32 {
+  pub fn get_precedence(&self, str: &&'_ StrI) -> i32 {
     if str == &self.keywords.dot_dot {
       6
     } else if str == &self.keywords.asterisk || str == &self.keywords.slash {

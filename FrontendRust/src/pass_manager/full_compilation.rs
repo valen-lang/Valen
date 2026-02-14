@@ -44,17 +44,17 @@ pub struct FullCompilationOptions {
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation {
-  hammer_compilation: HammerCompilation,
+pub struct FullCompilation<'a> {
+  hammer_compilation: HammerCompilation<'a>,
 }
 
-impl FullCompilation {
+impl<'a> FullCompilation<'a> {
   // From FullCompilation.scala lines 30-45
   pub fn new(
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'a Interner<'a>,
+    keywords: &'a Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
   ) -> Self {
     let hammer_compilation = HammerCompilation::new(
@@ -68,17 +68,17 @@ impl FullCompilation {
   }
 
   // From FullCompilation.scala line 48: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.hammer_compilation.get_code_map()
   }
 
   // From FullCompilation.scala line 49: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.hammer_compilation.get_parseds()
   }
 
   // From FullCompilation.scala line 50: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.hammer_compilation.get_vpst_map()
   }
 

@@ -25,6 +25,7 @@ import dev.vale._
 import scala.collection.immutable.{List, Range}
 */
 use crate::parsing::ast::{FunctionP, INameDeclarationP, LoadAsP};
+use crate::interner::Interner;
 use crate::postparsing::ast::{
   CodeBodyS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS, LocationInDenizenBuilder, UserFunctionS,
 };
@@ -33,7 +34,7 @@ use crate::postparsing::expressions::{
   BlockSE, BodySE, ConsecutorSE, FunctionCallSE, IExpressionSE, LocalLoadSE, LocalS, OutsideLoadSE,
 };
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, TemplateTemplataType};
-use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IVarNameS};
+use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IVarNameS};
 use crate::postparsing::post_parser::{
   EnvironmentS, FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
 };
@@ -41,7 +42,6 @@ use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
-use std::sync::Arc;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IFunctionParent {
@@ -101,7 +101,8 @@ class FunctionScout(
 pub struct FunctionScout;
 impl FunctionScout {
   pub fn scout_function(
-    file_coordinate: &Arc<FileCoordinate>,
+    interner: &Interner<'a>,
+    file_coordinate: &FileCoordinate<'a>,
     function: &FunctionP,
     maybe_parent: IFunctionParent,
   ) -> Result<(FunctionS, VariableUses), ICompileErrorS> {
@@ -190,22 +191,20 @@ impl FunctionScout {
 
     let body_range = PostParser::eval_range(file_coordinate, body.range);
     let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-      name: function_name.str.clone(),
+      name: function_name.str,
       code_location: PostParser::eval_pos(file_coordinate, function_name.range.begin),
     });
     let function_environment = FunctionEnvironmentS {
-      file: file_coordinate.clone(),
+      file: file_coordinate,
       name: function_declaration_name.clone(),
       parent_env: None,
       declared_runes: Vec::new(),
       num_explicit_params: 0,
       is_interface_internal_method: false,
     };
-    let default_region_rune = IRuneS::CodeRune(Arc::new(CodeRuneS {
-      name: function_name.str.clone(),
-    }));
+    let default_region_rune = IRuneS::CodeRune(interner.intern_code_rune(function_name.str));
     let stack_frame = StackFrame {
-      file: file_coordinate.clone(),
+      file: file_coordinate,
       name: function_declaration_name.clone(),
       parent_env: function_environment,
       maybe_parent: None,
@@ -215,7 +214,7 @@ impl FunctionScout {
         let mut vars = Vec::<VariableDeclarationS>::new();
         if let Some(explicit_self_name) = &explicit_self_name {
           vars.push(VariableDeclarationS {
-            name: IVarNameS::CodeVarName(explicit_self_name.clone()),
+            name: IVarNameS::CodeVarName(explicit_self_name),
           });
         }
         VariableDeclarations { vars }
@@ -224,11 +223,12 @@ impl FunctionScout {
     let mut lidb = LocationInDenizenBuilder::new(vec![]);
     let (stack_frame_after_body, body_expr, self_uses_before_constructing, child_uses) =
       ExpressionScout::scout_expression_and_coerce(
-      stack_frame,
-      &mut lidb,
-      body.inner.as_ref(),
-      LoadAsP::Use,
-    )?;
+        interner,
+        stack_frame,
+        &mut lidb,
+        body.inner.as_ref(),
+        LoadAsP::Use,
+      )?;
     let expr_without_constructing_without_void =
       match body_expr {
         IExpressionSE::Consecutor(mut consecutor) => {
@@ -266,9 +266,7 @@ impl FunctionScout {
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
           range: body_range.clone(),
           rules: Vec::new(),
-          name: IImpreciseNameS::CodeName(Arc::new(CodeNameS {
-            name: function_name.str.clone(),
-          })),
+          name: IImpreciseNameS::CodeName(interner.intern_code_name(function_name.str)),
           maybe_template_args: None,
           target_ownership: LoadAsP::LoadAsBorrow,
         })),

@@ -37,12 +37,12 @@ type ParseResult<T> = Result<T, ParseError>;
 
 /// Main parser coordinating all parsing operations
 /// Matches Scala's Parser class
-pub struct Parser {
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
-  pub templex_parser: TemplexParser,
-  pub pattern_parser: PatternParser,
-  pub expression_parser: ExpressionParser,
+pub struct Parser<'arena, 'b> {
+  interner: &'b Interner<'arena>,
+  keywords: &'b Keywords<'arena>,
+  pub templex_parser: TemplexParser<'arena>,
+  pub pattern_parser: PatternParser<'arena>,
+  pub expression_parser: ExpressionParser<'arena>,
 }
 /*
 class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
@@ -51,11 +51,14 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
   val expressionParser = new ExpressionParser(interner, keywords, opts, patternParser, templexParser)
 */
 
-impl Parser {
-  pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
-    let templex_parser = TemplexParser::new(interner.clone(), keywords.clone());
-    let pattern_parser = PatternParser::new(interner.clone(), keywords.clone());
-    let expression_parser = ExpressionParser::new(interner.clone(), keywords.clone());
+impl<'arena, 'b> Parser<'arena, 'b> {
+  pub fn new(
+    interner: &'b Interner<'arena>,
+    keywords: &'b Keywords<'arena>,
+  ) -> Self {
+    let templex_parser = TemplexParser::new(interner, keywords);
+    let pattern_parser = PatternParser::new(interner, keywords);
+    let expression_parser = ExpressionParser::new(interner, keywords);
 
     Parser {
       interner,
@@ -91,7 +94,7 @@ impl Parser {
     });
 
     Ok(FileP {
-      file_coord: empty_file,
+      file_coord: Arc::new(empty_file.clone()),
       comments_ranges: comment_ranges,
       denizens: parsed_denizens,
     })
@@ -1785,18 +1788,18 @@ impl Parser {
 */
 
 // From Parser.scala lines 699-854: ParserCompilation class
-pub struct ParserCompilation {
+pub struct ParserCompilation<'arena, 'b> {
   opts: GlobalOptions,
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
-  packages_to_build: Vec<Arc<PackageCoordinate>>,
-  package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
-  parser: Parser,
-  code_map_cache: Option<FileCoordinateMap<String>>,
-  vpst_map_cache: Option<FileCoordinateMap<String>>,
-  parseds_cache: Option<FileCoordinateMap<(FileP, Vec<RangeL>)>>,
+  interner: &'b Interner<'arena>,
+  keywords: &'b Keywords<'arena>,
+  packages_to_build: Vec<&'b PackageCoordinate<'arena>>,
+  package_to_contents_resolver: Box<dyn IPackageResolver<'arena, HashMap<String, String>> + 'b>,
+  parser: Parser<'arena, 'b>,
+  code_map_cache: Option<FileCoordinateMap<'arena, String>>,
+  vpst_map_cache: Option<FileCoordinateMap<'arena, String>>,
+  parseds_cache: Option<FileCoordinateMap<'arena, (FileP, Vec<RangeL>)>>,
 }
-impl ParserCompilation {
+impl<'arena, 'b> ParserCompilation<'arena, 'b> {
   /*
   class ParserCompilation(
     opts: GlobalOptions,
@@ -1816,12 +1819,12 @@ impl ParserCompilation {
   // From Parser.scala lines 699-706
   pub fn new(
     opts: GlobalOptions,
-    interner: Arc<Interner>,
-    keywords: Arc<Keywords>,
-    packages_to_build: Vec<Arc<PackageCoordinate>>,
-    package_to_contents_resolver: Arc<dyn IPackageResolver<HashMap<String, String>>>,
+    interner: &'b Interner<'arena>,
+    keywords: &'b Keywords<'arena>,
+    packages_to_build: Vec<&'b PackageCoordinate<'arena>>,
+    package_to_contents_resolver: Box<dyn IPackageResolver<'arena, HashMap<String, String>> + 'b>,
   ) -> Self {
-    let parser = Parser::new(interner.clone(), keywords.clone());
+    let parser = Parser::new(interner, keywords);
     ParserCompilation {
       opts,
       interner,
@@ -1839,12 +1842,12 @@ impl ParserCompilation {
   // From Parser.scala lines 708-773: loadAndParse
   fn load_and_parse(
     &mut self,
-    needed_packages: &[Arc<PackageCoordinate>],
-    resolver: &dyn IPackageResolver<HashMap<String, String>>,
+    needed_packages: &[&'b PackageCoordinate<'arena>],
+    resolver: &dyn IPackageResolver<'arena, HashMap<String, String>>,
   ) -> Result<
     (
-      FileCoordinateMap<String>,
-      FileCoordinateMap<(FileP, Vec<RangeL>)>,
+      FileCoordinateMap<'arena, String>,
+      FileCoordinateMap<'arena, (FileP, Vec<RangeL>)>,
     ),
     FailedParse,
   > {
@@ -1872,11 +1875,14 @@ impl ParserCompilation {
     }
 
     // From Parser.scala lines 742-749: Create resolver that filters out .vpst files
-    struct ValeOnlyResolver<'a> {
-      inner: &'a dyn IPackageResolver<HashMap<String, String>>,
+    struct ValeOnlyResolver<'arena, 'r> {
+      inner: &'r dyn IPackageResolver<'arena, HashMap<String, String>>,
     }
-    impl<'a> IPackageResolver<HashMap<String, String>> for ValeOnlyResolver<'a> {
-      fn resolve(&self, package_coord: &Arc<PackageCoordinate>) -> Option<HashMap<String, String>> {
+    impl<'arena, 'r> IPackageResolver<'arena, HashMap<String, String>> for ValeOnlyResolver<'arena, 'r> {
+      fn resolve(
+        &self,
+        package_coord: &Arc<PackageCoordinate<'arena>>,
+      ) -> Option<HashMap<String, String>> {
         self.inner.resolve(package_coord).map(|filepath_to_code| {
           filepath_to_code
             .into_iter()
@@ -1890,8 +1896,8 @@ impl ParserCompilation {
     // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
     use crate::parsing::parse_and_explore;
     parse_and_explore::parse_and_explore(
-            self.interner.clone(),
-            self.keywords.clone(),
+            self.interner,
+            self.keywords,
             self.opts.clone(),
             &mut self.parser,
             needed_packages.to_vec(),
@@ -1899,9 +1905,9 @@ impl ParserCompilation {
             |_file_coord, _code, _imports, denizen| denizen,
             |file_coord, code, comment_ranges, denizens| {
                 // From Parser.scala lines 756-766
-                found_code_map.put(file_coord.clone(), code.to_string());
+                found_code_map.put(Arc::new(file_coord.clone()), code.to_string());
                 let file = FileP {
-                    file_coord: file_coord.clone(),
+                    file_coord: Arc::new(file_coord.clone()),
                     comments_ranges: comment_ranges.to_vec(),
                     denizens: denizens.to_vec(),
                 };
@@ -1913,7 +1919,7 @@ impl ParserCompilation {
                     use crate::von::printer::VonPrinter;
 
                     let json = VonPrinter::new().print(&ParserVonifier::vonify_file(&file));
-                    let loaded_file = parsed_loader::load(&json).unwrap_or_else(|e| {
+                    let loaded_file = parsed_loader::load(self.interner, &json).unwrap_or_else(|e| {
                         panic!(
                             "Sanity check failed to load generated VPST for {}: {:?}",
                             file_coord.filepath, e
@@ -1929,7 +1935,7 @@ impl ParserCompilation {
                 }
                 
                 // From Parser.scala line 766
-                parsed_map.put(file_coord.clone(), (file, comment_ranges.to_vec()));
+                parsed_map.put(Arc::new(file_coord.clone()), (file, comment_ranges.to_vec()));
             },
         ).map_err(|e| e)?;
 
@@ -2006,7 +2012,7 @@ impl ParserCompilation {
   */
 
   // From Parser.scala lines 779-784: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'arena, String>, FailedParse> {
     self.get_parseds()?;
     Ok(self.code_map_cache.clone().unwrap())
   }
@@ -2023,7 +2029,7 @@ impl ParserCompilation {
   */
 
   // From Parser.scala lines 785-787: expectCodeMap
-  pub fn expect_code_map(&self) -> FileCoordinateMap<String> {
+  pub fn expect_code_map(&self) -> FileCoordinateMap<'arena, String> {
     self
       .code_map_cache
       .clone()
@@ -2031,14 +2037,14 @@ impl ParserCompilation {
   }
 
   // From Parser.scala lines 789-816: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'arena, (FileP, Vec<RangeL>)>, FailedParse> {
     if let Some(ref parseds) = self.parseds_cache {
       return Ok(parseds.clone());
     }
 
     let packages = self.packages_to_build.clone();
-    let resolver = self.package_to_contents_resolver.clone();
-    let (code_map, program_p_map) = self.load_and_parse(&packages, resolver.as_ref())?;
+    let (code_map, program_p_map) =
+      self.load_and_parse(&packages, self.package_to_contents_resolver.as_ref())?;
 
     self.code_map_cache = Some(code_map);
     self.parseds_cache = Some(program_p_map);
@@ -2064,7 +2070,7 @@ impl ParserCompilation {
   */
 
   // From Parser.scala lines 818-826: expectParseds
-  pub fn expect_parseds(&mut self) -> FileCoordinateMap<(FileP, Vec<RangeL>)> {
+  pub fn expect_parseds(&mut self) -> FileCoordinateMap<'arena, (FileP, Vec<RangeL>)> {
     match self.get_parseds() {
       Err(FailedParse {
         code: _code,
@@ -2091,7 +2097,7 @@ impl ParserCompilation {
   */
 
   // From Parser.scala lines 829-846: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'arena, String>, FailedParse> {
     if let Some(ref vpst) = self.vpst_map_cache {
       return Ok(vpst.clone());
     }
@@ -2121,7 +2127,7 @@ impl ParserCompilation {
   */
 
   // From Parser.scala lines 849-851: expectVpstMap
-  pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<String> {
+  pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<'arena, String> {
     self.get_vpst_map().expect("getVpstMap should succeed")
   }
   /*

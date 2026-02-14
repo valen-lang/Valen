@@ -18,35 +18,39 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
   }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
-fn compile(code: &str) -> IRulexPR {
-  compile_rulex_expect(code)
+fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> IRulexPR {
+  compile_rulex_expect(interner, keywords, code)
 }
 
 #[test]
 fn ownership() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   {
-    let rule = compile("X");
+    let rule = compile(&interner, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile("X Ownership");
+    let rule = compile(&interner, &keywords, "X Ownership");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
   }
   {
-    let rule = compile("X = own");
+    let rule = compile(&interner, &keywords, "X = own");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
     let ownership = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Ownership);
     assert_eq!(ownership.ownership, OwnershipP::Own);
   }
   {
-    let rule = compile("X Ownership = any(own, borrow, weak)");
+    let rule = compile(&interner, &keywords, "X Ownership = any(own, borrow, weak)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
@@ -68,18 +72,18 @@ fn ownership() {
     );
   }
   {
-    let rule = compile("_ Ownership");
+    let rule = compile(&interner, &keywords, "_ Ownership");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
   }
   {
-    let rule = compile("own");
+    let rule = compile(&interner, &keywords, "own");
     let ownership = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Ownership);
     assert_eq!(ownership.ownership, OwnershipP::Own);
   }
   {
-    let rule = compile("_ Ownership = any(own, share)");
+    let rule = compile(&interner, &keywords, "_ Ownership = any(own, share)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert!(typed.rune.is_none());
@@ -118,26 +122,28 @@ fn ownership() {
 */
 #[test]
 fn mutability() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   {
-    let rule = compile("X");
+    let rule = compile(&interner, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile("X Mutability");
+    let rule = compile(&interner, &keywords, "X Mutability");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
   }
   {
-    let rule = compile("X = mut");
+    let rule = compile(&interner, &keywords, "X = mut");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
     let mutability = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Mutability);
     assert_eq!(mutability.mutability, MutabilityP::Mutable);
   }
   {
-    let rule = compile("X Mutability = mut");
+    let rule = compile(&interner, &keywords, "X Mutability = mut");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
@@ -146,18 +152,18 @@ fn mutability() {
     assert_eq!(mutability.mutability, MutabilityP::Mutable);
   }
   {
-    let rule = compile("_ Mutability");
+    let rule = compile(&interner, &keywords, "_ Mutability");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
   }
   {
-    let rule = compile("mut");
+    let rule = compile(&interner, &keywords, "mut");
     let mutability = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Mutability);
     assert_eq!(mutability.mutability, MutabilityP::Mutable);
   }
   {
-    let rule = compile("_ Mutability = any(mut, imm)");
+    let rule = compile(&interner, &keywords, "_ Mutability = any(mut, imm)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert!(typed.rune.is_none());
@@ -196,26 +202,28 @@ fn mutability() {
 */
 #[test]
 fn location() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   {
-    let rule = compile("X");
+    let rule = compile(&interner, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile("X Location");
+    let rule = compile(&interner, &keywords, "X Location");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
     assert_eq!(typed.tyype, ITypePR::LocationType);
   }
   {
-    let rule = compile("X = inl");
+    let rule = compile(&interner, &keywords, "X = inl");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "X");
     let location = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Location);
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile("X Location = inl");
+    let rule = compile(&interner, &keywords, "X Location = inl");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
@@ -224,18 +232,18 @@ fn location() {
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile("_ Location");
+    let rule = compile(&interner, &keywords, "_ Location");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::LocationType);
   }
   {
-    let rule = compile("inl");
+    let rule = compile(&interner, &keywords, "inl");
     let location = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Location);
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile("_ Location = any(inl, heap)");
+    let rule = compile(&interner, &keywords, "_ Location = any(inl, heap)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
     assert!(typed.rune.is_none());

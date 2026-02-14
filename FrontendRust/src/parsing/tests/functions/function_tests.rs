@@ -14,6 +14,8 @@ import org.scalatest._
 class FunctionTests extends FunSuite with Collector with TestParseUtils {
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
@@ -22,7 +24,9 @@ use crate::parsing::tests::utils::{
 };
 #[test]
 fn simple_function() {
-  let program = compile("func main() { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "func main() { }");
   let function = find_func_named(&program, "main");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.generic_parameters.is_none());
@@ -49,22 +53,24 @@ fn simple_function() {
 */
 #[test]
 fn functions_with_weird_names() {
-  let program = compile("func !=() { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "func !=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "!=");
-  let program = compile("func <=() { }");
+  let program = compile(&interner, &keywords, "func <=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "<=");
-  let program = compile("func >=() { }");
+  let program = compile(&interner, &keywords, "func >=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, ">=");
-  let program = compile("func <() { }");
+  let program = compile(&interner, &keywords, "func <() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "<");
-  let program = compile("func >() { }");
+  let program = compile(&interner, &keywords, "func >() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, ">");
-  let program = compile("func ==() { }");
+  let program = compile(&interner, &keywords, "func ==() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "==");
 }
@@ -80,7 +86,11 @@ fn functions_with_weird_names() {
 */
 #[test]
 fn function_then_struct() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     r#"
       exported func main() int {}
 
@@ -109,7 +119,9 @@ fn function_then_struct() {
 */
 #[test]
 fn simple_function_with_return() {
-  let denizen = compile_denizen_expect("func sum() int {3}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum() int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(function.header.attributes.is_empty());
@@ -133,7 +145,9 @@ fn simple_function_with_return() {
 */
 #[test]
 fn pure_function() {
-  let denizen = compile_denizen_expect("pure func sum() {3}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "pure func sum() {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(matches!(
@@ -160,7 +174,9 @@ fn pure_function() {
 */
 #[test]
 fn extern_function() {
-  let program = compile("extern func sum();");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "extern func sum();");
   let function = find_func_named(&program, "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
@@ -182,7 +198,11 @@ fn extern_function() {
 */
 #[test]
 fn function_ending_with_set() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
     r#"
       func moo() {
         set bork = value
@@ -203,7 +223,9 @@ fn function_ending_with_set() {
 */
 #[test]
 fn extern_function_generated() {
-  let program = compile(r#"extern("bork") func sum();"#);
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, r#"extern("bork") func sum();"#);
   let function = find_func_named(&program, "sum");
   let builtin = cast!(
     expect_1(&function.header.attributes),
@@ -226,7 +248,9 @@ fn extern_function_generated() {
 */
 #[test]
 fn extern_function_with_return() {
-  let program = compile("extern func sum() int;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "extern func sum() int;");
   let function = find_func_named(&program, "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
@@ -248,7 +272,9 @@ fn extern_function_with_return() {
 */
 #[test]
 fn abstract_function() {
-  let denizen = compile_denizen_expect("abstract func sum();");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum();");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(matches!(
@@ -271,7 +297,13 @@ fn abstract_function() {
 */
 #[test]
 fn pure_and_default_region() {
-  let denizen = compile_denizen_expect("pure func findNearbyUnits() i'int i'{ }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "pure func findNearbyUnits() i'int i'{ }",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
     function.header.name.as_ref().unwrap().str.str,
@@ -311,7 +343,9 @@ fn pure_and_default_region() {
 */
 #[test]
 fn return_isolate() {
-  let denizen = compile_denizen_expect("func findNearbyUnits() 'int { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func findNearbyUnits() 'int { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
     function.header.name.as_ref().unwrap().str.str,
@@ -344,7 +378,13 @@ fn return_isolate() {
 */
 #[test]
 fn coord_generic_with_associated_region() {
-  let denizen = compile_denizen_expect("func findNearbyUnits<t', t'T>(x T) { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func findNearbyUnits<t', t'T>(x T) { }",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
     function.header.name.as_ref().unwrap().str.str,
@@ -397,7 +437,9 @@ fn coord_generic_with_associated_region() {
 */
 #[test]
 fn attribute_after_return() {
-  let denizen = compile_denizen_expect("abstract func sum() int;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(matches!(
@@ -423,7 +465,9 @@ fn attribute_after_return() {
 */
 #[test]
 fn attribute_before_return() {
-  let denizen = compile_denizen_expect("abstract func sum() Int;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() Int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(matches!(
@@ -449,7 +493,9 @@ fn attribute_before_return() {
 */
 #[test]
 fn simple_function_with_identifying_rune() {
-  let denizen = compile_denizen_expect("func sum<A>(a A){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "A");
@@ -469,7 +515,9 @@ fn simple_function_with_identifying_rune() {
 */
 #[test]
 fn simple_function_with_coord_typed_identifying_rune() {
-  let denizen = compile_denizen_expect("func sum<A Ref>(a A){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A Ref>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "A");
@@ -492,7 +540,9 @@ fn simple_function_with_coord_typed_identifying_rune() {
 */
 #[test]
 fn simple_function_with_region_typed_identifying_rune() {
-  let denizen = compile_denizen_expect("func sum<a'>(){}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<a'>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "a");
@@ -515,7 +565,9 @@ fn simple_function_with_region_typed_identifying_rune() {
 */
 #[test]
 fn readonly_region_rune() {
-  let denizen = compile_denizen_expect("func sum<r' ro>(){}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r' ro>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "r");
@@ -541,7 +593,9 @@ fn readonly_region_rune() {
 */
 #[test]
 fn simple_function_with_apostrophe_region_typed_identifying_rune() {
-  let denizen = compile_denizen_expect("func sum<r'>(a &r'Marine){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r'>(a &r'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "r");
@@ -564,7 +618,13 @@ fn simple_function_with_apostrophe_region_typed_identifying_rune() {
 */
 #[test]
 fn pool_region() {
-  let denizen = compile_denizen_expect("func sum<r' = pool>(a &r'Marine){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func sum<r' = pool>(a &r'Marine){a}",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "r");
@@ -592,7 +652,13 @@ fn pool_region() {
 */
 #[test]
 fn pool_readonly_region() {
-  let denizen = compile_denizen_expect("func sum<r' ro = pool>(a &r'Marine){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func sum<r' ro = pool>(a &r'Marine){a}",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "r");
@@ -623,7 +689,13 @@ fn pool_readonly_region() {
 */
 #[test]
 fn arena_region() {
-  let denizen = compile_denizen_expect("func sum<x' = arena>(a &x'Marine){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func sum<x' = arena>(a &x'Marine){a}",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "x");
@@ -651,7 +723,9 @@ fn arena_region() {
 */
 #[test]
 fn readonly_region() {
-  let denizen = compile_denizen_expect("func sum<x'>(a &x'Marine){a}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<x'>(a &x'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.str.str, "x");
@@ -680,7 +754,13 @@ fn readonly_region() {
 */
 #[test]
 fn virtual_function() {
-  let denizen = compile_denizen_expect("func doCivicDance(virtual this Car) int;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func doCivicDance(virtual this Car) int;",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
     function.header.name.as_ref().unwrap().str.str,
@@ -718,7 +798,11 @@ fn virtual_function() {
 */
 #[test]
 fn bad_thing_for_body() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let err = compile_denizen(
+    &interner,
+    &keywords,
     r#"
       func doCivicDance(virtual this Car) moo blork
     "#,
@@ -739,7 +823,9 @@ fn bad_thing_for_body() {
 */
 #[test]
 fn function_with_parameter_and_return() {
-  let program = compile("func main(moo T) T { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "func main(moo T) T { }");
   let function = find_func_named(&program, "main");
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   let pattern = param.pattern.as_ref().unwrap();
@@ -766,7 +852,9 @@ fn function_with_parameter_and_return() {
 */
 #[test]
 fn function_with_generics() {
-  let program = compile("func main<T>() { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "func main<T>() { }");
   let function = find_func_named(&program, "main");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.template_rules.is_none());
@@ -795,7 +883,13 @@ fn function_with_generics() {
 */
 #[test]
 fn impl_function() {
-  let denizen = compile_denizen_expect("func maxHp(virtual this Marine) { return 5; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func maxHp(virtual this Marine) { return 5; }",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "maxHp");
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
@@ -833,7 +927,9 @@ fn impl_function() {
 */
 #[test]
 fn param() {
-  let denizen = compile_denizen_expect("func call(f F){f()}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func call(f F){f()}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   let pattern = param.pattern.as_ref().unwrap();
@@ -850,7 +946,9 @@ fn param() {
 */
 #[test]
 fn func_with_rules() {
-  let denizen = compile_denizen_expect("func sum () where X Int {3}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func sum () where X Int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
   assert!(function.header.attributes.is_empty());
@@ -877,7 +975,13 @@ fn func_with_rules() {
 */
 #[test]
 fn func_with_func_bound() {
-  let denizen = compile_denizen_expect("func sum<T>() where func moo(&T)void {3}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
+    "func sum<T>() where func moo(&T)void {3}",
+  );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let template_rules = function.header.template_rules.as_ref().unwrap();
   let first_rule = expect_1(&template_rules.rules);
@@ -916,7 +1020,9 @@ fn func_with_func_bound() {
 */
 #[test]
 fn identifying_runes() {
-  let denizen = compile_denizen_expect("func wrap<A, F>(a A) { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func wrap<A, F>(a A) { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let (a_rune, f_rune) = expect_2(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(a_rune.name.str.str, "A");
@@ -957,7 +1063,9 @@ fn identifying_runes() {
 */
 #[test]
 fn never_signature() {
-  let denizen = compile_denizen_expect("func __vbi_panic() __Never {}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let denizen = compile_denizen_expect(&interner, &keywords, "func __vbi_panic() __Never {}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "__Never");
 }
@@ -973,7 +1081,11 @@ fn never_signature() {
 */
 #[test]
 fn should_require_identifying_runes() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let err = compile_denizen(
+    &interner,
+    &keywords,
     r#"
       func do(callable) int {callable()}
     "#,
@@ -998,7 +1110,11 @@ fn should_require_identifying_runes() {
 */
 #[test]
 fn short_self() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
     r#"
       interface IMoo {
         func moo(&self) {}

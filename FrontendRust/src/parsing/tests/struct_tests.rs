@@ -24,12 +24,16 @@ class StructTests extends FunSuite with Collector with TestParseUtils {
 //  }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn simple_struct() {
-  let struct_ = compile_struct_expect("struct Moo { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { }");
   assert_eq!(struct_.name.str.str, "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
@@ -56,7 +60,11 @@ fn simple_struct() {
 */
 #[test]
 fn struct_with_list_node() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
+    &interner,
+    &keywords,
     "
       struct Mork {
         a @ListNode<T>;
@@ -94,7 +102,11 @@ fn struct_with_list_node() {
 */
 #[test]
 fn imm_generic_param() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
+    &interner,
+    &keywords,
     "
       struct MyImmContainer<T Ref imm> imm { value T; }
     ",
@@ -134,7 +146,11 @@ fn imm_generic_param() {
 */
 #[test]
 fn struct_with_imm_generic_param() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
+    &interner,
+    &keywords,
     "
       struct Mork {
         a []<imm>T;
@@ -166,7 +182,9 @@ fn struct_with_imm_generic_param() {
 */
 #[test]
 fn variadic_struct() {
-  let struct_ = compile_struct_expect("struct Moo<T> { _ ..T; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo<T> { _ ..T; }");
   let variadic =
     cast!(expect_1(&struct_.members.contents), IStructContent::VariadicStructMember);
   assert_eq!(variadic.variability, VariabilityP::Final);
@@ -183,7 +201,9 @@ fn variadic_struct() {
 */
 #[test]
 fn variadic_struct_with_varying() {
-  let struct_ = compile_struct_expect("struct Moo<T> { _! ..T; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo<T> { _! ..T; }");
   let variadic =
     cast!(expect_1(&struct_.members.contents), IStructContent::VariadicStructMember);
   assert_eq!(variadic.variability, VariabilityP::Varying);
@@ -198,7 +218,9 @@ fn variadic_struct_with_varying() {
 */
 #[test]
 fn struct_with_weak() {
-  let struct_ = compile_struct_expect("struct Moo { x &&int; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x &&int; }");
   assert_eq!(struct_.name.str.str, "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
@@ -224,7 +246,9 @@ fn struct_with_weak() {
 */
 #[test]
 fn struct_with_heap() {
-  let struct_ = compile_struct_expect("struct Moo { x ^Marine; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x ^Marine; }");
   assert_eq!(struct_.name.str.str, "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
@@ -250,7 +274,9 @@ fn struct_with_heap() {
 */
 #[test]
 fn export_struct() {
-  let struct_ = compile_struct_expect("exported struct Moo { x &int; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let struct_ = compile_struct_expect(&interner, &keywords, "exported struct Moo { x &int; }");
   assert_eq!(struct_.name.str.str, "Moo");
   let first_attr = expect_1(&struct_.attributes);
   cast!(first_attr, IAttributeP::ExportAttribute);
@@ -277,7 +303,11 @@ fn export_struct() {
 */
 #[test]
 fn struct_with_rune() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
+    &interner,
+    &keywords,
     "
       struct ListNode<E> {
         value E;
@@ -337,7 +367,11 @@ fn struct_with_rune() {
 */
 #[test]
 fn struct_with_int_rune() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
+    &interner,
+    &keywords,
     "
       struct Vecf<N> where N Int
       {
@@ -403,7 +437,11 @@ fn struct_with_int_rune() {
 */
 #[test]
 fn struct_with_int_rune_array_sequence_specifies_mutability() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
+    &interner,
+    &keywords,
     "
       struct Vecf<N> where N Int
       {

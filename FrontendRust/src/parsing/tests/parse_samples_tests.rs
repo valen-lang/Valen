@@ -3,7 +3,6 @@ use crate::keywords::Keywords;
 use crate::parsing::tests::parser_test_compilation;
 use std::fs;
 use std::path::PathBuf;
-use std::sync::Arc;
 
 /*
 package dev.vale.parsing
@@ -34,11 +33,9 @@ fn load_expected(path: &str) -> String {
     .unwrap_or_else(|e| panic!("Failed to load sample '{}': {} ({:?})", path, e, full_path))
 }
 
-fn parse(path: &str) {
-  let interner = Arc::new(Interner::new());
-  let keywords = Arc::new(Keywords::new(&interner));
+fn parse(path: &str, interner: &Interner<'_>, keywords: &Keywords<'_>) {
   let code = load_expected(path);
-  let mut compilation = parser_test_compilation::test(interner, keywords, &[&code]);
+  let mut compilation = parser_test_compilation::test(interner, keywords, &[code]);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
@@ -48,7 +45,9 @@ macro_rules! parse_sample_test {
   ($name:ident, $path:literal) => {
     #[test]
     fn $name() {
-      parse($path);
+      let interner = Interner::new();
+      let keywords = Keywords::new(&interner);
+      parse($path, &interner, &keywords);
     }
   };
 }

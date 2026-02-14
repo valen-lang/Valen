@@ -5,7 +5,6 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
-use std::sync::Arc;
 
 /*
 package dev.vale.parsing
@@ -21,17 +20,17 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
-pub struct PatternParser {
+pub struct PatternParser<'a> {
   #[allow(dead_code)]
-  interner: Arc<Interner>,
-  keywords: Arc<Keywords>,
+  interner: &'a Interner<'a>,
+  keywords: &'a Keywords<'a>,
 }
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 */
 
-impl PatternParser {
-  pub fn new(interner: Arc<Interner>, keywords: Arc<Keywords>) -> Self {
+impl<'a> PatternParser<'a> {
+  pub fn new(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>) -> Self {
     PatternParser { interner, keywords }
   }
 

@@ -1,5 +1,7 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::kind_rule_tests
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
@@ -19,13 +21,15 @@ class KindRuleTests extends FunSuite with Matchers with Collector with TestParse
 //    compile(new TemplexParser().parseRule(_), code)
   }
 */
-fn compile(code: &str) -> IRulexPR {
-  compile_rulex_expect(code)
+fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> IRulexPR {
+  compile_rulex_expect(interner, keywords, code)
 }
 
 #[test]
 fn empty_kind_rule() {
-  let rule = compile("_ Kind");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "_ Kind");
   let typed = cast!(rule, IRulexPR::Typed);
   assert!(typed.rune.is_none());
   assert_eq!(typed.tyype, ITypePR::KindType);
@@ -39,7 +43,9 @@ fn empty_kind_rule() {
 */
 #[test]
 fn kind_with_rune() {
-  let rule = compile("T Kind");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "T Kind");
   let typed = cast!(rule, IRulexPR::Typed);
   assert_eq!(typed.rune.as_ref().unwrap().str.str, "T");
   assert_eq!(typed.tyype, ITypePR::KindType);
@@ -54,7 +60,9 @@ fn kind_with_rune() {
 */
 #[test]
 fn kind_with_destructure_only() {
-  let rule = compile("Kind[_]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Kind[_]");
   let components = cast!(rule, IRulexPR::Components);
   assert_eq!(components.container, ITypePR::KindType);
   let only_component = cast!(expect_1(&components.components), IRulexPR::Templex);
@@ -70,7 +78,9 @@ fn kind_with_destructure_only() {
 */
 #[test]
 fn kind_matches_plain_int() {
-  let rule = compile("int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "int");
   let templex = cast!(rule, IRulexPR::Templex);
   assert_templex_name(&templex, "int");
 }
@@ -83,7 +93,9 @@ fn kind_matches_plain_int() {
 */
 #[test]
 fn kind_with_value() {
-  let rule = compile("T Kind = int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "T Kind = int");
   let equals = cast!(rule, IRulexPR::Equals);
   let left = cast!(equals.left.as_ref(), IRulexPR::Typed);
   assert_eq!(left.rune.as_ref().unwrap().str.str, "T");
@@ -100,7 +112,9 @@ fn kind_with_value() {
 */
 #[test]
 fn kind_with_sequence_in_value_spot() {
-  let rule = compile("T Kind = (int, bool)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "T Kind = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
   let left = cast!(equals.left.as_ref(), IRulexPR::Typed);
   assert_eq!(left.rune.as_ref().unwrap().str.str, "T");
@@ -124,7 +138,9 @@ fn kind_with_sequence_in_value_spot() {
 */
 #[test]
 fn lone_sequence() {
-  let rule = compile("(int, bool)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "(int, bool)");
   let templex = cast!(rule, IRulexPR::Templex);
   let tuple = cast!(templex, ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(&tuple.elements);
@@ -142,14 +158,16 @@ fn lone_sequence() {
 */
 #[test]
 fn templated_struct_one_arg() {
-  let rule = compile("Moo<int>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Moo<int>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
   let arg = expect_1(&call.args);
   assert_templex_name(arg, "int");
 
-  let rule = compile("Moo<@int>");
+  let rule = compile(&interner, &keywords, "Moo<@int>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
@@ -174,19 +192,21 @@ fn templated_struct_one_arg() {
 */
 #[test]
 fn rwkilc() {
-  let rule = compile("List<int>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "List<int>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "List");
   let arg = expect_1(&call.args);
   assert_templex_name(arg, "int");
 
-  let rule = compile("K Int");
+  let rule = compile(&interner, &keywords, "K Int");
   let typed = cast!(rule, IRulexPR::Typed);
   assert_eq!(typed.rune.as_ref().unwrap().str.str, "K");
   assert_eq!(typed.tyype, ITypePR::IntType);
 
-  let rule = compile("K<int>");
+  let rule = compile(&interner, &keywords, "K<int>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "K");
@@ -208,7 +228,9 @@ fn rwkilc() {
 */
 #[test]
 fn templated_struct_rune_arg() {
-  let rule = compile("Moo<R>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Moo<R>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
@@ -225,7 +247,9 @@ fn templated_struct_rune_arg() {
 */
 #[test]
 fn templated_struct_multiple_args() {
-  let rule = compile("Moo<int, str>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Moo<int, str>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
@@ -243,7 +267,9 @@ fn templated_struct_multiple_args() {
 */
 #[test]
 fn templated_struct_arg_is_another_templated_struct_with_one_arg() {
-  let rule = compile("Moo<Blarg<int>>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Moo<Blarg<int>>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
@@ -268,7 +294,9 @@ fn templated_struct_arg_is_another_templated_struct_with_one_arg() {
 */
 #[test]
 fn templated_struct_arg_is_another_templated_struct_with_multiple_arg() {
-  let rule = compile("Moo<Blarg<int, str>>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let rule = compile(&interner, &keywords, "Moo<Blarg<int, str>>");
   let templex = cast!(rule, IRulexPR::Templex);
   let call = cast!(templex, ITemplexPT::Call);
   assert_templex_name(call.template.as_ref(), "Moo");
@@ -294,7 +322,12 @@ fn templated_struct_arg_is_another_templated_struct_with_multiple_arg() {
 */
 #[test]
 fn static_sized_array() {
-  let array = cast!(compile_templex_expect("[#_]_"), ITemplexPT::StaticSizedArray);
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#_]_"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Mutable
@@ -306,7 +339,10 @@ fn static_sized_array() {
   cast!(array.size.as_ref(), ITemplexPT::AnonymousRune);
   cast!(array.element.as_ref(), ITemplexPT::AnonymousRune);
 
-  let array = cast!(compile_templex_expect("[#_]<imm>_"), ITemplexPT::StaticSizedArray);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#_]<imm>_"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Immutable
@@ -318,7 +354,10 @@ fn static_sized_array() {
   cast!(array.size.as_ref(), ITemplexPT::AnonymousRune);
   cast!(array.element.as_ref(), ITemplexPT::AnonymousRune);
 
-  let array = cast!(compile_templex_expect("[#3]int"), ITemplexPT::StaticSizedArray);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#3]int"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Mutable
@@ -330,7 +369,10 @@ fn static_sized_array() {
   assert_eq!(cast!(array.size.as_ref(), ITemplexPT::Int).value, 3);
   assert_templex_name(array.element.as_ref(), "int");
 
-  let array = cast!(compile_templex_expect("[#N]int"), ITemplexPT::StaticSizedArray);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#N]int"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Mutable
@@ -342,7 +384,10 @@ fn static_sized_array() {
   assert_templex_name(array.size.as_ref(), "N");
   assert_templex_name(array.element.as_ref(), "int");
 
-  let array = cast!(compile_templex_expect("[#_]int"), ITemplexPT::StaticSizedArray);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#_]int"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Mutable
@@ -354,7 +399,10 @@ fn static_sized_array() {
   cast!(array.size.as_ref(), ITemplexPT::AnonymousRune);
   assert_templex_name(array.element.as_ref(), "int");
 
-  let array = cast!(compile_templex_expect("[#N]T"), ITemplexPT::StaticSizedArray);
+  let array = cast!(
+    compile_templex_expect(&interner, &keywords, "[#N]T"),
+    ITemplexPT::StaticSizedArray
+  );
   assert_eq!(
     cast!(array.mutability.as_ref(), ITemplexPT::Mutability).mutability,
     MutabilityP::Mutable
@@ -390,23 +438,40 @@ fn static_sized_array() {
 */
 #[test]
 fn regular_sequence() {
-  let tuple = cast!(compile_templex_expect("()"), ITemplexPT::Tuple);
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let tuple = cast!(
+    compile_templex_expect(&interner, &keywords, "()"),
+    ITemplexPT::Tuple
+  );
   assert_eq!(tuple.elements.len(), 0);
 
-  let tuple = cast!(compile_templex_expect("(int)"), ITemplexPT::Tuple);
+  let tuple = cast!(
+    compile_templex_expect(&interner, &keywords, "(int)"),
+    ITemplexPT::Tuple
+  );
   assert_templex_name(expect_1(&tuple.elements), "int");
 
-  let tuple = cast!(compile_templex_expect("(int, bool)"), ITemplexPT::Tuple);
+  let tuple = cast!(
+    compile_templex_expect(&interner, &keywords, "(int, bool)"),
+    ITemplexPT::Tuple
+  );
   let (int_, bool_) = expect_2(&tuple.elements);
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");
 
-  let tuple = cast!(compile_templex_expect("(_, bool)"), ITemplexPT::Tuple);
+  let tuple = cast!(
+    compile_templex_expect(&interner, &keywords, "(_, bool)"),
+    ITemplexPT::Tuple
+  );
   let (anonymous_, bool_) = expect_2(&tuple.elements);
   cast!(anonymous_, ITemplexPT::AnonymousRune);
   assert_templex_name(bool_, "bool");
 
-  let tuple = cast!(compile_templex_expect("(_, _)"), ITemplexPT::Tuple);
+  let tuple = cast!(
+    compile_templex_expect(&interner, &keywords, "(_, _)"),
+    ITemplexPT::Tuple
+  );
   let (anonymous1_, anonymous2_) = expect_2(&tuple.elements);
   cast!(anonymous1_, ITemplexPT::AnonymousRune);
   cast!(anonymous2_, ITemplexPT::AnonymousRune);
@@ -437,13 +502,15 @@ fn regular_sequence() {
 */
 #[test]
 fn prototype_kind_rule() {
-  let templex = compile_templex_expect("func moo(int)void");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let templex = compile_templex_expect(&interner, &keywords, "func moo(int)void");
   let prototype = cast!(templex, ITemplexPT::Func);
   assert_eq!(prototype.name.str.str, "moo");
   assert_templex_name(expect_1(&prototype.parameters), "int");
   assert_templex_name(prototype.return_type.as_ref(), "void");
 
-  let templex = compile_templex_expect("func moo(T)R");
+  let templex = compile_templex_expect(&interner, &keywords, "func moo(T)R");
   let prototype = cast!(templex, ITemplexPT::Func);
   assert_eq!(prototype.name.str.str, "moo");
   assert_templex_name(expect_1(&prototype.parameters), "T");

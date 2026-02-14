@@ -1,6 +1,8 @@
 // cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::expression_tests
 
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::assert_templex_name;
@@ -21,7 +23,9 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
 */
 #[test]
 fn simple_int() {
-  let expr = compile_expression_expect("4");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "4");
   assert!(matches!(
     expr,
     IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })
@@ -35,7 +39,9 @@ fn simple_int() {
 */
 #[test]
 fn simple_bool() {
-  let expr = compile_expression_expect("true");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "true");
   assert!(matches!(
     expr,
     IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. })
@@ -49,7 +55,9 @@ fn simple_bool() {
 */
 #[test]
 fn i64() {
-  let expr = compile_expression_expect("4i64");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "4i64");
   assert!(matches!(
     expr,
     IExpressionPE::ConstantInt(ConstantIntPE {
@@ -67,7 +75,9 @@ fn i64() {
 */
 #[test]
 fn binary_operator() {
-  let expr = compile_expression_expect("4 + 5");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "4 + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "+");
   assert_eq!(
@@ -88,7 +98,9 @@ fn binary_operator() {
 */
 #[test]
 fn floats() {
-  let expr = compile_expression_expect("4.2");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "4.2");
   assert!(matches!(
     expr,
     IExpressionPE::ConstantFloat(ConstantFloatPE { value: 4.2, .. })
@@ -102,7 +114,9 @@ fn floats() {
 */
 #[test]
 fn number_range() {
-  let expr = compile_expression_expect("0..5");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "0..5");
   let range = cast!(expr, IExpressionPE::Range);
   assert_eq!(
     cast!(range.from_expr.as_ref(), IExpressionPE::ConstantInt).value,
@@ -121,7 +135,9 @@ fn number_range() {
 */
 #[test]
 fn add_as_call() {
-  let expr = compile_expression_expect("+(4, 5)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "+(4, 5)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "+");
   let (first_arg, second_arg) = expect_2(&function_call.arg_exprs);
@@ -136,7 +152,9 @@ fn add_as_call() {
 */
 #[test]
 fn passing_eq_overload_set() {
-  let expr = compile_expression_expect("moo(4, ==)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "moo(4, ==)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "moo");
   let (first_arg, second_arg) = expect_2(&function_call.arg_exprs);
@@ -158,7 +176,9 @@ fn passing_eq_overload_set() {
 */
 #[test]
 fn call_then_binary_operator() {
-  let expr = compile_expression_expect("str(i) + 5");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "str(i) + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "+");
   let str_call = cast!(binary.left_expr.as_ref(), IExpressionPE::FunctionCall);
@@ -183,7 +203,9 @@ fn call_then_binary_operator() {
 */
 #[test]
 fn range() {
-  let expr = compile_expression_expect("a..b");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "a..b");
   let range = cast!(expr, IExpressionPE::Range);
   assert_lookup_name(range.from_expr.as_ref(), "a");
   assert_lookup_name(range.to_expr.as_ref(), "b");
@@ -196,7 +218,9 @@ fn range() {
 */
 #[test]
 fn regular_call() {
-  let expr = compile_expression_expect("x(y)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x(y)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "x");
   let first_arg = expect_1(&function_call.arg_exprs);
@@ -210,7 +234,9 @@ fn regular_call() {
 */
 #[test]
 fn not() {
-  let expr = compile_expression_expect("not y");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "not y");
   let not = cast!(expr, IExpressionPE::Not);
   assert_lookup_name(not.inner.as_ref(), "y");
 }
@@ -222,7 +248,9 @@ fn not() {
 */
 #[test]
 fn borrowing_result_of_function_call() {
-  let expr = compile_expression_expect("&Muta()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "&Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
   assert_eq!(augment.target_ownership, OwnershipP::Borrow);
   let function_call = cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
@@ -237,7 +265,9 @@ fn borrowing_result_of_function_call() {
 */
 #[test]
 fn specifying_heap() {
-  let expr = compile_expression_expect("^Muta()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "^Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
   assert_eq!(augment.target_ownership, OwnershipP::Own);
   cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
@@ -252,7 +282,9 @@ fn specifying_heap() {
 fn inline_call_ignored() {
   // The inl keyword is just parsed as an Own augment. It's effectively a no-op.
   // This is probably to better syntax-highlight the inl keyword even though we ignore it.
-  let expr = compile_expression_expect("inl Muta()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "inl Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
   assert_eq!(augment.target_ownership, OwnershipP::Own);
   let function_call = cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
@@ -268,7 +300,9 @@ fn inline_call_ignored() {
 */
 #[test]
 fn method_call() {
-  let expr = compile_expression_expect("x . shout ()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x . shout ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
   assert_lookup_name(method_call.subject_expr.as_ref(), "x");
   assert_name(&method_call.method_lookup.name, "shout");
@@ -284,7 +318,9 @@ fn method_call() {
 fn mapping_method_call() {
   // These arent implemented yet, we currently just parse these as method calls to support
   // snippets on the site.
-  let expr = compile_expression_expect("x *. shout ()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x *. shout ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
   assert_lookup_name(method_call.subject_expr.as_ref(), "x");
   assert_name(&method_call.method_lookup.name, "shout");
@@ -300,7 +336,9 @@ fn mapping_method_call() {
 */
 #[test]
 fn method_on_member() {
-  let expr = compile_expression_expect("x.moo.shout()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x.moo.shout()");
   let shout_call = cast!(expr, IExpressionPE::MethodCall);
   assert_name(&shout_call.method_lookup.name, "shout");
   assert_eq!(shout_call.arg_exprs.len(), 0);
@@ -322,7 +360,9 @@ fn method_on_member() {
 */
 #[test]
 fn moving_method_call() {
-  let expr = compile_expression_expect("(x ).shout()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(x ).shout()");
   let shout_call = cast!(expr, IExpressionPE::MethodCall);
   assert_name(&shout_call.method_lookup.name, "shout");
   assert_eq!(shout_call.arg_exprs.len(), 0);
@@ -358,7 +398,9 @@ fn moving_method_call() {
 */
 #[test]
 fn templated_function_call() {
-  let expr = compile_expression_expect("toArray<imm>( &result)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "toArray<imm>( &result)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
 
   let toarray_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
@@ -385,7 +427,9 @@ fn templated_function_call() {
 */
 #[test]
 fn templated_method_call() {
-  let expr = compile_expression_expect("result.toArray <imm> ()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "result.toArray <imm> ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
 
   assert_lookup_name(method_call.subject_expr.as_ref(), "result");
@@ -407,7 +451,9 @@ fn templated_method_call() {
 */
 #[test]
 fn custom_binaries() {
-  let expr = compile_expression_expect("not y florgle not x");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "not y florgle not x");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "florgle");
   let not_left = cast!(binary.left_expr.as_ref(), IExpressionPE::Not);
@@ -423,7 +469,9 @@ fn custom_binaries() {
 */
 #[test]
 fn custom_with_noncustom_binaries() {
-  let expr = compile_expression_expect("a + b florgle x * y");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "a + b florgle x * y");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "florgle");
   let add_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
@@ -454,8 +502,10 @@ fn custom_with_noncustom_binaries() {
 */
 #[test]
 fn template_calling() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   {
-    let expr = compile_expression_expect("MyNone< int >()");// UIIOVCP
+    let expr = compile_expression_expect(&interner, &keywords, "MyNone< int >()");// UIIOVCP
     let function_call = cast!(expr, IExpressionPE::FunctionCall);
     let mynone_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
     assert_name(&mynone_lookup.name, "MyNone");
@@ -466,7 +516,7 @@ fn template_calling() {
   }
 
   {
-    let expr = compile_expression_expect("MySome< MyNone <int> >()");// UIIOVCP
+    let expr = compile_expression_expect(&interner, &keywords, "MySome< MyNone <int> >()");// UIIOVCP
     let function_call = cast!(expr, IExpressionPE::FunctionCall);
     let mysome_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
     assert_name(&mysome_lookup.name, "MySome");
@@ -497,7 +547,9 @@ fn greater_than_or_equal() {
   // It turns out, this was only parsing "9 >=" because it was looking for > specifically (in fact, it was looking
   // for + - * / < >) so it parsed as >(9, =) which was bad. We changed the infix operator parser to expect the
   // whitespace on both sides, so that it was forced to parse the entire thing.
-  let expr = compile_expression_expect("9 >= 3");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "9 >= 3");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, ">=");
   assert_eq!(
@@ -522,7 +574,9 @@ fn greater_than_or_equal() {
 */
 #[test]
 fn indexing() {
-  let expr = compile_expression_expect("arr [4]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "arr [4]");
   let brace_call = cast!(expr, IExpressionPE::BraceCall);
   assert_lookup_name(brace_call.subject_expr.as_ref(), "arr");
   let first_arg = expect_1(&brace_call.arg_exprs);
@@ -536,7 +590,9 @@ fn indexing() {
 */
 #[test]
 fn single_arg_brace_lambda() {
-  let expr = compile_expression_expect("x => { x }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x => { x }");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   let params = function.header.params.as_ref().unwrap();
@@ -564,7 +620,9 @@ fn single_arg_brace_lambda() {
 */
 #[test]
 fn single_arg_no_brace_lambda() {
-  let expr = compile_expression_expect("x => x");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "x => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   let params = function.header.params.as_ref().unwrap();
@@ -591,7 +649,9 @@ fn single_arg_no_brace_lambda() {
 */
 #[test]
 fn single_arg_typed_brace_lambda() {
-  let expr = compile_expression_expect("(x int) => { x }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(x int) => { x }");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   let params = function.header.params.as_ref().unwrap();
@@ -620,7 +680,9 @@ fn single_arg_typed_brace_lambda() {
 */
 #[test]
 fn argless_lambda() {
-  let expr = compile_expression_expect("{_}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "{_}");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   assert!(function.header.ret.ret_type.is_none());
@@ -643,7 +705,9 @@ fn argless_lambda() {
 */
 #[test]
 fn multi_arg_typed_brace_lambda() {
-  let expr = compile_expression_expect("(x, y) => x");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(x, y) => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   let params = function.header.params.as_ref().unwrap();
@@ -678,7 +742,9 @@ fn multi_arg_typed_brace_lambda() {
 */
 #[test]
 fn destructuring_lambda() {
-  let expr = compile_expression_expect("([x, y]) => x");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "([x, y]) => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
   let function = &lambda.function;
   let params = function.header.params.as_ref().unwrap();
@@ -724,7 +790,9 @@ fn destructuring_lambda() {
 */
 #[test]
 fn dot_symbol() {
-  let expr = compile_expression_expect(r#"myPath./("subdir")"#);
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, r#"myPath./("subdir")"#);
   let method_call = cast!(expr, IExpressionPE::MethodCall);
   assert_lookup_name(method_call.subject_expr.as_ref(), "myPath");
   let method_lookup = cast!(&method_call.method_lookup.name, IImpreciseNameP::LookupName);
@@ -747,7 +815,9 @@ fn dot_symbol() {
 */
 #[test]
 fn not_equal() {
-  let expr = compile_expression_expect("3 != 4");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "3 != 4");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "!=");
   assert_eq!(
@@ -769,7 +839,9 @@ fn not_equal() {
 */
 #[test]
 fn set_call_isnt_interpreted_as_a_set_expression() {
-  let expr = compile_expression_expect("set(true)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "set(true)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "set");
   let first_arg = expect_1(&function_call.arg_exprs);
@@ -789,7 +861,9 @@ fn set_call_isnt_interpreted_as_a_set_expression() {
 #[test]
 fn two_d_array_access() {
   // We had a bug where the lexer was interpreting that 2.1 as a float.
-  let expr = compile_expression_expect("arr.2.1");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "arr.2.1");
   let outer_dot = cast!(expr, IExpressionPE::Dot);
   assert_eq!(outer_dot.member.str.str, "1");
   let inner_dot = cast!(outer_dot.left.as_ref(), IExpressionPE::Dot);
@@ -812,7 +886,9 @@ fn two_d_array_access() {
 */
 #[test]
 fn lambda_without_surrounding_parens() {
-  let expr = compile_expression_expect("{ 0 }()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "{ 0 }()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lambda);
   assert_eq!(function_call.arg_exprs.len(), 0);
@@ -827,7 +903,9 @@ fn lambda_without_surrounding_parens() {
 */
 #[test]
 fn function_call() {
-  let expr = compile_expression_expect("call(sum)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "call(sum)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "call");
   let first_arg = expect_1(&function_call.arg_exprs);
@@ -846,7 +924,9 @@ fn function_call() {
 */
 #[test]
 fn test_inner_expression_unlet() {
-  let expr = compile_expression_expect("destroy(unlet enemy)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "destroy(unlet enemy)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "destroy");
   let first_arg = expect_1(&function_call.arg_exprs);
@@ -866,7 +946,9 @@ fn test_inner_expression_unlet() {
 #[test]
 fn detect_break_in_expr() {
   // See BRCOBS
-  let err = compile_expression_for_error("a(b, break)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let err = compile_expression_for_error(&interner, &keywords, "a(b, break)");
   assert!(matches!(err, ParseError::CantUseBreakInExpression(_)));
 }
 /*
@@ -883,7 +965,9 @@ fn detect_break_in_expr() {
 #[test]
 fn detect_return_in_expr() {
   // See BRCOBS
-  let err = compile_expression_for_error("a(b, return)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let err = compile_expression_for_error(&interner, &keywords, "a(b, return)");
   assert!(matches!(err, ParseError::CantUseReturnInExpression(_)));
 }
 /*
@@ -899,7 +983,9 @@ fn detect_return_in_expr() {
 */
 #[test]
 fn parens() {
-  let expr = compile_expression_expect("2 * (5 - 7)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "2 * (5 - 7)");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "*");
   assert_eq!(
@@ -926,7 +1012,9 @@ fn parens() {
 */
 #[test]
 fn precedence_1() {
-  let expr = compile_expression_expect("(5 - 7) * 2");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(5 - 7) * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "*");
   let subexpr = cast!(binary.left_expr.as_ref(), IExpressionPE::SubExpression);
@@ -953,7 +1041,9 @@ fn precedence_1() {
 */
 #[test]
 fn precedence_2() {
-  let expr = compile_expression_expect("5 - 7 * 2");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "5 - 7 * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "-");
   assert_eq!(
@@ -979,7 +1069,9 @@ fn precedence_2() {
 */
 #[test]
 fn static_array_from_values() {
-  let expr = compile_expression_expect("[#](3, 5, 6)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[#](3, 5, 6)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1005,7 +1097,9 @@ fn static_array_from_values() {
 */
 #[test]
 fn static_array_from_values_with_newlines() {
-  let expr = compile_expression_expect("[#](\n3\n)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[#](\n3\n)");
   cast!(expr, IExpressionPE::ConstructArray);
 }
 /*
@@ -1018,7 +1112,9 @@ fn static_array_from_values_with_newlines() {
 */
 #[test]
 fn static_array_from_callable_with_rune() {
-  let expr = compile_expression_expect("[#N]({_ * 2})");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[#N]({_ * 2})");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1050,7 +1146,9 @@ fn static_array_from_callable_with_rune() {
 */
 #[test]
 fn less_than_or_equal() {
-  let expr = compile_expression_expect("a <= b");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "a <= b");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "<=");
   assert_lookup_name(binary.left_expr.as_ref(), "a");
@@ -1066,7 +1164,9 @@ fn less_than_or_equal() {
 */
 #[test]
 fn static_array_from_callable() {
-  let expr = compile_expression_expect("[#3](triple)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[#3](triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1097,7 +1197,9 @@ fn static_array_from_callable() {
 */
 #[test]
 fn immutable_static_array_from_callable() {
-  let expr = compile_expression_expect("#[#3](triple)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "#[#3](triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1128,7 +1230,9 @@ fn immutable_static_array_from_callable() {
 */
 #[test]
 fn immutable_static_array_from_callable_no_size() {
-  let expr = compile_expression_expect("#[#](3, 4, 5)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "#[#](3, 4, 5)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1160,7 +1264,9 @@ fn immutable_static_array_from_callable_no_size() {
 */
 #[test]
 fn runtime_array_from_callable_with_rune() {
-  let expr = compile_expression_expect("[](6, {_ * 2})");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[](6, {_ * 2})");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1189,7 +1295,9 @@ fn runtime_array_from_callable_with_rune() {
 */
 #[test]
 fn runtime_array_from_callable() {
-  let expr = compile_expression_expect("[](6, triple)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[](6, triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1218,7 +1326,9 @@ fn runtime_array_from_callable() {
 */
 #[test]
 fn double_rsa_with_type() {
-  let expr = compile_expression_expect("[][]bool(42)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "[][]bool(42)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   let array_type = construct_array.type_pt.as_ref().unwrap();
   let rsa = cast!(array_type, ITemplexPT::RuntimeSizedArray);
@@ -1255,7 +1365,9 @@ fn double_rsa_with_type() {
 */
 #[test]
 fn immutable_runtime_array_from_callable() {
-  let expr = compile_expression_expect("#[](6, triple)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "#[](6, triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
   assert!(construct_array.type_pt.is_none());
   let mutability = construct_array.mutability_pt.as_ref().unwrap();
@@ -1284,7 +1396,9 @@ fn immutable_runtime_array_from_callable() {
 */
 #[test]
 fn one_element_tuple() {
-  let expr = compile_expression_expect("(3,)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(3,)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
   let first_element = expect_1(&tuple.elements);
   assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
@@ -1298,7 +1412,9 @@ fn one_element_tuple() {
 */
 #[test]
 fn zero_element_tuple() {
-  let expr = compile_expression_expect("()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "()");
   let tuple = cast!(expr, IExpressionPE::Tuple);
   assert_eq!(tuple.elements.len(), 0);
 }
@@ -1310,7 +1426,9 @@ fn zero_element_tuple() {
 */
 #[test]
 fn two_element_tuple() {
-  let expr = compile_expression_expect("(3,4)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(3,4)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
   let (first_element, second_element) = expect_2(&tuple.elements);
   assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
@@ -1324,7 +1442,9 @@ fn two_element_tuple() {
 */
 #[test]
 fn three_element_tuple() {
-  let expr = compile_expression_expect("(3,4,5)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(3,4,5)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
   let (first_element, second_element, third_element) = expect_3(&tuple.elements);
   assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
@@ -1339,7 +1459,9 @@ fn three_element_tuple() {
 */
 #[test]
 fn three_element_tuple_trailing_comma() {
-  let expr = compile_expression_expect("(3,4,5,)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(3,4,5,)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
   let (first_element, second_element, third_element) = expect_3(&tuple.elements);
   assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
@@ -1354,7 +1476,9 @@ fn three_element_tuple_trailing_comma() {
 */
 #[test]
 fn transmigrate() {
-  let expr = compile_expression_expect("a'x");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "a'x");
   let transmigrate = cast!(expr, IExpressionPE::Transmigrate);
   assert_eq!(transmigrate.target_region.str.str, "a");
   assert_lookup_name(transmigrate.inner.as_ref(), "x");
@@ -1368,7 +1492,9 @@ fn transmigrate() {
 */
 #[test]
 fn call_callable_expr() {
-  let expr = compile_expression_expect("(something.callable)(3)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(something.callable)(3)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   let subexpr = cast!(
     function_call.callable_expr.as_ref(),
@@ -1392,14 +1518,16 @@ fn call_callable_expr() {
 */
 #[test]
 fn array_indexing() {
-  let expr = compile_expression_expect("board[i]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "board[i]");
   let brace_call = cast!(expr, IExpressionPE::BraceCall);
   assert_lookup_name(brace_call.subject_expr.as_ref(), "board");
   let first_arg = expect_1(&brace_call.arg_exprs);
   assert_lookup_name(first_arg, "i");
   assert_eq!(brace_call.callable_readwrite, false);
 
-  let expr2 = compile_expression_expect("this.board[i]");
+  let expr2 = compile_expression_expect(&interner, &keywords, "this.board[i]");
   let brace_call2 = cast!(expr2, IExpressionPE::BraceCall);
   let dot = cast!(brace_call2.subject_expr.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(&dot.left, "this");
@@ -1422,7 +1550,9 @@ fn array_indexing() {
 */
 #[test]
 fn mod_and_equal_precedence() {
-  let expr = compile_expression_expect("8 mod 2 == 0");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "8 mod 2 == 0");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
   assert_eq!(binary.function_name.str.str, "==");
   let left_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
@@ -1456,7 +1586,9 @@ fn mod_and_equal_precedence() {
 */
 #[test]
 fn or_and_equal_precedence() {
-  let expr = compile_expression_expect("2 == 0 or false");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "2 == 0 or false");
   let or = cast!(expr, IExpressionPE::Or);
   let left_binary = cast!(or.left.as_ref(), IExpressionPE::BinaryCall);
   assert_eq!(left_binary.function_name.str.str, "==");
@@ -1489,7 +1621,9 @@ fn or_and_equal_precedence() {
 */
 #[test]
 fn test_templated_lambda_param() {
-  let expr = compile_expression_expect("(a => a + a)(3)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "(a => a + a)(3)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   let subexpr = cast!(
     function_call.callable_expr.as_ref(),

@@ -15,6 +15,8 @@ class CaptureAndDestructureTests extends FunSuite with Matchers with Collector w
   }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 use crate::parsing::tests::utils::{
@@ -22,7 +24,9 @@ use crate::parsing::tests::utils::{
 };
 #[test]
 fn capture_with_destructure_with_type_inside() {
-  let pattern = compile_pattern_expect("a [a int, b bool]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile_pattern_expect(&interner, &keywords, "a [a int, b bool]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -50,7 +54,9 @@ fn capture_with_destructure_with_type_inside() {
 */
 #[test]
 fn capture_with_empty_sequence_type() {
-  let pattern = compile_pattern_expect("a ()");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile_pattern_expect(&interner, &keywords, "a ()");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
   assert!(tuple.elements.is_empty());
@@ -65,7 +71,9 @@ fn capture_with_empty_sequence_type() {
 */
 #[test]
 fn empty_destructure() {
-  let pattern = compile_pattern_expect("[]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile_pattern_expect(&interner, &keywords, "[]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -80,7 +88,9 @@ fn empty_destructure() {
 #[test]
 fn capture_with_empty_destructure() {
   // Needs the space between the braces, see https://github.com/ValeLang/Vale/issues/434
-  let pattern = compile_pattern_expect("a [ ]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile_pattern_expect(&interner, &keywords, "a [ ]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -96,7 +106,9 @@ fn capture_with_empty_destructure() {
 */
 #[test]
 fn destructure_with_nested_atom() {
-  let pattern = compile_pattern_expect("a [b int]");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile_pattern_expect(&interner, &keywords, "a [b int]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();

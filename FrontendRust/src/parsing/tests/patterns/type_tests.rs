@@ -16,6 +16,8 @@ class TypeTests extends FunSuite with Matchers with Collector with TestParseUtil
   }
 */
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::{
   INameDeclarationP, ITemplexPT, MutabilityP, OwnershipP, PatternPP, VariabilityP,
 };
@@ -23,12 +25,14 @@ use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile(code: &str) -> PatternPP {
-  compile_pattern_expect(code)
+fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> PatternPP {
+  compile_pattern_expect(interner, keywords, code)
 }
 #[test]
 fn ignoring_name() {
-  let pattern = compile("_ int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -46,7 +50,9 @@ fn ignoring_name() {
 */
 #[test]
 fn static_sized_array() {
-  let pattern = compile("_ [#3]MutableStruct");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ [#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -84,7 +90,9 @@ fn static_sized_array() {
 */
 #[test]
 fn static_sized_array_with_imm() {
-  let pattern = compile("_ [#3]<imm>MutableStruct");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ [#3]<imm>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -122,7 +130,9 @@ fn static_sized_array_with_imm() {
 */
 #[test]
 fn static_sized_array_with_imm_and_vary() {
-  let pattern = compile("_ [#3]<imm, vary>MutableStruct");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ [#3]<imm, vary>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -160,7 +170,9 @@ fn static_sized_array_with_imm_and_vary() {
 */
 #[test]
 fn runtime_sized_array() {
-  let pattern = compile("_ #[]int");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ #[]int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -193,7 +205,9 @@ fn runtime_sized_array() {
 */
 #[test]
 fn sequence_type() {
-  let pattern = compile("_ (int, bool)");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ (int, bool)");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -219,7 +233,9 @@ fn sequence_type() {
 */
 #[test]
 fn static_sized_array_with_borrow() {
-  let pattern = compile("_ &[#3]MutableStruct");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ &[#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -265,7 +281,9 @@ fn static_sized_array_with_borrow() {
 */
 #[test]
 fn static_sized_array_with_weak() {
-  let pattern = compile("_ &&[#3]<_, _>MutableStruct");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ &&[#3]<_, _>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -305,7 +323,9 @@ fn static_sized_array_with_weak() {
 */
 #[test]
 fn call_type() {
-  let pattern = compile("_ MyOption<MyList<int>>");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let pattern = compile(&interner, &keywords, "_ MyOption<MyList<int>>");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,

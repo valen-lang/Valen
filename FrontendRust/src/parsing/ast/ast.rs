@@ -27,9 +27,9 @@ case class UnitP(range: RangeL) { override def equals(obj: Any): Boolean = vcuri
 
 /// Name in source code
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NameP {
+pub struct NameP<'a> {
   pub range: RangeL,
-  pub str: Arc<StrI>,
+  pub str: &'a StrI,
 }
 /*
 case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
