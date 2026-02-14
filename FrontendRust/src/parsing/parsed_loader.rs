@@ -15,6 +15,7 @@ use crate::lexing::{ParseError, RangeL};
 use crate::parsing::ast::*;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use serde_json::{Map, Value, from_str};
+use std::sync::Arc;
 
 /*
 package dev.vale.parsing
@@ -258,7 +259,7 @@ fn load_range(jobj: &Map<String, Value>) -> RangeL {
       getIntField(jobj, "end"))
   }
 */
-fn load_name<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> NameP<'a> {
+fn load_name<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> NameP<'a> {
   expect_type(jobj, "Name");
   NameP {
     range: load_range(get_object_field(jobj, "range")),
@@ -274,7 +275,7 @@ fn load_name<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> NameP
   }
 
 */
-pub fn load<'a>(interner: &'a Interner<'a>, source: &str) -> Result<FileP, ParseError> {
+pub fn load<'a>(interner: &Interner<'a>, source: &str) -> Result<FileP<'a>, ParseError> {
   let parsed: Value = from_str(source).map_err(|err| ParseError::BadVPSTError {
     message: format!("Failed to parse VPST JSON: {}", err),
   })?;
@@ -328,7 +329,7 @@ pub fn load<'a>(interner: &'a Interner<'a>, source: &str) -> Result<FileP, Parse
   }
 
 */
-fn load_function<'a>(interner: &'a Interner<'a>, denizen: &Map<String, Value>) -> FunctionP<'a> {
+fn load_function<'a>(interner: &Interner<'a>, denizen: &Map<String, Value>) -> FunctionP<'a> {
   FunctionP {
     range: load_range(get_object_field(denizen, "range")),
     header: load_function_header(interner, get_object_field(denizen, "header")),
@@ -345,7 +346,7 @@ fn load_function<'a>(interner: &'a Interner<'a>, denizen: &Map<String, Value>) -
   }
 
 */
-fn load_impl<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ImplP<'a> {
+fn load_impl<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ImplP<'a> {
   ImplP {
     range: load_range(get_object_field(jobj, "range")),
     generic_params: load_optional_object(get_object_field(jobj, "identifyingRunes"), |x| {
@@ -374,7 +375,7 @@ fn load_impl<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ImplP
       getArrayField(jobj, "attributes").map(expectObject).map(loadAttribute))
   }
 */
-fn load_export_as<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ExportAsP<'a> {
+fn load_export_as<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ExportAsP<'a> {
   ExportAsP {
     range: load_range(get_object_field(jobj, "range")),
     struct_: load_templex(interner, get_object_field(jobj, "struct")),
@@ -390,7 +391,7 @@ fn load_export_as<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> 
       loadName(getObjectField(jobj, "exportedName")))
   }
 */
-fn load_import<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ImportP<'a> {
+fn load_import<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ImportP<'a> {
   ImportP {
     range: load_range(get_object_field(jobj, "range")),
     module_name: load_name(interner, get_object_field(jobj, "moduleName")),
@@ -411,7 +412,7 @@ fn load_import<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Imp
       loadName(getObjectField(jobj, "importeeName")))
   }
 */
-fn load_struct<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> StructP<'a> {
+fn load_struct<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> StructP<'a> {
   StructP {
     range: load_range(get_object_field(jobj, "range")),
     name: load_name(interner, get_object_field(jobj, "name")),
@@ -450,7 +451,7 @@ fn load_struct<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Str
       loadStructMembers(getObjectField(jobj, "members")))
   }
 */
-fn load_interface<'a>(interner: &'a Interner<'a>, denizen: &Map<String, Value>) -> InterfaceP<'a> {
+fn load_interface<'a>(interner: &Interner<'a>, denizen: &Map<String, Value>) -> InterfaceP<'a> {
   InterfaceP {
     range: load_range(get_object_field(denizen, "range")),
     name: load_name(interner, get_object_field(denizen, "name")),
@@ -495,7 +496,7 @@ fn load_interface<'a>(interner: &'a Interner<'a>, denizen: &Map<String, Value>) 
   }
 */
 fn load_function_header<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> FunctionHeaderP<'a> {
   FunctionHeaderP {
@@ -530,14 +531,13 @@ fn load_function_header<'a>(
 //      loadOptionalObject(getObjectField(jobj, "maybeDefaultRegion"), loadName))
   }
 */
-fn load_file_coord<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> FileCoordinate<'a> {
-  interner
-    .intern_file_coordinate(FileCoordinate {
-      package_coord: load_package_coord(interner, get_object_field(jobj, "packageCoord")),
-      filepath: get_string_field(jobj, "filepath").to_string(),
-    })
-    .as_ref()
-    .clone()
+fn load_file_coord<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> FileCoordinate<'a> {
+  let package_coord = load_package_coord(interner, get_object_field(jobj, "packageCoord"));
+  (*interner.intern_file_coordinate(FileCoordinate {
+    package_coord: Arc::new((*package_coord).clone()),
+    filepath: get_string_field(jobj, "filepath").to_string(),
+  }))
+  .clone()
 }
 /*
   def loadFileCoord(jobj: JObject): FileCoordinate = {
@@ -547,7 +547,7 @@ fn load_file_coord<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) ->
   }
 */
 fn load_package_coord<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> &'a PackageCoordinate<'a> {
   interner.intern_package_coordinate(PackageCoordinate {
@@ -566,7 +566,7 @@ fn load_package_coord<'a>(
       getArrayField(jobj, "packages").map(expectString).map(s => interner.intern(StrI(s.s)))))
   }
 */
-fn load_params<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ParamsP<'a> {
+fn load_params<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ParamsP<'a> {
   ParamsP {
     range: load_range(get_object_field(jobj, "range")),
     params: get_array_field(jobj, "params")
@@ -583,7 +583,7 @@ fn load_params<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Par
       getArrayField(jobj, "params").map(expectObject).map(loadParameter))
   }
 */
-fn load_parameter<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ParameterP<'a> {
+fn load_parameter<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ParameterP<'a> {
   ParameterP {
     range: load_range(get_object_field(jobj, "range")),
     virtuality: load_optional_object(get_object_field(jobj, "virtuality"), |x| {
@@ -604,7 +604,7 @@ fn load_parameter<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> 
       loadOptionalObject(getObjectField(jobj, "pattern"), loadPattern))
   }
 */
-fn load_pattern<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> PatternPP<'a> {
+fn load_pattern<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> PatternPP<'a> {
   PatternPP {
     range: load_range(get_object_field(jobj, "range")),
     destination: load_optional_object(get_object_field(jobj, "capture"), |x| {
@@ -627,7 +627,7 @@ fn load_pattern<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Pa
 //      loadOptionalObject(getObjectField(jobj, "virtuality"), loadVirtuality))
   }
 */
-fn load_destructure<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> DestructureP<'a> {
+fn load_destructure<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> DestructureP<'a> {
   DestructureP {
     range: load_range(get_object_field(jobj, "range")),
     patterns: get_array_field(jobj, "patterns")
@@ -645,7 +645,7 @@ fn load_destructure<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -
   }
 */
 fn load_destination_local<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> DestinationLocalP<'a> {
   DestinationLocalP {
@@ -662,7 +662,7 @@ fn load_destination_local<'a>(
 */
 
 fn load_name_declaration<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> INameDeclarationP<'a> {
   match get_type(jobj) {
@@ -703,7 +703,7 @@ fn load_name_declaration<'a>(
   }
 */
 fn load_imprecise_name<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> IImpreciseNameP<'a> {
   match get_type(jobj) {
@@ -743,7 +743,7 @@ fn load_imprecise_name<'a>(
     }
   }
 */
-fn load_block<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> BlockPE<'a> {
+fn load_block<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> BlockPE<'a> {
   BlockPE {
     range: load_range(get_object_field(jobj, "range")),
     maybe_pure: load_optional_object(get_object_field(jobj, "maybePure"), load_range),
@@ -763,7 +763,7 @@ fn load_block<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Bloc
       loadExpression(getObjectField(jobj, "inner")))
   }
 */
-fn load_consecutor<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ConsecutorPE<'a> {
+fn load_consecutor<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ConsecutorPE<'a> {
   ConsecutorPE {
     inners: get_array_field(jobj, "inners")
       .iter()
@@ -779,7 +779,7 @@ fn load_consecutor<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) ->
   }
 */
 fn load_function_return<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> FunctionReturnP<'a> {
   FunctionReturnP {
@@ -803,7 +803,7 @@ fn load_unit(_jobj: &Map<String, Value>) -> UnitP {
       loadRange(getObjectField(jobj, "range")))
   }
 */
-fn load_struct_members<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> StructMembersP<'a> {
+fn load_struct_members<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> StructMembersP<'a> {
   StructMembersP {
     range: load_range(get_object_field(jobj, "range")),
     contents: get_array_field(jobj, "members")
@@ -820,7 +820,7 @@ fn load_struct_members<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>
       getArrayField(jobj, "members").map(expectObject).map(loadStructContent))
   }
 */
-fn load_expression<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IExpressionPE<'a> {
+fn load_expression<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> IExpressionPE<'a> {
   match get_type(jobj) {
     "Return" => IExpressionPE::Return(ReturnPE {
       range: load_range(get_object_field(jobj, "range")),
@@ -1202,7 +1202,7 @@ fn load_expression<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) ->
     }
   }
 */
-fn load_array_size<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IArraySizeP<'a> {
+fn load_array_size<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> IArraySizeP<'a> {
   match get_type(jobj) {
     "RuntimeSized" => IArraySizeP::RuntimeSized,
     "StaticSized" => IArraySizeP::StaticSized(StaticSizedArraySizeP {
@@ -1222,7 +1222,7 @@ fn load_array_size<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) ->
   }
 */
 fn load_construct_array<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> ConstructArrayPE<'a> {
   ConstructArrayPE {
@@ -1255,7 +1255,7 @@ fn load_construct_array<'a>(
       getArrayField(jobj, "args").map(expectObject).map(loadExpression))
   }
 */
-fn load_lookup<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> LookupPE<'a> {
+fn load_lookup<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> LookupPE<'a> {
   LookupPE {
     name: load_imprecise_name(interner, get_object_field(jobj, "name")),
     template_args: load_optional_object(get_object_field(jobj, "templateArgs"), |x| {
@@ -1270,7 +1270,7 @@ fn load_lookup<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> Loo
       loadOptionalObject(getObjectField(jobj, "templateArgs"), loadTemplateArgs))
   }
 */
-fn load_template_args<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> TemplateArgsP<'a> {
+fn load_template_args<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> TemplateArgsP<'a> {
   TemplateArgsP {
     range: load_range(get_object_field(jobj, "range")),
     args: get_array_field(jobj, "args")
@@ -1307,7 +1307,7 @@ fn load_template_args<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>)
     }
   }
 */
-fn load_virtuality<'a>(_interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> AbstractP {
+fn load_virtuality<'a>(_interner: &Interner<'a>, jobj: &Map<String, Value>) -> AbstractP {
   AbstractP {
     range: load_range(get_object_field(jobj, "range")),
   }
@@ -1328,7 +1328,7 @@ fn load_virtuality<'a>(_interner: &'a Interner<'a>, jobj: &Map<String, Value>) -
   }
 */
 fn load_struct_content<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> IStructContent<'a> {
   match get_type(jobj) {
@@ -1403,7 +1403,7 @@ where
   }
 */
 fn load_template_rules<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> TemplateRulesP<'a> {
   TemplateRulesP {
@@ -1422,7 +1422,7 @@ fn load_template_rules<'a>(
       getArrayField(jobj, "rules").map(expectObject).map(loadRulex))
   }
 */
-fn load_rulex<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IRulexPR<'a> {
+fn load_rulex<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> IRulexPR<'a> {
   match get_type(jobj) {
     "TypedPR" => IRulexPR::Typed(load_typed_pr(interner, jobj)),
     "ComponentsPR" => IRulexPR::Components(ComponentsPR {
@@ -1502,7 +1502,7 @@ fn load_rulex<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IRul
     }
   }
 */
-fn load_typed_pr<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> TypedPR<'a> {
+fn load_typed_pr<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> TypedPR<'a> {
   TypedPR {
     range: load_range(get_object_field(jobj, "range")),
     rune: load_optional_object(get_object_field(jobj, "rune"), |x| load_name(interner, x)),
@@ -1614,7 +1614,7 @@ fn load_rune_attribute(jobj: &Map<String, Value>) -> IRuneAttributeP {
     }
   }
 */
-fn load_attribute<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IAttributeP<'a> {
+fn load_attribute<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> IAttributeP<'a> {
   match get_type(jobj) {
     "AbstractAttribute" => IAttributeP::AbstractAttribute(AbstractAttributeP {
       range: load_range(get_object_field(jobj, "range")),
@@ -1733,7 +1733,7 @@ fn load_ownership(jobj: &Map<String, Value>) -> OwnershipP {
     }
   }
 */
-fn load_templex<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> ITemplexPT<'a> {
+fn load_templex<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> ITemplexPT<'a> {
   match get_type(jobj) {
     "NameOrRuneT" => ITemplexPT::NameOrRune(NameOrRunePT {
       name: load_name(interner, get_object_field(jobj, "rune")),
@@ -1900,7 +1900,7 @@ fn load_templex<'a>(interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> IT
     }
   }
 */
-fn load_ownership_pt<'a>(_interner: &'a Interner<'a>, jobj: &Map<String, Value>) -> OwnershipPT {
+fn load_ownership_pt<'a>(_interner: &Interner<'a>, jobj: &Map<String, Value>) -> OwnershipPT {
   OwnershipPT {
     range: load_range(get_object_field(jobj, "range")),
     ownership: load_ownership(get_object_field(jobj, "ownership")),
@@ -1913,7 +1913,7 @@ fn load_ownership_pt<'a>(_interner: &'a Interner<'a>, jobj: &Map<String, Value>)
       loadOwnership(getObjectField(jobj, "ownership")))
   }
 */
-fn load_region_rune<'a>(_interner: &'a Interner<'a>, _jobj: &Map<String, Value>) -> RegionRunePT<'a> {
+fn load_region_rune<'a>(_interner: &Interner<'a>, _jobj: &Map<String, Value>) -> RegionRunePT<'a> {
   panic!("Not implemented");
 }
 /*
@@ -1924,7 +1924,7 @@ fn load_region_rune<'a>(_interner: &'a Interner<'a>, _jobj: &Map<String, Value>)
   }
 */
 fn load_identifying_runes<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> GenericParametersP<'a> {
   GenericParametersP {
@@ -1944,7 +1944,7 @@ fn load_identifying_runes<'a>(
   }
 */
 fn load_identifying_rune<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> GenericParameterP<'a> {
   GenericParameterP {

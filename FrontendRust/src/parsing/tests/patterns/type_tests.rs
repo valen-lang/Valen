@@ -25,7 +25,11 @@ use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> PatternPP {
+fn compile<'a>(
+  interner: &Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  code: &str,
+) -> PatternPP<'a> {
   compile_pattern_expect(interner, keywords, code)
 }
 #[test]

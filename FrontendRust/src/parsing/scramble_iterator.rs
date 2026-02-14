@@ -1,10 +1,11 @@
 use crate::lexing::ast::*;
+use crate::StrI;
 
 /// Iterator over a scramble of lexed nodes
 /// Matches Scala's ScrambleIterator
 #[derive(Clone, Debug)]
-pub struct ScrambleIterator {
-  pub scramble: ScrambleLE,
+pub struct ScrambleIterator<'a> {
+  pub scramble: ScrambleLE<'a>,
   pub index: usize,
   pub end: usize,
 }
@@ -15,9 +16,9 @@ class ScrambleIterator(
     var end: Int) {
   assert(end <= scramble.elements.length)
 */
-impl ScrambleIterator {
+impl<'a> ScrambleIterator<'a> {
   /// Create a new iterator over the entire scramble
-  pub fn new(scramble: ScrambleLE) -> Self {
+  pub fn new(scramble: ScrambleLE<'a>) -> Self {
     let end = scramble.elements.len();
     ScrambleIterator {
       scramble,
@@ -32,7 +33,7 @@ impl ScrambleIterator {
   */
 
   /// Create a new iterator with custom bounds
-  pub fn with_bounds(scramble: ScrambleLE, index: usize, end: usize) -> Self {
+  pub fn with_bounds(scramble: ScrambleLE<'a>, index: usize, end: usize) -> Self {
     assert!(end <= scramble.elements.len());
     ScrambleIterator {
       scramble,
@@ -160,6 +161,11 @@ impl ScrambleIterator {
       Some(&**&self.scramble.elements[self.index])
     }
   }
+
+  /// Peek at the current element, returning owned clone to avoid borrow conflicts.
+  pub fn peek_cloned(&self) -> Option<INodeLEEnum<'a>> {
+    self.peek().cloned()
+  }
   /*
     def peek(): Option[INodeLE] = {
       if (index >= end) None
@@ -209,6 +215,12 @@ impl ScrambleIterator {
     };
     (first, second)
   }
+
+  /// Peek at the next 2 elements, returning owned clones to avoid borrow conflicts.
+  pub fn peek2_cloned(&self) -> (Option<INodeLEEnum<'a>>, Option<INodeLEEnum<'a>>) {
+    let (a, b) = self.peek2();
+    (a.cloned(), b.cloned())
+  }
   /*
     def peek2(): (Option[INodeLE], Option[INodeLE]) = {
       (
@@ -241,6 +253,18 @@ impl ScrambleIterator {
       None
     };
     (first, second, third)
+  }
+
+  /// Peek at the next 3 elements, returning owned clones to avoid borrow conflicts.
+  pub fn peek3_cloned(
+    &self,
+  ) -> (
+    Option<INodeLEEnum<'a>>,
+    Option<INodeLEEnum<'a>>,
+    Option<INodeLEEnum<'a>>,
+  ) {
+    let (a, b, c) = self.peek3();
+    (a.cloned(), b.cloned(), c.cloned())
   }
   /*
     def peek3(): (Option[INodeLE], Option[INodeLE], Option[INodeLE]) = {
@@ -431,6 +455,40 @@ impl ScrambleIterator {
       U.findIndexWhereFromUntil(scramble.elements, func, index, end)
     }
   */
+
+  /// Split the scramble on a specific symbol
+  /// Split scramble into owned segments (avoids borrow issues in parsing loops).
+  /// Returns Vec<ScrambleLE> so each segment can live independently.
+  pub fn split_scramble_on_symbol(
+    scramble: ScrambleLE<'a>,
+    needle: char,
+    include_empty_trailing: bool,
+  ) -> Vec<ScrambleLE<'a>> {
+    let iter = ScrambleIterator::new(scramble);
+    let iters = iter.split_on_symbol(needle, include_empty_trailing);
+    iters
+      .into_iter()
+      .map(|i| {
+        let start = i.index;
+        let end = i.end;
+        let range = if start < end {
+          RangeL {
+            begin: i.scramble.elements[start].range().begin,
+            end: i.scramble.elements[end - 1].range().end,
+          }
+        } else {
+          RangeL {
+            begin: i.scramble.range.end,
+            end: i.scramble.range.end,
+          }
+        };
+        ScrambleLE {
+          range,
+          elements: i.scramble.elements[start..end].to_vec(),
+        }
+      })
+      .collect()
+  }
 
   /// Split the scramble on a specific symbol
   ///

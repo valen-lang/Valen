@@ -43,15 +43,15 @@ object ParseAndExplore {
 
 // From ParseAndExplore.scala lines 35-101: parseAndExplore
 pub fn parse_and_explore<'a, D, F, R, HandleParsedDenizen, FileHandler>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   keywords: &'a Keywords<'a>,
   _opts: GlobalOptions,
-  parser: &mut Parser<'a, '_>,
+  parser: &Parser<'a, '_>,
   packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
   mut handle_parsed_denizen: HandleParsedDenizen,
   mut file_handler: FileHandler,
-) -> Result<Vec<F>, FailedParse>
+) -> Result<Vec<F>, FailedParse<'a>>
 where
   R: IPackageResolver<'a, HashMap<String, String>>,
   HandleParsedDenizen: FnMut(&FileCoordinate<'a>, &str, &[ImportL], IDenizenP) -> D,
@@ -122,7 +122,7 @@ where
       // From ParseAndExplore.scala line 96
       handle_parsed_denizen(file_coord, code, imports, denizen_p)
     },
-    |file_coord: &Arc<FileCoordinate>,
+    |file_coord: &FileCoordinate<'a>,
      code: &str,
      comment_ranges: &[RangeL],
      denizens: &[D]|

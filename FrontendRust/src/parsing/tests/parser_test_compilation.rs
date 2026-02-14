@@ -20,7 +20,7 @@ object ParserTestCompilation {
 /// MIGTODO: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
 pub fn test<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   keywords: &'a Keywords<'a>,
   code: &[String],
 ) -> ParserCompilation<'a, 'a> {

@@ -36,7 +36,11 @@ use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
 
-fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> PatternPP {
+fn compile<'a>(
+  interner: &Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  code: &str,
+) -> PatternPP<'a> {
   compile_pattern_expect(interner, keywords, code)
 }
 #[test]

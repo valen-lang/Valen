@@ -36,7 +36,7 @@ use crate::postparsing::expressions::{
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, TemplateTemplataType};
 use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IVarNameS};
 use crate::postparsing::post_parser::{
-  EnvironmentS, FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
+  FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
 };
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
@@ -44,16 +44,16 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IFunctionParent {
+pub enum IFunctionParent<'b> {
   FunctionNoParent,
   ParentInterface {
-    interface_env: EnvironmentS,
-    interface_generic_params: Vec<GenericParameterS>,
-    interface_rules: Vec<IRulexSR>,
-    interface_rune_to_explicit_type: HashMap<IRuneS, ITemplataType>,
+    interface_env: FunctionEnvironmentS<'b>,
+    interface_generic_params: Vec<GenericParameterS<'b>>,
+    interface_rules: Vec<IRulexSR<'b>>,
+    interface_rune_to_explicit_type: HashMap<IRuneS<'b>, ITemplataType>,
   },
   ParentFunction {
-    parent_stack_frame: StackFrame,
+    parent_stack_frame: StackFrame<'b>,
   },
 }
 
@@ -100,12 +100,12 @@ class FunctionScout(
 */
 pub struct FunctionScout;
 impl FunctionScout {
-  pub fn scout_function(
-    interner: &Interner<'a>,
-    file_coordinate: &FileCoordinate<'a>,
-    function: &FunctionP,
-    maybe_parent: IFunctionParent,
-  ) -> Result<(FunctionS, VariableUses), ICompileErrorS> {
+  pub fn scout_function<'b>(
+    interner: &'b Interner<'b>,
+    file_coordinate: &FileCoordinate<'b>,
+    function: &FunctionP<'b>,
+    maybe_parent: IFunctionParent<'b>,
+  ) -> Result<(FunctionS<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}
       IFunctionParent::ParentInterface { .. } => {}
@@ -247,7 +247,7 @@ impl FunctionScout {
         }
         other => other,
       };
-    let constructing_member_names = stack_frame_after_body
+    let constructing_member_names: Vec<_> = stack_frame_after_body
       .locals
       .vars
       .iter()
@@ -255,12 +255,12 @@ impl FunctionScout {
         IVarNameS::ConstructingMemberName(member_name) => Some(member_name.clone()),
         _ => None,
       })
-      .collect::<Vec<_>>();
+      .collect();
     let mut self_uses = self_uses_before_constructing;
     let expr_with_constructor = if constructing_member_names.is_empty() {
       expr_without_constructing_without_void
     } else {
-      let constructor_expr = IExpressionSE::FunctionCall(FunctionCallSE {
+      let constructor_expr: IExpressionSE<'b> = IExpressionSE::FunctionCall(FunctionCallSE {
         range: body_range.clone(),
         location: lidb.child().consume(),
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
@@ -294,7 +294,7 @@ impl FunctionScout {
         }),
       }
     };
-    let locals = stack_frame_after_body
+    let locals: Vec<LocalS<'b>> = stack_frame_after_body
       .locals
       .vars
       .iter()
@@ -307,7 +307,7 @@ impl FunctionScout {
         child_moved: child_uses.is_moved(&declared.name),
         child_mutated: child_uses.is_mutated(&declared.name),
       })
-      .collect::<Vec<_>>();
+      .collect();
     Ok((FunctionS {
       range: PostParser::eval_range(file_coordinate, function.range),
       name: function_declaration_name,

@@ -51,7 +51,7 @@ pub struct FullCompilation<'a> {
 impl<'a> FullCompilation<'a> {
   // From FullCompilation.scala lines 30-45
   pub fn new(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,

@@ -3,10 +3,11 @@
 #![allow(nonstandard_style)]
 
 use crate::cast;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::lexing::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
-use crate::parsing::tests::utils::{compile_for_error, find_func_named};
 
 /*
 package dev.vale.parsing
@@ -30,7 +31,9 @@ class TopLevelTests extends FunSuite with Matchers with Collector with TestParse
 */
 #[test]
 fn function_then_struct() {
-  let program = compile("exported func main() int {} struct mork { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "exported func main() int {} struct mork { }");
   assert!(matches!(
     program.denizens[0],
     IDenizenP::TopLevelFunction(_)
@@ -51,17 +54,19 @@ fn function_then_struct() {
 */
 #[test]
 fn ellipses_ignored() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   // Unicode … symbol is treated as an expression by the parser
-  compile("exported func main() int {x = …;}");
-  compile("exported func main() int {set x = …;}");
+  compile(&interner, &keywords, "exported func main() int {x = …;}");
+  compile(&interner, &keywords, "exported func main() int {set x = …;}");
   // Three dots is treated as a comment
-  compile("exported func main(...) int {}");
-  compile("exported func main() ... {}");
-  compile("exported func main() int {} ... ");
-  compile("exported func main() int {...}");
-  compile("exported func main() int {moo(...)}");
-  compile("struct Moo {} ... ");
-  compile("struct Moo {...}");
+  compile(&interner, &keywords, "exported func main(...) int {}");
+  compile(&interner, &keywords, "exported func main() ... {}");
+  compile(&interner, &keywords, "exported func main() int {} ... ");
+  compile(&interner, &keywords, "exported func main() int {...}");
+  compile(&interner, &keywords, "exported func main() int {moo(...)}");
+  compile(&interner, &keywords, "struct Moo {} ... ");
+  compile(&interner, &keywords, "struct Moo {...}");
 }
 /*
   test("Ellipses ignored") {
@@ -81,7 +86,11 @@ fn ellipses_ignored() {
 */
 #[test]
 fn comments_ignored() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   compile(
+    &interner,
+    &keywords,
     r#"
         exported func main(
                 // moo
@@ -89,6 +98,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         exported func main()
                 // moo
@@ -96,12 +107,16 @@ fn comments_ignored() {
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         exported func main() int {}
                 // moo
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         exported func main() int {
                 // moo
@@ -109,6 +124,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         exported func main() int {
           moo(
@@ -118,12 +135,16 @@ fn comments_ignored() {
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         struct Moo {}
                 // moo
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         struct Moo {
                 // moo
@@ -131,6 +152,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
+    &interner,
+    &keywords,
     r#"
         struct Moo {
         }
@@ -191,7 +214,11 @@ fn comments_ignored() {
 */
 #[test]
 fn function_containing_if() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     r#"
         func main() int {
           if true { 3 } else { 4 }
@@ -216,7 +243,11 @@ fn function_containing_if() {
 */
 #[test]
 fn reports_unrecognized_at_top_level() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let err = compile_for_error(
+    &interner,
+    &keywords,
     r#"
       func main(){}
       blort
@@ -239,7 +270,11 @@ fn reports_unrecognized_at_top_level() {
 // lol
 #[test]
 fn funky_function() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     r#"
       funky main() { }
       "#,
@@ -255,7 +290,11 @@ fn funky_function() {
 */
 #[test]
 fn empty() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     r#"
       func foo() { ... }
       "#,
@@ -288,7 +327,9 @@ fn empty() {
 */
 #[test]
 fn exporting_int() {
-  let program = compile("export int as NumberThing;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "export int as NumberThing;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }),
@@ -307,7 +348,9 @@ fn exporting_int() {
 */
 #[test]
 fn exporting_imm_array_1() {
-  let program = compile("export []<mut>int as IntArray;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "export []<mut>int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     exported_name: NameP { str: ref IntArray_, .. },
@@ -326,7 +369,9 @@ fn exporting_imm_array_1() {
 */
 #[test]
 fn exporting_imm_array_2() {
-  let program = compile("export #[]int as IntArray;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "export #[]int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     exported_name: NameP { str: ref IntArray_, .. },
@@ -345,7 +390,9 @@ fn exporting_imm_array_2() {
 */
 #[test]
 fn import_wildcard() {
-  let program = compile("import somemodule.*;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "import somemodule.*;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP { str: ref somemodule_, .. },
@@ -366,7 +413,9 @@ fn import_wildcard() {
 */
 #[test]
 fn import_just_module_and_thing() {
-  let program = compile("import somemodule.List;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "import somemodule.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP { str: ref somemodule_, .. },
@@ -387,7 +436,9 @@ fn import_just_module_and_thing() {
 */
 #[test]
 fn full_import() {
-  let program = compile("import somemodule.subpackage.List;");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "import somemodule.subpackage.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP { str: ref somemodule_, .. },
@@ -408,7 +459,9 @@ fn full_import() {
 
 #[test]
 fn return_with_region_generics() {
-  let program = compile("func strongestDesire() IDesire<r', i'> { }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "func strongestDesire() IDesire<r', i'> { }");
   let func = find_func_named(&program, "strongestDesire");
   let ret_type = func
     .header
@@ -456,7 +509,11 @@ fn return_with_region_generics() {
 
 #[test]
 fn bad_start_of_statement() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let err = compile_for_error(
+    &interner,
+    &keywords,
     r#"
     func doCivicDance(virtual this Car) {
       )
@@ -465,6 +522,8 @@ fn bad_start_of_statement() {
   );
   assert!(matches!(err, ParseError::BadStartOfStatementError(_)));
   let err = compile_for_error(
+    &interner,
+    &keywords,
     r#"
     func doCivicDance(virtual this Car) {
       ]

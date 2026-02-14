@@ -39,8 +39,8 @@ object RangeS {
 */
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CodeLocationS {
-  pub file: Arc<FileCoordinate>,
+pub struct CodeLocationS<'a> {
+  pub file: Arc<FileCoordinate<'a>>,
   pub offset: i32,
 }
 
@@ -64,13 +64,13 @@ case class CodeLocationS(
 */
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RangeS {
-  pub begin: CodeLocationS,
-  pub end: CodeLocationS,
+pub struct RangeS<'a> {
+  pub begin: CodeLocationS<'a>,
+  pub end: CodeLocationS<'a>,
 }
 
-impl RangeS {
-  pub fn file(&self) -> &Arc<FileCoordinate> {
+impl RangeS<'_> {
+  pub fn file(&self) -> &Arc<FileCoordinate<'_>> {
     &self.begin.file
   }
 }

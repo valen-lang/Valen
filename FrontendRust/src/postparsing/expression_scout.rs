@@ -3,6 +3,7 @@ use crate::parsing::ast::{
 };
 use crate::interner::{Interner, StrI};
 use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   ConstantIntSE, DotSE, ExprMutateSE, FunctionCallSE, IExpressionSE, LetSE, LocalLoadSE,
   LocalMutateSE, OutsideLoadSE, OwnershippedSE, ReturnSE, RuneLookupSE, VoidSE,
@@ -44,10 +45,11 @@ trait IExpressionScoutDelegate {
   (FunctionS, VariableUses)
 }
 */
-enum IScoutResult {
-  LocalLookupResult(LocalLookupResultS),
-  OutsideLookupResult(OutsideLookupResultS),
-  NormalResult(NormalResultS),
+#[derive(Clone, Debug, PartialEq)]
+enum IScoutResult<'a> {
+  LocalLookupResult(LocalLookupResultS<'a>),
+  OutsideLookupResult(OutsideLookupResultS<'a>),
+  NormalResult(NormalResultS<'a>),
 }
 /*
 // MIGALLOW: Rust IScoutResult doesn't need to be generic, because we never made use of that in
@@ -56,7 +58,7 @@ sealed trait IScoutResult[+T <: IExpressionSE]
 */
 #[derive(Clone, Debug, PartialEq)]
 struct LocalLookupResultS<'a> {
-  range: RangeS,
+  range: RangeS<'a>,
   name: IVarNameS<'a>,
 }
 /*
@@ -67,9 +69,9 @@ case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResul
 */
 #[derive(Clone, Debug, PartialEq)]
 struct OutsideLookupResultS<'a> {
-  range: RangeS,
+  range: RangeS<'a>,
   name: &'a StrI,
-  template_args: Option<Vec<ITemplexPT>>,
+  template_args: Option<Vec<ITemplexPT<'a>>>,
 }
 /*
 // Looks up something that's not a local.
@@ -84,8 +86,8 @@ case class OutsideLookupResult(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-struct NormalResultS {
-  expr: IExpressionSE,
+struct NormalResultS<'a> {
+  expr: IExpressionSE<'a>,
 }
 
 /*
@@ -273,11 +275,11 @@ impl ExpressionScout {
     (blockSE, selfUsesOfThingsFromAbove, childUsesOfThingsFromAbove)
   }
 */
-fn find_local(
-  stack_frame: &StackFrame,
-  range: RangeS,
-  imprecise_name: &IImpreciseNameS,
-) -> Option<LocalLookupResultS> {
+fn find_local<'b>(
+  stack_frame: &StackFrame<'b>,
+  range: RangeS<'b>,
+  imprecise_name: &IImpreciseNameS<'b>,
+) -> Option<LocalLookupResultS<'b>> {
   stack_frame
     .find_variable(imprecise_name)
     .map(|full_name| LocalLookupResultS { range, name: full_name })
@@ -300,12 +302,12 @@ fn find_local(
 // - variable uses by self
 // - variable uses by child blocks
 // MIGTODO: rename all "scout" to "post parse" or something.
-fn scout_expression(
-  interner: &Interner<'a>,
-  stack_frame: StackFrame,
+fn scout_expression<'b>(
+  interner: &'b Interner<'b>,
+  stack_frame: StackFrame<'b>,
   lidb: &mut LocationInDenizenBuilder,
-  expression: &IExpressionPE,
-) -> Result<(StackFrame, IScoutResult, VariableUses, VariableUses), ICompileErrorS> {
+  expression: &IExpressionPE<'b>,
+) -> Result<(StackFrame<'b>, IScoutResult<'b>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
 /*
   // Returns:
   // - new seq num
@@ -1354,13 +1356,13 @@ fn scout_expression(
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-  pub(crate) fn scout_expression_and_coerce(
-    interner: &Interner<'a>,
-    stack_frame: StackFrame,
+  pub(crate) fn scout_expression_and_coerce<'b>(
+    interner: &'b Interner<'b>,
+    stack_frame: StackFrame<'b>,
     lidb: &mut LocationInDenizenBuilder,
-    expression_p: &IExpressionPE,
+    expression_p: &IExpressionPE<'b>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame, IExpressionSE, VariableUses, VariableUses), ICompileErrorS> {
+  ) -> Result<(StackFrame<'b>, IExpressionSE<'b>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = Self::scout_expression(
       interner,
@@ -1454,12 +1456,12 @@ fn scout_expression(
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-  fn scout_elements_as_expressions(
-    interner: &Interner<'a>,
-    initial_stack_frame: StackFrame,
+  fn scout_elements_as_expressions<'b>(
+    interner: &'b Interner<'b>,
+    initial_stack_frame: StackFrame<'b>,
     lidb: &mut LocationInDenizenBuilder,
-    exprs_p: &[IExpressionPE],
-  ) -> Result<(StackFrame, Vec<IExpressionSE>, VariableUses, VariableUses), ICompileErrorS> {
+    exprs_p: &[IExpressionPE<'b>],
+  ) -> Result<(StackFrame<'b>, Vec<IExpressionSE<'b>>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();
     let mut exprs_s = Vec::new();

@@ -24,7 +24,11 @@ use crate::parsing::ast::*;
 use crate::parsing::tests::traverse::NodeRefP;
 use crate::parsing::tests::utils::*;
 
-fn compile(interner: &Interner<'_>, keywords: &Keywords<'_>, code: &str) -> IRulexPR {
+fn compile<'a>(
+  interner: &Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  code: &str,
+) -> IRulexPR<'a> {
   compile_rulex_expect(interner, keywords, code)
 }
 

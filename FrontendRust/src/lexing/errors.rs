@@ -2,9 +2,9 @@ use crate::utils::code_hierarchy::FileCoordinate;
 
 /// Failed parse with context
 #[derive(Clone, Debug)]
-pub struct FailedParse {
+pub struct FailedParse<'a> {
   pub code: String,
-  pub file_coord: FileCoordinate,
+  pub file_coord: FileCoordinate<'a>,
   pub error: ParseError,
 }
 

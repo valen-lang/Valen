@@ -11,31 +11,31 @@ import dev.vale.{StrI, vassert, vcurious, vpass}
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ITemplexPT {
+pub enum ITemplexPT<'a> {
   AnonymousRune(AnonymousRunePT),
   Bool(BoolPT),
-  Point(PointPT),
-  Call(CallPT),
-  Function(FunctionPT),
-  Inline(InlinePT),
+  Point(PointPT<'a>),
+  Call(CallPT<'a>),
+  Function(FunctionPT<'a>),
+  Inline(InlinePT<'a>),
   Int(IntPT),
-  RegionRune(RegionRunePT),
+  RegionRune(RegionRunePT<'a>),
   Location(LocationPT),
-  Tuple(TuplePT),
+  Tuple(TuplePT<'a>),
   Mutability(MutabilityPT),
-  NameOrRune(NameOrRunePT),
-  Interpreted(InterpretedPT),
+  NameOrRune(NameOrRunePT<'a>),
+  Interpreted(InterpretedPT<'a>),
   Ownership(OwnershipPT),
-  Pack(PackPT),
-  Func(FuncPT),
-  StaticSizedArray(StaticSizedArrayPT),
-  RuntimeSizedArray(RuntimeSizedArrayPT),
-  Share(SharePT),
+  Pack(PackPT<'a>),
+  Func(FuncPT<'a>),
+  StaticSizedArray(StaticSizedArrayPT<'a>),
+  RuntimeSizedArray(RuntimeSizedArrayPT<'a>),
+  Share(SharePT<'a>),
   String(StringPT),
-  TypedRune(TypedRunePT),
+  TypedRune(TypedRunePT<'a>),
   Variability(VariabilityPT),
 }
-impl ITemplexPT {
+impl ITemplexPT<'_> {
   pub fn range(&self) -> RangeL {
     match self {
       ITemplexPT::AnonymousRune(r) => r.range,
@@ -91,9 +91,9 @@ case class BoolPT(range: RangeL, value: Boolean) extends ITemplexPT { override d
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PointPT {
+pub struct PointPT<'a> {
   pub range: RangeL,
-  pub inner: Box<ITemplexPT>,
+  pub inner: Box<ITemplexPT<'a>>,
 }
 /*
 case class PointPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -102,21 +102,21 @@ case class PointPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { overri
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CallPT {
+pub struct CallPT<'a> {
   pub range: RangeL,
-  pub template: Box<ITemplexPT>,
-  pub args: Vec<ITemplexPT>,
+  pub template: Box<ITemplexPT<'a>>,
+  pub args: Vec<ITemplexPT<'a>>,
 }
 /*
 case class CallPT(range: RangeL, template: ITemplexPT, args: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionPT {
+pub struct FunctionPT<'a> {
   pub range: RangeL,
-  pub mutability: Option<Box<ITemplexPT>>,
-  pub parameters: Box<PackPT>,
-  pub return_type: Box<ITemplexPT>,
+  pub mutability: Option<Box<ITemplexPT<'a>>>,
+  pub parameters: Box<PackPT<'a>>,
+  pub return_type: Box<ITemplexPT<'a>>,
 }
 /*
 // Mutability is Optional because they can leave it out, and mut will be assumed.
@@ -124,9 +124,9 @@ case class FunctionPT(range: RangeL, mutability: Option[ITemplexPT], parameters:
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct InlinePT {
+pub struct InlinePT<'a> {
   pub range: RangeL,
-  pub inner: Box<ITemplexPT>,
+  pub inner: Box<ITemplexPT<'a>>,
 }
 /*
 case class InlinePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -151,9 +151,9 @@ case class LocationPT(range: RangeL, location: LocationP) extends ITemplexPT { o
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TuplePT {
+pub struct TuplePT<'a> {
   pub range: RangeL,
-  pub elements: Vec<ITemplexPT>,
+  pub elements: Vec<ITemplexPT<'a>>,
 }
 /*
 case class TuplePT(range: RangeL, elements: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -169,8 +169,8 @@ case class MutabilityPT(range: RangeL, mutability: MutabilityP) extends ITemplex
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct NameOrRunePT {
-  pub name: NameP,
+pub struct NameOrRunePT<'a> {
+  pub name: NameP<'a>,
 }
 /*
 case class NameOrRunePT(name: NameP) extends ITemplexPT {
@@ -181,11 +181,11 @@ case class NameOrRunePT(name: NameP) extends ITemplexPT {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct InterpretedPT {
+pub struct InterpretedPT<'a> {
   pub range: RangeL,
   pub maybe_ownership: Option<Box<OwnershipPT>>,
-  pub maybe_region: Option<Box<RegionRunePT>>,
-  pub inner: Box<ITemplexPT>,
+  pub maybe_region: Option<Box<RegionRunePT<'a>>>,
+  pub inner: Box<ITemplexPT<'a>>,
 }
 /*
 //case class NullablePT(range: Range, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -198,24 +198,24 @@ case class InterpretedPT(range: RangeL, maybeOwnership: Option[OwnershipPT], may
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FuncPT {
+pub struct FuncPT<'a> {
   pub range: RangeL,
-  pub name: NameP,
+  pub name: NameP<'a>,
   pub params_range: RangeL,
-  pub parameters: Vec<ITemplexPT>,
-  pub return_type: Box<ITemplexPT>,
+  pub parameters: Vec<ITemplexPT<'a>>,
+  pub return_type: Box<ITemplexPT<'a>>,
 }
 /*
 case class FuncPT(range: RangeL, name: NameP, paramsRange: RangeL, parameters: Vector[ITemplexPT], returnType: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StaticSizedArrayPT {
+pub struct StaticSizedArrayPT<'a> {
   pub range: RangeL,
-  pub mutability: Box<ITemplexPT>,
-  pub variability: Box<ITemplexPT>,
-  pub size: Box<ITemplexPT>,
-  pub element: Box<ITemplexPT>,
+  pub mutability: Box<ITemplexPT<'a>>,
+  pub variability: Box<ITemplexPT<'a>>,
+  pub size: Box<ITemplexPT<'a>>,
+  pub element: Box<ITemplexPT<'a>>,
 }
 /*
 case class StaticSizedArrayPT(
@@ -228,10 +228,10 @@ case class StaticSizedArrayPT(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RuntimeSizedArrayPT {
+pub struct RuntimeSizedArrayPT<'a> {
   pub range: RangeL,
-  pub mutability: Box<ITemplexPT>,
-  pub element: Box<ITemplexPT>,
+  pub mutability: Box<ITemplexPT<'a>>,
+  pub element: Box<ITemplexPT<'a>>,
 }
 /*
 case class RuntimeSizedArrayPT(
@@ -242,9 +242,9 @@ case class RuntimeSizedArrayPT(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct SharePT {
+pub struct SharePT<'a> {
   pub range: RangeL,
-  pub inner: Box<ITemplexPT>,
+  pub inner: Box<ITemplexPT<'a>>,
 }
 /*
 case class SharePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -260,9 +260,9 @@ case class StringPT(range: RangeL, str: String) extends ITemplexPT { override de
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypedRunePT {
+pub struct TypedRunePT<'a> {
   pub range: RangeL,
-  pub rune: NameP,
+  pub rune: NameP<'a>,
   pub tyype: ITypePR,
 }
 /*
@@ -279,9 +279,9 @@ case class VariabilityPT(range: RangeL, variability: VariabilityP) extends ITemp
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RegionRunePT {
+pub struct RegionRunePT<'a> {
   pub range: RangeL,
-  pub name: Option<NameP>,
+  pub name: Option<NameP<'a>>,
 }
 /*
 case class RegionRunePT(range: RangeL, name: Option[NameP]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -297,9 +297,9 @@ case class OwnershipPT(range: RangeL, ownership: OwnershipP) extends ITemplexPT 
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackPT {
+pub struct PackPT<'a> {
   pub range: RangeL,
-  pub members: Vec<ITemplexPT>,
+  pub members: Vec<ITemplexPT<'a>>,
 }
 /*
 case class PackPT(range: RangeL, members: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }

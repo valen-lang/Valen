@@ -54,35 +54,35 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::names::IVarNameS;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VariableUseS {
-  pub name: IVarNameS,
+pub struct VariableUseS<'a> {
+  pub name: IVarNameS<'a>,
   pub borrowed: Option<IVariableUseCertainty>,
   pub moved: Option<IVariableUseCertainty>,
   pub mutated: Option<IVariableUseCertainty>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VariableDeclarationS {
-  pub name: IVarNameS,
+pub struct VariableDeclarationS<'a> {
+  pub name: IVarNameS<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct VariableDeclarations {
-  pub vars: Vec<VariableDeclarationS>,
+pub struct VariableDeclarations<'a> {
+  pub vars: Vec<VariableDeclarationS<'a>>,
 }
 
-impl VariableDeclarations {
-  pub fn empty() -> Self {
-    Self { vars: Vec::new() }
+impl<'a> VariableDeclarations<'a> {
+  pub fn empty<'b>() -> VariableDeclarations<'b> {
+    VariableDeclarations { vars: Vec::new() }
   }
 
-  pub fn plus_plus(&self, that: &VariableDeclarations) -> VariableDeclarations {
+  pub fn plus_plus(&self, that: &VariableDeclarations<'a>) -> VariableDeclarations<'a> {
     let mut vars = self.vars.clone();
     vars.extend(that.vars.clone());
     VariableDeclarations { vars }
   }
 
-  pub fn find(&self, needle: &IImpreciseNameS) -> Option<IVarNameS> {
+  pub fn find(&self, needle: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>> {
     match needle {
       IImpreciseNameS::CodeName(needle_name) => self.vars.iter().find_map(|decl| match &decl.name {
         IVarNameS::CodeVarName(haystack_name) if *haystack_name == needle_name.name => {
@@ -100,11 +100,11 @@ impl VariableDeclarations {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct VariableUses {
-  pub uses: Vec<VariableUseS>,
+pub struct VariableUses<'a> {
+  pub uses: Vec<VariableUseS<'a>>,
 }
 
-impl VariableUses {
+impl<'a> VariableUses<'a> {
 /*
 case class VariableUses(uses: Vector[VariableUse]) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
@@ -112,15 +112,18 @@ case class VariableUses(uses: Vector[VariableUse]) {
   vassert(uses.map(_.name).distinct == uses.map(_.name))
 */
 
-  pub fn empty() -> Self {
-    Self { uses: Vec::new() }
+  pub fn empty<'b>() -> VariableUses<'b> {
+    VariableUses { uses: Vec::new() }
   }
 
-  pub fn all_used_names(&self) -> Vec<IVarNameS> {
+  pub fn all_used_names(&self) -> Vec<IVarNameS<'_>> {
     self.uses.iter().map(|use_| use_.name.clone()).collect()
   }
 
-  pub fn mark_borrowed(&self, name: IVarNameS) -> VariableUses {
+  pub fn mark_borrowed<'b>(&self, name: IVarNameS<'b>) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     self.merge_new_use(VariableUseS {
       name,
       borrowed: Some(IVariableUseCertainty::Used),
@@ -129,7 +132,10 @@ case class VariableUses(uses: Vector[VariableUse]) {
     }, Self::then_merge_certainty)
   }
 
-  pub fn mark_moved(&self, name: IVarNameS) -> VariableUses {
+  pub fn mark_moved<'b>(&self, name: IVarNameS<'b>) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     self.merge_new_use(VariableUseS {
       name,
       borrowed: None,
@@ -138,7 +144,10 @@ case class VariableUses(uses: Vector[VariableUse]) {
     }, Self::then_merge_certainty)
   }
 
-  pub fn mark_mutated(&self, name: IVarNameS) -> VariableUses {
+  pub fn mark_mutated<'b>(&self, name: IVarNameS<'b>) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     self.merge_new_use(VariableUseS {
       name,
       borrowed: None,
@@ -147,15 +156,21 @@ case class VariableUses(uses: Vector[VariableUse]) {
     }, Self::then_merge_certainty)
   }
 
-  pub fn then_merge(&self, new_uses: &VariableUses) -> VariableUses {
+  pub fn then_merge<'b>(&self, new_uses: &VariableUses<'b>) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     self.combine(new_uses, Self::then_merge_certainty)
   }
 
-  pub fn branch_merge(&self, new_uses: &VariableUses) -> VariableUses {
+  pub fn branch_merge<'b>(&self, new_uses: &VariableUses<'b>) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     self.combine(new_uses, Self::branch_merge_certainty)
   }
 
-  pub fn is_borrowed(&self, name: &IVarNameS) -> IVariableUseCertainty {
+  pub fn is_borrowed(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -164,7 +179,7 @@ case class VariableUses(uses: Vector[VariableUse]) {
       .unwrap_or(IVariableUseCertainty::NotUsed)
   }
 
-  pub fn is_moved(&self, name: &IVarNameS) -> IVariableUseCertainty {
+  pub fn is_moved(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -173,7 +188,7 @@ case class VariableUses(uses: Vector[VariableUse]) {
       .unwrap_or(IVariableUseCertainty::NotUsed)
   }
 
-  pub fn is_mutated(&self, name: &IVarNameS) -> IVariableUseCertainty {
+  pub fn is_mutated(&self, name: &IVarNameS<'_>) -> IVariableUseCertainty {
     self
       .uses
       .iter()
@@ -182,15 +197,18 @@ case class VariableUses(uses: Vector[VariableUse]) {
       .unwrap_or(IVariableUseCertainty::NotUsed)
   }
 
-  fn combine(
+  fn combine<'b>(
     &self,
-    that: &VariableUses,
+    that: &VariableUses<'b>,
     certainty_merger: fn(
       Option<IVariableUseCertainty>,
       Option<IVariableUseCertainty>,
     ) -> Option<IVariableUseCertainty>,
-  ) -> VariableUses {
-    let mut names: Vec<IVarNameS> = self.uses.iter().map(|use_| use_.name.clone()).collect();
+  ) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
+    let mut names: Vec<IVarNameS<'_>> = self.uses.iter().map(|use_| use_.name.clone()).collect();
     for name in that.uses.iter().map(|use_| use_.name.clone()) {
       if !names.contains(&name) {
         names.push(name);
@@ -224,14 +242,17 @@ case class VariableUses(uses: Vector[VariableUse]) {
     VariableUses { uses: merged_uses }
   }
 
-  fn merge_new_use(
+  fn merge_new_use<'b>(
     &self,
-    new_use: VariableUseS,
+    new_use: VariableUseS<'b>,
     certainty_merger: fn(
       Option<IVariableUseCertainty>,
       Option<IVariableUseCertainty>,
     ) -> Option<IVariableUseCertainty>,
-  ) -> VariableUses {
+  ) -> VariableUses<'b>
+  where
+    'a: 'b,
+  {
     match self.uses.iter().find(|use_| use_.name == new_use.name) {
       None => {
         let mut uses = self.uses.clone();
@@ -239,7 +260,7 @@ case class VariableUses(uses: Vector[VariableUse]) {
         VariableUses { uses }
       }
       Some(existing_use) => {
-        let mut uses: Vec<VariableUseS> = self
+        let mut uses: Vec<VariableUseS<'_>> = self
           .uses
           .iter()
           .filter(|use_| use_.name != existing_use.name)
@@ -251,14 +272,14 @@ case class VariableUses(uses: Vector[VariableUse]) {
     }
   }
 
-  fn merge_uses(
-    existing_use: &VariableUseS,
-    new_use: &VariableUseS,
+  fn merge_uses<'b>(
+    existing_use: &VariableUseS<'b>,
+    new_use: &VariableUseS<'b>,
     certainty_merger: fn(
       Option<IVariableUseCertainty>,
       Option<IVariableUseCertainty>,
     ) -> Option<IVariableUseCertainty>,
-  ) -> VariableUseS {
+  ) -> VariableUseS<'b> {
     VariableUseS {
       name: new_use.name.clone(),
       borrowed: certainty_merger(existing_use.borrowed, new_use.borrowed),

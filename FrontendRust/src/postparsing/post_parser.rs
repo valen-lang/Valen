@@ -27,7 +27,7 @@ use crate::postparsing::names::{
 use crate::postparsing::rules::rules::{
   ILiteralSL, IRulexSR, LiteralSR, MaybeCoercingLookupSR, MutabilityLiteralSL, RuneUsage,
 };
-use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
+use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -39,7 +39,7 @@ pub struct ScoutCompilation<'a> {
   #[allow(dead_code)]
   global_options: GlobalOptions,
   #[allow(dead_code)]
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   #[allow(dead_code)]
   keywords: &'a Keywords<'a>,
   parser_compilation: ParserCompilation<'a, 'a>,
@@ -50,10 +50,10 @@ pub struct ScoutCompilation<'a> {
 impl<'a> ScoutCompilation<'a> {
   // From PostParser.scala lines 922-928
   pub fn new(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: Box<dyn IPackageResolver<'a, HashMap<String, String>> + 'a>,
+    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
@@ -74,17 +74,17 @@ impl<'a> ScoutCompilation<'a> {
   }
 
   // From PostParser.scala line 931: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.parser_compilation.get_code_map()
   }
 
   // From PostParser.scala line 932: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<(FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
     self.parser_compilation.get_parseds()
   }
 
   // From PostParser.scala line 933: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
     self.parser_compilation.get_vpst_map()
   }
 }
@@ -115,19 +115,19 @@ import scala.collection.mutable.ArrayBuffer
 case class CompileErrorExceptionS(err: ICompileErrorS) extends RuntimeException { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CompileErrorExceptionS {
-  pub err: ICompileErrorS,
+pub struct CompileErrorExceptionS<'a> {
+  pub err: ICompileErrorS<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ICompileErrorS {
-  CouldntFindVarToMutateS(CouldntFindVarToMutateS),
-  CouldntFindRuneS(CouldntFindRuneS),
-  RangedInternalErrorS(RangedInternalErrorS),
+pub enum ICompileErrorS<'a> {
+  CouldntFindVarToMutateS(CouldntFindVarToMutateS<'a>),
+  CouldntFindRuneS(CouldntFindRuneS<'a>),
+  RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
 
-impl ICompileErrorS {
-  pub fn range(&self) -> &RangeS {
+impl ICompileErrorS<'_> {
+  pub fn range(&self) -> &RangeS<'_> {
     match self {
       ICompileErrorS::CouldntFindVarToMutateS(x) => &x.range,
       ICompileErrorS::CouldntFindRuneS(x) => &x.range,
@@ -137,20 +137,20 @@ impl ICompileErrorS {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CouldntFindVarToMutateS {
-  pub range: RangeS,
+pub struct CouldntFindVarToMutateS<'a> {
+  pub range: RangeS<'a>,
   pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CouldntFindRuneS {
-  pub range: RangeS,
+pub struct CouldntFindRuneS<'a> {
+  pub range: RangeS<'a>,
   pub name: String,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RangedInternalErrorS {
-  pub range: RangeS,
+pub struct RangedInternalErrorS<'a> {
+  pub range: RangeS<'a>,
   pub message: String,
 }
 
@@ -245,19 +245,19 @@ case class FunctionEnvironmentS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct EnvironmentS {
+pub struct EnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
-  pub parent_env: Option<Box<EnvironmentS>>,
-  pub name: INameS,
-  pub user_declared_runes: Vec<IRuneS>,
+  pub parent_env: Option<Box<EnvironmentS<'a>>>,
+  pub name: INameS<'a>,
+  pub user_declared_runes: Vec<IRuneS<'a>>,
 }
 
-impl EnvironmentS {
-  pub fn local_declared_runes(&self) -> Vec<IRuneS> {
+impl<'a> EnvironmentS<'a> {
+  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
     self.user_declared_runes.clone()
   }
 
-  pub fn all_declared_runes(&self) -> Vec<IRuneS> {
+  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
     let mut runes = self.user_declared_runes.clone();
     if let Some(parent_env) = &self.parent_env {
       for rune in parent_env.all_declared_runes() {
@@ -271,13 +271,13 @@ impl EnvironmentS {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IEnvironmentS {
-  Environment(EnvironmentS),
-  FunctionEnvironment(FunctionEnvironmentS),
+pub enum IEnvironmentS<'a> {
+  Environment(EnvironmentS<'a>),
+  FunctionEnvironment(FunctionEnvironmentS<'a>),
 }
 
-impl IEnvironmentS {
-  pub fn all_declared_runes(&self) -> Vec<IRuneS> {
+impl IEnvironmentS<'_> {
+  pub fn all_declared_runes(&self) -> Vec<IRuneS<'_>> {
     match self {
       IEnvironmentS::Environment(environment) => environment.all_declared_runes(),
       IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.all_declared_runes(),
@@ -286,21 +286,21 @@ impl IEnvironmentS {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionEnvironmentS {
+pub struct FunctionEnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS,
-  pub parent_env: Option<Box<IEnvironmentS>>,
-  pub declared_runes: Vec<IRuneS>,
+  pub name: IFunctionDeclarationNameS<'a>,
+  pub parent_env: Option<Box<IEnvironmentS<'a>>>,
+  pub declared_runes: Vec<IRuneS<'a>>,
   pub num_explicit_params: i32,
   pub is_interface_internal_method: bool,
 }
 
-impl FunctionEnvironmentS {
-  pub fn local_declared_runes(&self) -> Vec<IRuneS> {
+impl FunctionEnvironmentS<'_> {
+  pub fn local_declared_runes(&self) -> Vec<IRuneS<'_>> {
     self.declared_runes.clone()
   }
 
-  pub fn all_declared_runes(&self) -> Vec<IRuneS> {
+  pub fn all_declared_runes(&self) -> Vec<IRuneS<'_>> {
     let mut runes = self.declared_runes.clone();
     if let Some(parent_env) = &self.parent_env {
       for rune in parent_env.all_declared_runes() {
@@ -312,7 +312,7 @@ impl FunctionEnvironmentS {
     runes
   }
 
-  pub fn child(&self) -> FunctionEnvironmentS {
+  pub fn child(&self) -> FunctionEnvironmentS<'_> {
     FunctionEnvironmentS {
       file: self.file,
       name: self.name.clone(),
@@ -325,18 +325,18 @@ impl FunctionEnvironmentS {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StackFrame {
+pub struct StackFrame<'a> {
   pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS,
-  pub parent_env: FunctionEnvironmentS,
+  pub name: IFunctionDeclarationNameS<'a>,
+  pub parent_env: FunctionEnvironmentS<'a>,
   pub maybe_parent: Option<&'a StackFrame<'a>>,
-  pub context_region: IRuneS,
+  pub context_region: IRuneS<'a>,
   pub pure_height: i32,
-  pub locals: VariableDeclarations,
+  pub locals: VariableDeclarations<'a>,
 }
 
-impl StackFrame {
-  pub fn plus(&self, new_vars: &VariableDeclarations) -> StackFrame {
+impl StackFrame<'_> {
+  pub fn plus(&self, new_vars: &VariableDeclarations<'_>) -> StackFrame<'_> {
     StackFrame {
       file: self.file,
       name: self.name.clone(),
@@ -348,14 +348,14 @@ impl StackFrame {
     }
   }
 
-  pub fn all_declarations(&self) -> VariableDeclarations {
+  pub fn all_declarations(&self) -> VariableDeclarations<'_> {
     match &self.maybe_parent {
       Some(parent) => self.locals.plus_plus(&parent.all_declarations()),
       None => self.locals.plus_plus(&PostParser::no_declarations()),
     }
   }
 
-  pub fn find_variable(&self, name: &IImpreciseNameS) -> Option<IVarNameS> {
+  pub fn find_variable(&self, name: &IImpreciseNameS<'_>) -> Option<IVarNameS<'_>> {
     match self.locals.find(name) {
       Some(full_name_s) => Some(full_name_s),
       None => match &self.maybe_parent {
@@ -404,16 +404,16 @@ object PostParser {
   def noVariableUses = VariableUses(Vector.empty)
   def noDeclarations = VariableDeclarations(Vector.empty)
 */
-impl PostParser {
-  pub fn no_variable_uses() -> VariableUses {
+impl<'a> PostParser<'a> {
+  pub fn no_variable_uses<'b>() -> VariableUses<'b> {
     VariableUses::empty()
   }
 
-  pub fn no_declarations() -> VariableDeclarations {
-    VariableDeclarations { vars: Vec::<VariableDeclarationS>::new() }
+  pub fn no_declarations<'b>() -> VariableDeclarations<'b> {
+    VariableDeclarations { vars: Vec::new() }
   }
 
-  pub fn eval_range(file: &FileCoordinate<'a>, range: RangeL) -> RangeS {
+  pub fn eval_range(file: &FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
     RangeS {
       begin: Self::eval_pos(file, range.begin),
       end: Self::eval_pos(file, range.end),
@@ -426,8 +426,8 @@ impl PostParser {
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
 */
-impl PostParser {
-  pub fn eval_pos(file: &FileCoordinate<'a>, pos: i32) -> CodeLocationS {
+impl<'a> PostParser<'a> {
+  pub fn eval_pos(file: &FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
     CodeLocationS {
       file: Arc::new(file.clone()),
       offset: pos,
@@ -522,8 +522,8 @@ impl PostParser {
 //    }
 //  }
 */
-impl PostParser {
-  pub fn consecutive(exprs: Vec<IExpressionSE>) -> IExpressionSE {
+impl<'a> PostParser<'a> {
+  pub fn consecutive(exprs: Vec<IExpressionSE<'a>>) -> IExpressionSE<'a> {
     assert!(!exprs.is_empty(), "POSTPARSER_CONSECUTIVE_EMPTY");
     if exprs.len() == 1 {
       return exprs.into_iter().next().unwrap();
@@ -684,16 +684,16 @@ impl PostParser {
 /*
 }
 */
-pub struct PostParser {
+pub struct PostParser<'a> {
   pub global_options: GlobalOptions,
-  pub interner: &'a Interner<'a>,
+  pub interner: &Interner<'a>,
   pub keywords: &'a Keywords<'a>,
 }
 
-impl PostParser {
+impl<'a> PostParser<'a> {
   pub fn new(
     global_options: GlobalOptions,
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
   ) -> Self {
     Self {
@@ -1352,11 +1352,14 @@ class PostParser(
     }
   }
 */
-  fn scout_interface(
+  fn scout_interface<'b>(
     &self,
-    file: &FileCoordinate<'a>,
-    interface: &crate::parsing::ast::InterfaceP,
-  ) -> Result<InterfaceS, ICompileErrorS> {
+    file: &'b FileCoordinate<'a>,
+    interface: &crate::parsing::ast::InterfaceP<'b>,
+  ) -> Result<InterfaceS<'b>, ICompileErrorS<'b>>
+  where
+    'a: 'b,
+  {
     let interface_range = Self::eval_range(file, interface.range);
     let _interface_body_range = Self::eval_range(file, interface.body_range);
     let interface_name = TopLevelInterfaceDeclarationNameS {
@@ -1638,7 +1641,7 @@ class ScoutCompilation(
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
 */
-impl ScoutCompilation {
+impl ScoutCompilation<'_> {
   // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<(), String> {
     if self.scoutput_cache.is_some() {

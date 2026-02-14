@@ -28,7 +28,7 @@ pub struct InstantiatedCompilation<'a> {
 impl<'a> InstantiatedCompilation<'a> {
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,

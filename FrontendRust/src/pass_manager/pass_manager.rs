@@ -266,7 +266,7 @@ pub enum IFrontendInput<'a> {
   },
 }
 impl<'a> IFrontendInput<'a> {
-  pub fn package_coord(&self, interner: &'a Interner<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn package_coord(&self, interner: &Interner<'a>) -> &'a PackageCoordinate<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
@@ -303,7 +303,7 @@ impl<'a> IFrontendInput<'a> {
 */
 
 // From PassManager.scala lines 356-366: buildAndOutput
-fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, opts: &Options<'a>) {
+fn build_and_output<'a>(interner: &Interner<'a>, keywords: &'a Keywords<'a>, opts: &Options<'a>) {
   match build(interner, keywords, opts) {
     Ok(_) => {
       // Success
@@ -331,7 +331,7 @@ fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, 
 
 // From PassManager.scala lines 203-342: build function
 pub fn build<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   keywords: &'a Keywords<'a>,
   opts: &Options<'a>,
 ) -> Result<(), String> {
@@ -374,7 +374,7 @@ pub fn build<'a>(
   // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
   let all_inputs_clone = all_inputs.clone();
   let resolver = builtins_code_map.or(move |package_coord: &Arc<PackageCoordinate<'a>>| {
-    resolve_package_contents(interner, &all_inputs_clone, package_coord.as_ref())
+    resolve_package_contents(interner, &all_inputs_clone, &**package_coord)
   });
 
   // From PassManager.scala lines 238-253: Create FullCompilationOptions
@@ -398,7 +398,7 @@ pub fn build<'a>(
     interner,
     keywords,
     packages_to_build,
-    Arc::new(resolver),
+    &resolver,
     options,
   );
 
@@ -642,12 +642,12 @@ pub struct Options<'a> {
 */
 
 // From PassManager.scala lines 71-150: parseOpts
-pub fn parse_opts<'a>(interner: &'a Interner<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
+pub fn parse_opts<'a>(interner: &Interner<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
   parse_opts_recursive(interner, opts, &list, 0)
 }
 
 fn parse_opts_recursive<'a>(
-  interner: &'a Interner<'a>,
+  interner: &Interner<'a>,
   mut opts: Options<'a>,
   list: &[String],
   index: usize,

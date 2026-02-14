@@ -57,7 +57,7 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 // to fail just because the builtin-yet-unused `func as<T, X>(x X) Opt<T> { ... }` doesn't want to
 // work right now.
 pub fn get_modulized_code_map<'a>(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
@@ -96,7 +96,7 @@ pub fn get_modulized_code_map<'a>(
 // Add an empty v.builtins.whatever so that the aforementioned imports still work.
 // But load the actual files all inside the root package.
 pub fn get_code_map<'a>(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {

@@ -9,97 +9,65 @@ import dev.vale.vcurious
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexPR {
-  Equals(EqualsPR),
-  /*
-  case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
-  Or(OrPR),
-  /*
-  case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
-  Dot(DotPR),
-  /*
-  case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
-  Components(ComponentsPR),
-  /*
-  case class ComponentsPR(
-    range: RangeL,
-    container: ITypePR,
-    components: Vector[IRulexPR]
-  ) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-   */
-  Typed(TypedPR),
-  /*
-  case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
-  Templex(ITemplexPT),
-  /*
-  case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
-    def range = templex.range
-  }
-  */
-  BuiltinCall(BuiltinCallPR),
-  /*
-  // This is for built-in parser functions, such as exists() or isBaseOf() etc.
-  case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
-  Pack(PackPR),
-  /*
-  //case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  */
+pub enum IRulexPR<'a> {
+  Equals(EqualsPR<'a>),
+  Or(OrPR<'a>),
+  Dot(DotPR<'a>),
+  Components(ComponentsPR<'a>),
+  Typed(TypedPR<'a>),
+  Templex(ITemplexPT<'a>),
+  BuiltinCall(BuiltinCallPR<'a>),
+  Pack(PackPR<'a>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct EqualsPR {
+pub struct EqualsPR<'a> {
   pub range: RangeL,
-  pub left: Box<IRulexPR>,
-  pub right: Box<IRulexPR>,
+  pub left: Box<IRulexPR<'a>>,
+  pub right: Box<IRulexPR<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrPR {
+pub struct OrPR<'a> {
   pub range: RangeL,
-  pub possibilities: Vec<IRulexPR>,
+  pub possibilities: Vec<IRulexPR<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DotPR {
+pub struct DotPR<'a> {
   pub range: RangeL,
-  pub container: Box<IRulexPR>,
-  pub member_name: NameP,
+  pub container: Box<IRulexPR<'a>>,
+  pub member_name: NameP<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ComponentsPR {
+pub struct ComponentsPR<'a> {
   pub range: RangeL,
   pub container: ITypePR,
-  pub components: Vec<IRulexPR>,
+  pub components: Vec<IRulexPR<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypedPR {
+pub struct TypedPR<'a> {
   pub range: RangeL,
-  pub rune: Option<NameP>,
+  pub rune: Option<NameP<'a>>,
   pub tyype: ITypePR,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinCallPR {
+pub struct BuiltinCallPR<'a> {
   pub range: RangeL,
-  pub name: NameP,
-  pub args: Vec<IRulexPR>,
+  pub name: NameP<'a>,
+  pub args: Vec<IRulexPR<'a>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackPR {
+pub struct PackPR<'a> {
   pub range: RangeL,
-  pub elements: Vec<IRulexPR>,
+  pub elements: Vec<IRulexPR<'a>>,
 }
 
-impl IRulexPR {
+impl IRulexPR<'_> {
   pub fn range(&self) -> RangeL {
     match self {
       IRulexPR::Equals(inner) => inner.range,

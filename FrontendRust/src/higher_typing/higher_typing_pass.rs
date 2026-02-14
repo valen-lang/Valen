@@ -8,7 +8,6 @@ use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-use std::sync::Arc;
 
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
 pub struct HigherTypingCompilation<'a> {
@@ -20,7 +19,7 @@ pub struct HigherTypingCompilation<'a> {
 impl<'a> HigherTypingCompilation<'a> {
   // From HigherTypingPass.scala lines 793-799
   pub fn new(
-    interner: &'a Interner<'a>,
+    interner: &Interner<'a>,
     keywords: &'a Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,

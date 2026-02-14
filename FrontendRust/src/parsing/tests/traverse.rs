@@ -4,6 +4,8 @@
 // might need to consider extra code at the pattern site whenever we add a new field to the struct.
 
 use crate::lexing::RangeL;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::compile;
 
@@ -1237,7 +1239,9 @@ macro_rules! collect_where {
 }
 #[test]
 fn test_collect_where_finds_function_by_name() {
-  let program = compile("exported func main() int {}");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "exported func main() int {}");
   assert!(!collect_where!(
       &program,
       NodeRefP::Function(FunctionP {

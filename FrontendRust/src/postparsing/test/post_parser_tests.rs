@@ -34,9 +34,11 @@ import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
-fn compile(code: &str) -> ProgramS {
-  let interner = Interner::new();
-  let keywords = Keywords::new(&interner);
+fn compile<'a>(
+  interner: &Interner<'a>,
+  keywords: &'a Keywords<'a>,
+  code: &str,
+) -> ProgramS<'a> {
   let options = GlobalOptions {
     sanity_check: true,
     use_overload_index: true,
@@ -45,8 +47,8 @@ fn compile(code: &str) -> ProgramS {
     debug_output: false,
   };
 
-  let only_file = compile_file(&interner, &keywords, code).unwrap();
-  let post_parser = PostParser::new(options, &interner, &keywords);
+  let only_file = compile_file(interner, keywords, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords);
   post_parser
     .scout_program(only_file.file_coord.as_ref(), &only_file)
     .unwrap()
@@ -131,7 +133,9 @@ fn compile(code: &str) -> ProgramS {
 */
 #[test]
 fn test_struct() {
-  let program = compile("struct Moo { x int; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
   crate::collect_only_sstruct!(
@@ -179,7 +183,9 @@ fn test_struct() {
 */
 #[test]
 fn linear_struct() {
-  let program = compile("linear struct Moo { x int; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
   crate::collect_only_sstruct!(
     moo_struct,
@@ -224,7 +230,9 @@ fn linear_struct() {
 */
 #[test]
 fn interface() {
-  let program = compile("interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
+  let program = compile(&interner, &keywords, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
@@ -436,7 +444,11 @@ fn interface() {
 */
 #[test]
 fn test_loading_from_member() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     "func MyStruct() {
       return moo.x;
     }",
@@ -483,7 +495,11 @@ fn test_loading_from_member() {
 */
 #[test]
 fn test_loading_from_member_2() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     "func MyStruct() {
       return &moo.x;
     }",
@@ -535,7 +551,11 @@ fn test_loading_from_member_2() {
 */
 #[test]
 fn constructing_members_borrowing_another_member() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     "func MyStruct() {
       self.x = 4;
       self.y = &self.x;
@@ -730,7 +750,11 @@ fn constructing_members_borrowing_another_member() {
 */
 #[test]
 fn this_isnt_special_if_was_explicit_param() {
+  let interner = Interner::new();
+  let keywords = Keywords::new(&interner);
   let program = compile(
+    &interner,
+    &keywords,
     "func moo(self &MyStruct) {
       println(self.x);
     }",

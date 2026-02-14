@@ -167,7 +167,7 @@ pub struct Keywords<'a> {
 }
 
 impl<'a> Keywords<'a> {
-  pub fn new(interner: &'a Interner<'a>) -> Self {
+  pub fn new(interner: &Interner<'a>) -> Self {
     Keywords {
       func: interner.intern("func"),
       impoort: interner.intern("import"),

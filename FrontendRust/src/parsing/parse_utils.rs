@@ -14,16 +14,16 @@ object ParseUtils {
 
 /// Helper method to skip past an equals sign while a condition is true
 /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
-pub fn try_skip_past_equals_while<F>(
-  iter: &mut ScrambleIterator,
+pub fn try_skip_past_equals_while<'a, F>(
+  iter: &'a mut ScrambleIterator<'a>,
   continue_while: F,
-) -> Option<ScrambleIterator>
+) -> Option<ScrambleIterator<'a>>
 where
-  F: Fn(&ScrambleIterator) -> bool,
+  F: Fn(&ScrambleIterator<'a>) -> bool,
 {
   let mut scouting_iter = iter.clone();
   while continue_while(&scouting_iter) {
-    match scouting_iter.peek3() {
+    match scouting_iter.peek3_cloned() {
       (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
         let surrounded_by_spaces = prev.range().end < range.begin && range.end < next.range().begin;
         if surrounded_by_spaces {
@@ -84,13 +84,13 @@ where
 
 /// Try to skip past a keyword, returning the portion before it
 /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
-pub fn try_skip_past_keyword_while<F>(
-  iter: &mut ScrambleIterator,
-  keyword: &crate::interner::StrI,
+pub fn try_skip_past_keyword_while<'a, F>(
+  iter: &'a mut ScrambleIterator<'a>,
+  keyword: &'a crate::interner::StrI,
   continue_while: F,
-) -> Option<(WordLE, ScrambleIterator)>
+) -> Option<(WordLE<'a>, ScrambleIterator<'a>)>
 where
-  F: Fn(&ScrambleIterator) -> bool,
+  F: Fn(&ScrambleIterator<'a>) -> bool,
 {
   // Mirrors ParseUtils.scala line 82
   let mut scouting_iter = iter.clone();
@@ -98,8 +98,8 @@ where
   // Mirrors ParseUtils.scala line 83
   while continue_while(&scouting_iter) {
     // Mirrors ParseUtils.scala lines 84-98
-    match scouting_iter.peek() {
-      Some(INodeLEEnum::Word(w)) if w.str.as_ref() == keyword => {
+    match scouting_iter.peek_cloned() {
+      Some(INodeLEEnum::Word(w)) if w.str == keyword => {
         // Mirrors ParseUtils.scala lines 86-88
         // We'll return this iterator for the things that come before the keyword
         let mut before_iter = iter.clone();

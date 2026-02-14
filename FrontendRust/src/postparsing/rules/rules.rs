@@ -19,9 +19,9 @@ use crate::parsing::ast::{LocationP, MutabilityP, OwnershipP, VariabilityP};
 use crate::utils::range::RangeS;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RuneUsage {
-  pub range: RangeS,
-  pub rune: IRuneS,
+pub struct RuneUsage<'a> {
+  pub range: RangeS<'a>,
+  pub rune: IRuneS<'a>,
 }
 
 /*
@@ -30,19 +30,19 @@ case class RuneUsage(range: RangeS, rune: IRuneS) {
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PlaceholderRuleSR {
-  pub range: RangeS,
+pub struct PlaceholderRuleSR<'a> {
+  pub range: RangeS<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexSR {
-  Placeholder(PlaceholderRuleSR),
-  Literal(LiteralSR),
-  MaybeCoercingLookup(MaybeCoercingLookupSR),
+pub enum IRulexSR<'a> {
+  Placeholder(PlaceholderRuleSR<'a>),
+  Literal(LiteralSR<'a>),
+  MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
 }
 
-impl IRulexSR {
-  pub fn range(&self) -> &RangeS {
+impl IRulexSR<'_> {
+  pub fn range(&self) -> &RangeS<'_> {
     match self {
       IRulexSR::Placeholder(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
@@ -50,7 +50,7 @@ impl IRulexSR {
     }
   }
 
-  pub fn rune_usages(&self) -> Vec<RuneUsage> {
+  pub fn rune_usages(&self) -> Vec<RuneUsage<'_>> {
     match self {
       IRulexSR::Placeholder(_) => vec![],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
@@ -245,9 +245,9 @@ case class RefListCompoundMutabilitySR(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LiteralSR {
-  pub range: RangeS,
-  pub rune: RuneUsage,
+pub struct LiteralSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
   pub literal: ILiteralSL,
 }
 
@@ -262,10 +262,10 @@ case class LiteralSR(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MaybeCoercingLookupSR {
-  pub range: RangeS,
-  pub rune: RuneUsage,
-  pub name: IImpreciseNameS,
+pub struct MaybeCoercingLookupSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+  pub name: IImpreciseNameS<'a>,
 }
 
 /*

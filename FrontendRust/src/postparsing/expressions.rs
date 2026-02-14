@@ -1,5 +1,5 @@
 use crate::interner::StrI;
-use crate::postparsing::ast::{FunctionS, LocationInDenizen};
+use crate::postparsing::ast::{FunctionS, IExpressionSE as IExpressionSETrait, LocationInDenizen};
 use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IRuneS, IVarNameS};
 use crate::postparsing::patterns::AtomSP;
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
@@ -29,18 +29,18 @@ case class LetSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LetSE {
-  pub range: RangeS,
-  pub rules: Vec<IRulexSR>,
-  pub pattern: AtomSP,
-  pub expr: Box<IExpressionSE>,
+pub struct LetSE<'a> {
+  pub range: RangeS<'a>,
+  pub rules: Vec<IRulexSR<'a>>,
+  pub pattern: AtomSP<'a>,
+  pub expr: Box<IExpressionSE<'a>>,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct IfSE {
-  pub range: RangeS,
-  pub condition: Box<IExpressionSE>,
-  pub then_body: BlockSE,
-  pub else_body: BlockSE,
+pub struct IfSE<'a> {
+  pub range: RangeS<'a>,
+  pub condition: Box<IExpressionSE<'a>>,
+  pub then_body: BlockSE<'a>,
+  pub else_body: BlockSE<'a>,
 }
 /*
 case class IfSE(
@@ -55,9 +55,9 @@ case class IfSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LoopSE {
-  pub range: RangeS,
-  pub body: BlockSE,
+pub struct LoopSE<'a> {
+  pub range: RangeS<'a>,
+  pub body: BlockSE<'a>,
 }
 /*
 case class LoopSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -66,8 +66,8 @@ case class LoopSE(range: RangeS, body: BlockSE) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct BreakSE {
-  pub range: RangeS,
+pub struct BreakSE<'a> {
+  pub range: RangeS<'a>,
 }
 /*
 case class BreakSE(range: RangeS) extends IExpressionSE {
@@ -75,9 +75,9 @@ case class BreakSE(range: RangeS) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct WhileSE {
-  pub range: RangeS,
-  pub body: BlockSE,
+pub struct WhileSE<'a> {
+  pub range: RangeS<'a>,
+  pub body: BlockSE<'a>,
 }
 /*
 case class WhileSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -86,9 +86,9 @@ case class WhileSE(range: RangeS, body: BlockSE) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MapSE {
-  pub range: RangeS,
-  pub body: BlockSE,
+pub struct MapSE<'a> {
+  pub range: RangeS<'a>,
+  pub body: BlockSE<'a>,
 }
 /*
 case class MapSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -97,10 +97,10 @@ case class MapSE(range: RangeS, body: BlockSE) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExprMutateSE {
-  pub range: RangeS,
-  pub mutatee: Box<IExpressionSE>,
-  pub expr: Box<IExpressionSE>,
+pub struct ExprMutateSE<'a> {
+  pub range: RangeS<'a>,
+  pub mutatee: Box<IExpressionSE<'a>>,
+  pub expr: Box<IExpressionSE<'a>>,
 }
 /*
 case class ExprMutateSE(range: RangeS, mutatee: IExpressionSE, expr: IExpressionSE) extends IExpressionSE {
@@ -109,9 +109,9 @@ case class ExprMutateSE(range: RangeS, mutatee: IExpressionSE, expr: IExpression
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct GlobalMutateSE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub name: CodeNameS<'a>,
-  pub expr: Box<IExpressionSE>,
+  pub expr: Box<IExpressionSE<'a>>,
 }
 /*
 case class GlobalMutateSE(range: RangeS, name: CodeNameS, expr: IExpressionSE) extends IExpressionSE {
@@ -120,9 +120,9 @@ case class GlobalMutateSE(range: RangeS, name: CodeNameS, expr: IExpressionSE) e
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalMutateSE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
-  pub expr: Box<IExpressionSE>,
+  pub expr: Box<IExpressionSE<'a>>,
 }
 /*
 case class LocalMutateSE(range: RangeS, name: IVarNameS, expr: IExpressionSE) extends IExpressionSE {
@@ -130,9 +130,9 @@ case class LocalMutateSE(range: RangeS, name: IVarNameS, expr: IExpressionSE) ex
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct OwnershippedSE {
-  pub range: RangeS,
-  pub inner_expr: Box<IExpressionSE>,
+pub struct OwnershippedSE<'a> {
+  pub range: RangeS<'a>,
+  pub inner_expr: Box<IExpressionSE<'a>>,
   pub target_ownership: LoadAsP,
 }
 /*
@@ -190,9 +190,9 @@ case class LocalS(
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct BodySE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub closured_names: Vec<IVarNameS<'a>>,
-  pub block: BlockSE,
+  pub block: BlockSE<'a>,
 }
 
 /*
@@ -210,10 +210,10 @@ case class BodySE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct PureSE {
-  pub range: RangeS,
+pub struct PureSE<'a> {
+  pub range: RangeS<'a>,
   pub location: LocationInDenizen,
-  pub inner: Box<IExpressionSE>,
+  pub inner: Box<IExpressionSE<'a>>,
 }
 
 /*
@@ -229,10 +229,10 @@ case class PureSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct BlockSE {
-  pub range: RangeS,
-  pub locals: Vec<LocalS>,
-  pub expr: Box<IExpressionSE>,
+pub struct BlockSE<'a> {
+  pub range: RangeS<'a>,
+  pub locals: Vec<LocalS<'a>>,
+  pub expr: Box<IExpressionSE<'a>>,
 }
 
 /*
@@ -252,48 +252,48 @@ case class BlockSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub enum IExpressionSE {
-  Let(LetSE),
-  If(IfSE),
-  Loop(LoopSE),
-  Break(BreakSE),
-  While(WhileSE),
-  Map(MapSE),
-  ExprMutate(ExprMutateSE),
-  GlobalMutate(GlobalMutateSE),
-  LocalMutate(LocalMutateSE),
-  Consecutor(ConsecutorSE),
-  ArgLookup(ArgLookupSE),
-  RepeaterBlock(RepeaterBlockSE),
-  RepeaterBlockIterator(RepeaterBlockIteratorSE),
-  Void(VoidSE),
-  Tuple(TupleSE),
-  StaticArrayFromValues(StaticArrayFromValuesSE),
-  StaticArrayFromCallable(StaticArrayFromCallableSE),
-  NewRuntimeSizedArray(NewRuntimeSizedArraySE),
-  RepeaterPack(RepeaterPackSE),
-  RepeaterPackIterator(RepeaterPackIteratorSE),
-  Block(BlockSE),
-  Pure(PureSE),
-  Return(ReturnSE),
-  ConstantInt(ConstantIntSE),
-  ConstantBool(ConstantBoolSE),
-  ConstantStr(ConstantStrSE),
-  ConstantFloat(ConstantFloatSE),
-  Destruct(DestructSE),
-  Unlet(UnletSE),
-  Function(FunctionSE),
-  Dot(DotSE),
-  Index(IndexSE),
-  FunctionCall(FunctionCallSE),
-  LocalLoad(LocalLoadSE),
-  OutsideLoad(OutsideLoadSE),
-  RuneLookup(RuneLookupSE),
-  Ownershipped(OwnershippedSE),
+pub enum IExpressionSE<'a> {
+  Let(LetSE<'a>),
+  If(IfSE<'a>),
+  Loop(LoopSE<'a>),
+  Break(BreakSE<'a>),
+  While(WhileSE<'a>),
+  Map(MapSE<'a>),
+  ExprMutate(ExprMutateSE<'a>),
+  GlobalMutate(GlobalMutateSE<'a>),
+  LocalMutate(LocalMutateSE<'a>),
+  Consecutor(ConsecutorSE<'a>),
+  ArgLookup(ArgLookupSE<'a>),
+  RepeaterBlock(RepeaterBlockSE<'a>),
+  RepeaterBlockIterator(RepeaterBlockIteratorSE<'a>),
+  Void(VoidSE<'a>),
+  Tuple(TupleSE<'a>),
+  StaticArrayFromValues(StaticArrayFromValuesSE<'a>),
+  StaticArrayFromCallable(StaticArrayFromCallableSE<'a>),
+  NewRuntimeSizedArray(NewRuntimeSizedArraySE<'a>),
+  RepeaterPack(RepeaterPackSE<'a>),
+  RepeaterPackIterator(RepeaterPackIteratorSE<'a>),
+  Block(BlockSE<'a>),
+  Pure(PureSE<'a>),
+  Return(ReturnSE<'a>),
+  ConstantInt(ConstantIntSE<'a>),
+  ConstantBool(ConstantBoolSE<'a>),
+  ConstantStr(ConstantStrSE<'a>),
+  ConstantFloat(ConstantFloatSE<'a>),
+  Destruct(DestructSE<'a>),
+  Unlet(UnletSE<'a>),
+  Function(FunctionSE<'a>),
+  Dot(DotSE<'a>),
+  Index(IndexSE<'a>),
+  FunctionCall(FunctionCallSE<'a>),
+  LocalLoad(LocalLoadSE<'a>),
+  OutsideLoad(OutsideLoadSE<'a>),
+  RuneLookup(RuneLookupSE<'a>),
+  Ownershipped(OwnershippedSE<'a>),
 }
 
-impl IExpressionSE {
-  pub fn range(&self) -> RangeS {
+impl<'a> IExpressionSETrait<'a> for IExpressionSE<'a> {
+  fn range(&self) -> RangeS<'a> {
     match self {
       IExpressionSE::Let(x) => x.range.clone(),
       IExpressionSE::If(x) => x.range.clone(),
@@ -365,12 +365,12 @@ case class ConsecutorSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConsecutorSE {
-  pub exprs: Vec<IExpressionSE>,
+pub struct ConsecutorSE<'a> {
+  pub exprs: Vec<IExpressionSE<'a>>,
 }
 
-impl ConsecutorSE {
-  pub fn range(&self) -> RangeS {
+impl ConsecutorSE<'_> {
+  pub fn range(&self) -> RangeS<'_> {
     assert!(!self.exprs.is_empty());
     RangeS {
       begin: self.exprs.first().unwrap().range().begin,
@@ -379,8 +379,8 @@ impl ConsecutorSE {
   }
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct ArgLookupSE {
-  pub range: RangeS,
+pub struct ArgLookupSE<'a> {
+  pub range: RangeS<'a>,
   pub index: i32,
 }
 /*
@@ -389,9 +389,9 @@ case class ArgLookupSE(range: RangeS, index: Int) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepeaterBlockSE {
-  pub range: RangeS,
-  pub expression: Box<IExpressionSE>,
+pub struct RepeaterBlockSE<'a> {
+  pub range: RangeS<'a>,
+  pub expression: Box<IExpressionSE<'a>>,
 }
 /*
  // These things will be separated by semicolons, and all be joined in a block
@@ -400,9 +400,9 @@ case class RepeaterBlockSE(range: RangeS, expression: IExpressionSE) extends IEx
  }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepeaterBlockIteratorSE {
-  pub range: RangeS,
-  pub expression: Box<IExpressionSE>,
+pub struct RepeaterBlockIteratorSE<'a> {
+  pub range: RangeS<'a>,
+  pub expression: Box<IExpressionSE<'a>>,
 }
 /*
 // Results in a pack, represents the differences between the expressions
@@ -411,9 +411,9 @@ case class RepeaterBlockIteratorSE(range: RangeS, expression: IExpressionSE) ext
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ReturnSE {
-  pub range: RangeS,
-  pub inner: Box<IExpressionSE>,
+pub struct ReturnSE<'a> {
+  pub range: RangeS<'a>,
+  pub inner: Box<IExpressionSE<'a>>,
 }
 /*
 case class ReturnSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE {
@@ -425,8 +425,8 @@ case class ReturnSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct VoidSE {
-  pub range: RangeS,
+pub struct VoidSE<'a> {
+  pub range: RangeS<'a>,
 }
 /*
 case class VoidSE(range: RangeS) extends IExpressionSE {
@@ -434,9 +434,9 @@ case class VoidSE(range: RangeS) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct TupleSE {
-  pub range: RangeS,
-  pub elements: Vec<IExpressionSE>,
+pub struct TupleSE<'a> {
+  pub range: RangeS<'a>,
+  pub elements: Vec<IExpressionSE<'a>>,
 }
 /*
 case class TupleSE(range: RangeS, elements: Vector[IExpressionSE]) extends IExpressionSE {
@@ -444,14 +444,14 @@ case class TupleSE(range: RangeS, elements: Vector[IExpressionSE]) extends IExpr
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct StaticArrayFromValuesSE {
-  pub range: RangeS,
-  pub rules: Vec<IRulexSR>,
-  pub maybe_element_type_st: Option<RuneUsage>,
-  pub mutability_st: RuneUsage,
-  pub variability_st: RuneUsage,
-  pub size_st: RuneUsage,
-  pub elements: Vec<IExpressionSE>,
+pub struct StaticArrayFromValuesSE<'a> {
+  pub range: RangeS<'a>,
+  pub rules: Vec<IRulexSR<'a>>,
+  pub maybe_element_type_st: Option<RuneUsage<'a>>,
+  pub mutability_st: RuneUsage<'a>,
+  pub variability_st: RuneUsage<'a>,
+  pub size_st: RuneUsage<'a>,
+  pub elements: Vec<IExpressionSE<'a>>,
 }
 /*
 case class StaticArrayFromValuesSE(
@@ -467,14 +467,14 @@ case class StaticArrayFromValuesSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct StaticArrayFromCallableSE {
-  pub range: RangeS,
-  pub rules: Vec<IRulexSR>,
-  pub maybe_element_type_st: Option<RuneUsage>,
-  pub mutability_st: RuneUsage,
-  pub variability_st: RuneUsage,
-  pub size_st: RuneUsage,
-  pub callable: Box<IExpressionSE>,
+pub struct StaticArrayFromCallableSE<'a> {
+  pub range: RangeS<'a>,
+  pub rules: Vec<IRulexSR<'a>>,
+  pub maybe_element_type_st: Option<RuneUsage<'a>>,
+  pub mutability_st: RuneUsage<'a>,
+  pub variability_st: RuneUsage<'a>,
+  pub size_st: RuneUsage<'a>,
+  pub callable: Box<IExpressionSE<'a>>,
 }
 /*
 case class StaticArrayFromCallableSE(
@@ -490,13 +490,13 @@ case class StaticArrayFromCallableSE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct NewRuntimeSizedArraySE {
-  pub range: RangeS,
-  pub rules: Vec<IRulexSR>,
-  pub maybe_element_type_st: Option<RuneUsage>,
-  pub mutability_st: RuneUsage,
-  pub size: Box<IExpressionSE>,
-  pub callable: Option<Box<IExpressionSE>>,
+pub struct NewRuntimeSizedArraySE<'a> {
+  pub range: RangeS<'a>,
+  pub rules: Vec<IRulexSR<'a>>,
+  pub maybe_element_type_st: Option<RuneUsage<'a>>,
+  pub mutability_st: RuneUsage<'a>,
+  pub size: Box<IExpressionSE<'a>>,
+  pub callable: Option<Box<IExpressionSE<'a>>>,
 }
 /*
 case class NewRuntimeSizedArraySE(
@@ -511,9 +511,9 @@ case class NewRuntimeSizedArraySE(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepeaterPackSE {
-  pub range: RangeS,
-  pub expression: Box<IExpressionSE>,
+pub struct RepeaterPackSE<'a> {
+  pub range: RangeS<'a>,
+  pub expression: Box<IExpressionSE<'a>>,
 }
 /*
 // This thing will be repeated, separated by commas, and all be joined in a pack
@@ -522,9 +522,9 @@ case class RepeaterPackSE(range: RangeS, expression: IExpressionSE) extends IExp
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RepeaterPackIteratorSE {
-  pub range: RangeS,
-  pub expression: Box<IExpressionSE>,
+pub struct RepeaterPackIteratorSE<'a> {
+  pub range: RangeS<'a>,
+  pub expression: Box<IExpressionSE<'a>>,
 }
 /*
 // Results in a pack, represents the differences between the elements
@@ -538,14 +538,14 @@ case class ConstantIntSE(range: RangeS, value: Long, bits: Int) extends IExpress
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConstantIntSE {
-  pub range: RangeS,
+pub struct ConstantIntSE<'a> {
+  pub range: RangeS<'a>,
   pub value: i64,
   pub bits: i32,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConstantBoolSE {
-  pub range: RangeS,
+pub struct ConstantBoolSE<'a> {
+  pub range: RangeS<'a>,
   pub value: bool,
 }
 /*
@@ -554,8 +554,8 @@ case class ConstantBoolSE(range: RangeS, value: Boolean) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConstantStrSE {
-  pub range: RangeS,
+pub struct ConstantStrSE<'a> {
+  pub range: RangeS<'a>,
   pub value: String,
 }
 /*
@@ -565,8 +565,8 @@ case class ConstantStrSE(range: RangeS, value: String) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConstantFloatSE {
-  pub range: RangeS,
+pub struct ConstantFloatSE<'a> {
+  pub range: RangeS<'a>,
   pub value: f64,
 }
 /*
@@ -575,9 +575,9 @@ case class ConstantFloatSE(range: RangeS, value: Double) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct DestructSE {
-  pub range: RangeS,
-  pub inner: Box<IExpressionSE>,
+pub struct DestructSE<'a> {
+  pub range: RangeS<'a>,
+  pub inner: Box<IExpressionSE<'a>>,
 }
 /*
 case class DestructSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE {
@@ -586,7 +586,7 @@ case class DestructSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct UnletSE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
 }
 /*
@@ -595,8 +595,8 @@ case class UnletSE(range: RangeS, name: IVarNameS) extends IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionSE {
-  pub function: FunctionS,
+pub struct FunctionSE<'a> {
+  pub function: FunctionS<'a>,
 }
 /*
 case class FunctionSE(function: FunctionS) extends IExpressionSE {
@@ -605,8 +605,8 @@ case class FunctionSE(function: FunctionS) extends IExpressionSE {
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct DotSE<'a> {
-  pub range: RangeS,
-  pub left: Box<IExpressionSE>,
+  pub range: RangeS<'a>,
+  pub left: Box<IExpressionSE<'a>>,
   pub member: &'a StrI,
   pub borrow_container: bool,
 }
@@ -616,10 +616,10 @@ case class DotSE(range: RangeS, left: IExpressionSE, member: StrI, borrowContain
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct IndexSE {
-  pub range: RangeS,
-  pub left: Box<IExpressionSE>,
-  pub index_expr: Box<IExpressionSE>,
+pub struct IndexSE<'a> {
+  pub range: RangeS<'a>,
+  pub left: Box<IExpressionSE<'a>>,
+  pub index_expr: Box<IExpressionSE<'a>>,
 }
 /*
 case class IndexSE(range: RangeS, left: IExpressionSE, indexExpr: IExpressionSE) extends IExpressionSE {
@@ -632,11 +632,11 @@ case class FunctionCallSE(range: RangeS, location: LocationInDenizen, callableEx
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionCallSE {
-  pub range: RangeS,
+pub struct FunctionCallSE<'a> {
+  pub range: RangeS<'a>,
   pub location: LocationInDenizen,
-  pub callable_expr: Box<IExpressionSE>,
-  pub arg_exprs: Vec<IExpressionSE>,
+  pub callable_expr: Box<IExpressionSE<'a>>,
+  pub arg_exprs: Vec<IExpressionSE<'a>>,
 }
 /*
 
@@ -646,16 +646,16 @@ case class LocalLoadSE(range: RangeS, name: IVarNameS, targetOwnership: LoadAsP)
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocalLoadSE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
   pub target_ownership: LoadAsP,
 }
 #[derive(Clone, Debug, PartialEq)]
 pub struct OutsideLoadSE<'a> {
-  pub range: RangeS,
-  pub rules: Vec<IRulexSR>,
+  pub range: RangeS<'a>,
+  pub rules: Vec<IRulexSR<'a>>,
   pub name: IImpreciseNameS<'a>,
-  pub maybe_template_args: Option<Vec<crate::postparsing::rules::RuneUsage>>,
+  pub maybe_template_args: Option<Vec<crate::postparsing::rules::RuneUsage<'a>>>,
   pub target_ownership: LoadAsP,
 }
 /*
@@ -674,7 +674,7 @@ case class OutsideLoadSE(
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuneLookupSE<'a> {
-  pub range: RangeS,
+  pub range: RangeS<'a>,
   pub rune: IRuneS<'a>,
 }
 /*

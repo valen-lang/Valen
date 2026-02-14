@@ -70,7 +70,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   }
 
   /// Parse a complete file from lexer output
-  pub fn parse_file(&mut self, file: FileL) -> ParseResult<FileP> {
+  pub fn parse_file(&self, file: FileL) -> ParseResult<FileP> {
     let FileL {
       denizens,
       comment_ranges,
@@ -89,7 +89,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
       packages: vec![],
     });
     let empty_file = self.interner.intern_file_coordinate(FileCoordinate {
-      package_coord: empty_package,
+      package_coord: Arc::new((*empty_package).clone()),
       filepath: "".to_string(),
     });
 
@@ -101,7 +101,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   }
 
   /// Parse a top-level denizen
-  pub fn parse_denizen(&mut self, denizen: IDenizenL) -> ParseResult<IDenizenP> {
+  pub fn parse_denizen(&self, denizen: IDenizenL) -> ParseResult<IDenizenP> {
     match denizen {
       IDenizenL::TopLevelFunction(func) => {
         // Top-level functions are not in a citizen (struct/interface)
@@ -132,7 +132,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   }
 
   /// Parse generic parameters from angled brackets
-  fn parse_identifying_runes(&mut self, node: &AngledLE) -> ParseResult<GenericParametersP> {
+  fn parse_identifying_runes(&self, node: &AngledLE) -> ParseResult<GenericParametersP> {
     let iter = ScrambleIterator::new(node.contents.clone());
     let parts = iter.split_on_symbol(',', false);
 
@@ -166,7 +166,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse a single generic parameter
   fn parse_generic_parameter(
-    &mut self,
+    &self,
     mut iter: ScrambleIterator,
   ) -> ParseResult<GenericParameterP> {
     let range = iter.range();
@@ -178,11 +178,11 @@ impl<'arena, 'b> Parser<'arena, 'b> {
     let (name, maybe_type, attributes) = match self.parse_region(&mut iter)? {
       None => {
         // Regular rune parameter
-        let name = match iter.peek() {
+        let name = match iter.peek_cloned() {
           Some(INodeLEEnum::Word(WordLE { range, str })) => {
             let result = NameP {
-              range: *range,
-              str: str.clone(),
+              range,
+              str,
             };
             iter.advance();
             result
@@ -276,7 +276,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
           case Err(x) => return Err(x)
           case Ok(None) => {
             val name =
-              iter.peek() match {
+              iter.peek_cloned() match {
                 case Some(WordLE(range, str)) => {
                   iter.advance()
                   NameP(range, str)
@@ -353,7 +353,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse optional prefixing region (e.g., `'a`)
   fn parse_prefixing_region(
-    &mut self,
+    &self,
     original_iter: &mut ScrambleIterator,
   ) -> ParseResult<Option<RegionRunePT>> {
     let mut tentative_iter = original_iter.clone();
@@ -361,7 +361,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
     let region = match self.parse_region(&mut tentative_iter)? {
       Some(region) => {
         // Check if the next token immediately follows (no gap)
-        match tentative_iter.peek() {
+        match tentative_iter.peek_cloned() {
           Some(next) if next.range().begin == region.range.end => region,
           _ => return Ok(None),
         }
@@ -399,7 +399,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse optional region marker
   fn parse_region(
-    &mut self,
+    &self,
     original_iter: &mut ScrambleIterator,
   ) -> ParseResult<Option<RegionRunePT>> {
     let mut tentative_iter = original_iter.clone();
@@ -472,14 +472,14 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   */
 
   /// Parse struct member
-  fn parse_struct_member(&mut self, iter: &mut ScrambleIterator) -> ParseResult<IStructContent> {
+  fn parse_struct_member(&self, iter: &mut ScrambleIterator) -> ParseResult<IStructContent> {
     let begin = iter.get_pos();
 
     // Parse name (can be a word or integer for variadic)
-    let name = match iter.peek() {
+    let name = match iter.peek_cloned() {
       Some(INodeLEEnum::ParsedInteger(ParsedIntegerLE { range, value, .. })) => {
         let result = NameP {
-          range: *range,
+          range,
           str: self.interner.intern(&value.to_string()),
         };
         iter.advance();
@@ -500,7 +500,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
     // Check for variadic (..)
     let variadic = matches!(
-      iter.peek2(),
+      iter.peek2_cloned(),
       (
         Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. })),
         Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. }))
@@ -548,7 +548,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
       val begin = iter.getPos()
 
       val name =
-        iter.peek() match {
+        iter.peek_cloned() match {
           case Some(ParsedIntegerLE(range, int, _)) => {
             // This is just temporary until we add proper variadics again, see TAVWG.
             iter.advance()
@@ -565,7 +565,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
       val variability = if (iter.trySkipSymbol('!')) VaryingP else FinalP
 
       val variadic =
-        iter.peek2() match {
+        iter.peek2_cloned() match {
           case (Some(SymbolLE(_, '.')), Some(SymbolLE(_, '.'))) => {
             iter.advance()
             iter.advance()
@@ -593,7 +593,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   */
 
   /// Parse a struct definition
-  pub fn parse_struct(&mut self, struct_l: StructL) -> ParseResult<StructP> {
+  pub fn parse_struct(&self, struct_l: StructL) -> ParseResult<StructP> {
     let StructL {
       range: struct_range,
       name: name_l,
@@ -752,7 +752,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   */
 
   /// Parse an interface definition
-  pub fn parse_interface(&mut self, interface_l: InterfaceL) -> ParseResult<InterfaceP> {
+  pub fn parse_interface(&self, interface_l: InterfaceL) -> ParseResult<InterfaceP> {
     let InterfaceL {
       range: interface_range,
       name: name_l,
@@ -966,7 +966,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse an impl block
   /// Mirrors Parser.parseImpl in Parser.scala lines 397-461
-  pub fn parse_impl(&mut self, impl_l: ImplL) -> ParseResult<ImplP> {
+  pub fn parse_impl(&self, impl_l: ImplL) -> ParseResult<ImplP> {
     let ImplL {
       range: impl_range,
       identifying_runes: maybe_identifying_runes_l,
@@ -1101,7 +1101,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse an export-as declaration
   /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
-  pub fn parse_export_as(&mut self, export_l: ExportAsL) -> ParseResult<ExportAsP> {
+  pub fn parse_export_as(&self, export_l: ExportAsL) -> ParseResult<ExportAsP> {
     let mut iter = ScrambleIterator::new(export_l.contents.clone());
 
     // Try to find "as" keyword and get everything before it
@@ -1113,7 +1113,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
       while scouting_iter.has_next() {
         // Check if we should continue (not at semicolon)
-        let should_continue = match scouting_iter.peek() {
+        let should_continue = match scouting_iter.peek_cloned() {
           None => false,
           Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
           _ => true,
@@ -1124,8 +1124,8 @@ impl<'arena, 'b> Parser<'arena, 'b> {
         }
 
         // Check if this is the "as" keyword
-        if let Some(INodeLEEnum::Word(WordLE { str, .. })) = scouting_iter.peek() {
-          if *str == self.keywords.r#as {
+        if let Some(INodeLEEnum::Word(WordLE { str, .. })) = scouting_iter.peek_cloned() {
+          if str == self.keywords.r#as {
             // Found "as"! Create iterator for everything before it
             before_iter.end = scouting_iter.index;
             iter.skip_to(&scouting_iter);
@@ -1147,7 +1147,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
     };
 
     // Get the name after "as"
-    let name = match iter.peek() {
+    let name = match iter.peek_cloned() {
       None => return Err(ParseError::BadExportEnd(iter.get_pos())),
       Some(INodeLEEnum::Word(word)) => self.to_name(word.clone()),
       _ => return Err(ParseError::BadExportEnd(iter.get_pos())),
@@ -1169,7 +1169,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
         ParseUtils.trySkipPastKeywordWhile(
           iter,
           keywords.as,
-          iter => iter.peek() match {
+          iter => iter.peek_cloned() match {
             case None => false
             case Some(SymbolLE(range, ';')) => false
             case _ => true
@@ -1186,7 +1186,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
         }
 
       val name =
-        iter.peek() match {
+        iter.peek_cloned() match {
           case None => return Err(BadExportEnd(iter.getPos()))
           case Some(WordLE(range, str)) => NameP(range, str)
         }
@@ -1197,7 +1197,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
 
   /// Parse an import declaration
   /// Mirrors Parser.parseImport in Parser.scala lines 499-516
-  pub fn parse_import(&mut self, import_l: ImportL) -> ParseResult<ImportP> {
+  pub fn parse_import(&self, import_l: ImportL) -> ParseResult<ImportP> {
     let ImportL {
       range,
       module_name: module_name_l,
@@ -1245,7 +1245,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   /// Parse a function
   /// Mirrors Parser.parseFunction in Parser.scala lines 552-654
   pub fn parse_function(
-    &mut self,
+    &self,
     func_l: FunctionL,
     is_in_citizen: bool,
   ) -> ParseResult<FunctionP> {
@@ -1660,7 +1660,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
   */
 
   /// Parse an attribute
-  fn parse_attribute(&mut self, attr_l: IAttributeL) -> ParseResult<IAttributeP> {
+  fn parse_attribute(&self, attr_l: IAttributeL) -> ParseResult<IAttributeP> {
     match attr_l {
       IAttributeL::WeakableAttribute(range) => {
         Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
@@ -1693,7 +1693,7 @@ impl<'arena, 'b> Parser<'arena, 'b> {
           Some(parend) => {
             // extern("name") becomes BuiltinAttribute
             let iter = ScrambleIterator::new(parend.contents.clone());
-            if let Some(INodeLEEnum::String(string_le)) = iter.peek() {
+            if let Some(INodeLEEnum::String(string_le)) = iter.peek_cloned() {
               // Extract the string value from the parts
               // For a simple string like "bork", there should be one Literal part
               if string_le.parts.len() == 1 {
@@ -1793,11 +1793,11 @@ pub struct ParserCompilation<'arena, 'b> {
   interner: &'b Interner<'arena>,
   keywords: &'b Keywords<'arena>,
   packages_to_build: Vec<&'b PackageCoordinate<'arena>>,
-  package_to_contents_resolver: Box<dyn IPackageResolver<'arena, HashMap<String, String>> + 'b>,
+  package_to_contents_resolver: &'b dyn IPackageResolver<'arena, HashMap<String, String>>,
   parser: Parser<'arena, 'b>,
   code_map_cache: Option<FileCoordinateMap<'arena, String>>,
   vpst_map_cache: Option<FileCoordinateMap<'arena, String>>,
-  parseds_cache: Option<FileCoordinateMap<'arena, (FileP, Vec<RangeL>)>>,
+  parseds_cache: Option<FileCoordinateMap<'arena, (FileP<'arena>, Vec<RangeL>)>>,
 }
 impl<'arena, 'b> ParserCompilation<'arena, 'b> {
   /*
@@ -1822,7 +1822,7 @@ impl<'arena, 'b> ParserCompilation<'arena, 'b> {
     interner: &'b Interner<'arena>,
     keywords: &'b Keywords<'arena>,
     packages_to_build: Vec<&'b PackageCoordinate<'arena>>,
-    package_to_contents_resolver: Box<dyn IPackageResolver<'arena, HashMap<String, String>> + 'b>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'arena, HashMap<String, String>>,
   ) -> Self {
     let parser = Parser::new(interner, keywords);
     ParserCompilation {
@@ -1841,7 +1841,7 @@ impl<'arena, 'b> ParserCompilation<'arena, 'b> {
   // From Parser.scala lines 708-773: loadAndParse
   // From Parser.scala lines 708-773: loadAndParse
   fn load_and_parse(
-    &mut self,
+    &self,
     needed_packages: &[&'b PackageCoordinate<'arena>],
     resolver: &dyn IPackageResolver<'arena, HashMap<String, String>>,
   ) -> Result<
@@ -1865,7 +1865,8 @@ impl<'arena, 'b> ParserCompilation<'arena, 'b> {
 
     // From Parser.scala lines 717-740: Load .vpst files directly
     for package_coord in needed_packages {
-      if let Some(filepath_to_code) = resolver.resolve(package_coord) {
+      let package_arc = Arc::new((*package_coord).clone());
+      if let Some(filepath_to_code) = resolver.resolve(&package_arc) {
         for (filepath, _code) in filepath_to_code {
           if filepath.ends_with(".vpst") {
             panic!("ParsedLoader not yet implemented - see Parser.scala lines 724-735. Need to load .vpst file: {}", filepath);
@@ -1899,7 +1900,7 @@ impl<'arena, 'b> ParserCompilation<'arena, 'b> {
             self.interner,
             self.keywords,
             self.opts.clone(),
-            &mut self.parser,
+            &self.parser,
             needed_packages.to_vec(),
             &vale_only_resolver,
             |_file_coord, _code, _imports, denizen| denizen,
@@ -2044,7 +2045,7 @@ impl<'arena, 'b> ParserCompilation<'arena, 'b> {
 
     let packages = self.packages_to_build.clone();
     let (code_map, program_p_map) =
-      self.load_and_parse(&packages, self.package_to_contents_resolver.as_ref())?;
+      self.load_and_parse(&packages, self.package_to_contents_resolver)?;
 
     self.code_map_cache = Some(code_map);
     self.parseds_cache = Some(program_p_map);

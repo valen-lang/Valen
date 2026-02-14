@@ -144,11 +144,11 @@ pub struct PackageCoordinate<'a> {
 impl<'a> PackageCoordinate<'a> {
   // From CodeHierarchy.scala line 50: BUILTIN
   pub fn builtin(
-    interner: &Arc<crate::Interner<'a>>,
-    keywords: &Arc<crate::Keywords<'a>>,
-  ) -> Arc<PackageCoordinate<'a>> {
+    interner: &'a crate::Interner<'a>,
+    keywords: &'a crate::Keywords<'a>,
+  ) -> &'a PackageCoordinate<'a> {
     interner.intern_package_coordinate(PackageCoordinate {
-      module: keywords.empty_string.clone(),
+      module: keywords.empty_string,
       packages: vec![],
     })
   }

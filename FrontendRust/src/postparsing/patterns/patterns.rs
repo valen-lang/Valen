@@ -13,8 +13,8 @@ use crate::postparsing::rules::RuneUsage;
 use crate::utils::range::RangeS;
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CaptureS {
-  pub name: IVarNameS,
+pub struct CaptureS<'a> {
+  pub name: IVarNameS<'a>,
   pub mutate: bool,
 }
 
@@ -26,11 +26,11 @@ case class CaptureS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct AtomSP {
-  pub range: RangeS,
-  pub name: Option<CaptureS>,
-  pub coord_rune: Option<RuneUsage>,
-  pub destructure: Option<Vec<AtomSP>>,
+pub struct AtomSP<'a> {
+  pub range: RangeS<'a>,
+  pub name: Option<CaptureS<'a>>,
+  pub coord_rune: Option<RuneUsage<'a>>,
+  pub destructure: Option<Vec<AtomSP<'a>>>,
 }
 
 /*
