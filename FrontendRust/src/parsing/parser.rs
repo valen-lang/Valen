@@ -36,12 +36,12 @@ type ParseResult<T> = Result<T, ParseError>;
 
 /// Main parser coordinating all parsing operations
 /// Matches Scala's Parser class
-pub struct Parser<'arena, 'i, 'k> {
-  interner: &'i Interner<'arena>,
-  keywords: &'k Keywords<'arena>,
-  pub templex_parser: TemplexParser<'arena, 'i, 'k>,
-  pub pattern_parser: PatternParser<'arena, 'i, 'k>,
-  pub expression_parser: ExpressionParser<'arena, 'i, 'k>,
+pub struct Parser<'a, 'i, 'k> {
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
+  pub templex_parser: TemplexParser<'a, 'i, 'k>,
+  pub pattern_parser: PatternParser<'a, 'i, 'k>,
+  pub expression_parser: ExpressionParser<'a, 'i, 'k>,
 }
 /*
 class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
@@ -50,14 +50,14 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
   val expressionParser = new ExpressionParser(interner, keywords, opts, patternParser, templexParser)
 */
 
-impl<'arena, 'i, 'k> Parser<'arena, 'i, 'k>
+impl<'a, 'i, 'k> Parser<'a, 'i, 'k>
 where
-  'i: 'arena,
-  'k: 'arena,
+  'i: 'a,
+  'k: 'a,
 {
   pub fn new(
-    interner: &'i Interner<'arena>,
-    keywords: &'k Keywords<'arena>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
   ) -> Self {
     let templex_parser = TemplexParser::new(interner, keywords);
     let pattern_parser = PatternParser::new(interner, keywords);
@@ -73,7 +73,7 @@ where
   }
 
   /// Parse a complete file from lexer output
-  pub fn parse_file(&self, file: FileL<'arena>) -> ParseResult<FileP<'arena>> {
+  pub fn parse_file(&self, file: FileL<'a>) -> ParseResult<FileP<'a>> {
     let FileL {
       denizens,
       comment_ranges,
@@ -104,7 +104,7 @@ where
   }
 
   /// Parse a top-level denizen
-  pub fn parse_denizen(&self, denizen: IDenizenL<'arena>) -> ParseResult<IDenizenP<'arena>> {
+  pub fn parse_denizen(&self, denizen: IDenizenL<'a>) -> ParseResult<IDenizenP<'a>> {
     match denizen {
       IDenizenL::TopLevelFunction(func) => {
         // Top-level functions are not in a citizen (struct/interface)
@@ -135,7 +135,7 @@ where
   }
 
   /// Parse generic parameters from angled brackets
-  fn parse_identifying_runes(&self, node: &AngledLE<'arena>) -> ParseResult<GenericParametersP<'arena>> {
+  fn parse_identifying_runes(&self, node: &AngledLE<'a>) -> ParseResult<GenericParametersP<'a>> {
     let iter = ScrambleIterator::new(node.contents.clone());
     let parts = iter.split_on_symbol(',', false);
 
@@ -154,7 +154,7 @@ where
     private[parsing] def parseIdentifyingRunes(node: AngledLE):
     Result[GenericParametersP, IParseError] = {
       val runesP =
-        U.map[ScrambleIterator, GenericParameterP]<'arena>(
+        U.map[ScrambleIterator, GenericParameterP]<'a>(
           new ScrambleIterator(node.contents).splitOnSymbol(',', false),
           inner => {
           parseGenericParameter(inner) match {
@@ -170,8 +170,8 @@ where
   /// Parse a single generic parameter
   fn parse_generic_parameter(
     &self,
-    mut iter: ScrambleIterator<'arena>,
-  ) -> ParseResult<GenericParameterP<'arena>> {
+    mut iter: ScrambleIterator<'a>,
+  ) -> ParseResult<GenericParameterP<'a>> {
     let range = iter.range();
 
     // Parse optional prefixing region
@@ -183,7 +183,7 @@ where
         // Regular rune parameter
         let name = match iter.peek_cloned() {
           Some(INodeLEEnum::Word(WordLE { range, str })) => {
-            let result = NameP::<'arena> {
+            let result = NameP::<'a> {
               range,
               str,
             };
@@ -254,7 +254,7 @@ where
 
     assert!(iter.at_end());
 
-    Ok(GenericParameterP::<'arena> {
+    Ok(GenericParameterP::<'a> {
       range,
       name,
       maybe_type,
@@ -357,8 +357,8 @@ where
   /// Parse optional prefixing region (e.g., `'a`)
   fn parse_prefixing_region(
     &self,
-    original_iter: &mut ScrambleIterator<'arena>,
-  ) -> ParseResult<Option<RegionRunePT<'arena>>> {
+    original_iter: &mut ScrambleIterator<'a>,
+  ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
 
     let region = match self.parse_region(&mut tentative_iter)? {
@@ -403,8 +403,8 @@ where
   /// Parse optional region marker
   fn parse_region(
     &self,
-    original_iter: &mut ScrambleIterator<'arena>,
-  ) -> ParseResult<Option<RegionRunePT<'arena>>> {
+    original_iter: &mut ScrambleIterator<'a>,
+  ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
     let rune_begin = tentative_iter.get_pos();
 
@@ -432,7 +432,7 @@ where
       end: rune_end,
     };
 
-    Ok(Some(RegionRunePT::<'arena> {
+    Ok(Some(RegionRunePT::<'a> {
       range,
       name: maybe_rune.map(|z| NameP {
         range: RangeL {
@@ -475,7 +475,7 @@ where
   */
 
   /// Parse struct member
-  fn parse_struct_member(&self, iter: &mut ScrambleIterator<'arena>) -> ParseResult<IStructContent<'arena>> {
+  fn parse_struct_member(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<IStructContent<'a>> {
     let begin = iter.get_pos();
 
     // Parse name (can be a word or integer for variadic)
@@ -533,7 +533,7 @@ where
         },
       ))
     } else {
-      Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'arena> {
+      Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'a> {
         range: RangeL {
           begin,
           end: iter.get_prev_end_pos(),
@@ -596,7 +596,7 @@ where
   */
 
   /// Parse a struct definition
-  pub fn parse_struct(&self, struct_l: StructL<'arena>) -> ParseResult<StructP<'arena>> {
+  pub fn parse_struct(&self, struct_l: StructL<'a>) -> ParseResult<StructP<'a>> {
     let StructL {
       range: struct_range,
       name: name_l,
@@ -659,7 +659,7 @@ where
       contents: members_vec,
     };
 
-    Ok(StructP::<'arena> {
+    Ok(StructP::<'a> {
       range: struct_range,
       name: self.to_name(name_l),
       attributes,
@@ -690,7 +690,7 @@ where
         val maybeTemplateRulesP =
           maybeTemplateRulesL.map(templateRulesScramble => {
             val elementsPR =
-              U.map[ScrambleIterator, IRulexPR]<'arena>(
+              U.map[ScrambleIterator, IRulexPR]<'a>(
                 new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
                 ruleIter => {
                   templexParser.parseRule(ruleIter) match {
@@ -727,7 +727,7 @@ where
         val membersP =
           StructMembersP(
             contentsL.range,
-            U.map[ScrambleIterator, IStructContent]<'arena>(
+            U.map[ScrambleIterator, IStructContent]<'a>(
               new ScrambleIterator(contentsL).splitOnSymbol(';', false),
               member => {
                 parseStructMember(member) match {
@@ -755,7 +755,7 @@ where
   */
 
   /// Parse an interface definition
-  pub fn parse_interface(&self, interface_l: InterfaceL<'arena>) -> ParseResult<InterfaceP<'arena>> {
+  pub fn parse_interface(&self, interface_l: InterfaceL<'a>) -> ParseResult<InterfaceP<'a>> {
     let InterfaceL {
       range: interface_range,
       name: name_l,
@@ -842,7 +842,7 @@ where
         val maybeTemplateRulesP =
           maybeTemplateRulesL.map(templateRulesScramble => {
             val elementsPR =
-              U.map[ScrambleIterator, IRulexPR]<'arena>(
+              U.map[ScrambleIterator, IRulexPR]<'a>(
                 new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
                 ruleIter => {
                   templexParser.parseRule(ruleIter) match {
@@ -969,7 +969,7 @@ where
 
   /// Parse an impl block
   /// Mirrors Parser.parseImpl in Parser.scala lines 397-461
-  pub fn parse_impl(&self, impl_l: ImplL<'arena>) -> ParseResult<ImplP<'arena>> {
+  pub fn parse_impl(&self, impl_l: ImplL<'a>) -> ParseResult<ImplP<'a>> {
     let ImplL {
       range: impl_range,
       identifying_runes: maybe_identifying_runes_l,
@@ -1104,8 +1104,8 @@ where
 
   /// Parse an export-as declaration
   /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
-  pub fn parse_export_as(&self, export_l: ExportAsL<'arena>) -> ParseResult<ExportAsP<'arena>> {
-    let mut iter = ScrambleIterator::<'arena>::new(export_l.contents.clone());
+  pub fn parse_export_as(&self, export_l: ExportAsL<'a>) -> ParseResult<ExportAsP<'a>> {
+    let mut iter = ScrambleIterator::<'a>::new(export_l.contents.clone());
 
     // Try to find "as" keyword and get everything before it
     // Mirrors ParseUtils.trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
@@ -1200,7 +1200,7 @@ where
 
   /// Parse an import declaration
   /// Mirrors Parser.parseImport in Parser.scala lines 499-516
-  pub fn parse_import(&self, import_l: ImportL<'arena>) -> ParseResult<ImportP<'arena>> {
+  pub fn parse_import(&self, import_l: ImportL<'a>) -> ParseResult<ImportP<'a>> {
     let ImportL {
       range,
       module_name: module_name_l,
@@ -1249,9 +1249,9 @@ where
   /// Mirrors Parser.parseFunction in Parser.scala lines 552-654
   pub fn parse_function(
     &self,
-    func_l: FunctionL<'arena>,
+    func_l: FunctionL<'a>,
     is_in_citizen: bool,
-  ) -> ParseResult<FunctionP<'arena>> {
+  ) -> ParseResult<FunctionP<'a>> {
     let FunctionL {
       range: func_range_l,
       header: header_l,
@@ -1437,7 +1437,7 @@ where
         val paramsP =
           ParamsP(
             paramsL.range,
-            U.mapWithIndex[ScrambleIterator, ParameterP]<'arena>(
+            U.mapWithIndex[ScrambleIterator, ParameterP]<'a>(
               new ScrambleIterator(paramsL.contents).splitOnSymbol(',', false),
               (index, patternIter) => {
                 patternParser.parseParameter(patternIter, index, isInCitizen, true, false) match {
@@ -1529,8 +1529,8 @@ where
   /// Mirrors Parser.parseBodyDefaultRegion in Parser.scala lines 660-691
   fn parse_body_default_region(
     &self,
-    input_scramble: ScrambleLE<'arena>,
-  ) -> (ScrambleLE<'arena>, Option<RegionRunePT<'arena>>) {
+    input_scramble: ScrambleLE<'a>,
+  ) -> (ScrambleLE<'a>, Option<RegionRunePT<'a>>) {
     if input_scramble.elements.len() < 2 {
       return (input_scramble, None);
     }
@@ -1663,7 +1663,7 @@ where
   */
 
   /// Parse an attribute
-  fn parse_attribute(&self, attr_l: IAttributeL<'arena>) -> ParseResult<IAttributeP<'arena>> {
+  fn parse_attribute(&self, attr_l: IAttributeL<'a>) -> ParseResult<IAttributeP<'a>> {
     match attr_l {
       IAttributeL::WeakableAttribute(range) => {
         Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
@@ -1767,7 +1767,7 @@ where
   */
 
   /// Helper to convert WordLE to NameP
-  fn to_name(&self, word: WordLE<'arena>) -> NameP<'arena> {
+  fn to_name(&self, word: WordLE<'a>) -> NameP<'a> {
     NameP {
       range: word.range,
       str: word.str,
@@ -1791,22 +1791,22 @@ where
 */
 
 // From Parser.scala lines 699-854: ParserCompilation class
-pub struct ParserCompilation<'arena, 'i, 'k, 'b> {
+pub struct ParserCompilation<'a, 'i, 'k, 'b> {
   opts: GlobalOptions,
-  interner: &'i Interner<'arena>,
-  keywords: &'k Keywords<'arena>,
-  packages_to_build: Vec<&'arena PackageCoordinate<'arena>>,
-  package_to_contents_resolver: &'b dyn IPackageResolver<'arena, HashMap<String, String>>,
-  parser: Parser<'arena, 'i, 'k>,
-  code_map_cache: Option<FileCoordinateMap<'arena, String>>,
-  vpst_map_cache: Option<FileCoordinateMap<'arena, String>>,
-  parseds_cache: Option<FileCoordinateMap<'arena, (FileP<'arena>, Vec<RangeL>)>>,
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
+  packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+  package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+  parser: Parser<'a, 'i, 'k>,
+  code_map_cache: Option<FileCoordinateMap<'a, String>>,
+  vpst_map_cache: Option<FileCoordinateMap<'a, String>>,
+  parseds_cache: Option<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>>,
 }
-impl<'arena, 'i, 'k, 'b> ParserCompilation<'arena, 'i, 'k, 'b>
+impl<'a, 'i, 'k, 'b> ParserCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'arena,
-  'k: 'arena,
-  'b: 'arena,
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
 {
   /*
   class ParserCompilation(
@@ -1827,10 +1827,10 @@ where
   // From Parser.scala lines 699-706
   pub fn new(
     opts: GlobalOptions,
-    interner: &'i Interner<'arena>,
-    keywords: &'k Keywords<'arena>,
-    packages_to_build: Vec<&'arena PackageCoordinate<'arena>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'arena, HashMap<String, String>>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
   ) -> Self {
     let parser = Parser::new(interner, keywords);
     ParserCompilation {
@@ -1850,14 +1850,14 @@ where
   // From Parser.scala lines 708-773: loadAndParse
   fn load_and_parse(
     &self,
-    needed_packages: &[&'arena PackageCoordinate<'arena>],
-    resolver: &dyn IPackageResolver<'arena, HashMap<String, String>>,
+    needed_packages: &[&'a PackageCoordinate<'a>],
+    resolver: &dyn IPackageResolver<'a, HashMap<String, String>>,
   ) -> Result<
     (
-      FileCoordinateMap<'arena, String>,
-      FileCoordinateMap<'arena, (FileP<'arena>, Vec<RangeL>)>,
+      FileCoordinateMap<'a, String>,
+      FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>,
     ),
-    FailedParse<'arena>,
+    FailedParse<'a>,
   > {
     // From Parser.scala line 712: Check for duplicates
     let unique_packages: std::collections::HashSet<_> = needed_packages.iter().collect();
@@ -1868,8 +1868,8 @@ where
     );
 
     // From Parser.scala lines 714-715
-    let mut found_code_map: FileCoordinateMap<'arena, String> = FileCoordinateMap::<String>::new();
-    let mut parsed_map: FileCoordinateMap<'arena, (FileP<'arena>, Vec<RangeL>)> = FileCoordinateMap::<(FileP, Vec<RangeL>)>::new();
+    let mut found_code_map: FileCoordinateMap<'a, String> = FileCoordinateMap::<String>::new();
+    let mut parsed_map: FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)> = FileCoordinateMap::<(FileP, Vec<RangeL>)>::new();
 
     // From Parser.scala lines 717-740: Load .vpst files directly
     for package_coord in needed_packages {
@@ -1883,13 +1883,13 @@ where
     }
 
     // From Parser.scala lines 742-749: Create resolver that filters out .vpst files
-    struct ValeOnlyResolver<'arena, 'r> {
-      inner: &'r dyn IPackageResolver<'arena, HashMap<String, String>>,
+    struct ValeOnlyResolver<'a, 'r> {
+      inner: &'r dyn IPackageResolver<'a, HashMap<String, String>>,
     }
-    impl<'arena, 'r> IPackageResolver<'arena, HashMap<String, String>> for ValeOnlyResolver<'arena, 'r> {
+    impl<'a, 'r> IPackageResolver<'a, HashMap<String, String>> for ValeOnlyResolver<'a, 'r> {
       fn resolve(
         &self,
-        package_coord: &'arena PackageCoordinate<'arena>,
+        package_coord: &'a PackageCoordinate<'a>,
       ) -> Option<HashMap<String, String>> {
         self.inner.resolve(package_coord).map(|filepath_to_code| {
           filepath_to_code
@@ -1911,7 +1911,7 @@ where
             needed_packages.to_vec(),
             &vale_only_resolver,
             |_file_coord, _code, _imports, denizen| denizen,
-            |file_coord: &'arena FileCoordinate<'arena>, code, comment_ranges, denizens| {
+            |file_coord: &'a FileCoordinate<'a>, code, comment_ranges, denizens| {
                 // From Parser.scala lines 756-766
                 found_code_map.put(file_coord, code.to_string());
                 let file = FileP {
@@ -2020,7 +2020,7 @@ where
   */
 
   // From Parser.scala lines 779-784: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'arena, String>, FailedParse<'arena>> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.get_parseds()?;
     Ok(self.code_map_cache.clone().unwrap())
   }
@@ -2037,7 +2037,7 @@ where
   */
 
   // From Parser.scala lines 785-787: expectCodeMap
-  pub fn expect_code_map(&self) -> FileCoordinateMap<'arena, String> {
+  pub fn expect_code_map(&self) -> FileCoordinateMap<'a, String> {
     self
       .code_map_cache
       .clone()
@@ -2045,7 +2045,7 @@ where
   }
 
   // From Parser.scala lines 789-816: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'arena, (FileP<'arena>, Vec<RangeL>)>, FailedParse<'arena>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
     if let Some(ref parseds) = self.parseds_cache {
       return Ok(parseds.clone());
     }
@@ -2078,7 +2078,7 @@ where
   */
 
   // From Parser.scala lines 818-826: expectParseds
-  pub fn expect_parseds(&mut self) -> FileCoordinateMap<'arena, (FileP, Vec<RangeL>)> {
+  pub fn expect_parseds(&mut self) -> FileCoordinateMap<'a, (FileP, Vec<RangeL>)> {
     match self.get_parseds() {
       Err(FailedParse {
         code: _code,
@@ -2105,7 +2105,7 @@ where
   */
 
   // From Parser.scala lines 829-846: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'arena, String>, FailedParse<'arena>> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     if let Some(ref vpst) = self.vpst_map_cache {
       return Ok(vpst.clone());
     }
@@ -2135,7 +2135,7 @@ where
   */
 
   // From Parser.scala lines 849-851: expectVpstMap
-  pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<'arena, String> {
+  pub fn expect_vpst_map(&mut self) -> FileCoordinateMap<'a, String> {
     self.get_vpst_map().expect("getVpstMap should succeed")
   }
   /*

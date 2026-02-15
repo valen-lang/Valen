@@ -54,11 +54,11 @@ where
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
 }
 
-struct ParserTestResolver<'arena> {
-  code_map: FileCoordinateMap<'arena, String>,
+struct ParserTestResolver<'a> {
+  code_map: FileCoordinateMap<'a, String>,
 }
-impl<'arena> IPackageResolver<'arena, HashMap<String, String>> for ParserTestResolver<'arena> {
-  fn resolve(&self, package_coord: &'arena PackageCoordinate<'arena>) -> Option<HashMap<String, String>> {
+impl<'a> IPackageResolver<'a, HashMap<String, String>> for ParserTestResolver<'a> {
+  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
     // For testing the parser, we dont want it to fetch things with import statements.
     Some(
       self

@@ -18,19 +18,19 @@ object ParserTestCompilation {
 
 /// MIGTODO: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
-pub fn test<'arena, 'i, 'k, 'b>(
-  interner: &'i Interner<'arena>,
-  keywords: &'k Keywords<'arena>,
-  resolver: &'b dyn IPackageResolver<'arena, HashMap<String, String>>,
-  test_package_coord: &'arena PackageCoordinate<'arena>,
-) -> ParserCompilation<'arena, 'i, 'k, 'b>
+pub fn test<'a, 'i, 'k, 'b>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
+  resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+  test_package_coord: &'a PackageCoordinate<'a>,
+) -> ParserCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'arena,
-  'k: 'arena,
-  'b: 'arena,
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
 {
 
-  ParserCompilation::<'arena, 'i, 'k, 'b>::new(
+  ParserCompilation::<'a, 'i, 'k, 'b>::new(
     GlobalOptions {
       sanity_check: true,
       use_overload_index: true,
