@@ -6,12 +6,11 @@ use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
-use crate::utils::code_hierarchy::{IPackageResolver, OrResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
-use crate::utils::code_hierarchy::FileCoordinateMap;
 /*
 package dev.vale.passmanager
 
@@ -112,13 +111,11 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
 }
 
 // From PassManager.scala lines 153-201: resolvePackageContents
-fn resolve_package_contents<'a, 'i>(
-  interner: &'i Interner<'a>,
+fn resolve_package_contents<'a>(
+  interner: &Interner<'a>,
   inputs: &[IFrontendInput<'a>],
   package_coord: &PackageCoordinate<'a>,
 ) -> Option<HashMap<String, String>>
-where
-  'a: 'i,
 {
   // From PassManager.scala line 158
   let module = &package_coord.module;
@@ -270,7 +267,7 @@ pub enum IFrontendInput<'a> {
   },
 }
 impl<'a> IFrontendInput<'a> {
-  pub fn package_coord(&self, interner: &'a Interner<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn package_coord<'i>(&self, interner: &'i Interner<'a>) -> &'a PackageCoordinate<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
@@ -413,6 +410,11 @@ where
   // From PassManager.scala line 255
   let _start_load_and_parse_time = std::time::Instant::now();
 
+  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
+  // Keep this before get_parseds so mutable borrows don't overlap.
+  let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
+  let _ = vale_code_map; // Suppress unused warning
+
   // From PassManager.scala lines 257-263: Get parsed files
   let parseds = match compilation.get_parseds() {
     Err(failed_parse) => {
@@ -424,12 +426,6 @@ where
     }
     Ok(p) => p,
   };
-  let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
-
-  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
-  // These will be needed when we implement error humanization
-  let _ = vale_code_map; // Suppress unused warning
-
   // From PassManager.scala lines 271-279: Write VPST files if requested
   if opts.output_vpst {
     use crate::parsing::vonifier::ParserVonifier;

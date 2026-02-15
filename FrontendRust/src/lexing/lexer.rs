@@ -23,7 +23,6 @@ impl<'a, 'i, 'k> Lexer<'a, 'i, 'k>
 where
   'a: 'i,
   'a: 'k,
-  Self: 'a,
 {
   /*
   class Lexer(interner: Interner, keywords: Keywords) {

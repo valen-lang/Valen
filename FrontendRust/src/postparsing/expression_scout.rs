@@ -1462,12 +1462,15 @@ where
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-  fn scout_elements_as_expressions<'b>(
-    interner: &'b Interner<'b>,
-    initial_stack_frame: StackFrame<'b>,
+  fn scout_elements_as_expressions<'a, 'i>(
+    interner: &'i Interner<'a>,
+    initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    exprs_p: &[IExpressionPE<'b>],
-  ) -> Result<(StackFrame<'b>, Vec<IExpressionSE<'b>>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
+    exprs_p: &[IExpressionPE<'a>],
+  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'a: 'i,
+  {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();
     let mut exprs_s = Vec::new();

@@ -58,7 +58,7 @@ where
     interner: &'i Interner<'a>,
     keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
