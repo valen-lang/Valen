@@ -35,30 +35,28 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // From PostParser.scala lines 922-965: ScoutCompilation class
-pub struct ScoutCompilation<'a, 'i, 'k, 'b> {
+pub struct ScoutCompilation<'a, 'ctx> {
   #[allow(dead_code)]
   global_options: GlobalOptions,
   #[allow(dead_code)]
-  interner: &'i Interner<'a>,
+  interner: &'ctx Interner<'a>,
   #[allow(dead_code)]
-  keywords: &'k Keywords<'a>,
-  parser_compilation: ParserCompilation<'a, 'i, 'k, 'b>,
+  keywords: &'ctx Keywords<'a>,
+  parser_compilation: ParserCompilation<'a, 'ctx>,
   #[allow(dead_code)]
   scoutput_cache: Option<()>,
 }
 
-impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> ScoutCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From PostParser.scala lines 922-928
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
@@ -409,16 +407,15 @@ object PostParser {
   def noVariableUses = VariableUses(Vector.empty)
   def noDeclarations = VariableDeclarations(Vector.empty)
 */
-impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
-  pub fn no_variable_uses<'b>() -> VariableUses<'b> {
+  pub fn no_variable_uses() -> VariableUses<'static> {
     VariableUses::empty()
   }
 
-  pub fn no_declarations<'b>() -> VariableDeclarations<'b> {
+  pub fn no_declarations() -> VariableDeclarations<'static> {
     VariableDeclarations { vars: Vec::new() }
   }
 
@@ -435,10 +432,9 @@ where
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
 */
-impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   pub fn eval_pos(file: &'a FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
     CodeLocationS {
@@ -535,10 +531,9 @@ where
 //    }
 //  }
 */
-impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   pub fn consecutive(exprs: Vec<IExpressionSE<'a>>) -> IExpressionSE<'a> {
     assert!(!exprs.is_empty(), "POSTPARSER_CONSECUTIVE_EMPTY");
@@ -701,21 +696,20 @@ where
 /*
 }
 */
-pub struct PostParser<'a, 'i, 'k> {
+pub struct PostParser<'a, 'ctx> {
   pub global_options: GlobalOptions,
-  pub interner: &'i Interner<'a>,
-  pub keywords: &'k Keywords<'a>,
+  pub interner: &'ctx Interner<'a>,
+  pub keywords: &'ctx Keywords<'a>,
 }
 
-impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   pub fn new(
     global_options: GlobalOptions,
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
   ) -> Self {
     Self {
       global_options,
@@ -1660,11 +1654,9 @@ class ScoutCompilation(
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
 */
-impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> ScoutCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<(), String> {

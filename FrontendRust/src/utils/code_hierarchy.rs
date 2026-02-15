@@ -144,10 +144,13 @@ pub struct PackageCoordinate<'a> {
 
 impl<'a> PackageCoordinate<'a> {
   // From CodeHierarchy.scala line 50: BUILTIN
-  pub fn builtin<'i, 'k>(
-    interner: &'i crate::Interner<'a>,
-    keywords: &'k crate::Keywords<'a>,
-  ) -> &'a PackageCoordinate<'a> {
+  pub fn builtin<'ctx>(
+    interner: &'ctx crate::Interner<'a>,
+    keywords: &'ctx crate::Keywords<'a>,
+  ) -> &'a PackageCoordinate<'a>
+  where
+    'a: 'ctx,
+  {
     interner.intern_package_coordinate(keywords.empty_string, &[])
   }
 }

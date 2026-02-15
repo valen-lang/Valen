@@ -275,14 +275,14 @@ impl ExpressionScout {
     (blockSE, selfUsesOfThingsFromAbove, childUsesOfThingsFromAbove)
   }
 */
-fn find_local<'b>(
-  stack_frame: &StackFrame<'b>,
-  range: RangeS<'b>,
-  imprecise_name: &IImpreciseNameS<'b>,
-) -> Option<LocalLookupResultS<'b>> {
+fn find_local<'a>(
+  stack_frame: &StackFrame<'a>,
+  range: RangeS<'a>,
+  imprecise_name: &IImpreciseNameS<'a>,
+) -> Option<LocalLookupResultS<'a>> {
   stack_frame
     .find_variable(imprecise_name)
-    .map(|full_name| LocalLookupResultS::<'b> { range, name: full_name })
+    .map(|full_name| LocalLookupResultS::<'a> { range, name: full_name })
 }
 
 /*
@@ -302,14 +302,14 @@ fn find_local<'b>(
 // - variable uses by self
 // - variable uses by child blocks
 // MIGTODO: rename all "scout" to "post parse" or something.
-fn scout_expression<'a, 'i>(
-  interner: &'i Interner<'a>,
+fn scout_expression<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
   stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
   expression: &IExpressionPE<'a>,
 ) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
 where
-  'a: 'i,
+  'a: 'ctx,
 {
 /*
   // Returns:
@@ -1359,15 +1359,15 @@ where
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-  pub(crate) fn scout_expression_and_coerce<'a, 'i>(
-    interner: &'i Interner<'a>,
+  pub(crate) fn scout_expression_and_coerce<'a, 'ctx>(
+    interner: &'ctx Interner<'a>,
     stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     expression_p: &IExpressionPE<'a>,
     load_as_p: LoadAsP,
   ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'i,
+    'a: 'ctx,
   {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = Self::scout_expression(
@@ -1462,14 +1462,14 @@ where
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-  fn scout_elements_as_expressions<'a, 'i>(
-    interner: &'i Interner<'a>,
+  fn scout_elements_as_expressions<'a, 'ctx>(
+    interner: &'ctx Interner<'a>,
     initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     exprs_p: &[IExpressionPE<'a>],
   ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'i,
+    'a: 'ctx,
   {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();

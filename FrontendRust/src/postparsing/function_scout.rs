@@ -45,16 +45,16 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IFunctionParent<'b> {
+pub enum IFunctionParent<'a> {
   FunctionNoParent,
   ParentInterface {
-    interface_env: FunctionEnvironmentS<'b>,
-    interface_generic_params: Vec<GenericParameterS<'b>>,
-    interface_rules: Vec<IRulexSR<'b>>,
-    interface_rune_to_explicit_type: HashMap<IRuneS<'b>, ITemplataType>,
+    interface_env: FunctionEnvironmentS<'a>,
+    interface_generic_params: Vec<GenericParameterS<'a>>,
+    interface_rules: Vec<IRulexSR<'a>>,
+    interface_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   },
   ParentFunction {
-    parent_stack_frame: StackFrame<'b>,
+    parent_stack_frame: StackFrame<'a>,
   },
 }
 
@@ -101,14 +101,14 @@ class FunctionScout(
 */
 pub struct FunctionScout;
 impl FunctionScout {
-  pub fn scout_function<'a, 'i>(
-    interner: &'i Interner<'a>,
+  pub fn scout_function<'a, 'ctx>(
+    interner: &'ctx Interner<'a>,
     file_coordinate: &'a FileCoordinate<'a>,
     function: &FunctionP<'a>,
     maybe_parent: IFunctionParent<'a>,
   ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'i,
+    'a: 'ctx,
   {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}

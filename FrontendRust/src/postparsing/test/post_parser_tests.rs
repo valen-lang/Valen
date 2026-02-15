@@ -35,14 +35,13 @@ import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+fn compile<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> ProgramS<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let options = GlobalOptions {
     sanity_check: true,

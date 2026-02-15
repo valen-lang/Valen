@@ -21,26 +21,24 @@ pub struct HammerCompilationOptions {
 }
 
 // From HammerCompilation.scala lines 25-66: HammerCompilation class
-pub struct HammerCompilation<'a, 'i, 'k, 'b> {
-  instantiated_compilation: InstantiatedCompilation<'a, 'i, 'k, 'b>,
+pub struct HammerCompilation<'a, 'ctx> {
+  instantiated_compilation: InstantiatedCompilation<'a, 'ctx>,
   #[allow(dead_code)]
   hamuts_cache: Option<()>, // ProgramH not yet ported
   #[allow(dead_code)]
   von_hammer_cache: Option<()>, // VonHammer not yet ported
 }
 
-impl<'a, 'i, 'k, 'b> HammerCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> HammerCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From HammerCompilation.scala lines 25-40
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
   ) -> Self {
     let hammer_options = HammerCompilationOptions {

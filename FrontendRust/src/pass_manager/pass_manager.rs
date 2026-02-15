@@ -268,7 +268,7 @@ pub enum IFrontendInput<'a> {
   },
 }
 impl<'a> IFrontendInput<'a> {
-  pub fn package_coord<'i>(&self, interner: &'i Interner<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn package_coord<'ctx>(&self, interner: &'ctx Interner<'a>) -> &'a PackageCoordinate<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
@@ -329,14 +329,13 @@ fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, 
 */
 
 // From PassManager.scala lines 203-342: build function
-pub fn build<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn build<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   opts: &Options<'a>,
 ) -> Result<(), String>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   // From PassManager.scala lines 205-207: Create output directories
   let output_dir_path = opts.output_dir_path.as_ref().unwrap();

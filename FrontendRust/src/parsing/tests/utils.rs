@@ -16,14 +16,13 @@ use crate::parsing::tests::traverse::NodeRefP;
 /// MIGTODO: Remove this function and use the one in ParserTestCompilation.scala instead
 /// so that it does a round-trip through vonprinter and parsedloader.
 /// Compile a Vale file and return the FileP AST
-pub fn compile_file<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_file<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<FileP<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -53,40 +52,37 @@ where
 }
 
 /// Compile a Vale file and panic if it fails (for tests)
-pub fn compile<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> FileP<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_file(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
 }
 
 /// Compile denizens (top-level declarations) from code
-pub fn compile_denizens<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_denizens<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<Vec<IDenizenP<'a>>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_file(interner, keywords, code).map(|file| file.denizens)
 }
 
 /// Compile a single denizen from code
-pub fn compile_denizen<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_denizen<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<IDenizenP<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let denizens = compile_denizens(interner, keywords, code)?;
   assert_eq!(denizens.len(), 1, "Expected exactly one denizen");
@@ -94,28 +90,26 @@ where
 }
 
 /// Compile a single denizen and panic if it fails
-pub fn compile_denizen_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_denizen_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> IDenizenP<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_denizen(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
 }
 
 /// Compile a single denizen and expect it to fail with an error, passing the error to a callback
-pub fn compile_denizen_for_error<'a, 'i, 'k, F>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_denizen_for_error<'a, 'ctx, F>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
   callback: F,
 )
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
   F: FnOnce(ParseError),
 {
   match compile_denizen(interner, keywords, code) {
@@ -125,14 +119,13 @@ where
 }
 
 /// Compile an expression from code
-pub fn compile_expression<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_expression<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let expression_parser = ExpressionParser::new(interner, keywords);
@@ -146,40 +139,37 @@ where
 }
 
 /// Compile an expression and panic if it fails
-pub fn compile_expression_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_expression_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_expression(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
 }
 
 /// Compile an expression and expect it to fail, returning the error
-pub fn compile_expression_for_error<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_expression_for_error<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> ParseError
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_expression(interner, keywords, code).expect_err("Expected parsing to fail")
 }
 
 /// Compile a statement from code
-pub fn compile_statement<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_statement<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let expression_parser = ExpressionParser::new(interner, keywords);
@@ -193,27 +183,25 @@ where
 }
 
 /// Compile a statement and panic if it fails
-pub fn compile_statement_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_statement_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_statement(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
 }
 
 /// Compile block contents from code
-pub fn compile_block_contents<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_block_contents<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let mut parser = Parser::new(interner, keywords);
@@ -230,27 +218,25 @@ where
 }
 
 /// Compile block contents and panic if it fails
-pub fn compile_block_contents_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_block_contents_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_block_contents(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
 }
 
 /// Compile a pattern from code
-pub fn compile_pattern<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_pattern<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<PatternPP<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let mut parser = Parser::new(interner, keywords);
@@ -272,27 +258,25 @@ where
 }
 
 /// Compile a pattern and panic if it fails
-pub fn compile_pattern_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_pattern_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> PatternPP<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_pattern(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
 }
 
 /// Compile a templex (type expression) from code
-pub fn compile_templex<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_templex<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<ITemplexPT<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -304,27 +288,25 @@ where
 }
 
 /// Compile a templex and panic if it fails
-pub fn compile_templex_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_templex_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> ITemplexPT<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_templex(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
 }
 
 /// Compile a rulex (rule expression) from code
-pub fn compile_rulex<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_rulex<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<IRulexPR<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -336,27 +318,25 @@ where
 }
 
 /// Compile a rulex and panic if it fails
-pub fn compile_rulex_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_rulex_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> IRulexPR<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_rulex(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
 }
 
 /// Compile a struct from code
-pub fn compile_struct<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_struct<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> Result<StructP<'a>, ParseError>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   let denizen = compile_denizen(interner, keywords, code)?;
   match denizen {
@@ -366,14 +346,13 @@ where
 }
 
 /// Compile a struct and panic if it fails
-pub fn compile_struct_expect<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_struct_expect<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> StructP<'a>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_struct(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
 }
@@ -413,14 +392,13 @@ pub fn find_struct_named<'a, 'f>(file: &'f FileP<'a>, name: &str) -> &'f StructP
   )
 }
 
-pub fn compile_for_error<'a, 'i, 'k>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn compile_for_error<'a, 'ctx>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   code: &str,
 ) -> ParseError
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   compile_file(interner, keywords, code).expect_err("Should be error")
 }

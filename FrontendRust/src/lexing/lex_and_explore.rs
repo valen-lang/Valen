@@ -26,17 +26,16 @@ object LexAndExplore {
 
 /// Main generic lexing function with import-driven package discovery
 /// From LexAndExplore.scala lines 43-150
-pub fn lex_and_explore<'a, 'i, 'k, D, F, R>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn lex_and_explore<'a, 'ctx, D, F, R>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
   mut denizen_handler: impl FnMut(&'a FileCoordinate<'a>, &str, &[ImportL<'a>], &IDenizenL<'a>) -> D,
   mut file_handler: impl FnMut(&'a FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,
 ) -> Result<Vec<F>, FailedParse<'a>>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
   R: IPackageResolver<'a, HashMap<String, String>>,
 {
   let mut unexplored_packages: HashSet<&'a PackageCoordinate<'a>> =
@@ -75,7 +74,7 @@ where
       let mut result_acc = Vec::new();
 
       let mut iter = LexingIterator::new(code.clone());
-      let lexer = Lexer::<'a, 'i, 'k>::new(interner, keywords);
+      let lexer = Lexer::<'a, 'ctx>::new(interner, keywords);
       // Store (module, packages) as owned strings to avoid lexer borrow conflict.
       let mut packages_to_explore: Vec<(String, Vec<String>)> = Vec::new();
 

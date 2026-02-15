@@ -36,12 +36,12 @@ type ParseResult<T> = Result<T, ParseError>;
 
 /// Main parser coordinating all parsing operations
 /// Matches Scala's Parser class
-pub struct Parser<'a, 'i, 'k> {
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
-  pub templex_parser: TemplexParser<'a, 'i, 'k>,
-  pub pattern_parser: PatternParser<'a, 'i, 'k>,
-  pub expression_parser: ExpressionParser<'a, 'i, 'k>,
+pub struct Parser<'a, 'ctx> {
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  pub templex_parser: TemplexParser<'a, 'ctx>,
+  pub pattern_parser: PatternParser<'a, 'ctx>,
+  pub expression_parser: ExpressionParser<'a, 'ctx>,
 }
 /*
 class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
@@ -50,14 +50,13 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
   val expressionParser = new ExpressionParser(interner, keywords, opts, patternParser, templexParser)
 */
 
-impl<'a, 'i, 'k> Parser<'a, 'i, 'k>
+impl<'a, 'ctx> Parser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
   ) -> Self {
     let templex_parser = TemplexParser::new(interner, keywords);
     let pattern_parser = PatternParser::new(interner, keywords);
@@ -1785,22 +1784,20 @@ where
 */
 
 // From Parser.scala lines 699-854: ParserCompilation class
-pub struct ParserCompilation<'a, 'i, 'k, 'b> {
+pub struct ParserCompilation<'a, 'ctx> {
   opts: GlobalOptions,
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-  package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
-  parser: Parser<'a, 'i, 'k>,
+  package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
+  parser: Parser<'a, 'ctx>,
   code_map_cache: Option<FileCoordinateMap<'a, String>>,
   vpst_map_cache: Option<FileCoordinateMap<'a, String>>,
   parseds_cache: Option<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>>,
 }
-impl<'a, 'i, 'k, 'b> ParserCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> ParserCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   /*
   class ParserCompilation(
@@ -1821,10 +1818,10 @@ where
   // From Parser.scala lines 699-706
   pub fn new(
     opts: GlobalOptions,
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
   ) -> Self {
     let parser = Parser::new(interner, keywords);
     ParserCompilation {
@@ -1877,10 +1874,10 @@ where
     }
 
     // From Parser.scala lines 742-749: Create resolver that filters out .vpst files
-    struct ValeOnlyResolver<'a, 'r> {
-      inner: &'r dyn IPackageResolver<'a, HashMap<String, String>>,
+    struct ValeOnlyResolver<'a, 'ctx> {
+      inner: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     }
-    impl<'a, 'r> IPackageResolver<'a, HashMap<String, String>> for ValeOnlyResolver<'a, 'r> {
+    impl<'a, 'ctx> IPackageResolver<'a, HashMap<String, String>> for ValeOnlyResolver<'a, 'ctx> {
       fn resolve(
         &self,
         package_coord: &'a PackageCoordinate<'a>,

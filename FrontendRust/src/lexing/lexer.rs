@@ -15,19 +15,18 @@ type Result<T> = std::result::Result<T, ParseError>;
 
 /// Vale lexer
 /// Matches Scala's Lexer class
-pub struct Lexer<'a, 'i, 'k> {
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub struct Lexer<'a, 'ctx> {
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
 }
-impl<'a, 'i, 'k> Lexer<'a, 'i, 'k>
+impl<'a, 'ctx> Lexer<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
   /*
   class Lexer(interner: Interner, keywords: Keywords) {
   */
-  pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
     Lexer { interner, keywords }
   }
 

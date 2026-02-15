@@ -29,21 +29,20 @@ type ParseResult<T> = Result<T, ParseError>;
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 #[derive(Clone)]
-pub struct TemplexParser<'a, 'i, 'k> {
+pub struct TemplexParser<'a, 'ctx> {
   #[allow(dead_code)]
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
 }
 /*
 class TemplexParser(interner: Interner, keywords: Keywords) {
 */
 
-impl<'a, 'i, 'k> TemplexParser<'a, 'i, 'k>
+impl<'a, 'ctx> TemplexParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
-  pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
     TemplexParser { interner, keywords }
   }
 

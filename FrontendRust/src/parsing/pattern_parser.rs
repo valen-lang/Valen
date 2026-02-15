@@ -20,21 +20,20 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
-pub struct PatternParser<'a, 'i, 'k> {
+pub struct PatternParser<'a, 'ctx> {
   #[allow(dead_code)]
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
 }
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 */
 
-impl<'a, 'i, 'k> PatternParser<'a, 'i, 'k>
+impl<'a, 'ctx> PatternParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
-  pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
     PatternParser { interner, keywords }
   }
 
@@ -43,7 +42,7 @@ where
   pub fn parse_parameter(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
@@ -207,7 +206,7 @@ where
   pub fn parse_pattern(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
     pattern_begin: i32,
     index: usize,
     is_in_citizen: bool,

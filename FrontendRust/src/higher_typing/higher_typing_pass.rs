@@ -10,27 +10,25 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
-pub struct HigherTypingCompilation<'a, 'i, 'k, 'b> {
-  scout_compilation: ScoutCompilation<'a, 'i, 'k, 'b>,
+pub struct HigherTypingCompilation<'a, 'ctx> {
+  scout_compilation: ScoutCompilation<'a, 'ctx>,
   #[allow(dead_code)]
   astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
 }
 
-impl<'a, 'i, 'k, 'b> HigherTypingCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> HigherTypingCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From HigherTypingPass.scala lines 793-799
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
-    let scout_compilation = ScoutCompilation::<'a, 'i, 'k, 'b>::new(
+    let scout_compilation = ScoutCompilation::<'a, 'ctx>::new(
       interner,
       keywords,
       packages_to_build,

@@ -42,19 +42,18 @@ object ParseAndExplore {
 */
 
 // From ParseAndExplore.scala lines 35-101: parseAndExplore
-pub fn parse_and_explore<'a, 'i, 'k, D, F, R, HandleParsedDenizen, FileHandler>(
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
+pub fn parse_and_explore<'a, 'ctx, D, F, R, HandleParsedDenizen, FileHandler>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
   _opts: GlobalOptions,
-  parser: &Parser<'a, 'i, 'k>,
+  parser: &Parser<'a, 'ctx>,
   packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
   mut handle_parsed_denizen: HandleParsedDenizen,
   mut file_handler: FileHandler,
 ) -> Result<Vec<F>, FailedParse<'a>>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
   R: IPackageResolver<'a, HashMap<String, String>>,
   HandleParsedDenizen: FnMut(&'a FileCoordinate<'a>, &str, &[ImportL<'a>], IDenizenP<'a>) -> D,
   FileHandler: FnMut(&'a FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,

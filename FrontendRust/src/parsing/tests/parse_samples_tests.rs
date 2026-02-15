@@ -36,17 +36,15 @@ fn load_expected(path: &str) -> String {
     .unwrap_or_else(|e| panic!("Failed to load sample '{}': {} ({:?})", path, e, full_path))
 }
 
-fn parse<'a, 'i, 'k, 'b>(
+fn parse<'a, 'ctx>(
   path: &str,
-  interner: &'i Interner<'a>,
-  keywords: &'k Keywords<'a>,
-  resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
   test_package_coord: &'a PackageCoordinate<'a>,
 )
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   let mut compilation = parser_test_compilation::test(interner, keywords, resolver, test_package_coord);
   compilation

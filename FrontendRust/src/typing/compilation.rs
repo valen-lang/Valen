@@ -22,24 +22,22 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation<'a, 'i, 'k, 'b> {
-  higher_typing_compilation: HigherTypingCompilation<'a, 'i, 'k, 'b>,
+pub struct TypingPassCompilation<'a, 'ctx> {
+  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl<'a, 'i, 'k, 'b> TypingPassCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> TypingPassCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From Compilation.scala lines 22-30
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
   ) -> Self {

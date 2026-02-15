@@ -35,9 +35,9 @@ enum ExpressionElement<'a> {
 }
 
 #[derive(Clone)]
-pub struct ExpressionParser<'a, 'i, 'k> {
-  interner: &'i Interner<'a>,
-  pub keywords: &'k Keywords<'a>,
+pub struct ExpressionParser<'a, 'ctx> {
+  interner: &'ctx Interner<'a>,
+  pub keywords: &'ctx Keywords<'a>,
 }
 /*
 class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptions, patternParser: PatternParser, templexParser: TemplexParser) {
@@ -48,12 +48,11 @@ case class DataElement(expr: IExpressionPE) extends IExpressionElement
 case class BinaryCallElement(symbol: NameP, precedence: Int) extends IExpressionElement
 */
 
-impl<'a, 'i, 'k> ExpressionParser<'a, 'i, 'k>
+impl<'a, 'ctx> ExpressionParser<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
+  'a: 'ctx,
 {
-  pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
     ExpressionParser { interner, keywords }
   }
 
@@ -62,8 +61,8 @@ where
   pub fn parse_block(
     &self,
     block_l: &CurliedLE<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     let mut iter = ScrambleIterator::new(block_l.contents.clone());
     self.parse_block_contents(&mut iter, false, templex_parser, pattern_parser)
@@ -80,8 +79,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     let mut statements = Vec::new();
 
@@ -238,8 +237,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
@@ -498,8 +497,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     assert!(iter.has_next());
     let begin = iter.get_pos();
@@ -717,8 +716,8 @@ where
     iter: &mut ScrambleIterator<'a>,
     expr_so_far: IExpressionPE<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let operator_begin = iter.get_pos();
 
@@ -1075,8 +1074,8 @@ where
     original_iter: &mut ScrambleIterator<'a>,
     spree_begin: i32,
     expr_so_far: IExpressionPE<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>>
   {
     let mut tentative_iter = original_iter.clone();
@@ -1131,8 +1130,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     assert!(iter.has_next());
     let begin = iter.get_pos();
@@ -1194,7 +1193,7 @@ where
   pub fn parse_chevron_pack(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
   ) -> ParseResult<Option<Vec<ITemplexPT<'a>>>>
   {
     match iter.peek_cloned() {
@@ -1244,7 +1243,7 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     expr_so_far: IExpressionPE<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
   ) -> ParseResult<Option<LookupPE<'a>>> {
     let operator_begin = iter.get_pos();
 
@@ -1300,8 +1299,8 @@ where
   pub fn parse_pack(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<(RangeL, Vec<IExpressionPE<'a>>)>> {
     let parend_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Parend(p)) => {
@@ -1354,8 +1353,8 @@ where
   pub fn parse_square_pack(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<Vec<IExpressionPE<'a>>>> {
     let squared_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(p)) => {
@@ -1408,8 +1407,8 @@ where
   pub fn parse_brace_pack(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<Vec<IExpressionPE<'a>>>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(SquaredLE { contents, .. })) => {
@@ -1457,8 +1456,8 @@ where
   pub fn parse_tuple_or_sub_expression(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Parend(ParendLE { range, contents })) => {
@@ -1566,8 +1565,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     assert!(iter.has_next());
 
@@ -1844,8 +1843,8 @@ where
   fn parse_lone_block(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     // Mirrors ExpressionParser.scala line 645
     let mut tentative_iter = iter.clone();
@@ -1938,8 +1937,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     // Mirrors ExpressionParser.scala line 682
     let begin = iter.get_pos();
@@ -2152,8 +2151,8 @@ where
   pub fn parse_lambda(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let begin = iter.get_pos();
 
@@ -2454,8 +2453,8 @@ where
   pub fn parse_array(
     &self,
     original_iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let mut tentative_iter = original_iter.clone();
     let begin = tentative_iter.get_pos();
@@ -2982,8 +2981,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<IExpressionPE<'a>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
@@ -3128,8 +3127,8 @@ where
   fn parse_while(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let while_begin = iter.get_pos();
 
@@ -3220,8 +3219,8 @@ where
   fn parse_explicit_block(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let block_begin = iter.get_pos();
 
@@ -3297,8 +3296,8 @@ where
   fn parse_if_ladder(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let if_ladder_begin = iter.get_pos();
 
@@ -3512,8 +3511,8 @@ where
   fn parse_if_part(
     &self,
     iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<(IExpressionPE<'a>, BlockPE<'a>)> {
     let if_begin = iter.get_pos();
 
@@ -3585,8 +3584,8 @@ where
   fn parse_foreach(
     &self,
     original_iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let each_begin = original_iter.get_pos();
 
@@ -3782,8 +3781,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let begin = iter.get_pos();
     if iter.try_skip_word(&self.keywords.retuurn).is_none() {
@@ -3861,8 +3860,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let mutate_begin = iter.get_pos();
     if !self.next_is_set_expr(iter) {
@@ -3941,8 +3940,8 @@ where
     &self,
     iter: &mut ScrambleIterator<'a>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'i, 'k>,
-    pattern_parser: &PatternParser<'a, 'i, 'k>,
+    templex_parser: &TemplexParser<'a, 'ctx>,
+    pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     // Try to parse a let statement by looking for pattern = expr
     let original_pos = iter.index;

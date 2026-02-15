@@ -19,24 +19,22 @@ pub struct InstantiatorCompilationOptions {
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
-pub struct InstantiatedCompilation<'a, 'i, 'k, 'b> {
-  typing_pass_compilation: TypingPassCompilation<'a, 'i, 'k, 'b>,
+pub struct InstantiatedCompilation<'a, 'ctx> {
+  typing_pass_compilation: TypingPassCompilation<'a, 'ctx>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
-impl<'a, 'i, 'k, 'b> InstantiatedCompilation<'a, 'i, 'k, 'b>
+impl<'a, 'ctx> InstantiatedCompilation<'a, 'ctx>
 where
-  'a: 'i,
-  'a: 'k,
-  'a: 'b,
+  'a: 'ctx,
 {
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(
-    interner: &'i Interner<'a>,
-    keywords: &'k Keywords<'a>,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: HammerCompilationOptions,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {

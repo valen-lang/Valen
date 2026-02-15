@@ -72,7 +72,7 @@ pub struct VariableDeclarations<'a> {
 }
 
 impl<'a> VariableDeclarations<'a> {
-  pub fn empty<'b>() -> VariableDeclarations<'b> {
+  pub fn empty() -> VariableDeclarations<'static> {
     VariableDeclarations { vars: Vec::new() }
   }
 
@@ -112,7 +112,7 @@ case class VariableUses(uses: Vector[VariableUse]) {
   vassert(uses.map(_.name).distinct == uses.map(_.name))
 */
 
-  pub fn empty<'b>() -> VariableUses<'b> {
+  pub fn empty() -> VariableUses<'static> {
     VariableUses { uses: Vec::new() }
   }
 
