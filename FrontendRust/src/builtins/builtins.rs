@@ -71,18 +71,12 @@ pub fn get_modulized_code_map<'a>(
         
         let package_coord = {
             // Interner now has interior mutability
-            interner.intern_package_coordinate(PackageCoordinate {
-                module: keywords.v,
-                packages: vec![keywords.builtins, module_name_stri],
-            })
+            interner.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri])
         };
         
         let file_coord = {
             // Interner now has interior mutability
-            interner.intern_file_coordinate(FileCoordinate {
-                package_coord: package_coord,
-                filepath: filename.to_string(),
-            })
+            interner.intern_file_coordinate(package_coord, filename)
         };
         
         let code = load(builtins_dir, filename)?;
@@ -102,10 +96,7 @@ pub fn get_code_map<'a>(
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let builtin_namespace_coord = {
         // Interner now has interior mutability
-        interner.intern_package_coordinate(PackageCoordinate {
-            module: keywords.empty_string,
-            packages: vec![],
-        })
+        interner.intern_package_coordinate(keywords.empty_string, &[])
     };
     
     let mut result = FileCoordinateMap::new();
@@ -119,18 +110,12 @@ pub fn get_code_map<'a>(
         // Put empty string for v.builtins.moduleName
         let modulized_package_coord = {
             // Interner now has interior mutability
-            interner.intern_package_coordinate(PackageCoordinate {
-                module: keywords.v,
-                packages: vec![keywords.builtins, module_name_stri],
-            })
+            interner.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri])
         };
         
         let modulized_file_coord = {
             // Interner now has interior mutability
-            interner.intern_file_coordinate(FileCoordinate {
-                package_coord: modulized_package_coord,
-                filepath: filename.to_string(),
-            })
+            interner.intern_file_coordinate(modulized_package_coord, filename)
         };
         
         result.put(modulized_file_coord, String::new());
@@ -138,10 +123,7 @@ pub fn get_code_map<'a>(
         // Put actual code for root package
         let root_file_coord = {
             // Interner now has interior mutability
-            interner.intern_file_coordinate(FileCoordinate {
-                package_coord: builtin_namespace_coord,
-                filepath: filename.to_string(),
-            })
+            interner.intern_file_coordinate(builtin_namespace_coord, filename)
         };
         
         let code = load(builtins_dir, filename)?;

@@ -15,6 +15,7 @@ class TypeTests extends FunSuite with Matchers with Collector with TestParseUtil
 //    compile(new PatternParser().parsePattern(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -39,7 +40,8 @@ where
 
 #[test]
 fn ignoring_name() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
@@ -59,7 +61,8 @@ fn ignoring_name() {
 */
 #[test]
 fn static_sized_array() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ [#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
@@ -99,7 +102,8 @@ fn static_sized_array() {
 */
 #[test]
 fn static_sized_array_with_imm() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ [#3]<imm>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
@@ -139,7 +143,8 @@ fn static_sized_array_with_imm() {
 */
 #[test]
 fn static_sized_array_with_imm_and_vary() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ [#3]<imm, vary>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
@@ -179,7 +184,8 @@ fn static_sized_array_with_imm_and_vary() {
 */
 #[test]
 fn runtime_sized_array() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ #[]int");
   let destination = pattern.destination.as_ref().unwrap();
@@ -214,7 +220,8 @@ fn runtime_sized_array() {
 */
 #[test]
 fn sequence_type() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ (int, bool)");
   let destination = pattern.destination.as_ref().unwrap();
@@ -242,7 +249,8 @@ fn sequence_type() {
 */
 #[test]
 fn static_sized_array_with_borrow() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ &[#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
@@ -290,7 +298,8 @@ fn static_sized_array_with_borrow() {
 */
 #[test]
 fn static_sized_array_with_weak() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ &&[#3]<_, _>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
@@ -332,7 +341,8 @@ fn static_sized_array_with_weak() {
 */
 #[test]
 fn call_type() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ MyOption<MyList<int>>");
   let destination = pattern.destination.as_ref().unwrap();

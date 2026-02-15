@@ -58,10 +58,7 @@ where
       Some(filepath_to_code) => {
         let mut result = Vec::new();
         for (filepath, code) in filepath_to_code {
-          let file_coord = interner.intern_file_coordinate(FileCoordinate::<'a> {
-            package_coord: needed_package_coord,
-            filepath: filepath.clone(),
-          });
+          let file_coord = interner.intern_file_coordinate(needed_package_coord, &filepath);
           result.push((file_coord, code));
         }
         result
@@ -111,8 +108,8 @@ where
             }
 
             packages_to_explore.push((
-              im.module_name.str.str.clone(),
-              im.package_steps.iter().map(|x| x.str.str.clone()).collect(),
+              im.module_name.str.str.to_string(),
+              im.package_steps.iter().map(|x| x.str.str.to_string()).collect(),
             ));
 
             let denizen_result = denizen_handler(file_coord, &code, &[], &denizen);
@@ -124,8 +121,8 @@ where
               Some(imports_accum) => {
                 for imp in &imports_accum {
                   packages_to_explore.push((
-                    imp.module_name.str.str.clone(),
-                    imp.package_steps.iter().map(|x| x.str.str.clone()).collect(),
+                    imp.module_name.str.str.to_string(),
+                    imp.package_steps.iter().map(|x| x.str.str.to_string()).collect(),
                   ));
                 }
                 maybe_imports = Some(imports_accum);
@@ -143,10 +140,9 @@ where
 
       // Add discovered packages to unexplored (after lex loop to avoid borrow conflicts).
       for (module_str, package_strs) in packages_to_explore {
-        let coord = interner.intern_package_coordinate(PackageCoordinate {
-          module: interner.intern(&module_str),
-          packages: package_strs.iter().map(|s| interner.intern(s)).collect(),
-        });
+        let package_steps: Vec<&'a crate::interner::StrI> =
+          package_strs.iter().map(|s| interner.intern(s)).collect();
+        let coord = interner.intern_package_coordinate(interner.intern(&module_str), &package_steps);
         if !started_packages.contains(&*coord) {
           unexplored_packages.insert(&*coord);
         }

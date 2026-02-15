@@ -16,6 +16,7 @@ class DestructureParserTests extends FunSuite with Matchers with Collector with 
 //    compile(new PatternParser().parsePattern(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::parsing::ast::{INameDeclarationP, PatternPP};
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -43,7 +44,8 @@ where
 */
 #[test]
 fn only_empty_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[]");
   assert!(pattern.destination.is_none());
@@ -54,7 +56,8 @@ fn only_empty_destructure() {
 
 #[test]
 fn one_element_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[a]");
   assert!(pattern.destination.is_none());
@@ -74,7 +77,8 @@ fn one_element_destructure() {
 */
 #[test]
 fn one_typed_element_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[ _ A ]");
   assert!(pattern.destination.is_none());
@@ -100,7 +104,8 @@ fn one_typed_element_destructure() {
 */
 #[test]
 fn only_two_element_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[a, b]");
   assert!(pattern.destination.is_none());
@@ -123,7 +128,8 @@ fn only_two_element_destructure() {
 */
 #[test]
 fn two_element_destructure_with_ignore() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[_, b]");
   assert!(pattern.destination.is_none());
@@ -153,7 +159,8 @@ fn two_element_destructure_with_ignore() {
 */
 #[test]
 fn capture_with_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a [x, y]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
@@ -179,7 +186,8 @@ fn capture_with_destructure() {
 */
 #[test]
 fn type_with_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "A[a, b]");
   assert!(pattern.destination.is_none());
@@ -205,7 +213,8 @@ fn type_with_destructure() {
 */
 #[test]
 fn capture_and_type_with_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a A[x, y]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
@@ -231,7 +240,8 @@ fn capture_and_type_with_destructure() {
 */
 #[test]
 fn capture_with_types_inside() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a [_ int, _ bool]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
@@ -269,7 +279,8 @@ fn capture_with_types_inside() {
 */
 #[test]
 fn destructure_with_type_inside() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[a int, b bool]");
   assert!(pattern.destination.is_none());
@@ -295,7 +306,8 @@ fn destructure_with_type_inside() {
 */
 #[test]
 fn nested_destructures_a() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[a, [b, c]]");
   assert!(pattern.destination.is_none());
@@ -331,7 +343,8 @@ fn nested_destructures_a() {
 */
 #[test]
 fn nested_destructures_b() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[[a], b]");
   assert!(pattern.destination.is_none());
@@ -363,7 +376,8 @@ fn nested_destructures_b() {
 */
 #[test]
 fn nested_destructures_c() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "[[[a]]]");
   assert!(pattern.destination.is_none());

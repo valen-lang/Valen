@@ -3,9 +3,16 @@
 version = 4
 
 [[package]]
+name = "bumpalo"
+version = "3.19.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "5dd9dc738b7a8311c7ade152424974d8115f2cdad61e8dab8dac9f2362298510"
+
+[[package]]
 name = "frontend_rust"
 version = "0.1.0"
 dependencies = [
+ "bumpalo",
  "serde",
  "serde_json",
 ]

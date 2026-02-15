@@ -16,6 +16,7 @@ class CoordRuleTests extends FunSuite with Matchers with Collector with TestPars
 //    compile(new TemplexParser(interner).parseRule(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -36,7 +37,8 @@ where
 
 #[test]
 fn empty_coord_rule() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "_ Ref");
   let typed = cast!(rule, IRulexPR::Typed);
@@ -54,7 +56,8 @@ fn empty_coord_rule() {
 
 #[test]
 fn coord_with_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Ref");
   let typed = cast!(rule, IRulexPR::Typed);
@@ -71,7 +74,8 @@ fn coord_with_rune() {
 */
 #[test]
 fn coord_with_destructure_only() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Ref[_, _, _]");
   let components = cast!(rule, IRulexPR::Components);
@@ -92,7 +96,8 @@ fn coord_with_destructure_only() {
 
 #[test]
 fn coord_with_rune_and_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T = Ref[_, _, _]");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -143,7 +148,8 @@ fn coord_matches_plain_int() {
   //   (a: #T)
   // Note from later: I think this is an anachronism, this doesn't test
   // anything with coords.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "int");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -169,7 +175,8 @@ fn coord_matches_plain_int() {
 */
 #[test]
 fn coord_with_int_in_kind_rule() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Ref[_, _, int]");
   let components = cast!(rule, IRulexPR::Components);
@@ -192,7 +199,8 @@ fn coord_with_int_in_kind_rule() {
 
 #[test]
 fn coord_with_specific_kind_rule() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Ref[_, _, Kind[mut]]");
   let components = cast!(rule, IRulexPR::Components);
@@ -222,7 +230,8 @@ fn coord_with_specific_kind_rule() {
 */
 #[test]
 fn coord_with_value() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Ref = int");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -243,7 +252,8 @@ fn coord_with_value() {
 */
 #[test]
 fn coord_with_destructure_and_value() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Ref[_, _, _] = int");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -267,7 +277,8 @@ fn coord_with_destructure_and_value() {
 */
 #[test]
 fn coord_with_sequence_in_value_spot() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Ref = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -293,7 +304,8 @@ fn coord_with_sequence_in_value_spot() {
 */
 #[test]
 fn lone_tuple_is_sequence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "(int, bool)");
   let tuple = cast!(cast!(&rule, IRulexPR::Templex), ITemplexPT::Tuple);

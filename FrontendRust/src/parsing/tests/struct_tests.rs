@@ -23,6 +23,7 @@ class StructTests extends FunSuite with Collector with TestParseUtils {
 //    }
 //  }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -31,7 +32,8 @@ use crate::parsing::tests::utils::*;
 
 #[test]
 fn simple_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { }");
   assert_eq!(struct_.name.str.str, "Moo");
@@ -60,7 +62,8 @@ fn simple_struct() {
 */
 #[test]
 fn struct_with_list_node() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
     &interner,
@@ -102,7 +105,8 @@ fn struct_with_list_node() {
 */
 #[test]
 fn imm_generic_param() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
@@ -146,7 +150,8 @@ fn imm_generic_param() {
 */
 #[test]
 fn struct_with_imm_generic_param() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
     &interner,
@@ -182,7 +187,8 @@ fn struct_with_imm_generic_param() {
 */
 #[test]
 fn variadic_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo<T> { _ ..T; }");
   let variadic =
@@ -201,7 +207,8 @@ fn variadic_struct() {
 */
 #[test]
 fn variadic_struct_with_varying() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo<T> { _! ..T; }");
   let variadic =
@@ -218,7 +225,8 @@ fn variadic_struct_with_varying() {
 */
 #[test]
 fn struct_with_weak() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x &&int; }");
   assert_eq!(struct_.name.str.str, "Moo");
@@ -246,7 +254,8 @@ fn struct_with_weak() {
 */
 #[test]
 fn struct_with_heap() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x ^Marine; }");
   assert_eq!(struct_.name.str.str, "Moo");
@@ -274,7 +283,8 @@ fn struct_with_heap() {
 */
 #[test]
 fn export_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "exported struct Moo { x &int; }");
   assert_eq!(struct_.name.str.str, "Moo");
@@ -303,7 +313,8 @@ fn export_struct() {
 */
 #[test]
 fn struct_with_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
     &interner,
@@ -367,7 +378,8 @@ fn struct_with_rune() {
 */
 #[test]
 fn struct_with_int_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
     &interner,
@@ -437,7 +449,8 @@ fn struct_with_int_rune() {
 */
 #[test]
 fn struct_with_int_rune_array_sequence_specifies_mutability() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(
     &interner,

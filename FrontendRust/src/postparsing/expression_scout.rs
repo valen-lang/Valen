@@ -755,7 +755,7 @@ where
         IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name, .. }) => {
           return Err(ICompileErrorS::CouldntFindVarToMutateS(CouldntFindVarToMutateS {
             range,
-            name: name.str.clone(),
+            name: name.str.to_string(),
           }));
         }
         IScoutResult::NormalResult(NormalResultS { expr: destination_expr_s }) => {

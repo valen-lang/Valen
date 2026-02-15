@@ -1,3 +1,4 @@
+use bumpalo::Bump;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::parsing::tests::parser_test_compilation;
@@ -5,7 +6,6 @@ use std::fs;
 use std::path::PathBuf;
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-use crate::utils::code_hierarchy::FileCoordinate;
 
 /*
 package dev.vale.parsing
@@ -73,14 +73,12 @@ macro_rules! parse_sample_test {
   ($name:ident, $path:literal) => {
     #[test]
     fn $name() {
-      let interner = Interner::new();
+      let arena = Bump::new();
+      let interner = Interner::with_arena(&arena);
       let keywords = Keywords::new(&interner);
 
       let test_module = interner.intern("test");
-      let test_package_coord = interner.intern_package_coordinate(PackageCoordinate {
-        module: test_module,
-        packages: vec![],
-      });
+      let test_package_coord = interner.intern_package_coordinate(test_module, &[]);
 
       let code: &[String] = &[load_expected($path)];
 
@@ -91,10 +89,7 @@ macro_rules! parse_sample_test {
         } else {
           format!("{}.vale", index)
         };
-        let file_coord = interner.intern_file_coordinate(FileCoordinate {
-          package_coord: &test_package_coord,
-          filepath,
-        });
+        let file_coord = interner.intern_file_coordinate(test_package_coord, &filepath);
         code_map.put(&file_coord, contents.clone());
       }
     

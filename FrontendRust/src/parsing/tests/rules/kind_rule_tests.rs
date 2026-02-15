@@ -1,4 +1,5 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::rules::kind_rule_tests
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -35,7 +36,8 @@ where
 
 #[test]
 fn empty_kind_rule() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "_ Kind");
   let typed = cast!(rule, IRulexPR::Typed);
@@ -51,7 +53,8 @@ fn empty_kind_rule() {
 */
 #[test]
 fn kind_with_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Kind");
   let typed = cast!(rule, IRulexPR::Typed);
@@ -68,7 +71,8 @@ fn kind_with_rune() {
 */
 #[test]
 fn kind_with_destructure_only() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Kind[_]");
   let components = cast!(rule, IRulexPR::Components);
@@ -86,7 +90,8 @@ fn kind_with_destructure_only() {
 */
 #[test]
 fn kind_matches_plain_int() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "int");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -101,7 +106,8 @@ fn kind_matches_plain_int() {
 */
 #[test]
 fn kind_with_value() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Kind = int");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -120,7 +126,8 @@ fn kind_with_value() {
 */
 #[test]
 fn kind_with_sequence_in_value_spot() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Kind = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
@@ -146,7 +153,8 @@ fn kind_with_sequence_in_value_spot() {
 */
 #[test]
 fn lone_sequence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "(int, bool)");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -166,7 +174,8 @@ fn lone_sequence() {
 */
 #[test]
 fn templated_struct_one_arg() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Moo<int>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -200,7 +209,8 @@ fn templated_struct_one_arg() {
 */
 #[test]
 fn rwkilc() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "List<int>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -236,7 +246,8 @@ fn rwkilc() {
 */
 #[test]
 fn templated_struct_rune_arg() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Moo<R>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -255,7 +266,8 @@ fn templated_struct_rune_arg() {
 */
 #[test]
 fn templated_struct_multiple_args() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Moo<int, str>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -275,7 +287,8 @@ fn templated_struct_multiple_args() {
 */
 #[test]
 fn templated_struct_arg_is_another_templated_struct_with_one_arg() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Moo<Blarg<int>>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -302,7 +315,8 @@ fn templated_struct_arg_is_another_templated_struct_with_one_arg() {
 */
 #[test]
 fn templated_struct_arg_is_another_templated_struct_with_multiple_arg() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Moo<Blarg<int, str>>");
   let templex = cast!(rule, IRulexPR::Templex);
@@ -330,7 +344,8 @@ fn templated_struct_arg_is_another_templated_struct_with_multiple_arg() {
 */
 #[test]
 fn static_sized_array() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let array = cast!(
     compile_templex_expect(&interner, &keywords, "[#_]_"),
@@ -446,7 +461,8 @@ fn static_sized_array() {
 */
 #[test]
 fn regular_sequence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let tuple = cast!(
     compile_templex_expect(&interner, &keywords, "()"),
@@ -510,7 +526,8 @@ fn regular_sequence() {
 */
 #[test]
 fn prototype_kind_rule() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let templex = compile_templex_expect(&interner, &keywords, "func moo(int)void");
   let prototype = cast!(templex, ITemplexPT::Func);

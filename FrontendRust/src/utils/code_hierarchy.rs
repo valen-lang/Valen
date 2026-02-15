@@ -1,7 +1,7 @@
 // From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
 use std::collections::HashMap;
-use crate::interner::StrI;
+use crate::interner::{InternedSlice, InternedStr, StrI};
 
 // From CodeHierarchy.scala lines 104-189
 #[derive(Clone)]
@@ -117,7 +117,7 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>> for Fi
               .file_coord_to_contents
               .get(file_coord)
               .expect("FileCoordinateMap::resolve - file coord not found in contents");
-            (file_coord.filepath.clone(), contents.clone())
+            (file_coord.filepath.to_string(), contents.clone())
           })
           .collect()
       })
@@ -130,7 +130,7 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>> for Fi
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
   pub package_coord: &'a PackageCoordinate<'a>,
-  pub filepath: String,
+  pub filepath: InternedStr,
 }
 
 // TODO: move to utils/code_hierarchy.rs
@@ -139,7 +139,7 @@ pub struct FileCoordinate<'a> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageCoordinate<'a> {
   pub module: &'a StrI,
-  pub packages: Vec<&'a StrI>,
+  pub packages: InternedSlice<&'a StrI>,
 }
 
 impl<'a> PackageCoordinate<'a> {
@@ -148,10 +148,7 @@ impl<'a> PackageCoordinate<'a> {
     interner: &'i crate::Interner<'a>,
     keywords: &'k crate::Keywords<'a>,
   ) -> &'a PackageCoordinate<'a> {
-    interner.intern_package_coordinate(PackageCoordinate {
-      module: keywords.empty_string,
-      packages: vec![],
-    })
+    interner.intern_package_coordinate(keywords.empty_string, &[])
   }
 }
 

@@ -1,5 +1,6 @@
 // cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::expression_tests
 
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -23,7 +24,8 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
 */
 #[test]
 fn simple_int() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4");
   assert!(matches!(
@@ -39,7 +41,8 @@ fn simple_int() {
 */
 #[test]
 fn simple_bool() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "true");
   assert!(matches!(
@@ -55,7 +58,8 @@ fn simple_bool() {
 */
 #[test]
 fn i64() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4i64");
   assert!(matches!(
@@ -75,7 +79,8 @@ fn i64() {
 */
 #[test]
 fn binary_operator() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4 + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -98,7 +103,8 @@ fn binary_operator() {
 */
 #[test]
 fn floats() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4.2");
   assert!(matches!(
@@ -114,7 +120,8 @@ fn floats() {
 */
 #[test]
 fn number_range() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "0..5");
   let range = cast!(expr, IExpressionPE::Range);
@@ -135,7 +142,8 @@ fn number_range() {
 */
 #[test]
 fn add_as_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "+(4, 5)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -152,7 +160,8 @@ fn add_as_call() {
 */
 #[test]
 fn passing_eq_overload_set() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "moo(4, ==)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -176,7 +185,8 @@ fn passing_eq_overload_set() {
 */
 #[test]
 fn call_then_binary_operator() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "str(i) + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -203,7 +213,8 @@ fn call_then_binary_operator() {
 */
 #[test]
 fn range() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a..b");
   let range = cast!(expr, IExpressionPE::Range);
@@ -218,7 +229,8 @@ fn range() {
 */
 #[test]
 fn regular_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x(y)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -234,7 +246,8 @@ fn regular_call() {
 */
 #[test]
 fn not() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "not y");
   let not = cast!(expr, IExpressionPE::Not);
@@ -248,7 +261,8 @@ fn not() {
 */
 #[test]
 fn borrowing_result_of_function_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "&Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
@@ -265,7 +279,8 @@ fn borrowing_result_of_function_call() {
 */
 #[test]
 fn specifying_heap() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "^Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
@@ -282,7 +297,8 @@ fn specifying_heap() {
 fn inline_call_ignored() {
   // The inl keyword is just parsed as an Own augment. It's effectively a no-op.
   // This is probably to better syntax-highlight the inl keyword even though we ignore it.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "inl Muta()");
   let augment = cast!(expr, IExpressionPE::Augment);
@@ -300,7 +316,8 @@ fn inline_call_ignored() {
 */
 #[test]
 fn method_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x . shout ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
@@ -318,7 +335,8 @@ fn method_call() {
 fn mapping_method_call() {
   // These arent implemented yet, we currently just parse these as method calls to support
   // snippets on the site.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x *. shout ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
@@ -336,7 +354,8 @@ fn mapping_method_call() {
 */
 #[test]
 fn method_on_member() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x.moo.shout()");
   let shout_call = cast!(expr, IExpressionPE::MethodCall);
@@ -360,7 +379,8 @@ fn method_on_member() {
 */
 #[test]
 fn moving_method_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(x ).shout()");
   let shout_call = cast!(expr, IExpressionPE::MethodCall);
@@ -398,7 +418,8 @@ fn moving_method_call() {
 */
 #[test]
 fn templated_function_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "toArray<imm>( &result)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -427,7 +448,8 @@ fn templated_function_call() {
 */
 #[test]
 fn templated_method_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "result.toArray <imm> ()");
   let method_call = cast!(expr, IExpressionPE::MethodCall);
@@ -451,7 +473,8 @@ fn templated_method_call() {
 */
 #[test]
 fn custom_binaries() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "not y florgle not x");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -469,7 +492,8 @@ fn custom_binaries() {
 */
 #[test]
 fn custom_with_noncustom_binaries() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a + b florgle x * y");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -502,7 +526,8 @@ fn custom_with_noncustom_binaries() {
 */
 #[test]
 fn template_calling() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let expr = compile_expression_expect(&interner, &keywords, "MyNone< int >()");// UIIOVCP
@@ -547,7 +572,8 @@ fn greater_than_or_equal() {
   // It turns out, this was only parsing "9 >=" because it was looking for > specifically (in fact, it was looking
   // for + - * / < >) so it parsed as >(9, =) which was bad. We changed the infix operator parser to expect the
   // whitespace on both sides, so that it was forced to parse the entire thing.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "9 >= 3");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -574,7 +600,8 @@ fn greater_than_or_equal() {
 */
 #[test]
 fn indexing() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "arr [4]");
   let brace_call = cast!(expr, IExpressionPE::BraceCall);
@@ -590,7 +617,8 @@ fn indexing() {
 */
 #[test]
 fn single_arg_brace_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x => { x }");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -620,7 +648,8 @@ fn single_arg_brace_lambda() {
 */
 #[test]
 fn single_arg_no_brace_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -649,7 +678,8 @@ fn single_arg_no_brace_lambda() {
 */
 #[test]
 fn single_arg_typed_brace_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(x int) => { x }");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -680,7 +710,8 @@ fn single_arg_typed_brace_lambda() {
 */
 #[test]
 fn argless_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "{_}");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -705,7 +736,8 @@ fn argless_lambda() {
 */
 #[test]
 fn multi_arg_typed_brace_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(x, y) => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -742,7 +774,8 @@ fn multi_arg_typed_brace_lambda() {
 */
 #[test]
 fn destructuring_lambda() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "([x, y]) => x");
   let lambda = cast!(expr, IExpressionPE::Lambda);
@@ -790,7 +823,8 @@ fn destructuring_lambda() {
 */
 #[test]
 fn dot_symbol() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, r#"myPath./("subdir")"#);
   let method_call = cast!(expr, IExpressionPE::MethodCall);
@@ -815,7 +849,8 @@ fn dot_symbol() {
 */
 #[test]
 fn not_equal() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "3 != 4");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -839,7 +874,8 @@ fn not_equal() {
 */
 #[test]
 fn set_call_isnt_interpreted_as_a_set_expression() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "set(true)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -861,7 +897,8 @@ fn set_call_isnt_interpreted_as_a_set_expression() {
 #[test]
 fn two_d_array_access() {
   // We had a bug where the lexer was interpreting that 2.1 as a float.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "arr.2.1");
   let outer_dot = cast!(expr, IExpressionPE::Dot);
@@ -886,7 +923,8 @@ fn two_d_array_access() {
 */
 #[test]
 fn lambda_without_surrounding_parens() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "{ 0 }()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -903,7 +941,8 @@ fn lambda_without_surrounding_parens() {
 */
 #[test]
 fn function_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "call(sum)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -924,7 +963,8 @@ fn function_call() {
 */
 #[test]
 fn test_inner_expression_unlet() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "destroy(unlet enemy)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -946,7 +986,8 @@ fn test_inner_expression_unlet() {
 #[test]
 fn detect_break_in_expr() {
   // See BRCOBS
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_expression_for_error(&interner, &keywords, "a(b, break)");
   assert!(matches!(err, ParseError::CantUseBreakInExpression(_)));
@@ -965,7 +1006,8 @@ fn detect_break_in_expr() {
 #[test]
 fn detect_return_in_expr() {
   // See BRCOBS
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_expression_for_error(&interner, &keywords, "a(b, return)");
   assert!(matches!(err, ParseError::CantUseReturnInExpression(_)));
@@ -983,7 +1025,8 @@ fn detect_return_in_expr() {
 */
 #[test]
 fn parens() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "2 * (5 - 7)");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -1012,7 +1055,8 @@ fn parens() {
 */
 #[test]
 fn precedence_1() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(5 - 7) * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -1041,7 +1085,8 @@ fn precedence_1() {
 */
 #[test]
 fn precedence_2() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "5 - 7 * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -1069,7 +1114,8 @@ fn precedence_2() {
 */
 #[test]
 fn static_array_from_values() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[#](3, 5, 6)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1097,7 +1143,8 @@ fn static_array_from_values() {
 */
 #[test]
 fn static_array_from_values_with_newlines() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[#](\n3\n)");
   cast!(expr, IExpressionPE::ConstructArray);
@@ -1112,7 +1159,8 @@ fn static_array_from_values_with_newlines() {
 */
 #[test]
 fn static_array_from_callable_with_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[#N]({_ * 2})");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1146,7 +1194,8 @@ fn static_array_from_callable_with_rune() {
 */
 #[test]
 fn less_than_or_equal() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a <= b");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -1164,7 +1213,8 @@ fn less_than_or_equal() {
 */
 #[test]
 fn static_array_from_callable() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[#3](triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1197,7 +1247,8 @@ fn static_array_from_callable() {
 */
 #[test]
 fn immutable_static_array_from_callable() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "#[#3](triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1230,7 +1281,8 @@ fn immutable_static_array_from_callable() {
 */
 #[test]
 fn immutable_static_array_from_callable_no_size() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "#[#](3, 4, 5)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1264,7 +1316,8 @@ fn immutable_static_array_from_callable_no_size() {
 */
 #[test]
 fn runtime_array_from_callable_with_rune() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[](6, {_ * 2})");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1295,7 +1348,8 @@ fn runtime_array_from_callable_with_rune() {
 */
 #[test]
 fn runtime_array_from_callable() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[](6, triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1326,7 +1380,8 @@ fn runtime_array_from_callable() {
 */
 #[test]
 fn double_rsa_with_type() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "[][]bool(42)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1365,7 +1420,8 @@ fn double_rsa_with_type() {
 */
 #[test]
 fn immutable_runtime_array_from_callable() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "#[](6, triple)");
   let construct_array = cast!(expr, IExpressionPE::ConstructArray);
@@ -1396,7 +1452,8 @@ fn immutable_runtime_array_from_callable() {
 */
 #[test]
 fn one_element_tuple() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(3,)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
@@ -1412,7 +1469,8 @@ fn one_element_tuple() {
 */
 #[test]
 fn zero_element_tuple() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "()");
   let tuple = cast!(expr, IExpressionPE::Tuple);
@@ -1426,7 +1484,8 @@ fn zero_element_tuple() {
 */
 #[test]
 fn two_element_tuple() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(3,4)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
@@ -1442,7 +1501,8 @@ fn two_element_tuple() {
 */
 #[test]
 fn three_element_tuple() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(3,4,5)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
@@ -1459,7 +1519,8 @@ fn three_element_tuple() {
 */
 #[test]
 fn three_element_tuple_trailing_comma() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(3,4,5,)");
   let tuple = cast!(expr, IExpressionPE::Tuple);
@@ -1476,7 +1537,8 @@ fn three_element_tuple_trailing_comma() {
 */
 #[test]
 fn transmigrate() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a'x");
   let transmigrate = cast!(expr, IExpressionPE::Transmigrate);
@@ -1492,7 +1554,8 @@ fn transmigrate() {
 */
 #[test]
 fn call_callable_expr() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(something.callable)(3)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -1518,7 +1581,8 @@ fn call_callable_expr() {
 */
 #[test]
 fn array_indexing() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "board[i]");
   let brace_call = cast!(expr, IExpressionPE::BraceCall);
@@ -1550,7 +1614,8 @@ fn array_indexing() {
 */
 #[test]
 fn mod_and_equal_precedence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "8 mod 2 == 0");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
@@ -1586,7 +1651,8 @@ fn mod_and_equal_precedence() {
 */
 #[test]
 fn or_and_equal_precedence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "2 == 0 or false");
   let or = cast!(expr, IExpressionPE::Or);
@@ -1621,7 +1687,8 @@ fn or_and_equal_precedence() {
 */
 #[test]
 fn test_templated_lambda_param() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(a => a + a)(3)");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);

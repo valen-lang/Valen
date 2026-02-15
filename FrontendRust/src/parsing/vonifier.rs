@@ -118,7 +118,7 @@ impl<'a> ParserVonifier<'a> {
         VonMember {
           field_name: "filepath".to_string(),
           value: IVonData::Str(VonStr {
-            value: coord.filepath.clone(),
+            value: coord.filepath.to_string(),
           }),
         },
       ],
@@ -134,7 +134,7 @@ impl<'a> ParserVonifier<'a> {
         VonMember {
           field_name: "module".to_string(),
           value: IVonData::Str(VonStr {
-            value: coord.module.str.clone(),
+            value: coord.module.str.to_string(),
           }),
         },
         VonMember {
@@ -146,7 +146,7 @@ impl<'a> ParserVonifier<'a> {
               .iter()
               .map(|p| {
                 IVonData::Str(VonStr {
-                  value: p.str.clone(),
+                  value: p.str.to_string(),
                 })
               })
               .collect(),
@@ -191,7 +191,7 @@ impl<'a> ParserVonifier<'a> {
         VonMember {
           field_name: "name".to_string(),
           value: IVonData::Str(VonStr {
-            value: name.str.str.clone(),
+            value: name.str.str.to_string(),
           }),
         },
       ],

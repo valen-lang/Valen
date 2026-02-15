@@ -87,14 +87,8 @@ where
     }
 
     let empty_str = self.interner.intern("");
-    let empty_package = self.interner.intern_package_coordinate(PackageCoordinate {
-      module: empty_str,
-      packages: vec![],
-    });
-    let empty_file = self.interner.intern_file_coordinate(FileCoordinate {
-      package_coord: empty_package,
-      filepath: "".to_string(),
-    });
+    let empty_package = self.interner.intern_package_coordinate(empty_str, &[]);
+    let empty_file = self.interner.intern_file_coordinate(empty_package, "");
 
     Ok(FileP {
       file_coord: empty_file,

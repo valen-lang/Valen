@@ -1,5 +1,6 @@
 // Run with: cargo test --manifest-path FrontendRust/Cargo.toml --lib postparsing::test::post_parser_tests
 
+use bumpalo::Bump;
 use crate::cast;
 use crate::compile_options::GlobalOptions;
 use crate::{Interner, Keywords};
@@ -137,7 +138,8 @@ where
 */
 #[test]
 fn test_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
@@ -187,7 +189,8 @@ fn test_struct() {
 */
 #[test]
 fn linear_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
@@ -234,7 +237,8 @@ fn linear_struct() {
 */
 #[test]
 fn interface() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
   let imoo = program.lookup_interface("IMoo");
@@ -448,7 +452,8 @@ fn interface() {
 */
 #[test]
 fn test_loading_from_member() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -499,7 +504,8 @@ fn test_loading_from_member() {
 */
 #[test]
 fn test_loading_from_member_2() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -555,7 +561,8 @@ fn test_loading_from_member_2() {
 */
 #[test]
 fn constructing_members_borrowing_another_member() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -754,7 +761,8 @@ fn constructing_members_borrowing_another_member() {
 */
 #[test]
 fn this_isnt_special_if_was_explicit_param() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,

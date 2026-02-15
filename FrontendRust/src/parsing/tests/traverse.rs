@@ -3,6 +3,7 @@
 // Only the human should use ellipses. This is because explicit matches are a signal of when we
 // might need to consider extra code at the pattern site whenever we add a new field to the struct.
 
+use bumpalo::Bump;
 use crate::lexing::RangeL;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -1246,7 +1247,8 @@ macro_rules! collect_where {
 }
 #[test]
 fn test_collect_where_finds_function_by_name() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "exported func main() int {}");
   assert!(!collect_where!(

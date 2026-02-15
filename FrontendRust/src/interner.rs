@@ -1,22 +1,153 @@
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::{CodeNameS, CodeRuneS, LetImplicitRuneS};
+use bumpalo::Bump;
 use std::collections::HashMap;
 use std::marker::PhantomData;
-use std::sync::Mutex;
+use std::cell::RefCell;
+use std::fmt::{Debug, Display, Formatter};
+use std::hash::{Hash, Hasher};
+use std::ops::Deref;
 
 const MIN_INTERNING_ID: u64 = (1u64 << (7 * 8)) + 1;
+
+#[derive(Copy, Clone)]
+pub struct InternedStr {
+  ptr: *const u8,
+  len: usize,
+}
+
+impl InternedStr {
+  pub fn new(s: &str) -> Self {
+    InternedStr {
+      ptr: s.as_ptr(),
+      len: s.len(),
+    }
+  }
+
+  pub fn as_str(&self) -> &str {
+    // SAFETY: All InternedStr instances are created from valid UTF-8 slices
+    // allocated in the compilation arena and outlive all uses.
+    unsafe {
+      let bytes = std::slice::from_raw_parts(self.ptr, self.len);
+      std::str::from_utf8_unchecked(bytes)
+    }
+  }
+}
+
+impl Deref for InternedStr {
+  type Target = str;
+
+  fn deref(&self) -> &Self::Target {
+    self.as_str()
+  }
+}
+
+impl Debug for InternedStr {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    Debug::fmt(self.as_str(), f)
+  }
+}
+
+impl Display for InternedStr {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    Display::fmt(self.as_str(), f)
+  }
+}
+
+impl PartialEq for InternedStr {
+  fn eq(&self, other: &Self) -> bool {
+    self.as_str() == other.as_str()
+  }
+}
+
+impl Eq for InternedStr {}
+
+impl Hash for InternedStr {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.as_str().hash(state);
+  }
+}
+
+impl PartialEq<&str> for InternedStr {
+  fn eq(&self, other: &&str) -> bool {
+    self.as_str() == *other
+  }
+}
+
+#[derive(Copy, Clone)]
+pub struct InternedSlice<T: Copy> {
+  ptr: *const T,
+  len: usize,
+  _marker: PhantomData<T>,
+}
+
+impl<T: Copy> InternedSlice<T> {
+  pub fn new(slice: &[T]) -> Self {
+    InternedSlice {
+      ptr: slice.as_ptr(),
+      len: slice.len(),
+      _marker: PhantomData,
+    }
+  }
+
+  pub fn as_slice(&self) -> &[T] {
+    // SAFETY: The backing slice is arena-allocated and outlives all uses.
+    unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+  }
+
+  pub fn iter(&self) -> std::slice::Iter<'_, T> {
+    self.as_slice().iter()
+  }
+
+  pub fn is_empty(&self) -> bool {
+    self.len == 0
+  }
+
+  pub fn len(&self) -> usize {
+    self.len
+  }
+}
+
+impl<'b, T: Copy> IntoIterator for &'b InternedSlice<T> {
+  type Item = &'b T;
+  type IntoIter = std::slice::Iter<'b, T>;
+
+  fn into_iter(self) -> Self::IntoIter {
+    self.as_slice().iter()
+  }
+}
+
+impl<T: Copy + Debug> Debug for InternedSlice<T> {
+  fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
+    Debug::fmt(self.as_slice(), f)
+  }
+}
+
+impl<T: Copy + PartialEq> PartialEq for InternedSlice<T> {
+  fn eq(&self, other: &Self) -> bool {
+    self.as_slice() == other.as_slice()
+  }
+}
+
+impl<T: Copy + Eq> Eq for InternedSlice<T> {}
+
+impl<T: Copy + Hash> Hash for InternedSlice<T> {
+  fn hash<H: Hasher>(&self, state: &mut H) {
+    self.as_slice().hash(state);
+  }
+}
 
 /// Interned string - immutable, cheap to copy
 /// Matches Scala's StrI
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StrI {
   id: u64,
-  pub str: String,
+  pub str: InternedStr,
 }
 
 impl StrI {
-  pub fn new(id: u64, s: String) -> Self {
+  pub fn new(id: u64, s: InternedStr) -> Self {
     StrI { id, str: s }
   }
 
@@ -70,7 +201,8 @@ impl StrI {
 /// Generic interning system with interior mutability
 /// Matches Scala's Interner
 pub struct Interner<'a> {
-  inner: Mutex<InternerInner<'a>>,
+  arena: &'a Bump,
+  inner: RefCell<InternerInner<'a>>,
   _marker: PhantomData<&'a StrI>,
 }
 
@@ -88,12 +220,12 @@ struct InternerInner<'a> {
 macro_rules! define_payload_interner_1arg {
   ($method_name:ident, $ty:ty, $field:ident, $arg_name:ident : $arg_ty:ty, $ctor:expr) => {
     pub fn $method_name(&self, $arg_name: $arg_ty) -> &'a $ty {
-      let mut inner = self.inner.lock().unwrap();
+      let mut inner = self.inner.borrow_mut();
       let key: $ty = $ctor;
       if let Some(existing) = inner.$field.get(&key) {
         return *existing;
       }
-      let new_ref = Box::leak(Box::new(key.clone()));
+      let new_ref = self.arena.alloc(key.clone());
       inner.$field.insert(key, new_ref);
       new_ref
     }
@@ -101,9 +233,10 @@ macro_rules! define_payload_interner_1arg {
 }
 
 impl<'a> Interner<'a> {
-  pub fn new() -> Self {
+  pub fn with_arena(arena: &'a Bump) -> Self {
     Interner {
-      inner: Mutex::new(InternerInner {
+      arena,
+      inner: RefCell::new(InternerInner {
         string_to_stri: HashMap::new(),
         id_to_stri: HashMap::new(),
         package_coord_to_ref: HashMap::new(),
@@ -119,7 +252,7 @@ impl<'a> Interner<'a> {
 
   /// Intern a string, returning a canonical shared StrI value.
   pub fn intern(&self, s: &str) -> &'a StrI {
-    let mut inner = self.inner.lock().unwrap();
+    let mut inner = self.inner.borrow_mut();
     if let Some(existing) = inner.string_to_stri.get(s) {
       return *existing;
     }
@@ -132,7 +265,8 @@ impl<'a> Interner<'a> {
       new_id
     };
 
-    let value_ref: &'a StrI = Box::leak(Box::new(StrI::new(id, s.to_string())));
+    let arena_str = self.arena.alloc_str(s);
+    let value_ref: &'a StrI = self.arena.alloc(StrI::new(id, InternedStr::new(arena_str)));
     inner.string_to_stri.insert(s.to_string(), value_ref);
     inner.id_to_stri.insert(id, value_ref);
     value_ref
@@ -140,27 +274,53 @@ impl<'a> Interner<'a> {
 
   /// Get StrI by id.
   pub fn get_by_id(&self, id: u64) -> Option<&'a StrI> {
-    self.inner.lock().unwrap().id_to_stri.get(&id).cloned()
+    self.inner.borrow().id_to_stri.get(&id).cloned()
   }
 
   /// Intern a PackageCoordinate.
-  pub fn intern_package_coordinate(&self, coord: PackageCoordinate<'a>) -> &'a PackageCoordinate<'a> {
-    let mut inner = self.inner.lock().unwrap();
-    if let Some(existing) = inner.package_coord_to_ref.get(&coord) {
+  pub fn intern_package_coordinate(
+    &self,
+    module: &'a StrI,
+    packages: &[&'a StrI],
+  ) -> &'a PackageCoordinate<'a> {
+    let mut inner = self.inner.borrow_mut();
+    let lookup_coord = PackageCoordinate {
+      module,
+      packages: InternedSlice::new(packages),
+    };
+    if let Some(existing) = inner.package_coord_to_ref.get(&lookup_coord) {
       return *existing;
     }
-    let new_ref: &'a PackageCoordinate<'a> = Box::leak(Box::new(coord.clone()));
+    let arena_packages = self.arena.alloc_slice_copy(packages);
+    let coord = PackageCoordinate {
+      module,
+      packages: InternedSlice::new(arena_packages),
+    };
+    let new_ref: &'a PackageCoordinate<'a> = self.arena.alloc(coord.clone());
     inner.package_coord_to_ref.insert(coord, new_ref);
     new_ref
   }
 
   /// Intern a FileCoordinate
-  pub fn intern_file_coordinate(&self, coord: FileCoordinate<'a>) -> &'a FileCoordinate<'a> {
-    let mut inner = self.inner.lock().unwrap();
-    if let Some(existing) = inner.file_coord_to_ref.get(&coord) {
+  pub fn intern_file_coordinate(
+    &self,
+    package_coord: &'a PackageCoordinate<'a>,
+    filepath: &str,
+  ) -> &'a FileCoordinate<'a> {
+    let mut inner = self.inner.borrow_mut();
+    let lookup_coord = FileCoordinate {
+      package_coord,
+      filepath: InternedStr::new(filepath),
+    };
+    if let Some(existing) = inner.file_coord_to_ref.get(&lookup_coord) {
       return *existing;
     }
-    let new_ref: &'a FileCoordinate<'a> = Box::leak(Box::new(coord.clone()));
+    let arena_filepath = self.arena.alloc_str(filepath);
+    let coord = FileCoordinate {
+      package_coord,
+      filepath: InternedStr::new(arena_filepath),
+    };
+    let new_ref: &'a FileCoordinate<'a> = self.arena.alloc(coord.clone());
     inner.file_coord_to_ref.insert(coord, new_ref);
     new_ref
   }
@@ -190,19 +350,14 @@ impl<'a> Interner<'a> {
   );
 }
 
-impl<'a> Default for Interner<'a> {
-  fn default() -> Self {
-    Self::new()
-  }
-}
-
 #[cfg(test)]
 mod tests {
   use super::*;
 
   #[test]
   fn test_short_string_encoding() {
-    let interner = Interner::new();
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
     let s1 = interner.intern("hello");
     let s2 = interner.intern("hello");
 
@@ -217,7 +372,8 @@ mod tests {
 
   #[test]
   fn test_long_string_interning() {
-    let interner = Interner::new();
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
     let s1 = interner.intern("this is a long string");
     let s2 = interner.intern("this is a long string");
 
@@ -232,11 +388,28 @@ mod tests {
 
   #[test]
   fn test_different_strings() {
-    let interner = Interner::new();
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
     let s1 = interner.intern("foo");
     let s2 = interner.intern("bar");
 
     // Different strings should have different IDs
     assert_ne!(s1.id(), s2.id());
+  }
+
+  #[test]
+  fn test_coordinate_interning_canonicalizes() {
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let module = interner.intern("my_module");
+    let pkg1 = interner.intern_package_coordinate(module, &[]);
+    let pkg2 = interner.intern_package_coordinate(module, &[]);
+    assert!(std::ptr::eq(pkg1, pkg2));
+
+    let file1 = interner.intern_file_coordinate(pkg1, "main.vale");
+    let file2 = interner.intern_file_coordinate(pkg1, "main.vale");
+    assert!(std::ptr::eq(file1, file2));
+    assert_eq!(file1.filepath, "main.vale");
   }
 }

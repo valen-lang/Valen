@@ -2,6 +2,7 @@
 
 #![allow(nonstandard_style)]
 
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -31,7 +32,8 @@ class TopLevelTests extends FunSuite with Matchers with Collector with TestParse
 */
 #[test]
 fn function_then_struct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "exported func main() int {} struct mork { }");
   assert!(matches!(
@@ -54,7 +56,8 @@ fn function_then_struct() {
 */
 #[test]
 fn ellipses_ignored() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   // Unicode … symbol is treated as an expression by the parser
   compile(&interner, &keywords, "exported func main() int {x = …;}");
@@ -86,7 +89,8 @@ fn ellipses_ignored() {
 */
 #[test]
 fn comments_ignored() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile(
     &interner,
@@ -214,7 +218,8 @@ fn comments_ignored() {
 */
 #[test]
 fn function_containing_if() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -243,7 +248,8 @@ fn function_containing_if() {
 */
 #[test]
 fn reports_unrecognized_at_top_level() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
@@ -270,7 +276,8 @@ fn reports_unrecognized_at_top_level() {
 // lol
 #[test]
 fn funky_function() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -290,7 +297,8 @@ fn funky_function() {
 */
 #[test]
 fn empty() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
@@ -327,7 +335,8 @@ fn empty() {
 */
 #[test]
 fn exporting_int() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "export int as NumberThing;");
   assert!(
@@ -348,7 +357,8 @@ fn exporting_int() {
 */
 #[test]
 fn exporting_imm_array_1() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "export []<mut>int as IntArray;");
   assert!(
@@ -369,7 +379,8 @@ fn exporting_imm_array_1() {
 */
 #[test]
 fn exporting_imm_array_2() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "export #[]int as IntArray;");
   assert!(
@@ -390,7 +401,8 @@ fn exporting_imm_array_2() {
 */
 #[test]
 fn import_wildcard() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "import somemodule.*;");
   assert!(
@@ -413,7 +425,8 @@ fn import_wildcard() {
 */
 #[test]
 fn import_just_module_and_thing() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "import somemodule.List;");
   assert!(
@@ -436,7 +449,8 @@ fn import_just_module_and_thing() {
 */
 #[test]
 fn full_import() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "import somemodule.subpackage.List;");
   assert!(
@@ -459,7 +473,8 @@ fn full_import() {
 
 #[test]
 fn return_with_region_generics() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "func strongestDesire() IDesire<r', i'> { }");
   let func = find_func_named(&program, "strongestDesire");
@@ -509,7 +524,8 @@ fn return_with_region_generics() {
 
 #[test]
 fn bad_start_of_statement() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,

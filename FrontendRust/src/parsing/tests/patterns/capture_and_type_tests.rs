@@ -28,6 +28,7 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
 //    compile(new PatternParser().parsePattern(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -49,7 +50,8 @@ where
 }
 #[test]
 fn no_capture_with_type() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ int");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
@@ -64,7 +66,8 @@ fn no_capture_with_type() {
 */
 #[test]
 fn capture_with_type() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a int");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
@@ -80,7 +83,8 @@ fn capture_with_type() {
 */
 #[test]
 fn simple_capture_with_tame() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a T");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
@@ -96,7 +100,8 @@ fn simple_capture_with_tame() {
 */
 #[test]
 fn capture_with_borrow_tame() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "arr &R");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
@@ -121,7 +126,8 @@ fn capture_with_borrow_tame() {
 */
 #[test]
 fn capture_with_self_in_front() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "self.arr &&R");
   let destination = pattern.destination.as_ref().unwrap();

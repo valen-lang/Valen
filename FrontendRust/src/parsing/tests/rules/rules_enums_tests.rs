@@ -17,6 +17,7 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
 //    compile(new TemplexParser().parseRule(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -37,7 +38,8 @@ where
 
 #[test]
 fn ownership() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let rule = compile(&interner, &keywords, "X");
@@ -130,7 +132,8 @@ fn ownership() {
 */
 #[test]
 fn mutability() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let rule = compile(&interner, &keywords, "X");
@@ -210,7 +213,8 @@ fn mutability() {
 */
 #[test]
 fn location() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let rule = compile(&interner, &keywords, "X");

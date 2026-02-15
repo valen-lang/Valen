@@ -12,6 +12,7 @@ import org.scalatest._
 
 class StatementTests extends FunSuite with Collector with TestParseUtils {
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -21,7 +22,8 @@ use crate::parsing::tests::utils::*;
 
 #[test]
 fn simple_let() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, "x = 4;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
@@ -44,7 +46,8 @@ fn simple_let() {
 
 #[test]
 fn multiple_statements() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, "4");
   let four = cast!(expr, IExpressionPE::ConstantInt);
@@ -95,7 +98,8 @@ fn multiple_statements() {
 
 #[test]
 fn test_8() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "[x, y] = (4, 5);");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -135,7 +139,8 @@ fn test_8() {
 
 #[test]
 fn test_9() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "set x.a = 5;");
   let mutate = cast!(expr, IExpressionPE::Mutate);
@@ -154,7 +159,8 @@ fn test_9() {
 
 #[test]
 fn test_1_pe() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, r#"set board.PE.PE.symbol = "v";"#);
   let mutate = cast!(expr, IExpressionPE::Mutate);
@@ -177,7 +183,8 @@ fn test_1_pe() {
 
 #[test]
 fn test_simple_let() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "x = 3;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -197,7 +204,8 @@ fn test_simple_let() {
 
 #[test]
 fn test_simple_mut() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "set x = 5;");
   let mutate = cast!(expr, IExpressionPE::Mutate);
@@ -216,7 +224,8 @@ fn test_simple_mut() {
 fn test_expr_starting_with_return() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "retcode()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -237,7 +246,8 @@ fn test_expr_starting_with_return() {
 fn test_inner_set() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "oldArray = set list.array = newArray;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -270,7 +280,8 @@ fn test_inner_set() {
 fn test_if_statement_producing() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "if true { 3 } else { 4 }");
   let if_ = cast!(expr, IExpressionPE::If);
@@ -294,7 +305,8 @@ fn test_if_statement_producing() {
 
 #[test]
 fn test_destruct() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "destruct x;");
   let destruct = cast!(expr, IExpressionPE::Destruct);
@@ -310,7 +322,8 @@ fn test_destruct() {
 
 #[test]
 fn test_unlet() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "unlet x");
   let unlet = cast!(expr, IExpressionPE::Unlet);
@@ -326,7 +339,8 @@ fn test_unlet() {
 
 #[test]
 fn dot_on_function_calls_result() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "Wizard(8).charges");
   let dot = cast!(expr, IExpressionPE::Dot);
@@ -351,7 +365,8 @@ fn dot_on_function_calls_result() {
 
 #[test]
 fn let_with_pattern_with_only_a_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "a = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -371,7 +386,8 @@ fn let_with_pattern_with_only_a_capture() {
 
 #[test]
 fn let_with_simple_pattern() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "a Moo = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -394,7 +410,8 @@ fn let_with_simple_pattern() {
 
 #[test]
 fn let_with_simple_pattern_in_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "[a Moo] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -423,7 +440,8 @@ fn let_with_simple_pattern_in_destructure() {
 
 #[test]
 fn let_with_destructuring_pattern() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "Muta[ ] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -444,7 +462,8 @@ fn let_with_destructuring_pattern() {
 
 #[test]
 fn destructure_pattern_with_let_and_set() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "[a, set x] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
@@ -481,7 +500,8 @@ fn destructure_pattern_with_let_and_set() {
 
 #[test]
 fn ret() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "return 3;");
   let ret = cast!(expr, IExpressionPE::Return);
@@ -497,7 +517,8 @@ fn ret() {
 
 #[test]
 fn foreach() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "foreach i in myList { }");
   let each = cast!(expr, IExpressionPE::Each);
@@ -524,7 +545,8 @@ fn foreach() {
 
 #[test]
 fn foreach_with_borrow() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "foreach i in &myList { }");
   let each = cast!(expr, IExpressionPE::Each);
@@ -553,7 +575,8 @@ fn foreach_with_borrow() {
 
 #[test]
 fn foreach_with_two_receivers() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "foreach [a, b] in myList { }");
   let each = cast!(expr, IExpressionPE::Each);
@@ -594,7 +617,8 @@ fn foreach_with_two_receivers() {
 
 #[test]
 fn foreach_complex_iterable() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "foreach i in myList = 3; myList { }");
   let each = cast!(expr, IExpressionPE::Each);
@@ -632,7 +656,8 @@ fn foreach_complex_iterable() {
 
 #[test]
 fn multiple_statements_2() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
@@ -655,7 +680,8 @@ fn multiple_statements_2() {
 
 #[test]
 fn if_and_another_statement() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
@@ -678,7 +704,8 @@ fn if_and_another_statement() {
 
 #[test]
 fn test_blocks_trailing_void_presence() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, "moo()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
@@ -709,7 +736,8 @@ fn test_blocks_trailing_void_presence() {
 
 #[test]
 fn block_with_statement_and_result() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
@@ -738,7 +766,8 @@ fn block_with_statement_and_result() {
 
 #[test]
 fn block_with_result() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, "3");
   assert_eq!(cast!(expr, IExpressionPE::ConstantInt).value, 3);
@@ -755,7 +784,8 @@ fn block_with_result() {
 fn block_with_result_that_could_be_an_expr() {
   // = doThings(a); could be misinterpreted as an expression doThings(=, a) if we're
   // not careful.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
@@ -796,7 +826,8 @@ fn block_with_result_that_could_be_an_expr() {
 
 #[test]
 fn mutating_as_statement() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, "set x = 6;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
@@ -819,7 +850,8 @@ fn mutating_as_statement() {
 
 #[test]
 fn lone_block() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
@@ -850,7 +882,8 @@ fn lone_block() {
 fn pure_block() {
   // Just make sure it parses, so that we can highlight it.
   // The pure block feature doesn't actually exist yet.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
@@ -879,7 +912,8 @@ fn pure_block() {
 fn unsafe_pure_block() {
   // Just make sure it parses, so that we can highlight it.
   // The unsafe pure block feature doesn't actually exist yet.
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
@@ -906,7 +940,8 @@ fn unsafe_pure_block() {
 
 #[test]
 fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_statement(
     &interner,
@@ -935,7 +970,8 @@ fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
 
 #[test]
 fn empty_block() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
@@ -972,7 +1008,8 @@ fn empty_block() {
 
 #[test]
 fn cant_use_set_as_a_local_name() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_statement(&interner, &keywords, "[set] = (6,)").unwrap_err();
   assert!(matches!(
@@ -992,7 +1029,8 @@ fn cant_use_set_as_a_local_name() {
 
 #[test]
 fn foreach_2() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
@@ -1035,7 +1073,8 @@ fn foreach_2() {
 
 #[test]
 fn foreach_expr() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,

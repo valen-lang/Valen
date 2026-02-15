@@ -16,6 +16,7 @@ import java.nio.charset.Charset
 class LoadTests extends FunSuite with Matchers with Collector with TestParseUtils {
 */
 
+use bumpalo::Bump;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::lexing::lexing_iterator::LexingIterator;
@@ -27,7 +28,8 @@ use crate::von::printer::VonPrinter;
 
 #[test]
 fn simple_program() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let original_file = compile_file(&interner, &keywords, "exported func main() int { return 42; }").unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
@@ -50,7 +52,8 @@ fn simple_program() {
 
 #[test]
 fn strings_with_special_characters() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let lexer = Lexer::new(&interner, &keywords);
   let mut iter = LexingIterator::new("000a".to_string());

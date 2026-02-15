@@ -532,10 +532,7 @@ fn load_function_header<'a>(
 */
 fn load_file_coord<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> &'a FileCoordinate<'a> {
   let package_coord = load_package_coord(interner, get_object_field(jobj, "packageCoord"));
-  interner.intern_file_coordinate(FileCoordinate {
-    package_coord: package_coord,
-    filepath: get_string_field(jobj, "filepath").to_string(),
-  })
+  interner.intern_file_coordinate(package_coord, get_string_field(jobj, "filepath"))
 }
 /*
   def loadFileCoord(jobj: JObject): FileCoordinate = {
@@ -548,14 +545,13 @@ fn load_package_coord<'a>(
   interner: &Interner<'a>,
   jobj: &Map<String, Value>,
 ) -> &'a PackageCoordinate<'a> {
-  interner.intern_package_coordinate(PackageCoordinate {
-    module: interner.intern(get_string_field(jobj, "module")),
-    packages: get_array_field(jobj, "packages")
-      .iter()
-      .map(expect_string)
-      .map(|s| interner.intern(s))
-      .collect(),
-  })
+  let module = interner.intern(get_string_field(jobj, "module"));
+  let packages: Vec<&'a crate::interner::StrI> = get_array_field(jobj, "packages")
+    .iter()
+    .map(expect_string)
+    .map(|s| interner.intern(s))
+    .collect();
+  interner.intern_package_coordinate(module, &packages)
 }
 /*
   def loadPackageCoord(jobj: JObject): PackageCoordinate = {

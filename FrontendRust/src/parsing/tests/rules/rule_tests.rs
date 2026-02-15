@@ -17,6 +17,7 @@ class RuleTests extends FunSuite with Matchers with Collector with TestParseUtil
 //    compile(new TemplexParser().parseRule(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -38,7 +39,8 @@ where
 
 #[test]
 fn relations() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let rule = compile(&interner, &keywords, "implements(MyObject, IObject)");
@@ -108,7 +110,8 @@ fn relations() {
 
 #[test]
 fn super_complicated() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile(&interner, &keywords, "C = any([#I]X, [#N]T)");
 }
@@ -120,7 +123,8 @@ fn super_complicated() {
 
 #[test]
 fn destructure_prototype() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Prot[_, _, T] = moo");
   let equals = crate::collect_only_rulex!(&rule, NodeRefP::Rulex(IRulexPR::Equals(equals)) => Some(equals));
@@ -146,7 +150,8 @@ fn destructure_prototype() {
 
 #[test]
 fn func() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "func moo()T");
   let func = crate::collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
@@ -169,7 +174,8 @@ fn func() {
 
 #[test]
 fn prototype_with_coords() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "Prot[_, pack(int, bool), _]");
   let components = crate::collect_only_rulex!(

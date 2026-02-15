@@ -10,6 +10,7 @@ import org.scalatest._
 
 class ImplTests extends FunSuite with Matchers with Collector with TestParseUtils {
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -18,7 +19,8 @@ use crate::parsing::tests::utils::*;
 
 #[test]
 fn normal_impl() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let file = compile(&interner, &keywords, "impl MyInterface for SomeStruct;");
   let denizen = expect_1(&file.denizens);
@@ -49,7 +51,8 @@ fn normal_impl() {
 
 #[test]
 fn templated_impl() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let file = compile(&interner, &keywords, "impl<T> MyInterface<T> for SomeStruct<T>;");
   let denizen = expect_1(&file.denizens);
@@ -94,7 +97,8 @@ fn templated_impl() {
 
 #[test]
 fn impling_a_template_call() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let file = compile(&interner, &keywords, "impl IFunction1<mut, int, int> for MyIntIdentity;");
   let denizen = expect_1(&file.denizens);

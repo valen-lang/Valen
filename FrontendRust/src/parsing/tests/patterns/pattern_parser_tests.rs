@@ -25,6 +25,7 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
 //    compileForRest(new PatternParser().parsePattern(_), code, expectedRest)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -46,7 +47,8 @@ where
 }
 #[test]
 fn simple_int() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
@@ -69,7 +71,8 @@ fn simple_int() {
 */
 #[test]
 fn name_only_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a");
   let destination = pattern.destination.as_ref().unwrap();
@@ -87,7 +90,8 @@ fn name_only_capture() {
 */
 #[test]
 fn empty_pattern() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_");
   let destination = pattern.destination.as_ref().unwrap();
@@ -106,7 +110,8 @@ fn empty_pattern() {
 */
 #[test]
 fn capture_with_type_with_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a Moo[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -139,7 +144,8 @@ fn capture_with_type_with_destructure() {
 */
 #[test]
 fn cstodts() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "moo T[a int]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -169,7 +175,8 @@ fn cstodts() {
 */
 #[test]
 fn capture_with_destructure_with_type_outside() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "a (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();

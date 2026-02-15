@@ -16,6 +16,7 @@ class TypeAndDestructureTests extends FunSuite with Matchers with Collector with
 //    compile(new PatternParser().parsePattern(_), code)
   }
 */
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -37,7 +38,8 @@ where
 }
 #[test]
 fn empty_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ Muta[]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -62,7 +64,8 @@ fn empty_destructure() {
 */
 #[test]
 fn templated_destructure() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
     let pattern = compile(&interner, &keywords, "_ Muta<int>[]");
@@ -121,7 +124,8 @@ fn templated_destructure() {
 */
 #[test]
 fn destructure_with_type_outside() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -163,7 +167,8 @@ fn destructure_with_type_outside() {
 */
 #[test]
 fn destructure_with_typeless_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ Muta[b]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -193,7 +198,8 @@ fn destructure_with_typeless_capture() {
 */
 #[test]
 fn destructure_with_typed_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ Muta[b Marine]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -223,7 +229,8 @@ fn destructure_with_typed_capture() {
 */
 #[test]
 fn destructure_with_unnamed_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ Muta[_ Marine]");
   let destination = pattern.destination.as_ref().unwrap();
@@ -256,7 +263,8 @@ fn destructure_with_unnamed_capture() {
 */
 #[test]
 fn destructure_with_runed_capture() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let pattern = compile(&interner, &keywords, "_ Muta[_ R]");
   let destination = pattern.destination.as_ref().unwrap();

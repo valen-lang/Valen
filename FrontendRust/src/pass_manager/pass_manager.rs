@@ -7,6 +7,7 @@ use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use bumpalo::Bump;
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
@@ -84,7 +85,7 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
     // Build path: module_root/package1/package2/...
     let mut dir_path = module_root.clone();
     for package_step in &package_coord.packages {
-      dir_path.push(&package_step.str);
+      dir_path.push(package_step.str.as_str());
     }
 
     // Find all .vale files in this directory
@@ -148,7 +149,7 @@ fn resolve_package_contents<'a>(
         let mut directory_path = module_path.clone();
         for package_step in packages {
           directory_path.push('/');
-          directory_path.push_str(&package_step.str);
+          directory_path.push_str(package_step.str.as_str());
         }
 
         let directory = std::path::Path::new(&directory_path);
@@ -271,10 +272,7 @@ impl<'a> IFrontendInput<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
-        interner.intern_package_coordinate(PackageCoordinate {
-          module: *module,
-          packages: vec![],
-        })
+        interner.intern_package_coordinate(*module, &[])
       }
       IFrontendInput::DirectFilePathInput { package_coord, .. } => *package_coord,
     }
@@ -809,12 +807,9 @@ fn parse_opts_recursive<'a>(
               .iter()
               .map(|s| interner.intern(s))
               .collect();
-            interner.intern_package_coordinate(PackageCoordinate { module, packages })
+            interner.intern_package_coordinate(module, &packages)
           } else {
-            interner.intern_package_coordinate(PackageCoordinate {
-              module: interner.intern(package_coord_str),
-              packages: vec![],
-            })
+            interner.intern_package_coordinate(interner.intern(package_coord_str), &[])
           };
 
           // From PassManager.scala lines 135-143
@@ -932,7 +927,8 @@ fn parse_opts_recursive<'a>(
 // From PassManager.scala lines 390-481: main
 pub fn main(args: Vec<String>) {
   // From PassManager.scala lines 391-393
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
 
   // From PassManager.scala lines 395-413

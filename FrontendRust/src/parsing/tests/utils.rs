@@ -1,3 +1,4 @@
+use bumpalo::Bump;
 use crate::cast;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -11,7 +12,6 @@ use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::tests::traverse::NodeRefP;
-use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 
 /// MIGTODO: Remove this function and use the one in ParserTestCompilation.scala instead
 /// so that it does a round-trip through vonprinter and parsedloader.
@@ -45,11 +45,9 @@ where
 
   let empty_module = interner.intern("");
 
-  let package_coord = interner
-    .intern_package_coordinate(PackageCoordinate { module: empty_module, packages: vec![] });
+  let package_coord = interner.intern_package_coordinate(empty_module, &[]);
 
-  let file_coord = interner
-    .intern_file_coordinate(FileCoordinate { package_coord: package_coord, filepath: "test.vale".to_string() });
+  let file_coord = interner.intern_file_coordinate(package_coord, "test.vale");
 
   Ok(FileP { file_coord: file_coord, comments_ranges: vec![], denizens })
 }
@@ -396,7 +394,8 @@ pub fn find_func_named<'a, 'p>(file: &'p FileP<'a>, name: &str) -> &'p FunctionP
 }
 #[test]
 fn test_find_func_named_returns_function() {
-  let interner = Interner::new();
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, "exported func main() int {}");
   let main_function = find_func_named(&program, "main");
