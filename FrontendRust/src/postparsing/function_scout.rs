@@ -256,7 +256,7 @@ impl FunctionScout {
       .vars
       .iter()
       .filter_map(|declared| match &declared.name {
-        IVarNameS::ConstructingMemberName(member_name) => Some(member_name.clone()),
+        IVarNameS::ConstructingMemberName(member_name) => Some(*member_name),
         _ => None,
       })
       .collect();

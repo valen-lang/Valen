@@ -2059,7 +2059,7 @@ where
   pub fn parse_single_arg_lambda_begin(
     &self,
     _original_iter: &mut ScrambleIterator<'a>,
-  ) -> Option<ParamsP> {
+  ) -> Option<ParamsP<'a>> {
     panic!("parse_single_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1563")
   }
   /*
@@ -2093,7 +2093,7 @@ where
   pub fn parse_multi_arg_lambda_begin(
     &self,
     _original_iter: &mut ScrambleIterator<'a>,
-  ) -> Option<ParamsP> {
+  ) -> Option<ParamsP<'a>> {
     panic!("parse_multi_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1587")
   }
   /*

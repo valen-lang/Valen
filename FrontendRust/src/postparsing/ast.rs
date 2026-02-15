@@ -216,7 +216,7 @@ impl ICitizenS<'_> {
     }
   }
 
-  pub fn generic_params(&self) -> &Vec<GenericParameterS> {
+  pub fn generic_params(&self) -> &Vec<GenericParameterS<'_>> {
     match self {
       ICitizenS::Struct(s) => &s.generic_params,
       ICitizenS::Interface(i) => &i.generic_params,

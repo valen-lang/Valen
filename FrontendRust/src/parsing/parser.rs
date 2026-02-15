@@ -1578,7 +1578,7 @@ where
               range,
               name: Some(NameP {
                 range: *word_range,
-                str: region_name.clone(),
+                str: *region_name,
               }),
             })
           }
@@ -2078,7 +2078,7 @@ where
   */
 
   // From Parser.scala lines 818-826: expectParseds
-  pub fn expect_parseds(&mut self) -> FileCoordinateMap<'a, (FileP, Vec<RangeL>)> {
+  pub fn expect_parseds(&mut self) -> FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)> {
     match self.get_parseds() {
       Err(FailedParse {
         code: _code,

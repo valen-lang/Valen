@@ -117,7 +117,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Peek at the previous element
-  pub fn peek_prev(&self) -> Option<&INodeLEEnum> {
+  pub fn peek_prev(&self) -> Option<&INodeLEEnum<'a>> {
     if self.index > 0 {
       Some(&self.scramble.elements[self.index - 1])
     } else {
@@ -174,7 +174,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Peek at the next n elements
-  pub fn peek_n(&self, n: usize) -> Vec<Option<&INodeLEEnum>> {
+  pub fn peek_n(&self, n: usize) -> Vec<Option<&INodeLEEnum<'a>>> {
     (0..n)
       .map(|i| {
         let idx = self.index + i;
@@ -292,7 +292,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Advance and return a reference to the current element
-  pub fn advance(&mut self) -> &INodeLEEnum {
+  pub fn advance(&mut self) -> &INodeLEEnum<'a> {
     assert!(self.has_next());
     let result = &**&self.scramble.elements[self.index];
     self.index += 1;
@@ -585,7 +585,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Try to match a Word node
-  pub fn try_match_word(&self) -> Option<&WordLE> {
+  pub fn try_match_word(&self) -> Option<&WordLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Word(w)) => Some(w),
       _ => None,
@@ -601,7 +601,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match a Scramble node
-  pub fn try_match_scramble(&self) -> Option<&ScrambleLE> {
+  pub fn try_match_scramble(&self) -> Option<&ScrambleLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Scramble(s)) => Some(s),
       _ => None,
@@ -609,7 +609,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match a Parend node
-  pub fn try_match_parend(&self) -> Option<&ParendLE> {
+  pub fn try_match_parend(&self) -> Option<&ParendLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Parend(p)) => Some(p),
       _ => None,
@@ -617,7 +617,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match an Angled node
-  pub fn try_match_angled(&self) -> Option<&AngledLE> {
+  pub fn try_match_angled(&self) -> Option<&AngledLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Angled(a)) => Some(a),
       _ => None,
@@ -625,7 +625,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match a Squared node
-  pub fn try_match_squared(&self) -> Option<&SquaredLE> {
+  pub fn try_match_squared(&self) -> Option<&SquaredLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Squared(s)) => Some(s),
       _ => None,
@@ -633,7 +633,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match a Curlied node
-  pub fn try_match_curlied(&self) -> Option<&CurliedLE> {
+  pub fn try_match_curlied(&self) -> Option<&CurliedLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Curlied(c)) => Some(c),
       _ => None,
@@ -641,7 +641,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Try to match a String node
-  pub fn try_match_string(&self) -> Option<&StringLE> {
+  pub fn try_match_string(&self) -> Option<&StringLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::String(s)) => Some(s),
       _ => None,

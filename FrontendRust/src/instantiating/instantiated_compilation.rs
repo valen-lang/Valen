@@ -64,7 +64,7 @@ where
   }
 
   // From InstantiatedCompilation.scala line 37: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
     self.typing_pass_compilation.get_parseds()
   }
 

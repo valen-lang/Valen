@@ -69,7 +69,7 @@ where
   }
 
   // From Compilation.scala line 34: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
     self.higher_typing_compilation.get_parseds()
   }
 

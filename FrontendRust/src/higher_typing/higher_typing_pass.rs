@@ -50,7 +50,7 @@ where
   }
 
   // From HigherTypingPass.scala line 803: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
     self.scout_compilation.get_parseds()
   }
 
