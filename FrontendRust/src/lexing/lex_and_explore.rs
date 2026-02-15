@@ -35,8 +35,8 @@ pub fn lex_and_explore<'a, 'i, 'k, D, F, R>(
   mut file_handler: impl FnMut(&'a FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,
 ) -> Result<Vec<F>, FailedParse<'a>>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
   R: IPackageResolver<'a, HashMap<String, String>>,
 {
   let mut unexplored_packages: HashSet<&'a PackageCoordinate<'a>> =

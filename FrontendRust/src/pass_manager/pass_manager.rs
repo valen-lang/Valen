@@ -118,7 +118,7 @@ fn resolve_package_contents<'a, 'i>(
   package_coord: &PackageCoordinate<'a>,
 ) -> Option<HashMap<String, String>>
 where
-  'i: 'a,
+  'a: 'i,
 {
   // From PassManager.scala line 158
   let module = &package_coord.module;
@@ -340,8 +340,8 @@ pub fn build<'a, 'i, 'k>(
   opts: &Options<'a>,
 ) -> Result<(), String>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   // From PassManager.scala lines 205-207: Create output directories
   let output_dir_path = opts.output_dir_path.as_ref().unwrap();

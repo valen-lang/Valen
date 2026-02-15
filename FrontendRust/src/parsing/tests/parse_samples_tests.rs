@@ -44,9 +44,9 @@ fn parse<'a, 'i, 'k, 'b>(
   test_package_coord: &'a PackageCoordinate<'a>,
 )
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   let mut compilation = parser_test_compilation::test(interner, keywords, resolver, test_package_coord);
   compilation

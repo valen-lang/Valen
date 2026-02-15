@@ -50,8 +50,8 @@ case class BinaryCallElement(symbol: NameP, precedence: Int) extends IExpression
 
 impl<'a, 'i, 'k> ExpressionParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
     ExpressionParser { interner, keywords }

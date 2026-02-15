@@ -52,8 +52,8 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
 
 impl<'a, 'i, 'k> Parser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn new(
     interner: &'i Interner<'a>,
@@ -1804,9 +1804,9 @@ pub struct ParserCompilation<'a, 'i, 'k, 'b> {
 }
 impl<'a, 'i, 'k, 'b> ParserCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   /*
   class ParserCompilation(

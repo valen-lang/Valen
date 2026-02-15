@@ -29,8 +29,8 @@ fn compile<'a, 'i, 'k>(
   code: &str,
 ) -> PatternPP<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_pattern_expect(interner, keywords, code)
 }

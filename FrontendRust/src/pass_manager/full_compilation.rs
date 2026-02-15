@@ -46,18 +46,18 @@ pub struct FullCompilationOptions {
 // From FullCompilation.scala lines 30-57: FullCompilation class
 pub struct FullCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   hammer_compilation: HammerCompilation<'a, 'i, 'k, 'b>,
 }
 
 impl<'a, 'i, 'k, 'b> FullCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From FullCompilation.scala lines 30-45
   pub fn new(

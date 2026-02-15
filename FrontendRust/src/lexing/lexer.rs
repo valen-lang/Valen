@@ -21,8 +21,8 @@ pub struct Lexer<'a, 'i, 'k> {
 }
 impl<'a, 'i, 'k> Lexer<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
   Self: 'a,
 {
   /*

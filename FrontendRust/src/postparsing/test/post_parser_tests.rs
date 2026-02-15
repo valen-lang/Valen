@@ -40,8 +40,8 @@ fn compile<'a, 'i, 'k>(
   code: &str,
 ) -> ProgramS<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let options = GlobalOptions {
     sanity_check: true,

@@ -40,8 +40,8 @@ class TemplexParser(interner: Interner, keywords: Keywords) {
 
 impl<'a, 'i, 'k> TemplexParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
     TemplexParser { interner, keywords }

@@ -49,9 +49,9 @@ pub struct ScoutCompilation<'a, 'i, 'k, 'b> {
 
 impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From PostParser.scala lines 922-928
   pub fn new(
@@ -411,8 +411,8 @@ object PostParser {
 */
 impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn no_variable_uses<'b>() -> VariableUses<'b> {
     VariableUses::empty()
@@ -437,8 +437,8 @@ where
 */
 impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn eval_pos(file: &'a FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
     CodeLocationS {
@@ -537,8 +537,8 @@ where
 */
 impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn consecutive(exprs: Vec<IExpressionSE<'a>>) -> IExpressionSE<'a> {
     assert!(!exprs.is_empty(), "POSTPARSER_CONSECUTIVE_EMPTY");
@@ -709,8 +709,8 @@ pub struct PostParser<'a, 'i, 'k> {
 
 impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn new(
     global_options: GlobalOptions,
@@ -1662,9 +1662,9 @@ class ScoutCompilation(
 */
 impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<(), String> {

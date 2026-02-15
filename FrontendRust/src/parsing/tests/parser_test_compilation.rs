@@ -25,9 +25,9 @@ pub fn test<'a, 'i, 'k, 'b>(
   test_package_coord: &'a PackageCoordinate<'a>,
 ) -> ParserCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
 
   ParserCompilation::<'a, 'i, 'k, 'b>::new(

@@ -31,8 +31,8 @@ class PatternParser(interner: Interner, keywords: Keywords, templexParser: Templ
 
 impl<'a, 'i, 'k> PatternParser<'a, 'i, 'k>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
     PatternParser { interner, keywords }

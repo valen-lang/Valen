@@ -18,9 +18,9 @@ pub struct HigherTypingCompilation<'a, 'i, 'k, 'b> {
 
 impl<'a, 'i, 'k, 'b> HigherTypingCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From HigherTypingPass.scala lines 793-799
   pub fn new(

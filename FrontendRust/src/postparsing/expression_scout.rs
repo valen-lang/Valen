@@ -309,7 +309,7 @@ fn scout_expression<'a, 'i>(
   expression: &IExpressionPE<'a>,
 ) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
 where
-  'i: 'a,
+  'a: 'i,
 {
 /*
   // Returns:
@@ -1367,7 +1367,7 @@ where
     load_as_p: LoadAsP,
   ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'i: 'a,
+    'a: 'i,
   {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = Self::scout_expression(

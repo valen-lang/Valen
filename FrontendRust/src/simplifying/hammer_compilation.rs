@@ -31,9 +31,9 @@ pub struct HammerCompilation<'a, 'i, 'k, 'b> {
 
 impl<'a, 'i, 'k, 'b> HammerCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From HammerCompilation.scala lines 25-40
   pub fn new(

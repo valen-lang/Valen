@@ -108,7 +108,7 @@ impl FunctionScout {
     maybe_parent: IFunctionParent<'a>,
   ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'i: 'a,
+    'a: 'i,
   {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}

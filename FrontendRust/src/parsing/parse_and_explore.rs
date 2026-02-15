@@ -53,8 +53,8 @@ pub fn parse_and_explore<'a, 'i, 'k, D, F, R, HandleParsedDenizen, FileHandler>(
   mut file_handler: FileHandler,
 ) -> Result<Vec<F>, FailedParse<'a>>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
   R: IPackageResolver<'a, HashMap<String, String>>,
   HandleParsedDenizen: FnMut(&'a FileCoordinate<'a>, &str, &[ImportL<'a>], IDenizenP<'a>) -> D,
   FileHandler: FnMut(&'a FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,

@@ -22,8 +22,8 @@ pub fn compile_file<'a, 'i, 'k>(
   code: &str,
 ) -> Result<FileP<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -61,8 +61,8 @@ pub fn compile<'a, 'i, 'k>(
   code: &str,
 ) -> FileP<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_file(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
 }
@@ -74,8 +74,8 @@ pub fn compile_denizens<'a, 'i, 'k>(
   code: &str,
 ) -> Result<Vec<IDenizenP<'a>>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_file(interner, keywords, code).map(|file| file.denizens)
 }
@@ -87,8 +87,8 @@ pub fn compile_denizen<'a, 'i, 'k>(
   code: &str,
 ) -> Result<IDenizenP<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let denizens = compile_denizens(interner, keywords, code)?;
   assert_eq!(denizens.len(), 1, "Expected exactly one denizen");
@@ -102,8 +102,8 @@ pub fn compile_denizen_expect<'a, 'i, 'k>(
   code: &str,
 ) -> IDenizenP<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_denizen(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
 }
@@ -116,8 +116,8 @@ pub fn compile_denizen_for_error<'a, 'i, 'k, F>(
   callback: F,
 )
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
   F: FnOnce(ParseError),
 {
   match compile_denizen(interner, keywords, code) {
@@ -133,8 +133,8 @@ pub fn compile_expression<'a, 'i, 'k>(
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let expression_parser = ExpressionParser::new(interner, keywords);
@@ -154,8 +154,8 @@ pub fn compile_expression_expect<'a, 'i, 'k>(
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_expression(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
 }
@@ -167,8 +167,8 @@ pub fn compile_expression_for_error<'a, 'i, 'k>(
   code: &str,
 ) -> ParseError
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_expression(interner, keywords, code).expect_err("Expected parsing to fail")
 }
@@ -180,8 +180,8 @@ pub fn compile_statement<'a, 'i, 'k>(
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let expression_parser = ExpressionParser::new(interner, keywords);
@@ -201,8 +201,8 @@ pub fn compile_statement_expect<'a, 'i, 'k>(
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_statement(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
 }
@@ -214,8 +214,8 @@ pub fn compile_block_contents<'a, 'i, 'k>(
   code: &str,
 ) -> Result<IExpressionPE<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let mut parser = Parser::new(interner, keywords);
@@ -238,8 +238,8 @@ pub fn compile_block_contents_expect<'a, 'i, 'k>(
   code: &str,
 ) -> IExpressionPE<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_block_contents(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
 }
@@ -251,8 +251,8 @@ pub fn compile_pattern<'a, 'i, 'k>(
   code: &str,
 ) -> Result<PatternPP<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let mut parser = Parser::new(interner, keywords);
@@ -280,8 +280,8 @@ pub fn compile_pattern_expect<'a, 'i, 'k>(
   code: &str,
 ) -> PatternPP<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_pattern(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
 }
@@ -293,8 +293,8 @@ pub fn compile_templex<'a, 'i, 'k>(
   code: &str,
 ) -> Result<ITemplexPT<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -312,8 +312,8 @@ pub fn compile_templex_expect<'a, 'i, 'k>(
   code: &str,
 ) -> ITemplexPT<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_templex(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
 }
@@ -325,8 +325,8 @@ pub fn compile_rulex<'a, 'i, 'k>(
   code: &str,
 ) -> Result<IRulexPR<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let lexer = Lexer::new(interner, keywords);
   let parser = Parser::new(interner, keywords);
@@ -344,8 +344,8 @@ pub fn compile_rulex_expect<'a, 'i, 'k>(
   code: &str,
 ) -> IRulexPR<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_rulex(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
 }
@@ -357,8 +357,8 @@ pub fn compile_struct<'a, 'i, 'k>(
   code: &str,
 ) -> Result<StructP<'a>, ParseError>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   let denizen = compile_denizen(interner, keywords, code)?;
   match denizen {
@@ -374,8 +374,8 @@ pub fn compile_struct_expect<'a, 'i, 'k>(
   code: &str,
 ) -> StructP<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_struct(interner, keywords, code).unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
 }
@@ -420,8 +420,8 @@ pub fn compile_for_error<'a, 'i, 'k>(
   code: &str,
 ) -> ParseError
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_file(interner, keywords, code).expect_err("Should be error")
 }

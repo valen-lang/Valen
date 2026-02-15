@@ -30,9 +30,9 @@ pub struct TypingPassCompilation<'a, 'i, 'k, 'b> {
 
 impl<'a, 'i, 'k, 'b> TypingPassCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From Compilation.scala lines 22-30
   pub fn new(

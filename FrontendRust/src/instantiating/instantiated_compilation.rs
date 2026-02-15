@@ -27,9 +27,9 @@ pub struct InstantiatedCompilation<'a, 'i, 'k, 'b> {
 
 impl<'a, 'i, 'k, 'b> InstantiatedCompilation<'a, 'i, 'k, 'b>
 where
-  'i: 'a,
-  'k: 'a,
-  'b: 'a,
+  'a: 'i,
+  'a: 'k,
+  'a: 'b,
 {
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(

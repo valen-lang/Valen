@@ -30,8 +30,8 @@ fn compile<'a, 'i, 'k>(
   code: &str,
 ) -> IRulexPR<'a>
 where
-  'i: 'a,
-  'k: 'a,
+  'a: 'i,
+  'a: 'k,
 {
   compile_rulex_expect(interner, keywords, code)
 }
