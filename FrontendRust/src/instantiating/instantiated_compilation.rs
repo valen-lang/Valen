@@ -19,19 +19,24 @@ pub struct InstantiatorCompilationOptions {
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
-pub struct InstantiatedCompilation<'a> {
-  typing_pass_compilation: TypingPassCompilation<'a>,
+pub struct InstantiatedCompilation<'a, 'i, 'k, 'b> {
+  typing_pass_compilation: TypingPassCompilation<'a, 'i, 'k, 'b>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
-impl<'a> InstantiatedCompilation<'a> {
+impl<'a, 'i, 'k, 'b> InstantiatedCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
     options: HammerCompilationOptions,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
@@ -54,17 +59,17 @@ impl<'a> InstantiatedCompilation<'a> {
   }
 
   // From InstantiatedCompilation.scala line 36: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.typing_pass_compilation.get_code_map()
   }
 
   // From InstantiatedCompilation.scala line 37: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
     self.typing_pass_compilation.get_parseds()
   }
 
   // From InstantiatedCompilation.scala line 38: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.typing_pass_compilation.get_vpst_map()
   }
 

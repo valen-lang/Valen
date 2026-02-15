@@ -369,8 +369,8 @@ pub struct ConsecutorSE<'a> {
   pub exprs: Vec<IExpressionSE<'a>>,
 }
 
-impl ConsecutorSE<'_> {
-  pub fn range(&self) -> RangeS<'_> {
+impl<'a> ConsecutorSE<'a> {
+  pub fn range(&self) -> RangeS<'a> {
     assert!(!self.exprs.is_empty());
     RangeS {
       begin: self.exprs.first().unwrap().range().begin,

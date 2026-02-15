@@ -6,11 +6,12 @@ use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::{IPackageResolver, OrResolver, PackageCoordinate};
 use std::collections::HashMap;
 use std::fs;
 use std::path::PathBuf;
 use std::sync::Arc;
+use crate::utils::code_hierarchy::FileCoordinateMap;
 /*
 package dev.vale.passmanager
 
@@ -66,9 +67,9 @@ impl<'a> FileSystemResolver<'a> {
 
 impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a> {
   // From PassManager.scala lines 153-201
-  fn resolve(&self, package_coord: &Arc<PackageCoordinate<'a>>) -> Option<HashMap<String, String>> {
+  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
     // From PassManager.scala lines 190-196: Check for DirectFilePathInput first
-    if let Some(file_path) = self.direct_file_inputs.get(package_coord.as_ref()) {
+    if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
       if let Ok(code) = fs::read_to_string(file_path) {
         let filepath = file_path.to_string_lossy().to_string();
         let mut result = HashMap::new();
@@ -111,11 +112,14 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
 }
 
 // From PassManager.scala lines 153-201: resolvePackageContents
-fn resolve_package_contents<'a>(
-  interner: &Interner<'a>,
+fn resolve_package_contents<'a, 'i>(
+  interner: &'i Interner<'a>,
   inputs: &[IFrontendInput<'a>],
   package_coord: &PackageCoordinate<'a>,
-) -> Option<HashMap<String, String>> {
+) -> Option<HashMap<String, String>>
+where
+  'i: 'a,
+{
   // From PassManager.scala line 158
   let module = &package_coord.module;
   let packages = &package_coord.packages;
@@ -266,7 +270,7 @@ pub enum IFrontendInput<'a> {
   },
 }
 impl<'a> IFrontendInput<'a> {
-  pub fn package_coord(&self, interner: &Interner<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn package_coord(&self, interner: &'a Interner<'a>) -> &'a PackageCoordinate<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
@@ -303,7 +307,7 @@ impl<'a> IFrontendInput<'a> {
 */
 
 // From PassManager.scala lines 356-366: buildAndOutput
-fn build_and_output<'a>(interner: &Interner<'a>, keywords: &'a Keywords<'a>, opts: &Options<'a>) {
+fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, opts: &Options<'a>) {
   match build(interner, keywords, opts) {
     Ok(_) => {
       // Success
@@ -330,11 +334,15 @@ fn build_and_output<'a>(interner: &Interner<'a>, keywords: &'a Keywords<'a>, opt
 */
 
 // From PassManager.scala lines 203-342: build function
-pub fn build<'a>(
-  interner: &Interner<'a>,
-  keywords: &'a Keywords<'a>,
+pub fn build<'a, 'i, 'k>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
   opts: &Options<'a>,
-) -> Result<(), String> {
+) -> Result<(), String>
+where
+  'i: 'a,
+  'k: 'a,
+{
   // From PassManager.scala lines 205-207: Create output directories
   let output_dir_path = opts.output_dir_path.as_ref().unwrap();
   fs::create_dir_all(output_dir_path)
@@ -373,8 +381,8 @@ pub fn build<'a>(
 
   // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
   let all_inputs_clone = all_inputs.clone();
-  let resolver = builtins_code_map.or(move |package_coord: &Arc<PackageCoordinate<'a>>| {
-    resolve_package_contents(interner, &all_inputs_clone, &**package_coord)
+  let resolver = builtins_code_map.or(move |package_coord: &'a PackageCoordinate<'a>| {
+    resolve_package_contents(interner, &all_inputs_clone, &*package_coord)
   });
 
   // From PassManager.scala lines 238-253: Create FullCompilationOptions
@@ -642,12 +650,12 @@ pub struct Options<'a> {
 */
 
 // From PassManager.scala lines 71-150: parseOpts
-pub fn parse_opts<'a>(interner: &Interner<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
+pub fn parse_opts<'a>(interner: &'a Interner<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
   parse_opts_recursive(interner, opts, &list, 0)
 }
 
 fn parse_opts_recursive<'a>(
-  interner: &Interner<'a>,
+  interner: &'a Interner<'a>,
   mut opts: Options<'a>,
   list: &[String],
   index: usize,

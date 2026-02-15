@@ -44,17 +44,27 @@ pub struct FullCompilationOptions {
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation<'a> {
-  hammer_compilation: HammerCompilation<'a>,
+pub struct FullCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
+  hammer_compilation: HammerCompilation<'a, 'i, 'k, 'b>,
 }
 
-impl<'a> FullCompilation<'a> {
+impl<'a, 'i, 'k, 'b> FullCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From FullCompilation.scala lines 30-45
   pub fn new(
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
   ) -> Self {
     let hammer_compilation = HammerCompilation::new(

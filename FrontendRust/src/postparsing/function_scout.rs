@@ -24,6 +24,7 @@ import dev.vale._
 
 import scala.collection.immutable.{List, Range}
 */
+use crate::StrI;
 use crate::parsing::ast::{FunctionP, INameDeclarationP, LoadAsP};
 use crate::interner::Interner;
 use crate::postparsing::ast::{
@@ -100,12 +101,15 @@ class FunctionScout(
 */
 pub struct FunctionScout;
 impl FunctionScout {
-  pub fn scout_function<'b>(
-    interner: &'b Interner<'b>,
-    file_coordinate: &FileCoordinate<'b>,
-    function: &FunctionP<'b>,
-    maybe_parent: IFunctionParent<'b>,
-  ) -> Result<(FunctionS<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
+  pub fn scout_function<'a, 'i>(
+    interner: &'i Interner<'a>,
+    file_coordinate: &'a FileCoordinate<'a>,
+    function: &FunctionP<'a>,
+    maybe_parent: IFunctionParent<'a>,
+  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'i: 'a,
+  {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}
       IFunctionParent::ParentInterface { .. } => {}
@@ -125,7 +129,7 @@ impl FunctionScout {
     if function.header.template_rules.is_some() {
       panic!("POSTPARSER_SCOUT_FUNCTION_TEMPLATE_RULES_NOT_YET_IMPLEMENTED");
     }
-    let explicit_self_name = if let Some(params) = &function.header.params {
+    let explicit_self_name: Option<&'a StrI> = if let Some(params) = &function.header.params {
       if params.params.is_empty() {
         None
       } else if params.params.len() == 1 {
@@ -165,7 +169,7 @@ impl FunctionScout {
               pattern.destructure.is_none(),
               "POSTPARSER_SCOUT_FUNCTION_PARAM_DESTRUCTURE_NOT_YET_IMPLEMENTED"
             );
-            Some(local_name.str.clone())
+            Some(local_name.str)
           }
           _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
         }
@@ -247,7 +251,7 @@ impl FunctionScout {
         }
         other => other,
       };
-    let constructing_member_names: Vec<_> = stack_frame_after_body
+    let constructing_member_names: Vec<&'a StrI> = stack_frame_after_body
       .locals
       .vars
       .iter()
@@ -256,11 +260,11 @@ impl FunctionScout {
         _ => None,
       })
       .collect();
-    let mut self_uses = self_uses_before_constructing;
+    let mut self_uses: VariableUses<'a> = self_uses_before_constructing;
     let expr_with_constructor = if constructing_member_names.is_empty() {
       expr_without_constructing_without_void
     } else {
-      let constructor_expr: IExpressionSE<'b> = IExpressionSE::FunctionCall(FunctionCallSE {
+      let constructor_expr: IExpressionSE<'a> = IExpressionSE::FunctionCall(FunctionCallSE {
         range: body_range.clone(),
         location: lidb.child().consume(),
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
@@ -272,14 +276,14 @@ impl FunctionScout {
         })),
         arg_exprs: constructing_member_names
           .iter()
-          .map(|member_name| {
+          .map(|member_name: &&'a StrI| {
             IExpressionSE::LocalLoad(LocalLoadSE {
               range: body_range.clone(),
-              name: IVarNameS::ConstructingMemberName(member_name.clone()),
+              name: IVarNameS::ConstructingMemberName(member_name),
               target_ownership: LoadAsP::Move,
             })
           })
-          .collect::<Vec<_>>(),
+          .collect::<Vec<IExpressionSE<'a>>>(),
       });
       for member_name in constructing_member_names {
         self_uses = self_uses.mark_moved(IVarNameS::ConstructingMemberName(member_name));
@@ -294,7 +298,7 @@ impl FunctionScout {
         }),
       }
     };
-    let locals: Vec<LocalS<'b>> = stack_frame_after_body
+    let locals: Vec<LocalS<'a>> = stack_frame_after_body
       .locals
       .vars
       .iter()

@@ -5,7 +5,6 @@ use super::templex::{ITemplexPT, RegionRunePT};
 use crate::interner::StrI;
 use crate::lexing::RangeL;
 use crate::utils::code_hierarchy::FileCoordinate;
-use std::sync::Arc;
 /*
 package dev.vale.parsing.ast
 
@@ -38,7 +37,7 @@ case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Bool
 /// Parsed file
 #[derive(Clone, Debug, PartialEq)]
 pub struct FileP<'a> {
-  pub file_coord: Arc<FileCoordinate<'a>>,
+  pub file_coord: &'a FileCoordinate<'a>,
   pub comments_ranges: Vec<RangeL>,
   pub denizens: Vec<IDenizenP<'a>>,
 }

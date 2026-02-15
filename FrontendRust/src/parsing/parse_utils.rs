@@ -15,7 +15,7 @@ object ParseUtils {
 /// Helper method to skip past an equals sign while a condition is true
 /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
 pub fn try_skip_past_equals_while<'a, F>(
-  iter: &'a mut ScrambleIterator<'a>,
+  iter: &mut ScrambleIterator<'a>,
   continue_while: F,
 ) -> Option<ScrambleIterator<'a>>
 where
@@ -85,7 +85,7 @@ where
 /// Try to skip past a keyword, returning the portion before it
 /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
 pub fn try_skip_past_keyword_while<'a, F>(
-  iter: &'a mut ScrambleIterator<'a>,
+  iter: &mut ScrambleIterator<'a>,
   keyword: &'a crate::interner::StrI,
   continue_while: F,
 ) -> Option<(WordLE<'a>, ScrambleIterator<'a>)>

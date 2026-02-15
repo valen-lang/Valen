@@ -58,7 +58,7 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 // work right now.
 pub fn get_modulized_code_map<'a>(
     interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    keywords: &Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let mut result = FileCoordinateMap::new();
@@ -97,7 +97,7 @@ pub fn get_modulized_code_map<'a>(
 // But load the actual files all inside the root package.
 pub fn get_code_map<'a>(
     interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    keywords: &Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let builtin_namespace_coord = {

@@ -22,159 +22,159 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::rules::RuneUsage;
 
-pub enum NodeRefS<'a> {
-  Program(&'a ProgramS),
-  File(&'a FileS),
+pub enum NodeRefS<'a, 'p> {
+  Program(&'p ProgramS<'a>),
+  File(&'p FileS<'a>),
 
-  Struct(&'a StructS),
-  Interface(&'a InterfaceS),
-  Impl(&'a ImplS),
-  Function(&'a FunctionS),
-  ExportAs(&'a ExportAsS),
-  Import(&'a ImportS),
+  Struct(&'p StructS<'a>),
+  Interface(&'p InterfaceS<'a>),
+  Impl(&'p ImplS<'a>),
+  Function(&'p FunctionS<'a>),
+  ExportAs(&'p ExportAsS<'a>),
+  Import(&'p ImportS<'a>),
 
-  Denizen(&'a IDenizenS),
-  TopLevelFunction(&'a TopLevelFunctionS),
-  TopLevelImpl(&'a TopLevelImplS),
-  TopLevelExportAs(&'a TopLevelExportAsS),
-  TopLevelImport(&'a TopLevelImportS),
-  TopLevelStruct(&'a TopLevelStructS),
-  TopLevelInterface(&'a TopLevelInterfaceS),
-  CitizenDenizen(&'a ICitizenDenizenS),
+  Denizen(&'p IDenizenS<'a>),
+  TopLevelFunction(&'p TopLevelFunctionS<'a>),
+  TopLevelImpl(&'p TopLevelImplS<'a>),
+  TopLevelExportAs(&'p TopLevelExportAsS<'a>),
+  TopLevelImport(&'p TopLevelImportS<'a>),
+  TopLevelStruct(&'p TopLevelStructS<'a>),
+  TopLevelInterface(&'p TopLevelInterfaceS<'a>),
+  CitizenDenizen(&'p ICitizenDenizenS<'a>),
 
-  CitizenAttribute(&'a ICitizenAttributeS),
-  FunctionAttribute(&'a IFunctionAttributeS),
-  ExternAttribute(&'a ExternS),
-  BuiltinAttribute(&'a BuiltinS),
-  MacroCallAttribute(&'a MacroCallS),
-  ExportAttribute(&'a ExportS),
-  SealedAttribute(&'a SealedS),
-  PureAttribute(&'a PureS),
-  AdditiveAttribute(&'a AdditiveS),
-  UserFunctionAttribute(&'a UserFunctionS),
+  CitizenAttribute(&'p ICitizenAttributeS<'a>),
+  FunctionAttribute(&'p IFunctionAttributeS<'a>),
+  ExternAttribute(&'p ExternS<'a>),
+  BuiltinAttribute(&'p BuiltinS<'a>),
+  MacroCallAttribute(&'p MacroCallS<'a>),
+  ExportAttribute(&'p ExportS<'a>),
+  SealedAttribute(&'p SealedS),
+  PureAttribute(&'p PureS),
+  AdditiveAttribute(&'p AdditiveS),
+  UserFunctionAttribute(&'p UserFunctionS),
 
-  StructMember(&'a IStructMemberS),
-  NormalStructMember(&'a NormalStructMemberS),
-  VariadicStructMember(&'a VariadicStructMemberS),
+  StructMember(&'p IStructMemberS<'a>),
+  NormalStructMember(&'p NormalStructMemberS<'a>),
+  VariadicStructMember(&'p VariadicStructMemberS<'a>),
 
-  GenericParameter(&'a GenericParameterS),
-  GenericParameterDefault(&'a GenericParameterDefaultS),
-  GenericParameterType(&'a IGenericParameterTypeS),
-  Parameter(&'a ParameterS),
-  SimpleParameter(&'a SimpleParameterS),
+  GenericParameter(&'p GenericParameterS<'a>),
+  GenericParameterDefault(&'p GenericParameterDefaultS<'a>),
+  GenericParameterType(&'p IGenericParameterTypeS<'a>),
+  Parameter(&'p ParameterS<'a>),
+  SimpleParameter(&'p SimpleParameterS<'a>),
 
-  Body(&'a IBodyS),
-  ExternBody(&'a ExternBodyS),
-  AbstractBody(&'a AbstractBodyS),
-  GeneratedBody(&'a GeneratedBodyS),
-  CodeBody(&'a CodeBodyS),
+  Body(&'p IBodyS<'a>),
+  ExternBody(&'p ExternBodyS),
+  AbstractBody(&'p AbstractBodyS),
+  GeneratedBody(&'p GeneratedBodyS<'a>),
+  CodeBody(&'p CodeBodyS<'a>),
 
-  BodyExpr(&'a BodySE),
-  Local(&'a LocalS),
-  Expression(&'a IExpressionSE),
-  BlockExpr(&'a BlockSE),
-  PureExpr(&'a PureSE),
+  BodyExpr(&'p BodySE<'a>),
+  Local(&'p LocalS<'a>),
+  Expression(&'p IExpressionSE<'a>),
+  BlockExpr(&'p BlockSE<'a>),
+  PureExpr(&'p PureSE<'a>),
 
-  Pattern(&'a AtomSP),
-  Capture(&'a CaptureS),
+  Pattern(&'p AtomSP<'a>),
+  Capture(&'p CaptureS<'a>),
 
-  Rulex(&'a IRulexSR),
-  PlaceholderRule(&'a crate::postparsing::rules::rules::PlaceholderRuleSR),
-  LiteralRule(&'a LiteralSR),
-  MaybeCoercingLookupRule(&'a MaybeCoercingLookupSR),
-  RuneUsage(&'a RuneUsage),
-  Literal(&'a ILiteralSL),
-  IntLiteral(&'a IntLiteralSL),
-  StringLiteral(&'a StringLiteralSL),
-  BoolLiteral(&'a BoolLiteralSL),
-  MutabilityLiteral(&'a MutabilityLiteralSL),
-  LocationLiteral(&'a LocationLiteralSL),
-  OwnershipLiteral(&'a OwnershipLiteralSL),
-  VariabilityLiteral(&'a VariabilityLiteralSL),
+  Rulex(&'p IRulexSR<'a>),
+  PlaceholderRule(&'p crate::postparsing::rules::rules::PlaceholderRuleSR<'a>),
+  LiteralRule(&'p LiteralSR<'a>),
+  MaybeCoercingLookupRule(&'p MaybeCoercingLookupSR<'a>),
+  RuneUsage(&'p RuneUsage<'a>),
+  Literal(&'p ILiteralSL),
+  IntLiteral(&'p IntLiteralSL),
+  StringLiteral(&'p StringLiteralSL),
+  BoolLiteral(&'p BoolLiteralSL),
+  MutabilityLiteral(&'p MutabilityLiteralSL),
+  LocationLiteral(&'p LocationLiteralSL),
+  OwnershipLiteral(&'p OwnershipLiteralSL),
+  VariabilityLiteral(&'p VariabilityLiteralSL),
 
-  Name(&'a INameS),
-  FunctionDeclarationName(&'a IFunctionDeclarationNameS),
-  FunctionName(&'a FunctionNameS),
-  LambdaDeclarationName(&'a LambdaDeclarationNameS),
-  TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS),
-  TopLevelStructDeclarationName(&'a TopLevelStructDeclarationNameS),
-  TopLevelInterfaceDeclarationName(&'a TopLevelInterfaceDeclarationNameS),
-  ImplDeclarationName(&'a ImplDeclarationNameS),
-  ExportAsName(&'a ExportAsNameFromNamesS),
-  ImpreciseName(&'a IImpreciseNameS),
-  CodeName(&'a CodeNameS),
-  VarName(&'a IVarNameS),
-  Rune(&'a IRuneS),
-  CodeRune(&'a CodeRuneS),
-  DenizenDefaultRegionRune(&'a DenizenDefaultRegionRuneS),
+  Name(&'p INameS<'a>),
+  FunctionDeclarationName(&'p IFunctionDeclarationNameS<'a>),
+  FunctionName(&'p FunctionNameS<'a>),
+  LambdaDeclarationName(&'p LambdaDeclarationNameS<'a>),
+  TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS<'a>),
+  TopLevelStructDeclarationName(&'p TopLevelStructDeclarationNameS<'a>),
+  TopLevelInterfaceDeclarationName(&'p TopLevelInterfaceDeclarationNameS<'a>),
+  ImplDeclarationName(&'p ImplDeclarationNameS<'a>),
+  ExportAsName(&'p ExportAsNameFromNamesS<'a>),
+  ImpreciseName(&'p IImpreciseNameS<'a>),
+  CodeName(&'p CodeNameS<'a>),
+  VarName(&'p IVarNameS<'a>),
+  Rune(&'p IRuneS<'a>),
+  CodeRune(&'a CodeRuneS<'a>),
+  DenizenDefaultRegionRune(&'p DenizenDefaultRegionRuneS<'a>),
 }
 
-fn collect_if<'a, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefS<'a>)
+fn collect_if<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefS<'a, 'p>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   if let Some(x) = pred(node) {
     out.push(x);
   }
 }
 
-pub fn collect_in_program<'a, T, F>(program: &'a ProgramS, predicate: &F) -> Vec<T>
+pub fn collect_in_program<'a, 'p, T, F>(program: &'p ProgramS<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_program(predicate, &mut out, program);
   out
 }
 
-pub fn collect_in_file<'a, T, F>(file: &'a FileS, predicate: &F) -> Vec<T>
+pub fn collect_in_file<'a, 'p, T, F>(file: &'p FileS<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_file(predicate, &mut out, file);
   out
 }
 
-pub fn collect_in_citizen<'a, T, F>(citizen: &'a ICitizenS, predicate: &F) -> Vec<T>
+pub fn collect_in_citizen<'a, 'p, T, F>(citizen: &'p ICitizenS<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_citizen(predicate, &mut out, citizen);
   out
 }
 
-pub fn collect_in_citizen_denizen<'a, T, F>(denizen: &'a ICitizenDenizenS, predicate: &F) -> Vec<T>
+pub fn collect_in_citizen_denizen<'a, 'p, T, F>(denizen: &'p ICitizenDenizenS<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_citizen_denizen(predicate, &mut out, denizen);
   out
 }
 
-pub fn collect_in_struct<'a, T, F>(strukt: &'a StructS, predicate: &F) -> Vec<T>
+pub fn collect_in_struct<'a, 'p, T, F>(strukt: &'p StructS<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_struct(predicate, &mut out, strukt);
   out
 }
 
-pub fn collect_in_srulex<'a, T, F>(rulex: &'a IRulexSR, predicate: &F) -> Vec<T>
+pub fn collect_in_srulex<'a, 'p, T, F>(rulex: &'p IRulexSR<'a>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_rulex(predicate, &mut out, rulex);
   out
 }
 
-fn visit_program<'a, T, F>(pred: &F, out: &mut Vec<T>, program: &'a ProgramS)
+fn visit_program<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, program: &'p ProgramS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Program(program));
   for strukt in &program.structs {
@@ -197,9 +197,9 @@ where
   }
 }
 
-fn visit_file<'a, T, F>(pred: &F, out: &mut Vec<T>, file: &'a FileS)
+fn visit_file<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, file: &'p FileS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::File(file));
   for denizen in &file.denizens {
@@ -207,9 +207,9 @@ where
   }
 }
 
-fn visit_denizen<'a, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'a IDenizenS)
+fn visit_denizen<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'p IDenizenS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Denizen(denizen));
   match denizen {
@@ -240,9 +240,9 @@ where
   }
 }
 
-fn visit_citizen<'a, T, F>(pred: &F, out: &mut Vec<T>, citizen: &'a ICitizenS)
+fn visit_citizen<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, citizen: &'p ICitizenS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   match citizen {
     ICitizenS::Struct(x) => visit_struct(pred, out, x),
@@ -250,9 +250,9 @@ where
   }
 }
 
-fn visit_citizen_denizen<'a, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'a ICitizenDenizenS)
+fn visit_citizen_denizen<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'p ICitizenDenizenS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::CitizenDenizen(denizen));
   match denizen {
@@ -267,9 +267,9 @@ where
   }
 }
 
-fn visit_struct<'a, T, F>(pred: &F, out: &mut Vec<T>, strukt: &'a StructS)
+fn visit_struct<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, strukt: &'p StructS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Struct(strukt));
   collect_if(
@@ -296,9 +296,9 @@ where
   }
 }
 
-fn visit_interface<'a, T, F>(pred: &F, out: &mut Vec<T>, interface: &'a InterfaceS)
+fn visit_interface<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, interface: &'p InterfaceS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Interface(interface));
   collect_if(
@@ -322,9 +322,9 @@ where
   }
 }
 
-fn visit_impl<'a, T, F>(pred: &F, out: &mut Vec<T>, impl_: &'a ImplS)
+fn visit_impl<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, impl_: &'p ImplS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Impl(impl_));
   collect_if(pred, out, NodeRefS::ImplDeclarationName(&impl_.name));
@@ -340,9 +340,9 @@ where
   visit_imprecise_name(pred, out, &impl_.super_interface_imprecise_name);
 }
 
-fn visit_export_as<'a, T, F>(pred: &F, out: &mut Vec<T>, export: &'a ExportAsS)
+fn visit_export_as<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, export: &'p ExportAsS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::ExportAs(export));
   collect_if(pred, out, NodeRefS::ExportAsName(&export.export_name));
@@ -352,16 +352,16 @@ where
   visit_rune_usage(pred, out, &export.rune);
 }
 
-fn visit_import<'a, T, F>(pred: &F, out: &mut Vec<T>, import: &'a ImportS)
+fn visit_import<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, import: &'p ImportS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Import(import));
 }
 
-fn visit_function<'a, T, F>(pred: &F, out: &mut Vec<T>, function: &'a FunctionS)
+fn visit_function<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, function: &'p FunctionS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Function(function));
   visit_function_declaration_name(pred, out, &function.name);
@@ -383,17 +383,17 @@ where
   visit_body(pred, out, &function.body);
 }
 
-fn visit_parameter<'a, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'a ParameterS)
+fn visit_parameter<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'p ParameterS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Parameter(parameter));
   visit_pattern(pred, out, &parameter.pattern);
 }
 
-fn visit_generic_parameter<'a, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'a GenericParameterS)
+fn visit_generic_parameter<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'p GenericParameterS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameter(parameter));
   visit_rune_usage(pred, out, &parameter.rune);
@@ -403,9 +403,9 @@ where
   }
 }
 
-fn visit_generic_parameter_default<'a, T, F>(pred: &F, out: &mut Vec<T>, default: &'a GenericParameterDefaultS)
+fn visit_generic_parameter_default<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, default: &'p GenericParameterDefaultS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameterDefault(default));
   visit_rune(pred, out, &default.result_rune);
@@ -414,9 +414,9 @@ where
   }
 }
 
-fn visit_generic_parameter_type<'a, T, F>(pred: &F, out: &mut Vec<T>, tyype: &'a IGenericParameterTypeS)
+fn visit_generic_parameter_type<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, tyype: &'p IGenericParameterTypeS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::GenericParameterType(tyype));
   if let IGenericParameterTypeS::CoordGenericParameterType(x) = tyype {
@@ -426,9 +426,9 @@ where
   }
 }
 
-fn visit_body<'a, T, F>(pred: &F, out: &mut Vec<T>, body: &'a IBodyS)
+fn visit_body<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, body: &'p IBodyS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Body(body));
   match body {
@@ -448,9 +448,9 @@ where
   }
 }
 
-fn visit_body_expr<'a, T, F>(pred: &F, out: &mut Vec<T>, body: &'a BodySE)
+fn visit_body_expr<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, body: &'p BodySE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::BodyExpr(body));
   for closured_name in &body.closured_names {
@@ -459,9 +459,9 @@ where
   visit_block(pred, out, &body.block);
 }
 
-fn visit_expression<'a, T, F>(pred: &F, out: &mut Vec<T>, expression: &'a IExpressionSE)
+fn visit_expression<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, expression: &'p IExpressionSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Expression(expression));
   match expression {
@@ -495,23 +495,23 @@ where
   }
 }
 
-fn visit_return<'a, T, F>(pred: &F, out: &mut Vec<T>, ret: &'a ReturnSE)
+fn visit_return<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, ret: &'p ReturnSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   visit_expression(pred, out, ret.inner.as_ref());
 }
 
-fn visit_dot<'a, T, F>(pred: &F, out: &mut Vec<T>, dot: &'a DotSE)
+fn visit_dot<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, dot: &'p DotSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   visit_expression(pred, out, dot.left.as_ref());
 }
 
-fn visit_outside_load<'a, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'a OutsideLoadSE)
+fn visit_outside_load<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'p OutsideLoadSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   for rule in &outside_load.rules {
     visit_rulex(pred, out, rule);
@@ -524,16 +524,16 @@ where
   }
 }
 
-fn visit_ownershipped<'a, T, F>(pred: &F, out: &mut Vec<T>, ownershipped: &'a OwnershippedSE)
+fn visit_ownershipped<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, ownershipped: &'p OwnershippedSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   visit_expression(pred, out, ownershipped.inner_expr.as_ref());
 }
 
-fn visit_block<'a, T, F>(pred: &F, out: &mut Vec<T>, block: &'a BlockSE)
+fn visit_block<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, block: &'p BlockSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::BlockExpr(block));
   for local in &block.locals {
@@ -542,25 +542,25 @@ where
   visit_expression(pred, out, block.expr.as_ref());
 }
 
-fn visit_pure<'a, T, F>(pred: &F, out: &mut Vec<T>, pure: &'a PureSE)
+fn visit_pure<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, pure: &'p PureSE<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::PureExpr(pure));
   visit_expression(pred, out, pure.inner.as_ref());
 }
 
-fn visit_local<'a, T, F>(pred: &F, out: &mut Vec<T>, local: &'a LocalS)
+fn visit_local<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, local: &'p LocalS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Local(local));
   visit_var_name(pred, out, &local.var_name);
 }
 
-fn visit_pattern<'a, T, F>(pred: &F, out: &mut Vec<T>, pattern: &'a AtomSP)
+fn visit_pattern<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, pattern: &'p AtomSP<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Pattern(pattern));
   if let Some(capture) = &pattern.name {
@@ -576,17 +576,17 @@ where
   }
 }
 
-fn visit_capture<'a, T, F>(pred: &F, out: &mut Vec<T>, capture: &'a CaptureS)
+fn visit_capture<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, capture: &'p CaptureS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Capture(capture));
   visit_var_name(pred, out, &capture.name);
 }
 
-fn visit_struct_member<'a, T, F>(pred: &F, out: &mut Vec<T>, member: &'a IStructMemberS)
+fn visit_struct_member<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p IStructMemberS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::StructMember(member));
   match member {
@@ -601,9 +601,9 @@ where
   }
 }
 
-fn visit_citizen_attribute<'a, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'a ICitizenAttributeS)
+fn visit_citizen_attribute<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p ICitizenAttributeS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::CitizenAttribute(attribute));
   match attribute {
@@ -615,9 +615,9 @@ where
   }
 }
 
-fn visit_function_attribute<'a, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'a IFunctionAttributeS)
+fn visit_function_attribute<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p IFunctionAttributeS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::FunctionAttribute(attribute));
   match attribute {
@@ -630,9 +630,9 @@ where
   }
 }
 
-fn visit_rulex<'a, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'a IRulexSR)
+fn visit_rulex<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'p IRulexSR<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Rulex(rulex));
   match rulex {
@@ -652,9 +652,10 @@ where
   }
 }
 
-fn visit_literal<'a, T, F>(pred: &F, out: &mut Vec<T>, literal: &'a ILiteralSL)
+fn visit_literal<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, literal: &'p ILiteralSL)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  'a: 'p,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Literal(literal));
   match literal {
@@ -668,9 +669,9 @@ where
   }
 }
 
-fn visit_function_declaration_name<'a, T, F>(pred: &F, out: &mut Vec<T>, name: &'a IFunctionDeclarationNameS)
+fn visit_function_declaration_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p IFunctionDeclarationNameS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::FunctionDeclarationName(name));
   match name {
@@ -682,35 +683,35 @@ where
   }
 }
 
-fn visit_imprecise_name<'a, T, F>(pred: &F, out: &mut Vec<T>, name: &'a IImpreciseNameS)
+fn visit_imprecise_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p IImpreciseNameS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::ImpreciseName(name));
   match name {
-    IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x.as_ref())),
+    IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x)),
     _ => panic!("POSTPARSING_TRAVERSE_IMPRECISE_NAME_NOT_YET_IMPLEMENTED"),
   }
 }
 
-fn visit_var_name<'a, T, F>(pred: &F, out: &mut Vec<T>, name: &'a IVarNameS)
+fn visit_var_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p IVarNameS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::VarName(name));
 }
 
-fn visit_rune_usage<'a, T, F>(pred: &F, out: &mut Vec<T>, rune_usage: &'a RuneUsage)
+fn visit_rune_usage<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, rune_usage: &'p RuneUsage<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::RuneUsage(rune_usage));
   visit_rune(pred, out, &rune_usage.rune);
 }
 
-fn visit_rune<'a, T, F>(pred: &F, out: &mut Vec<T>, rune: &'a IRuneS)
+fn visit_rune<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, rune: &'p IRuneS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Rune(rune));
   match rune {
@@ -723,9 +724,9 @@ where
   }
 }
 
-fn visit_name<'a, T, F>(pred: &F, out: &mut Vec<T>, name: &'a INameS)
+fn visit_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p INameS<'a>)
 where
-  F: Fn(NodeRefS<'a>) -> Option<T>,
+  F: Fn(NodeRefS<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::Name(name));
   match name {

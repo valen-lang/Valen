@@ -24,11 +24,15 @@ use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a>(
-  interner: &Interner<'a>,
-  keywords: &'a Keywords<'a>,
+fn compile<'a, 'i, 'k>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
   code: &str,
-) -> PatternPP<'a> {
+) -> PatternPP<'a>
+where
+  'i: 'a,
+  'k: 'a,
+{
   compile_pattern_expect(interner, keywords, code)
 }
 #[test]

@@ -35,23 +35,28 @@ use std::collections::HashMap;
 use std::sync::Arc;
 
 // From PostParser.scala lines 922-965: ScoutCompilation class
-pub struct ScoutCompilation<'a> {
+pub struct ScoutCompilation<'a, 'i, 'k, 'b> {
   #[allow(dead_code)]
   global_options: GlobalOptions,
   #[allow(dead_code)]
-  interner: &Interner<'a>,
+  interner: &'i Interner<'a>,
   #[allow(dead_code)]
-  keywords: &'a Keywords<'a>,
-  parser_compilation: ParserCompilation<'a, 'a>,
+  keywords: &'k Keywords<'a>,
+  parser_compilation: ParserCompilation<'a, 'i, 'k, 'b>,
   #[allow(dead_code)]
   scoutput_cache: Option<()>,
 }
 
-impl<'a> ScoutCompilation<'a> {
+impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From PostParser.scala lines 922-928
   pub fn new(
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
@@ -74,17 +79,17 @@ impl<'a> ScoutCompilation<'a> {
   }
 
   // From PostParser.scala line 931: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.parser_compilation.get_code_map()
   }
 
   // From PostParser.scala line 932: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
     self.parser_compilation.get_parseds()
   }
 
   // From PostParser.scala line 933: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.parser_compilation.get_vpst_map()
   }
 }
@@ -335,9 +340,9 @@ pub struct StackFrame<'a> {
   pub locals: VariableDeclarations<'a>,
 }
 
-impl StackFrame<'_> {
-  pub fn plus(&self, new_vars: &VariableDeclarations<'_>) -> StackFrame<'_> {
-    StackFrame {
+impl<'a> StackFrame<'a> {
+  pub fn plus(&self, new_vars: &VariableDeclarations<'a>) -> StackFrame<'a> {
+    StackFrame::<'a> {
       file: self.file,
       name: self.name.clone(),
       parent_env: self.parent_env.clone(),
@@ -355,7 +360,7 @@ impl StackFrame<'_> {
     }
   }
 
-  pub fn find_variable(&self, name: &IImpreciseNameS<'_>) -> Option<IVarNameS<'_>> {
+  pub fn find_variable(&self, name: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>> {
     match self.locals.find(name) {
       Some(full_name_s) => Some(full_name_s),
       None => match &self.maybe_parent {
@@ -404,7 +409,11 @@ object PostParser {
   def noVariableUses = VariableUses(Vector.empty)
   def noDeclarations = VariableDeclarations(Vector.empty)
 */
-impl<'a> PostParser<'a> {
+impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+where
+  'i: 'a,
+  'k: 'a,
+{
   pub fn no_variable_uses<'b>() -> VariableUses<'b> {
     VariableUses::empty()
   }
@@ -413,7 +422,7 @@ impl<'a> PostParser<'a> {
     VariableDeclarations { vars: Vec::new() }
   }
 
-  pub fn eval_range(file: &FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
+  pub fn eval_range(file: &'a FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
     RangeS {
       begin: Self::eval_pos(file, range.begin),
       end: Self::eval_pos(file, range.end),
@@ -426,8 +435,12 @@ impl<'a> PostParser<'a> {
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
 */
-impl<'a> PostParser<'a> {
-  pub fn eval_pos(file: &FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
+impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+where
+  'i: 'a,
+  'k: 'a,
+{
+  pub fn eval_pos(file: &'a FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
     CodeLocationS {
       file: Arc::new(file.clone()),
       offset: pos,
@@ -522,7 +535,11 @@ impl<'a> PostParser<'a> {
 //    }
 //  }
 */
-impl<'a> PostParser<'a> {
+impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+where
+  'i: 'a,
+  'k: 'a,
+{
   pub fn consecutive(exprs: Vec<IExpressionSE<'a>>) -> IExpressionSE<'a> {
     assert!(!exprs.is_empty(), "POSTPARSER_CONSECUTIVE_EMPTY");
     if exprs.len() == 1 {
@@ -684,17 +701,21 @@ impl<'a> PostParser<'a> {
 /*
 }
 */
-pub struct PostParser<'a> {
+pub struct PostParser<'a, 'i, 'k> {
   pub global_options: GlobalOptions,
-  pub interner: &Interner<'a>,
-  pub keywords: &'a Keywords<'a>,
+  pub interner: &'i Interner<'a>,
+  pub keywords: &'k Keywords<'a>,
 }
 
-impl<'a> PostParser<'a> {
+impl<'a, 'i, 'k> PostParser<'a, 'i, 'k>
+where
+  'i: 'a,
+  'k: 'a,
+{
   pub fn new(
     global_options: GlobalOptions,
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
   ) -> Self {
     Self {
       global_options,
@@ -714,9 +735,9 @@ class PostParser(
 */
   pub fn scout_program(
     &self,
-    file_coordinate: &FileCoordinate<'a>,
-    parsed: &FileP,
-  ) -> Result<ProgramS, ICompileErrorS> {
+    file_coordinate: &'a FileCoordinate<'a>,
+    parsed: &FileP<'a>,
+  ) -> Result<ProgramS<'a>, ICompileErrorS<'a>> {
     let mut structs = Vec::new();
     for denizen in &parsed.denizens {
       if let IDenizenP::TopLevelStruct(struct_p) = denizen {
@@ -987,9 +1008,9 @@ class PostParser(
 */
   fn scout_struct(
     &self,
-    file: &FileCoordinate<'a>,
-    head: &StructP,
-  ) -> Result<StructS, ICompileErrorS> {
+    file: &'a FileCoordinate<'a>,
+    head: &StructP<'a>,
+  ) -> Result<StructS<'a>, ICompileErrorS<'a>> {
     if head.mutability.is_some() {
       panic!("POSTPARSER_SCOUT_STRUCT_MUTABILITY_NOT_YET_IMPLEMENTED");
     }
@@ -1090,7 +1111,7 @@ class PostParser(
         }
         IAttributeP::ExportAttribute(_) => {
           attributes.push(ICitizenAttributeS::Export(ExportS {
-            package_coordinate: file.package_coord.as_ref(),
+            package_coordinate: file.package_coord,
           }));
         }
         IAttributeP::MacroCall(attr) => {
@@ -1352,13 +1373,11 @@ class PostParser(
     }
   }
 */
-  fn scout_interface<'b>(
+  fn scout_interface(
     &self,
-    file: &'b FileCoordinate<'a>,
-    interface: &crate::parsing::ast::InterfaceP<'b>,
-  ) -> Result<InterfaceS<'b>, ICompileErrorS<'b>>
-  where
-    'a: 'b,
+    file: &'a FileCoordinate<'a>,
+    interface: &crate::parsing::ast::InterfaceP<'a>,
+  ) -> Result<InterfaceS<'a>, ICompileErrorS<'a>>
   {
     let interface_range = Self::eval_range(file, interface.range);
     let _interface_body_range = Self::eval_range(file, interface.body_range);
@@ -1402,7 +1421,7 @@ class PostParser(
         }
         IAttributeP::ExportAttribute(_) => {
           attributes.push(ICitizenAttributeS::Export(ExportS {
-            package_coordinate: file.package_coord.as_ref(),
+            package_coordinate: file.package_coord,
           }));
         }
         IAttributeP::MacroCall(attr) => {
@@ -1641,7 +1660,12 @@ class ScoutCompilation(
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
 */
-impl ScoutCompilation<'_> {
+impl<'a, 'i, 'k, 'b> ScoutCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From PostParser.scala lines 935-950: getScoutput
   pub fn get_scoutput(&mut self) -> Result<(), String> {
     if self.scoutput_cache.is_some() {

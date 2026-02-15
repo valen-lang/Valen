@@ -20,17 +20,21 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
-pub struct PatternParser<'a> {
+pub struct PatternParser<'a, 'i, 'k> {
   #[allow(dead_code)]
-  interner: &Interner<'a>,
-  keywords: &'a Keywords<'a>,
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
 }
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 */
 
-impl<'a> PatternParser<'a> {
-  pub fn new(interner: &Interner<'a>, keywords: &'a Keywords<'a>) -> Self {
+impl<'a, 'i, 'k> PatternParser<'a, 'i, 'k>
+where
+  'i: 'a,
+  'k: 'a,
+{
+  pub fn new(interner: &'i Interner<'a>, keywords: &'k Keywords<'a>) -> Self {
     PatternParser { interner, keywords }
   }
 
@@ -38,13 +42,13 @@ impl<'a> PatternParser<'a> {
   /// Mirrors parseParameter in PatternParser.scala lines 13-72
   pub fn parse_parameter(
     &self,
-    iter: &mut ScrambleIterator,
-    templex_parser: &TemplexParser,
+    iter: &mut ScrambleIterator<'a>,
+    templex_parser: &TemplexParser<'a, 'i, 'k>,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
-  ) -> ParseResult<ParameterP> {
+  ) -> ParseResult<ParameterP<'a>> {
     let pattern_begin = iter.get_pos();
     let pattern_range = iter.range();
 
@@ -202,15 +206,15 @@ impl<'a> PatternParser<'a> {
   /// Mirrors parsePattern in PatternParser.scala lines 74-221
   pub fn parse_pattern(
     &self,
-    iter: &mut ScrambleIterator,
-    templex_parser: &TemplexParser,
+    iter: &mut ScrambleIterator<'a>,
+    templex_parser: &TemplexParser<'a, 'i, 'k>,
     pattern_begin: i32,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
-    maybe_name_from_parameter: Option<WordLE>,
-  ) -> ParseResult<PatternPP> {
+    maybe_name_from_parameter: Option<WordLE<'a>>,
+  ) -> ParseResult<PatternPP<'a>> {
     // Mirrors PatternParser.scala lines 75-88
     // The Scala code used to have an early return here, but it was dead code and has been commented out.
     // We just check for empty pattern with no name.
@@ -247,12 +251,12 @@ impl<'a> PatternParser<'a> {
     let maybe_destination_local = match maybe_name_from_parameter {
       Some(WordLE { range, str }) => {
         if str == self.keywords.underscore {
-          Some(DestinationLocalP {
+          Some(DestinationLocalP::<'a> {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(range),
             mutate: None,
           })
         } else {
-          Some(DestinationLocalP {
+          Some(DestinationLocalP::<'a> {
             decl: INameDeclarationP::LocalNameDeclaration(NameP { range, str }),
             mutate: None,
           })
@@ -330,7 +334,7 @@ impl<'a> PatternParser<'a> {
     };
 
     // Parse optional type (lines 175-194)
-    let maybe_type = if next_is_type {
+    let maybe_type: Option<ITemplexPT<'a>> = if next_is_type {
       Some(templex_parser.parse_templex(iter)?)
     } else {
       if is_in_lambda {
@@ -388,7 +392,7 @@ impl<'a> PatternParser<'a> {
     };
 
     // Return the complete pattern (lines 217-220)
-    Ok(PatternPP {
+    Ok(PatternPP::<'a> {
       range: RangeL {
         begin: pattern_begin,
         end: iter.get_prev_end_pos(),

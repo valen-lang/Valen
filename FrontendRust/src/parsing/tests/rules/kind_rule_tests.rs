@@ -21,11 +21,15 @@ class KindRuleTests extends FunSuite with Matchers with Collector with TestParse
 //    compile(new TemplexParser().parseRule(_), code)
   }
 */
-fn compile<'a>(
-  interner: &Interner<'a>,
-  keywords: &'a Keywords<'a>,
+fn compile<'a, 'i, 'k>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
   code: &str,
-) -> IRulexPR<'a> {
+) -> IRulexPR<'a>
+where
+  'i: 'a,
+  'k: 'a,
+{
   compile_rulex_expect(interner, keywords, code)
 }
 

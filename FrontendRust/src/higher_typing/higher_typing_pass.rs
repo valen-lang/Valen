@@ -10,22 +10,27 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
-pub struct HigherTypingCompilation<'a> {
-  scout_compilation: ScoutCompilation<'a>,
+pub struct HigherTypingCompilation<'a, 'i, 'k, 'b> {
+  scout_compilation: ScoutCompilation<'a, 'i, 'k, 'b>,
   #[allow(dead_code)]
   astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
 }
 
-impl<'a> HigherTypingCompilation<'a> {
+impl<'a, 'i, 'k, 'b> HigherTypingCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From HigherTypingPass.scala lines 793-799
   pub fn new(
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
   ) -> Self {
-    let scout_compilation = ScoutCompilation::new(
+    let scout_compilation = ScoutCompilation::<'a, 'i, 'k, 'b>::new(
       interner,
       keywords,
       packages_to_build,
@@ -40,17 +45,17 @@ impl<'a> HigherTypingCompilation<'a> {
   }
 
   // From HigherTypingPass.scala line 802: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.scout_compilation.get_code_map()
   }
 
   // From HigherTypingPass.scala line 803: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
     self.scout_compilation.get_parseds()
   }
 
   // From HigherTypingPass.scala line 804: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.scout_compilation.get_vpst_map()
   }
 

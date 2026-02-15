@@ -22,19 +22,24 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation<'a> {
-  higher_typing_compilation: HigherTypingCompilation<'a>,
+pub struct TypingPassCompilation<'a, 'i, 'k, 'b> {
+  higher_typing_compilation: HigherTypingCompilation<'a, 'i, 'k, 'b>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl<'a> TypingPassCompilation<'a> {
+impl<'a, 'i, 'k, 'b> TypingPassCompilation<'a, 'i, 'k, 'b>
+where
+  'i: 'a,
+  'k: 'a,
+  'b: 'a,
+{
   // From Compilation.scala lines 22-30
   pub fn new(
-    interner: &Interner<'a>,
-    keywords: &'a Keywords<'a>,
+    interner: &'i Interner<'a>,
+    keywords: &'k Keywords<'a>,
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'a dyn IPackageResolver<'a, HashMap<String, String>>,
+    package_to_contents_resolver: &'b dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
   ) -> Self {
@@ -59,17 +64,17 @@ impl<'a> TypingPassCompilation<'a> {
   }
 
   // From Compilation.scala line 33: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.higher_typing_compilation.get_code_map()
   }
 
   // From Compilation.scala line 34: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP, Vec<RangeL>)>, FailedParse<'a>> {
     self.higher_typing_compilation.get_parseds()
   }
 
   // From Compilation.scala line 35: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
     self.higher_typing_compilation.get_vpst_map()
   }
 

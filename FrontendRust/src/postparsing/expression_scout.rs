@@ -282,7 +282,7 @@ fn find_local<'b>(
 ) -> Option<LocalLookupResultS<'b>> {
   stack_frame
     .find_variable(imprecise_name)
-    .map(|full_name| LocalLookupResultS { range, name: full_name })
+    .map(|full_name| LocalLookupResultS::<'b> { range, name: full_name })
 }
 
 /*
@@ -302,12 +302,15 @@ fn find_local<'b>(
 // - variable uses by self
 // - variable uses by child blocks
 // MIGTODO: rename all "scout" to "post parse" or something.
-fn scout_expression<'b>(
-  interner: &'b Interner<'b>,
-  stack_frame: StackFrame<'b>,
+fn scout_expression<'a, 'i>(
+  interner: &'i Interner<'a>,
+  stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  expression: &IExpressionPE<'b>,
-) -> Result<(StackFrame<'b>, IScoutResult<'b>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
+  expression: &IExpressionPE<'a>,
+) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+where
+  'i: 'a,
+{
 /*
   // Returns:
   // - new seq num
@@ -323,7 +326,7 @@ fn scout_expression<'b>(
     Profiler.frame(() => {
       val evalRange = (range: RangeL) => PostParser.evalRange(stackFrame0.file, range)
 */
-  let file_coordinate = stack_frame.file.clone();
+  let file_coordinate = stack_frame.file;
   match expression {
   /*
   expr match {
@@ -332,7 +335,7 @@ fn scout_expression<'b>(
       stack_frame,
       IScoutResult::NormalResult(NormalResultS {
         expr: IExpressionSE::Void(VoidSE {
-          range: PostParser::eval_range(&file_coordinate, void.range),
+          range: PostParser::eval_range(file_coordinate, void.range),
         }),
       }),
       VariableUses::empty(),
@@ -1356,13 +1359,16 @@ fn scout_expression<'b>(
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-  pub(crate) fn scout_expression_and_coerce<'b>(
-    interner: &'b Interner<'b>,
-    stack_frame: StackFrame<'b>,
+  pub(crate) fn scout_expression_and_coerce<'a, 'i>(
+    interner: &'i Interner<'a>,
+    stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    expression_p: &IExpressionPE<'b>,
+    expression_p: &IExpressionPE<'a>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'b>, IExpressionSE<'b>, VariableUses<'b>, VariableUses<'b>), ICompileErrorS<'b>> {
+  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'i: 'a,
+  {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = Self::scout_expression(
       interner,

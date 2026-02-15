@@ -34,11 +34,15 @@ import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a>(
-  interner: &Interner<'a>,
-  keywords: &'a Keywords<'a>,
+fn compile<'a, 'i, 'k>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
   code: &str,
-) -> ProgramS<'a> {
+) -> ProgramS<'a>
+where
+  'i: 'a,
+  'k: 'a,
+{
   let options = GlobalOptions {
     sanity_check: true,
     use_overload_index: true,
@@ -50,7 +54,7 @@ fn compile<'a>(
   let only_file = compile_file(interner, keywords, code).unwrap();
   let post_parser = PostParser::new(options, interner, keywords);
   post_parser
-    .scout_program(only_file.file_coord.as_ref(), &only_file)
+    .scout_program(only_file.file_coord, &only_file)
     .unwrap()
 }
 

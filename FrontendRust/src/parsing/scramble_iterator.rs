@@ -154,7 +154,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Peek at the current element
-  pub fn peek(&self) -> Option<&INodeLEEnum> {
+  pub fn peek(&self) -> Option<&INodeLEEnum<'a>> {
     if self.index >= self.end {
       None
     } else {
@@ -202,7 +202,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Peek at the next 2 elements
-  pub fn peek2(&self) -> (Option<&INodeLEEnum>, Option<&INodeLEEnum>) {
+  pub fn peek2(&self) -> (Option<&INodeLEEnum<'a>>, Option<&INodeLEEnum<'a>>) {
     let first = if self.index < self.end {
       Some(&**&self.scramble.elements[self.index])
     } else {
@@ -233,9 +233,9 @@ impl<'a> ScrambleIterator<'a> {
   pub fn peek3(
     &self,
   ) -> (
-    Option<&INodeLEEnum>,
-    Option<&INodeLEEnum>,
-    Option<&INodeLEEnum>,
+    Option<&INodeLEEnum<'a>>,
+    Option<&INodeLEEnum<'a>>,
+    Option<&INodeLEEnum<'a>>,
   ) {
     let first = if self.index < self.end {
       Some(&**&self.scramble.elements[self.index])
@@ -308,7 +308,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Take the current element and advance (returning owned)
-  pub fn take(&mut self) -> Option<INodeLEEnum> {
+  pub fn take(&mut self) -> Option<INodeLEEnum<'a>> {
     if self.index >= self.end {
       None
     } else {
@@ -381,7 +381,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Get the next word element
-  pub fn next_word(&mut self) -> Option<WordLE> {
+  pub fn next_word(&mut self) -> Option<WordLE<'a>> {
     match self.peek() {
       Some(INodeLEEnum::Word(w)) => {
         let result = w.clone();
@@ -498,7 +498,7 @@ impl<'a> ScrambleIterator<'a> {
     &self,
     needle: char,
     include_empty_trailing: bool,
-  ) -> Vec<ScrambleIterator> {
+  ) -> Vec<ScrambleIterator<'a>> {
     let mut iters = Vec::new();
     let mut start = self.index;
     let mut i = start;
@@ -679,7 +679,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Consume and return all remaining elements
-  pub fn consume_rest(&mut self) -> Vec<INodeLEEnum> {
+  pub fn consume_rest(&mut self) -> Vec<INodeLEEnum<'a>> {
     let mut result = Vec::new();
     while self.has_next() {
       result.push(self.take().unwrap());

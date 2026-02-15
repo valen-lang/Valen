@@ -87,7 +87,7 @@ struct InternerInner<'a> {
 
 macro_rules! define_payload_interner_1arg {
   ($method_name:ident, $ty:ty, $field:ident, $arg_name:ident : $arg_ty:ty, $ctor:expr) => {
-    pub fn $method_name(&'a self, $arg_name: $arg_ty) -> &'a $ty {
+    pub fn $method_name(&self, $arg_name: $arg_ty) -> &'a $ty {
       let mut inner = self.inner.lock().unwrap();
       let key: $ty = $ctor;
       if let Some(existing) = inner.$field.get(&key) {
@@ -118,7 +118,7 @@ impl<'a> Interner<'a> {
   }
 
   /// Intern a string, returning a canonical shared StrI value.
-  pub fn intern(&'a self, s: &str) -> &'a StrI {
+  pub fn intern(&self, s: &str) -> &'a StrI {
     let mut inner = self.inner.lock().unwrap();
     if let Some(existing) = inner.string_to_stri.get(s) {
       return *existing;
@@ -139,12 +139,12 @@ impl<'a> Interner<'a> {
   }
 
   /// Get StrI by id.
-  pub fn get_by_id(&'a self, id: u64) -> Option<&'a StrI> {
+  pub fn get_by_id(&self, id: u64) -> Option<&'a StrI> {
     self.inner.lock().unwrap().id_to_stri.get(&id).cloned()
   }
 
   /// Intern a PackageCoordinate.
-  pub fn intern_package_coordinate(&'a self, coord: PackageCoordinate<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn intern_package_coordinate(&self, coord: PackageCoordinate<'a>) -> &'a PackageCoordinate<'a> {
     let mut inner = self.inner.lock().unwrap();
     if let Some(existing) = inner.package_coord_to_ref.get(&coord) {
       return *existing;
@@ -155,7 +155,7 @@ impl<'a> Interner<'a> {
   }
 
   /// Intern a FileCoordinate
-  pub fn intern_file_coordinate(&'a self, coord: FileCoordinate<'a>) -> &'a FileCoordinate<'a> {
+  pub fn intern_file_coordinate(&self, coord: FileCoordinate<'a>) -> &'a FileCoordinate<'a> {
     let mut inner = self.inner.lock().unwrap();
     if let Some(existing) = inner.file_coord_to_ref.get(&coord) {
       return *existing;

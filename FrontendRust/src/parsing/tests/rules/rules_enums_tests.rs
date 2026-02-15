@@ -23,7 +23,15 @@ use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
-fn compile<'a>(interner: &Interner<'a>, keywords: &Keywords<'a>, code: &str) -> IRulexPR<'a> {
+fn compile<'a, 'i, 'k>(
+  interner: &'i Interner<'a>,
+  keywords: &'k Keywords<'a>,
+  code: &str,
+) -> IRulexPR<'a>
+where
+  'i: 'a,
+  'k: 'a,
+{
   compile_rulex_expect(interner, keywords, code)
 }
 

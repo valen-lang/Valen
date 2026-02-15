@@ -15,7 +15,6 @@ use crate::lexing::{ParseError, RangeL};
 use crate::parsing::ast::*;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use serde_json::{Map, Value, from_str};
-use std::sync::Arc;
 
 /*
 package dev.vale.parsing
@@ -281,7 +280,7 @@ pub fn load<'a>(interner: &Interner<'a>, source: &str) -> Result<FileP<'a>, Pars
   })?;
   let jfile = expect_object_typed(&parsed, "File");
   Ok(FileP {
-    file_coord: Arc::new(load_file_coord(interner, get_object_field(jfile, "fileCoord"))),
+    file_coord: load_file_coord(interner, get_object_field(jfile, "fileCoord")),
     comments_ranges: get_array_field(jfile, "commentsRanges")
       .iter()
       .map(expect_object)
@@ -531,13 +530,12 @@ fn load_function_header<'a>(
 //      loadOptionalObject(getObjectField(jobj, "maybeDefaultRegion"), loadName))
   }
 */
-fn load_file_coord<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> FileCoordinate<'a> {
+fn load_file_coord<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> &'a FileCoordinate<'a> {
   let package_coord = load_package_coord(interner, get_object_field(jobj, "packageCoord"));
-  (*interner.intern_file_coordinate(FileCoordinate {
-    package_coord: Arc::new((*package_coord).clone()),
+  interner.intern_file_coordinate(FileCoordinate {
+    package_coord: package_coord,
     filepath: get_string_field(jobj, "filepath").to_string(),
-  }))
-  .clone()
+  })
 }
 /*
   def loadFileCoord(jobj: JObject): FileCoordinate = {
