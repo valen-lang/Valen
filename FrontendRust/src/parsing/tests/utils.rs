@@ -243,7 +243,7 @@ where
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
-  let begin = scramble.range.begin;
+  let begin = scramble.range.begin();
   let mut iter = ScrambleIterator::new(scramble);
   parser.pattern_parser.parse_pattern(
     &mut iter,
@@ -364,11 +364,11 @@ pub fn find_func_named<'a, 'p>(file: &'p FileP<'a>, name: &str) -> &'p FunctionP
       file,
       NodeRefP::Function(function @ FunctionP {
           header: FunctionHeaderP {
-              name: Some(NameP { str: ref s, .. }),
+              name: Some(NameP(_, s)),
               ..
           },
           ..
-      }) if s.str == name => Some(function)
+      }) if s.as_str() == name => Some(function)
   )
 }
 #[test]
@@ -386,9 +386,9 @@ pub fn find_struct_named<'a, 'f>(file: &'f FileP<'a>, name: &str) -> &'f StructP
   crate::collect_only!(
       file,
       NodeRefP::Struct(struct_ @ StructP {
-          name: NameP { str: ref s, .. },
+          name: NameP(_, s),
           ..
-      }) if s.str == name => Some(struct_)
+      }) if s.as_str() == name => Some(struct_)
   )
 }
 
@@ -411,17 +411,17 @@ pub fn assert_lookup_name(expr: &IExpressionPE, expected: &str) {
 
 pub fn assert_templex_name(expr: &ITemplexPT, expected: &str) {
   let templex_lookup = cast!(expr, ITemplexPT::NameOrRune);
-  assert_eq!(templex_lookup.name.str.str, expected);
+  assert_eq!(templex_lookup.name.str().as_str(), expected);
 }
 
 pub fn assert_name(name: &IImpreciseNameP, expected: &str) {
   let lookup_name = cast!(name, IImpreciseNameP::LookupName);
-  assert_eq!(lookup_name.str.str, expected);
+  assert_eq!(lookup_name.str().as_str(), expected);
 }
 
 pub fn assert_destination_local_name(destination: &DestinationLocalP, expected: &str) {
   let local_name = cast!(&destination.decl, INameDeclarationP::LocalNameDeclaration);
-  assert_eq!(local_name.str.str, expected);
+  assert_eq!(local_name.str().as_str(), expected);
 }
 
 /// Asserts that a slice has exactly 1 element and returns it.

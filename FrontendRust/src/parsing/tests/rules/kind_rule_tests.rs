@@ -57,7 +57,7 @@ fn kind_with_rune() {
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Kind");
   let typed = cast!(rule, IRulexPR::Typed);
-  assert_eq!(typed.rune.as_ref().unwrap().str.str, "T");
+  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::KindType);
 }
 /*
@@ -111,7 +111,7 @@ fn kind_with_value() {
   let rule = compile(&interner, &keywords, "T Kind = int");
   let equals = cast!(rule, IRulexPR::Equals);
   let left = cast!(equals.left.as_ref(), IRulexPR::Typed);
-  assert_eq!(left.rune.as_ref().unwrap().str.str, "T");
+  assert_eq!(left.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(left.tyype, ITypePR::KindType);
   let right = cast!(equals.right.as_ref(), IRulexPR::Templex);
   assert_templex_name(right, "int");
@@ -131,7 +131,7 @@ fn kind_with_sequence_in_value_spot() {
   let rule = compile(&interner, &keywords, "T Kind = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
   let left = cast!(equals.left.as_ref(), IRulexPR::Typed);
-  assert_eq!(left.rune.as_ref().unwrap().str.str, "T");
+  assert_eq!(left.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(left.tyype, ITypePR::KindType);
   let right = cast!(equals.right.as_ref(), IRulexPR::Templex);
   let tuple = cast!(right, ITemplexPT::Tuple);
@@ -220,7 +220,7 @@ fn rwkilc() {
 
   let rule = compile(&interner, &keywords, "K Int");
   let typed = cast!(rule, IRulexPR::Typed);
-  assert_eq!(typed.rune.as_ref().unwrap().str.str, "K");
+  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "K");
   assert_eq!(typed.tyype, ITypePR::IntType);
 
   let rule = compile(&interner, &keywords, "K<int>");
@@ -530,13 +530,13 @@ fn prototype_kind_rule() {
   let keywords = Keywords::new(&interner);
   let templex = compile_templex_expect(&interner, &keywords, "func moo(int)void");
   let prototype = cast!(templex, ITemplexPT::Func);
-  assert_eq!(prototype.name.str.str, "moo");
+  assert_eq!(prototype.name.as_str(), "moo");
   assert_templex_name(expect_1(&prototype.parameters), "int");
   assert_templex_name(prototype.return_type.as_ref(), "void");
 
   let templex = compile_templex_expect(&interner, &keywords, "func moo(T)R");
   let prototype = cast!(templex, ITemplexPT::Func);
-  assert_eq!(prototype.name.str.str, "moo");
+  assert_eq!(prototype.name.as_str(), "moo");
   assert_templex_name(expect_1(&prototype.parameters), "T");
   assert_templex_name(prototype.return_type.as_ref(), "R");
 }

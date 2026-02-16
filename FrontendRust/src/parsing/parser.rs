@@ -176,10 +176,7 @@ where
         // Regular rune parameter
         let name = match iter.peek_cloned() {
           Some(INodeLEEnum::Word(WordLE { range, str })) => {
-            let result = NameP::<'a> {
-              range,
-              str,
-            };
+            let result = NameP(range, str);
             iter.advance();
             result
           }
@@ -190,18 +187,15 @@ where
         let maybe_rune_type = self.templex_parser.parse_rune_type(&mut iter)?;
 
         let maybe_type = maybe_rune_type.map(|tyype| GenericParameterTypeP {
-          range: RangeL {
-            begin: type_begin,
-            end: iter.get_prev_end_pos(),
-          },
+          range: RangeL(type_begin, iter.get_prev_end_pos()),
           tyype,
         });
 
-        let maybe_attrs = if iter.try_skip_word(&self.keywords.imm).is_some() {
-          vec![IRuneAttributeP::ImmutableRuneAttribute(RangeL {
-            begin: iter.get_prev_end_pos(),
-            end: iter.get_prev_end_pos(),
-          })]
+        let maybe_attrs = if iter.try_skip_word(self.keywords.imm).is_some() {
+          vec![IRuneAttributeP::ImmutableRuneAttribute(RangeL(
+            iter.get_prev_end_pos(),
+            iter.get_prev_end_pos(),
+          ))]
         } else {
           vec![]
         };
@@ -210,23 +204,20 @@ where
       }
       Some(region) => {
         // Region parameter
-        let attributes = if let Some(range) = iter.try_skip_word(&self.keywords.ro) {
+        let attributes = if let Some(range) = iter.try_skip_word(self.keywords.ro) {
           vec![IRuneAttributeP::ReadOnlyRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(&self.keywords.rw) {
+        } else if let Some(range) = iter.try_skip_word(self.keywords.rw) {
           vec![IRuneAttributeP::ReadWriteRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(&self.keywords.additive) {
+        } else if let Some(range) = iter.try_skip_word(self.keywords.additive) {
           vec![IRuneAttributeP::AdditiveRegionRuneAttribute(range)]
-        } else if let Some(range) = iter.try_skip_word(&self.keywords.imm) {
+        } else if let Some(range) = iter.try_skip_word(self.keywords.imm) {
           vec![IRuneAttributeP::ImmutableRegionRuneAttribute(range)]
         } else {
           vec![]
         };
 
         let tyype = GenericParameterTypeP {
-          range: RangeL {
-            begin: range.begin,
-            end: iter.get_prev_end_pos(),
-          },
+          range: RangeL(range.begin(), iter.get_prev_end_pos()),
           tyype: ITypePR::RegionType,
         };
 
@@ -358,7 +349,7 @@ where
       Some(region) => {
         // Check if the next token immediately follows (no gap)
         match tentative_iter.peek_cloned() {
-          Some(next) if next.range().begin == region.range.end => region,
+          Some(next) if next.range().begin() == region.range.end() => region,
           _ => return Ok(None),
         }
       }
@@ -420,20 +411,14 @@ where
     let rune_end = tentative_iter.get_prev_end_pos();
     original_iter.skip_to(&tentative_iter);
 
-    let range = RangeL {
-      begin: rune_begin,
-      end: rune_end,
-    };
+    let range = RangeL(rune_begin, rune_end);
 
     Ok(Some(RegionRunePT::<'a> {
       range,
-      name: maybe_rune.map(|z| NameP {
-        range: RangeL {
-          begin: rune_begin,
-          end: rune_end,
-        },
-        str: z.str,
-      }),
+      name: maybe_rune.map(|z| NameP(
+        RangeL(rune_begin, rune_end),
+        z.str,
+      )),
     }))
   }
   /*
@@ -474,15 +459,12 @@ where
     // Parse name (can be a word or integer for variadic)
     let name = match iter.peek_cloned() {
       Some(INodeLEEnum::ParsedInteger(ParsedIntegerLE { range, value, .. })) => {
-        let result: NameP<'_> = NameP {
-          range,
-          str: self.interner.intern(&value.to_string()),
-        };
+        let result: NameP<'_> = NameP(range, self.interner.intern(&value.to_string()));
         iter.advance();
         result
       }
       _ => match iter.next_word() {
-        Some(WordLE { range, str }) => NameP { range, str },
+        Some(WordLE { range, str }) => NameP(range, str),
         None => return Err(ParseError::BadStructMember(iter.get_pos())),
       },
     };
@@ -498,8 +480,8 @@ where
     let variadic = matches!(
       iter.peek2_cloned(),
       (
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. }))
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '.')))
       )
     );
     if variadic {
@@ -511,26 +493,20 @@ where
     let tyype = self.templex_parser.parse_templex(iter)?;
 
     if variadic {
-      if name.str != self.keywords.underscore {
+      if name.str() != self.keywords.underscore {
         return Err(ParseError::VariadicStructMemberHasName(iter.get_pos()));
       }
 
       Ok(IStructContent::VariadicStructMember(
         VariadicStructMemberP {
-          range: RangeL {
-            begin,
-            end: iter.get_prev_end_pos(),
-          },
+          range: RangeL(begin, iter.get_prev_end_pos()),
           variability,
           tyype,
         },
       ))
     } else {
       Ok(IStructContent::NormalStructMember(NormalStructMemberP::<'a> {
-        range: RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(begin, iter.get_prev_end_pos()),
         name,
         variability,
         tyype,
@@ -1111,7 +1087,7 @@ where
         // Check if we should continue (not at semicolon)
         let should_continue = match scouting_iter.peek_cloned() {
           None => false,
-          Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+          Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
           _ => true,
         };
 
@@ -1308,26 +1284,26 @@ where
 
     // Mirrors Parser.scala lines 584-589
     let (maybe_return_iter, return_end_pos, maybe_rules_iter) =
-      match try_skip_past_keyword_while(&mut return_and_where_iter, &self.keywords.r#where, |it| {
+      match try_skip_past_keyword_while(&mut return_and_where_iter, self.keywords.r#where, |it| {
         it.has_next()
       }) {
         None => {
           // No "where" was found. Use everything remaining.
           (
             Some(return_and_where_iter.clone()),
-            trailing_details_with_return_and_where.range.end,
+            trailing_details_with_return_and_where.range.end(),
             None,
           )
         }
         Some((_, return_iter)) => (
           Some(return_iter),
-          return_and_where_iter.scramble.range.end,
+          return_and_where_iter.scramble.range.end(),
           Some(return_and_where_iter.clone()),
         ),
       };
 
     // Mirrors Parser.scala lines 591-602
-    let return_begin_pos = trailing_details_with_return_and_where.range.begin;
+    let return_begin_pos = trailing_details_with_return_and_where.range.begin();
     let maybe_return_type_p = if let Some(mut return_iter) = maybe_return_iter {
       if return_iter.has_next() {
         Some(self.templex_parser.parse_templex(&mut return_iter)?)
@@ -1340,10 +1316,7 @@ where
 
     // Mirrors Parser.scala line 603
     let return_p = FunctionReturnP {
-      range: RangeL {
-        begin: return_begin_pos,
-        end: return_end_pos,
-      },
+      range: RangeL(return_begin_pos, return_end_pos),
       ret_type: maybe_return_type_p,
     };
 
@@ -1539,10 +1512,7 @@ where
       1 => {
         // Check if it's just a single apostrophe
         match &*input_scramble.elements[0] {
-          INodeLEEnum::Symbol(SymbolLE {
-            range: symbol_range,
-            c: '\'',
-          }) => Some(RegionRunePT {
+          INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')) => Some(RegionRunePT {
             range: *symbol_range,
             name: None,
           }),
@@ -1558,21 +1528,12 @@ where
               range: word_range,
               str: region_name,
             }),
-            INodeLEEnum::Symbol(SymbolLE {
-              range: symbol_range,
-              c: '\'',
-            }),
+            INodeLEEnum::Symbol(SymbolLE(symbol_range, '\'')),
           ) => {
-            let range = RangeL {
-              begin: word_range.begin,
-              end: symbol_range.end,
-            };
+            let range = RangeL(word_range.begin(), symbol_range.end());
             Some(RegionRunePT {
               range,
-              name: Some(NameP {
-                range: *word_range,
-                str: *region_name,
-              }),
+            name: Some(NameP(*word_range, *region_name)),
             })
           }
           _ => None,
@@ -1598,15 +1559,12 @@ where
       .collect();
 
     let preceding_elements_range = if preceding_elements.is_empty() {
-      RangeL {
-        begin: input_scramble.range.begin,
-        end: input_scramble.range.begin,
-      }
+      RangeL(input_scramble.range.begin(), input_scramble.range.begin())
     } else {
-      RangeL {
-        begin: preceding_elements.first().unwrap().range().begin,
-        end: preceding_elements.last().unwrap().range().end,
-      }
+      RangeL(
+        preceding_elements.first().unwrap().range().begin(),
+        preceding_elements.last().unwrap().range().end(),
+      )
     };
 
     let preceding_elements_scramble = ScrambleLE {
@@ -1694,19 +1652,16 @@ where
               // For a simple string like "bork", there should be one Literal part
               if string_le.parts.len() == 1 {
                 if let StringPart::Literal { s, .. } = &string_le.parts[0] {
-                  let name = NameP {
-                    range: string_le.range,
-                    str: self.interner.intern(s),
-                  };
+                  let name = NameP(string_le.range, self.interner.intern(s));
                   return Ok(IAttributeP::BuiltinAttribute(BuiltinAttributeP {
                     range,
                     generator_name: name,
                   }));
                 }
               }
-              Err(ParseError::BadExternAttribute(range.begin))
+              Err(ParseError::BadExternAttribute(range.begin()))
             } else {
-              Err(ParseError::BadExternAttribute(range.begin))
+              Err(ParseError::BadExternAttribute(range.begin()))
             }
           }
         }
@@ -1761,10 +1716,7 @@ where
 
   /// Helper to convert WordLE to NameP
   fn to_name(&self, word: WordLE<'a>) -> NameP<'a> {
-    NameP {
-      range: word.range,
-      str: word.str,
-    }
+    NameP(word.range, word.str)
   }
 }
 

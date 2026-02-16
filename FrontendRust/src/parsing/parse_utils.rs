@@ -1,3 +1,4 @@
+use crate::StrI;
 use crate::lexing::ast::INodeLE;
 use crate::lexing::ast::INodeLEEnum;
 use crate::lexing::ast::SymbolLE;
@@ -24,8 +25,8 @@ where
   let mut scouting_iter = iter.clone();
   while continue_while(&scouting_iter) {
     match scouting_iter.peek3_cloned() {
-      (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE { range, c: '=' })), Some(next)) => {
-        let surrounded_by_spaces = prev.range().end < range.begin && range.end < next.range().begin;
+      (Some(prev), Some(INodeLEEnum::Symbol(SymbolLE(range, '='))), Some(next)) => {
+        let surrounded_by_spaces = prev.range().end() < range.begin() && range.end() < next.range().begin();
         if surrounded_by_spaces {
           // We'll return this iterator for the things that come before the =
           let mut before_iter = iter.clone();
@@ -59,7 +60,7 @@ where
       scoutingIter.peek3() match {
         case (Some(prev), Some(SymbolLE(range, '=')), Some(next)) => {
           val surroundedBySpaces =
-            prev.range.end < range.begin && range.end < next.range.begin
+            prev.range().end() < range.begin() && range.end() < next.range().begin()
           if (surroundedBySpaces) {
             // We'll return this iterator for the things that come before the =
             val beforeIter = iter.clone()
@@ -86,7 +87,7 @@ where
 /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
 pub fn try_skip_past_keyword_while<'a, F>(
   iter: &mut ScrambleIterator<'a>,
-  keyword: &'a crate::interner::StrI,
+  keyword: StrI<'a>,
   continue_while: F,
 ) -> Option<(WordLE<'a>, ScrambleIterator<'a>)>
 where

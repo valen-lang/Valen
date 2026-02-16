@@ -49,7 +49,7 @@ impl ITemplexPT<'_> {
       ITemplexPT::Location(r) => r.range,
       ITemplexPT::Tuple(r) => r.range,
       ITemplexPT::Mutability(r) => r.range,
-      ITemplexPT::NameOrRune(n) => n.name.range,
+      ITemplexPT::NameOrRune(n) => n.name.range(),
       ITemplexPT::Interpreted(r) => r.range,
       ITemplexPT::Ownership(r) => r.range,
       ITemplexPT::Pack(p) => p.range,
@@ -176,7 +176,7 @@ pub struct NameOrRunePT<'a> {
 case class NameOrRunePT(name: NameP) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   def range = name.range
-  vassert(name.str.str != "_")
+  vassert(name.str != "_")
 }
 */
 

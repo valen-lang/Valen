@@ -374,10 +374,7 @@ impl LexingIterator {
         }
       }
 
-      self.comments.push(RangeL {
-        begin: begin as i32,
-        end: self.position as i32,
-      });
+      self.comments.push(RangeL(begin as i32, self.position as i32));
 
       self.consume_comments();
     }
@@ -409,10 +406,7 @@ impl LexingIterator {
 
       self.skip_to_past('»');
 
-      self.comments.push(RangeL {
-        begin: begin as i32,
-        end: self.position as i32,
-      });
+      self.comments.push(RangeL(begin as i32, self.position as i32));
 
       self.consume_comments();
     }
@@ -453,10 +447,7 @@ impl LexingIterator {
 
       // Unlike line comments, ellipses don't extend to end of line
       // They're just consumed as placeholder tokens (Scala line 103)
-      self.comments.push(RangeL {
-        begin: begin as i32,
-        end: self.position as i32,
-      });
+      self.comments.push(RangeL(begin as i32, self.position as i32));
 
       self.consume_comments();
     }

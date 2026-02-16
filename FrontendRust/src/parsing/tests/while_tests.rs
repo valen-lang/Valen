@@ -84,7 +84,7 @@ fn while_with_condition_declarations() {
   assert_eq!(four.bits, None);
 
   let greater_than = cast!(x_greater_than_six, IExpressionPE::BinaryCall);
-  assert_eq!(greater_than.function_name.str.str, ">");
+  assert_eq!(greater_than.function_name.str().as_str(), ">");
   assert_lookup_name(greater_than.left_expr.as_ref(), "x");
   let six = cast!(greater_than.right_expr.as_ref(), IExpressionPE::ConstantInt);
   assert_eq!(six.value, 6);

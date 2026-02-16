@@ -57,7 +57,7 @@ where
 
     // Check for 'virtual' keyword (lines 21-29)
     let maybe_virtual = match iter.peek_cloned() {
-      None => return Err(ParseError::EmptyParameter(pattern_range.begin)),
+      None => return Err(ParseError::EmptyParameter(pattern_range.begin())),
       Some(INodeLEEnum::Word(WordLE { range, str })) if str == self.keywords.r#virtual => {
         iter.advance();
         Some(AbstractP { range })
@@ -67,20 +67,17 @@ where
 
     // Check for '&self' (lines 31-41)
     let maybe_self_borrow = match iter.peek_n(2).as_slice() {
-      [] => return Err(ParseError::EmptyParameter(pattern_range.begin)),
-      [None] => return Err(ParseError::EmptyParameter(pattern_range.begin)),
-      [None, None] => return Err(ParseError::EmptyParameter(pattern_range.begin)),
-      [Some(INodeLEEnum::Symbol(SymbolLE {
-        range: range1,
-        c: '&',
-      })), Some(INodeLEEnum::Word(WordLE { range: range2, str }))]
+      [] => return Err(ParseError::EmptyParameter(pattern_range.begin())),
+      [None] => return Err(ParseError::EmptyParameter(pattern_range.begin())),
+      [None, None] => return Err(ParseError::EmptyParameter(pattern_range.begin())),
+      [Some(INodeLEEnum::Symbol(SymbolLE(range1, '&'))), Some(INodeLEEnum::Word(WordLE { range: range2, str }))]
         if *str == self.keywords.self_ =>
       {
-        let begin = range1.begin;
-        let end = range2.end;
+        let begin = range1.begin();
+        let end = range2.end();
         iter.advance();
         iter.advance();
-        Some(RangeL { begin, end })
+        Some(RangeL(begin, end))
       }
       _ => None,
     };
@@ -115,7 +112,7 @@ where
     };
 
     // Check for 'pre' keyword (line 64)
-    let maybe_pre_checked = iter.try_skip_word(&self.keywords.pre);
+    let maybe_pre_checked = iter.try_skip_word(self.keywords.pre);
 
     // Parse the pattern (lines 66-69)
     let pattern = self.parse_pattern(
@@ -228,7 +225,7 @@ where
     let is_constructing = match iter.peek2_cloned() {
       (
         Some(INodeLEEnum::Word(WordLE { str: self_str, .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. })),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))),
       ) if self_str == self.keywords.self_ => {
         iter.advance();
         iter.advance();
@@ -238,7 +235,7 @@ where
     };
 
     // Check for 'set' keyword (lines 101-104)
-    let maybe_mutate = iter.try_skip_word(&self.keywords.set);
+    let maybe_mutate = iter.try_skip_word(self.keywords.set);
     if maybe_mutate.is_some() && !iter.has_next() {
       return Err(ParseError::CantUseThatLocalName {
         pos: iter.get_pos(),
@@ -256,7 +253,7 @@ where
           })
         } else {
           Some(DestinationLocalP::<'a> {
-            decl: INameDeclarationP::LocalNameDeclaration(NameP { range, str }),
+            decl: INameDeclarationP::LocalNameDeclaration(NameP(range, str)),
             mutate: None,
           })
         }
@@ -271,7 +268,7 @@ where
           (Some(_), None) => true,
           (Some(first), Some(second)) => {
             // There's a space after the first thing if ranges don't touch
-            first.range().end < second.range().begin
+            first.range().end() < second.range().begin()
           }
         };
 
@@ -287,15 +284,12 @@ where
               } else {
                 if is_constructing {
                   Some(DestinationLocalP {
-                    decl: INameDeclarationP::ConstructingMemberNameDeclaration(NameP {
-                      range,
-                      str,
-                    }),
+                    decl: INameDeclarationP::ConstructingMemberNameDeclaration(NameP(range, str)),
                     mutate: maybe_mutate,
                   })
                 } else {
                   Some(DestinationLocalP {
-                    decl: INameDeclarationP::LocalNameDeclaration(NameP { range, str }),
+                    decl: INameDeclarationP::LocalNameDeclaration(NameP(range, str)),
                     mutate: maybe_mutate,
                   })
                 }
@@ -386,16 +380,13 @@ where
           patterns,
         })
       }
-      Some(other) => return Err(ParseError::BadThingAfterTypeInPattern(other.range().begin)),
+      Some(other) => return Err(ParseError::BadThingAfterTypeInPattern(other.range().begin())),
       None => None,
     };
 
     // Return the complete pattern (lines 217-220)
     Ok(PatternPP::<'a> {
-      range: RangeL {
-        begin: pattern_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(pattern_begin, iter.get_prev_end_pos()),
       destination: maybe_destination_local,
       templex: maybe_type,
       destructure: maybe_destructure,

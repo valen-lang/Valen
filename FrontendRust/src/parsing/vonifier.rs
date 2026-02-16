@@ -134,7 +134,7 @@ impl<'a> ParserVonifier<'a> {
         VonMember {
           field_name: "module".to_string(),
           value: IVonData::Str(VonStr {
-            value: coord.module.str.to_string(),
+            value: coord.module.as_str().to_string(),
           }),
         },
         VonMember {
@@ -146,7 +146,7 @@ impl<'a> ParserVonifier<'a> {
               .iter()
               .map(|p| {
                 IVonData::Str(VonStr {
-                  value: p.str.to_string(),
+                  value: p.as_str().to_string(),
                 })
               })
               .collect(),
@@ -165,13 +165,13 @@ impl<'a> ParserVonifier<'a> {
         VonMember {
           field_name: "begin".to_string(),
           value: IVonData::Int(VonInt {
-            value: range.begin as i64,
+            value: range.begin() as i64,
           }),
         },
         VonMember {
           field_name: "end".to_string(),
           value: IVonData::Int(VonInt {
-            value: range.end as i64,
+            value: range.end() as i64,
           }),
         },
       ],
@@ -186,12 +186,12 @@ impl<'a> ParserVonifier<'a> {
       members: vec![
         VonMember {
           field_name: "range".to_string(),
-          value: Self::vonify_range(&name.range),
+          value: Self::vonify_range(&name.range()),
         },
         VonMember {
           field_name: "name".to_string(),
           value: IVonData::Str(VonStr {
-            value: name.str.str.to_string(),
+            value: name.str().as_str().to_string(),
           }),
         },
       ],

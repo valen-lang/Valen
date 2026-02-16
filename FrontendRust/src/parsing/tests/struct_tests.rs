@@ -36,7 +36,7 @@ fn simple_struct() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { }");
-  assert_eq!(struct_.name.str.str, "Moo");
+  assert_eq!(struct_.name.str().as_str(), "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   assert!(struct_.identifying_runes.is_none());
@@ -75,7 +75,7 @@ fn struct_with_list_node() {
     ",
   );
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "a");
+  assert_eq!(member.name.str().as_str(), "a");
   assert_eq!(member.variability, VariabilityP::Final);
   let interpreted = cast!(&member.tyype, ITemplexPT::Interpreted);
   assert_eq!(
@@ -122,7 +122,7 @@ fn imm_generic_param() {
   cast!(generic_param_attr, IRuneAttributeP::ImmutableRuneAttribute);
 
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "value");
+  assert_eq!(member.name.str().as_str(), "value");
   assert_eq!(member.variability, VariabilityP::Final);
   assert_templex_name(&member.tyype, "T");
 }
@@ -163,7 +163,7 @@ fn struct_with_imm_generic_param() {
     ",
   );
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "a");
+  assert_eq!(member.name.str().as_str(), "a");
   assert_eq!(member.variability, VariabilityP::Final);
   let rsa = cast!(&member.tyype, ITemplexPT::RuntimeSizedArray);
   assert_eq!(
@@ -229,13 +229,13 @@ fn struct_with_weak() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x &&int; }");
-  assert_eq!(struct_.name.str.str, "Moo");
+  assert_eq!(struct_.name.str().as_str(), "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   assert!(struct_.identifying_runes.is_none());
   assert!(struct_.template_rules.is_none());
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "x");
+  assert_eq!(member.name.str().as_str(), "x");
   assert_eq!(member.variability, VariabilityP::Final);
   let interpreted = cast!(&member.tyype, ITemplexPT::Interpreted);
   assert_eq!(
@@ -258,13 +258,13 @@ fn struct_with_heap() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "struct Moo { x ^Marine; }");
-  assert_eq!(struct_.name.str.str, "Moo");
+  assert_eq!(struct_.name.str().as_str(), "Moo");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   assert!(struct_.identifying_runes.is_none());
   assert!(struct_.template_rules.is_none());
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "x");
+  assert_eq!(member.name.str().as_str(), "x");
   assert_eq!(member.variability, VariabilityP::Final);
   let interpreted = cast!(&member.tyype, ITemplexPT::Interpreted);
   assert_eq!(
@@ -287,14 +287,14 @@ fn export_struct() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let struct_ = compile_struct_expect(&interner, &keywords, "exported struct Moo { x &int; }");
-  assert_eq!(struct_.name.str.str, "Moo");
+  assert_eq!(struct_.name.str().as_str(), "Moo");
   let first_attr = expect_1(&struct_.attributes);
   cast!(first_attr, IAttributeP::ExportAttribute);
   assert!(struct_.mutability.is_none());
   assert!(struct_.identifying_runes.is_none());
   assert!(struct_.template_rules.is_none());
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "x");
+  assert_eq!(member.name.str().as_str(), "x");
   assert_eq!(member.variability, VariabilityP::Final);
   let interpreted = cast!(&member.tyype, ITemplexPT::Interpreted);
   assert_eq!(
@@ -326,11 +326,11 @@ fn struct_with_rune() {
       }
     ",
   );
-  assert_eq!(struct_.name.str.str, "ListNode");
+  assert_eq!(struct_.name.str().as_str(), "ListNode");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   let generic_param = expect_1(&struct_.identifying_runes.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "E");
+  assert_eq!(generic_param.name.str().as_str(), "E");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
@@ -339,12 +339,12 @@ fn struct_with_rune() {
 
   let (value_member, next_member) = expect_2(&struct_.members.contents);
   let value_member = cast!(value_member, IStructContent::NormalStructMember);
-  assert_eq!(value_member.name.str.str, "value");
+  assert_eq!(value_member.name.str().as_str(), "value");
   assert_eq!(value_member.variability, VariabilityP::Final);
   assert_templex_name(&value_member.tyype, "E");
 
   let next_member = cast!(next_member, IStructContent::NormalStructMember);
-  assert_eq!(next_member.name.str.str, "next");
+  assert_eq!(next_member.name.str().as_str(), "next");
   assert_eq!(next_member.variability, VariabilityP::Final);
   let listnode_call = cast!(&next_member.tyype, ITemplexPT::Call);
   assert_templex_name(listnode_call.template.as_ref(), "ListNode");
@@ -391,11 +391,11 @@ fn struct_with_int_rune() {
       }
     ",
   );
-  assert_eq!(struct_.name.str.str, "Vecf");
+  assert_eq!(struct_.name.str().as_str(), "Vecf");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   let generic_param = expect_1(&struct_.identifying_runes.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "N");
+  assert_eq!(generic_param.name.str().as_str(), "N");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
@@ -405,11 +405,11 @@ fn struct_with_int_rune() {
     expect_1(&struct_.template_rules.as_ref().unwrap().rules),
     IRulexPR::Typed
   );
-  assert_eq!(typed_rule.rune.as_ref().unwrap().str.str, "N");
+  assert_eq!(typed_rule.rune.as_ref().unwrap().str().as_str(), "N");
   assert_eq!(typed_rule.tyype, ITypePR::IntType);
 
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "values");
+  assert_eq!(member.name.str().as_str(), "values");
   assert_eq!(member.variability, VariabilityP::Final);
   let ssa = cast!(&member.tyype, ITemplexPT::StaticSizedArray);
   assert_eq!(
@@ -462,11 +462,11 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
       }
     ",
   );
-  assert_eq!(struct_.name.str.str, "Vecf");
+  assert_eq!(struct_.name.str().as_str(), "Vecf");
   assert!(struct_.attributes.is_empty());
   assert!(struct_.mutability.is_none());
   let generic_param = expect_1(&struct_.identifying_runes.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "N");
+  assert_eq!(generic_param.name.str().as_str(), "N");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
@@ -476,11 +476,11 @@ fn struct_with_int_rune_array_sequence_specifies_mutability() {
     expect_1(&struct_.template_rules.as_ref().unwrap().rules),
     IRulexPR::Typed
   );
-  assert_eq!(typed_rule.rune.as_ref().unwrap().str.str, "N");
+  assert_eq!(typed_rule.rune.as_ref().unwrap().str().as_str(), "N");
   assert_eq!(typed_rule.tyype, ITypePR::IntType);
 
   let member = cast!(expect_1(&struct_.members.contents), IStructContent::NormalStructMember);
-  assert_eq!(member.name.str.str, "values");
+  assert_eq!(member.name.str().as_str(), "values");
   assert_eq!(member.variability, VariabilityP::Final);
   let ssa = cast!(&member.tyype, ITemplexPT::StaticSizedArray);
   assert_eq!(

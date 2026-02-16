@@ -91,9 +91,9 @@ impl IExpressionPE<'_> {
       IExpressionPE::Block(x) => x.range,
       IExpressionPE::Consecutor(x) => {
         assert!(!x.inners.is_empty());
-        let begin = x.inners.first().unwrap().range().begin;
-        let end = x.inners.last().unwrap().range().end;
-        RangeL { begin, end }
+        let begin = x.inners.first().unwrap().range().begin();
+        let end = x.inners.last().unwrap().range().end();
+        RangeL(begin, end)
       }
       IExpressionPE::Shortcall(x) => x.range,
     }
@@ -737,7 +737,7 @@ pub enum IImpreciseNameP<'a> {
 impl IImpreciseNameP<'_> {
   pub fn range(&self) -> RangeL {
     match self {
-      IImpreciseNameP::LookupName(n) => n.range,
+      IImpreciseNameP::LookupName(n) => n.range(),
       IImpreciseNameP::IterableName(r) => *r,
       IImpreciseNameP::IteratorName(r) => *r,
       IImpreciseNameP::IterationOptionName(r) => *r,

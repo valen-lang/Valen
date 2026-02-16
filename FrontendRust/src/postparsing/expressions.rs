@@ -607,7 +607,7 @@ case class FunctionSE(function: FunctionS) extends IExpressionSE {
 pub struct DotSE<'a> {
   pub range: RangeS<'a>,
   pub left: Box<IExpressionSE<'a>>,
-  pub member: &'a StrI,
+  pub member: StrI<'a>,
   pub borrow_container: bool,
 }
 /*

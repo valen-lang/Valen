@@ -146,7 +146,7 @@ fn test_9() {
   let mutate = cast!(expr, IExpressionPE::Mutate);
   let dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(dot.left.as_ref(), "x");
-  assert_eq!(dot.member.str.str, "a");
+  assert_eq!(dot.member.str().as_str(), "a");
   assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantInt).value, 5);
 }
 /*
@@ -165,11 +165,11 @@ fn test_1_pe() {
   let expr = compile_statement_expect(&interner, &keywords, r#"set board.PE.PE.symbol = "v";"#);
   let mutate = cast!(expr, IExpressionPE::Mutate);
   let symbol_dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
-  assert_eq!(symbol_dot.member.str.str, "symbol");
+  assert_eq!(symbol_dot.member.str().as_str(), "symbol");
   let second_pe_dot = cast!(symbol_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(second_pe_dot.member.str.str, "PE");
+  assert_eq!(second_pe_dot.member.str().as_str(), "PE");
   let first_pe_dot = cast!(second_pe_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(first_pe_dot.member.str.str, "PE");
+  assert_eq!(first_pe_dot.member.str().as_str(), "PE");
   assert_lookup_name(first_pe_dot.left.as_ref(), "board");
   assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantStr).value, "v");
 }
@@ -258,7 +258,7 @@ fn test_inner_set() {
   let mutate = cast!(let_.source.as_ref(), IExpressionPE::Mutate);
   let dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(dot.left.as_ref(), "list");
-  assert_eq!(dot.member.str.str, "array");
+  assert_eq!(dot.member.str().as_str(), "array");
   assert_lookup_name(mutate.source.as_ref(), "newArray");
 }
 /*
@@ -348,7 +348,7 @@ fn dot_on_function_calls_result() {
   assert_lookup_name(wizard_call.callable_expr.as_ref(), "Wizard");
   let first_arg = expect_1(&wizard_call.arg_exprs);
   assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 8);
-  assert_eq!(dot.member.str.str, "charges");
+  assert_eq!(dot.member.str().as_str(), "charges");
 }
 /*
   test("Dot on function call's result") {

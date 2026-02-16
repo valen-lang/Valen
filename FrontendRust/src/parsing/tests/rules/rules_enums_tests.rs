@@ -48,7 +48,7 @@ fn ownership() {
   {
     let rule = compile(&interner, &keywords, "X Ownership");
     let typed = cast!(rule, IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
   }
   {
@@ -62,10 +62,10 @@ fn ownership() {
     let rule = compile(&interner, &keywords, "X Ownership = any(own, borrow, weak)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
     let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
-    assert_eq!(any_.name.str.str, "any");
+    assert_eq!(any_.name.as_str(), "any");
     let (own_, borrow_, weak_) = expect_3(&any_.args);
     assert_eq!(
       cast!(cast!(own_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
@@ -98,7 +98,7 @@ fn ownership() {
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
     let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
-    assert_eq!(any_.name.str.str, "any");
+    assert_eq!(any_.name.as_str(), "any");
     let (own_, share_) = expect_2(&any_.args);
     assert_eq!(
       cast!(cast!(own_, IRulexPR::Templex), ITemplexPT::Ownership).ownership,
@@ -142,7 +142,7 @@ fn mutability() {
   {
     let rule = compile(&interner, &keywords, "X Mutability");
     let typed = cast!(rule, IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
   }
   {
@@ -156,7 +156,7 @@ fn mutability() {
     let rule = compile(&interner, &keywords, "X Mutability = mut");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
     let mutability = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Mutability);
     assert_eq!(mutability.mutability, MutabilityP::Mutable);
@@ -179,7 +179,7 @@ fn mutability() {
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
     let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
-    assert_eq!(any_.name.str.str, "any");
+    assert_eq!(any_.name.as_str(), "any");
     let (mut_, imm_) = expect_2(&any_.args);
     assert_eq!(
       cast!(cast!(mut_, IRulexPR::Templex), ITemplexPT::Mutability).mutability,
@@ -223,7 +223,7 @@ fn location() {
   {
     let rule = compile(&interner, &keywords, "X Location");
     let typed = cast!(rule, IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::LocationType);
   }
   {
@@ -237,7 +237,7 @@ fn location() {
     let rule = compile(&interner, &keywords, "X Location = inl");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
-    assert_eq!(typed.rune.as_ref().unwrap().str.str, "X");
+    assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::LocationType);
     let location = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Location);
     assert_eq!(location.location, LocationP::Inline);
@@ -260,7 +260,7 @@ fn location() {
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::LocationType);
     let any_ = cast!(equals.right.as_ref(), IRulexPR::BuiltinCall);
-    assert_eq!(any_.name.str.str, "any");
+    assert_eq!(any_.name.as_str(), "any");
     let (inl_, heap_) = expect_2(&any_.args);
     assert_eq!(
       cast!(cast!(inl_, IRulexPR::Templex), ITemplexPT::Location).location,

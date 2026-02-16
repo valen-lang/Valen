@@ -47,7 +47,7 @@ fn relations() {
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
-    assert_eq!(builtin.name.str.str, "implements");
+    assert_eq!(builtin.name.as_str(), "implements");
     let (myobject_, iobject_) = expect_2(&builtin.args);
     assert_templex_name(cast!(myobject_, IRulexPR::Templex), "MyObject");
     assert_templex_name(cast!(iobject_, IRulexPR::Templex), "IObject");
@@ -59,7 +59,7 @@ fn relations() {
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
-    assert_eq!(builtin.name.str.str, "implements");
+    assert_eq!(builtin.name.as_str(), "implements");
     let (r_, iobject_) = expect_2(&builtin.args);
     assert_templex_name(cast!(r_, IRulexPR::Templex), "R");
     assert_templex_name(cast!(iobject_, IRulexPR::Templex), "IObject");
@@ -71,7 +71,7 @@ fn relations() {
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
-    assert_eq!(builtin.name.str.str, "implements");
+    assert_eq!(builtin.name.as_str(), "implements");
     let (myobject_, t_) = expect_2(&builtin.args);
     assert_templex_name(cast!(myobject_, IRulexPR::Templex), "MyObject");
     assert_templex_name(cast!(t_, IRulexPR::Templex), "T");
@@ -83,9 +83,9 @@ fn relations() {
       &rule,
       NodeRefP::Rulex(IRulexPR::BuiltinCall(builtin)) => Some(builtin)
     );
-    assert_eq!(builtin.name.str.str, "exists");
+    assert_eq!(builtin.name.as_str(), "exists");
     let func = cast!(cast!(expect_1(&builtin.args), IRulexPR::Templex), ITemplexPT::Func);
-    assert_eq!(func.name.str.str, "+");
+    assert_eq!(func.name.as_str(), "+");
     assert_templex_name(expect_1(&func.parameters), "T");
     assert_templex_name(func.return_type.as_ref(), "int");
   }
@@ -154,7 +154,7 @@ fn func() {
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "func moo()T");
   let func = crate::collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
-  assert_eq!(func.name.str.str, "moo");
+  assert_eq!(func.name.as_str(), "moo");
   assert!(func.parameters.is_empty());
   assert_templex_name(func.return_type.as_ref(), "T");
 }
@@ -185,7 +185,7 @@ fn prototype_with_coords() {
   let (first_, pack_, third_) = expect_3(&components.components);
   cast!(cast!(first_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
   let pack_call = cast!(pack_, IRulexPR::BuiltinCall);
-  assert_eq!(pack_call.name.str.str, "pack");
+  assert_eq!(pack_call.name.as_str(), "pack");
   let (int_, bool_) = expect_2(&pack_call.args);
   assert_templex_name(cast!(int_, IRulexPR::Templex), "int");
   assert_templex_name(cast!(bool_, IRulexPR::Templex), "bool");

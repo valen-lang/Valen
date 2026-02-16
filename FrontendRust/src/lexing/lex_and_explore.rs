@@ -1,4 +1,4 @@
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::ast::{IDenizenL, ImportL, RangeL};
 use crate::lexing::errors::FailedParse;
@@ -107,8 +107,8 @@ where
             }
 
             packages_to_explore.push((
-              im.module_name.str.str.to_string(),
-              im.package_steps.iter().map(|x| x.str.str.to_string()).collect(),
+              im.module_name.str.to_string(),
+              im.package_steps.iter().map(|x| x.str.to_string()).collect(),
             ));
 
             let denizen_result = denizen_handler(file_coord, &code, &[], &denizen);
@@ -120,8 +120,8 @@ where
               Some(imports_accum) => {
                 for imp in &imports_accum {
                   packages_to_explore.push((
-                    imp.module_name.str.str.to_string(),
-                    imp.package_steps.iter().map(|x| x.str.str.to_string()).collect(),
+                    imp.module_name.str.to_string(),
+                    imp.package_steps.iter().map(|x| x.str.to_string()).collect(),
                   ));
                 }
                 maybe_imports = Some(imports_accum);
@@ -139,7 +139,7 @@ where
 
       // Add discovered packages to unexplored (after lex loop to avoid borrow conflicts).
       for (module_str, package_strs) in packages_to_explore {
-        let package_steps: Vec<&'a crate::interner::StrI> =
+        let package_steps: Vec<StrI<'a>> =
           package_strs.iter().map(|s| interner.intern(s)).collect();
         let coord = interner.intern_package_coordinate(interner.intern(&module_str), &package_steps);
         if !started_packages.contains(&*coord) {

@@ -166,7 +166,7 @@ fn if_with_condition_declarations_and_block_contents() {
 
   let if_ = cast!(let_new_len.source.as_ref(), IExpressionPE::If);
   let equals = cast!(if_.condition.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(equals.function_name.str.str, "==");
+  assert_eq!(equals.function_name.as_str(), "==");
   assert_lookup_name(equals.left_expr.as_ref(), "num");
   assert_eq!(
     cast!(equals.right_expr.as_ref(), IExpressionPE::ConstantInt).value,

@@ -341,10 +341,10 @@ fn exporting_int() {
   let program = compile(&interner, &keywords, "export int as NumberThing;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref s, .. } }),
-    exported_name: NameP { str: ref e, .. },
+    struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, s) }),
+    exported_name: NameP(_, e),
     ..
-  }) if s.str == "int" && e.str == "NumberThing")
+  }) if s.as_str() == "int" && e.as_str() == "NumberThing")
   );
 }
 /*
@@ -363,9 +363,9 @@ fn exporting_imm_array_1() {
   let program = compile(&interner, &keywords, "export []<mut>int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP { str: ref IntArray_, .. },
+    exported_name: NameP(_, IntArray_),
     ..
-  }) if IntArray_.str == "IntArray")
+  }) if IntArray_.as_str() == "IntArray")
   );
 }
 
@@ -385,9 +385,9 @@ fn exporting_imm_array_2() {
   let program = compile(&interner, &keywords, "export #[]int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP { str: ref IntArray_, .. },
+    exported_name: NameP(_, IntArray_),
     ..
-  }) if IntArray_.str == "IntArray")
+  }) if IntArray_.as_str() == "IntArray")
   );
 }
 
@@ -407,11 +407,11 @@ fn import_wildcard() {
   let program = compile(&interner, &keywords, "import somemodule.*;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP { str: ref somemodule_, .. },
+    module_name: NameP(_, somemodule_),
     package_steps: ref p,
-    importee_name: NameP { str: ref star_, .. },
+    importee_name: NameP(_, star_),
     ..
-  }) if somemodule_.str == "somemodule" && star_.str == "*")
+  }) if somemodule_.as_str() == "somemodule" && star_.as_str() == "*")
   );
 }
 
@@ -431,11 +431,11 @@ fn import_just_module_and_thing() {
   let program = compile(&interner, &keywords, "import somemodule.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP { str: ref somemodule_, .. },
+    module_name: NameP(_, somemodule_),
     package_steps: ref p,
-    importee_name: NameP { str: ref List_, .. },
+    importee_name: NameP(_, List_),
     ..
-  }) if somemodule_.str == "somemodule" && List_.str == "List" && p.is_empty())
+  }) if somemodule_.as_str() == "somemodule" && List_.as_str() == "List" && p.is_empty())
   );
 }
 
@@ -455,11 +455,11 @@ fn full_import() {
   let program = compile(&interner, &keywords, "import somemodule.subpackage.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP { str: ref somemodule_, .. },
+    module_name: NameP(_, somemodule_),
     package_steps: ref p,
-    importee_name: NameP { str: ref List_, .. },
+    importee_name: NameP(_, List_),
     ..
-  }) if somemodule_.str == "somemodule" && List_.str == "List" && p.len() == 1 && p[0].str.str == "subpackage")
+  }) if somemodule_.as_str() == "somemodule" && List_.as_str() == "List" && p.len() == 1 && p[0].str().as_str() == "subpackage")
   );
 }
 /*
@@ -486,15 +486,14 @@ fn return_with_region_generics() {
     .expect("Expected return type");
   let ret_call = cast!(ret_type, ITemplexPT::Call);
   let ret_name = &cast!(ret_call.template.as_ref(), ITemplexPT::NameOrRune);
-  assert!(ret_name.name.str.str == "IDesire");
+  assert!(ret_name.name.str() == "IDesire");
   assert!(ret_call.args.len() == 2);
   assert_eq!(
     cast!(&ret_call.args[0], ITemplexPT::RegionRune)
       .name
       .as_ref()
       .unwrap()
-      .str
-      .str,
+      .str(),
     "r"
   );
   assert_eq!(
@@ -502,8 +501,7 @@ fn return_with_region_generics() {
       .name
       .as_ref()
       .unwrap()
-      .str
-      .str,
+      .str(),
     "i"
   );
 }

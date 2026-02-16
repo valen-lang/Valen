@@ -60,7 +60,7 @@ fn coord_with_rune() {
   let keywords = Keywords::new(&interner);
   let rule = compile(&interner, &keywords, "T Ref");
   let typed = cast!(rule, IRulexPR::Typed);
-  assert_eq!(typed.rune.unwrap().str.str, "T");
+  assert_eq!(typed.rune.unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
 }
 /*
@@ -235,7 +235,7 @@ fn coord_with_value() {
   let rule = compile(&interner, &keywords, "T Ref = int");
   let equals = cast!(rule, IRulexPR::Equals);
   let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
-  assert_eq!(typed.rune.as_ref().unwrap().str.str, "T");
+  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
   assert_templex_name(cast!(equals.right.as_ref(), IRulexPR::Templex), "int");
 }
@@ -282,7 +282,7 @@ fn coord_with_sequence_in_value_spot() {
   let rule = compile(&interner, &keywords, "T Ref = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
   let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
-  assert_eq!(typed.rune.as_ref().unwrap().str.str, "T");
+  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
   let tuple = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(&tuple.elements);

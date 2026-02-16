@@ -21,8 +21,8 @@ use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  CodeNameS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS,
-  TopLevelInterfaceDeclarationNameS,
+  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS,
+  INameS, IRuneS, IRuneValS, IVarNameS, TopLevelInterfaceDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{
   ILiteralSL, IRulexSR, LiteralSR, MaybeCoercingLookupSR, MutabilityLiteralSL, RuneUsage,
@@ -421,8 +421,8 @@ where
 
   pub fn eval_range(file: &'a FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
     RangeS {
-      begin: Self::eval_pos(file, range.begin),
-      end: Self::eval_pos(file, range.end),
+      begin: Self::eval_pos(file, range.begin()),
+      end: Self::eval_pos(file, range.end()),
     }
   }
 }
@@ -1016,13 +1016,15 @@ class PostParser(
 
     let struct_range_s = Self::eval_range(file, head.range);
     let struct_name = crate::postparsing::names::TopLevelStructDeclarationNameS {
-      name: head.name.str,
-      range: Self::eval_range(file, head.name.range),
+      name: head.name.str(),
+      range: Self::eval_range(file, head.name.range()),
     };
 
     let mutability_rune = RuneUsage {
       range: struct_range_s.clone(),
-      rune: IRuneS::CodeRune(self.interner.intern_code_rune(self.interner.intern("__struct_mutability"))),
+      rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+        name: self.interner.intern("__struct_mutability"),
+      })),
     };
     let header_rules = vec![IRulexSR::Literal(LiteralSR {
       range: struct_range_s.clone(),
@@ -1041,15 +1043,15 @@ class PostParser(
           let member_range = Self::eval_range(file, member.range);
           let member_rune = RuneUsage {
             range: member_range.clone(),
-            rune: IRuneS::CodeRune(self.interner.intern_code_rune(
-              self
+            rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+              name: self
                 .interner
-                .intern(&format!("__member_{}", member.name.str.str)),
-            )),
+                .intern(&format!("__member_{}", member.name.str().as_str())),
+            })),
           };
           let lookup_name = match &member.tyype {
             ITemplexPT::NameOrRune(name_or_rune) => CodeNameS {
-              name: name_or_rune.name.str,
+              name: name_or_rune.name.str(),
             },
             _ => {
               panic!("POSTPARSER_SCOUT_STRUCT_MEMBER_TYPE_NOT_YET_IMPLEMENTED");
@@ -1058,9 +1060,9 @@ class PostParser(
           member_rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
             range: Self::eval_range(file, member.tyype.range()),
             rune: member_rune.clone(),
-            name: crate::postparsing::names::IImpreciseNameS::CodeName(
-              self.interner.intern_code_name(lookup_name.name),
-            ),
+            name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+              name: lookup_name.name,
+            })),
           }));
           members_rune_to_explicit_type.insert(
             member_rune.rune.clone(),
@@ -1068,7 +1070,7 @@ class PostParser(
           );
           members.push(IStructMemberS::NormalStructMember(NormalStructMemberS {
             range: member_range,
-            name: member.name.str,
+            name: member.name.str(),
             variability: member.variability,
             type_rune: member_rune,
           }));
@@ -1108,7 +1110,7 @@ class PostParser(
           attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
             range: Self::eval_range(file, attr.range),
             include: attr.inclusion,
-            macro_name: attr.name.str,
+            macro_name: attr.name.str(),
           }));
         }
         other => panic!("POSTPARSER_SCOUT_STRUCT_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
@@ -1193,7 +1195,7 @@ class PostParser(
           val regionRangeS = evalRange(file, regionRangeP)
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!structEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.str))
+            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.as_str().to_string()))
           }
           (regionRangeS, rune, None)
         }
@@ -1372,8 +1374,8 @@ class PostParser(
     let interface_range = Self::eval_range(file, interface.range);
     let _interface_body_range = Self::eval_range(file, interface.body_range);
     let interface_name = TopLevelInterfaceDeclarationNameS {
-      name: interface.name.str,
-      range: Self::eval_range(file, interface.name.range),
+      name: interface.name.str(),
+      range: Self::eval_range(file, interface.name.range()),
     };
 
     assert!(
@@ -1418,7 +1420,7 @@ class PostParser(
           attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
             range: Self::eval_range(file, attr.range),
             include: attr.inclusion,
-            macro_name: attr.name.str,
+            macro_name: attr.name.str(),
           }));
         }
         other => panic!("POSTPARSER_SCOUT_INTERFACE_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
@@ -1437,7 +1439,9 @@ class PostParser(
 
     let mutability_rune = RuneUsage {
       range: interface_range.clone(),
-      rune: IRuneS::CodeRune(self.interner.intern_code_rune(self.interner.intern("__interface_mutability"))),
+      rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+        name: self.interner.intern("__interface_mutability"),
+      })),
     };
 
     let internal_methods = interface
@@ -1468,8 +1472,8 @@ class PostParser(
         FunctionS {
           range: Self::eval_range(file, member.range),
           name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-            name: method_name.str,
-            code_location: Self::eval_pos(file, method_name.range.begin),
+            name: method_name.str(),
+            code_location: Self::eval_pos(file, method_name.range().begin()),
           }),
           attributes: Vec::new(),
           generic_params: generic_params.clone(),
@@ -1553,7 +1557,7 @@ class PostParser(
           val regionRangeS = evalRange(file, regionRangeP)
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!interfaceEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.str))
+            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.as_str().to_string()))
           }
           (regionRangeS, rune, None)
         }

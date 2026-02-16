@@ -1,6 +1,13 @@
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
-use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::names::{CodeNameS, CodeRuneS, LetImplicitRuneS};
+use crate::postparsing::names::{
+  IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS,
+  ImplicitRegionRuneS, ImplicitCoercionOwnershipRuneS, ImplicitCoercionKindRuneS,
+  ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
+  DispatcherRuneFromImplS, CaseRuneFromImplS,
+  LambdaStructImpreciseNameS, AnonymousSubstructTemplateImpreciseNameS,
+  AnonymousSubstructConstructorTemplateImpreciseNameS, ImplImpreciseNameS,
+  ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, RuneNameS,
+};
 use bumpalo::Bump;
 use std::collections::HashMap;
 use std::marker::PhantomData;
@@ -9,69 +16,47 @@ use std::fmt::{Debug, Display, Formatter};
 use std::hash::{Hash, Hasher};
 use std::ops::Deref;
 
-const MIN_INTERNING_ID: u64 = (1u64 << (7 * 8)) + 1;
 
-#[derive(Copy, Clone)]
-pub struct InternedStr {
-  ptr: *const u8,
-  len: usize,
-}
+/// Interned string: a by-value wrapper around arena-backed `&'a str`.
+/// Never arena-allocated; just holds a reference to canonical storage.
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
+pub struct StrI<'a>(pub &'a str);
 
-impl InternedStr {
-  pub fn new(s: &str) -> Self {
-    InternedStr {
-      ptr: s.as_ptr(),
-      len: s.len(),
-    }
-  }
-
-  pub fn as_str(&self) -> &str {
-    // SAFETY: All InternedStr instances are created from valid UTF-8 slices
-    // allocated in the compilation arena and outlive all uses.
-    unsafe {
-      let bytes = std::slice::from_raw_parts(self.ptr, self.len);
-      std::str::from_utf8_unchecked(bytes)
-    }
+impl<'a> StrI<'a> {
+  pub fn as_str(&self) -> &'a str {
+    self.0
   }
 }
 
-impl Deref for InternedStr {
+impl Deref for StrI<'_> {
   type Target = str;
 
   fn deref(&self) -> &Self::Target {
-    self.as_str()
+    self.0
   }
 }
 
-impl Debug for InternedStr {
+impl Debug for StrI<'_> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    Debug::fmt(self.as_str(), f)
+    Debug::fmt(self.0, f)
   }
 }
 
-impl Display for InternedStr {
+impl Display for StrI<'_> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    Display::fmt(self.as_str(), f)
+    Display::fmt(self.0, f)
   }
 }
 
-impl PartialEq for InternedStr {
-  fn eq(&self, other: &Self) -> bool {
-    self.as_str() == other.as_str()
-  }
-}
-
-impl Eq for InternedStr {}
-
-impl Hash for InternedStr {
-  fn hash<H: Hasher>(&self, state: &mut H) {
-    self.as_str().hash(state);
-  }
-}
-
-impl PartialEq<&str> for InternedStr {
+impl PartialEq<&str> for StrI<'_> {
   fn eq(&self, other: &&str) -> bool {
-    self.as_str() == *other
+    self.0 == *other
+  }
+}
+
+impl PartialEq<str> for StrI<'_> {
+  fn eq(&self, other: &str) -> bool {
+    self.0 == other
   }
 }
 
@@ -138,98 +123,41 @@ impl<T: Copy + Hash> Hash for InternedSlice<T> {
   }
 }
 
-/// Interned string - immutable, cheap to copy
-/// Matches Scala's StrI
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct StrI {
-  id: u64,
-  pub str: InternedStr,
-}
-
-impl StrI {
-  pub fn new(id: u64, s: InternedStr) -> Self {
-    StrI { id, str: s }
-  }
-
-  pub fn id(&self) -> u64 {
-    self.id
-  }
-
-  /// Try to encode a short string (≤8 ASCII chars) into a u64 ID
-  /// Matches Scala's StrI.shortcutNewInterningId
-  fn try_encode_short_string(s: &str) -> Option<u64> {
-    if s.len() > 8 {
-      return None;
-    }
-
-    let bytes = s.as_bytes();
-
-    // Check all bytes are ASCII (< 128)
-    if bytes.iter().any(|&b| b >= 128) {
-      return None;
-    }
-
-    // Encode up to 8 bytes into a u64
-    // We do +1 so we don't collide with 0 (which means not interned)
-    let mut buffer = [0u8; 8];
-    buffer[..bytes.len()].copy_from_slice(bytes);
-
-    let char0 = buffer[0] as u64;
-    let char1 = buffer[1] as u64;
-    let char2 = buffer[2] as u64;
-    let char3 = buffer[3] as u64;
-    let char4 = buffer[4] as u64;
-    let char5 = buffer[5] as u64;
-    let char6 = buffer[6] as u64;
-    let char7 = buffer[7] as u64;
-
-    let total = 1u64
-      + ((char0 << (7 * 7))
-        | (char1 << (7 * 6))
-        | (char2 << (7 * 5))
-        | (char3 << (7 * 4))
-        | (char4 << (7 * 3))
-        | (char5 << (7 * 2))
-        | (char6 << 7)
-        | (char7 << (7 * 0)));
-
-    assert!(total < MIN_INTERNING_ID);
-    Some(total)
-  }
-}
-
 /// Generic interning system with interior mutability
 /// Matches Scala's Interner
 pub struct Interner<'a> {
   arena: &'a Bump,
   inner: RefCell<InternerInner<'a>>,
-  _marker: PhantomData<&'a StrI>,
+  _marker: PhantomData<&'a str>,
+}
+
+/// Lookup key for file coordinates; uses String for filepath to allow lookup with arbitrary &str.
+#[derive(Clone)]
+struct FileCoordLookupKey<'a> {
+  package_coord: &'a PackageCoordinate<'a>,
+  filepath: String,
+}
+
+impl<'a> PartialEq for FileCoordLookupKey<'a> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.package_coord, other.package_coord) && self.filepath == other.filepath
+  }
+}
+impl<'a> Eq for FileCoordLookupKey<'a> {}
+
+impl<'a> std::hash::Hash for FileCoordLookupKey<'a> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    (self.package_coord as *const PackageCoordinate<'_>).hash(state);
+    self.filepath.hash(state);
+  }
 }
 
 struct InternerInner<'a> {
-  string_to_stri: HashMap<String, &'a StrI>,
-  id_to_stri: HashMap<u64, &'a StrI>,
+  string_to_interned: HashMap<String, &'a str>,
   package_coord_to_ref: HashMap<PackageCoordinate<'a>, &'a PackageCoordinate<'a>>,
-  file_coord_to_ref: HashMap<FileCoordinate<'a>, &'a FileCoordinate<'a>>,
-  code_name_to_ref: HashMap<CodeNameS<'a>, &'a CodeNameS<'a>>,
-  code_rune_to_ref: HashMap<CodeRuneS<'a>, &'a CodeRuneS<'a>>,
-  let_implicit_rune_to_ref: HashMap<LetImplicitRuneS, &'a LetImplicitRuneS>,
-  next_id: u64,
-}
-
-macro_rules! define_payload_interner_1arg {
-  ($method_name:ident, $ty:ty, $field:ident, $arg_name:ident : $arg_ty:ty, $ctor:expr) => {
-    pub fn $method_name(&self, $arg_name: $arg_ty) -> &'a $ty {
-      let mut inner = self.inner.borrow_mut();
-      let key: $ty = $ctor;
-      if let Some(existing) = inner.$field.get(&key) {
-        return *existing;
-      }
-      let new_ref = self.arena.alloc(key.clone());
-      inner.$field.insert(key, new_ref);
-      new_ref
-    }
-  };
+  file_coord_to_ref: HashMap<FileCoordLookupKey<'a>, &'a FileCoordinate<'a>>,
+  imprecise_name_val_to_ref: HashMap<IImpreciseNameValS<'a>, IImpreciseNameS<'a>>,
+  rune_val_to_ref: HashMap<IRuneValS<'a>, IRuneS<'a>>,
 }
 
 impl<'a> Interner<'a> {
@@ -237,51 +165,34 @@ impl<'a> Interner<'a> {
     Interner {
       arena,
       inner: RefCell::new(InternerInner {
-        string_to_stri: HashMap::new(),
-        id_to_stri: HashMap::new(),
+        string_to_interned: HashMap::new(),
         package_coord_to_ref: HashMap::new(),
         file_coord_to_ref: HashMap::new(),
-        code_name_to_ref: HashMap::new(),
-        code_rune_to_ref: HashMap::new(),
-        let_implicit_rune_to_ref: HashMap::new(),
-        next_id: MIN_INTERNING_ID,
+        imprecise_name_val_to_ref: HashMap::new(),
+        rune_val_to_ref: HashMap::new(),
       }),
       _marker: PhantomData,
     }
   }
 
-  /// Intern a string, returning a canonical shared StrI value.
-  pub fn intern(&self, s: &str) -> &'a StrI {
+  /// Intern a string, returning a canonical value.
+  pub fn intern(&self, s: &str) -> StrI<'a> {
     let mut inner = self.inner.borrow_mut();
-    if let Some(existing) = inner.string_to_stri.get(s) {
-      return *existing;
+    if let Some(&existing) = inner.string_to_interned.get(s) {
+      return StrI(existing);
     }
 
-    let id = if let Some(encoded_id) = StrI::try_encode_short_string(s) {
-      encoded_id
-    } else {
-      let new_id = inner.next_id;
-      inner.next_id += 1;
-      new_id
-    };
-
     let arena_str = self.arena.alloc_str(s);
-    let value_ref: &'a StrI = self.arena.alloc(StrI::new(id, InternedStr::new(arena_str)));
-    inner.string_to_stri.insert(s.to_string(), value_ref);
-    inner.id_to_stri.insert(id, value_ref);
-    value_ref
+    inner.string_to_interned.insert(s.to_string(), arena_str);
+    StrI(arena_str)
   }
 
-  /// Get StrI by id.
-  pub fn get_by_id(&self, id: u64) -> Option<&'a StrI> {
-    self.inner.borrow().id_to_stri.get(&id).cloned()
-  }
 
   /// Intern a PackageCoordinate.
   pub fn intern_package_coordinate(
     &self,
-    module: &'a StrI,
-    packages: &[&'a StrI],
+    module: StrI<'a>,
+    packages: &[StrI<'a>],
   ) -> &'a PackageCoordinate<'a> {
     let mut inner = self.inner.borrow_mut();
     let lookup_coord = PackageCoordinate {
@@ -308,46 +219,445 @@ impl<'a> Interner<'a> {
     filepath: &str,
   ) -> &'a FileCoordinate<'a> {
     let mut inner = self.inner.borrow_mut();
-    let lookup_coord = FileCoordinate {
+    let lookup_key = FileCoordLookupKey {
       package_coord,
-      filepath: InternedStr::new(filepath),
+      filepath: filepath.to_string(),
     };
-    if let Some(existing) = inner.file_coord_to_ref.get(&lookup_coord) {
+    if let Some(existing) = inner.file_coord_to_ref.get(&lookup_key) {
       return *existing;
     }
     let arena_filepath = self.arena.alloc_str(filepath);
     let coord = FileCoordinate {
       package_coord,
-      filepath: InternedStr::new(arena_filepath),
+      filepath: StrI(arena_filepath),
     };
     let new_ref: &'a FileCoordinate<'a> = self.arena.alloc(coord.clone());
-    inner.file_coord_to_ref.insert(coord, new_ref);
+    let insert_key = FileCoordLookupKey {
+      package_coord,
+      filepath: filepath.to_string(),
+    };
+    inner.file_coord_to_ref.insert(insert_key, new_ref);
     new_ref
   }
 
-  define_payload_interner_1arg!(
-    intern_code_name,
-    CodeNameS<'a>,
-    code_name_to_ref,
-    name: &'a StrI,
-    CodeNameS { name }
-  );
+  /// Canonical imprecise-name entrypoint: intern an IImpreciseNameValS value key and return canonical IImpreciseNameS.
+  pub fn intern_imprecise_name(&self, val: IImpreciseNameValS<'a>) -> IImpreciseNameS<'a> {
+    {
+      let inner = self.inner.borrow();
+      if let Some(existing) = inner.imprecise_name_val_to_ref.get(&val) {
+        // Fast path: return the already-canonicalized payload.
+        return existing.clone();
+      }
+    }
+    let canonical = self.alloc_imprecise_name_canonical(val.clone());
+    let mut inner = self.inner.borrow_mut();
+    // Keep the original value key in the map; identity comparisons should be done on
+    // the canonical payload pointer (`ptr_eq` / `canonical_ptr`), not on `==`.
+    inner.imprecise_name_val_to_ref.insert(val, canonical.clone());
+    canonical
+  }
 
-  define_payload_interner_1arg!(
-    intern_code_rune,
-    CodeRuneS<'a>,
-    code_rune_to_ref,
-    name: &'a StrI,
-    CodeRuneS { name }
-  );
+  fn alloc_imprecise_name_canonical(&self, val: IImpreciseNameValS<'a>) -> IImpreciseNameS<'a> {
+    use crate::postparsing::names::IImpreciseNameValS::*;
+    match val {
+      CodeName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::CodeName(r)
+      }
+      LambdaImpreciseName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::LambdaImpreciseName(r)
+      }
+      PlaceholderImpreciseName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::PlaceholderImpreciseName(r)
+      }
+      LambdaStructImpreciseName(v) => {
+        // Shallow key: v.lambda_name is already canonical; use directly.
+        let payload = LambdaStructImpreciseNameS {
+          lambda_name: v.lambda_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::LambdaStructImpreciseName(r)
+      }
+      ClosureParamImpreciseName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::ClosureParamImpreciseName(r)
+      }
+      PrototypeName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::PrototypeName(r)
+      }
+      AnonymousSubstructTemplateImpreciseName(v) => {
+        // Shallow key: v.interface_imprecise_name is already canonical; use directly.
+        let payload = AnonymousSubstructTemplateImpreciseNameS {
+          interface_imprecise_name: v.interface_imprecise_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(r)
+      }
+      AnonymousSubstructConstructorTemplateImpreciseName(v) => {
+        // Shallow key: v.interface_imprecise_name is already canonical; use directly.
+        let payload = AnonymousSubstructConstructorTemplateImpreciseNameS {
+          interface_imprecise_name: v.interface_imprecise_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(r)
+      }
+      ImplImpreciseName(v) => {
+        // Shallow key: both children already canonical; use directly.
+        let payload = ImplImpreciseNameS {
+          sub_citizen_imprecise_name: v.sub_citizen_imprecise_name,
+          super_interface_imprecise_name: v.super_interface_imprecise_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::ImplImpreciseName(r)
+      }
+      ImplSubCitizenImpreciseName(v) => {
+        // Shallow key: v.sub_citizen_imprecise_name is already canonical; use directly.
+        let payload = ImplSubCitizenImpreciseNameS {
+          sub_citizen_imprecise_name: v.sub_citizen_imprecise_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::ImplSubCitizenImpreciseName(r)
+      }
+      ImplSuperInterfaceImpreciseName(v) => {
+        // Shallow key: v.super_interface_imprecise_name is already canonical; use directly.
+        let payload = ImplSuperInterfaceImpreciseNameS {
+          super_interface_imprecise_name: v.super_interface_imprecise_name,
+        };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::ImplSuperInterfaceImpreciseName(r)
+      }
+      SelfName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::SelfName(r)
+      }
+      RuneName(v) => {
+        // Shallow key: v.rune is already canonical; use directly.
+        let payload = RuneNameS { rune: v.rune };
+        let r = self.arena.alloc(payload);
+        IImpreciseNameS::RuneName(r)
+      }
+      ArbitraryName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::ArbitraryName(r)
+      }
+    }
+  }
 
-  define_payload_interner_1arg!(
-    intern_let_implicit_rune,
-    LetImplicitRuneS,
-    let_implicit_rune_to_ref,
-    lid: LocationInDenizen,
-    LetImplicitRuneS { lid }
-  );
+  /// Canonical rune entrypoint: intern an IRuneValS value key and return canonical IRuneS.
+  pub fn intern_rune(&self, val: IRuneValS<'a>) -> IRuneS<'a> {
+    {
+      let inner = self.inner.borrow();
+      if let Some(existing) = inner.rune_val_to_ref.get(&val) {
+        // Fast path: return the already-canonicalized payload.
+        return existing.clone();
+      }
+    }
+    let canonical = self.alloc_rune_canonical(val.clone());
+    let mut inner = self.inner.borrow_mut();
+    // Store by value-key and return canonical ref payload.
+    // If you need to verify canonicalization, use `ptr_eq` (not just `==`).
+    inner.rune_val_to_ref.insert(val, canonical.clone());
+    canonical
+  }
+
+  fn alloc_rune_canonical(&self, val: IRuneValS<'a>) -> IRuneS<'a> {
+    use IRuneValS::*;
+    match val {
+      CodeRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::CodeRune(r)
+      }
+      LetImplicitRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::LetImplicitRune(r)
+      }
+      ImplicitRegionRune(v) => {
+        // Shallow key: v.original_rune is already canonical; use directly.
+        let payload = ImplicitRegionRuneS {
+          original_rune: v.original_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::ImplicitRegionRune(r)
+      }
+      ImplicitCoercionOwnershipRune(v) => {
+        // Shallow key: v.original_coord_rune is already canonical; use directly.
+        let payload = ImplicitCoercionOwnershipRuneS {
+          range: v.range,
+          original_coord_rune: v.original_coord_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::ImplicitCoercionOwnershipRune(r)
+      }
+      ImplicitCoercionKindRune(v) => {
+        // Shallow key: v.original_coord_rune is already canonical; use directly.
+        let payload = ImplicitCoercionKindRuneS {
+          range: v.range,
+          original_coord_rune: v.original_coord_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::ImplicitCoercionKindRune(r)
+      }
+      ImplicitCoercionTemplateRune(v) => {
+        // Shallow key: v.original_kind_rune is already canonical; use directly.
+        let payload = ImplicitCoercionTemplateRuneS {
+          range: v.range,
+          original_kind_rune: v.original_kind_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::ImplicitCoercionTemplateRune(r)
+      }
+      AnonymousSubstructMethodInheritedRune(v) => {
+        // Shallow key: v.inner is already canonical; use directly.
+        let payload = AnonymousSubstructMethodInheritedRuneS {
+          interface: v.interface,
+          method: v.method,
+          inner: v.inner,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::AnonymousSubstructMethodInheritedRune(r)
+      }
+      DispatcherRuneFromImpl(v) => {
+        // Shallow key: v.inner_rune is already canonical; use directly.
+        let payload = DispatcherRuneFromImplS {
+          inner_rune: v.inner_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::DispatcherRuneFromImpl(r)
+      }
+      CaseRuneFromImpl(v) => {
+        // Shallow key: v.inner_rune is already canonical; use directly.
+        let payload = CaseRuneFromImplS {
+          inner_rune: v.inner_rune,
+        };
+        let r = self.arena.alloc(payload);
+        IRuneS::CaseRuneFromImpl(r)
+      }
+      ImplDropCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ImplDropCoordRune(r)
+      }
+      ImplDropVoidRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ImplDropVoidRune(r)
+      }
+      ImplicitRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ImplicitRune(r)
+      }
+      PureBlockRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::PureBlockRegionRune(r)
+      }
+      CallRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::CallRegionRune(r)
+      }
+      CallPureMergeRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::CallPureMergeRegionRune(r)
+      }
+      ReachablePrototypeRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ReachablePrototypeRune(r)
+      }
+      FreeOverrideStructTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FreeOverrideStructTemplateRune(r)
+      }
+      FreeOverrideStructRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FreeOverrideStructRune(r)
+      }
+      FreeOverrideInterfaceRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FreeOverrideInterfaceRune(r)
+      }
+      MagicParamRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MagicParamRune(r)
+      }
+      MemberRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MemberRune(r)
+      }
+      LocalDefaultRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::LocalDefaultRegionRune(r)
+      }
+      DenizenDefaultRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::DenizenDefaultRegionRune(r)
+      }
+      ExportDefaultRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ExportDefaultRegionRune(r)
+      }
+      ExternDefaultRegionRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ExternDefaultRegionRune(r)
+      }
+      ArraySizeImplicitRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ArraySizeImplicitRune(r)
+      }
+      ArrayMutabilityImplicitRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ArrayMutabilityImplicitRune(r)
+      }
+      ArrayVariabilityImplicitRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ArrayVariabilityImplicitRune(r)
+      }
+      ReturnRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ReturnRune(r)
+      }
+      StructNameRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::StructNameRune(r)
+      }
+      InterfaceNameRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::InterfaceNameRune(r)
+      }
+      SelfRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::SelfRune(r)
+      }
+      SelfOwnershipRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::SelfOwnershipRune(r)
+      }
+      SelfKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::SelfKindRune(r)
+      }
+      SelfKindTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::SelfKindTemplateRune(r)
+      }
+      SelfCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::SelfCoordRune(r)
+      }
+      MacroVoidKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MacroVoidKindRune(r)
+      }
+      MacroVoidCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MacroVoidCoordRune(r)
+      }
+      MacroSelfKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MacroSelfKindRune(r)
+      }
+      MacroSelfKindTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MacroSelfKindTemplateRune(r)
+      }
+      MacroSelfCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::MacroSelfCoordRune(r)
+      }
+      ArgumentRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ArgumentRune(r)
+      }
+      PatternInputRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::PatternInputRune(r)
+      }
+      ExplicitTemplateArgRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::ExplicitTemplateArgRune(r)
+      }
+      AnonymousSubstructParentInterfaceTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructParentInterfaceTemplateRune(r)
+      }
+      AnonymousSubstructParentInterfaceKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructParentInterfaceKindRune(r)
+      }
+      AnonymousSubstructParentInterfaceCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructParentInterfaceCoordRune(r)
+      }
+      AnonymousSubstructTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructTemplateRune(r)
+      }
+      AnonymousSubstructKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructKindRune(r)
+      }
+      AnonymousSubstructCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructCoordRune(r)
+      }
+      AnonymousSubstructVoidKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructVoidKindRune(r)
+      }
+      AnonymousSubstructVoidCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructVoidCoordRune(r)
+      }
+      AnonymousSubstructMemberRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructMemberRune(r)
+      }
+      AnonymousSubstructMethodSelfBorrowCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructMethodSelfBorrowCoordRune(r)
+      }
+      AnonymousSubstructMethodSelfOwnCoordRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructMethodSelfOwnCoordRune(r)
+      }
+      AnonymousSubstructDropBoundPrototypeRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructDropBoundPrototypeRune(r)
+      }
+      AnonymousSubstructDropBoundParamsListRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructDropBoundParamsListRune(r)
+      }
+      AnonymousSubstructFunctionBoundPrototypeRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r)
+      }
+      AnonymousSubstructFunctionBoundParamsListRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructFunctionBoundParamsListRune(r)
+      }
+      AnonymousSubstructFunctionInterfaceTemplateRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(r)
+      }
+      AnonymousSubstructFunctionInterfaceKindRune(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::AnonymousSubstructFunctionInterfaceKindRune(r)
+      }
+      FunctorPrototypeRuneName(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FunctorPrototypeRuneName(r)
+      }
+      FunctorParamRuneName(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FunctorParamRuneName(r)
+      }
+      FunctorReturnRuneName(p) => {
+        let r = self.arena.alloc(p);
+        IRuneS::FunctorReturnRuneName(r)
+      }
+    }
+  }
+
 }
 
 #[cfg(test)]
@@ -355,19 +665,15 @@ mod tests {
   use super::*;
 
   #[test]
-  fn test_short_string_encoding() {
+  fn test_string_interning() {
     let arena = Bump::new();
     let interner = Interner::with_arena(&arena);
     let s1 = interner.intern("hello");
     let s2 = interner.intern("hello");
 
-    // Same string should have same ID and same canonical instance.
-    assert_eq!(s1.id(), s2.id());
+    // Same string should be same canonical instance.
     assert_eq!(s1, s2);
-    assert_eq!(s1.str, "hello");
-
-    // Short strings should use encoded ID
-    assert!(s1.id() < MIN_INTERNING_ID);
+    assert_eq!(s1.as_str(), "hello");
   }
 
   #[test]
@@ -377,13 +683,8 @@ mod tests {
     let s1 = interner.intern("this is a long string");
     let s2 = interner.intern("this is a long string");
 
-    // Same string should have same ID and same canonical instance.
-    assert_eq!(s1.id(), s2.id());
     assert_eq!(s1, s2);
-    assert_eq!(s1.str, "this is a long string");
-
-    // Long strings should use regular interning
-    assert!(s1.id() >= MIN_INTERNING_ID);
+    assert_eq!(s1.as_str(), "this is a long string");
   }
 
   #[test]
@@ -393,8 +694,7 @@ mod tests {
     let s1 = interner.intern("foo");
     let s2 = interner.intern("bar");
 
-    // Different strings should have different IDs
-    assert_ne!(s1.id(), s2.id());
+    assert_ne!(s1, s2);
   }
 
   #[test]
@@ -412,4 +712,131 @@ mod tests {
     assert!(std::ptr::eq(file1, file2));
     assert_eq!(file1.filepath, "main.vale");
   }
+
+  #[test]
+  fn test_imprecise_name_canonicalization_same_key() {
+    use crate::postparsing::names::{CodeNameS, IImpreciseNameValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let name = interner.intern("foo");
+    let n1 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }));
+    let n2 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }));
+    assert_eq!(n1, n2);
+  }
+
+  #[test]
+  fn test_rune_canonicalization_same_key() {
+    use crate::postparsing::ast::LocationInDenizen;
+    use crate::postparsing::names::{CodeRuneS, IRuneValS, LetImplicitRuneS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let name = interner.intern("T");
+    let r1 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name }));
+    let r2 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name }));
+    // `==` checks value semantics; ptr-based tests below check canonical identity.
+    assert_eq!(r1, r2);
+
+    let r3 = interner.intern_rune(IRuneValS::LetImplicitRune(LetImplicitRuneS {
+      lid: LocationInDenizen { path: vec![1] },
+    }));
+    let r4 = interner.intern_rune(IRuneValS::LetImplicitRune(LetImplicitRuneS {
+      lid: LocationInDenizen { path: vec![1] },
+    }));
+    assert_eq!(r3, r4);
+  }
+
+  #[test]
+  fn test_rune_canonicalization_distinct_values() {
+    use crate::postparsing::names::{CodeRuneS, IRuneValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let r1 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+      name: interner.intern("A"),
+    }));
+    let r2 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+      name: interner.intern("B"),
+    }));
+    assert_ne!(r1, r2);
+  }
+
+  #[test]
+  fn test_rune_ptr_eq_same_canonical() {
+    use crate::postparsing::names::{CodeRuneS, IRuneS, IRuneValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let name = interner.intern("X");
+    let r1 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name }));
+    let r2 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name }));
+
+    // Guardrail: this checks payload pointer identity directly, so it catches
+    // accidental regressions where equality stays true but canonicalization breaks.
+    let (ref1, ref2) = match (&r1, &r2) {
+      (IRuneS::CodeRune(a), IRuneS::CodeRune(b)) => (*a as *const _, *b as *const _),
+      _ => panic!("expected CodeRune"),
+    };
+    assert!(std::ptr::eq(ref1, ref2), "same key should yield same canonical ref");
+
+    assert!(r1.ptr_eq(&r2));
+    assert!(std::ptr::eq(r1.canonical_ptr(), r2.canonical_ptr()));
+  }
+
+  #[test]
+  fn test_rune_ptr_eq_distinct() {
+    use crate::postparsing::names::{CodeRuneS, IRuneValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let r1 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+      name: interner.intern("P"),
+    }));
+    let r2 = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+      name: interner.intern("Q"),
+    }));
+
+    assert!(!r1.ptr_eq(&r2));
+    assert!(!std::ptr::eq(r1.canonical_ptr(), r2.canonical_ptr()));
+  }
+
+  #[test]
+  fn test_imprecise_name_ptr_eq_same_canonical() {
+    use crate::postparsing::names::{CodeNameS, IImpreciseNameValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let name = interner.intern("bar");
+    let n1 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }));
+    let n2 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name }));
+
+    assert!(n1.ptr_eq(&n2));
+    assert!(std::ptr::eq(n1.canonical_ptr(), n2.canonical_ptr()));
+  }
+
+  #[test]
+  fn test_imprecise_name_ptr_eq_distinct() {
+    use crate::postparsing::names::{CodeNameS, IImpreciseNameValS};
+
+    let arena = Bump::new();
+    let interner = Interner::with_arena(&arena);
+
+    let n1 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: interner.intern("x"),
+    }));
+    let n2 = interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+      name: interner.intern("y"),
+    }));
+
+    assert!(!n1.ptr_eq(&n2));
+    assert!(!std::ptr::eq(n1.canonical_ptr(), n2.canonical_ptr()));
+  }
+
 }

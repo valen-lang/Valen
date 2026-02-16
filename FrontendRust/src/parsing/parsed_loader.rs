@@ -10,7 +10,7 @@
 // 6) Keep new Rust code above the equivalent Scala comment block.
 // 7) If a Scala case is not ported yet, leave an explicit `panic!`/`vimpl` marker.
 
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::lexing::{ParseError, RangeL};
 use crate::parsing::ast::*;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
@@ -245,10 +245,10 @@ fn get_type<'a>(jobj: &'a Map<String, Value>) -> &'a str {
 */
 fn load_range(jobj: &Map<String, Value>) -> RangeL {
   expect_type(jobj, "Range");
-  RangeL {
-    begin: get_int_field(jobj, "begin"),
-    end: get_int_field(jobj, "end"),
-  }
+  RangeL(
+    get_int_field(jobj, "begin"),
+    get_int_field(jobj, "end"),
+  )
 }
 /*
   def loadRange(jobj: JObject): RangeL = {
@@ -260,10 +260,10 @@ fn load_range(jobj: &Map<String, Value>) -> RangeL {
 */
 fn load_name<'a>(interner: &Interner<'a>, jobj: &Map<String, Value>) -> NameP<'a> {
   expect_type(jobj, "Name");
-  NameP {
-    range: load_range(get_object_field(jobj, "range")),
-    str: interner.intern(get_string_field(jobj, "name")),
-  }
+  NameP(
+    load_range(get_object_field(jobj, "range")),
+    interner.intern(get_string_field(jobj, "name")),
+  )
 }
 /*
   def loadName(jobj: JObject): NameP = {
@@ -546,7 +546,7 @@ fn load_package_coord<'a>(
   jobj: &Map<String, Value>,
 ) -> &'a PackageCoordinate<'a> {
   let module = interner.intern(get_string_field(jobj, "module"));
-  let packages: Vec<&'a crate::interner::StrI> = get_array_field(jobj, "packages")
+  let packages: Vec<StrI<'a>> = get_array_field(jobj, "packages")
     .iter()
     .map(expect_string)
     .map(|s| interner.intern(s))

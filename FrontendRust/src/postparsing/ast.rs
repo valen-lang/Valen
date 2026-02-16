@@ -53,7 +53,7 @@ impl ProgramS<'_> {
       .implemented_functions
       .iter()
       .filter(|f| match &f.name {
-        IFunctionDeclarationNameS::FunctionName(n) => n.name.str == name,
+        IFunctionDeclarationNameS::FunctionName(n) => n.name.as_str() == name,
         _ => false,
       })
       .collect();
@@ -65,7 +65,7 @@ impl ProgramS<'_> {
     let matches: Vec<&InterfaceS<'_>> = self
       .interfaces
       .iter()
-      .filter(|i| i.name.name.str == name)
+      .filter(|i| i.name.name.as_str() == name)
       .collect();
     assert_eq!(matches.len(), 1);
     matches[0]
@@ -75,7 +75,7 @@ impl ProgramS<'_> {
     let matches: Vec<&StructS<'_>> = self
       .structs
       .iter()
-      .filter(|s| s.name.name.str == name)
+      .filter(|s| s.name.name.as_str() == name)
       .collect();
     assert_eq!(matches.len(), 1);
     matches[0]
@@ -129,14 +129,14 @@ pub struct ExternS<'a> {
 pub struct BuiltinS<'a> {
   // MIGTODO: can we give everything a lifetime into an arena so we can
   // all have references instead of using Arc everywhere?
-  pub generator_name: &'a StrI,
+  pub generator_name: StrI<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MacroCallS<'a> {
   pub range: RangeS<'a>,
   pub include: IMacroInclusionP,
-  pub macro_name: &'a StrI,
+  pub macro_name: StrI<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -339,7 +339,7 @@ sealed trait IStructMemberS {
 #[derive(Clone, Debug, PartialEq)]
 pub struct NormalStructMemberS<'a> {
   pub range: RangeS<'a>,
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
   pub variability: VariabilityP,
   pub type_rune: RuneUsage<'a>,
 }
@@ -471,7 +471,7 @@ pub struct ExportAsS<'a> {
   pub rules: Vec<IRulexSR<'a>>,
   pub export_name: ExportAsNameS<'a>,
   pub rune: RuneUsage<'a>,
-  pub exported_name: &'a StrI,
+  pub exported_name: StrI<'a>,
 }
 
 /*
@@ -487,9 +487,9 @@ case class ExportAsS(
 #[derive(Clone, Debug, PartialEq)]
 pub struct ImportS<'a> {
   pub range: RangeS<'a>,
-  pub module_name: &'a StrI,
-  pub package_names: Vec<&'a StrI>,
-  pub importee_name: &'a StrI,
+  pub module_name: StrI<'a>,
+  pub package_names: Vec<StrI<'a>>,
+  pub importee_name: StrI<'a>,
 }
 
 /*
@@ -592,7 +592,7 @@ case class SimpleParameterS(
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct GeneratedBodyS<'a> {
-  pub generator_id: &'a StrI,
+  pub generator_id: StrI<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

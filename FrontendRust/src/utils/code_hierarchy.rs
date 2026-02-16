@@ -1,7 +1,7 @@
 // From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
 use std::collections::HashMap;
-use crate::interner::{InternedSlice, InternedStr, StrI};
+use crate::interner::{InternedSlice, StrI};
 
 // From CodeHierarchy.scala lines 104-189
 #[derive(Clone)]
@@ -130,7 +130,7 @@ impl<'a, Contents: Clone> IPackageResolver<'a, HashMap<String, Contents>> for Fi
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FileCoordinate<'a> {
   pub package_coord: &'a PackageCoordinate<'a>,
-  pub filepath: InternedStr,
+  pub filepath: StrI<'a>,
 }
 
 // TODO: move to utils/code_hierarchy.rs
@@ -138,8 +138,8 @@ pub struct FileCoordinate<'a> {
 /// Interned.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageCoordinate<'a> {
-  pub module: &'a StrI,
-  pub packages: InternedSlice<&'a StrI>,
+  pub module: StrI<'a>,
+  pub packages: InternedSlice<StrI<'a>>,
 }
 
 impl<'a> PackageCoordinate<'a> {

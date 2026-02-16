@@ -98,12 +98,12 @@ pub enum INameDeclarationP<'a> {
 impl INameDeclarationP<'_> {
   pub fn range(&self) -> RangeL {
     match self {
-      INameDeclarationP::LocalNameDeclaration(n) => n.range,
+      INameDeclarationP::LocalNameDeclaration(n) => n.range(),
       INameDeclarationP::IgnoredLocalNameDeclaration(r) => *r,
       INameDeclarationP::IterableNameDeclaration(r) => *r,
       INameDeclarationP::IteratorNameDeclaration(r) => *r,
       INameDeclarationP::IterationOptionNameDeclaration(r) => *r,
-      INameDeclarationP::ConstructingMemberNameDeclaration(n) => n.range,
+      INameDeclarationP::ConstructingMemberNameDeclaration(n) => n.range(),
     }
   }
 }
@@ -113,7 +113,7 @@ sealed trait INameDeclarationP {
 }
 case class LocalNameDeclarationP(name: NameP) extends INameDeclarationP {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious(); override def range: RangeL = name.range
-  if (name.str.str == "_") {
+  if (name.str == "_") {
     vwat()
   }
 }

@@ -95,17 +95,11 @@ where
       (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
       (false, Some(templex)) => templex.clone(),
       (true, None) => ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL {
-          begin: template_args_begin,
-          end: template_args_end,
-        },
+        range: RangeL(template_args_begin, template_args_end),
         mutability: MutabilityP::Immutable,
       }),
       (false, None) => ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL {
-          begin: template_args_begin,
-          end: template_args_end,
-        },
+        range: RangeL(template_args_begin, template_args_end),
         mutability: MutabilityP::Mutable,
       }),
     };
@@ -116,10 +110,7 @@ where
       .cloned()
       .unwrap_or_else(|| {
         ITemplexPT::Variability(VariabilityPT {
-          range: RangeL {
-            begin: template_args_begin,
-            end: template_args_end,
-          },
+          range: RangeL(template_args_begin, template_args_end),
           variability: VariabilityP::Final,
         })
       });
@@ -128,18 +119,12 @@ where
 
     let result = match maybe_size_templex {
       None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
-        range: RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(begin, iter.get_prev_end_pos()),
         mutability: Box::new(mutability),
         element: Box::new(element_type),
       }),
       Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
-        range: RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(begin, iter.get_prev_end_pos()),
         mutability: Box::new(mutability),
         variability: Box::new(variability),
         size: Box::new(size_templex),
@@ -232,175 +217,136 @@ where
         let range = word.range;
         let str = word.str;
         iter.advance();
-        Some(NameP { range, str })
+        Some(NameP(range, str))
       }
       Some(INodeLEEnum::Symbol(_)) => {
         let begin = iter.get_pos();
         match iter.peek3_cloned() {
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
           ) => {
             iter.advance();
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.triple_equals,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.triple_equals,
+            ))
           }
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
           ) => {
             iter.advance();
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.spaceship,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.spaceship,
+            ))
           }
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
             _,
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.double_equals,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.double_equals,
+            ))
           }
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '!', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '!'))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
             _,
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.not_equals,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.not_equals,
+            ))
           }
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
             _,
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.less_equals,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.less_equals,
+            ))
           }
           (
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
-            Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
+            Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
             _,
           ) => {
             iter.advance();
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.greater_equals,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.greater_equals,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.less,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.less,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.greater,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.greater,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '+', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '+'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.plus,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.plus,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '-', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '-'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.minus,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.minus,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '*', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '*'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.asterisk,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.asterisk,
+            ))
           }
-          (Some(INodeLEEnum::Symbol(SymbolLE { c: '/', .. })), _, _) => {
+          (Some(INodeLEEnum::Symbol(SymbolLE(_, '/'))), _, _) => {
             iter.advance();
-            Some(NameP {
-              range: RangeL {
-                begin,
-                end: iter.get_prev_end_pos(),
-              },
-              str: self.keywords.slash,
-            })
+            Some(NameP(
+              RangeL(begin, iter.get_prev_end_pos()),
+              self.keywords.slash,
+            ))
           }
           _ => None,
         }
       }
       Some(INodeLEEnum::Parend(ParendLE { range, .. })) => {
         // Don't advance, we do that elsewhere
-        Some(NameP {
-          range: RangeL {
-            begin: range.begin,
-            end: range.begin,
-          },
-          str: self.keywords.underscores_call,
-        })
+        Some(NameP(
+          RangeL(range.begin(), range.begin()),
+          self.keywords.underscores_call,
+        ))
       }
       _ => None,
     }
@@ -491,7 +437,7 @@ where
   ) -> ParseResult<Option<ITemplexPT<'a>>> {
     let begin = iter.get_pos();
 
-    if iter.try_skip_word(&self.keywords.func).is_none() {
+    if iter.try_skip_word(self.keywords.func).is_none() {
       return Ok(None);
     }
 
@@ -511,15 +457,9 @@ where
     let return_type = self.parse_templex(iter)?;
 
     let result = ITemplexPT::Func(FuncPT {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+        range: RangeL(begin, iter.get_prev_end_pos()),
       name,
-      params_range: RangeL {
-        begin: args_begin,
-        end: args_end,
-      },
+      params_range: RangeL(args_begin, args_end),
       parameters: args,
       return_type: Box::new(return_type),
     });
@@ -663,34 +603,22 @@ where
     // Parse ownership prefix (^, @, &&, &)
     let maybe_ownership = if iter.try_skip_symbol('^') {
       Some(OwnershipPT {
-        range: RangeL {
-          begin,
-          end: iter.get_pos(),
-        },
+        range: RangeL(begin, iter.get_pos()),
         ownership: OwnershipP::Own,
       })
     } else if iter.try_skip_symbol('@') {
       Some(OwnershipPT {
-        range: RangeL {
-          begin,
-          end: iter.get_pos(),
-        },
+        range: RangeL(begin, iter.get_pos()),
         ownership: OwnershipP::Share,
       })
     } else if iter.try_skip_symbols(&['&', '&']) {
       Some(OwnershipPT {
-        range: RangeL {
-          begin,
-          end: iter.get_pos(),
-        },
+        range: RangeL(begin, iter.get_pos()),
         ownership: OwnershipP::Weak,
       })
     } else if iter.try_skip_symbol('&') {
       Some(OwnershipPT {
-        range: RangeL {
-          begin,
-          end: iter.get_pos(),
-        },
+        range: RangeL(begin, iter.get_pos()),
         ownership: OwnershipP::Borrow,
       })
     } else {
@@ -710,10 +638,7 @@ where
     let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
 
     Ok(Some(ITemplexPT::Interpreted(InterpretedPT {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+        range: RangeL(begin, iter.get_prev_end_pos()),
       maybe_ownership: maybe_ownership.map(Box::new),
       maybe_region: maybe_region.map(Box::new),
       inner: Box::new(inner),
@@ -823,19 +748,13 @@ where
 
     original_iter.skip_to(&tentative_iter);
 
-    let range = RangeL {
-      begin: rune_begin,
-      end: rune_end,
-    };
+    let range = RangeL(rune_begin, rune_end);
     Ok(Some(RegionRunePT {
       range,
-      name: maybe_rune.map(|z| NameP {
-        range: RangeL {
-          begin: rune_begin,
-          end: rune_end,
-        },
-        str: z.str,
-      }),
+      name: maybe_rune.map(|z| NameP(
+        RangeL(rune_begin, rune_end),
+        z.str,
+      )),
     }))
   }
 
@@ -867,92 +786,92 @@ where
     let _begin = iter.get_pos();
 
     // Try keywords first (lines 340-403)
-    if let Some(range) = iter.try_skip_word(&self.keywords.underscore) {
+    if let Some(range) = iter.try_skip_word(self.keywords.underscore) {
       return Ok(ITemplexPT::AnonymousRune(AnonymousRunePT { range }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.truue) {
+    if let Some(range) = iter.try_skip_word(self.keywords.truue) {
       return Ok(ITemplexPT::Bool(BoolPT { range, value: true }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.faalse) {
+    if let Some(range) = iter.try_skip_word(self.keywords.faalse) {
       return Ok(ITemplexPT::Bool(BoolPT {
         range,
         value: false,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.own) {
+    if let Some(range) = iter.try_skip_word(self.keywords.own) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Own,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.borrow) {
+    if let Some(range) = iter.try_skip_word(self.keywords.borrow) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Borrow,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.weak) {
+    if let Some(range) = iter.try_skip_word(self.keywords.weak) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Weak,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.share) {
+    if let Some(range) = iter.try_skip_word(self.keywords.share) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Share,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.inl) {
+    if let Some(range) = iter.try_skip_word(self.keywords.inl) {
       return Ok(ITemplexPT::Location(LocationPT {
         range,
         location: LocationP::Inline,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.heap) {
+    if let Some(range) = iter.try_skip_word(self.keywords.heap) {
       return Ok(ITemplexPT::Location(LocationPT {
         range,
         location: LocationP::Yonder,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.imm) {
+    if let Some(range) = iter.try_skip_word(self.keywords.imm) {
       return Ok(ITemplexPT::Mutability(MutabilityPT {
         range,
         mutability: MutabilityP::Immutable,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.r#mut) {
+    if let Some(range) = iter.try_skip_word(self.keywords.r#mut) {
       return Ok(ITemplexPT::Mutability(MutabilityPT {
         range,
         mutability: MutabilityP::Mutable,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.vary) {
+    if let Some(range) = iter.try_skip_word(self.keywords.vary) {
       return Ok(ITemplexPT::Variability(VariabilityPT {
         range,
         variability: VariabilityP::Varying,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.fiinal) {
+    if let Some(range) = iter.try_skip_word(self.keywords.fiinal) {
       return Ok(ITemplexPT::Variability(VariabilityPT {
         range,
         variability: VariabilityP::Final,
       }));
     }
     // Duplicate checks for weak, own, share (lines 392-403 in Scala)
-    if let Some(range) = iter.try_skip_word(&self.keywords.weak) {
+    if let Some(range) = iter.try_skip_word(self.keywords.weak) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Weak,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.own) {
+    if let Some(range) = iter.try_skip_word(self.keywords.own) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Own,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.share) {
+    if let Some(range) = iter.try_skip_word(self.keywords.share) {
       return Ok(ITemplexPT::Ownership(OwnershipPT {
         range,
         ownership: OwnershipP::Share,
@@ -984,7 +903,7 @@ where
             range: *range,
             str: s.clone(),
           })),
-          _ => Err(ParseError::BadStringInTemplex(range.begin)),
+          _ => Err(ParseError::BadStringInTemplex(range.begin())),
         }
       }
       INodeLEEnum::ParsedInteger(ParsedIntegerLE { range, value, .. }) => {
@@ -992,7 +911,7 @@ where
         Ok(ITemplexPT::Int(IntPT { range, value }))
       }
       INodeLEEnum::ParsedDouble(ParsedDoubleLE { range, .. }) => {
-        let pos = range.begin;
+        let pos = range.begin();
         iter.advance();
         Err(ParseError::RangedInternalError {
           pos,
@@ -1002,7 +921,7 @@ where
       INodeLEEnum::Word(WordLE { range, str }) => {
         iter.advance();
         Ok(ITemplexPT::NameOrRune(NameOrRunePT {
-          name: NameP { range, str },
+          name: NameP(range, str),
         }))
       }
       _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
@@ -1130,10 +1049,7 @@ where
     match self.parse_template_call_args(iter)? {
       Some(args) => {
         return Ok(ITemplexPT::Call(CallPT {
-          range: RangeL {
-            begin,
-            end: iter.get_prev_end_pos(),
-          },
+        range: RangeL(begin, iter.get_prev_end_pos()),
           template: Box::new(atom),
           args,
         }));
@@ -1275,10 +1191,7 @@ where
         let maybe_name = if name_str == self.keywords.underscore {
           None
         } else {
-          Some(NameP {
-            range: name_range,
-            str: name_str,
-          })
+          Some(NameP(name_range, name_str))
         };
 
         original_iter.advance();
@@ -1290,10 +1203,7 @@ where
         };
 
         Ok(Some(IRulexPR::Typed(TypedPR {
-          range: RangeL {
-            begin: name_range.begin,
-            end: type_range.end,
-          },
+          range: RangeL(name_range.begin(), type_range.end()),
           rune: maybe_name,
           tyype,
         })))
@@ -1346,10 +1256,7 @@ where
           contents: args_lr,
         })),
       ) => {
-        let range = RangeL {
-          begin: name_range.begin,
-          end: args_range.end,
-        };
+        let range = RangeL(name_range.begin(), args_range.end());
 
         // Parse the arguments
         let mut args_pr = Vec::new();
@@ -1363,10 +1270,7 @@ where
 
         Ok(Some(IRulexPR::BuiltinCall(BuiltinCallPR {
           range,
-          name: NameP {
-            range: name_range,
-            str: name,
-          },
+          name: NameP(name_range, name),
           args: args_pr,
         })))
       }
@@ -1427,7 +1331,7 @@ where
           range: squared_range,
           contents: components_l,
         })),
-      ) => (word_range.begin, squared_range.end, components_l.clone()),
+      ) => (word_range.begin(), squared_range.end(), components_l.clone()),
       _ => return Ok(None),
     };
 
@@ -1450,7 +1354,7 @@ where
     }
 
     Ok(Some(IRulexPR::Components(ComponentsPR {
-      range: RangeL { begin, end },
+      range: RangeL(begin, end),
       container: rune_type,
       components: components_p,
     })))
@@ -1547,7 +1451,7 @@ where
       match scouting_iter.peek_cloned() {
         None => false,
         // Stop on comma
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ',', .. })) => false,
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ','))) => false,
         // Stop if we hit an open brace, its the function body
         Some(INodeLEEnum::Curlied(_)) => false,
         _ => true,
@@ -1564,10 +1468,7 @@ where
         let left = self.parse_rule_atom(&mut before_iter)?;
         let right = self.parse_rule_atom(iter)?;
         Ok(IRulexPR::Equals(EqualsPR {
-          range: RangeL {
-            begin: left.range().begin,
-            end: right.range().end,
-          },
+          range: RangeL(left.range().begin(), right.range().end()),
           left: Box::new(left),
           right: Box::new(right),
         }))
@@ -1599,7 +1500,7 @@ where
                 case Err(e) => return Err(e)
                 case Ok(x) => x
               }
-            Ok(EqualsPR(RangeL(left.range.begin, right.range.end), left, right))
+            Ok(EqualsPR(RangeL(left.range().begin(), right.range().end()), left, right))
           }
         }
       })

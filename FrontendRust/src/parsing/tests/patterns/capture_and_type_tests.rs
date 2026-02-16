@@ -134,7 +134,7 @@ fn capture_with_self_in_front() {
     &destination.decl,
     INameDeclarationP::ConstructingMemberNameDeclaration
   );
-  assert_eq!(member_name.str.str, "arr");
+  assert_eq!(member_name.as_str(), "arr");
   assert!(destination.mutate.is_none());
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(

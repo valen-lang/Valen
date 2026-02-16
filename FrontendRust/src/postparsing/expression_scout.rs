@@ -8,7 +8,7 @@ use crate::postparsing::expressions::{
   ConstantIntSE, DotSE, ExprMutateSE, FunctionCallSE, IExpressionSE, LetSE, LocalLoadSE,
   LocalMutateSE, OutsideLoadSE, OwnershippedSE, ReturnSE, RuneLookupSE, VoidSE,
 };
-use crate::postparsing::names::{IImpreciseNameS, IRuneS, IVarNameS};
+use crate::postparsing::names::{CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS, IRuneValS, IVarNameS};
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{CouldntFindVarToMutateS, ICompileErrorS, PostParser, StackFrame};
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
@@ -70,7 +70,7 @@ case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResul
 #[derive(Clone, Debug, PartialEq)]
 struct OutsideLookupResultS<'a> {
   range: RangeS<'a>,
-  name: &'a StrI,
+  name: StrI<'a>,
   template_args: Option<Vec<ITemplexPT<'a>>>,
 }
 /*
@@ -141,7 +141,7 @@ class ExpressionScout(
           case Some(RegionRunePT(range, name)) => {
             val regionRuneS = CodeRuneS(vassertSome(name).str) // impl isolates
             if (!parentStackFrame.parentEnv.allDeclaredRunes().contains(regionRuneS)) {
-              throw CompileErrorExceptionS(CouldntFindRuneS(rangeS, vassertSome(name).str.str)) // impl isolates
+              throw CompileErrorExceptionS(CouldntFindRuneS(rangeS, vassertSome(name).str.as_str())) // impl isolates
             }
             regionRuneS
           }
@@ -431,16 +431,18 @@ fn scout_expression(
           // We know we're in a constructor if there's no `this` variable yet. After all,
           // in a constructor, `this` is just an imaginary concept until we actually
           // fill all the variables.
-          if lookup_name.str.str == "self"
+          if lookup_name.str().as_str() == "self"
             && stack_frame
-              .find_variable(&IImpreciseNameS::CodeName(self.interner.intern_code_name(lookup_name.str)))
+              .find_variable(&self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+                name: lookup_name.str(),
+              })))
               .is_none()
           {
             return Ok((
               stack_frame,
               IScoutResult::LocalLookupResult(LocalLookupResultS {
                 range: PostParser::eval_range(&file_coordinate, lookup.name.range()),
-                name: IVarNameS::ConstructingMemberName(dot.member.str),
+                name: IVarNameS::ConstructingMemberName(dot.member.str()),
               }),
               VariableUses::empty(),
               VariableUses::empty(),
@@ -464,7 +466,7 @@ fn scout_expression(
           expr: IExpressionSE::Dot(DotSE {
             range: PostParser::eval_range(&file_coordinate, dot.range),
             left: Box::new(container_expr_s),
-            member: dot.member.str,
+            member: dot.member.str(),
             borrow_container: true,
           }),
         }),
@@ -495,7 +497,9 @@ fn scout_expression(
       match (&lookup.name, &lookup.template_args) {
         (IImpreciseNameP::LookupName(lookup_name), None) => {
           let range = PostParser::eval_range(&file_coordinate, lookup.name.range());
-          let imprecise_name = IImpreciseNameS::CodeName(self.interner.intern_code_name(lookup_name.str));
+          let imprecise_name = self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(
+            CodeNameS { name: lookup_name.str() },
+          ));
           if let Some(local_lookup_result) = find_local(&stack_frame, range.clone(), &imprecise_name) {
             return Ok((
               stack_frame,
@@ -504,7 +508,9 @@ fn scout_expression(
               VariableUses::empty(),
             ));
           } else {
-            let code_rune = IRuneS::CodeRune(self.interner.intern_code_rune(lookup_name.str));
+            let code_rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+              name: lookup_name.str(),
+            }));
             let lookup_result = if stack_frame.parent_env.all_declared_runes().contains(&code_rune) {
               IScoutResult::NormalResult(NormalResultS {
                 expr: IExpressionSE::RuneLookup(RuneLookupSE { range, rune: code_rune }),
@@ -512,7 +518,7 @@ fn scout_expression(
             } else {
               IScoutResult::OutsideLookupResult(OutsideLookupResultS {
                 range,
-                name: lookup_name.str,
+                name: lookup_name.str(),
                 template_args: None,
               })
             };
@@ -528,7 +534,7 @@ fn scout_expression(
           stack_frame,
           IScoutResult::OutsideLookupResult(OutsideLookupResultS {
             range: PostParser::eval_range(&file_coordinate, lookup.name.range()),
-            name: lookup_name.str,
+            name: lookup_name.str(),
             template_args: Some(template_args.args.clone()),
           }),
           VariableUses::empty(),
@@ -633,10 +639,10 @@ fn scout_expression(
         "POSTPARSER_SCOUT_LET_DESTRUCTURE_NOT_YET_IMPLEMENTED"
       );
       let declared_name = match &destination.decl {
-        INameDeclarationP::LocalNameDeclaration(local_name) => IVarNameS::CodeVarName(local_name.str),
+        INameDeclarationP::LocalNameDeclaration(local_name) => IVarNameS::CodeVarName(local_name.str()),
         // WARNING: This is inaccurate and doesn't match scala, and we need to change this to call out to translatePattern ASAP!
         INameDeclarationP::ConstructingMemberNameDeclaration(member_name) => {
-          IVarNameS::ConstructingMemberName(member_name.str)
+          IVarNameS::ConstructingMemberName(member_name.str())
         }
         _ => panic!("POSTPARSER_SCOUT_LET_DECL_NOT_YET_IMPLEMENTED"),
       };
@@ -746,7 +752,7 @@ fn scout_expression(
         IScoutResult::OutsideLookupResult(OutsideLookupResultS { range, name, .. }) => {
           return Err(ICompileErrorS::CouldntFindVarToMutateS(CouldntFindVarToMutateS {
             range,
-            name: name.str.to_string(),
+            name: name.as_str().to_string(),
           }));
         }
         IScoutResult::NormalResult(NormalResultS { expr: destination_expr_s }) => {
@@ -1379,7 +1385,9 @@ pub(crate) fn scout_expression_and_coerce(
           IExpressionSE::OutsideLoad(OutsideLoadSE {
             range,
             rules: Vec::new(),
-            name: IImpreciseNameS::CodeName(self.interner.intern_code_name(name)),
+            name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+              name,
+            })),
             maybe_template_args: None,
             target_ownership: load_as_p,
           }),

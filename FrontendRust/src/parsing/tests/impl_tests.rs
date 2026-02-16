@@ -60,7 +60,7 @@ fn templated_impl() {
 
   let generic_params = impl_.generic_params.as_ref().unwrap();
   let generic_param = expect_1(&generic_params.params);
-  assert_eq!(generic_param.name.str.str, "T");
+  assert_eq!(generic_param.name.as_str(), "T");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert_eq!(generic_param.attributes.len(), 0);

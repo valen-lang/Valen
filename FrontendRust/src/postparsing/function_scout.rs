@@ -33,7 +33,7 @@ use crate::postparsing::expressions::{
   BlockSE, BodySE, ConsecutorSE, FunctionCallSE, IExpressionSE, LocalLoadSE, LocalS, OutsideLoadSE,
 };
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, TemplateTemplataType};
-use crate::postparsing::names::{FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IVarNameS};
+use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS};
 use crate::postparsing::post_parser::{
   FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
 };
@@ -126,7 +126,7 @@ where
     if function.header.template_rules.is_some() {
       panic!("POSTPARSER_SCOUT_FUNCTION_TEMPLATE_RULES_NOT_YET_IMPLEMENTED");
     }
-    let explicit_self_name: Option<&'a StrI> = if let Some(params) = &function.header.params {
+    let explicit_self_name: Option<StrI<'a>> = if let Some(params) = &function.header.params {
       if params.params.is_empty() {
         None
       } else if params.params.len() == 1 {
@@ -154,7 +154,7 @@ where
               panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_DECL_NOT_YET_IMPLEMENTED");
             };
             assert_eq!(
-              local_name.str.str.as_str(),
+              local_name.str().as_str(),
               "self",
               "POSTPARSER_SCOUT_FUNCTION_PARAM_NON_SELF_NOT_YET_IMPLEMENTED"
             );
@@ -166,7 +166,7 @@ where
               pattern.destructure.is_none(),
               "POSTPARSER_SCOUT_FUNCTION_PARAM_DESTRUCTURE_NOT_YET_IMPLEMENTED"
             );
-            Some(local_name.str)
+            Some(local_name.str())
           }
           _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
         }
@@ -192,8 +192,8 @@ where
 
     let body_range = Self::eval_range(file_coordinate, body.range);
     let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-      name: function_name.str,
-      code_location: Self::eval_pos(file_coordinate, function_name.range.begin),
+      name: function_name.str(),
+      code_location: Self::eval_pos(file_coordinate, function_name.range().begin()),
     });
     let function_environment = FunctionEnvironmentS {
       file: file_coordinate,
@@ -203,7 +203,9 @@ where
       num_explicit_params: 0,
       is_interface_internal_method: false,
     };
-    let default_region_rune = IRuneS::CodeRune(self.interner.intern_code_rune(function_name.str));
+    let default_region_rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+      name: function_name.str(),
+    }));
     let stack_frame = StackFrame {
       file: file_coordinate,
       name: function_declaration_name.clone(),
@@ -215,7 +217,7 @@ where
         let mut vars = Vec::<VariableDeclarationS>::new();
         if let Some(explicit_self_name) = &explicit_self_name {
           vars.push(VariableDeclarationS {
-            name: IVarNameS::CodeVarName(explicit_self_name),
+            name: IVarNameS::CodeVarName(*explicit_self_name),
           });
         }
         VariableDeclarations { vars }
@@ -247,7 +249,7 @@ where
         }
         other => other,
       };
-    let constructing_member_names: Vec<&'a StrI> = stack_frame_after_body
+    let constructing_member_names: Vec<StrI<'a>> = stack_frame_after_body
       .locals
       .vars
       .iter()
@@ -266,16 +268,18 @@ where
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
           range: body_range.clone(),
           rules: Vec::new(),
-          name: IImpreciseNameS::CodeName(self.interner.intern_code_name(function_name.str)),
+          name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+            name: function_name.str(),
+          })),
           maybe_template_args: None,
           target_ownership: LoadAsP::LoadAsBorrow,
         })),
         arg_exprs: constructing_member_names
           .iter()
-          .map(|member_name: &&'a StrI| {
+          .map(|member_name: &StrI<'a>| {
             IExpressionSE::LocalLoad(LocalLoadSE {
               range: body_range.clone(),
-              name: IVarNameS::ConstructingMemberName(member_name),
+              name: IVarNameS::ConstructingMemberName(*member_name),
               target_ownership: LoadAsP::Move,
             })
           })
@@ -447,7 +451,7 @@ where
         case Some(RegionRunePT(regionRange, regionName)) => {
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!functionEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.str))
+            throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.as_str().to_string()))
           }
           (evalRange(file, regionRange), rune, None)
         }

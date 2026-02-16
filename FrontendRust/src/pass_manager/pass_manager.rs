@@ -79,13 +79,13 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
     }
 
     // From PassManager.scala lines 168-189: ModulePathInput - find all files in directory
-    let module_name = &package_coord.module.str;
-    let module_root = self.module_roots.get(module_name.as_str())?;
+    let module_name = package_coord.module.as_str();
+    let module_root = self.module_roots.get(module_name)?;
 
     // Build path: module_root/package1/package2/...
     let mut dir_path = module_root.clone();
     for package_step in &package_coord.packages {
-      dir_path.push(package_step.str.as_str());
+      dir_path.push(package_step.as_str());
     }
 
     // Find all .vale files in this directory
@@ -149,7 +149,7 @@ fn resolve_package_contents<'a>(
         let mut directory_path = module_path.clone();
         for package_step in packages {
           directory_path.push('/');
-          directory_path.push_str(package_step.str.as_str());
+          directory_path.push_str(package_step.as_str());
         }
 
         let directory = std::path::Path::new(&directory_path);
@@ -259,7 +259,7 @@ pub enum IFrontendInput<'a> {
     code: String,
   },
   ModulePathInput {
-    module: &'a StrI,
+    module: StrI<'a>,
     module_path: String,
   },
   DirectFilePathInput {
@@ -802,7 +802,7 @@ fn parse_opts_recursive<'a>(
           let package_coordinate = if package_coord_str.contains(".") {
             let package_coord_parts: Vec<&str> = package_coord_str.split('.').collect();
             let module = interner.intern(package_coord_parts[0]);
-            let packages: Vec<&'a StrI> = package_coord_parts[1..]
+            let packages: Vec<StrI<'a>> = package_coord_parts[1..]
               .iter()
               .map(|s| interner.intern(s))
               .collect();

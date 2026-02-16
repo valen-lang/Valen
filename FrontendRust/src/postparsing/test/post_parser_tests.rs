@@ -163,11 +163,11 @@ fn test_struct() {
         rune,
         ..
       }
-    ) if code_name.name.str == "int" && *rune == *only_member.type_rune() => Some(())
+    ) if code_name.name.as_str() == "int" && *rune == *only_member.type_rune() => Some(())
   );
 
   let normal_member = cast!(only_member, IStructMemberS::NormalStructMember);
-  assert_eq!(normal_member.name.str, "x");
+  assert_eq!(normal_member.name.as_str(), "x");
   assert_eq!(normal_member.variability, VariabilityP::Final);
 }
 /*
@@ -197,7 +197,7 @@ fn linear_struct() {
     moo_struct,
     NodeRefS::MacroCallAttribute(macro_call)
       if macro_call.include == IMacroInclusionP::DontCallMacro
-        && macro_call.macro_name.str == "DeriveStructDrop" => Some(())
+        && macro_call.macro_name.as_str() == "DeriveStructDrop" => Some(())
   );
 }
 /*
@@ -243,7 +243,7 @@ fn interface() {
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
-  assert_eq!(function_name.name.str, "blork");
+  assert_eq!(function_name.name.as_str(), "blork");
 }
 /*
   test("Interface") {
@@ -480,8 +480,8 @@ fn test_loading_from_member() {
         }),
       ..
     }) => {
-      assert_eq!(outside_name.name.str, "moo");
-      assert_eq!(member.str, "x");
+      assert_eq!(outside_name.name.as_str(), "moo");
+      assert_eq!(member.as_str(), "x");
     }
     other => panic!("unexpected shape: {:?}", other),
   }
@@ -537,8 +537,8 @@ fn test_loading_from_member_2() {
         }),
       ..
     }) => {
-      assert_eq!(outside_name.name.str, "moo");
-      assert_eq!(member.str, "x");
+      assert_eq!(outside_name.name.as_str(), "moo");
+      assert_eq!(member.as_str(), "x");
     }
     other => panic!("unexpected shape: {:?}", other),
   }
@@ -578,7 +578,7 @@ fn constructing_members_borrowing_another_member() {
   let (first_local, second_local) = expect_2(&block.locals);
   assert!(matches!(
     first_local.var_name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
   ));
   assert_eq!(first_local.self_borrowed, IVariableUseCertainty::Used);
   assert_eq!(first_local.self_moved, IVariableUseCertainty::Used);
@@ -589,7 +589,7 @@ fn constructing_members_borrowing_another_member() {
 
   assert!(matches!(
     second_local.var_name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "y"
   ));
   assert_eq!(second_local.self_borrowed, IVariableUseCertainty::NotUsed);
   assert_eq!(second_local.self_moved, IVariableUseCertainty::Used);
@@ -605,7 +605,7 @@ fn constructing_members_borrowing_another_member() {
   let let_x_capture = let_x.pattern.name.as_ref().unwrap();
   assert!(matches!(
     let_x_capture.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
   ));
   assert_eq!(let_x_capture.mutate, false);
   assert_eq!(cast!(let_x.expr.as_ref(), IExpressionSE::ConstantInt).value, 4);
@@ -614,13 +614,13 @@ fn constructing_members_borrowing_another_member() {
   let let_y_capture = let_y.pattern.name.as_ref().unwrap();
   assert!(matches!(
     let_y_capture.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "y"
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "y"
   ));
   assert_eq!(let_y_capture.mutate, false);
   let local_load_x_borrow = cast!(let_y.expr.as_ref(), IExpressionSE::LocalLoad);
   assert!(matches!(
     local_load_x_borrow.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.str == "x"
+    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
   ));
   assert_eq!(local_load_x_borrow.target_ownership, LoadAsP::LoadAsBorrow);
 
@@ -634,7 +634,7 @@ fn constructing_members_borrowing_another_member() {
       arg_exprs,
       ..
     }) => {
-      assert_eq!(callable_name.name.str, "MyStruct");
+      assert_eq!(callable_name.name.as_str(), "MyStruct");
       match arg_exprs.as_slice() {
         [
           IExpressionSE::LocalLoad(LocalLoadSE {
@@ -648,8 +648,8 @@ fn constructing_members_borrowing_another_member() {
             ..
           }),
         ] => {
-          assert_eq!(x_name.str, "x");
-          assert_eq!(y_name.str, "y");
+          assert_eq!(x_name.as_str(), "x");
+          assert_eq!(y_name.as_str(), "y");
         }
         other => panic!("unexpected constructor args: {:?}", other),
       }
@@ -778,13 +778,13 @@ fn this_isnt_special_if_was_explicit_param() {
   );
   let outside_load = cast!(function_call.callable_expr.as_ref(), IExpressionSE::OutsideLoad);
   let code_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
-  assert_eq!(code_name.name.str, "println");
+  assert_eq!(code_name.name.as_str(), "println");
   let dot = cast!(expect_1(&function_call.arg_exprs), IExpressionSE::Dot);
-  assert_eq!(dot.member.str, "x");
+  assert_eq!(dot.member.as_str(), "x");
   assert!(dot.borrow_container);
   let local_load = cast!(dot.left.as_ref(), IExpressionSE::LocalLoad);
   let code_var_name = cast!(&local_load.name, IVarNameS::CodeVarName);
-  assert_eq!(code_var_name.str, "self");
+  assert_eq!(code_var_name.as_str(), "self");
   assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);
 
   let function_calls = crate::collect_where_sprogram!(

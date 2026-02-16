@@ -53,13 +53,105 @@ pub enum IImpreciseNameS<'a> {
   ArbitraryName(&'a ArbitraryNameS),
 }
 
+impl<'a> IImpreciseNameS<'a> {
+  /// Pointer to the canonical interned payload. Use `std::ptr::eq(a.canonical_ptr(), b.canonical_ptr())` for identity comparison.
+  pub fn canonical_ptr(&self) -> *const () {
+    match self {
+      IImpreciseNameS::CodeName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::LambdaImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::PlaceholderImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::LambdaStructImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ClosureParamImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::PrototypeName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ImplImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ImplSubCitizenImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ImplSuperInterfaceImpreciseName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::SelfName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::RuneName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::ArbitraryName(r) => *r as *const _ as *const (),
+    }
+  }
+
+  /// Returns true iff both refer to the same canonical interned value.
+  #[inline(always)]
+  pub fn ptr_eq(&self, other: &IImpreciseNameS<'a>) -> bool {
+    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+  }
+}
+
+/// Value-struct for LambdaStructImpreciseNameS key. Shallow: references canonical child.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LambdaStructImpreciseNameValS<'a> {
+  pub lambda_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for AnonymousSubstructTemplateImpreciseNameS key. Shallow: references canonical child.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructTemplateImpreciseNameValS<'a> {
+  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for AnonymousSubstructConstructorTemplateImpreciseNameS key. Shallow: references canonical child.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructConstructorTemplateImpreciseNameValS<'a> {
+  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for ImplImpreciseNameS key. Shallow: references canonical children.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplImpreciseNameValS<'a> {
+  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for ImplSubCitizenImpreciseNameS key. Shallow: references canonical child.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplSubCitizenImpreciseNameValS<'a> {
+  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for ImplSuperInterfaceImpreciseNameS key. Shallow: references canonical child.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplSuperInterfaceImpreciseNameValS<'a> {
+  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+}
+
+/// Value-struct for RuneNameS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RuneNameValS<'a> {
+  pub rune: &'a IRuneS<'a>,
+}
+
+/// Value/key form of imprecise name for interner lookups. Storage uses canonical `IImpreciseNameS<'a>`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IImpreciseNameValS<'a> {
+  CodeName(CodeNameS<'a>),
+  LambdaImpreciseName(LambdaImpreciseNameS),
+  PlaceholderImpreciseName(PlaceholderImpreciseNameS),
+  LambdaStructImpreciseName(LambdaStructImpreciseNameValS<'a>),
+  ClosureParamImpreciseName(ClosureParamImpreciseNameS),
+  PrototypeName(PrototypeNameS),
+  AnonymousSubstructTemplateImpreciseName(AnonymousSubstructTemplateImpreciseNameValS<'a>),
+  AnonymousSubstructConstructorTemplateImpreciseName(
+    AnonymousSubstructConstructorTemplateImpreciseNameValS<'a>,
+  ),
+  ImplImpreciseName(ImplImpreciseNameValS<'a>),
+  ImplSubCitizenImpreciseName(ImplSubCitizenImpreciseNameValS<'a>),
+  ImplSuperInterfaceImpreciseName(ImplSuperInterfaceImpreciseNameValS<'a>),
+  SelfName(SelfNameS),
+  RuneName(RuneNameValS<'a>),
+  ArbitraryName(ArbitraryNameS),
+}
+
 /*
 sealed trait IVarNameS extends INameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarNameS<'a> {
-  CodeVarName(&'a StrI),
-  ConstructingMemberName(&'a StrI),
+  CodeVarName(StrI<'a>),
+  ConstructingMemberName(StrI<'a>),
   ClosureParamName(CodeLocationS<'a>),
   MagicParamName(CodeLocationS<'a>),
   IterableName(RangeS<'a>),
@@ -139,7 +231,7 @@ case class PlaceholderImpreciseNameS(index: Int) extends IImpreciseNameS {
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctionNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
   pub code_location: CodeLocationS<'a>,
 }
 
@@ -194,7 +286,7 @@ sealed trait IStructDeclarationNameS extends ICitizenDeclarationNameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TopLevelStructDeclarationNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
   pub range: RangeS<'a>,
 }
 /*
@@ -206,7 +298,7 @@ sealed trait IInterfaceDeclarationNameS extends ICitizenDeclarationNameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TopLevelInterfaceDeclarationNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
   pub range: RangeS<'a>,
 }
 /*
@@ -214,10 +306,10 @@ case class TopLevelInterfaceDeclarationNameS(name: StrI, range: RangeS) extends 
 }
 */
 impl<'a> TopLevelCitizenDeclarationNameS<'a> {
-  pub fn name(&self) -> &&'a StrI {
+  pub fn name(&self) -> StrI<'a> {
     match self {
-      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => &x.name,
-      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => &x.name,
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.name,
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => x.name,
     }
   }
 }
@@ -322,7 +414,7 @@ case class AnonymousSubstructTemplateNameS(interfaceName: TopLevelInterfaceDecla
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameS<'a> {
-  pub interface_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
 }
 /*
 case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -331,7 +423,7 @@ case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImp
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameS<'a> {
-  pub interface_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
 }
 /*
 case class AnonymousSubstructConstructorTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -347,7 +439,7 @@ case class AnonymousSubstructMemberNameS(index: Int) extends IVarNameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeVarNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
 }
 /*
 case class CodeVarNameS(name: StrI) extends IVarNameS {
@@ -357,7 +449,7 @@ case class CodeVarNameS(name: StrI) extends IVarNameS {
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstructingMemberNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
 }
 /*
 case class ConstructingMemberNameS(name: StrI) extends IVarNameS {  }
@@ -392,7 +484,7 @@ case class WhileCondResultNameS(range: RangeS) extends IVarNameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneNameS<'a> {
-  pub rune: Box<IRuneS<'a>>,
+  pub rune: &'a IRuneS<'a>,
 }
 /*
 case class RuneNameS(rune: IRuneS) extends INameS with IImpreciseNameS {  }
@@ -479,6 +571,201 @@ pub enum IRuneS<'a> {
   CaseRuneFromImpl(&'a CaseRuneFromImplS<'a>),
 }
 
+impl<'a> IRuneS<'a> {
+  /// Pointer to the canonical interned payload. Use `std::ptr::eq(a.canonical_ptr(), b.canonical_ptr())` for identity comparison.
+  pub fn canonical_ptr(&self) -> *const () {
+    match self {
+      IRuneS::CodeRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplDropCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplDropVoidRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplicitRune(r) => *r as *const _ as *const (),
+      IRuneS::PureBlockRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::CallRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::CallPureMergeRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplicitRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::ReachablePrototypeRune(r) => *r as *const _ as *const (),
+      IRuneS::FreeOverrideStructTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::FreeOverrideStructRune(r) => *r as *const _ as *const (),
+      IRuneS::FreeOverrideInterfaceRune(r) => *r as *const _ as *const (),
+      IRuneS::LetImplicitRune(r) => *r as *const _ as *const (),
+      IRuneS::MagicParamRune(r) => *r as *const _ as *const (),
+      IRuneS::MemberRune(r) => *r as *const _ as *const (),
+      IRuneS::LocalDefaultRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::DenizenDefaultRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::ExportDefaultRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::ExternDefaultRegionRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplicitCoercionOwnershipRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplicitCoercionKindRune(r) => *r as *const _ as *const (),
+      IRuneS::ImplicitCoercionTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::ArraySizeImplicitRune(r) => *r as *const _ as *const (),
+      IRuneS::ArrayMutabilityImplicitRune(r) => *r as *const _ as *const (),
+      IRuneS::ArrayVariabilityImplicitRune(r) => *r as *const _ as *const (),
+      IRuneS::ReturnRune(r) => *r as *const _ as *const (),
+      IRuneS::StructNameRune(r) => *r as *const _ as *const (),
+      IRuneS::InterfaceNameRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfOwnershipRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfKindRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfKindTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::SelfCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::MacroVoidKindRune(r) => *r as *const _ as *const (),
+      IRuneS::MacroVoidCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::MacroSelfKindRune(r) => *r as *const _ as *const (),
+      IRuneS::MacroSelfKindTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::MacroSelfCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::ArgumentRune(r) => *r as *const _ as *const (),
+      IRuneS::PatternInputRune(r) => *r as *const _ as *const (),
+      IRuneS::ExplicitTemplateArgRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructParentInterfaceTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructParentInterfaceKindRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructParentInterfaceCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructKindRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructVoidKindRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructVoidCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructMemberRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructMethodSelfBorrowCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructMethodSelfOwnCoordRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructDropBoundPrototypeRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructDropBoundParamsListRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructFunctionBoundPrototypeRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructFunctionBoundParamsListRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructFunctionInterfaceTemplateRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructFunctionInterfaceKindRune(r) => *r as *const _ as *const (),
+      IRuneS::AnonymousSubstructMethodInheritedRune(r) => *r as *const _ as *const (),
+      IRuneS::FunctorPrototypeRuneName(r) => *r as *const _ as *const (),
+      IRuneS::FunctorParamRuneName(r) => *r as *const _ as *const (),
+      IRuneS::FunctorReturnRuneName(r) => *r as *const _ as *const (),
+      IRuneS::DispatcherRuneFromImpl(r) => *r as *const _ as *const (),
+      IRuneS::CaseRuneFromImpl(r) => *r as *const _ as *const (),
+    }
+  }
+
+  /// Returns true iff both refer to the same canonical interned value.
+  #[inline(always)]
+  pub fn ptr_eq(&self, other: &IRuneS<'a>) -> bool {
+    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+  }
+}
+
+/// Value-struct for ImplicitRegionRuneS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplicitRegionRuneValS<'a> {
+  pub original_rune: &'a IRuneS<'a>,
+}
+
+/// Value-struct for ImplicitCoercionOwnershipRuneS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplicitCoercionOwnershipRuneValS<'a> {
+  pub range: RangeS<'a>,
+  pub original_coord_rune: &'a IRuneS<'a>,
+}
+
+/// Value-struct for ImplicitCoercionKindRuneS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplicitCoercionKindRuneValS<'a> {
+  pub range: RangeS<'a>,
+  pub original_coord_rune: &'a IRuneS<'a>,
+}
+
+/// Value-struct for ImplicitCoercionTemplateRuneS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplicitCoercionTemplateRuneValS<'a> {
+  pub range: RangeS<'a>,
+  pub original_kind_rune: &'a IRuneS<'a>,
+}
+
+/// Value-struct for AnonymousSubstructMethodInheritedRuneS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructMethodInheritedRuneValS<'a> {
+  pub interface: TopLevelInterfaceDeclarationNameS<'a>,
+  pub method: IFunctionDeclarationNameS<'a>,
+  pub inner: &'a IRuneS<'a>,
+}
+
+/// Value-struct for DispatcherRuneFromImplS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct DispatcherRuneFromImplValS<'a> {
+  pub inner_rune: &'a IRuneS<'a>,
+}
+
+/// Value-struct for CaseRuneFromImplS key. Shallow: references canonical child rune.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CaseRuneFromImplValS<'a> {
+  pub inner_rune: &'a IRuneS<'a>,
+}
+
+/// Value/key form of rune for interner lookups. Used when constructing runes before
+/// canonicalizing via `intern_rune`. Storage fields use canonical `IRuneS<'a>`.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IRuneValS<'a> {
+  CodeRune(CodeRuneS<'a>),
+  ImplDropCoordRune(ImplDropCoordRuneS),
+  ImplDropVoidRune(ImplDropVoidRuneS),
+  ImplicitRune(ImplicitRuneS),
+  PureBlockRegionRune(PureBlockRegionRuneS),
+  CallRegionRune(CallRegionRuneS),
+  CallPureMergeRegionRune(CallPureMergeRegionRuneS),
+  ImplicitRegionRune(ImplicitRegionRuneValS<'a>),
+  ReachablePrototypeRune(ReachablePrototypeRuneS),
+  FreeOverrideStructTemplateRune(FreeOverrideStructTemplateRuneS),
+  FreeOverrideStructRune(FreeOverrideStructRuneS),
+  FreeOverrideInterfaceRune(FreeOverrideInterfaceRuneS),
+  LetImplicitRune(LetImplicitRuneS),
+  MagicParamRune(MagicParamRuneS),
+  MemberRune(MemberRuneS),
+  LocalDefaultRegionRune(LocalDefaultRegionRuneS),
+  DenizenDefaultRegionRune(DenizenDefaultRegionRuneS<'a>),
+  ExportDefaultRegionRune(ExportDefaultRegionRuneS<'a>),
+  ExternDefaultRegionRune(ExternDefaultRegionRuneS<'a>),
+  ImplicitCoercionOwnershipRune(ImplicitCoercionOwnershipRuneValS<'a>),
+  ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS<'a>),
+  ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS<'a>),
+  ArraySizeImplicitRune(ArraySizeImplicitRuneS),
+  ArrayMutabilityImplicitRune(ArrayMutabilityImplicitRuneS),
+  ArrayVariabilityImplicitRune(ArrayVariabilityImplicitRuneS),
+  ReturnRune(ReturnRuneS),
+  StructNameRune(StructNameRuneS<'a>),
+  InterfaceNameRune(InterfaceNameRuneS<'a>),
+  SelfRune(SelfRuneS),
+  SelfOwnershipRune(SelfOwnershipRuneS),
+  SelfKindRune(SelfKindRuneS),
+  SelfKindTemplateRune(SelfKindTemplateRuneS<'a>),
+  SelfCoordRune(SelfCoordRuneS),
+  MacroVoidKindRune(MacroVoidKindRuneS),
+  MacroVoidCoordRune(MacroVoidCoordRuneS),
+  MacroSelfKindRune(MacroSelfKindRuneS),
+  MacroSelfKindTemplateRune(MacroSelfKindTemplateRuneS),
+  MacroSelfCoordRune(MacroSelfCoordRuneS),
+  ArgumentRune(ArgumentRuneS),
+  PatternInputRune(PatternInputRuneS<'a>),
+  ExplicitTemplateArgRune(ExplicitTemplateArgRuneS),
+  AnonymousSubstructParentInterfaceTemplateRune(AnonymousSubstructParentInterfaceTemplateRuneS),
+  AnonymousSubstructParentInterfaceKindRune(AnonymousSubstructParentInterfaceKindRuneS),
+  AnonymousSubstructParentInterfaceCoordRune(AnonymousSubstructParentInterfaceCoordRuneS),
+  AnonymousSubstructTemplateRune(AnonymousSubstructTemplateRuneS),
+  AnonymousSubstructKindRune(AnonymousSubstructKindRuneS),
+  AnonymousSubstructCoordRune(AnonymousSubstructCoordRuneS),
+  AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS),
+  AnonymousSubstructVoidCoordRune(AnonymousSubstructVoidCoordRuneS),
+  AnonymousSubstructMemberRune(AnonymousSubstructMemberRuneS<'a>),
+  AnonymousSubstructMethodSelfBorrowCoordRune(AnonymousSubstructMethodSelfBorrowCoordRuneS<'a>),
+  AnonymousSubstructMethodSelfOwnCoordRune(AnonymousSubstructMethodSelfOwnCoordRuneS<'a>),
+  AnonymousSubstructDropBoundPrototypeRune(AnonymousSubstructDropBoundPrototypeRuneS<'a>),
+  AnonymousSubstructDropBoundParamsListRune(AnonymousSubstructDropBoundParamsListRuneS<'a>),
+  AnonymousSubstructFunctionBoundPrototypeRune(AnonymousSubstructFunctionBoundPrototypeRuneS<'a>),
+  AnonymousSubstructFunctionBoundParamsListRune(AnonymousSubstructFunctionBoundParamsListRuneS<'a>),
+  AnonymousSubstructFunctionInterfaceTemplateRune(AnonymousSubstructFunctionInterfaceTemplateRuneS<'a>),
+  AnonymousSubstructFunctionInterfaceKindRune(AnonymousSubstructFunctionInterfaceKindRuneS<'a>),
+  AnonymousSubstructMethodInheritedRune(AnonymousSubstructMethodInheritedRuneValS<'a>),
+  FunctorPrototypeRuneName(FunctorPrototypeRuneNameS),
+  FunctorParamRuneName(FunctorParamRuneNameS),
+  FunctorReturnRuneName(FunctorReturnRuneNameS),
+  DispatcherRuneFromImpl(DispatcherRuneFromImplValS<'a>),
+  CaseRuneFromImpl(CaseRuneFromImplValS<'a>),
+}
+
 /*
 // We differentiate rune names from regular names, we scout out what's actually
 // a rune so we can inform the typingpass. The typingpass wants to know so it can know
@@ -494,7 +781,7 @@ trait IRuneS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeRuneS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
 }
 
 /*
@@ -550,7 +837,7 @@ case class CallPureMergeRegionRuneS(lid: LocationInDenizen) extends IRuneS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRegionRuneS<'a> {
-  pub original_rune: Box<IRuneS<'a>>,
+  pub original_rune: &'a IRuneS<'a>,
 }
 /*
 case class ImplicitRegionRuneS(originalRune: IRuneS) extends IRuneS
@@ -634,7 +921,7 @@ case class ExternDefaultRegionRuneS(denizenName: INameS) extends IRuneS
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionOwnershipRuneS<'a> {
   pub range: RangeS<'a>,
-  pub original_coord_rune: Box<IRuneS<'a>>,
+  pub original_coord_rune: &'a IRuneS<'a>,
 }
 /*
 case class ImplicitCoercionOwnershipRuneS(range: RangeS, originalCoordRune: IRuneS) extends IRuneS {  }
@@ -642,7 +929,7 @@ case class ImplicitCoercionOwnershipRuneS(range: RangeS, originalCoordRune: IRun
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionKindRuneS<'a> {
   pub range: RangeS<'a>,
-  pub original_coord_rune: Box<IRuneS<'a>>,
+  pub original_coord_rune: &'a IRuneS<'a>,
 }
 /*
 case class ImplicitCoercionKindRuneS(range: RangeS, originalCoordRune: IRuneS) extends IRuneS {  }
@@ -650,7 +937,7 @@ case class ImplicitCoercionKindRuneS(range: RangeS, originalCoordRune: IRuneS) e
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionTemplateRuneS<'a> {
   pub range: RangeS<'a>,
-  pub original_kind_rune: Box<IRuneS<'a>>,
+  pub original_kind_rune: &'a IRuneS<'a>,
 }
 /*
 case class ImplicitCoercionTemplateRuneS(range: RangeS, originalKindRune: IRuneS) extends IRuneS {  }
@@ -750,7 +1037,7 @@ case class MacroSelfCoordRuneS() extends IRuneS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeNameS<'a> {
-  pub name: &'a StrI,
+  pub name: StrI<'a>,
 }
 
 /*
@@ -845,7 +1132,7 @@ pub struct AnonymousSubstructFunctionInterfaceKindRuneS<'a> {
 pub struct AnonymousSubstructMethodInheritedRuneS<'a> {
   pub interface: TopLevelInterfaceDeclarationNameS<'a>,
   pub method: IFunctionDeclarationNameS<'a>,
-  pub inner: Box<IRuneS<'a>>,
+  pub inner: &'a IRuneS<'a>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctorPrototypeRuneNameS {}
@@ -907,14 +1194,14 @@ case class ArbitraryNameS() extends INameS with IImpreciseNameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DispatcherRuneFromImplS<'a> {
-  pub inner_rune: Box<IRuneS<'a>>,
+  pub inner_rune: &'a IRuneS<'a>,
 }
 /*
 case class DispatcherRuneFromImplS(innerRune: IRuneS) extends IRuneS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CaseRuneFromImplS<'a> {
-  pub inner_rune: Box<IRuneS<'a>>,
+  pub inner_rune: &'a IRuneS<'a>,
 }
 /*
 case class CaseRuneFromImplS(innerRune: IRuneS) extends IRuneS
@@ -952,16 +1239,16 @@ case class ImmInterfaceDestructorNameS(packageCoordinate: PackageCoordinate) ext
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameS<'a> {
-  pub sub_citizen_imprecise_name: Box<IImpreciseNameS<'a>>,
-  pub super_interface_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameS<'a> {
-  pub sub_citizen_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameS<'a> {
-  pub super_interface_imprecise_name: Box<IImpreciseNameS<'a>>,
+  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
 }
 /*
 case class ImplImpreciseNameS(subCitizenImpreciseName: IImpreciseNameS, superInterfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS { }

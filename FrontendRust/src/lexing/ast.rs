@@ -7,19 +7,24 @@ import dev.vale.{IInterning, StrI, U, vassert, vcurious, vpass, vwat}
 
 /// Position range in source code
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RangeL {
-  pub begin: i32,
-  pub end: i32,
-}
+pub struct RangeL(pub i32, pub i32);
 
 impl RangeL {
   pub fn new(begin: i32, end: i32) -> Self {
     assert!(begin == end || begin <= end);
-    RangeL { begin, end }
+    RangeL(begin, end)
   }
 
   pub fn zero() -> Self {
-    RangeL { begin: 0, end: 0 }
+    RangeL(0, 0)
+  }
+
+  pub fn begin(&self) -> i32 {
+    self.0
+  }
+
+  pub fn end(&self) -> i32 {
+    self.1
   }
 }
 /*
@@ -328,7 +333,7 @@ impl INodeLE for INodeLEEnum<'_> {
       INodeLEEnum::Squared(x) => x.range,
       INodeLEEnum::Angled(x) => x.range,
       INodeLEEnum::Word(x) => x.range,
-      INodeLEEnum::Symbol(x) => x.range,
+      INodeLEEnum::Symbol(x) => x.range(),
       INodeLEEnum::String(x) => x.range,
       INodeLEEnum::ParsedInteger(x) => x.range,
       INodeLEEnum::ParsedDouble(x) => x.range,
@@ -411,7 +416,7 @@ case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WordLE<'a> {
   pub range: RangeL,
-  pub str: &'a StrI,
+  pub str: StrI<'a>,
 }
 impl INodeLE for WordLE<'_> {
   fn range(&self) -> RangeL {
@@ -426,14 +431,21 @@ case class WordLE(range: RangeL, str: StrI) extends INodeLE {
 
 /// Single character symbol
 #[derive(Clone, Debug, PartialEq)]
-pub struct SymbolLE {
-  pub range: RangeL,
-  pub c: char,
+pub struct SymbolLE(pub RangeL, pub char);
+
+impl SymbolLE {
+  pub fn range(&self) -> RangeL {
+    self.0
+  }
+
+  pub fn c(&self) -> char {
+    self.1
+  }
 }
 
 impl INodeLE for SymbolLE {
   fn range(&self) -> RangeL {
-    self.range
+    self.0
   }
 }
 /*

@@ -99,22 +99,19 @@ where
     // If we just ate a semicolon, but there's nothing after it, then add a void (lines 617-633)
     if iter.has_next() {
       match iter.peek_cloned() {
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ')', .. })) => {
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ')'))) => {
           // vcurious() - unexpected but continue
         }
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ']', .. })) => {
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ']'))) => {
           // vcurious() - unexpected but continue
         }
         _ => {}
       }
     } else {
       if let Some(prev) = iter.peek_prev() {
-        if let INodeLEEnum::Symbol(SymbolLE { range, c: ';' }) = prev {
+        if let INodeLEEnum::Symbol(SymbolLE(range, ';')) = prev {
           statements.push(IExpressionPE::Void(VoidPE {
-            range: RangeL {
-              begin: range.end,
-              end: range.end,
-            },
+            range: RangeL(range.end(), range.end()),
           }));
         }
       }
@@ -123,10 +120,7 @@ where
     // Return result (lines 635-639)
     match statements.len() {
       0 => Ok(IExpressionPE::Void(VoidPE {
-        range: RangeL {
-          begin: iter.get_pos(),
-          end: iter.get_pos(),
-        },
+        range: RangeL(iter.get_pos(), iter.get_pos()),
       })),
       1 => Ok(statements.into_iter().next().unwrap()),
       _ => Ok(IExpressionPE::Consecutor(ConsecutorPE {
@@ -192,7 +186,7 @@ where
   /// Mirrors getPrecedence in ExpressionParser.scala lines 831-844
   /// Get operator precedence
   /// Mirrors getPrecedence in ExpressionParser.scala lines 831-843
-  pub fn get_precedence(&self, str: &StrI) -> i32 {
+  pub fn get_precedence(&self, str: StrI<'_>) -> i32 {
     if str == self.keywords.dot_dot {
       6
     } else if str == self.keywords.asterisk || str == self.keywords.slash {
@@ -259,7 +253,7 @@ where
       if self.at_expression_end(iter, stop_on_curlied) {
         break;
       } else {
-        if sub_expr.range().end == iter.get_pos() {
+        if sub_expr.range().end() == iter.get_pos() {
           return Err(ParseError::NeedWhitespaceAroundBinaryOperator(
             iter.get_pos(),
           ));
@@ -268,13 +262,13 @@ where
         match self.parse_binary_call(iter)? {
           None => break,
           Some(symbol) => {
-            let precedence = self.get_precedence(symbol.str);
+            let precedence = self.get_precedence(symbol.str());
             elements.push(ExpressionElement::BinaryCall(symbol.clone(), precedence));
 
             match iter.peek_cloned() {
               None => return Err(ParseError::BadExpressionEnd(iter.get_pos())),
               Some(node) => {
-                if symbol.range.end == node.range().begin {
+                if symbol.range().end() == node.range().begin() {
                   return Err(ParseError::NeedWhitespaceAroundBinaryOperator(
                     iter.get_pos(),
                   ));
@@ -320,7 +314,7 @@ where
               case Ok(Some(symbol)) => {
                 vassert(MIN_PRECEDENCE == 1)
                 vassert(MAX_PRECEDENCE == 6)
-                val precedence = getPrecedence(symbol.str)
+                val precedence = getPrecedence(symbol.str())
                 elements += parsing.BinaryCallElement(symbol, precedence)
 
 
@@ -351,63 +345,54 @@ where
     let begin = iter.get_pos();
     match iter.peek3_cloned() {
       (
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
       ) => {
         iter.advance();
         iter.advance();
         iter.advance();
         Some(IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP {
-            range: RangeL {
-              begin,
-              end: iter.get_prev_end_pos(),
-            },
-            str: self.keywords.spaceship,
-          }),
+          name: IImpreciseNameP::LookupName(NameP(
+            RangeL(begin, iter.get_prev_end_pos()),
+            self.keywords.spaceship,
+          )),
           template_args: None,
         }))
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: range1,
-          c: c1 @ ('=' | '>' | '<' | '!'),
-        })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: range2,
-          c: '=',
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(
+          range1,
+          c1 @ ('=' | '>' | '<' | '!'),
+        ))),
+        Some(INodeLEEnum::Symbol(SymbolLE(range2, '='))),
         _,
       ) => {
         iter.advance();
         iter.advance();
         let combined = format!("{}{}", c1, '=');
         Some(IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP {
-            range: RangeL {
-              begin: range1.begin,
-              end: range2.end,
-            },
-            str: self.interner.intern(&combined),
-          }),
+          name: IImpreciseNameP::LookupName(NameP(
+            RangeL(range1.begin(), range2.end()),
+            self.interner.intern(&combined),
+          )),
           template_args: None,
         }))
       }
-      (Some(INodeLEEnum::Symbol(SymbolLE { range, c })), _, _) => {
+      (Some(INodeLEEnum::Symbol(SymbolLE(range, c))), _, _) => {
         iter.advance();
         Some(IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP {
+          name: IImpreciseNameP::LookupName(NameP(
             range,
-            str: self.interner.intern(&c.to_string()),
-          }),
+            self.interner.intern(&c.to_string()),
+          )),
           template_args: None,
         }))
       }
       (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
         iter.advance();
         Some(IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP { range, str }),
+          name: IImpreciseNameP::LookupName(NameP(range, str)),
           template_args: None,
         }))
       }
@@ -433,14 +418,14 @@ where
           iter.advance()
           Some(
             LookupPE(
-              LookupNameP(NameP(RangeL(range1.begin, range2.end), interner.intern(StrI(c1.toString + c2)))),
+              LookupNameP(NameP(RangeL(range1.begin, range2.end), interner.intern(c1.toString + c2)))),
               None))
         }
         case (Some(SymbolLE(range, c)), _, _) => {
           iter.advance()
           Some(
             LookupPE(
-              LookupNameP(NameP(range, interner.intern(StrI(c.toString)))),
+              LookupNameP(NameP(range, interner.intern(c.toString)))),
               None))
         }
         case (Some(WordLE(range, str)), _, _) => {
@@ -462,13 +447,13 @@ where
   /// Parse a boolean literal
   /// Mirrors parseBoolean in ExpressionParser.scala lines 940-954
   pub fn parse_boolean(&self, iter: &mut ScrambleIterator<'a>) -> Option<IExpressionPE<'a>> {
-    if let Some(range) = iter.try_skip_word(&self.keywords.truue) {
+    if let Some(range) = iter.try_skip_word(self.keywords.truue) {
       return Some(IExpressionPE::ConstantBool(ConstantBoolPE {
         range,
         value: true,
       }));
     }
-    if let Some(range) = iter.try_skip_word(&self.keywords.faalse) {
+    if let Some(range) = iter.try_skip_word(self.keywords.faalse) {
       return Some(IExpressionPE::ConstantBool(ConstantBoolPE {
         range,
         value: false,
@@ -504,18 +489,18 @@ where
     let begin = iter.get_pos();
 
     // Check for keywords that can't be used in expressions (lines 960-969)
-    if iter.try_skip_word(&self.keywords.r#break).is_some() {
+    if iter.try_skip_word(self.keywords.r#break).is_some() {
       return Err(ParseError::CantUseBreakInExpression(iter.get_pos()));
     }
-    if iter.try_skip_word(&self.keywords.retuurn).is_some() {
+    if iter.try_skip_word(self.keywords.retuurn).is_some() {
       return Err(ParseError::CantUseReturnInExpression(iter.get_pos()));
     }
-    if iter.try_skip_word(&self.keywords.whiile).is_some() {
+    if iter.try_skip_word(self.keywords.whiile).is_some() {
       return Err(ParseError::CantUseWhileInExpression(iter.get_pos()));
     }
 
     // Check for underscore (magic param lookup) (lines 970-973)
-    if let Some(range) = iter.try_skip_word(&self.keywords.underscore) {
+    if let Some(range) = iter.try_skip_word(self.keywords.underscore) {
       return Ok(IExpressionPE::MagicParamLookup(MagicParamLookupPE {
         range,
       }));
@@ -724,11 +709,8 @@ where
     // Check for & (borrow augmentation)
     if iter.try_skip_symbol('&') {
       let range_pe = AugmentPE {
-        range: RangeL {
-          begin: spree_begin,
-          end: iter.get_prev_end_pos(),
-        },
-        target_ownership: OwnershipP::Borrow,
+      range: RangeL(spree_begin, iter.get_prev_end_pos()),
+      target_ownership: OwnershipP::Borrow,
         inner: Box::new(expr_so_far),
       };
       return Ok(Some(IExpressionPE::Augment(range_pe)));
@@ -756,14 +738,8 @@ where
     match self.parse_brace_pack(iter, templex_parser, pattern_parser)? {
       Some(arg_exprs) => {
         return Ok(Some(IExpressionPE::BraceCall(BraceCallPE::<'a> {
-          range: RangeL {
-            begin: spree_begin,
-            end: iter.get_prev_end_pos(),
-          },
-          operator_range: RangeL {
-            begin: operator_begin,
-            end: iter.get_prev_end_pos(),
-          },
+          range: RangeL(spree_begin, iter.get_prev_end_pos()),
+          operator_range: RangeL(operator_begin, iter.get_prev_end_pos()),
           subject_expr: Box::new(expr_so_far),
           arg_exprs,
           callable_readwrite: false,
@@ -776,10 +752,7 @@ where
     if iter.try_skip_symbols(&['.', '.']) {
       let operand = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
       let range_pe = RangePE {
-        range: RangeL {
-          begin: spree_begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(spree_begin, iter.get_prev_end_pos()),
         from_expr: Box::new(expr_so_far),
         to_expr: Box::new(operand),
       };
@@ -810,73 +783,64 @@ where
           if bits.is_some() {
             return Err(ParseError::BadDot(iter.get_pos()));
           }
-          NameP {
-            range: RangeL {
-              begin: name_begin,
-              end: iter.get_prev_end_pos(),
-            },
-            str: self.interner.intern(&int.to_string()),
-          }
+          NameP(
+            RangeL(name_begin, iter.get_prev_end_pos()),
+            self.interner.intern(&int.to_string()),
+          )
         }
         Some(INodeLEEnum::Symbol(_)) => {
           let name = match iter.peek3_cloned() {
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
             ) => self.keywords.spaceship,
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
             ) => self.keywords.triple_equals,
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
               _,
             ) => self.keywords.greater_equals,
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
               _,
             ) => self.keywords.less_equals,
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '!', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '!'))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
               _,
             ) => self.keywords.not_equals,
             (
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-              Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+              Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
               _,
             ) => self.keywords.double_equals,
-            (Some(INodeLEEnum::Symbol(SymbolLE { c: '+', .. })), _, _) => self.keywords.plus,
-            (Some(INodeLEEnum::Symbol(SymbolLE { c: '-', .. })), _, _) => self.keywords.minus,
-            (Some(INodeLEEnum::Symbol(SymbolLE { c: '*', .. })), _, _) => self.keywords.asterisk,
-            (Some(INodeLEEnum::Symbol(SymbolLE { c: '/', .. })), _, _) => self.keywords.slash,
+            (Some(INodeLEEnum::Symbol(SymbolLE(_, '+'))), _, _) => self.keywords.plus,
+            (Some(INodeLEEnum::Symbol(SymbolLE(_, '-'))), _, _) => self.keywords.minus,
+            (Some(INodeLEEnum::Symbol(SymbolLE(_, '*'))), _, _) => self.keywords.asterisk,
+            (Some(INodeLEEnum::Symbol(SymbolLE(_, '/'))), _, _) => self.keywords.slash,
             _ => return Err(ParseError::BadDot(iter.get_pos())),
           };
           // Advance by the length of the keyword
-          for _ in 0..name.str.len() {
+          for _ in 0..name.as_str().len() {
             iter.advance();
           }
-          NameP {
-            range: RangeL {
-              begin: name_begin,
-              end: iter.get_prev_end_pos(),
-            },
-            str: name,
-          }
+          NameP(
+            RangeL(name_begin, iter.get_prev_end_pos()),
+            name,
+          )
         }
         Some(INodeLEEnum::Word(WordLE { str, .. })) => {
           iter.advance();
-          NameP {
-            range: RangeL {
-              begin: name_begin,
-              end: iter.get_prev_end_pos(),
-            },
+          NameP(
+            RangeL(name_begin, iter.get_prev_end_pos()),
             str,
-          }
+          )
         }
         _ => return Err(ParseError::BadDot(iter.get_pos())),
       };
@@ -884,10 +848,7 @@ where
       let maybe_template_args = match self.parse_chevron_pack(iter, templex_parser)? {
         None => None,
         Some(template_args) => Some(TemplateArgsP {
-          range: RangeL {
-            begin: operator_begin,
-            end: iter.get_prev_end_pos(),
-          },
+          range: RangeL(operator_begin, iter.get_prev_end_pos()),
           args: template_args,
         }),
       };
@@ -895,15 +856,9 @@ where
       match self.parse_pack(iter, templex_parser, pattern_parser)? {
         Some((range, arg_exprs)) => {
           return Ok(Some(IExpressionPE::MethodCall(MethodCallPE {
-            range: RangeL {
-              begin: operator_begin,
-              end: range.end,
-            },
+            range: RangeL(operator_begin, range.end()),
             subject_expr: Box::new(expr_so_far),
-            operator_range: RangeL {
-              begin: operator_begin,
-              end: operator_end,
-            },
+            operator_range: RangeL(operator_begin, operator_end),
             method_lookup: Box::new(LookupPE {
               name: IImpreciseNameP::LookupName(name),
               template_args: maybe_template_args,
@@ -917,15 +872,9 @@ where
           }
 
           return Ok(Some(IExpressionPE::Dot(DotPE {
-            range: RangeL {
-              begin: spree_begin,
-              end: iter.get_prev_end_pos(),
-            },
+            range: RangeL(spree_begin, iter.get_prev_end_pos()),
             left: Box::new(expr_so_far),
-            operator_range: RangeL {
-              begin: operator_begin,
-              end: operator_end,
-            },
+            operator_range: RangeL(operator_begin, operator_end),
             member: name,
           })));
         }
@@ -1000,7 +949,7 @@ where
               if (bits.nonEmpty) {
                 return Err(BadDot(iter.getPos()))
               }
-              NameP(RangeL(nameBegin, iter.getPrevEndPos()), interner.intern(StrI(int.toString)))
+              NameP(RangeL(nameBegin, iter.getPrevEndPos()), interner.intern(int.toString)))
             }
             case Some(SymbolLE(_, _)) => {
               val name =
@@ -1041,7 +990,7 @@ where
             return Ok(
               Some(
                 MethodCallPE(
-                  RangeL(operatorBegin, range.end),
+                  RangeL(operatorBegin, range.end()),
                   exprSoFar,
                   RangeL(operatorBegin, operatorEnd),
                   LookupPE(LookupNameP(name), maybeTemplateArgs),
@@ -1086,14 +1035,8 @@ where
       Some((range, args)) => {
         original_iter.skip_to(&tentative_iter);
         Ok(Some(IExpressionPE::FunctionCall(FunctionCallPE {
-          range: RangeL {
-            begin: spree_begin,
-            end: range.end,
-          },
-          operator_range: RangeL {
-            begin: operator_begin,
-            end: range.end,
-          },
+          range: RangeL(spree_begin, range.end()),
+          operator_range: RangeL(operator_begin, range.end()),
           callable_expr: Box::new(expr_so_far),
           arg_exprs: args,
         })))
@@ -1115,8 +1058,8 @@ where
           Ok(
             Some(
               FunctionCallPE(
-                RangeL(spreeBegin, range.end),
-                RangeL(operatorBegin, range.end),
+                RangeL(spreeBegin, range.end()),
+                RangeL(operatorBegin, range.end()),
                 exprSoFar,
                 args)))
         }
@@ -1250,10 +1193,7 @@ where
     let template_args = match self.parse_chevron_pack(iter, templex_parser)? {
       None => return Ok(None),
       Some(template_args) => TemplateArgsP {
-        range: RangeL {
-          begin: operator_begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(operator_begin, iter.get_prev_end_pos()),
         args: template_args,
       },
     };
@@ -1583,7 +1523,7 @@ where
 
     // Handle single quote prefix (Scala line 1426-1432)
     match iter.peek2_cloned() {
-      (Some(INodeLEEnum::Symbol(SymbolLE { c: '\'', .. })), Some(INodeLEEnum::Word(_))) => {
+      (Some(INodeLEEnum::Symbol(SymbolLE(_, '\''))), Some(INodeLEEnum::Word(_))) => {
         iter.advance();
         iter.advance();
         return self.parse_expression_data_element(
@@ -1597,14 +1537,14 @@ where
     }
 
     // Handle 'not' keyword (Scala line 1438-1445)
-    if iter.try_skip_word(&self.keywords.not).is_some() {
+    if iter.try_skip_word(self.keywords.not).is_some() {
       let inner_pe = self.parse_expression_data_element(
         iter,
         stop_on_curlied,
         templex_parser,
         pattern_parser,
       )?;
-      let end = inner_pe.range().end;
+      let end = inner_pe.range().end();
       return Ok(IExpressionPE::Not(NotPE {
         range: RangeL::new(begin, end),
         inner: Box::new(inner_pe),
@@ -1645,12 +1585,9 @@ where
           range: region_range,
           str: region,
         })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '\'', .. })),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '\''))),
       ) => {
-        let region_name = NameP {
-          range: region_range,
-          str: region,
-        };
+        let region_name = NameP(region_range, region);
         iter.advance();
         iter.advance();
         let inner_pe = self.parse_atom_and_tight_suffixes(
@@ -1670,14 +1607,14 @@ where
 
     // Handle ownership prefixes ^ & && inl (Scala line 1495-1531)
     let maybe_target_ownership = match iter.peek_cloned() {
-      Some(INodeLEEnum::Symbol(SymbolLE { c: '^', .. })) => {
+      Some(INodeLEEnum::Symbol(SymbolLE(_, '^'))) => {
         iter.advance();
         Some(OwnershipP::Own)
       }
-      Some(INodeLEEnum::Symbol(SymbolLE { c: '&', .. })) => {
+      Some(INodeLEEnum::Symbol(SymbolLE(_, '&'))) => {
         iter.advance();
         match iter.peek_cloned() {
-          Some(INodeLEEnum::Symbol(SymbolLE { c: '&', .. })) => {
+          Some(INodeLEEnum::Symbol(SymbolLE(_, '&'))) => {
             iter.advance();
             Some(OwnershipP::Weak)
           }
@@ -1736,7 +1673,7 @@ where
             case Err(e) => return Err(e)
             case Ok(x) => x
           }
-        return Ok(NotPE(RangeL(begin, innerPE.range.end), innerPE))
+        return Ok(NotPE(RangeL(begin, innerPE.range().end()), innerPE))
       }
 
       parseLoneBlock(iter) match {
@@ -1852,11 +1789,11 @@ where
     // Mirrors ExpressionParser.scala lines 647-650
     // The pure/unsafe is a hack to get syntax highlighting work for
     // the future pure block feature.
-    tentative_iter.try_skip_word(&self.keywords.r#unsafe);
-    let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+    tentative_iter.try_skip_word(self.keywords.r#unsafe);
+    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
     // Mirrors ExpressionParser.scala lines 652-654
-    if tentative_iter.try_skip_word(&self.keywords.block).is_none() {
+    if tentative_iter.try_skip_word(self.keywords.block).is_none() {
       return Ok(None);
     }
 
@@ -1884,10 +1821,7 @@ where
 
     // Mirrors ExpressionParser.scala line 675
     Ok(Some(IExpressionPE::Block(BlockPE {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(begin, iter.get_prev_end_pos()),
       maybe_pure: pure,
       maybe_default_region: None,
       inner: Box::new(inner),
@@ -1944,7 +1878,7 @@ where
     let begin = iter.get_pos();
 
     // Mirrors ExpressionParser.scala lines 683-685
-    if iter.try_skip_word(&self.keywords.destruct).is_none() {
+    if iter.try_skip_word(self.keywords.destruct).is_none() {
       return Ok(None);
     }
 
@@ -1957,10 +1891,7 @@ where
 
     // Mirrors ExpressionParser.scala line 693
     Ok(Some(IExpressionPE::Destruct(DestructPE {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(begin, iter.get_prev_end_pos()),
       inner: Box::new(inner_expr),
     })))
   }
@@ -1988,20 +1919,17 @@ where
   /// Mirrors parseUnlet in ExpressionParser.scala  
   fn parse_unlet(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<Option<IExpressionPE<'a>>> {
     // Check for 'unlet' keyword
-    if let Some(range) = iter.try_skip_word(&self.keywords.unlet) {
+    if let Some(range) = iter.try_skip_word(self.keywords.unlet) {
       // Parse the name to unlet
       match iter.peek_cloned() {
         Some(INodeLEEnum::Word(WordLE {
           range: name_range,
           str: name_str,
         })) => {
-          let name = IImpreciseNameP::LookupName(NameP {
-            range: name_range,
-            str: name_str,
-          });
+          let name = IImpreciseNameP::LookupName(NameP(name_range, name_str));
           iter.advance();
           Ok(Some(IExpressionPE::Unlet(UnletPE {
-            range: RangeL::new(range.begin, iter.get_prev_end_pos()),
+            range: RangeL::new(range.begin(), iter.get_prev_end_pos()),
             name,
           })))
         }
@@ -2160,10 +2088,7 @@ where
       // Just a curlied block with no params (e.g., { ... })
       (Some(INodeLEEnum::Curlied(CurliedLE { range, .. })), _, _) => {
         let retuurn = FunctionReturnP {
-          range: RangeL {
-            begin: iter.get_pos(),
-            end: iter.get_pos(),
-          },
+          range: RangeL(iter.get_pos(), iter.get_pos()),
           ret_type: None,
         };
         // Don't iter.advance() because we still need to parse this later
@@ -2183,17 +2108,11 @@ where
           range: param_range,
           str: param_name,
         })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: eq_range,
-          c: '=',
-        })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: gt_range,
-          c: '>',
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(eq_range, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(gt_range, '>'))),
       ) => {
-        if eq_range.end != gt_range.begin {
-          return Err(ParseError::BadLambdaBegin(eq_range.begin));
+        if eq_range.end() != gt_range.begin() {
+          return Err(ParseError::BadLambdaBegin(eq_range.begin()));
         }
         iter.advance();
         iter.advance();
@@ -2207,10 +2126,7 @@ where
           pattern: Some(PatternPP {
             range: param_range,
             destination: Some(DestinationLocalP {
-              decl: INameDeclarationP::LocalNameDeclaration(NameP {
-                range: param_range,
-                str: param_name,
-              }),
+              decl: INameDeclarationP::LocalNameDeclaration(NameP(param_range, param_name)),
               mutate: None,
             }),
             templex: None,
@@ -2222,16 +2138,10 @@ where
           params: vec![param],
         };
         let retuurn = FunctionReturnP {
-          range: RangeL {
-            begin: iter.get_pos(),
-            end: iter.get_pos(),
-          },
+          range: RangeL(iter.get_pos(), iter.get_pos()),
           ret_type: None,
         };
-        let range = RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        };
+        let range = RangeL(begin, iter.get_prev_end_pos());
         FunctionHeaderP {
           range,
           name: None,
@@ -2248,18 +2158,12 @@ where
           range: params_range,
           contents: params_contents,
         })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: eq_range,
-          c: '=',
-        })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: gt_range,
-          c: '>',
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(eq_range, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(gt_range, '>'))),
       ) => {
         let params_contents = params_contents.clone();
-        if eq_range.end != gt_range.begin {
-          return Err(ParseError::BadLambdaBegin(eq_range.begin));
+        if eq_range.end() != gt_range.begin() {
+          return Err(ParseError::BadLambdaBegin(eq_range.begin()));
         }
         iter.advance();
         iter.advance();
@@ -2285,16 +2189,10 @@ where
           params: patterns,
         };
         let retuurn = FunctionReturnP {
-          range: RangeL {
-            begin: iter.get_pos(),
-            end: iter.get_pos(),
-          },
+          range: RangeL(iter.get_pos(), iter.get_pos()),
           ret_type: None,
         };
-        let range = RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        };
+        let range = RangeL(begin, iter.get_prev_end_pos());
         FunctionHeaderP {
           range,
           name: None,
@@ -2341,10 +2239,7 @@ where
     let lam = LambdaPE {
       captures: None,
       function: FunctionP {
-        range: RangeL {
-          begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(begin, iter.get_prev_end_pos()),
         header: header_p,
         body: Some(Box::new(body_p)),
       },
@@ -2461,15 +2356,12 @@ where
 
     let mutability = if tentative_iter.try_skip_symbol('#') {
       ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL {
-          begin,
-          end: tentative_iter.get_prev_end_pos(),
-        },
+        range: RangeL(begin, tentative_iter.get_prev_end_pos()),
         mutability: MutabilityP::Immutable,
       })
     } else {
       ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL { begin, end: begin },
+        range: RangeL(begin, begin),
         mutability: MutabilityP::Mutable,
       })
     };
@@ -2484,7 +2376,7 @@ where
     let is_array = match tentative_iter.peek_cloned() {
       // If there's nothing after the square brackets, it's not an array.
       None => false,
-      Some(INodeLEEnum::Symbol(SymbolLE { c: '.', .. })) => false,
+      Some(INodeLEEnum::Symbol(SymbolLE(_, '.'))) => false,
       _ => true,
     };
 
@@ -2527,10 +2419,7 @@ where
     };
 
     let array_pe = ConstructArrayPE {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(begin, iter.get_prev_end_pos()),
       type_pt: tyype,
       mutability_pt: Some(mutability),
       variability_pt: None,
@@ -2699,12 +2588,9 @@ where
       next_index = new_next_index;
 
       // Construct the appropriate expression (lines 1854-1875)
-      left_operand = if binary_call.str == self.keywords.and {
+      left_operand = if binary_call.str() == self.keywords.and {
         IExpressionPE::And(AndPE {
-          range: RangeL {
-            begin: left_operand.range().begin,
-            end: right_operand.range().end,
-          },
+          range: RangeL(left_operand.range().begin(), right_operand.range().end()),
           left: Box::new(left_operand),
           right: Box::new(BlockPE {
             range: right_operand.range(),
@@ -2713,12 +2599,9 @@ where
             inner: Box::new(right_operand),
           }),
         })
-      } else if binary_call.str == self.keywords.or {
+      } else if binary_call.str() == self.keywords.or {
         IExpressionPE::Or(OrPE {
-          range: RangeL {
-            begin: left_operand.range().begin,
-            end: right_operand.range().end,
-          },
+          range: RangeL(left_operand.range().begin(), right_operand.range().end()),
           left: Box::new(left_operand),
           right: Box::new(BlockPE {
             range: right_operand.range(),
@@ -2729,10 +2612,7 @@ where
         })
       } else {
         IExpressionPE::BinaryCall(BinaryCallPE {
-          range: RangeL {
-            begin: left_operand.range().begin,
-            end: right_operand.range().end,
-          },
+          range: RangeL(left_operand.range().begin(), right_operand.range().end()),
           function_name: binary_call,
           left_expr: Box::new(left_operand),
           right_expr: Box::new(right_operand),
@@ -2777,22 +2657,22 @@ where
         nextIndex = newNextIndex
 
         leftOperand =
-          binaryCall.symbol.str match {
+          binaryCall.symbol.str() match {
             case s if s == keywords.and => {
               AndPE(
-                RangeL(leftOperand.range.begin, leftOperand.range.end),
+                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
                 leftOperand,
                 BlockPE(rightOperand.range, None, None, rightOperand))
             }
             case s if s == keywords.or => {
               OrPE(
-                RangeL(leftOperand.range.begin, leftOperand.range.end),
+                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
                 leftOperand,
                 BlockPE(rightOperand.range, None, None, rightOperand))
             }
             case _ => {
               BinaryCallPE(
-                RangeL(leftOperand.range.begin, leftOperand.range.end),
+                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
                 binaryCall.symbol,
                 leftOperand,
                 rightOperand)
@@ -2810,13 +2690,10 @@ where
     let name = match iter.peek3_cloned() {
       (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
         iter.advance();
-        NameP { range, str }
+        NameP(range, str)
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range,
-          c: s @ ('+' | '-' | '*' | '/'),
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(range, s @ ('+' | '-' | '*' | '/')))),
         _,
         _,
       ) => {
@@ -2828,51 +2705,42 @@ where
           '/' => self.keywords.slash,
           _ => unreachable!(),
         };
-        NameP { range, str: str_i }
+        NameP(range, str_i)
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
       ) => {
         let begin = iter.get_pos();
         iter.advance();
         iter.advance();
         iter.advance();
         let end = iter.get_prev_end_pos();
-        NameP {
-          range: RangeL { begin, end },
-          str: self.keywords.triple_equals,
-        }
+        NameP(RangeL(begin, end), self.keywords.triple_equals)
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '<', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '=', .. })),
-        Some(INodeLEEnum::Symbol(SymbolLE { c: '>', .. })),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '<'))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '='))),
+        Some(INodeLEEnum::Symbol(SymbolLE(_, '>'))),
       ) => {
         let begin = iter.get_pos();
         iter.advance();
         iter.advance();
         iter.advance();
         let end = iter.get_prev_end_pos();
-        NameP {
-          range: RangeL { begin, end },
-          str: self.keywords.spaceship,
-        }
+        NameP(RangeL(begin, end), self.keywords.spaceship)
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: range1,
-          c: s1 @ ('>' | '<' | '=' | '!'),
-        })),
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range: range2,
-          c: '=',
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(
+          range1,
+          s1 @ ('>' | '<' | '=' | '!'),
+        ))),
+        Some(INodeLEEnum::Symbol(SymbolLE(range2, '='))),
         _,
       ) => {
-        let begin = range1.begin;
-        let end = range2.end;
+        let begin = range1.begin();
+        let end = range2.end();
         iter.advance();
         iter.advance();
         let str_i = match s1 {
@@ -2882,16 +2750,10 @@ where
           '>' => self.keywords.greater_equals,
           _ => unreachable!(),
         };
-        NameP {
-          range: RangeL { begin, end },
-          str: str_i,
-        }
+        NameP(RangeL(begin, end), str_i)
       }
       (
-        Some(INodeLEEnum::Symbol(SymbolLE {
-          range,
-          c: s @ ('>' | '<'),
-        })),
+        Some(INodeLEEnum::Symbol(SymbolLE(range, s @ ('>' | '<')))),
         _,
         _,
       ) => {
@@ -2901,7 +2763,7 @@ where
           '<' => self.keywords.less,
           _ => unreachable!(),
         };
-        NameP { range, str: str_i }
+        NameP(range, str_i)
       }
       _ => return Ok(None),
     };
@@ -2919,7 +2781,7 @@ where
           }
           case (Some(SymbolLE(range, s @ ('+' | '-' | '*' | '/'))), _, _) => {
             iter.advance()
-            NameP(range, interner.intern(StrI(s.toString)))
+            NameP(range, interner.intern(s.toString)))
           }
           case (Some(SymbolLE(_, '=')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '='))) => {
             val begin = iter.getPos()
@@ -2940,11 +2802,11 @@ where
           case (Some(SymbolLE(range1, s1 @ ('>' | '<' | '=' | '!'))), Some(SymbolLE(range2, '=')), _) => {
             iter.advance()
             iter.advance()
-            NameP(RangeL(range1.begin, range2.end), interner.intern(StrI(s1.toString + '=')))
+            NameP(RangeL(range1.begin, range2.end), interner.intern(s1.toString + '=')))
           }
           case (Some(SymbolLE(range, s @ ('>' | '<'))), _, _) => {
             iter.advance()
-            NameP(range, interner.intern(StrI(s.toString)))
+            NameP(range, interner.intern(s.toString)))
           }
           case _ => return Ok(None)
         }
@@ -2958,7 +2820,7 @@ where
   pub fn at_expression_end(&self, iter: &ScrambleIterator, stop_on_curlied: bool) -> bool {
     match iter.peek_cloned() {
       None => true,
-      Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => true,
+      Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => true,
       Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => true,
       _ => false,
     }
@@ -3025,7 +2887,7 @@ where
     match iter.peek_cloned() {
       None => {}                                             // okay, hit the end
       Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => {} // okay, hit the end
-      Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => {
+      Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => {
         iter.advance(); // consume it to end the statement
       }
       _ => return Err(ParseError::BadExpressionEnd(iter.get_pos())),
@@ -3134,10 +2996,10 @@ where
 
     let mut tentative_iter = iter.clone();
 
-    let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
     if tentative_iter
-      .try_skip_word(&self.keywords.whiile)
+      .try_skip_word(self.keywords.whiile)
       .is_none()
     {
       return Ok(None);
@@ -3160,10 +3022,7 @@ where
     };
 
     Ok(Some(IExpressionPE::While(WhilePE {
-      range: RangeL {
-        begin: while_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(while_begin, iter.get_prev_end_pos()),
       condition: Box::new(condition),
       body: Box::new(BlockPE {
         range: body.range(),
@@ -3226,9 +3085,9 @@ where
 
     let mut tentative_iter = iter.clone();
 
-    let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
-    if tentative_iter.try_skip_word(&self.keywords.block).is_none() {
+    if tentative_iter.try_skip_word(self.keywords.block).is_none() {
       return Ok(None);
     }
 
@@ -3246,10 +3105,7 @@ where
     };
 
     Ok(Some(IExpressionPE::Block(BlockPE {
-      range: RangeL {
-        begin: block_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(block_begin, iter.get_prev_end_pos()),
       maybe_pure: pure,
       maybe_default_region: None,
       inner: Box::new(contents),
@@ -3325,7 +3181,7 @@ where
 
     // Parse else block (lines 417-436)
     let else_begin = iter.get_pos();
-    let maybe_else_block = if iter.try_skip_word(&self.keywords.elsse).is_some() {
+    let maybe_else_block = if iter.try_skip_word(self.keywords.elsse).is_some() {
       let body = match iter.peek_cloned() {
         Some(INodeLEEnum::Curlied(b)) => {
           let b = b.clone();
@@ -3341,10 +3197,7 @@ where
 
       let else_end = iter.get_pos();
       Some(BlockPE {
-        range: RangeL {
-          begin: else_begin,
-          end: else_end,
-        },
+        range: RangeL(else_begin, else_end),
         maybe_pure: None,
         maybe_default_region: None,
         inner: Box::new(else_body),
@@ -3358,17 +3211,11 @@ where
       None => {
         let pos = iter.get_prev_end_pos();
         BlockPE {
-          range: RangeL {
-            begin: pos,
-            end: pos,
-          },
+          range: RangeL(pos, pos),
           maybe_pure: None,
           maybe_default_region: None,
           inner: Box::new(IExpressionPE::Void(VoidPE {
-            range: RangeL {
-              begin: pos,
-              end: pos,
-            },
+            range: RangeL(pos, pos),
           })),
         }
       }
@@ -3379,17 +3226,11 @@ where
     let mut root_else_block = final_else;
     for (cond_block, then_block) in if_elses.into_iter().rev() {
       root_else_block = BlockPE {
-        range: RangeL {
-          begin: cond_block.range().begin,
-          end: then_block.range.end,
-        },
+        range: RangeL(cond_block.range().begin(), then_block.range.end()),
         maybe_pure: None,
         maybe_default_region: None,
         inner: Box::new(IExpressionPE::If(IfPE {
-          range: RangeL {
-            begin: cond_block.range().begin,
-            end: then_block.range.end,
-          },
+          range: RangeL(cond_block.range().begin(), then_block.range.end()),
           condition: Box::new(cond_block),
           then_body: Box::new(then_block),
           else_body: Box::new(root_else_block),
@@ -3399,10 +3240,7 @@ where
 
     let (root_condition, root_then) = root_if;
     Ok(Some(IExpressionPE::If(IfPE {
-      range: RangeL {
-        begin: if_ladder_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(if_ladder_begin, iter.get_prev_end_pos()),
       condition: Box::new(root_condition),
       then_body: Box::new(root_then),
       else_body: Box::new(root_else_block),
@@ -3481,11 +3319,11 @@ where
             //     6
             //   }
             BlockPE(
-              RangeL(condBlock.range.begin, thenBlock.range.end),
+              RangeL(condBlock.range().begin(), thenBlock.range().end()),
               None,
               None,
               IfPE(
-                RangeL(condBlock.range.begin, thenBlock.range.end),
+                RangeL(condBlock.range().begin(), thenBlock.range().end()),
                 condBlock, thenBlock, elseBlock))
           }
         })
@@ -3516,7 +3354,7 @@ where
   ) -> ParseResult<(IExpressionPE<'a>, BlockPE<'a>)> {
     let if_begin = iter.get_pos();
 
-    if iter.try_skip_word(&self.keywords.iff).is_none() {
+    if iter.try_skip_word(self.keywords.iff).is_none() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
     }
 
@@ -3537,10 +3375,7 @@ where
     Ok((
       condition,
       BlockPE {
-        range: RangeL {
-          begin: if_begin,
-          end: iter.get_prev_end_pos(),
-        },
+        range: RangeL(if_begin, iter.get_prev_end_pos()),
         maybe_pure: None,
         maybe_default_region: None,
         inner: Box::new(body),
@@ -3592,16 +3427,16 @@ where
     let mut tentative_iter: ScrambleIterator<'a> = original_iter.clone();
 
     if tentative_iter
-      .try_skip_word(&self.keywords.parallel)
+      .try_skip_word(self.keywords.parallel)
       .is_some()
     {
       // do nothing for now
     }
 
-    let pure = tentative_iter.try_skip_word(&self.keywords.pure);
+    let pure = tentative_iter.try_skip_word(self.keywords.pure);
 
     if tentative_iter
-      .try_skip_word(&self.keywords.foreeach)
+      .try_skip_word(self.keywords.foreeach)
       .is_none()
     {
       return Ok(None);
@@ -3609,11 +3444,11 @@ where
     original_iter.skip_to(&tentative_iter);
     let iter: &mut ScrambleIterator<'a> = original_iter;
 
-    let (in_range, pattern) = match try_skip_past_keyword_while(iter, &self.keywords.r#in, |it| {
+    let (in_range, pattern) = match try_skip_past_keyword_while(iter, self.keywords.r#in, |it| {
       match it.peek() {
         // Stop if we hit the end or a semicolon or a curly brace
         None => false,
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
         Some(INodeLEEnum::Curlied(_)) => false,
         // Continue for anything else
         Some(_) => true,
@@ -3655,10 +3490,7 @@ where
     };
 
     Ok(Some(IExpressionPE::Each(EachPE::<'a> {
-      range: RangeL {
-        begin: each_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(each_begin, iter.get_prev_end_pos()),
       maybe_pure: pure,
       entry_pattern: pattern,
       in_keyword_range: in_range,
@@ -3749,17 +3581,14 @@ where
 
   fn parse_break(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<Option<IExpressionPE<'a>>> {
     let begin = iter.get_pos();
-    if iter.try_skip_word(&self.keywords.r#break).is_none() {
+    if iter.try_skip_word(self.keywords.r#break).is_none() {
       return Ok(None);
     }
     if !iter.try_skip_symbol(';') {
       return Err(ParseError::BadExpressionEnd(iter.get_pos()));
     }
     Ok(Some(IExpressionPE::Break(BreakPE {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(begin, iter.get_prev_end_pos()),
     })))
   }
   /*
@@ -3785,7 +3614,7 @@ where
     pattern_parser: &PatternParser<'a, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'a>>> {
     let begin = iter.get_pos();
-    if iter.try_skip_word(&self.keywords.retuurn).is_none() {
+    if iter.try_skip_word(self.keywords.retuurn).is_none() {
       return Ok(None);
     }
 
@@ -3797,10 +3626,7 @@ where
     }
 
     Ok(Some(IExpressionPE::Return(ReturnPE {
-      range: RangeL {
-        begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(begin, iter.get_prev_end_pos()),
       expr: Box::new(inner_expr),
     })))
   }
@@ -3836,7 +3662,7 @@ where
           str: set,
         })),
         Some(other),
-      ) if set == self.keywords.set && set_range.end < other.range().begin => {
+      ) if set == self.keywords.set && set_range.end() < other.range().begin() => {
         // Then there's indeed a space after the set. Continue!
         true
       }
@@ -3873,7 +3699,7 @@ where
     let mutatee_expr =
       match try_skip_past_equals_while(iter, |scouting_iter| match scouting_iter.peek_cloned() {
         None => false,
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
         _ => true,
       }) {
         None => return Err(ParseError::BadMutateEqualsError(iter.get_pos())),
@@ -3889,10 +3715,7 @@ where
       self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
 
     Ok(Some(IExpressionPE::Mutate(MutatePE {
-      range: RangeL {
-        begin: mutate_begin,
-        end: iter.get_prev_end_pos(),
-      },
+      range: RangeL(mutate_begin, iter.get_prev_end_pos()),
       mutatee: Box::new(mutatee_expr),
       source: Box::new(source_expr),
     })))
@@ -3952,7 +3775,7 @@ where
       match try_skip_past_equals_while(iter, |scouting_iter| match scouting_iter.peek_cloned() {
         None => false,
         Some(INodeLEEnum::Curlied(_)) if stop_on_curlied => false,
-        Some(INodeLEEnum::Symbol(SymbolLE { c: ';', .. })) => false,
+        Some(INodeLEEnum::Symbol(SymbolLE(_, ';'))) => false,
         _ => true,
       }) {
         None => {
@@ -3977,21 +3800,18 @@ where
 
     // Validate the pattern doesn't use 'set' keyword
     if let Some(DestinationLocalP {
-      decl: INameDeclarationP::LocalNameDeclaration(NameP { str: name, .. }),
+      decl: INameDeclarationP::LocalNameDeclaration(NameP(_, name)),
       mutate: None,
     }) = &pattern.destination
     {
-      assert!(name != &self.keywords.set);
+      assert!(*name != self.keywords.set);
     }
 
     let source_expr =
       self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?;
 
     Ok(Some(IExpressionPE::Let(LetPE {
-      range: RangeL {
-        begin: pattern.range.begin,
-        end: source_expr.range().end,
-      },
+      range: RangeL(pattern.range.begin(), source_expr.range().end()),
       pattern,
       source: Box::new(source_expr),
     })))
@@ -4018,7 +3838,7 @@ where
           case Err(e) => return Err(e)
           case Ok(x) => x
         }
-      Ok(LetPE(RangeL(pattern.range.begin, sourceExpr.range.end), pattern, sourceExpr))
+      Ok(LetPE(RangeL(pattern.range().begin(), sourceExpr.range().end()), pattern, sourceExpr))
     }
   */
 }

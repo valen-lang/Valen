@@ -2,7 +2,7 @@
 
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
@@ -84,7 +84,7 @@ fn binary_operator() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4 + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "+");
+  assert_eq!(binary.function_name.as_str(), "+");
   assert_eq!(
     cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     4
@@ -190,7 +190,7 @@ fn call_then_binary_operator() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "str(i) + 5");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "+");
+  assert_eq!(binary.function_name.as_str(), "+");
   let str_call = cast!(binary.left_expr.as_ref(), IExpressionPE::FunctionCall);
   assert_lookup_name(str_call.callable_expr.as_ref(), "str");
   let first_arg = expect_1(&str_call.arg_exprs);
@@ -363,7 +363,7 @@ fn method_on_member() {
   assert_eq!(shout_call.arg_exprs.len(), 0);
   let x_dot_moo = cast!(shout_call.subject_expr.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(&x_dot_moo.left, "x");
-  assert_eq!(x_dot_moo.member.str.str, "moo");
+  assert_eq!(x_dot_moo.member.as_str(), "moo");
 }
 /*
   test("Method on member") {
@@ -456,7 +456,7 @@ fn templated_method_call() {
 
   assert_lookup_name(method_call.subject_expr.as_ref(), "result");
   let toarray_lookup = cast!(&method_call.method_lookup.name, IImpreciseNameP::LookupName);
-  assert_eq!(toarray_lookup.str.str, "toArray");
+  assert_eq!(toarray_lookup.as_str(), "toArray");
   let template_args = method_call.method_lookup.template_args.as_ref().unwrap();
   let first_template_arg = expect_1(&template_args.args);
   let mutability = cast!(first_template_arg, ITemplexPT::Mutability);
@@ -478,7 +478,7 @@ fn custom_binaries() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "not y florgle not x");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "florgle");
+  assert_eq!(binary.function_name.as_str(), "florgle");
   let not_left = cast!(binary.left_expr.as_ref(), IExpressionPE::Not);
   assert_lookup_name(not_left.inner.as_ref(), "y");
   let not_right = cast!(binary.right_expr.as_ref(), IExpressionPE::Not);
@@ -497,15 +497,55 @@ fn custom_with_noncustom_binaries() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a + b florgle x * y");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "florgle");
+  assert_eq!(binary.function_name.as_str(), "florgle");
   let add_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(add_binary.function_name.str.str, "+");
+  assert_eq!(add_binary.function_name.as_str(), "+");
   assert_lookup_name(add_binary.left_expr.as_ref(), "a");
   assert_lookup_name(add_binary.right_expr.as_ref(), "b");
   let times_binary = cast!(binary.right_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(times_binary.function_name.str.str, "*");
+  assert_eq!(times_binary.function_name.as_str(), "*");
   assert_lookup_name(times_binary.left_expr.as_ref(), "x");
   assert_lookup_name(times_binary.right_expr.as_ref(), "y");
+}
+
+#[test]
+fn custom_with_noncustom_binaries_2() {
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let keywords = Keywords::new(&interner);
+  let expr = compile_expression_expect(&interner, &keywords, "a + b florgle x * y");
+
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("florgle")),
+      left_expr: box IExpressionPE::BinaryCall(BinaryCallPE {
+        function_name: NameP(_, StrI("+")),
+        left_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+          template_args: None,
+        }),
+        right_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      right_expr: box IExpressionPE::BinaryCall(BinaryCallPE {
+        function_name: NameP(_, StrI("*")),
+        left_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+        right_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a + b florgle x * y structure"),
+  }
 }
 /*
   test("Custom with noncustom binaries") {
@@ -577,7 +617,7 @@ fn greater_than_or_equal() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "9 >= 3");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, ">=");
+  assert_eq!(binary.function_name.as_str(), ">=");
   assert_eq!(
     cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     9
@@ -830,7 +870,7 @@ fn dot_symbol() {
   let method_call = cast!(expr, IExpressionPE::MethodCall);
   assert_lookup_name(method_call.subject_expr.as_ref(), "myPath");
   let method_lookup = cast!(&method_call.method_lookup.name, IImpreciseNameP::LookupName);
-  assert_eq!(method_lookup.str.str, "/");
+  assert_eq!(method_lookup.as_str(), "/");
   let first_arg = expect_1(&method_call.arg_exprs);
   let constant_str = cast!(first_arg, IExpressionPE::ConstantStr);
   assert_eq!(constant_str.value, "subdir");
@@ -854,7 +894,7 @@ fn not_equal() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "3 != 4");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "!=");
+  assert_eq!(binary.function_name.as_str(), "!=");
   assert_eq!(
     cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     3
@@ -902,9 +942,9 @@ fn two_d_array_access() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "arr.2.1");
   let outer_dot = cast!(expr, IExpressionPE::Dot);
-  assert_eq!(outer_dot.member.str.str, "1");
+  assert_eq!(outer_dot.member.as_str(), "1");
   let inner_dot = cast!(outer_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(inner_dot.member.str.str, "2");
+  assert_eq!(inner_dot.member.as_str(), "2");
   assert_lookup_name(&inner_dot.left, "arr");
 }
 /*
@@ -972,7 +1012,7 @@ fn test_inner_expression_unlet() {
   let first_arg = expect_1(&function_call.arg_exprs);
   let unlet = cast!(first_arg, IExpressionPE::Unlet);
   let lookup_name = cast!(&unlet.name, IImpreciseNameP::LookupName);
-  assert_eq!(lookup_name.str.str, "enemy");
+  assert_eq!(lookup_name.as_str(), "enemy");
 }
 /*
   test("Test inner expression unlet") {
@@ -1030,14 +1070,14 @@ fn parens() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "2 * (5 - 7)");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "*");
+  assert_eq!(binary.function_name.as_str(), "*");
   assert_eq!(
     cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     2
   );
   let subexpr = cast!(binary.right_expr.as_ref(), IExpressionPE::SubExpression);
   let inner_binary = cast!(subexpr.inner.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(inner_binary.function_name.str.str, "-");
+  assert_eq!(inner_binary.function_name.as_str(), "-");
   assert_eq!(
     cast!(inner_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     5
@@ -1060,10 +1100,10 @@ fn precedence_1() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(5 - 7) * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "*");
+  assert_eq!(binary.function_name.as_str(), "*");
   let subexpr = cast!(binary.left_expr.as_ref(), IExpressionPE::SubExpression);
   let inner_binary = cast!(subexpr.inner.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(inner_binary.function_name.str.str, "-");
+  assert_eq!(inner_binary.function_name.as_str(), "-");
   assert_eq!(
     cast!(inner_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     5
@@ -1090,13 +1130,13 @@ fn precedence_2() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "5 - 7 * 2");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "-");
+  assert_eq!(binary.function_name.as_str(), "-");
   assert_eq!(
     cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     5
   );
   let right_binary = cast!(binary.right_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(right_binary.function_name.str.str, "*");
+  assert_eq!(right_binary.function_name.as_str(), "*");
   assert_eq!(
     cast!(right_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     7
@@ -1199,7 +1239,7 @@ fn less_than_or_equal() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a <= b");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "<=");
+  assert_eq!(binary.function_name.as_str(), "<=");
   assert_lookup_name(binary.left_expr.as_ref(), "a");
   assert_lookup_name(binary.right_expr.as_ref(), "b");
 }
@@ -1542,7 +1582,7 @@ fn transmigrate() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a'x");
   let transmigrate = cast!(expr, IExpressionPE::Transmigrate);
-  assert_eq!(transmigrate.target_region.str.str, "a");
+  assert_eq!(transmigrate.target_region.as_str(), "a");
   assert_lookup_name(transmigrate.inner.as_ref(), "x");
 }
 /*
@@ -1565,7 +1605,7 @@ fn call_callable_expr() {
   );
   let dot = cast!(subexpr.inner.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(&dot.left, "something");
-  assert_eq!(dot.member.str.str, "callable");
+  assert_eq!(dot.member.as_str(), "callable");
   expect_1(&function_call.arg_exprs);
 }
 /*
@@ -1595,7 +1635,7 @@ fn array_indexing() {
   let brace_call2 = cast!(expr2, IExpressionPE::BraceCall);
   let dot = cast!(brace_call2.subject_expr.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(&dot.left, "this");
-  assert_eq!(dot.member.str.str, "board");
+  assert_eq!(dot.member.as_str(), "board");
   let first_arg2 = expect_1(&brace_call2.arg_exprs);
   assert_lookup_name(first_arg2, "i");
   assert_eq!(brace_call2.callable_readwrite, false);
@@ -1619,9 +1659,9 @@ fn mod_and_equal_precedence() {
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "8 mod 2 == 0");
   let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "==");
+  assert_eq!(binary.function_name.as_str(), "==");
   let left_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(left_binary.function_name.str.str, "mod");
+  assert_eq!(left_binary.function_name.as_str(), "mod");
   assert_eq!(
     cast!(left_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     8
@@ -1657,7 +1697,7 @@ fn or_and_equal_precedence() {
   let expr = compile_expression_expect(&interner, &keywords, "2 == 0 or false");
   let or = cast!(expr, IExpressionPE::Or);
   let left_binary = cast!(or.left.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(left_binary.function_name.str.str, "==");
+  assert_eq!(left_binary.function_name.as_str(), "==");
   assert_eq!(
     cast!(left_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
     2
@@ -1706,7 +1746,7 @@ fn test_templated_lambda_param() {
   assert!(pattern.destructure.is_none());
   let block = lambda.function.body.as_ref().unwrap();
   let binary = cast!(&*block.inner, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.str.str, "+");
+  assert_eq!(binary.function_name.as_str(), "+");
   assert_lookup_name(binary.left_expr.as_ref(), "a");
   assert_lookup_name(binary.right_expr.as_ref(), "a");
   let first_arg = expect_1(&function_call.arg_exprs);

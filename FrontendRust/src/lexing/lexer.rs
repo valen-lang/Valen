@@ -425,7 +425,7 @@ where
 
     let interface = if let Some(interface_generic_args) = maybe_interface_generic_args {
       ScrambleLE::<'a> {
-        range: RangeL::new(interface_name.range.begin, interface_generic_args.range.end),
+        range: RangeL::new(interface_name.range.begin(), interface_generic_args.range.end()),
         elements: vec![
           Box::new(INodeLEEnum::Word::<'a>(interface_name)),
           Box::new(INodeLEEnum::Angled::<'a>(interface_generic_args)),
@@ -455,7 +455,7 @@ where
 
     let struct_ = if let Some(struct_generic_args) = maybe_struct_generic_args {
       ScrambleLE {
-        range: RangeL::new(struct_name.range.begin, struct_generic_args.range.end),
+        range: RangeL::new(struct_name.range.begin(), struct_generic_args.range.end()),
         elements: vec![
           Box::new(INodeLEEnum::Word(struct_name)),
           Box::new(INodeLEEnum::Angled(struct_generic_args)),
@@ -1223,7 +1223,7 @@ where
     attributes: Vec<IAttributeL<'a>>,
   ) -> Result<Option<ImportL<'a>>>
   {
-    if !iter.try_skip_complete_word(&self.keywords.impoort.str) {
+    if !iter.try_skip_complete_word(self.keywords.impoort.as_str()) {
       return Ok(None);
     }
 
@@ -1324,7 +1324,7 @@ where
     attributes: Vec<IAttributeL<'a>>,
   ) -> Result<Option<ExportAsL<'a>>>
   {
-    if !iter.try_skip_complete_word(&self.keywords.export.str) {
+    if !iter.try_skip_complete_word(self.keywords.export.as_str()) {
       return Ok(None);
     }
 
@@ -1891,10 +1891,10 @@ where
 
     // Otherwise it's a symbol
     let c = iter.advance();
-    Ok(INodeLEEnum::Symbol(SymbolLE {
-      range: RangeL::new(begin, iter.get_pos()),
+    Ok(INodeLEEnum::Symbol(SymbolLE(
+      RangeL::new(begin, iter.get_pos()),
       c,
-    }))
+    )))
   }
   /*
     // Optimize: we can make a perfect hash map beforehand based off of the u64s
@@ -1969,7 +1969,7 @@ where
       if (word.isEmpty) {
         None
       } else {
-        Some(WordLE(RangeL(begin, end), interner.intern(StrI(word))))
+        Some(WordLE(RangeL(begin, end), interner.intern(word)))
       }
     }
   */

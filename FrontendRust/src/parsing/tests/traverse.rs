@@ -1255,11 +1255,11 @@ fn test_collect_where_finds_function_by_name() {
       &program,
       NodeRefP::Function(FunctionP {
           header: FunctionHeaderP {
-              name: Some(NameP { str: ref s, .. }),
+              name: Some(NameP(_, s)),
               ..
           },
           ..
-      }) if s.str == "main" => Some(())
+      }) if s.as_str() == "main" => Some(())
   )
   .is_empty());
 }

@@ -2,7 +2,7 @@ use super::expressions::BlockPE;
 use super::pattern::ParameterP;
 use super::rules::{IRulexPR, ITypePR};
 use super::templex::{ITemplexPT, RegionRunePT};
-use crate::interner::StrI;
+use crate::StrI;
 use crate::lexing::RangeL;
 use crate::utils::code_hierarchy::FileCoordinate;
 /*
@@ -26,9 +26,21 @@ case class UnitP(range: RangeL) { override def equals(obj: Any): Boolean = vcuri
 
 /// Name in source code
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NameP<'a> {
-  pub range: RangeL,
-  pub str: &'a StrI,
+pub struct NameP<'a>(pub RangeL, pub StrI<'a>);
+
+impl<'a> NameP<'a> {
+  pub fn range(&self) -> RangeL {
+    self.0
+  }
+
+  pub fn str(&self) -> StrI<'a> {
+    self.1
+  }
+
+  /// Returns the underlying string slice.
+  pub fn as_str(&self) -> &'a str {
+    self.1.as_str()
+  }
 }
 /*
 case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -50,7 +62,7 @@ case class FileP(
   def lookupFunction(name: String) = {
     val results =
       denizens.collect({
-        case TopLevelFunctionP(f) if f.header.name.exists(_.str.str == name) => f
+        case TopLevelFunctionP(f) if f.header.name.exists(_.str == name) => f
       })
     vassert(results.size == 1)
     results.head

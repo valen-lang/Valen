@@ -128,7 +128,7 @@ fn simple_function_with_return() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum() int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "int");
@@ -155,7 +155,7 @@ fn pure_function() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "pure func sum() {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
     [IAttributeP::PureAttribute(_)]
@@ -240,7 +240,7 @@ fn extern_function_generated() {
     expect_1(&function.header.attributes),
     IAttributeP::BuiltinAttribute
   );
-  assert_eq!(builtin.generator_name.str.str, "bork");
+  assert_eq!(builtin.generator_name.as_str(), "bork");
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
   assert!(function.header.ret.ret_type.is_none());
   assert!(function.body.is_none());
@@ -287,7 +287,7 @@ fn abstract_function() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum();");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
     [IAttributeP::AbstractAttribute(_)]
@@ -318,7 +318,7 @@ fn pure_and_default_region() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
-    function.header.name.as_ref().unwrap().str.str,
+    function.header.name.as_ref().unwrap().as_str(),
     "findNearbyUnits"
   );
   assert!(matches!(
@@ -332,11 +332,11 @@ fn pure_and_default_region() {
   );
   assert!(ret_type.maybe_ownership.is_none());
   let ret_region = ret_type.maybe_region.as_ref().unwrap();
-  assert_eq!(ret_region.name.as_ref().unwrap().str.str, "i");
+  assert_eq!(ret_region.name.as_ref().unwrap().as_str(), "i");
   assert_templex_name(ret_type.inner.as_ref(), "int");
   let body = function.body.as_ref().unwrap();
   let default_region = body.maybe_default_region.as_ref().unwrap();
-  assert_eq!(default_region.name.as_ref().unwrap().str.str, "i");
+  assert_eq!(default_region.name.as_ref().unwrap().as_str(), "i");
   assert!(matches!(body.inner.as_ref(), IExpressionPE::Void(_)));
 }
 /*
@@ -361,7 +361,7 @@ fn return_isolate() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func findNearbyUnits() 'int { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
-    function.header.name.as_ref().unwrap().str.str,
+    function.header.name.as_ref().unwrap().as_str(),
     "findNearbyUnits"
   );
   assert!(function.header.attributes.is_empty());
@@ -401,12 +401,12 @@ fn coord_generic_with_associated_region() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
-    function.header.name.as_ref().unwrap().str.str,
+    function.header.name.as_ref().unwrap().as_str(),
     "findNearbyUnits"
   );
   let generic_params = &function.header.generic_parameters.as_ref().unwrap().params;
   let (first_param, second_param) = expect_2(generic_params);
-  assert_eq!(first_param.name.str.str, "t");
+  assert_eq!(first_param.name.as_str(), "t");
   assert_eq!(
     first_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -414,7 +414,7 @@ fn coord_generic_with_associated_region() {
   assert!(first_param.coord_region.is_none());
   assert!(first_param.attributes.is_empty());
   assert!(first_param.maybe_default.is_none());
-  assert_eq!(second_param.name.str.str, "T");
+  assert_eq!(second_param.name.as_str(), "T");
   assert!(second_param.maybe_type.is_none());
   assert_eq!(
     second_param
@@ -424,8 +424,8 @@ fn coord_generic_with_associated_region() {
       .name
       .as_ref()
       .unwrap()
-      .str
-      .str,
+      .str()
+      .as_str(),
     "t"
   );
   assert!(second_param.attributes.is_empty());
@@ -456,7 +456,7 @@ fn attribute_after_return() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
     [IAttributeP::AbstractAttribute(_)]
@@ -485,7 +485,7 @@ fn attribute_before_return() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() Int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
     function.header.attributes.as_slice(),
     [IAttributeP::AbstractAttribute(_)]
@@ -515,7 +515,7 @@ fn simple_function_with_identifying_rune() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "A");
+  assert_eq!(generic_param.name.as_str(), "A");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
@@ -538,7 +538,7 @@ fn simple_function_with_coord_typed_identifying_rune() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A Ref>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "A");
+  assert_eq!(generic_param.name.as_str(), "A");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::CoordType
@@ -564,7 +564,7 @@ fn simple_function_with_region_typed_identifying_rune() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<a'>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "a");
+  assert_eq!(generic_param.name.as_str(), "a");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -590,7 +590,7 @@ fn readonly_region_rune() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r' ro>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "r");
+  assert_eq!(generic_param.name.as_str(), "r");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -619,7 +619,7 @@ fn simple_function_with_apostrophe_region_typed_identifying_rune() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r'>(a &r'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "r");
+  assert_eq!(generic_param.name.as_str(), "r");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -649,7 +649,7 @@ fn pool_region() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "r");
+  assert_eq!(generic_param.name.as_str(), "r");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -684,7 +684,7 @@ fn pool_readonly_region() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "r");
+  assert_eq!(generic_param.name.as_str(), "r");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -722,7 +722,7 @@ fn arena_region() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "x");
+  assert_eq!(generic_param.name.as_str(), "x");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -753,7 +753,7 @@ fn readonly_region() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum<x'>(a &x'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "x");
+  assert_eq!(generic_param.name.as_str(), "x");
   assert_eq!(
     generic_param.maybe_type.as_ref().unwrap().tyype,
     ITypePR::RegionType
@@ -789,7 +789,7 @@ fn virtual_function() {
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
-    function.header.name.as_ref().unwrap().str.str,
+    function.header.name.as_ref().unwrap().as_str(),
     "doCivicDance"
   );
   assert!(function.header.attributes.is_empty());
@@ -888,7 +888,7 @@ fn function_with_generics() {
   assert!(function.header.attributes.is_empty());
   assert!(function.header.template_rules.is_none());
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(generic_param.name.str.str, "T");
+  assert_eq!(generic_param.name.as_str(), "T");
   assert!(generic_param.maybe_type.is_none());
   assert!(generic_param.coord_region.is_none());
   assert!(generic_param.attributes.is_empty());
@@ -921,7 +921,7 @@ fn impl_function() {
     "func maxHp(virtual this Marine) { return 5; }",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "maxHp");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "maxHp");
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   assert!(matches!(param.virtuality.as_ref(), Some(AbstractP { .. })));
   let pattern = param.pattern.as_ref().unwrap();
@@ -982,7 +982,7 @@ fn func_with_rules() {
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(&interner, &keywords, "func sum () where X Int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "sum");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.generic_parameters.is_none());
   assert!(function.header.template_rules.is_some());
@@ -1020,7 +1020,7 @@ fn func_with_func_bound() {
   let first_rule = expect_1(&template_rules.rules);
   let first_rule_templex = cast!(first_rule, IRulexPR::Templex);
   let function_bound = cast!(first_rule_templex, ITemplexPT::Func);
-  assert_eq!(function_bound.name.str.str, "moo");
+  assert_eq!(function_bound.name.as_str(), "moo");
   let first_param = expect_1(&function_bound.parameters);
   let interpreted = cast!(first_param, ITemplexPT::Interpreted);
   assert_eq!(
@@ -1059,12 +1059,12 @@ fn identifying_runes() {
   let denizen = compile_denizen_expect(&interner, &keywords, "func wrap<A, F>(a A) { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let (a_rune, f_rune) = expect_2(&function.header.generic_parameters.as_ref().unwrap().params);
-  assert_eq!(a_rune.name.str.str, "A");
+  assert_eq!(a_rune.name.as_str(), "A");
   assert!(a_rune.maybe_type.is_none());
   assert!(a_rune.coord_region.is_none());
   assert!(a_rune.attributes.is_empty());
   assert!(a_rune.maybe_default.is_none());
-  assert_eq!(f_rune.name.str.str, "F");
+  assert_eq!(f_rune.name.as_str(), "F");
   assert!(f_rune.maybe_type.is_none());
   assert!(f_rune.coord_region.is_none());
   assert!(f_rune.attributes.is_empty());
@@ -1159,9 +1159,9 @@ fn short_self() {
     "#,
   );
   let interface = cast!(denizen, IDenizenP::TopLevelInterface);
-  assert_eq!(interface.name.str.str, "IMoo");
+  assert_eq!(interface.name.as_str(), "IMoo");
   let function = &interface.members[0];
-  assert_eq!(function.header.name.as_ref().unwrap().str.str, "moo");
+  assert_eq!(function.header.name.as_ref().unwrap().as_str(), "moo");
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   assert!(param.virtuality.is_none());
   assert!(param.self_borrow.is_some());

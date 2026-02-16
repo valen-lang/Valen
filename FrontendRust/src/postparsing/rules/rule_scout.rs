@@ -202,7 +202,7 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
 
           rules.RuneUsage(evalRange(range), resultRune.rune)
         } else {
-          throw new CompileErrorExceptionS(UnknownRuleFunctionS(evalRange(range), name.str.str))
+          throw new CompileErrorExceptionS(UnknownRuleFunctionS(evalRange(range), name.str.as_str()))
         }
       }
     }
