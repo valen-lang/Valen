@@ -16,7 +16,7 @@ use crate::postparsing::ast::{
   StructS,
 };
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
-use crate::postparsing::function_scout::{FunctionScout, IFunctionParent};
+use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, TemplateTemplataType,
 };
@@ -756,12 +756,8 @@ class PostParser(
     let mut implemented_functions = Vec::new();
     for denizen in &parsed.denizens {
       if let IDenizenP::TopLevelFunction(function_p) = denizen {
-        let (function_s, function_uses) = FunctionScout::scout_function(
-          &self.interner,
-          file_coordinate,
-          function_p,
-          IFunctionParent::FunctionNoParent,
-        )?;
+        let (function_s, function_uses) =
+          self.scout_function(file_coordinate, function_p, IFunctionParent::FunctionNoParent)?;
         assert!(function_uses.uses.is_empty());
         if let IBodyS::CodeBody(code_body_s) = &function_s.body {
           assert!(

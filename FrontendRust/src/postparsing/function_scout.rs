@@ -26,11 +26,9 @@ import scala.collection.immutable.{List, Range}
 */
 use crate::StrI;
 use crate::parsing::ast::{FunctionP, INameDeclarationP, LoadAsP};
-use crate::interner::Interner;
 use crate::postparsing::ast::{
   CodeBodyS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS, LocationInDenizenBuilder, UserFunctionS,
 };
-use crate::postparsing::expression_scout::ExpressionScout;
 use crate::postparsing::expressions::{
   BlockSE, BodySE, ConsecutorSE, FunctionCallSE, IExpressionSE, LocalLoadSE, LocalS, OutsideLoadSE,
 };
@@ -99,17 +97,16 @@ class FunctionScout(
       keywords
     )
 */
-pub struct FunctionScout;
-impl FunctionScout {
-  pub fn scout_function<'a, 'ctx>(
-    interner: &'ctx Interner<'a>,
+impl<'a, 'ctx> PostParser<'a, 'ctx>
+where
+  'a: 'ctx,
+{
+  pub(crate) fn scout_function(
+    &self,
     file_coordinate: &'a FileCoordinate<'a>,
     function: &FunctionP<'a>,
     maybe_parent: IFunctionParent<'a>,
-  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
-  where
-    'a: 'ctx,
-  {
+  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}
       IFunctionParent::ParentInterface { .. } => {}
@@ -193,10 +190,10 @@ impl FunctionScout {
       panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
     }
 
-    let body_range = PostParser::eval_range(file_coordinate, body.range);
+    let body_range = Self::eval_range(file_coordinate, body.range);
     let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
       name: function_name.str,
-      code_location: PostParser::eval_pos(file_coordinate, function_name.range.begin),
+      code_location: Self::eval_pos(file_coordinate, function_name.range.begin),
     });
     let function_environment = FunctionEnvironmentS {
       file: file_coordinate,
@@ -206,7 +203,7 @@ impl FunctionScout {
       num_explicit_params: 0,
       is_interface_internal_method: false,
     };
-    let default_region_rune = IRuneS::CodeRune(interner.intern_code_rune(function_name.str));
+    let default_region_rune = IRuneS::CodeRune(self.interner.intern_code_rune(function_name.str));
     let stack_frame = StackFrame {
       file: file_coordinate,
       name: function_declaration_name.clone(),
@@ -226,8 +223,7 @@ impl FunctionScout {
     };
     let mut lidb = LocationInDenizenBuilder::new(vec![]);
     let (stack_frame_after_body, body_expr, self_uses_before_constructing, child_uses) =
-      ExpressionScout::scout_expression_and_coerce(
-        interner,
+      self.scout_expression_and_coerce(
         stack_frame,
         &mut lidb,
         body.inner.as_ref(),
@@ -270,7 +266,7 @@ impl FunctionScout {
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
           range: body_range.clone(),
           rules: Vec::new(),
-          name: IImpreciseNameS::CodeName(interner.intern_code_name(function_name.str)),
+          name: IImpreciseNameS::CodeName(self.interner.intern_code_name(function_name.str)),
           maybe_template_args: None,
           target_ownership: LoadAsP::LoadAsBorrow,
         })),
@@ -313,7 +309,7 @@ impl FunctionScout {
       })
       .collect();
     Ok((FunctionS {
-      range: PostParser::eval_range(file_coordinate, function.range),
+      range: Self::eval_range(file_coordinate, function.range),
       name: function_declaration_name,
       attributes: vec![IFunctionAttributeS::UserFunction(UserFunctionS)],
       generic_params: Vec::new(),
@@ -920,6 +916,19 @@ impl FunctionScout {
     })
   }
 */
+  #[allow(dead_code)]
+  pub(crate) fn scout_lambda(
+    &self,
+    parent_stack_frame: StackFrame<'a>,
+    function: &FunctionP<'a>,
+  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+    let file_coordinate = parent_stack_frame.file;
+    self.scout_function(
+      file_coordinate,
+      function,
+      IFunctionParent::ParentFunction { parent_stack_frame },
+    )
+  }
 /*
   def scoutLambda(
     parentStackFrame: StackFrame,

@@ -1,7 +1,7 @@
 use crate::parsing::ast::{
   IExpressionPE, IImpreciseNameP, INameDeclarationP, ITemplexPT, LoadAsP, OwnershipP,
 };
-use crate::interner::{Interner, StrI};
+use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
@@ -109,9 +109,6 @@ class ExpressionScout(
     keywords: Keywords) {
   val loopPostParser = new LoopPostParser(interner, keywords)
 */
-pub struct ExpressionScout;
-
-impl ExpressionScout {
 /*
   def endsWithReturn(exprSE: IExpressionSE): Boolean = {
     exprSE match {
@@ -302,15 +299,16 @@ fn find_local<'a>(
 // - variable uses by self
 // - variable uses by child blocks
 // MIGTODO: rename all "scout" to "post parse" or something.
-fn scout_expression<'a, 'ctx>(
-  interner: &'ctx Interner<'a>,
-  stack_frame: StackFrame<'a>,
-  lidb: &mut LocationInDenizenBuilder,
-  expression: &IExpressionPE<'a>,
-) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
   'a: 'ctx,
 {
+fn scout_expression(
+  &self,
+  stack_frame: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  expression: &IExpressionPE<'a>,
+) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
 /*
   // Returns:
   // - new seq num
@@ -346,8 +344,7 @@ where
     */
     IExpressionPE::Return(ret) => {
       let mut ret_expr_lidb = lidb.child();
-      let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = Self::scout_expression_and_coerce(
-        interner,
+      let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = self.scout_expression_and_coerce(
         stack_frame.clone(),
         &mut ret_expr_lidb,
         ret.expr.as_ref(),
@@ -382,8 +379,7 @@ where
       };
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = {
         let mut inner_lidb = lidb.child();
-        let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = Self::scout_expression_and_coerce(
-          interner,
+        let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = self.scout_expression_and_coerce(
           stack_frame.clone(),
           &mut inner_lidb,
           augment.inner.as_ref(),
@@ -437,7 +433,7 @@ where
           // fill all the variables.
           if lookup_name.str.str == "self"
             && stack_frame
-              .find_variable(&IImpreciseNameS::CodeName(interner.intern_code_name(lookup_name.str)))
+              .find_variable(&IImpreciseNameS::CodeName(self.interner.intern_code_name(lookup_name.str)))
               .is_none()
           {
             return Ok((
@@ -454,8 +450,7 @@ where
       }
       let (stack_frame1, container_expr_s, self_uses, child_uses) = {
         let mut dot_left_lidb = lidb.child();
-        let (stack_frame1, container_expr_s, self_uses, child_uses) = Self::scout_expression_and_coerce(
-          interner,
+        let (stack_frame1, container_expr_s, self_uses, child_uses) = self.scout_expression_and_coerce(
           stack_frame,
           &mut dot_left_lidb,
           dot.left.as_ref(),
@@ -500,8 +495,8 @@ where
       match (&lookup.name, &lookup.template_args) {
         (IImpreciseNameP::LookupName(lookup_name), None) => {
           let range = PostParser::eval_range(&file_coordinate, lookup.name.range());
-          let imprecise_name = IImpreciseNameS::CodeName(interner.intern_code_name(lookup_name.str));
-          if let Some(local_lookup_result) = Self::find_local(&stack_frame, range.clone(), &imprecise_name) {
+          let imprecise_name = IImpreciseNameS::CodeName(self.interner.intern_code_name(lookup_name.str));
+          if let Some(local_lookup_result) = find_local(&stack_frame, range.clone(), &imprecise_name) {
             return Ok((
               stack_frame,
               IScoutResult::LocalLookupResult(local_lookup_result),
@@ -509,7 +504,7 @@ where
               VariableUses::empty(),
             ));
           } else {
-            let code_rune = IRuneS::CodeRune(interner.intern_code_rune(lookup_name.str));
+            let code_rune = IRuneS::CodeRune(self.interner.intern_code_rune(lookup_name.str));
             let lookup_result = if stack_frame.parent_env.all_declared_runes().contains(&code_rune) {
               IScoutResult::NormalResult(NormalResultS {
                 expr: IExpressionSE::RuneLookup(RuneLookupSE { range, rune: code_rune }),
@@ -581,8 +576,7 @@ where
     IExpressionPE::FunctionCall(function_call) => {
       let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses) = {
         let mut callable_lidb = lidb.child();
-        let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses) = Self::scout_expression_and_coerce(
-          interner,
+        let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses) = self.scout_expression_and_coerce(
           stack_frame,
           &mut callable_lidb,
           function_call.callable_expr.as_ref(),
@@ -592,7 +586,7 @@ where
       };
       let mut args_lidb = lidb.child();
       let (stack_frame2, arg_exprs_s, args_self_uses, args_child_uses) =
-        Self::scout_elements_as_expressions(interner, stack_frame1, &mut args_lidb, &function_call.arg_exprs)?;
+        self.scout_elements_as_expressions(stack_frame1, &mut args_lidb, &function_call.arg_exprs)?;
       let result =
         IScoutResult::NormalResult(NormalResultS {
           expr: IExpressionSE::FunctionCall(FunctionCallSE {
@@ -648,8 +642,7 @@ where
       };
       let (stack_frame1, source_expr_s, source_self_uses, source_child_uses) = {
         let mut source_expr_lidb = lidb.child();
-        let (stack_frame1, source_expr_s, source_self_uses, source_child_uses) = Self::scout_expression_and_coerce(
-          interner,
+        let (stack_frame1, source_expr_s, source_self_uses, source_child_uses) = self.scout_expression_and_coerce(
           stack_frame,
           &mut source_expr_lidb,
           lett.source.as_ref(),
@@ -724,8 +717,7 @@ where
       let (stack_frame1, source_expr_s, source_inner_self_uses, source_child_uses) = {
         let mut source_expr_lidb = lidb.child();
         // MIGTODO: consider doing &mut StackFrame instead of clone, everywhere.
-        Self::scout_expression_and_coerce(
-          interner,
+        self.scout_expression_and_coerce(
           stack_frame,
           &mut source_expr_lidb,
           mutate.source.as_ref(),
@@ -734,8 +726,7 @@ where
       };
       let (stack_frame2, destination_result_s, destination_self_uses, destination_child_uses) = {
         let mut destination_expr_lidb = lidb.child();
-        Self::scout_expression(
-          interner,
+        self.scout_expression(
           stack_frame1,
           &mut destination_expr_lidb,
           mutate.mutatee.as_ref(),
@@ -817,7 +808,7 @@ where
     */
     IExpressionPE::Consecutor(consecutor) => {
       let (stack_frame1, unfiltered_exprs, self_uses, child_uses) =
-        Self::scout_elements_as_expressions(interner, stack_frame, lidb, &consecutor.inners)?;
+        self.scout_elements_as_expressions(stack_frame, lidb, &consecutor.inners)?;
 
       // Match Scala's two-step behavior:
       // 1) recursively scout all inners
@@ -881,8 +872,7 @@ where
         block.maybe_pure.is_none(),
         "POSTPARSER_SCOUT_BLOCK_PURE_NOT_YET_IMPLEMENTED"
       );
-      Self::scout_expression(
-        interner,
+      self.scout_expression(
         stack_frame,
         lidb,
         block.inner.as_ref(),
@@ -898,8 +888,7 @@ where
     */
     IExpressionPE::SubExpression(sub_expression) => {
       let mut sub_expression_lidb = lidb.child();
-      let (stack_frame1, sub_expression_s, sub_self_uses, sub_child_uses) = Self::scout_expression_and_coerce(
-        interner,
+      let (stack_frame1, sub_expression_s, sub_self_uses, sub_child_uses) = self.scout_expression_and_coerce(
         stack_frame.clone(),
         &mut sub_expression_lidb,
         sub_expression.inner.as_ref(),
@@ -1359,19 +1348,15 @@ where
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-  pub(crate) fn scout_expression_and_coerce<'a, 'ctx>(
-    interner: &'ctx Interner<'a>,
+pub(crate) fn scout_expression_and_coerce(
+    &self,
     stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     expression_p: &IExpressionPE<'a>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
-  where
-    'a: 'ctx,
-  {
+  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
     let mut expression_lidb = lidb.child();
-    let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = Self::scout_expression(
-      interner,
+    let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = self.scout_expression(
       stack_frame,
       &mut expression_lidb,
       expression_p,
@@ -1394,7 +1379,7 @@ where
           IExpressionSE::OutsideLoad(OutsideLoadSE {
             range,
             rules: Vec::new(),
-            name: IImpreciseNameS::CodeName(interner.intern_code_name(name)),
+            name: IImpreciseNameS::CodeName(self.interner.intern_code_name(name)),
             maybe_template_args: None,
             target_ownership: load_as_p,
           }),
@@ -1462,15 +1447,12 @@ where
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-  fn scout_elements_as_expressions<'a, 'ctx>(
-    interner: &'ctx Interner<'a>,
+fn scout_elements_as_expressions(
+    &self,
     initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     exprs_p: &[IExpressionPE<'a>],
-  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
-  where
-    'a: 'ctx,
-  {
+  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();
     let mut exprs_s = Vec::new();
@@ -1478,7 +1460,7 @@ where
     for expr_p in exprs_p {
       let mut expr_lidb = lidb.child();
       let (next_stack_frame, expr_s, first_self_uses, first_child_uses) =
-        Self::scout_expression_and_coerce(interner, stack_frame, &mut expr_lidb, expr_p, LoadAsP::Use)?;
+        self.scout_expression_and_coerce(stack_frame, &mut expr_lidb, expr_p, LoadAsP::Use)?;
       stack_frame = next_stack_frame;
       self_uses = self_uses.then_merge(&first_self_uses);
       child_uses = child_uses.then_merge(&first_child_uses);
