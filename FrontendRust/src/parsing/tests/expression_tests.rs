@@ -6,9 +6,7 @@ use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
-use crate::parsing::tests::utils::assert_templex_name;
 use crate::parsing::tests::utils::*;
-use crate::parsing::tests::utils::{assert_lookup_name, assert_name};
 
 /*
 // MIGALLOW: Rust code doesn't need to check bits == None like Scala does.
@@ -83,16 +81,15 @@ fn binary_operator() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "4 + 5");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "+");
-  assert_eq!(
-    cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    4
-  );
-  assert_eq!(
-    cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    5
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("+")),
+      left_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected 4 + 5 structure"),
+  }
 }
 /*
   test("Binary operator") {
@@ -124,15 +121,14 @@ fn number_range() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "0..5");
-  let range = cast!(expr, IExpressionPE::Range);
-  assert_eq!(
-    cast!(range.from_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    0
-  );
-  assert_eq!(
-    cast!(range.to_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    5
-  );
+  match &expr {
+    IExpressionPE::Range(RangePE {
+      from_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
+      to_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected 0..5 structure"),
+  }
 }
 /*
   test("Number range") {
@@ -146,11 +142,17 @@ fn add_as_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "+(4, 5)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "+");
-  let (first_arg, second_arg) = expect_2(&function_call.arg_exprs);
-  assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(second_arg, IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("+"))),
+        template_args: None,
+      }),
+      arg_exprs,
+      ..
+    }) if matches!(arg_exprs.as_slice(), [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }), ..]) => {}
+    _ => panic!("expected +(4, 5) structure"),
+  }
 }
 /*
   test("add as call") {
@@ -164,12 +166,26 @@ fn passing_eq_overload_set() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "moo(4, ==)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "moo");
-  let (first_arg, second_arg) = expect_2(&function_call.arg_exprs);
-  let constant_int = cast!(first_arg, IExpressionPE::ConstantInt);
-  assert_eq!(constant_int.value, 4);
-  assert_lookup_name(second_arg, "==");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))),
+        ..
+      }),
+      arg_exprs,
+      ..
+    }) => {
+      match (arg_exprs.get(0), arg_exprs.get(1)) {
+        (Some(IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })),
+         Some(IExpressionPE::Lookup(LookupPE {
+           name: IImpreciseNameP::LookupName(NameP(_, StrI("=="))),
+           template_args: None,
+         }))) => {}
+        _ => panic!("expected moo(4, ==) structure"),
+      }
+    }
+    _ => panic!("expected moo(4, ==) structure"),
+  }
 }
 /*
   // MIGALLOW: Rust code can check for the 4 value.
@@ -189,14 +205,30 @@ fn call_then_binary_operator() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "str(i) + 5");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "+");
-  let str_call = cast!(binary.left_expr.as_ref(), IExpressionPE::FunctionCall);
-  assert_lookup_name(str_call.callable_expr.as_ref(), "str");
-  let first_arg = expect_1(&str_call.arg_exprs);
-  assert_lookup_name(first_arg, "i");
-  let five_int = cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt);
-  assert_eq!(five_int.value, 5);
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("+")),
+      left_expr: box IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("str"))),
+          template_args: None,
+        }),
+        arg_exprs,
+        ..
+      }),
+      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      ..
+    }) => {
+      match arg_exprs.as_slice() {
+        [IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+          template_args: None,
+        })] => {}
+        _ => panic!("expected str(i) + 5 structure"),
+      }
+    }
+    _ => panic!("expected str(i) + 5 structure"),
+  }
 }
 /*
   test("Call then binary operator") {
@@ -217,9 +249,20 @@ fn range() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "a..b");
-  let range = cast!(expr, IExpressionPE::Range);
-  assert_lookup_name(range.from_expr.as_ref(), "a");
-  assert_lookup_name(range.to_expr.as_ref(), "b");
+  match &expr {
+    IExpressionPE::Range(RangePE {
+      from_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+        template_args: None,
+      }),
+      to_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a..b structure"),
+  }
 }
 /*
   test("range") {
@@ -233,10 +276,23 @@ fn regular_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x(y)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "x");
-  let first_arg = expect_1(&function_call.arg_exprs);
-  assert_lookup_name(first_arg, "y");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      arg_exprs,
+      ..
+    }) => match arg_exprs.as_slice() {
+      [IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+        template_args: None,
+      })] => {}
+      _ => panic!("expected x(y) structure"),
+    },
+    _ => panic!("expected x(y) structure"),
+  }
 }
 /*
   test("regular call") {
@@ -250,8 +306,16 @@ fn not() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "not y");
-  let not = cast!(expr, IExpressionPE::Not);
-  assert_lookup_name(not.inner.as_ref(), "y");
+  match &expr {
+    IExpressionPE::Not(NotPE {
+      inner: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected not y structure"),
+  }
 }
 /*
   test("not") {
@@ -265,11 +329,21 @@ fn borrowing_result_of_function_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "&Muta()");
-  let augment = cast!(expr, IExpressionPE::Augment);
-  assert_eq!(augment.target_ownership, OwnershipP::Borrow);
-  let function_call = cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "Muta");
-  assert_eq!(function_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::Augment(AugmentPE {
+      target_ownership: OwnershipP::Borrow,
+      inner: box IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
+          template_args: None,
+        }),
+        arg_exprs,
+        ..
+      }),
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected &Muta() structure"),
+  }
 }
 /*
   test("Borrowing result of function call") {
@@ -283,9 +357,14 @@ fn specifying_heap() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "^Muta()");
-  let augment = cast!(expr, IExpressionPE::Augment);
-  assert_eq!(augment.target_ownership, OwnershipP::Own);
-  cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
+  match &expr {
+    IExpressionPE::Augment(AugmentPE {
+      target_ownership: OwnershipP::Own,
+      inner: box IExpressionPE::FunctionCall(FunctionCallPE { .. }),
+      ..
+    }) => {}
+    _ => panic!("expected ^Muta() structure"),
+  }
 }
 /*
   test("Specifying heap") {
@@ -301,11 +380,21 @@ fn inline_call_ignored() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "inl Muta()");
-  let augment = cast!(expr, IExpressionPE::Augment);
-  assert_eq!(augment.target_ownership, OwnershipP::Own);
-  let function_call = cast!(augment.inner.as_ref(), IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "Muta");
-  assert_eq!(function_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::Augment(AugmentPE {
+      target_ownership: OwnershipP::Own,
+      inner: box IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
+          template_args: None,
+        }),
+        arg_exprs,
+        ..
+      }),
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected inl Muta() structure"),
+  }
 }
 /*
   // MIGALLOW: Rust can check for the Augment with Own.
@@ -320,10 +409,21 @@ fn method_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x . shout ()");
-  let method_call = cast!(expr, IExpressionPE::MethodCall);
-  assert_lookup_name(method_call.subject_expr.as_ref(), "x");
-  assert_name(&method_call.method_lookup.name, "shout");
-  assert_eq!(method_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
+        template_args: None,
+      },
+      arg_exprs,
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected x . shout () structure"),
+  }
 }
 /*
   test("Method call") {
@@ -339,10 +439,21 @@ fn mapping_method_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x *. shout ()");
-  let method_call = cast!(expr, IExpressionPE::MethodCall);
-  assert_lookup_name(method_call.subject_expr.as_ref(), "x");
-  assert_name(&method_call.method_lookup.name, "shout");
-  assert_eq!(method_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
+        template_args: None,
+      },
+      arg_exprs,
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected x *. shout () structure"),
+  }
 }
 /*
   test("Mapping method call") {
@@ -358,12 +469,25 @@ fn method_on_member() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "x.moo.shout()");
-  let shout_call = cast!(expr, IExpressionPE::MethodCall);
-  assert_name(&shout_call.method_lookup.name, "shout");
-  assert_eq!(shout_call.arg_exprs.len(), 0);
-  let x_dot_moo = cast!(shout_call.subject_expr.as_ref(), IExpressionPE::Dot);
-  assert_lookup_name(&x_dot_moo.left, "x");
-  assert_eq!(x_dot_moo.member.as_str(), "moo");
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: box IExpressionPE::Dot(DotPE {
+        left: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+        member: NameP(_, StrI("moo")),
+        ..
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
+        template_args: None,
+      },
+      arg_exprs,
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected x.moo.shout() structure"),
+  }
 }
 /*
   test("Method on member") {
@@ -383,14 +507,24 @@ fn moving_method_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "(x ).shout()");
-  let shout_call = cast!(expr, IExpressionPE::MethodCall);
-  assert_name(&shout_call.method_lookup.name, "shout");
-  assert_eq!(shout_call.arg_exprs.len(), 0);
-  let x_subexpr = cast!(
-    shout_call.subject_expr.as_ref(),
-    IExpressionPE::SubExpression
-  );
-  assert_lookup_name(x_subexpr.inner.as_ref(), "x");
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: box IExpressionPE::SubExpression(SubExpressionPE {
+        inner: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
+        template_args: None,
+      },
+      arg_exprs,
+      ..
+    }) if arg_exprs.is_empty() => {}
+    _ => panic!("expected (x ).shout() structure"),
+  }
 }
 /*
   test("Moving method call") {
@@ -422,19 +556,33 @@ fn templated_function_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "toArray<imm>( &result)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-
-  let toarray_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
-  assert_name(&toarray_lookup.name, "toArray");
-  let template_args = toarray_lookup.template_args.as_ref().unwrap();
-  let first_template_arg = expect_1(&template_args.args);
-  let mutability = cast!(first_template_arg, ITemplexPT::Mutability);
-  assert_eq!(mutability.mutability, MutabilityP::Immutable);
-
-  let first_arg = expect_1(&function_call.arg_exprs);
-  let augment = cast!(first_arg, IExpressionPE::Augment);
-  assert_eq!(augment.target_ownership, OwnershipP::Borrow);
-  assert_lookup_name(augment.inner.as_ref(), "result");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
+        template_args: Some(TemplateArgsP {
+          args,
+          ..
+        }),
+      }),
+      arg_exprs,
+      ..
+    }) => {
+      match (args.as_slice(), arg_exprs.as_slice()) {
+        ([ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }), ..],
+         [IExpressionPE::Augment(AugmentPE {
+           target_ownership: OwnershipP::Borrow,
+           inner: box IExpressionPE::Lookup(LookupPE {
+             name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
+             template_args: None,
+           }),
+           ..
+         })]) => {}
+        _ => panic!("expected toArray<imm>( &result) structure"),
+      }
+    }
+    _ => panic!("expected toArray<imm>( &result) structure"),
+  }
 }
 /*
   test("Templated function call") {
@@ -452,16 +600,29 @@ fn templated_method_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "result.toArray <imm> ()");
-  let method_call = cast!(expr, IExpressionPE::MethodCall);
-
-  assert_lookup_name(method_call.subject_expr.as_ref(), "result");
-  let toarray_lookup = cast!(&method_call.method_lookup.name, IImpreciseNameP::LookupName);
-  assert_eq!(toarray_lookup.as_str(), "toArray");
-  let template_args = method_call.method_lookup.template_args.as_ref().unwrap();
-  let first_template_arg = expect_1(&template_args.args);
-  let mutability = cast!(first_template_arg, ITemplexPT::Mutability);
-  assert_eq!(mutability.mutability, MutabilityP::Immutable);
-  assert_eq!(method_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
+        template_args: None,
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
+        template_args: Some(TemplateArgsP {
+          args,
+          ..
+        }),
+      },
+      arg_exprs,
+      ..
+    }) if arg_exprs.is_empty() => {
+      match args.as_slice() {
+        [ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }), ..] => {}
+        _ => panic!("expected result.toArray <imm> () structure"),
+      }
+    }
+    _ => panic!("expected result.toArray <imm> () structure"),
+  }
 }
 /*
   test("Templated method call") {
@@ -477,12 +638,27 @@ fn custom_binaries() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "not y florgle not x");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "florgle");
-  let not_left = cast!(binary.left_expr.as_ref(), IExpressionPE::Not);
-  assert_lookup_name(not_left.inner.as_ref(), "y");
-  let not_right = cast!(binary.right_expr.as_ref(), IExpressionPE::Not);
-  assert_lookup_name(not_right.inner.as_ref(), "x");
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("florgle")),
+      left_expr: box IExpressionPE::Not(NotPE {
+        inner: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      right_expr: box IExpressionPE::Not(NotPE {
+        inner: box IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected not y florgle not x structure"),
+  }
 }
 /*
   test("Custom binaries") {
@@ -492,24 +668,6 @@ fn custom_binaries() {
 */
 #[test]
 fn custom_with_noncustom_binaries() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, "a + b florgle x * y");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "florgle");
-  let add_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(add_binary.function_name.as_str(), "+");
-  assert_lookup_name(add_binary.left_expr.as_ref(), "a");
-  assert_lookup_name(add_binary.right_expr.as_ref(), "b");
-  let times_binary = cast!(binary.right_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(times_binary.function_name.as_str(), "*");
-  assert_lookup_name(times_binary.left_expr.as_ref(), "x");
-  assert_lookup_name(times_binary.right_expr.as_ref(), "y");
-}
-
-#[test]
-fn custom_with_noncustom_binaries_2() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
@@ -616,16 +774,15 @@ fn greater_than_or_equal() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "9 >= 3");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), ">=");
-  assert_eq!(
-    cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    9
-  );
-  assert_eq!(
-    cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    3
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI(">=")),
+      left_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 9, .. }),
+      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected 9 >= 3 structure"),
+  }
 }
 /*
   test(">=") {
@@ -644,10 +801,20 @@ fn indexing() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, "arr [4]");
-  let brace_call = cast!(expr, IExpressionPE::BraceCall);
-  assert_lookup_name(brace_call.subject_expr.as_ref(), "arr");
-  let first_arg = expect_1(&brace_call.arg_exprs);
-  assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 4);
+  match &expr {
+    IExpressionPE::BraceCall(BraceCallPE {
+      subject_expr: box IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
+        template_args: None,
+      }),
+      arg_exprs,
+      ..
+    }) => match arg_exprs.as_slice() {
+      [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), ..] => {}
+      _ => panic!("expected arr [4] structure"),
+    },
+    _ => panic!("expected arr [4] structure"),
+  }
 }
 /*
   test("Indexing") {
