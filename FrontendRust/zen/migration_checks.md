@@ -98,3 +98,84 @@ For example, the old Scala did this well:
     val codeLocation = rangeS.begin
     val retRangeS = PostParser.evalRange(file, retRange)
 ```
+
+
+# M9: Keep inline comparisons inline (KICI)
+
+This is not a style preference. It is a Scala-parity requirement.
+If Scala has an inline comparison/check inside a `match`/`case`, keep that check inline in the Rust pattern itself.
+Do NOT move it into a guard.
+Do NOT move it outside the match.
+
+Look for these and change them to match the Scala shape:
+
+Scala source shape:
+```scala
+node match {
+  case NameS(StrI("x")) =>
+}
+```
+
+Wrong (moved into guard):
+```rust
+match node {
+  Node::Name(name) if name.as_str() == "x" => {}
+  _ => panic!("expected x"),
+}
+```
+
+Right (inline in pattern):
+```rust
+match node {
+  Node::Name(StrI("x")) => {}
+  _ => panic!("expected x"),
+}
+```
+
+Scala source shape:
+```scala
+node match {
+  case NameS(StrI("x")) =>
+}
+```
+
+Wrong (moved outside match):
+```rust
+let name = match node {
+  Node::Name(name) => name,
+  _ => panic!("expected name"),
+};
+assert_eq!(name.as_str(), "x");
+```
+
+Right (inline in pattern):
+```rust
+match node {
+  Node::Name(StrI("x")) => {}
+  _ => panic!("expected x"),
+}
+```
+
+Scala source shape:
+```scala
+Collector.only(program, {
+  case LocalLoadSE(_, _, UseP) =>
+})
+```
+
+Wrong (property checked later):
+```rust
+let load = collect_only!(program, Node::LocalLoad(load) => Some(load));
+assert_eq!(load.target_ownership, LoadAsP::Move);
+```
+
+Right (property checked inline):
+```rust
+collect_only!(
+  program,
+  Node::LocalLoad(LocalLoadSE {
+    target_ownership: LoadAsP::Move,
+    ..
+  }) => Some(())
+);
+```

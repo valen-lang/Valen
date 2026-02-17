@@ -175,6 +175,29 @@ where
   out
 }
 
+pub fn collect_in_sexpressions<'a, 's, T, F>(
+  expressions: &'s [&'s IExpressionSE<'a, 's>],
+  predicate: &F,
+) -> Vec<T>
+where
+  F: Fn(NodeRefS<'a, 's>) -> Option<T>,
+{
+  let mut out = Vec::new();
+  for expression in expressions {
+    visit_expression(predicate, &mut out, expression);
+  }
+  out
+}
+
+pub fn collect_in_sexpression<'a, 's, T, F>(expression: &'s IExpressionSE<'a, 's>, predicate: &F) -> Vec<T>
+where
+  F: Fn(NodeRefS<'a, 's>) -> Option<T>,
+{
+  let mut out = Vec::new();
+  visit_expression(predicate, &mut out, expression);
+  out
+}
+
 fn visit_program<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, program: &'s ProgramS<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
@@ -475,16 +498,94 @@ where
       visit_pattern(pred, out, &x.pattern);
       visit_expression(pred, out, x.expr);
     }
+    IExpressionSE::If(x) => {
+      visit_expression(pred, out, x.condition);
+      visit_block(pred, out, &x.then_body);
+      visit_block(pred, out, &x.else_body);
+    }
+    IExpressionSE::Loop(x) => visit_block(pred, out, &x.body),
+    IExpressionSE::Break(_) => {}
+    IExpressionSE::While(x) => visit_block(pred, out, &x.body),
+    IExpressionSE::Map(x) => visit_block(pred, out, &x.body),
+    IExpressionSE::ExprMutate(x) => {
+      visit_expression(pred, out, x.mutatee);
+      visit_expression(pred, out, x.expr);
+    }
+    IExpressionSE::GlobalMutate(x) => visit_expression(pred, out, x.expr),
+    IExpressionSE::LocalMutate(x) => {
+      visit_var_name(pred, out, &x.name);
+      visit_expression(pred, out, x.expr);
+    }
     IExpressionSE::Consecutor(x) => {
       for expr in x.exprs {
         visit_expression(pred, out, expr);
       }
     }
+    IExpressionSE::ArgLookup(_) => {}
+    IExpressionSE::RepeaterBlock(x) => visit_expression(pred, out, x.expression),
+    IExpressionSE::RepeaterBlockIterator(x) => visit_expression(pred, out, x.expression),
+    IExpressionSE::Void(_) => {}
+    IExpressionSE::Tuple(x) => {
+      for element in x.elements {
+        visit_expression(pred, out, element);
+      }
+    }
+    IExpressionSE::StaticArrayFromValues(x) => {
+      for rule in &x.rules {
+        visit_rulex(pred, out, rule);
+      }
+      if let Some(element_type_st) = &x.maybe_element_type_st {
+        visit_rune_usage(pred, out, element_type_st);
+      }
+      visit_rune_usage(pred, out, &x.mutability_st);
+      visit_rune_usage(pred, out, &x.variability_st);
+      visit_rune_usage(pred, out, &x.size_st);
+      for element in x.elements {
+        visit_expression(pred, out, element);
+      }
+    }
+    IExpressionSE::StaticArrayFromCallable(x) => {
+      for rule in &x.rules {
+        visit_rulex(pred, out, rule);
+      }
+      if let Some(element_type_st) = &x.maybe_element_type_st {
+        visit_rune_usage(pred, out, element_type_st);
+      }
+      visit_rune_usage(pred, out, &x.mutability_st);
+      visit_rune_usage(pred, out, &x.variability_st);
+      visit_rune_usage(pred, out, &x.size_st);
+      visit_expression(pred, out, x.callable);
+    }
+    IExpressionSE::NewRuntimeSizedArray(x) => {
+      for rule in &x.rules {
+        visit_rulex(pred, out, rule);
+      }
+      if let Some(element_type_st) = &x.maybe_element_type_st {
+        visit_rune_usage(pred, out, element_type_st);
+      }
+      visit_rune_usage(pred, out, &x.mutability_st);
+      visit_expression(pred, out, x.size);
+      if let Some(callable) = x.callable {
+        visit_expression(pred, out, callable);
+      }
+    }
+    IExpressionSE::RepeaterPack(x) => visit_expression(pred, out, x.expression),
+    IExpressionSE::RepeaterPackIterator(x) => visit_expression(pred, out, x.expression),
     IExpressionSE::Block(x) => visit_block(pred, out, x),
     IExpressionSE::Pure(x) => visit_pure(pred, out, x),
     IExpressionSE::Return(x) => visit_return(pred, out, x),
     IExpressionSE::ConstantInt(_) => {}
+    IExpressionSE::ConstantBool(_) => {}
+    IExpressionSE::ConstantStr(_) => {}
+    IExpressionSE::ConstantFloat(_) => {}
+    IExpressionSE::Destruct(x) => visit_expression(pred, out, x.inner),
+    IExpressionSE::Unlet(x) => visit_var_name(pred, out, &x.name),
+    IExpressionSE::Function(x) => visit_function(pred, out, &x.function),
     IExpressionSE::Dot(x) => visit_dot(pred, out, x),
+    IExpressionSE::Index(x) => {
+      visit_expression(pred, out, x.left);
+      visit_expression(pred, out, x.index_expr);
+    }
     IExpressionSE::FunctionCall(x) => {
       visit_expression(pred, out, x.callable_expr);
       for arg in x.arg_exprs {
@@ -493,8 +594,8 @@ where
     }
     IExpressionSE::LocalLoad(x) => visit_var_name(pred, out, &x.name),
     IExpressionSE::OutsideLoad(x) => visit_outside_load(pred, out, x),
+    IExpressionSE::RuneLookup(x) => visit_rune(pred, out, &x.rune),
     IExpressionSE::Ownershipped(x) => visit_ownershipped(pred, out, x),
-    _ => panic!("POSTPARSING_TRAVERSE_EXPRESSION_VARIANT_NOT_YET_IMPLEMENTED"),
   }
 }
 
@@ -745,62 +846,88 @@ where
   }
 }
 
+pub fn collect_in_snode<'a, 's, T, F>(node: &NodeRefS<'a, 's>, predicate: &F) -> Vec<T>
+where
+  F: Fn(NodeRefS<'a, 's>) -> Option<T>,
+{
+  match node {
+    NodeRefS::Program(program) => collect_in_program(program, predicate),
+    NodeRefS::Struct(strukt) => collect_in_struct(strukt, predicate),
+    NodeRefS::Expression(expression) => collect_in_sexpression(expression, predicate),
+    _ => panic!("POSTPARSING_TEST_COLLECT_IN_SNODE_NODE_KIND_NOT_YET_IMPLEMENTED"),
+  }
+}
+
 #[macro_export]
-macro_rules! collect_where_sprogram {
+macro_rules! collect_in_snodes {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_program($expr, &|node| match node {
-      $pattern => $body,
-      _ => None,
-    })
+    let mut out = Vec::new();
+    for node in $expr {
+      out.extend($crate::postparsing::test::traverse::collect_in_snode(
+        node,
+        &|node| match node {
+          $pattern => $body,
+          _ => None,
+        },
+      ));
+    }
+    out
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_program($expr, &|node| match node {
-      $pattern if $guard => $body,
-      _ => None,
-    })
+    let mut out = Vec::new();
+    for node in $expr {
+      out.extend($crate::postparsing::test::traverse::collect_in_snode(
+        node,
+        &|node| match node {
+          $pattern if $guard => $body,
+          _ => None,
+        },
+      ));
+    }
+    out
   }};
 }
 
 #[macro_export]
-macro_rules! collect_only_sprogram {
+macro_rules! collect_where_snodes {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    let mut matches = $crate::collect_where_sprogram!($expr, $pattern => $body);
+    $crate::collect_in_snodes!($expr, $pattern => $body)
+  }};
+  ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
+    $crate::collect_in_snodes!($expr, $pattern if $guard => $body)
+  }};
+}
+
+#[macro_export]
+macro_rules! collect_only_snodes {
+  ($expr:expr, $pattern:pat => $body:expr) => {{
+    let mut matches = $crate::collect_where_snodes!($expr, $pattern => $body);
     assert_eq!(1, matches.len());
     matches.remove(0)
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    let mut matches = $crate::collect_where_sprogram!($expr, $pattern if $guard => $body);
+    let mut matches = $crate::collect_where_snodes!($expr, $pattern if $guard => $body);
     assert_eq!(1, matches.len());
     matches.remove(0)
   }};
 }
 
 #[macro_export]
-macro_rules! collect_where_sstruct {
+macro_rules! collect_where_snode {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_struct($expr, &|node| match node {
-      $pattern => $body,
-      _ => None,
-    })
+    $crate::collect_where_snodes!(&[$expr], $pattern => $body)
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    $crate::postparsing::test::traverse::collect_in_struct($expr, &|node| match node {
-      $pattern if $guard => $body,
-      _ => None,
-    })
+    $crate::collect_where_snodes!(&[$expr], $pattern if $guard => $body)
   }};
 }
 
 #[macro_export]
-macro_rules! collect_only_sstruct {
+macro_rules! collect_only_snode {
   ($expr:expr, $pattern:pat => $body:expr) => {{
-    let mut matches = $crate::collect_where_sstruct!($expr, $pattern => $body);
-    assert_eq!(1, matches.len());
-    matches.remove(0)
+    $crate::collect_only_snodes!(&[$expr], $pattern => $body)
   }};
   ($expr:expr, $pattern:pat if $guard:expr => $body:expr) => {{
-    let mut matches = $crate::collect_where_sstruct!($expr, $pattern if $guard => $body);
-    assert_eq!(1, matches.len());
-    matches.remove(0)
+    $crate::collect_only_snodes!(&[$expr], $pattern if $guard => $body)
   }};
 }

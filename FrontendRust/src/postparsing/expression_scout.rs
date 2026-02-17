@@ -6,11 +6,12 @@ use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
-  BlockSE, ConstantIntSE, DotSE, ExprMutateSE, FunctionCallSE, IExpressionSE, IfSE, LetSE,
-  LocalLoadSE, LocalMutateSE, OutsideLoadSE, OwnershippedSE, ReturnSE, RuneLookupSE, VoidSE,
+  BlockSE, ConstantBoolSE, ConstantIntSE, DotSE, ExprMutateSE, FunctionCallSE, IExpressionSE,
+  IfSE, LetSE, LocalLoadSE, LocalMutateSE, OutsideLoadSE, OwnershippedSE, ReturnSE, RuneLookupSE,
+  VoidSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS,
+  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS,
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{
@@ -217,27 +218,175 @@ fn scout_impure_block<'a, 'p, 'pp, 'env, 's>(
     }
   }
 */
-fn new_block<'a, 'env, 's, F>(
-  _function_body_env: FunctionEnvironmentS<'a, 'env>,
-  _parent_stack_frame: Option<StackFrame<'a, 'env>>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _range_s: RangeS<'a>,
-  _context_region: IRuneS<'a>,
-  _initial_locals: VariableDeclarations<'a>,
-  _scout_contents: F,
-) -> (BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>)
+impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
-  F: FnOnce(
-    StackFrame<'a, 'env>,
-    &mut LocationInDenizenBuilder,
-  ) -> (
-    StackFrame<'a, 'env>,
-    &'s IExpressionSE<'a, 's>,
-    VariableUses<'a>,
-    VariableUses<'a>,
-  ),
+  'a: 'ctx,
+  'a: 'p,
+  'a: 's,
 {
-  panic!("Unimplemented new_block");
+  pub(crate) fn new_block<'env, F>(
+    &self,
+    function_body_env: FunctionEnvironmentS<'a, 'env>,
+    parent_stack_frame: Option<StackFrame<'a, 'env>>,
+    lidb: &mut LocationInDenizenBuilder,
+    range_s: RangeS<'a>,
+    context_region: IRuneS<'a>,
+    initial_locals: VariableDeclarations<'a>,
+    scout_contents: F,
+  ) -> Result<(BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    F: FnOnce(
+      StackFrame<'a, 'env>,
+      &mut LocationInDenizenBuilder,
+    ) -> Result<
+      (
+        StackFrame<'a, 'env>,
+        &'s IExpressionSE<'a, 's>,
+        VariableUses<'a>,
+        VariableUses<'a>,
+      ),
+      ICompileErrorS<'a>,
+    >,
+  {
+    if parent_stack_frame.is_some() {
+      panic!("POSTPARSER_NEW_BLOCK_PARENT_STACK_FRAME_NOT_YET_IMPLEMENTED");
+    }
+    let initial_stack_frame = StackFrame {
+      file: function_body_env.file,
+      name: function_body_env.name.clone(),
+      parent_env: function_body_env,
+      maybe_parent: None,
+      context_region,
+      pure_height: 0,
+      locals: initial_locals,
+    };
+    let mut inner_lidb = lidb.child();
+    let (
+      stack_frame_before_constructing,
+      expr_without_constructing_without_void,
+      self_uses_before_constructing,
+      child_uses_before_constructing,
+    ) = scout_contents(initial_stack_frame, &mut inner_lidb)?;
+
+    let constructing_member_names: Vec<StrI<'a>> = stack_frame_before_constructing
+      .locals
+      .vars
+      .iter()
+      .filter_map(|declared| match &declared.name {
+        IVarNameS::ConstructingMemberName(member_name) => Some(*member_name),
+        _ => None,
+      })
+      .collect();
+    let (
+      stack_frame_after_constructing,
+      expr_with_constructing_if_necessary,
+      self_uses,
+      child_uses,
+    ) = if constructing_member_names.is_empty() {
+      (
+        stack_frame_before_constructing,
+        expr_without_constructing_without_void,
+        self_uses_before_constructing,
+        child_uses_before_constructing,
+      )
+    } else {
+      let function_name = match &stack_frame_before_constructing.parent_env.name {
+        IFunctionDeclarationNameS::FunctionName(FunctionNameS { name, .. }) => *name,
+        _ => panic!("POSTPARSER_NEW_BLOCK_EXPECTED_FUNCTION_NAME"),
+      };
+      let range_at_end = RangeL(range_s.end.offset, range_s.end.offset);
+      let callable_expr_p = &*self.scout_arena.alloc(IExpressionPE::Lookup(crate::parsing::ast::LookupPE {
+        name: IImpreciseNameP::LookupName(crate::parsing::ast::NameP(range_at_end, function_name)),
+        template_args: None,
+      }));
+      let arg_exprs_p: Vec<IExpressionPE<'a, 's>> = constructing_member_names
+        .iter()
+        .map(|member_name| {
+          let self_lookup_p = &*self.scout_arena.alloc(IExpressionPE::Lookup(crate::parsing::ast::LookupPE {
+            name: IImpreciseNameP::LookupName(crate::parsing::ast::NameP(
+              range_at_end,
+              self.keywords.self_,
+            )),
+            template_args: None,
+          }));
+          IExpressionPE::Dot(crate::parsing::ast::DotPE {
+            range: range_at_end,
+            left: self_lookup_p,
+            operator_range: RangeL::zero(),
+            member: crate::parsing::ast::NameP(range_at_end, *member_name),
+          })
+        })
+        .collect();
+      let constructor_call_p = IExpressionPE::FunctionCall(crate::parsing::ast::FunctionCallPE {
+        range: range_at_end,
+        operator_range: RangeL::zero(),
+        callable_expr: callable_expr_p,
+        arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs_p),
+      });
+      let mut constructor_lidb = lidb.child();
+      let (
+        stack_frame_after_constructing,
+        constructor_result,
+        self_uses_after_constructing,
+        child_uses_after_constructing,
+      ) = self.scout_expression(
+        stack_frame_before_constructing,
+        &mut constructor_lidb,
+        &constructor_call_p,
+      )?;
+      let construct_expression = match constructor_result {
+        IScoutResult::NormalResult(NormalResultS { expr }) => expr,
+        _ => panic!("POSTPARSER_NEW_BLOCK_CONSTRUCTOR_SCOUT_RESULT_NOT_NORMAL"),
+      };
+      let expr_after_constructing =
+        self.consecutive(vec![expr_without_constructing_without_void, construct_expression]);
+      (
+        stack_frame_after_constructing,
+        expr_after_constructing,
+        self_uses_before_constructing.then_merge(&self_uses_after_constructing),
+        child_uses_before_constructing.then_merge(&child_uses_after_constructing),
+      )
+    };
+    let locals: Vec<crate::postparsing::expressions::LocalS<'a>> = stack_frame_after_constructing
+      .locals
+      .vars
+      .iter()
+      .map(|declared| crate::postparsing::expressions::LocalS {
+        var_name: declared.name.clone(),
+        self_borrowed: self_uses.is_borrowed(&declared.name),
+        self_moved: self_uses.is_moved(&declared.name),
+        self_mutated: self_uses.is_mutated(&declared.name),
+        child_borrowed: child_uses.is_borrowed(&declared.name),
+        child_moved: child_uses.is_moved(&declared.name),
+        child_mutated: child_uses.is_mutated(&declared.name),
+      })
+      .collect();
+    let self_uses_of_things_from_above = VariableUses {
+      uses: self_uses
+        .uses
+        .iter()
+        .filter(|use_| !locals.iter().any(|local| local.var_name == use_.name))
+        .cloned()
+        .collect(),
+    };
+    let child_uses_of_things_from_above = VariableUses {
+      uses: child_uses
+        .uses
+        .iter()
+        .filter(|use_| !locals.iter().any(|local| local.var_name == use_.name))
+        .cloned()
+        .collect(),
+    };
+    Ok((
+      BlockSE {
+        range: range_s,
+        locals,
+        expr: expr_with_constructing_if_necessary,
+      },
+      self_uses_of_things_from_above,
+      child_uses_of_things_from_above,
+    ))
+  }
 }
 /*
   def newBlock(
@@ -685,6 +834,67 @@ where
       (stackFrame2, result, callableSelfUses.thenMerge(argsSelfUses), callableChildUses.thenMerge(argsChildUses))
     }
     */
+    IExpressionPE::BinaryCall(binary_call) => {
+      let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
+        range: PostParser::eval_range(&file_coordinate, binary_call.range),
+        rules: Vec::new(),
+        name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          name: binary_call.function_name.str(),
+        })),
+        maybe_template_args: None,
+        target_ownership: LoadAsP::LoadAsBorrow,
+      }));
+      let (stack_frame1, left_expr_s, left_self_uses, left_child_uses) = {
+        let mut left_lidb = lidb.child();
+        self.scout_expression_and_coerce(
+          stack_frame,
+          &mut left_lidb,
+          binary_call.left_expr,
+          LoadAsP::LoadAsBorrow,
+        )?
+      };
+      let (stack_frame2, right_expr_s, right_self_uses, right_child_uses) = {
+        let mut right_lidb = lidb.child();
+        self.scout_expression_and_coerce(
+          stack_frame1,
+          &mut right_lidb,
+          binary_call.right_expr,
+          LoadAsP::LoadAsBorrow,
+        )?
+      };
+      let result = IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
+          range: PostParser::eval_range(&file_coordinate, binary_call.range),
+          location: lidb.child().consume(),
+          callable_expr: callable_expr_s,
+          arg_exprs: alloc_slice_from_vec(
+            self.scout_arena,
+            vec![left_expr_s, right_expr_s],
+          ),
+        })),
+      });
+      Ok((
+        stack_frame2,
+        result,
+        left_self_uses.then_merge(&right_self_uses),
+        left_child_uses.then_merge(&right_child_uses),
+      ))
+    }
+    /*
+    case BinaryCallPE(range, namePE, leftPE, rightPE) => {
+      val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(namePE.str)), None, LoadAsBorrowP)
+
+      val (stackFrame1, leftSE, leftSelfUses, leftChildUses) =
+        scoutExpressionAndCoerce(stackFrame0, lidb.child(), leftPE, LoadAsBorrowP)
+      val (stackFrame2, rightSE, rightSelfUses, rightChildUses) =
+        scoutExpressionAndCoerce(stackFrame1, lidb.child(), rightPE, LoadAsBorrowP)
+
+      val result =
+        NormalResult(
+          vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(leftSE, rightSE)))
+      (stackFrame2, result, leftSelfUses.thenMerge(rightSelfUses), leftChildUses.thenMerge(rightChildUses))
+    }
+    */
     IExpressionPE::Let(lett) => {
       let destination = lett
         .pattern
@@ -1053,6 +1263,17 @@ where
           (stackFrame2, NormalResult(resultSE), beginSelfUses.thenMerge(endSelfUses), beginChildUses.thenMerge(endChildUses))
         }
         */
+    IExpressionPE::ConstantBool(constant_bool) => Ok((
+      stack_frame,
+      IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::ConstantBool(ConstantBoolSE {
+          range: PostParser::eval_range(&file_coordinate, constant_bool.range),
+          value: constant_bool.value,
+        })),
+      }),
+      VariableUses::empty(),
+      VariableUses::empty(),
+    )),
         /*
         case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(vale.postparsing.ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
         */
@@ -1104,21 +1325,6 @@ where
           val (stackFrame1, inner1, innerSelfUses, innerChildUses) =
             scoutExpressionAndCoerce(stackFrame0, lidb.child(), innersPE.head, UseP)
           (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)
-        }
-        */
-        /*
-        case BinaryCallPE(range, namePE, leftPE, rightPE) => {
-          val callableSE = vale.postparsing.OutsideLoadSE(evalRange(range), Vector(), interner.intern(CodeNameS(namePE.str)), None, LoadAsBorrowP)
-
-          val (stackFrame1, leftSE, leftSelfUses, leftChildUses) =
-            scoutExpressionAndCoerce(stackFrame0, lidb.child(), leftPE, LoadAsBorrowP)
-          val (stackFrame2, rightSE, rightSelfUses, rightChildUses) =
-            scoutExpressionAndCoerce(stackFrame1, lidb.child(), rightPE, LoadAsBorrowP)
-
-          val result =
-            NormalResult(
-              vale.postparsing.FunctionCallSE(evalRange(range), lidb.child().consume(), callableSE, Vector(leftSE, rightSE)))
-          (stackFrame2, result, leftSelfUses.thenMerge(rightSelfUses), leftChildUses.thenMerge(rightChildUses))
         }
         */
         /*

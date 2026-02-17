@@ -25,19 +25,23 @@ import dev.vale._
 import scala.collection.immutable.{List, Range}
 */
 use crate::StrI;
-use crate::parsing::ast::{FunctionP, INameDeclarationP, LoadAsP};
+use crate::parsing::ast::{FunctionP, IAttributeP, INameDeclarationP, ITemplexPT, LoadAsP};
 use crate::postparsing::ast::{
-  CodeBodyS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS, LocationInDenizenBuilder, UserFunctionS,
+  AdditiveS, CodeBodyS, ExportS, ExternS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS,
+  LocationInDenizenBuilder, PureS,
 };
 use crate::postparsing::expressions::{
-  BlockSE, BodySE, ConsecutorSE, FunctionCallSE, IExpressionSE, LocalLoadSE, LocalS, OutsideLoadSE,
+  BodySE, ConsecutorSE, IExpressionSE,
 };
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, TemplateTemplataType};
-use crate::postparsing::names::{CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS};
+use crate::postparsing::names::{
+  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameValS, IRuneS,
+  IRuneValS, IVarNameS, ImplicitRuneS,
+};
 use crate::postparsing::post_parser::{
   FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
 };
-use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::rules::rules::{IRulexSR, MaybeCoercingLookupSR, RuneUsage};
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::utils::code_hierarchy::FileCoordinate;
@@ -116,19 +120,52 @@ where
   where
     'a: 'pp,
   {
-    match maybe_parent {
-      IFunctionParent::FunctionNoParent => {}
-      IFunctionParent::ParentInterface { .. } => {}
-      IFunctionParent::ParentFunction { .. } => {}
-    }
+    // MIGTODO: check the order of these various chunks of logic
+
+    assert!(
+      matches!(&maybe_parent, IFunctionParent::FunctionNoParent),
+      "POSTPARSER_SCOUT_FUNCTION_PARENT_KIND_NOT_YET_IMPLEMENTED"
+    );
     let function_name = function
       .header
       .name
       .as_ref()
       .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_NAME"));
-    if !function.header.attributes.is_empty() {
-      panic!("POSTPARSER_SCOUT_FUNCTION_ATTRIBUTES_NOT_YET_IMPLEMENTED");
-    }
+    let func_attrs_s: Vec<IFunctionAttributeS<'a>> = {
+      let unfiltered_attrs_p = function.header.attributes;
+      let filtered_attrs: Vec<&IAttributeP<'a>> = match maybe_parent {
+        IFunctionParent::FunctionNoParent => unfiltered_attrs_p
+          .iter()
+          .filter(|a| !matches!(a, IAttributeP::AbstractAttribute(_)))
+          .collect(),
+        IFunctionParent::ParentInterface { .. } => unfiltered_attrs_p.iter().collect(),
+        IFunctionParent::ParentFunction { .. } => unfiltered_attrs_p.iter().collect(),
+      };
+      filtered_attrs
+        .into_iter()
+        .map(|attr| match attr {
+          IAttributeP::ExportAttribute(_) => {
+            IFunctionAttributeS::Export(ExportS {
+              package_coordinate: file_coordinate.package_coord,
+            })
+          }
+          IAttributeP::ExternAttribute(_) => {
+            IFunctionAttributeS::Extern(ExternS {
+              package_coord: file_coordinate.package_coord,
+            })
+          }
+          IAttributeP::PureAttribute(_) => IFunctionAttributeS::Pure(PureS),
+          IAttributeP::AdditiveAttribute(_) => IFunctionAttributeS::Additive(AdditiveS),
+          IAttributeP::BuiltinAttribute(builtin_attr) => {
+            IFunctionAttributeS::Builtin(crate::postparsing::ast::BuiltinS {
+              generator_name: builtin_attr.generator_name.str(),
+            })
+          }
+          IAttributeP::AbstractAttribute(_) => panic!("AbstractAttribute should have been filtered"),
+          other => panic!("POSTPARSER_SCOUT_FUNCTION_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
+        })
+        .collect()
+    };
     if function.header.generic_parameters.is_some() {
       panic!("POSTPARSER_SCOUT_FUNCTION_GENERICS_NOT_YET_IMPLEMENTED");
     }
@@ -185,9 +222,36 @@ where
     } else {
       None
     };
-    if function.header.ret.ret_type.is_some() {
-      panic!("POSTPARSER_SCOUT_FUNCTION_RETURN_TYPES_NOT_YET_IMPLEMENTED");
-    }
+    let mut lidb = LocationInDenizenBuilder::new(vec![]);
+    let mut rules: Vec<IRulexSR<'a>> = Vec::new();
+    let mut rune_to_predicted_type: HashMap<IRuneS<'a>, ITemplataType> = HashMap::new();
+    let maybe_ret_coord_rune = match &function.header.ret.ret_type {
+      None => None,
+      Some(ret_type) => {
+        let ITemplexPT::NameOrRune(name_or_rune) = ret_type else {
+          panic!("POSTPARSER_SCOUT_FUNCTION_RETURN_TYPE_NOT_YET_IMPLEMENTED");
+        };
+        let ret_range = PostParser::eval_range(file_coordinate, name_or_rune.0.range());
+        let ret_coord_rune = RuneUsage {
+          range: ret_range.clone(),
+          rune: self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: lidb.child().consume(),
+          })),
+        };
+        rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
+          range: ret_range,
+          rune: ret_coord_rune.clone(),
+          name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+            name: name_or_rune.0.str(),
+          })),
+        }));
+        rune_to_predicted_type.insert(
+          ret_coord_rune.rune.clone(),
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        );
+        Some(ret_coord_rune)
+      }
+    };
     let body = function
       .body
       .as_ref()
@@ -199,7 +263,6 @@ where
       panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
     }
 
-    let body_range = Self::eval_range(file_coordinate, body.range);
     let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
       name: function_name.str(),
       code_location: Self::eval_pos(file_coordinate, function_name.range().begin()),
@@ -215,154 +278,43 @@ where
     let default_region_rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
       name: function_name.str(),
     }));
-    let stack_frame = StackFrame {
-      file: file_coordinate,
-      name: function_declaration_name.clone(),
-      parent_env: function_environment,
-      maybe_parent: None,
-      context_region: default_region_rune,
-      pure_height: 0,
-      locals: {
-        let mut vars = Vec::<VariableDeclarationS>::new();
-        if let Some(explicit_self_name) = &explicit_self_name {
-          vars.push(VariableDeclarationS {
-            name: IVarNameS::CodeVarName(*explicit_self_name),
-          });
-        }
-        VariableDeclarations { vars }
-      },
-    };
-    let mut lidb = LocationInDenizenBuilder::new(vec![]);
-    let (stack_frame_after_body, body_expr, self_uses_before_constructing, child_uses) =
-      self.scout_expression_and_coerce(
-        stack_frame,
-        &mut lidb,
-        body.inner,
-        LoadAsP::Use,
-      )?;
-    let expr_without_constructing_without_void: &'s IExpressionSE<'a, 's> = match body_expr {
-      IExpressionSE::Consecutor(consecutor) => {
-        let exprs: Vec<&'s IExpressionSE<'a, 's>> = {
-          let mut v: Vec<_> = consecutor.exprs.iter().copied().collect();
-          while matches!(v.last(), Some(IExpressionSE::Void(_))) {
-            v.pop();
-          }
-          v
-        };
-        assert!(
-          !exprs.is_empty(),
-          "POSTPARSER_SCOUT_FUNCTION_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
-        );
-        if exprs.len() == 1 {
-          exprs.into_iter().next().unwrap()
-        } else {
-          &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-            exprs: alloc_slice_from_vec(self.scout_arena, exprs),
-          }))
-        }
+    let initial_declarations = {
+      let mut vars = Vec::<VariableDeclarationS>::new();
+      if let Some(explicit_self_name) = &explicit_self_name {
+        vars.push(VariableDeclarationS {
+          name: IVarNameS::CodeVarName(*explicit_self_name),
+        });
       }
-      other => other,
+      VariableDeclarations { vars }
     };
-    let constructing_member_names: Vec<StrI<'a>> = stack_frame_after_body
-      .locals
-      .vars
-      .iter()
-      .filter_map(|declared| match &declared.name {
-        IVarNameS::ConstructingMemberName(member_name) => Some(member_name.clone()),
-        _ => None,
-      })
-      .collect();
-    let mut self_uses: VariableUses<'a> = self_uses_before_constructing;
-    let expr_with_constructor: &'s IExpressionSE<'a, 's> = if constructing_member_names.is_empty() {
-      expr_without_constructing_without_void
-    } else {
-      let callable_expr = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
-        range: body_range.clone(),
-        rules: Vec::new(),
-        name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-          name: function_name.str(),
-        })),
-        maybe_template_args: None,
-        target_ownership: LoadAsP::LoadAsBorrow,
-      }));
-      let arg_exprs: Vec<&'s IExpressionSE<'a, 's>> = constructing_member_names
-        .iter()
-        .map(|member_name: &StrI<'a>| {
-          &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
-            range: body_range.clone(),
-            name: IVarNameS::ConstructingMemberName(*member_name),
-            target_ownership: LoadAsP::Move,
-          }))
-        })
-        .collect();
-      let constructor_expr = &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
-        range: body_range.clone(),
-        location: lidb.child().consume(),
-        callable_expr,
-        arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs),
-      }));
-      for member_name in constructing_member_names {
-        self_uses = self_uses.mark_moved(IVarNameS::ConstructingMemberName(member_name));
-      }
-      match expr_without_constructing_without_void {
-        IExpressionSE::Consecutor(consecutor) => {
-          let mut exprs: Vec<&'s IExpressionSE<'a, 's>> =
-            consecutor.exprs.iter().copied().collect();
-          exprs.push(constructor_expr);
-          &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-            exprs: alloc_slice_from_vec(self.scout_arena, exprs),
-          }))
-        }
-        other => &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-          exprs: alloc_slice_from_vec(
-            self.scout_arena,
-            vec![other, constructor_expr],
-          ),
-        })),
-      }
-    };
-    let locals: Vec<LocalS<'a>> = stack_frame_after_body
-      .locals
-      .vars
-      .iter()
-      .map(|declared| LocalS {
-        var_name: declared.name.clone(),
-        self_borrowed: self_uses.is_borrowed(&declared.name),
-        self_moved: self_uses.is_moved(&declared.name),
-        self_mutated: self_uses.is_mutated(&declared.name),
-        child_borrowed: child_uses.is_borrowed(&declared.name),
-        child_moved: child_uses.is_moved(&declared.name),
-        child_mutated: child_uses.is_mutated(&declared.name),
-      })
-      .collect();
+    let (body_s, variable_uses, magic_param_names) = self.scout_body(
+      function_environment,
+      None,
+      &mut lidb,
+      default_region_rune,
+      body,
+      initial_declarations,
+    )?;
+    if !magic_param_names.is_empty() {
+      panic!("POSTPARSER_SCOUT_FUNCTION_MAGIC_PARAMS_NOT_YET_IMPLEMENTED");
+    }
     Ok((FunctionS {
       range: Self::eval_range(file_coordinate, function.range),
       name: function_declaration_name,
-      attributes: alloc_slice_from_vec(
-        self.scout_arena,
-        vec![IFunctionAttributeS::UserFunction(UserFunctionS)],
-      ),
+      attributes: alloc_slice_from_vec(self.scout_arena, func_attrs_s),
       generic_params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
-      rune_to_predicted_type: HashMap::new(),
+      rune_to_predicted_type,
       tyype: TemplateTemplataType {
         param_types: Vec::new(),
         return_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
       },
       params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
-      maybe_ret_coord_rune: None,
-      rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
+      maybe_ret_coord_rune,
+      rules: alloc_slice_from_vec(self.scout_arena, rules),
       body: IBodyS::CodeBody(CodeBodyS {
-        body: BodySE {
-          range: body_range.clone(),
-          closured_names: Vec::new(),
-          block: BlockSE {
-            range: body_range,
-            locals,
-            expr: expr_with_constructor,
-          },
-        },
+        body: body_s,
       }),
-    }, VariableUses::empty()))
+    }, variable_uses))
   }
 /*
   def scoutFunction(
@@ -991,20 +943,105 @@ fn create_magic_parameters(
     scoutFunction(file, functionP, ParentFunction(parentStackFrame))
   }
 */
-fn scout_body<'env>(
-  _function_env: FunctionEnvironmentS<'a, 'env>,
-  _parent_stack_frame: Option<StackFrame<'a, 'env>>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _context_region: IRuneS<'a>,
-  _body0: &crate::parsing::ast::BlockPE<'a, 'p>,
-  _initial_declarations: VariableDeclarations<'a>,
-) -> (
-  crate::postparsing::expressions::BodySE<'a, 's>,
-  VariableUses<'a>,
-  Vec<crate::postparsing::names::MagicParamNameS<'a>>,
-) {
-  panic!("Unimplemented scout_body");
-}
+  fn scout_body<'env>(
+    &self,
+    function_env: FunctionEnvironmentS<'a, 'env>,
+    parent_stack_frame: Option<StackFrame<'a, 'env>>,
+    lidb: &mut LocationInDenizenBuilder,
+    context_region: IRuneS<'a>,
+    body0: &crate::parsing::ast::BlockPE<'a, 'p>,
+    initial_declarations: VariableDeclarations<'a>,
+  ) -> Result<
+    (
+      crate::postparsing::expressions::BodySE<'a, 's>,
+      VariableUses<'a>,
+      Vec<crate::postparsing::names::MagicParamNameS<'a>>,
+    ),
+    ICompileErrorS<'a>,
+  > {
+    let function_body_env = function_env.child(self.scout_arena);
+    let mut new_block_lidb = lidb.child();
+    let (block1, self_uses, child_uses) = self.new_block(
+      function_body_env.clone(),
+      parent_stack_frame,
+      &mut new_block_lidb,
+      PostParser::eval_range(function_body_env.file, body0.range),
+      context_region,
+      initial_declarations,
+      |stack_frame1, scout_contents_lidb| {
+        let (stack_frame2, inner_expr, inner_self_uses, inner_child_uses) =
+          self.scout_expression_and_coerce(
+            stack_frame1,
+            scout_contents_lidb,
+            body0.inner,
+            LoadAsP::Use,
+          )?;
+        let expr_without_constructing_without_void: &'s IExpressionSE<'a, 's> = match inner_expr {
+          IExpressionSE::Consecutor(consecutor) => {
+            let exprs: Vec<&'s IExpressionSE<'a, 's>> = {
+              let mut v: Vec<_> = consecutor.exprs.iter().copied().collect();
+              while matches!(v.last(), Some(IExpressionSE::Void(_))) {
+                v.pop();
+              }
+              v
+            };
+            assert!(
+              !exprs.is_empty(),
+              "POSTPARSER_SCOUT_BODY_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
+            );
+            if exprs.len() == 1 {
+              exprs.into_iter().next().unwrap()
+            } else {
+              &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
+                exprs: alloc_slice_from_vec(self.scout_arena, exprs),
+              }))
+            }
+          }
+          other => other,
+        };
+        Ok((
+          stack_frame2,
+          expr_without_constructing_without_void,
+          inner_self_uses,
+          inner_child_uses,
+        ))
+      },
+    )?;
+
+    let magic_param_names: Vec<crate::postparsing::names::MagicParamNameS<'a>> = self_uses
+      .uses
+      .iter()
+      .filter_map(|use_| match &use_.name {
+        IVarNameS::MagicParamName(code_location) => {
+          Some(crate::postparsing::names::MagicParamNameS {
+            code_location: code_location.clone(),
+          })
+        }
+        _ => None,
+      })
+      .collect();
+    if !magic_param_names.is_empty() {
+      panic!("POSTPARSER_SCOUT_BODY_MAGIC_PARAMS_NOT_YET_IMPLEMENTED");
+    }
+    if child_uses
+      .uses
+      .iter()
+      .any(|use_| matches!(use_.name, IVarNameS::MagicParamName(_)))
+    {
+      panic!("POSTPARSER_SCOUT_BODY_CHILD_MAGIC_PARAMS_NOT_YET_IMPLEMENTED");
+    }
+    let closured_names: Vec<IVarNameS<'a>> = self_uses
+      .uses
+      .iter()
+      .map(|use_| use_.name.clone())
+      .collect();
+    let body_s = BodySE {
+      range: PostParser::eval_range(function_body_env.file, body0.range),
+      closured_names,
+      block: block1,
+    };
+    Ok((body_s, self_uses, magic_param_names))
+  }
 /*
   // Returns:
   // - Body.

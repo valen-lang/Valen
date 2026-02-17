@@ -11,7 +11,7 @@ use crate::postparsing::expressions::{
   OwnershippedSE, ReturnSE,
 };
 use crate::postparsing::names::{IFunctionDeclarationNameS, IImpreciseNameS, IVarNameS};
-use crate::postparsing::post_parser::PostParser;
+use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
 use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLookupSR};
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::parsing::tests::utils::compile_file;
@@ -78,6 +78,31 @@ where
     }
   }
 */
+fn compile_for_error<'a, 'ctx, 'p>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
+  code: &str,
+) -> ICompileErrorS<'a>
+where
+  'a: 'ctx,
+  'a: 'p,
+{
+  let options = GlobalOptions {
+    sanity_check: true,
+    use_overload_index: true,
+    use_optimized_solver: true,
+    verbose_errors: false,
+    debug_output: false,
+  };
+
+  let only_file = compile_file(interner, keywords, arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, arena);
+  match post_parser.scout_program(only_file.file_coord, &only_file) {
+    Ok(_) => panic!("Accidentally compiled!"),
+    Err(e) => e,
+  }
+}
 /*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
@@ -126,11 +151,42 @@ where
     }
   }
 */
+#[test]
+fn lookup_plus() {
+  let arena = Bump::new();
+  let parse_arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let keywords = Keywords::new(&interner);
+  let program = compile(
+    &interner,
+    &keywords,
+    &parse_arena,
+    "exported func main() int { return +(3, 4); }",
+  );
+  let main = program.lookup_function("main");
+  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  match code_body.body.block.expr {
+    IExpressionSE::Return(ReturnSE {
+      inner:
+        IExpressionSE::FunctionCall(FunctionCallSE {
+          callable_expr:
+            IExpressionSE::OutsideLoad(OutsideLoadSE {
+              name: IImpreciseNameS::CodeName(code_name),
+              ..
+            }),
+          ..
+        }),
+      ..
+    }) => assert_eq!(code_name.name.as_str(), "+"),
+    _ => panic!("expected return +(3, 4) structure"),
+  }
+}
 /*
   test("Lookup +") {
     val program1 = compile("exported func main() int { return +(3, 4); }")
     val main = program1.lookupFunction("main")
 
+    // MIGALLOW: Rust can just do one big match on code_body.body.block.expr
     val CodeBodyS(BodySE(_, _, block)) = main.body
     val ret = Collector.only(block.expr, { case x @ ReturnSE(_, _) => x })
     val call = Collector.only(ret.inner, { case x @ FunctionCallSE(_, _, _, _) => x })
@@ -146,8 +202,8 @@ fn test_struct() {
   let program = compile(&interner, &keywords, &parse_arena, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
-  crate::collect_only_sstruct!(
-    imoo,
+  crate::collect_only_snode!(
+    NodeRefS::Struct(imoo),
     NodeRefS::LiteralRule(
       literal_rule @ LiteralSR {
         literal: ILiteralSL::MutabilityLiteral(mutability_literal),
@@ -158,8 +214,8 @@ fn test_struct() {
   );
   
   let only_member = expect_1(&imoo.members);
-  crate::collect_only_sstruct!(
-    imoo,
+  crate::collect_only_snode!(
+    NodeRefS::Struct(imoo),
     NodeRefS::MaybeCoercingLookupRule(
       MaybeCoercingLookupSR {
         name: IImpreciseNameS::CodeName(code_name),
@@ -197,8 +253,8 @@ fn linear_struct() {
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, &parse_arena, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
-  crate::collect_only_sstruct!(
-    moo_struct,
+  crate::collect_only_snode!(
+    NodeRefS::Struct(moo_struct),
     NodeRefS::MacroCallAttribute(macro_call)
       if macro_call.include == IMacroInclusionP::DontCallMacro
         && macro_call.macro_name.as_str() == "DeriveStructDrop" => Some(())
@@ -368,6 +424,126 @@ fn interface() {
     }
   }
 */
+#[test]
+fn constructing_members() {
+  let arena = Bump::new();
+  let parse_arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let keywords = Keywords::new(&interner);
+  let program = compile(
+    &interner,
+    &keywords,
+    &parse_arena,
+    "func MyStruct() {
+      self.x = 4;
+      self.y = true;
+    }",
+  );
+  let mystruct = program.lookup_function("MyStruct");
+  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let block = &code_body.body.block;
+
+  match &block.locals[..] {
+    [
+      crate::postparsing::expressions::LocalS {
+        var_name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+        self_borrowed: IVariableUseCertainty::NotUsed,
+        self_moved: IVariableUseCertainty::Used,
+        self_mutated: IVariableUseCertainty::NotUsed,
+        child_borrowed: IVariableUseCertainty::NotUsed,
+        child_moved: IVariableUseCertainty::NotUsed,
+        child_mutated: IVariableUseCertainty::NotUsed,
+      },
+      crate::postparsing::expressions::LocalS {
+        var_name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+        self_borrowed: IVariableUseCertainty::NotUsed,
+        self_moved: IVariableUseCertainty::Used,
+        self_mutated: IVariableUseCertainty::NotUsed,
+        child_borrowed: IVariableUseCertainty::NotUsed,
+        child_moved: IVariableUseCertainty::NotUsed,
+        child_mutated: IVariableUseCertainty::NotUsed,
+      },
+    ] => {}
+    other => panic!("unexpected constructing_members locals: {:?}", other),
+  }
+
+  let exprs = match block.expr {
+    IExpressionSE::Consecutor(crate::postparsing::expressions::ConsecutorSE { exprs }) => exprs,
+    _ => panic!("expected consecutor in constructing_members"),
+  };
+  let expr_nodes = exprs
+    .iter()
+    .map(|expr| NodeRefS::Expression(*expr))
+    .collect::<Vec<_>>();
+
+  let _ = crate::collect_only_snodes!(
+    &expr_nodes,
+    NodeRefS::Expression(
+      IExpressionSE::Let(crate::postparsing::expressions::LetSE {
+        pattern:
+          crate::postparsing::patterns::AtomSP {
+            name:
+              Some(crate::postparsing::patterns::CaptureS {
+                name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+                mutate: false,
+              }),
+            destructure: None,
+            ..
+          },
+        expr: IExpressionSE::ConstantInt(crate::postparsing::expressions::ConstantIntSE { value: 4, .. }),
+        ..
+      })
+    ) => Some(())
+  );
+
+  let _ = crate::collect_only_snodes!(
+    &expr_nodes,
+    NodeRefS::Expression(
+      IExpressionSE::Let(crate::postparsing::expressions::LetSE {
+        pattern:
+          crate::postparsing::patterns::AtomSP {
+            name:
+              Some(crate::postparsing::patterns::CaptureS {
+                name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+                mutate: false,
+              }),
+            destructure: None,
+            ..
+          },
+        expr: IExpressionSE::ConstantBool(crate::postparsing::expressions::ConstantBoolSE { value: true, .. }),
+        ..
+      })
+    ) => Some(())
+  );
+
+  let _ = crate::collect_only_snodes!(
+    &expr_nodes,
+    NodeRefS::Expression(
+      IExpressionSE::FunctionCall(FunctionCallSE {
+        callable_expr:
+          IExpressionSE::OutsideLoad(OutsideLoadSE {
+            name: IImpreciseNameS::CodeName(crate::postparsing::names::CodeNameS {
+              name: crate::interner::StrI("MyStruct"),
+            }),
+            ..
+          }),
+        arg_exprs: [
+          IExpressionSE::LocalLoad(LocalLoadSE {
+            name: IVarNameS::ConstructingMemberName(crate::interner::StrI("x")),
+            target_ownership: LoadAsP::Use,
+            ..
+          }),
+          IExpressionSE::LocalLoad(LocalLoadSE {
+            name: IVarNameS::ConstructingMemberName(crate::interner::StrI("y")),
+            target_ownership: LoadAsP::Use,
+            ..
+          }),
+        ],
+        ..
+      })
+    ) => Some(())
+  );
+}
 /*
   test("Constructing members") {
     val program1 = compile(
@@ -650,12 +826,12 @@ fn constructing_members_borrowing_another_member() {
         [
           IExpressionSE::LocalLoad(LocalLoadSE {
             name: IVarNameS::ConstructingMemberName(x_name),
-            target_ownership: LoadAsP::Move,
+            target_ownership: LoadAsP::Use,
             ..
           }),
           IExpressionSE::LocalLoad(LocalLoadSE {
             name: IVarNameS::ConstructingMemberName(y_name),
-            target_ownership: LoadAsP::Move,
+            target_ownership: LoadAsP::Use,
             ..
           }),
         ] => {
@@ -785,8 +961,8 @@ fn this_isnt_special_if_was_explicit_param() {
   );
   let moo = program.lookup_function("moo");
   let code_body = cast!(&moo.body, crate::postparsing::ast::IBodyS::CodeBody);
-  let function_call = crate::collect_only_sprogram!(
-    &program,
+  let function_call = crate::collect_only_snode!(
+    NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
   );
   let outside_load = cast!(function_call.callable_expr, IExpressionSE::OutsideLoad);
@@ -800,8 +976,8 @@ fn this_isnt_special_if_was_explicit_param() {
   assert_eq!(code_var_name.as_str(), "self");
   assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);
 
-  let function_calls = crate::collect_where_sprogram!(
-    &program,
+  let function_calls = crate::collect_where_snode!(
+    NodeRefS::Program(&program),
     NodeRefS::Expression(IExpressionSE::FunctionCall(_)) => Some(())
   );
   assert_eq!(function_calls.len(), 1);
@@ -824,6 +1000,23 @@ fn this_isnt_special_if_was_explicit_param() {
     Collector.all(main.body, { case FunctionCallSE(_, _, _, _) => }).size shouldEqual 1
   }
 */
+#[test]
+fn reports_when_mutating_nonexistant_local() {
+  let arena = Bump::new();
+  let parse_arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let keywords = Keywords::new(&interner);
+  let err = compile_for_error(
+    &interner,
+    &keywords,
+    &parse_arena,
+    "exported func main() int {\n  set a = a + 1;\n}",
+  );
+  match &err {
+    ICompileErrorS::CouldntFindVarToMutateS(c) => assert_eq!(c.name, "a"),
+    _ => panic!("expected CouldntFindVarToMutateS(_, \"a\"), got {:?}", err),
+  }
+}
 /*
   test("Reports when mutating nonexistant local") {
     val err = compileForError(
