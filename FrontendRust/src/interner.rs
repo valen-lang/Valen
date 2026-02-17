@@ -61,65 +61,58 @@ impl PartialEq<str> for StrI<'_> {
 }
 
 #[derive(Copy, Clone)]
-pub struct InternedSlice<T: Copy> {
-  ptr: *const T,
-  len: usize,
-  _marker: PhantomData<T>,
+pub struct InternedSlice<'a, T: Copy> {
+  slice: &'a [T],
 }
 
-impl<T: Copy> InternedSlice<T> {
-  pub fn new(slice: &[T]) -> Self {
-    InternedSlice {
-      ptr: slice.as_ptr(),
-      len: slice.len(),
-      _marker: PhantomData,
-    }
+impl<'a, T: Copy> InternedSlice<'a, T> {
+  pub fn new(slice: &'a [T]) -> Self {
+    InternedSlice { slice }
   }
 
-  pub fn as_slice(&self) -> &[T] {
-    // SAFETY: The backing slice is arena-allocated and outlives all uses.
-    unsafe { std::slice::from_raw_parts(self.ptr, self.len) }
+  pub fn as_slice(&self) -> &'a [T] {
+    self.slice
   }
 
-  pub fn iter(&self) -> std::slice::Iter<'_, T> {
-    self.as_slice().iter()
+  pub fn iter(&self) -> std::slice::Iter<'a, T> {
+    self.slice.iter()
   }
 
   pub fn is_empty(&self) -> bool {
-    self.len == 0
+    self.slice.is_empty()
   }
 
   pub fn len(&self) -> usize {
-    self.len
+    self.slice.len()
   }
 }
 
-impl<'b, T: Copy> IntoIterator for &'b InternedSlice<T> {
-  type Item = &'b T;
-  type IntoIter = std::slice::Iter<'b, T>;
+impl<'a, T: Copy> IntoIterator for &InternedSlice<'a, T> {
+  type Item = &'a T;
+  type IntoIter = std::slice::Iter<'a, T>;
 
   fn into_iter(self) -> Self::IntoIter {
-    self.as_slice().iter()
+    self.slice.iter()
   }
 }
 
-impl<T: Copy + Debug> Debug for InternedSlice<T> {
+impl<T: Copy + Debug> Debug for InternedSlice<'_, T> {
   fn fmt(&self, f: &mut Formatter<'_>) -> std::fmt::Result {
-    Debug::fmt(self.as_slice(), f)
+    Debug::fmt(self.slice, f)
   }
 }
 
-impl<T: Copy + PartialEq> PartialEq for InternedSlice<T> {
+impl<T: Copy + PartialEq> PartialEq for InternedSlice<'_, T> {
   fn eq(&self, other: &Self) -> bool {
-    self.as_slice() == other.as_slice()
+    self.slice == other.slice
   }
 }
 
-impl<T: Copy + Eq> Eq for InternedSlice<T> {}
+impl<T: Copy + Eq> Eq for InternedSlice<'_, T> {}
 
-impl<T: Copy + Hash> Hash for InternedSlice<T> {
+impl<T: Copy + Hash> Hash for InternedSlice<'_, T> {
   fn hash<H: Hasher>(&self, state: &mut H) {
-    self.as_slice().hash(state);
+    self.slice.hash(state);
   }
 }
 

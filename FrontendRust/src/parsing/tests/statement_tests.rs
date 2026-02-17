@@ -23,9 +23,10 @@ use crate::parsing::tests::utils::*;
 #[test]
 fn simple_let() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "x = 4;");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "x = 4;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (let_x, final_void) = expect_2(&consecutor.inners);
   let let_x = cast!(let_x, IExpressionPE::Let);
@@ -47,25 +48,26 @@ fn simple_let() {
 #[test]
 fn multiple_statements() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "4");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4");
   let four = cast!(expr, IExpressionPE::ConstantInt);
   assert_eq!(four.value, 4);
 
-  let expr = compile_block_contents_expect(&interner, &keywords, "4;");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (four, final_void) = expect_2(&consecutor.inners);
   assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
   cast!(final_void, IExpressionPE::Void);
 
-  let expr = compile_block_contents_expect(&interner, &keywords, "4; 3");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4; 3");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (four, three) = expect_2(&consecutor.inners);
   assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
   assert_eq!(cast!(three, IExpressionPE::ConstantInt).value, 3);
 
-  let expr = compile_block_contents_expect(&interner, &keywords, "4; 3;");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4; 3;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (four, three, final_void) = expect_3(&consecutor.inners);
   assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
@@ -99,9 +101,10 @@ fn multiple_statements() {
 #[test]
 fn test_8() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "[x, y] = (4, 5);");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[x, y] = (4, 5);");
   let let_ = cast!(expr, IExpressionPE::Let);
   assert!(let_.pattern.destination.is_none());
   assert!(let_.pattern.templex.is_none());
@@ -140,9 +143,10 @@ fn test_8() {
 #[test]
 fn test_9() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "set x.a = 5;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "set x.a = 5;");
   let mutate = cast!(expr, IExpressionPE::Mutate);
   let dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
   assert_lookup_name(dot.left.as_ref(), "x");
@@ -160,9 +164,10 @@ fn test_9() {
 #[test]
 fn test_1_pe() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, r#"set board.PE.PE.symbol = "v";"#);
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, r#"set board.PE.PE.symbol = "v";"#);
   let mutate = cast!(expr, IExpressionPE::Mutate);
   let symbol_dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
   assert_eq!(symbol_dot.member.str().as_str(), "symbol");
@@ -184,9 +189,10 @@ fn test_1_pe() {
 #[test]
 fn test_simple_let() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "x = 3;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "x = 3;");
   let let_ = cast!(expr, IExpressionPE::Let);
   let destination = let_.pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "x");
@@ -205,9 +211,10 @@ fn test_simple_let() {
 #[test]
 fn test_simple_mut() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "set x = 5;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "set x = 5;");
   let mutate = cast!(expr, IExpressionPE::Mutate);
   assert_lookup_name(mutate.mutatee.as_ref(), "x");
   assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantInt).value, 5);
@@ -225,9 +232,10 @@ fn test_expr_starting_with_return() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "retcode()");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "retcode()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "retcode");
   assert!(function_call.arg_exprs.is_empty());
@@ -247,9 +255,10 @@ fn test_inner_set() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "oldArray = set list.array = newArray;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "oldArray = set list.array = newArray;");
   let let_ = cast!(expr, IExpressionPE::Let);
   let destination = let_.pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "oldArray");
@@ -281,9 +290,10 @@ fn test_if_statement_producing() {
   // This test is here because we had a bug where we didn't check that there
   // was whitespace after a "return".
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "if true { 3 } else { 4 }");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "if true { 3 } else { 4 }");
   let if_ = cast!(expr, IExpressionPE::If);
   assert!(cast!(if_.condition.as_ref(), IExpressionPE::ConstantBool).value);
   assert_eq!(cast!(if_.then_body.inner.as_ref(), IExpressionPE::ConstantInt).value, 3);
@@ -306,9 +316,10 @@ fn test_if_statement_producing() {
 #[test]
 fn test_destruct() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "destruct x;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "destruct x;");
   let destruct = cast!(expr, IExpressionPE::Destruct);
   assert_lookup_name(destruct.inner.as_ref(), "x");
 }
@@ -323,9 +334,10 @@ fn test_destruct() {
 #[test]
 fn test_unlet() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "unlet x");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "unlet x");
   let unlet = cast!(expr, IExpressionPE::Unlet);
   assert_name(&unlet.name, "x");
 }
@@ -340,9 +352,10 @@ fn test_unlet() {
 #[test]
 fn dot_on_function_calls_result() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "Wizard(8).charges");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "Wizard(8).charges");
   let dot = cast!(expr, IExpressionPE::Dot);
   let wizard_call = cast!(dot.left.as_ref(), IExpressionPE::FunctionCall);
   assert_lookup_name(wizard_call.callable_expr.as_ref(), "Wizard");
@@ -366,9 +379,10 @@ fn dot_on_function_calls_result() {
 #[test]
 fn let_with_pattern_with_only_a_capture() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "a = m;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "a = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
   let destination = let_.pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
@@ -387,9 +401,10 @@ fn let_with_pattern_with_only_a_capture() {
 #[test]
 fn let_with_simple_pattern() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "a Moo = m;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "a Moo = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
   let destination = let_.pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
@@ -411,9 +426,10 @@ fn let_with_simple_pattern() {
 #[test]
 fn let_with_simple_pattern_in_destructure() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "[a Moo] = m;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[a Moo] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
   assert!(let_.pattern.destination.is_none());
   assert!(let_.pattern.templex.is_none());
@@ -441,9 +457,10 @@ fn let_with_simple_pattern_in_destructure() {
 #[test]
 fn let_with_destructuring_pattern() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "Muta[ ] = m;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "Muta[ ] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
   assert!(let_.pattern.destination.is_none());
   let templex = let_.pattern.templex.as_ref().unwrap();
@@ -463,9 +480,10 @@ fn let_with_destructuring_pattern() {
 #[test]
 fn destructure_pattern_with_let_and_set() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "[a, set x] = m;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[a, set x] = m;");
   let let_ = cast!(expr, IExpressionPE::Let);
   assert!(let_.pattern.destination.is_none());
   assert!(let_.pattern.templex.is_none());
@@ -501,9 +519,10 @@ fn destructure_pattern_with_let_and_set() {
 #[test]
 fn ret() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "return 3;");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "return 3;");
   let ret = cast!(expr, IExpressionPE::Return);
   assert_eq!(cast!(ret.expr.as_ref(), IExpressionPE::ConstantInt).value, 3);
 }
@@ -518,9 +537,10 @@ fn ret() {
 #[test]
 fn foreach() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "foreach i in myList { }");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in myList { }");
   let each = cast!(expr, IExpressionPE::Each);
   assert!(each.maybe_pure.is_none());
   let destination = each.entry_pattern.destination.as_ref().unwrap();
@@ -546,9 +566,10 @@ fn foreach() {
 #[test]
 fn foreach_with_borrow() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "foreach i in &myList { }");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in &myList { }");
   let each = cast!(expr, IExpressionPE::Each);
   assert!(each.maybe_pure.is_none());
   let destination = each.entry_pattern.destination.as_ref().unwrap();
@@ -576,9 +597,10 @@ fn foreach_with_borrow() {
 #[test]
 fn foreach_with_two_receivers() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "foreach [a, b] in myList { }");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach [a, b] in myList { }");
   let each = cast!(expr, IExpressionPE::Each);
   assert!(each.maybe_pure.is_none());
   assert!(each.entry_pattern.destination.is_none());
@@ -618,9 +640,10 @@ fn foreach_with_two_receivers() {
 #[test]
 fn foreach_complex_iterable() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "foreach i in myList = 3; myList { }");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in myList = 3; myList { }");
   let each = cast!(expr, IExpressionPE::Each);
   assert!(each.maybe_pure.is_none());
   let destination = each.entry_pattern.destination.as_ref().unwrap();
@@ -657,11 +680,13 @@ fn foreach_complex_iterable() {
 #[test]
 fn multiple_statements_2() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       42;
       43;
@@ -681,11 +706,13 @@ fn multiple_statements_2() {
 #[test]
 fn if_and_another_statement() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       newCapacity = if (true) { 1 } else { 2 };
       newArray = 3;
@@ -705,14 +732,15 @@ fn if_and_another_statement() {
 #[test]
 fn test_blocks_trailing_void_presence() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "moo()");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "moo()");
   let function_call = cast!(expr, IExpressionPE::FunctionCall);
   assert_lookup_name(function_call.callable_expr.as_ref(), "moo");
   assert!(function_call.arg_exprs.is_empty());
 
-  let expr = compile_block_contents_expect(&interner, &keywords, "moo();");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "moo();");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (moo_call, final_void) = expect_2(&consecutor.inners);
   let moo_call = cast!(moo_call, IExpressionPE::FunctionCall);
@@ -737,11 +765,13 @@ fn test_blocks_trailing_void_presence() {
 #[test]
 fn block_with_statement_and_result() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       b;
       a
@@ -767,9 +797,10 @@ fn block_with_statement_and_result() {
 #[test]
 fn block_with_result() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_statement_expect(&interner, &keywords, "3");
+  let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "3");
   assert_eq!(cast!(expr, IExpressionPE::ConstantInt).value, 3);
 }
 /*
@@ -785,11 +816,13 @@ fn block_with_result_that_could_be_an_expr() {
   // = doThings(a); could be misinterpreted as an expression doThings(=, a) if we're
   // not careful.
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       a = 2;
       doThings(a)
@@ -827,9 +860,10 @@ fn block_with_result_that_could_be_an_expr() {
 #[test]
 fn mutating_as_statement() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "set x = 6;");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "set x = 6;");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (mutate, final_void) = expect_2(&consecutor.inners);
   let mutate = cast!(mutate, IExpressionPE::Mutate);
@@ -851,11 +885,13 @@ fn mutating_as_statement() {
 #[test]
 fn lone_block() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       block {
         a
@@ -883,11 +919,13 @@ fn pure_block() {
   // Just make sure it parses, so that we can highlight it.
   // The pure block feature doesn't actually exist yet.
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       pure block {
         a
@@ -913,11 +951,13 @@ fn unsafe_pure_block() {
   // Just make sure it parses, so that we can highlight it.
   // The unsafe pure block feature doesn't actually exist yet.
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       unsafe pure block {
         a
@@ -941,11 +981,13 @@ fn unsafe_pure_block() {
 #[test]
 fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_statement(
     &interner,
     &keywords,
+    &parse_arena,
     "
       block {
         floop() ]
@@ -971,11 +1013,13 @@ fn report_leaving_out_semicolon_or_ending_body_after_expression_for_square() {
 #[test]
 fn empty_block() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       block {
       }
@@ -1009,9 +1053,10 @@ fn empty_block() {
 #[test]
 fn cant_use_set_as_a_local_name() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let err = compile_statement(&interner, &keywords, "[set] = (6,)").unwrap_err();
+  let err = compile_statement(&interner, &keywords, &parse_arena, "[set] = (6,)").unwrap_err();
   assert!(matches!(
     err,
     ParseError::CantUseThatLocalName { ref name, .. } if name == "set"
@@ -1030,11 +1075,13 @@ fn cant_use_set_as_a_local_name() {
 #[test]
 fn foreach_2() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       foreach i in a {
         i
@@ -1074,11 +1121,13 @@ fn foreach_2() {
 #[test]
 fn foreach_expr() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "
       a = foreach i in c { i };
       ",

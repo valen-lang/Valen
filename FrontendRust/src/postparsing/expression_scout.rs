@@ -46,9 +46,9 @@ trait IExpressionScoutDelegate {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-enum IScoutResult<'a> {
+enum IScoutResult<'a, 'p> {
   LocalLookupResult(LocalLookupResultS<'a>),
-  OutsideLookupResult(OutsideLookupResultS<'a>),
+  OutsideLookupResult(OutsideLookupResultS<'a, 'p>),
   NormalResult(NormalResultS<'a>),
 }
 /*
@@ -68,10 +68,10 @@ case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResul
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-struct OutsideLookupResultS<'a> {
+struct OutsideLookupResultS<'a, 'p> {
   range: RangeS<'a>,
   name: StrI<'a>,
-  template_args: Option<Vec<ITemplexPT<'a>>>,
+  template_args: Option<&'p [ITemplexPT<'a, 'p>]>,
 }
 /*
 // Looks up something that's not a local.
@@ -303,12 +303,15 @@ impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
   'a: 'ctx,
 {
-fn scout_expression(
+fn scout_expression<'p>(
   &self,
   stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  expression: &IExpressionPE<'a>,
-) -> Result<(StackFrame<'a>, IScoutResult<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+  expression: &IExpressionPE<'a, 'p>,
+) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+where
+  'a: 'p,
+{
 /*
   // Returns:
   // - new seq num
@@ -535,7 +538,7 @@ fn scout_expression(
           IScoutResult::OutsideLookupResult(OutsideLookupResultS {
             range: PostParser::eval_range(&file_coordinate, lookup.name.range()),
             name: lookup_name.str(),
-            template_args: Some(template_args.args.clone()),
+            template_args: Some(template_args.args),
           }),
           VariableUses::empty(),
           VariableUses::empty(),
@@ -1354,13 +1357,16 @@ fn scout_expression(
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-pub(crate) fn scout_expression_and_coerce(
+pub(crate) fn scout_expression_and_coerce<'p>(
     &self,
     stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    expression_p: &IExpressionPE<'a>,
+    expression_p: &IExpressionPE<'a, 'p>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'a: 'p,
+  {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = self.scout_expression(
       stack_frame,
@@ -1455,12 +1461,15 @@ pub(crate) fn scout_expression_and_coerce(
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-fn scout_elements_as_expressions(
+fn scout_elements_as_expressions<'p>(
     &self,
     initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    exprs_p: &[IExpressionPE<'a>],
-  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+    exprs_p: &[IExpressionPE<'a, 'p>],
+  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'a: 'p,
+  {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();
     let mut exprs_s = Vec::new();

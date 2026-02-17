@@ -5,6 +5,8 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
+use crate::utils::arena_utils::alloc_slice_from_vec;
+use bumpalo::Bump;
 
 /*
 package dev.vale.parsing
@@ -20,34 +22,40 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
-pub struct PatternParser<'a, 'ctx> {
+pub struct PatternParser<'a, 'ctx, 'p> {
   #[allow(dead_code)]
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
 }
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 */
 
-impl<'a, 'ctx> PatternParser<'a, 'ctx>
+impl<'a, 'ctx, 'p> PatternParser<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
-    PatternParser { interner, keywords }
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>, arena: &'p Bump) -> Self {
+    PatternParser {
+      interner,
+      keywords,
+      arena,
+    }
   }
 
   /// Parse a parameter
   /// Mirrors parseParameter in PatternParser.scala lines 13-72
   pub fn parse_parameter(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'ctx>,
+    iter: &mut ScrambleIterator<'a, '_>,
+    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
-  ) -> ParseResult<ParameterP<'a>> {
+  ) -> ParseResult<ParameterP<'a, 'p>> {
     let pattern_begin = iter.get_pos();
     let pattern_range = iter.range();
 
@@ -202,15 +210,15 @@ where
   /// Mirrors parsePattern in PatternParser.scala lines 74-221
   pub fn parse_pattern(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-    templex_parser: &TemplexParser<'a, 'ctx>,
+    iter: &mut ScrambleIterator<'a, '_>,
+    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
     pattern_begin: i32,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
     maybe_name_from_parameter: Option<WordLE<'a>>,
-  ) -> ParseResult<PatternPP<'a>> {
+  ) -> ParseResult<PatternPP<'a, 'p>> {
     // Mirrors PatternParser.scala lines 75-88
     // The Scala code used to have an early return here, but it was dead code and has been commented out.
     // We just check for empty pattern with no name.
@@ -327,7 +335,7 @@ where
     };
 
     // Parse optional type (lines 175-194)
-    let maybe_type: Option<ITemplexPT<'a>> = if next_is_type {
+    let maybe_type: Option<ITemplexPT<'a, 'p>> = if next_is_type {
       Some(templex_parser.parse_templex(iter)?)
     } else {
       if is_in_lambda {
@@ -356,7 +364,7 @@ where
         let destructure_elements = destructure_elements.clone();
         iter.advance();
 
-        let destructure_iter = ScrambleIterator::new(destructure_elements);
+        let destructure_iter = ScrambleIterator::new(&destructure_elements);
         let element_iters = destructure_iter.split_on_symbol(',', false);
 
         let mut patterns = Vec::new();
@@ -377,7 +385,7 @@ where
 
         Some(DestructureP {
           range: destructure_range,
-          patterns,
+          patterns: alloc_slice_from_vec(self.arena, patterns),
         })
       }
       Some(other) => return Err(ParseError::BadThingAfterTypeInPattern(other.range().begin())),
@@ -385,7 +393,7 @@ where
     };
 
     // Return the complete pattern (lines 217-220)
-    Ok(PatternPP::<'a> {
+    Ok(PatternPP::<'a, 'p> {
       range: RangeL(pattern_begin, iter.get_prev_end_pos()),
       destination: maybe_destination_local,
       templex: maybe_type,

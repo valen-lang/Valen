@@ -9,42 +9,42 @@ import dev.vale.vcurious
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexPR<'a> {
-  Equals(EqualsPR<'a>),
-  Or(OrPR<'a>),
-  Dot(DotPR<'a>),
-  Components(ComponentsPR<'a>),
+pub enum IRulexPR<'a, 'p> {
+  Equals(EqualsPR<'a, 'p>),
+  Or(OrPR<'a, 'p>),
+  Dot(DotPR<'a, 'p>),
+  Components(ComponentsPR<'a, 'p>),
   Typed(TypedPR<'a>),
-  Templex(ITemplexPT<'a>),
-  BuiltinCall(BuiltinCallPR<'a>),
-  Pack(PackPR<'a>),
+  Templex(ITemplexPT<'a, 'p>),
+  BuiltinCall(BuiltinCallPR<'a, 'p>),
+  Pack(PackPR<'a, 'p>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct EqualsPR<'a> {
+pub struct EqualsPR<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IRulexPR<'a>>,
-  pub right: Box<IRulexPR<'a>>,
+  pub left: Box<IRulexPR<'a, 'p>>,
+  pub right: Box<IRulexPR<'a, 'p>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrPR<'a> {
+pub struct OrPR<'a, 'p> {
   pub range: RangeL,
-  pub possibilities: Vec<IRulexPR<'a>>,
+  pub possibilities: &'p [IRulexPR<'a, 'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DotPR<'a> {
+pub struct DotPR<'a, 'p> {
   pub range: RangeL,
-  pub container: Box<IRulexPR<'a>>,
+  pub container: Box<IRulexPR<'a, 'p>>,
   pub member_name: NameP<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ComponentsPR<'a> {
+pub struct ComponentsPR<'a, 'p> {
   pub range: RangeL,
   pub container: ITypePR,
-  pub components: Vec<IRulexPR<'a>>,
+  pub components: &'p [IRulexPR<'a, 'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -55,19 +55,19 @@ pub struct TypedPR<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinCallPR<'a> {
+pub struct BuiltinCallPR<'a, 'p> {
   pub range: RangeL,
   pub name: NameP<'a>,
-  pub args: Vec<IRulexPR<'a>>,
+  pub args: &'p [IRulexPR<'a, 'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackPR<'a> {
+pub struct PackPR<'a, 'p> {
   pub range: RangeL,
-  pub elements: Vec<IRulexPR<'a>>,
+  pub elements: &'p [IRulexPR<'a, 'p>],
 }
 
-impl IRulexPR<'_> {
+impl IRulexPR<'_, '_> {
   pub fn range(&self) -> RangeL {
     match self {
       IRulexPR::Equals(inner) => inner.range,

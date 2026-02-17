@@ -44,16 +44,18 @@ pub struct FullCompilationOptions {
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation<'a, 'ctx>
+pub struct FullCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  hammer_compilation: HammerCompilation<'a, 'ctx>,
+  hammer_compilation: HammerCompilation<'a, 'ctx, 'p>,
 }
 
-impl<'a, 'ctx> FullCompilation<'a, 'ctx>
+impl<'a, 'ctx, 'p> FullCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   // From FullCompilation.scala lines 30-45
   pub fn new(
@@ -62,6 +64,7 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
+    arena: &'p bumpalo::Bump,
   ) -> Self {
     let hammer_compilation = HammerCompilation::new(
       interner,
@@ -69,6 +72,7 @@ where
       packages_to_build,
       package_to_contents_resolver,
       options,
+      arena,
     );
     FullCompilation { hammer_compilation }
   }
@@ -79,7 +83,7 @@ where
   }
 
   // From FullCompilation.scala line 49: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
     self.hammer_compilation.get_parseds()
   }
 

@@ -20,9 +20,10 @@ use crate::parsing::tests::utils::*;
 #[test]
 fn simple_while_loop() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "while true {}");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while true {}");
   let while_ = cast!(expr, IExpressionPE::While);
   let condition = cast!(while_.condition.as_ref(), IExpressionPE::ConstantBool);
   assert!(condition.value);
@@ -40,9 +41,10 @@ fn simple_while_loop() {
 #[test]
 fn result_after_while_loop() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "while true {} false");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while true {} false");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (while_expr, false_expr) = expect_2(&consecutor.inners);
 
@@ -66,9 +68,10 @@ fn result_after_while_loop() {
 #[test]
 fn while_with_condition_declarations() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, "while x = 4; x > 6 { }");
+  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while x = 4; x > 6 { }");
   let while_ = cast!(expr, IExpressionPE::While);
 
   let condition = cast!(while_.condition.as_ref(), IExpressionPE::Consecutor);

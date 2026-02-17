@@ -22,15 +22,16 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation<'a, 'ctx> {
-  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx>,
+pub struct TypingPassCompilation<'a, 'ctx, 'p> {
+  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx, 'p>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl<'a, 'ctx> TypingPassCompilation<'a, 'ctx>
+impl<'a, 'ctx, 'p> TypingPassCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   // From Compilation.scala lines 22-30
   pub fn new(
@@ -40,6 +41,7 @@ where
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
+    arena: &'p bumpalo::Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options,
@@ -53,6 +55,7 @@ where
       packages_to_build,
       package_to_contents_resolver,
       typing_options.global_options,
+      arena,
     );
 
     TypingPassCompilation {
@@ -67,7 +70,7 @@ where
   }
 
   // From Compilation.scala line 34: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
     self.higher_typing_compilation.get_parseds()
   }
 

@@ -19,12 +19,12 @@ case class AbstractP(range: RangeL)// extends IVirtualityP
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ParameterP<'a> {
+pub struct ParameterP<'a, 'p> {
   pub range: RangeL,
   pub virtuality: Option<AbstractP>,
   pub maybe_pre_checked: Option<RangeL>,
   pub self_borrow: Option<RangeL>,
-  pub pattern: Option<PatternPP<'a>>,
+  pub pattern: Option<PatternPP<'a, 'p>>,
 }
 /*
 case class ParameterP(
@@ -48,11 +48,11 @@ case class DestinationLocalP(decl: INameDeclarationP, mutate: Option[RangeL])
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PatternPP<'a> {
+pub struct PatternPP<'a, 'p> {
   pub range: RangeL,
   pub destination: Option<DestinationLocalP<'a>>,
-  pub templex: Option<ITemplexPT<'a>>,
-  pub destructure: Option<DestructureP<'a>>,
+  pub templex: Option<ITemplexPT<'a, 'p>>,
+  pub destructure: Option<DestructureP<'a, 'p>>,
 }
 /*
 case class PatternPP(
@@ -73,9 +73,9 @@ case class PatternPP(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DestructureP<'a> {
+pub struct DestructureP<'a, 'p> {
   pub range: RangeL,
-  pub patterns: Vec<PatternPP<'a>>,
+  pub patterns: &'p [PatternPP<'a, 'p>],
 }
 /*
 case class DestructureP(

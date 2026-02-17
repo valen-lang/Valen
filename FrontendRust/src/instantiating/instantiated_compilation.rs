@@ -19,15 +19,16 @@ pub struct InstantiatorCompilationOptions {
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
-pub struct InstantiatedCompilation<'a, 'ctx> {
-  typing_pass_compilation: TypingPassCompilation<'a, 'ctx>,
+pub struct InstantiatedCompilation<'a, 'ctx, 'p> {
+  typing_pass_compilation: TypingPassCompilation<'a, 'ctx, 'p>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
-impl<'a, 'ctx> InstantiatedCompilation<'a, 'ctx>
+impl<'a, 'ctx, 'p> InstantiatedCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   // From InstantiatedCompilation.scala lines 19-34
   pub fn new(
@@ -36,6 +37,7 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: HammerCompilationOptions,
+    arena: &'p bumpalo::Bump,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
       debug_out: options.debug_out.clone(),
@@ -48,6 +50,7 @@ where
       package_to_contents_resolver,
       options.global_options,
       typing_options,
+      arena,
     );
 
     InstantiatedCompilation {
@@ -62,7 +65,7 @@ where
   }
 
   // From InstantiatedCompilation.scala line 37: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
     self.typing_pass_compilation.get_parseds()
   }
 

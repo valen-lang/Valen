@@ -18,16 +18,18 @@ object ParserTestCompilation {
 
 /// MIGTODO: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
-pub fn test<'a, 'ctx>(
+pub fn test<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
   resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
   test_package_coord: &'a PackageCoordinate<'a>,
-) -> ParserCompilation<'a, 'ctx>
+  arena: &'p bumpalo::Bump,
+) -> ParserCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  ParserCompilation::<'a, 'ctx>::new(
+  ParserCompilation::new(
     GlobalOptions {
       sanity_check: true,
       use_overload_index: true,
@@ -39,6 +41,7 @@ where
     keywords,
     vec![test_package_coord],
     resolver,
+    arena,
   )
 }
 /*

@@ -12,46 +12,46 @@ import dev.vale.vpass
 
 /// Expression enum - idiomatic Rust replacement for Scala's trait hierarchy
 #[derive(Clone, Debug, PartialEq)]
-pub enum IExpressionPE<'a> {
+pub enum IExpressionPE<'a, 'p> {
   Void(VoidPE),
-  Pack(PackPE<'a>),
-  SubExpression(SubExpressionPE<'a>),
-  And(AndPE<'a>),
-  Or(OrPE<'a>),
-  If(IfPE<'a>),
-  While(WhilePE<'a>),
-  Each(EachPE<'a>),
-  Range(RangePE<'a>),
-  Destruct(DestructPE<'a>),
+  Pack(PackPE<'a, 'p>),
+  SubExpression(SubExpressionPE<'a, 'p>),
+  And(AndPE<'a, 'p>),
+  Or(OrPE<'a, 'p>),
+  If(IfPE<'a, 'p>),
+  While(WhilePE<'a, 'p>),
+  Each(EachPE<'a, 'p>),
+  Range(RangePE<'a, 'p>),
+  Destruct(DestructPE<'a, 'p>),
   Unlet(UnletPE<'a>),
-  Mutate(MutatePE<'a>),
-  Return(ReturnPE<'a>),
+  Mutate(MutatePE<'a, 'p>),
+  Return(ReturnPE<'a, 'p>),
   Break(BreakPE),
-  Let(LetPE<'a>),
-  Tuple(TuplePE<'a>),
-  ConstructArray(ConstructArrayPE<'a>),
+  Let(LetPE<'a, 'p>),
+  Tuple(TuplePE<'a, 'p>),
+  ConstructArray(ConstructArrayPE<'a, 'p>),
   ConstantInt(ConstantIntPE),
   ConstantBool(ConstantBoolPE),
   ConstantStr(ConstantStrPE),
   ConstantFloat(ConstantFloatPE),
-  StrInterpolate(StrInterpolatePE<'a>),
-  Dot(DotPE<'a>),
-  Index(IndexPE<'a>),
-  FunctionCall(FunctionCallPE<'a>),
-  BraceCall(BraceCallPE<'a>),
-  Not(NotPE<'a>),
-  Augment(AugmentPE<'a>),
-  Transmigrate(TransmigratePE<'a>),
-  BinaryCall(BinaryCallPE<'a>),
-  MethodCall(MethodCallPE<'a>),
-  Lookup(LookupPE<'a>),
+  StrInterpolate(StrInterpolatePE<'a, 'p>),
+  Dot(DotPE<'a, 'p>),
+  Index(IndexPE<'a, 'p>),
+  FunctionCall(FunctionCallPE<'a, 'p>),
+  BraceCall(BraceCallPE<'a, 'p>),
+  Not(NotPE<'a, 'p>),
+  Augment(AugmentPE<'a, 'p>),
+  Transmigrate(TransmigratePE<'a, 'p>),
+  BinaryCall(BinaryCallPE<'a, 'p>),
+  MethodCall(MethodCallPE<'a, 'p>),
+  Lookup(LookupPE<'a, 'p>),
   MagicParamLookup(MagicParamLookupPE),
-  Lambda(LambdaPE<'a>),
-  Block(BlockPE<'a>),
-  Consecutor(ConsecutorPE<'a>),
-  Shortcall(ShortcallPE<'a>),
+  Lambda(LambdaPE<'a, 'p>),
+  Block(BlockPE<'a, 'p>),
+  Consecutor(ConsecutorPE<'a, 'p>),
+  Shortcall(ShortcallPE<'a, 'p>),
 }
-impl IExpressionPE<'_> {
+impl IExpressionPE<'_, '_> {
   pub fn range(&self) -> RangeL {
     match self {
       IExpressionPE::Void(x) => x.range,
@@ -209,9 +209,9 @@ case class VoidPE(range: RangeL) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackPE<'a> {
+pub struct PackPE<'a, 'p> {
   pub range: RangeL,
-  pub inners: Vec<IExpressionPE<'a>>,
+  pub inners: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 // We have this because it sometimes even a single-member pack can change the semantics.
@@ -226,9 +226,9 @@ case class PackPE(range: RangeL, inners: Vector[IExpressionPE]) extends IExpress
 
 // Parens that we use for precedence
 #[derive(Clone, Debug, PartialEq)]
-pub struct SubExpressionPE<'a> {
+pub struct SubExpressionPE<'a, 'p> {
   pub range: RangeL,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 // Parens that we use for precedence
@@ -240,10 +240,10 @@ case class SubExpressionPE(range: RangeL, inner: IExpressionPE) extends IExpress
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct AndPE<'a> {
+pub struct AndPE<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IExpressionPE<'a>>,
-  pub right: Box<BlockPE<'a>>,
+  pub left: Box<IExpressionPE<'a, 'p>>,
+  pub right: Box<BlockPE<'a, 'p>>,
 }
 /*
 case class AndPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IExpressionPE {
@@ -254,10 +254,10 @@ case class AndPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IEx
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrPE<'a> {
+pub struct OrPE<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IExpressionPE<'a>>,
-  pub right: Box<BlockPE<'a>>,
+  pub left: Box<IExpressionPE<'a, 'p>>,
+  pub right: Box<BlockPE<'a, 'p>>,
 }
 /*
 case class OrPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IExpressionPE {
@@ -268,11 +268,11 @@ case class OrPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IExp
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct IfPE<'a> {
+pub struct IfPE<'a, 'p> {
   pub range: RangeL,
-  pub condition: Box<IExpressionPE<'a>>,
-  pub then_body: Box<BlockPE<'a>>,
-  pub else_body: Box<BlockPE<'a>>,
+  pub condition: Box<IExpressionPE<'a, 'p>>,
+  pub then_body: Box<BlockPE<'a, 'p>>,
+  pub else_body: Box<BlockPE<'a, 'p>>,
 }
 /*
 case class IfPE(range: RangeL, condition: IExpressionPE, thenBody: BlockPE, elseBody: BlockPE) extends IExpressionPE {
@@ -295,10 +295,10 @@ case class IfPE(range: RangeL, condition: IExpressionPE, thenBody: BlockPE, else
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct WhilePE<'a> {
+pub struct WhilePE<'a, 'p> {
   pub range: RangeL,
-  pub condition: Box<IExpressionPE<'a>>,
-  pub body: Box<BlockPE<'a>>,
+  pub condition: Box<IExpressionPE<'a, 'p>>,
+  pub body: Box<BlockPE<'a, 'p>>,
 }
 /*
 // condition and body are both blocks because otherwise, if we declare a variable inside them, then
@@ -312,13 +312,13 @@ case class WhilePE(range: RangeL, condition: IExpressionPE, body: BlockPE) exten
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct EachPE<'a> {
+pub struct EachPE<'a, 'p> {
   pub range: RangeL,
   pub maybe_pure: Option<RangeL>,
-  pub entry_pattern: PatternPP<'a>,
+  pub entry_pattern: PatternPP<'a, 'p>,
   pub in_keyword_range: RangeL,
-  pub iterable_expr: Box<IExpressionPE<'a>>,
-  pub body: Box<BlockPE<'a>>,
+  pub iterable_expr: Box<IExpressionPE<'a, 'p>>,
+  pub body: Box<BlockPE<'a, 'p>>,
 }
 /*
 case class EachPE(range: RangeL, maybePure: Option[RangeL], entryPattern: PatternPP, inKeywordRange: RangeL, iterableExpr: IExpressionPE, body: BlockPE) extends IExpressionPE {
@@ -329,10 +329,10 @@ case class EachPE(range: RangeL, maybePure: Option[RangeL], entryPattern: Patter
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct RangePE<'a> {
+pub struct RangePE<'a, 'p> {
   pub range: RangeL,
-  pub from_expr: Box<IExpressionPE<'a>>,
-  pub to_expr: Box<IExpressionPE<'a>>,
+  pub from_expr: Box<IExpressionPE<'a, 'p>>,
+  pub to_expr: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class RangePE(range: RangeL, fromExpr: IExpressionPE, toExpr: IExpressionPE) extends IExpressionPE {
@@ -343,9 +343,9 @@ case class RangePE(range: RangeL, fromExpr: IExpressionPE, toExpr: IExpressionPE
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DestructPE<'a> {
+pub struct DestructPE<'a, 'p> {
   pub range: RangeL,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class DestructPE(range: RangeL, inner: IExpressionPE) extends IExpressionPE {
@@ -369,10 +369,10 @@ case class UnletPE(range: RangeL, name: IImpreciseNameP) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MutatePE<'a> {
+pub struct MutatePE<'a, 'p> {
   pub range: RangeL,
-  pub mutatee: Box<IExpressionPE<'a>>,
-  pub source: Box<IExpressionPE<'a>>,
+  pub mutatee: Box<IExpressionPE<'a, 'p>>,
+  pub source: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 //case class MatchPE(range: RangeP, condition: IExpressionPE, lambdas: Vector[LambdaPE]) extends IExpressionPE {
@@ -387,9 +387,9 @@ case class MutatePE(range: RangeL, mutatee: IExpressionPE, source: IExpressionPE
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ReturnPE<'a> {
+pub struct ReturnPE<'a, 'p> {
   pub range: RangeL,
-  pub expr: Box<IExpressionPE<'a>>,
+  pub expr: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class ReturnPE(range: RangeL, expr: IExpressionPE) extends IExpressionPE {
@@ -412,10 +412,10 @@ case class BreakPE(range: RangeL) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LetPE<'a> {
+pub struct LetPE<'a, 'p> {
   pub range: RangeL,
-  pub pattern: PatternPP<'a>,
-  pub source: Box<IExpressionPE<'a>>,
+  pub pattern: PatternPP<'a, 'p>,
+  pub source: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class LetPE(
@@ -431,9 +431,9 @@ case class LetPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TuplePE<'a> {
+pub struct TuplePE<'a, 'p> {
   pub range: RangeL,
-  pub elements: Vec<IExpressionPE<'a>>,
+  pub elements: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class TuplePE(range: RangeL, elements: Vector[IExpressionPE]) extends IExpressionPE {
@@ -444,14 +444,14 @@ case class TuplePE(range: RangeL, elements: Vector[IExpressionPE]) extends IExpr
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StaticSizedArraySizeP<'a> {
-  pub size_pt: Option<ITemplexPT<'a>>,
+pub struct StaticSizedArraySizeP<'a, 'p> {
+  pub size_pt: Option<ITemplexPT<'a, 'p>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IArraySizeP<'a> {
+pub enum IArraySizeP<'a, 'p> {
   RuntimeSized,
-  StaticSized(StaticSizedArraySizeP<'a>),
+  StaticSized(StaticSizedArraySizeP<'a, 'p>),
 }
 /*
 sealed trait IArraySizeP
@@ -460,14 +460,14 @@ case class StaticSizedP(sizePT: Option[ITemplexPT]) extends IArraySizeP { overri
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConstructArrayPE<'a> {
+pub struct ConstructArrayPE<'a, 'p> {
   pub range: RangeL,
-  pub type_pt: Option<ITemplexPT<'a>>,
-  pub mutability_pt: Option<ITemplexPT<'a>>,
-  pub variability_pt: Option<ITemplexPT<'a>>,
-  pub size: IArraySizeP<'a>,
+  pub type_pt: Option<ITemplexPT<'a, 'p>>,
+  pub mutability_pt: Option<ITemplexPT<'a, 'p>>,
+  pub variability_pt: Option<ITemplexPT<'a, 'p>>,
+  pub size: IArraySizeP<'a, 'p>,
   pub initializing_individual_elements: bool,
-  pub args: Vec<IExpressionPE<'a>>,
+  pub args: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class ConstructArrayPE(
@@ -543,9 +543,9 @@ case class ConstantFloatPE(range: RangeL, value: Double) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StrInterpolatePE<'a> {
+pub struct StrInterpolatePE<'a, 'p> {
   pub range: RangeL,
-  pub parts: Vec<IExpressionPE<'a>>,
+  pub parts: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class StrInterpolatePE(range: RangeL, parts: Vector[IExpressionPE]) extends IExpressionPE {
@@ -556,9 +556,9 @@ case class StrInterpolatePE(range: RangeL, parts: Vector[IExpressionPE]) extends
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DotPE<'a> {
+pub struct DotPE<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IExpressionPE<'a>>,
+  pub left: Box<IExpressionPE<'a, 'p>>,
   pub operator_range: RangeL,
   pub member: NameP<'a>,
 }
@@ -575,10 +575,10 @@ case class DotPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct IndexPE<'a> {
+pub struct IndexPE<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IExpressionPE<'a>>,
-  pub args: Vec<IExpressionPE<'a>>,
+  pub left: Box<IExpressionPE<'a, 'p>>,
+  pub args: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class IndexPE(range: RangeL, left: IExpressionPE, args: Vector[IExpressionPE]) extends IExpressionPE {
@@ -589,11 +589,11 @@ case class IndexPE(range: RangeL, left: IExpressionPE, args: Vector[IExpressionP
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionCallPE<'a> {
+pub struct FunctionCallPE<'a, 'p> {
   pub range: RangeL,
   pub operator_range: RangeL,
-  pub callable_expr: Box<IExpressionPE<'a>>,
-  pub arg_exprs: Vec<IExpressionPE<'a>>,
+  pub callable_expr: Box<IExpressionPE<'a, 'p>>,
+  pub arg_exprs: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class FunctionCallPE(
@@ -609,11 +609,11 @@ case class FunctionCallPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BraceCallPE<'a> {
+pub struct BraceCallPE<'a, 'p> {
   pub range: RangeL,
   pub operator_range: RangeL,
-  pub subject_expr: Box<IExpressionPE<'a>>,
-  pub arg_exprs: Vec<IExpressionPE<'a>>,
+  pub subject_expr: Box<IExpressionPE<'a, 'p>>,
+  pub arg_exprs: &'p [IExpressionPE<'a, 'p>],
   pub callable_readwrite: bool,
 }
 /*
@@ -631,9 +631,9 @@ case class BraceCallPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct NotPE<'a> {
+pub struct NotPE<'a, 'p> {
   pub range: RangeL,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class NotPE(range: RangeL, inner: IExpressionPE) extends IExpressionPE {
@@ -645,10 +645,10 @@ case class NotPE(range: RangeL, inner: IExpressionPE) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct AugmentPE<'a> {
+pub struct AugmentPE<'a, 'p> {
   pub range: RangeL,
   pub target_ownership: OwnershipP,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class AugmentPE(
@@ -665,10 +665,10 @@ case class AugmentPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TransmigratePE<'a> {
+pub struct TransmigratePE<'a, 'p> {
   pub range: RangeL,
   pub target_region: NameP<'a>,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class TransmigratePE(
@@ -685,11 +685,11 @@ case class TransmigratePE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BinaryCallPE<'a> {
+pub struct BinaryCallPE<'a, 'p> {
   pub range: RangeL,
   pub function_name: NameP<'a>,
-  pub left_expr: Box<IExpressionPE<'a>>,
-  pub right_expr: Box<IExpressionPE<'a>>,
+  pub left_expr: Box<IExpressionPE<'a, 'p>>,
+  pub right_expr: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class BinaryCallPE(
@@ -705,12 +705,12 @@ case class BinaryCallPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MethodCallPE<'a> {
+pub struct MethodCallPE<'a, 'p> {
   pub range: RangeL,
-  pub subject_expr: Box<IExpressionPE<'a>>,
+  pub subject_expr: Box<IExpressionPE<'a, 'p>>,
   pub operator_range: RangeL,
-  pub method_lookup: Box<LookupPE<'a>>,
-  pub arg_exprs: Vec<IExpressionPE<'a>>,
+  pub method_lookup: Box<LookupPE<'a, 'p>>,
+  pub arg_exprs: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class MethodCallPE(
@@ -755,9 +755,9 @@ case class IterationOptionNameP(range: RangeL) extends IImpreciseNameP
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LookupPE<'a> {
+pub struct LookupPE<'a, 'p> {
   pub name: IImpreciseNameP<'a>,
-  pub template_args: Option<TemplateArgsP<'a>>,
+  pub template_args: Option<TemplateArgsP<'a, 'p>>,
 }
 /*
 case class LookupPE(
@@ -773,9 +773,9 @@ case class LookupPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TemplateArgsP<'a> {
+pub struct TemplateArgsP<'a, 'p> {
   pub range: RangeL,
-  pub args: Vec<ITemplexPT<'a>>,
+  pub args: &'p [ITemplexPT<'a, 'p>],
 }
 /*
 case class TemplateArgsP(range: RangeL, args: Vector[ITemplexPT]) {
@@ -796,9 +796,9 @@ case class MagicParamLookupPE(range: RangeL) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct LambdaPE<'a> {
+pub struct LambdaPE<'a, 'p> {
   pub captures: Option<UnitP>,
-  pub function: FunctionP<'a>,
+  pub function: FunctionP<'a, 'p>,
 }
 /*
 case class LambdaPE(
@@ -814,11 +814,11 @@ case class LambdaPE(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BlockPE<'a> {
+pub struct BlockPE<'a, 'p> {
   pub range: RangeL,
   pub maybe_pure: Option<RangeL>,
   pub maybe_default_region: Option<RegionRunePT<'a>>,
-  pub inner: Box<IExpressionPE<'a>>,
+  pub inner: Box<IExpressionPE<'a, 'p>>,
 }
 /*
 case class BlockPE(range: RangeL, maybePure: Option[RangeL], maybeDefaultRegion: Option[RegionRunePT], inner: IExpressionPE) extends IExpressionPE {
@@ -830,8 +830,8 @@ case class BlockPE(range: RangeL, maybePure: Option[RangeL], maybeDefaultRegion:
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ConsecutorPE<'a> {
-  pub inners: Vec<IExpressionPE<'a>>,
+pub struct ConsecutorPE<'a, 'p> {
+  pub inners: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class ConsecutorPE(inners: Vector[IExpressionPE]) extends IExpressionPE {
@@ -850,9 +850,9 @@ case class ConsecutorPE(inners: Vector[IExpressionPE]) extends IExpressionPE {
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ShortcallPE<'a> {
+pub struct ShortcallPE<'a, 'p> {
   pub range: RangeL,
-  pub arg_exprs: Vec<IExpressionPE<'a>>,
+  pub arg_exprs: &'p [IExpressionPE<'a, 'p>],
 }
 /*
 case class ShortcallPE(range: RangeL, argExprs: Vector[IExpressionPE]) extends IExpressionPE {

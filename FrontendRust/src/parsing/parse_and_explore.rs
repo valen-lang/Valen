@@ -42,11 +42,11 @@ object ParseAndExplore {
 */
 
 // From ParseAndExplore.scala lines 35-101: parseAndExplore
-pub fn parse_and_explore<'a, 'ctx, D, F, R, HandleParsedDenizen, FileHandler>(
+pub fn parse_and_explore<'a, 'ctx, 'p, D, F, R, HandleParsedDenizen, FileHandler>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
   _opts: GlobalOptions,
-  parser: &Parser<'a, 'ctx>,
+  parser: &Parser<'a, 'ctx, 'p>,
   packages: Vec<&'a PackageCoordinate<'a>>,
   resolver: &R,
   mut handle_parsed_denizen: HandleParsedDenizen,
@@ -54,8 +54,9 @@ pub fn parse_and_explore<'a, 'ctx, D, F, R, HandleParsedDenizen, FileHandler>(
 ) -> Result<Vec<F>, FailedParse<'a>>
 where
   'a: 'ctx,
+  'a: 'p,
   R: IPackageResolver<'a, HashMap<String, String>>,
-  HandleParsedDenizen: FnMut(&'a FileCoordinate<'a>, &str, &[ImportL<'a>], IDenizenP<'a>) -> D,
+  HandleParsedDenizen: FnMut(&'a FileCoordinate<'a>, &str, &[ImportL<'a>], IDenizenP<'a, 'p>) -> D,
   FileHandler: FnMut(&'a FileCoordinate<'a>, &str, &[RangeL], &[D]) -> F,
 {
   // From ParseAndExplore.scala lines 45-100: Call lexAndExplore with parsing logic
@@ -70,7 +71,7 @@ where
      denizen_l: &IDenizenL<'a>|
      -> D {
       // From ParseAndExplore.scala lines 51-95: Parse each denizen type
-      let denizen_p: IDenizenP = match denizen_l {
+      let denizen_p: IDenizenP<'a, 'p> = match denizen_l {
         IDenizenL::TopLevelImport(import) => {
           // From ParseAndExplore.scala lines 53-59
           IDenizenP::TopLevelImport(

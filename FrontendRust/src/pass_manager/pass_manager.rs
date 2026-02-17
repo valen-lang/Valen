@@ -396,12 +396,14 @@ where
   };
 
   // From PassManager.scala lines 231-233: Create FullCompilation
+  let arena = bumpalo::Bump::new();
   let mut compilation = FullCompilation::new(
     interner,
     keywords,
     packages_to_build,
     &resolver,
     options,
+    &arena,
   );
 
   // From PassManager.scala line 255

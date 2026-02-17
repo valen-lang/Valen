@@ -26,9 +26,10 @@ use crate::parsing::tests::utils::{
 #[test]
 fn capture_with_destructure_with_type_inside() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, "a [a int, b bool]");
+  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [a int, b bool]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -57,9 +58,10 @@ fn capture_with_destructure_with_type_inside() {
 #[test]
 fn capture_with_empty_sequence_type() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, "a ()");
+  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a ()");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
   assert!(tuple.elements.is_empty());
@@ -75,9 +77,10 @@ fn capture_with_empty_sequence_type() {
 #[test]
 fn empty_destructure() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, "[]");
+  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "[]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -93,9 +96,10 @@ fn empty_destructure() {
 fn capture_with_empty_destructure() {
   // Needs the space between the braces, see https://github.com/ValeLang/Vale/issues/434
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, "a [ ]");
+  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [ ]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -112,9 +116,10 @@ fn capture_with_empty_destructure() {
 #[test]
 fn destructure_with_nested_atom() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, "a [b int]");
+  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [b int]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();

@@ -15,12 +15,12 @@ object ParseUtils {
 
 /// Helper method to skip past an equals sign while a condition is true
 /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
-pub fn try_skip_past_equals_while<'a, F>(
-  iter: &mut ScrambleIterator<'a>,
+pub fn try_skip_past_equals_while<'a, 's, F>(
+  iter: &mut ScrambleIterator<'a, 's>,
   continue_while: F,
-) -> Option<ScrambleIterator<'a>>
+) -> Option<ScrambleIterator<'a, 's>>
 where
-  F: Fn(&ScrambleIterator<'a>) -> bool,
+  F: Fn(&ScrambleIterator<'a, 's>) -> bool,
 {
   let mut scouting_iter = iter.clone();
   while continue_while(&scouting_iter) {
@@ -85,13 +85,13 @@ where
 
 /// Try to skip past a keyword, returning the portion before it
 /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
-pub fn try_skip_past_keyword_while<'a, F>(
-  iter: &mut ScrambleIterator<'a>,
+pub fn try_skip_past_keyword_while<'a, 's, F>(
+  iter: &mut ScrambleIterator<'a, 's>,
   keyword: StrI<'a>,
   continue_while: F,
-) -> Option<(WordLE<'a>, ScrambleIterator<'a>)>
+) -> Option<(WordLE<'a>, ScrambleIterator<'a, 's>)>
 where
-  F: Fn(&ScrambleIterator<'a>) -> bool,
+  F: Fn(&ScrambleIterator<'a, 's>) -> bool,
 {
   // Mirrors ParseUtils.scala line 82
   let mut scouting_iter = iter.clone();

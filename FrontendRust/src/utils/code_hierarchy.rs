@@ -139,7 +139,7 @@ pub struct FileCoordinate<'a> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PackageCoordinate<'a> {
   pub module: StrI<'a>,
-  pub packages: InternedSlice<StrI<'a>>,
+  pub packages: InternedSlice<'a, StrI<'a>>,
 }
 
 impl<'a> PackageCoordinate<'a> {

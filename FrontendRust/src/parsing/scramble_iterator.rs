@@ -2,10 +2,10 @@ use crate::lexing::ast::*;
 use crate::StrI;
 
 /// Iterator over a scramble of lexed nodes
-/// Matches Scala's ScrambleIterator
+/// Matches Scala's ScrambleIterator (holds reference to scramble, like Scala)
 #[derive(Clone, Debug)]
-pub struct ScrambleIterator<'a> {
-  pub scramble: ScrambleLE<'a>,
+pub struct ScrambleIterator<'a, 's> {
+  pub scramble: &'s ScrambleLE<'a>,
   pub index: usize,
   pub end: usize,
 }
@@ -16,9 +16,9 @@ class ScrambleIterator(
     var end: Int) {
   assert(end <= scramble.elements.length)
 */
-impl<'a> ScrambleIterator<'a> {
+impl<'a, 's> ScrambleIterator<'a, 's> {
   /// Create a new iterator over the entire scramble
-  pub fn new(scramble: ScrambleLE<'a>) -> Self {
+  pub fn new(scramble: &'s ScrambleLE<'a>) -> Self {
     let end = scramble.elements.len();
     ScrambleIterator {
       scramble,
@@ -33,7 +33,7 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Create a new iterator with custom bounds
-  pub fn with_bounds(scramble: ScrambleLE<'a>, index: usize, end: usize) -> Self {
+  pub fn with_bounds(scramble: &'s ScrambleLE<'a>, index: usize, end: usize) -> Self {
     assert!(end <= scramble.elements.len());
     ScrambleIterator {
       scramble,
@@ -123,7 +123,7 @@ impl<'a> ScrambleIterator<'a> {
   }
 
   /// Skip to the position of another iterator
-  pub fn skip_to(&mut self, that: &ScrambleIterator) {
+  pub fn skip_to(&mut self, that: &ScrambleIterator<'a, 's>) {
     self.index = that.index;
   }
   /*
@@ -454,37 +454,6 @@ impl<'a> ScrambleIterator<'a> {
   */
 
   /// Split the scramble on a specific symbol
-  /// Split scramble into owned segments (avoids borrow issues in parsing loops).
-  /// Returns Vec<ScrambleLE> so each segment can live independently.
-  pub fn split_scramble_on_symbol(
-    scramble: ScrambleLE<'a>,
-    needle: char,
-    include_empty_trailing: bool,
-  ) -> Vec<ScrambleLE<'a>> {
-    let iter = ScrambleIterator::new(scramble);
-    let iters = iter.split_on_symbol(needle, include_empty_trailing);
-    iters
-      .into_iter()
-      .map(|i| {
-        let start = i.index;
-        let end = i.end;
-        let range = if start < end {
-          RangeL(
-            i.scramble.elements[start].range().begin(),
-            i.scramble.elements[end - 1].range().end(),
-          )
-        } else {
-          RangeL(i.scramble.range.end(), i.scramble.range.end())
-        };
-        ScrambleLE {
-          range,
-          elements: i.scramble.elements[start..end].to_vec(),
-        }
-      })
-      .collect()
-  }
-
-  /// Split the scramble on a specific symbol
   ///
   /// `include_empty_trailing`: If true and the scramble ends with the needle,
   /// include an empty iterator at the end
@@ -492,7 +461,7 @@ impl<'a> ScrambleIterator<'a> {
     &self,
     needle: char,
     include_empty_trailing: bool,
-  ) -> Vec<ScrambleIterator<'a>> {
+  ) -> Vec<ScrambleIterator<'a, 's>> {
     let mut iters = Vec::new();
     let mut start = self.index;
     let mut i = start;
@@ -500,11 +469,7 @@ impl<'a> ScrambleIterator<'a> {
     while i < self.end {
       match &**&self.scramble.elements[i] {
         INodeLEEnum::Symbol(SymbolLE(_, c)) if *c == needle => {
-          iters.push(ScrambleIterator::with_bounds(
-            self.scramble.clone(),
-            start,
-            i,
-          ));
+          iters.push(ScrambleIterator::with_bounds(self.scramble, start, i));
           start = i + 1;
           i += 1;
         }
@@ -516,18 +481,10 @@ impl<'a> ScrambleIterator<'a> {
 
     if start < self.end {
       // Scramble didn't end in the needle, add the last section
-      iters.push(ScrambleIterator::with_bounds(
-        self.scramble.clone(),
-        start,
-        self.end,
-      ));
+      iters.push(ScrambleIterator::with_bounds(self.scramble, start, self.end));
     } else if start == self.end && include_empty_trailing {
       // Ended in a needle and we want to include the empty section
-      iters.push(ScrambleIterator::with_bounds(
-        self.scramble.clone(),
-        start,
-        self.end,
-      ));
+      iters.push(ScrambleIterator::with_bounds(self.scramble, start, self.end));
     }
 
     iters
@@ -696,7 +653,7 @@ mod tests {
       ],
     };
 
-    let mut iter = ScrambleIterator::new(scramble);
+    let mut iter = ScrambleIterator::new(&scramble);
     assert!(!iter.at_end());
     assert!(iter.has_next());
     assert_eq!(iter.remaining(), 2);
@@ -720,7 +677,7 @@ mod tests {
       ],
     };
 
-    let iter = ScrambleIterator::new(scramble);
+    let iter = ScrambleIterator::new(&scramble);
     let parts = iter.split_on_symbol(',', false);
     assert_eq!(parts.len(), 2);
     assert_eq!(parts[0].remaining(), 1);

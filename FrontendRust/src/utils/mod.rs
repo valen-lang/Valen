@@ -1,5 +1,6 @@
 // From Frontend/Utils/src/dev/vale/CodeHierarchy.scala
 
+pub mod arena_utils;
 pub mod code_hierarchy;
 pub mod profiler;
 pub mod range;

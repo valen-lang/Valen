@@ -26,15 +26,17 @@ use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a, 'ctx>(
+fn compile<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p bumpalo::Bump,
   code: &str,
-) -> PatternPP<'a>
+) -> PatternPP<'a, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  compile_pattern_expect(interner, keywords, code)
+  compile_pattern_expect(interner, keywords, arena, code)
 }
 
 #[test]
@@ -42,7 +44,8 @@ fn ignoring_name() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ int");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -63,7 +66,8 @@ fn static_sized_array() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ [#3]MutableStruct");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -104,7 +108,8 @@ fn static_sized_array_with_imm() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ [#3]<imm>MutableStruct");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -145,7 +150,8 @@ fn static_sized_array_with_imm_and_vary() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ [#3]<imm, vary>MutableStruct");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm, vary>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -186,7 +192,8 @@ fn runtime_sized_array() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ #[]int");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ #[]int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -222,7 +229,8 @@ fn sequence_type() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ (int, bool)");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ (int, bool)");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -251,7 +259,8 @@ fn static_sized_array_with_borrow() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ &[#3]MutableStruct");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ &[#3]MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -300,7 +309,8 @@ fn static_sized_array_with_weak() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ &&[#3]<_, _>MutableStruct");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ &&[#3]<_, _>MutableStruct");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -343,7 +353,8 @@ fn call_type() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ MyOption<MyList<int>>");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ MyOption<MyList<int>>");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,

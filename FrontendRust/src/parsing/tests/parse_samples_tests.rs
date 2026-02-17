@@ -36,17 +36,19 @@ fn load_expected(path: &str) -> String {
     .unwrap_or_else(|e| panic!("Failed to load sample '{}': {} ({:?})", path, e, full_path))
 }
 
-fn parse<'a, 'ctx>(
+fn parse<'a, 'ctx, 'p>(
   path: &str,
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
   resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
   test_package_coord: &'a PackageCoordinate<'a>,
+  arena: &'p Bump,
 )
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  let mut compilation = parser_test_compilation::test(interner, keywords, resolver, test_package_coord);
+  let mut compilation = parser_test_compilation::test(interner, keywords, resolver, test_package_coord, arena);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
@@ -72,6 +74,7 @@ macro_rules! parse_sample_test {
     #[test]
     fn $name() {
       let arena = Bump::new();
+      let parse_arena = Bump::new();
       let interner = Interner::with_arena(&arena);
       let keywords = Keywords::new(&interner);
 
@@ -93,7 +96,7 @@ macro_rules! parse_sample_test {
     
       let resolver = ParserTestResolver { code_map };
 
-      parse($path, &interner, &keywords, &resolver, &test_package_coord);
+      parse($path, &interner, &keywords, &resolver, &test_package_coord, &parse_arena);
     }
   };
 }

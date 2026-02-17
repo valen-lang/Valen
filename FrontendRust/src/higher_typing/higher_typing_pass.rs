@@ -10,15 +10,16 @@ use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 
 // From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
-pub struct HigherTypingCompilation<'a, 'ctx> {
-  scout_compilation: ScoutCompilation<'a, 'ctx>,
+pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
+  scout_compilation: ScoutCompilation<'a, 'ctx, 'p>,
   #[allow(dead_code)]
   astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
 }
 
-impl<'a, 'ctx> HigherTypingCompilation<'a, 'ctx>
+impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   // From HigherTypingPass.scala lines 793-799
   pub fn new(
@@ -27,13 +28,15 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
+    arena: &'p bumpalo::Bump,
   ) -> Self {
-    let scout_compilation = ScoutCompilation::<'a, 'ctx>::new(
+    let scout_compilation = ScoutCompilation::new(
       interner,
       keywords,
       packages_to_build,
       package_to_contents_resolver,
       global_options,
+      arena,
     );
 
     HigherTypingCompilation {
@@ -48,7 +51,7 @@ where
   }
 
   // From HigherTypingPass.scala line 803: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
     self.scout_compilation.get_parseds()
   }
 

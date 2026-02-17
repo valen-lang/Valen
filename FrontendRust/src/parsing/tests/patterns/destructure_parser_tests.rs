@@ -24,15 +24,17 @@ use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a, 'ctx>(
+fn compile<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p bumpalo::Bump,
   code: &str,
-) -> PatternPP<'a>
+) -> PatternPP<'a, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  compile_pattern_expect(interner, keywords, code)
+  compile_pattern_expect(interner, keywords, arena, code)
 }
 /*
   test("Only empty destructure") {
@@ -46,7 +48,8 @@ fn only_empty_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -58,7 +61,8 @@ fn one_element_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[a]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[a]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -79,7 +83,8 @@ fn one_typed_element_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[ _ A ]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[ _ A ]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -106,7 +111,8 @@ fn only_two_element_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[a, b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[a, b]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -130,7 +136,8 @@ fn two_element_destructure_with_ignore() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[_, b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[_, b]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -161,7 +168,8 @@ fn capture_with_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "a [x, y]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "a [x, y]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -188,7 +196,8 @@ fn type_with_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "A[a, b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "A[a, b]");
   assert!(pattern.destination.is_none());
   assert_templex_name(pattern.templex.as_ref().unwrap(), "A");
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -215,7 +224,8 @@ fn capture_and_type_with_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "a A[x, y]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "a A[x, y]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "A");
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -242,7 +252,8 @@ fn capture_with_types_inside() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "a [_ int, _ bool]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "a [_ int, _ bool]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -281,7 +292,8 @@ fn destructure_with_type_inside() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[a int, b bool]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[a int, b bool]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -308,7 +320,8 @@ fn nested_destructures_a() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[a, [b, c]]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[a, [b, c]]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -345,7 +358,8 @@ fn nested_destructures_b() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[[a], b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[[a], b]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -378,7 +392,8 @@ fn nested_destructures_c() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "[[[a]]]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "[[[a]]]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let outer_destructure = pattern.destructure.as_ref().unwrap();

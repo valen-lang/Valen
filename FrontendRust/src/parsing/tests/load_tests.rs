@@ -29,12 +29,13 @@ use crate::von::printer::VonPrinter;
 #[test]
 fn simple_program() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let original_file = compile_file(&interner, &keywords, "exported func main() int { return 42; }").unwrap();
+  let original_file = compile_file(&interner, &keywords, &parse_arena, "exported func main() int { return 42; }").unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let json = VonPrinter::new().print(&von);
-  let loaded_file = parsed_loader::load(&interner, &json).unwrap();
+  let loaded_file = parsed_loader::load(&interner, &parse_arena, &json).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }
@@ -77,12 +78,13 @@ fn strings_with_special_characters() {
   // they won't have the 0x1b byte.
   assert!(code.contains("\\u001b"));
 
-  let original_file = compile_file(&interner, &keywords, code).unwrap();
+  let parse_arena = Bump::new();
+  let original_file = compile_file(&interner, &keywords, &parse_arena, code).unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let generated_json_str = VonPrinter::new().print(&von);
   let generated_bytes = generated_json_str.as_bytes();
   let loaded_json_str = String::from_utf8(generated_bytes.to_vec()).unwrap();
-  let loaded_file = parsed_loader::load(&interner, &loaded_json_str).unwrap();
+  let loaded_file = parsed_loader::load(&interner, &parse_arena, &loaded_json_str).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }

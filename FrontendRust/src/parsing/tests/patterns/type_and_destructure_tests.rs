@@ -25,22 +25,25 @@ use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a, 'ctx>(
+fn compile<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p bumpalo::Bump,
   code: &str,
-) -> PatternPP<'a>
+) -> PatternPP<'a, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  compile_pattern_expect(interner, keywords, code)
+  compile_pattern_expect(interner, keywords, arena, code)
 }
 #[test]
 fn empty_destructure() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ Muta[]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta[]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -64,10 +67,11 @@ fn empty_destructure() {
 #[test]
 fn templated_destructure() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
-    let pattern = compile(&interner, &keywords, "_ Muta<int>[]");
+    let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta<int>[]");
     let destination = pattern.destination.as_ref().unwrap();
     assert!(matches!(
       destination.decl,
@@ -83,7 +87,7 @@ fn templated_destructure() {
   }
 
   {
-    let pattern = compile(&interner, &keywords, "_ Muta<R>[]");
+    let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta<R>[]");
     let destination = pattern.destination.as_ref().unwrap();
     assert!(matches!(
       destination.decl,
@@ -126,7 +130,8 @@ fn destructure_with_type_outside() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ (int, bool)[a, b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -169,7 +174,8 @@ fn destructure_with_typeless_capture() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ Muta[b]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta[b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -200,7 +206,8 @@ fn destructure_with_typed_capture() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ Muta[b Marine]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta[b Marine]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -231,7 +238,8 @@ fn destructure_with_unnamed_capture() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ Muta[_ Marine]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta[_ Marine]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -265,7 +273,8 @@ fn destructure_with_runed_capture() {
   let arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let pattern = compile(&interner, &keywords, "_ Muta[_ R]");
+  let parse_arena = Bump::new();
+  let pattern = compile(&interner, &keywords, &parse_arena, "_ Muta[_ R]");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,

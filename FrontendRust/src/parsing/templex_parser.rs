@@ -10,6 +10,8 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::parse_utils::try_skip_past_equals_while;
 use crate::parsing::scramble_iterator::ScrambleIterator;
+use crate::utils::arena_utils::alloc_slice_from_vec;
+use bumpalo::Bump;
 /*
 package dev.vale.parsing.templex
 
@@ -29,29 +31,35 @@ type ParseResult<T> = Result<T, ParseError>;
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 #[derive(Clone)]
-pub struct TemplexParser<'a, 'ctx> {
+pub struct TemplexParser<'a, 'ctx, 'p> {
   #[allow(dead_code)]
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
 }
 /*
 class TemplexParser(interner: Interner, keywords: Keywords) {
 */
 
-impl<'a, 'ctx> TemplexParser<'a, 'ctx>
+impl<'a, 'ctx, 'p> TemplexParser<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
-  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
-    TemplexParser { interner, keywords }
+  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>, arena: &'p Bump) -> Self {
+    TemplexParser {
+      interner,
+      keywords,
+      arena,
+    }
   }
 
   /// Parse an array type expression
   /// Mirrors parseArray in TemplexParser.scala lines 14-85
   pub fn parse_array(
     &self,
-    original_iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<ITemplexPT<'a>>> {
+    original_iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<ITemplexPT<'a, 'p>>> {
     let begin = original_iter.get_pos();
 
     let mut tentative_iter = original_iter.clone();
@@ -59,11 +67,12 @@ where
     let immutable = tentative_iter.try_skip_symbol('#');
 
     // Check for squared brackets
+    let squared_contents;
     let size_scramble_iter_l = match tentative_iter.peek_cloned() {
       Some(INodeLEEnum::Squared(squared)) => {
-        let contents = squared.contents.clone();
+        squared_contents = squared.contents.clone();
         tentative_iter.advance();
-        ScrambleIterator::new(contents)
+        ScrambleIterator::new(&squared_contents)
       }
       _ => return Ok(None),
     };
@@ -211,7 +220,7 @@ where
 
   /// Parse a function name (including operator names)
   /// Mirrors parseFunctionName in TemplexParser.scala lines 87-161
-  pub fn parse_function_name(&self, iter: &mut ScrambleIterator<'a>) -> Option<NameP<'a>> {
+  pub fn parse_function_name(&self, iter: &mut ScrambleIterator<'a, '_>) -> Option<NameP<'a>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Word(word)) => {
         let range = word.range;
@@ -433,8 +442,8 @@ where
   /// Mirrors parsePrototype in TemplexParser.scala lines 163-189
   pub fn parse_prototype(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<ITemplexPT<'a>>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<ITemplexPT<'a, 'p>>> {
     let begin = iter.get_pos();
 
     if iter.try_skip_word(self.keywords.func).is_none() {
@@ -500,8 +509,8 @@ where
   /// Mirrors parseTemplateCallArgs in TemplexParser.scala lines 443-461
   pub fn parse_template_call_args(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<Vec<ITemplexPT<'a>>>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<&'p [ITemplexPT<'a, 'p>]>> {
     let angled = match iter.peek_cloned() {
       Some(INodeLEEnum::Angled(a)) => a.clone(),
       Some(_) => return Ok(None),
@@ -511,7 +520,8 @@ where
     iter.advance();
 
     let mut elements_p = Vec::new();
-    let contents_iter = ScrambleIterator::new(angled.contents.clone());
+    let angled_contents = angled.contents.clone();
+    let contents_iter = ScrambleIterator::new(&angled_contents);
     let element_iters = contents_iter.split_on_symbol(',', false);
 
     for element_iter in element_iters {
@@ -519,7 +529,7 @@ where
       elements_p.push(self.parse_templex(&mut elem_iter)?);
     }
 
-    Ok(Some(elements_p))
+    Ok(Some(alloc_slice_from_vec(self.arena, elements_p)))
   }
   /*
     def parseTemplateCallArgs(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
@@ -547,8 +557,8 @@ where
   /// Mirrors parseTuple in TemplexParser.scala lines 463-481
   pub fn parse_tuple(
     &self,
-    outer_iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<ITemplexPT<'a>>> {
+    outer_iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<ITemplexPT<'a, 'p>>> {
     let _begin = outer_iter.get_pos();
 
     match outer_iter.peek_cloned() {
@@ -557,7 +567,7 @@ where
         outer_iter.advance();
 
         let mut elements = Vec::new();
-        let contents_iter = ScrambleIterator::new(contents);
+        let contents_iter = ScrambleIterator::new(&contents);
         let iter_splits = contents_iter.split_on_symbol(',', false);
 
         for iter_split in iter_splits {
@@ -565,7 +575,10 @@ where
           elements.push(self.parse_templex(&mut iter)?);
         }
 
-        Ok(Some(ITemplexPT::Tuple(TuplePT { range, elements })))
+        Ok(Some(ITemplexPT::Tuple(TuplePT {
+          range,
+          elements: alloc_slice_from_vec(self.arena, elements),
+        })))
       }
       _ => Ok(None),
     }
@@ -596,8 +609,8 @@ where
   /// Mirrors parseInterpreted in TemplexParser.scala lines 273-303
   pub fn parse_interpreted(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<ITemplexPT<'a>>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<ITemplexPT<'a, 'p>>> {
     let begin = iter.get_pos();
 
     // Parse ownership prefix (^, @, &&, &)
@@ -682,7 +695,7 @@ where
   /// Mirrors parseEndingRegion in TemplexParser.scala lines 306-323
   pub fn parse_ending_region(
     &self,
-    original_iter: &mut ScrambleIterator<'a>,
+    original_iter: &mut ScrambleIterator<'a, '_>,
   ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
 
@@ -724,7 +737,7 @@ where
 
   /// Helper to parse region - mirrors Parser.parseRegion in Parser.scala lines 826-853
   fn parse_region_helper(
-    original_iter: &mut ScrambleIterator<'a>,
+    original_iter: &mut ScrambleIterator<'a, '_>,
   ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
 
@@ -762,8 +775,8 @@ where
   /// Mirrors parseTemplexAtomAndCallAndPrefixesAndSuffixes in TemplexParser.scala lines 326-334
   pub fn parse_templex_atom_and_call_and_prefixes_and_suffixes(
     &self,
-    original_iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<ITemplexPT<'a>> {
+    original_iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<ITemplexPT<'a, 'p>> {
     let inner = self.parse_templex_atom_and_call_and_prefixes(original_iter)?;
     Ok(inner)
   }
@@ -781,7 +794,7 @@ where
 
   /// Parse a templex atom (basic type expression)
   /// Mirrors parseTemplexAtom in TemplexParser.scala lines 336-441
-  pub fn parse_templex_atom(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<ITemplexPT<'a>> {
+  pub fn parse_templex_atom(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<ITemplexPT<'a, 'p>> {
     assert!(iter.peek_cloned().is_some());
     let _begin = iter.get_pos();
 
@@ -1040,8 +1053,8 @@ where
   /// Mirrors parseTemplexAtomAndCall in TemplexParser.scala lines 483-499
   pub fn parse_templex_atom_and_call(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<ITemplexPT<'a>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<ITemplexPT<'a, 'p>> {
     let begin = iter.get_pos();
 
     let atom = self.parse_templex_atom(iter)?;
@@ -1083,8 +1096,8 @@ where
   /// Mirrors parseTemplexAtomAndCallAndPrefixes in TemplexParser.scala lines 501-539
   pub fn parse_templex_atom_and_call_and_prefixes(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<ITemplexPT<'a>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<ITemplexPT<'a, 'p>> {
     assert!(iter.has_next());
 
     // Check for 'in' keyword - should not be interpreted as a templex (lines 506-515)
@@ -1154,7 +1167,7 @@ where
 
   /// Main entry point for parsing a templex
   /// Mirrors parseTemplex in TemplexParser.scala lines 541-545
-  pub fn parse_templex(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<ITemplexPT<'a>> {
+  pub fn parse_templex(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<ITemplexPT<'a, 'p>> {
     self.parse_templex_atom_and_call_and_prefixes_and_suffixes(iter)
   }
   /*
@@ -1169,8 +1182,8 @@ where
   /// Mirrors parseTypedRune in TemplexParser.scala lines 547-571
   pub fn parse_typed_rune(
     &self,
-    original_iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<IRulexPR<'a>>> {
+    original_iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<IRulexPR<'a, 'p>>> {
     match original_iter.peek2_cloned() {
       // Don't parse "func moo()void" (lines 550-552)
       (Some(INodeLEEnum::Word(WordLE { str: name_str, .. })), _)
@@ -1241,7 +1254,7 @@ where
 
   /// Parse a rule call
   /// Mirrors parseRuleCall in TemplexParser.scala lines 573-607
-  pub fn parse_rule_call(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<Option<IRulexPR<'a>>> {
+  pub fn parse_rule_call(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<Option<IRulexPR<'a, 'p>>> {
     match iter.peek2_cloned() {
       (Some(INodeLEEnum::Word(WordLE { str, .. })), _) if str == self.keywords.func => {
         return Ok(None);
@@ -1260,7 +1273,8 @@ where
 
         // Parse the arguments
         let mut args_pr = Vec::new();
-        let args_iter = ScrambleIterator::new(args_lr.clone());
+        let args_lr_clone = args_lr.clone();
+        let args_iter = ScrambleIterator::new(&args_lr_clone);
         let arg_iters = args_iter.split_on_symbol(',', false);
 
         for arg_iter in arg_iters {
@@ -1271,7 +1285,7 @@ where
         Ok(Some(IRulexPR::BuiltinCall(BuiltinCallPR {
           range,
           name: NameP(name_range, name),
-          args: args_pr,
+          args: alloc_slice_from_vec(self.arena, args_pr),
         })))
       }
       _ => Ok(None),
@@ -1319,8 +1333,8 @@ where
   /// Mirrors parseRuleDestructure in TemplexParser.scala lines 609-632
   pub fn parse_rule_destructure(
     &self,
-    original_iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<Option<IRulexPR<'a>>> {
+    original_iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<Option<IRulexPR<'a, 'p>>> {
     // Extract data from peek2() before mutating
     let (begin, end, components_l) = match original_iter.peek2_cloned() {
       (
@@ -1345,7 +1359,7 @@ where
 
     // Parse the components
     let mut components_p = Vec::new();
-    let components_iter = ScrambleIterator::new(components_l);
+    let components_iter = ScrambleIterator::new(&components_l);
     let component_iters = components_iter.split_on_symbol(',', false);
 
     for component_iter in component_iters {
@@ -1356,7 +1370,7 @@ where
     Ok(Some(IRulexPR::Components(ComponentsPR {
       range: RangeL(begin, end),
       container: rune_type,
-      components: components_p,
+      components: alloc_slice_from_vec(self.arena, components_p),
     })))
   }
   /*
@@ -1388,7 +1402,7 @@ where
 
   /// Parse a rule atom
   /// Mirrors parseRuleAtom in TemplexParser.scala lines 634-659
-  pub fn parse_rule_atom(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<IRulexPR<'a>> {
+  pub fn parse_rule_atom(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<IRulexPR<'a, 'p>> {
     let _begin = iter.get_pos();
 
     // Try parsing a rule call (lines 637-641)
@@ -1444,8 +1458,8 @@ where
   /// Mirrors parseRuleUpToEqualsPrecedence in TemplexParser.scala lines 661-689
   pub fn parse_rule_up_to_equals_precedence(
     &self,
-    iter: &mut ScrambleIterator<'a>,
-  ) -> ParseResult<IRulexPR<'a>> {
+    iter: &mut ScrambleIterator<'a, '_>,
+  ) -> ParseResult<IRulexPR<'a, 'p>> {
     // Try to find an equals sign while scouting ahead (lines 663-672)
     let maybe_before_iter = try_skip_past_equals_while(iter, |scouting_iter| {
       match scouting_iter.peek_cloned() {
@@ -1509,7 +1523,7 @@ where
 
   /// Main entry point for parsing a rule
   /// Mirrors parseRule in TemplexParser.scala lines 691-693
-  pub fn parse_rule(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<IRulexPR<'a>> {
+  pub fn parse_rule(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<IRulexPR<'a, 'p>> {
     self.parse_rule_up_to_equals_precedence(iter)
   }
   /*
@@ -1520,7 +1534,7 @@ where
 
   /// Parse a rune type (Ref, Int, etc.)
   /// Mirrors parseRuneType in TemplexParser.scala lines 695-732
-  pub fn parse_rune_type(&self, iter: &mut ScrambleIterator<'a>) -> ParseResult<Option<ITypePR>> {
+  pub fn parse_rune_type(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<Option<ITypePR>> {
     match iter.peek_cloned() {
       None => Ok(None),
 

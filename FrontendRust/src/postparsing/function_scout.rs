@@ -101,12 +101,15 @@ impl<'a, 'ctx> PostParser<'a, 'ctx>
 where
   'a: 'ctx,
 {
-  pub(crate) fn scout_function(
+  pub(crate) fn scout_function<'p>(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
-    function: &FunctionP<'a>,
+    function: &FunctionP<'a, 'p>,
     maybe_parent: IFunctionParent<'a>,
-  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'a: 'p,
+  {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}
       IFunctionParent::ParentInterface { .. } => {}
@@ -921,11 +924,14 @@ where
   }
 */
   #[allow(dead_code)]
-  pub(crate) fn scout_lambda(
+  pub(crate) fn scout_lambda<'p>(
     &self,
     parent_stack_frame: StackFrame<'a>,
-    function: &FunctionP<'a>,
-  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>> {
+    function: &FunctionP<'a, 'p>,
+  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  where
+    'a: 'p,
+  {
     let file_coordinate = parent_stack_frame.file;
     self.scout_function(
       file_coordinate,

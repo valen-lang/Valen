@@ -35,13 +35,15 @@ import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a, 'ctx>(
+fn compile<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
   code: &str,
 ) -> ProgramS<'a>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -51,7 +53,7 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, code).unwrap();
+  let only_file = compile_file(interner, keywords, arena, code).unwrap();
   let post_parser = PostParser::new(options, interner, keywords);
   post_parser
     .scout_program(only_file.file_coord, &only_file)
@@ -138,9 +140,10 @@ where
 #[test]
 fn test_struct() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "struct Moo { x int; }");
+  let program = compile(&interner, &keywords, &parse_arena, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
   crate::collect_only_sstruct!(
@@ -189,9 +192,10 @@ fn test_struct() {
 #[test]
 fn linear_struct() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "linear struct Moo { x int; }");
+  let program = compile(&interner, &keywords, &parse_arena, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
   crate::collect_only_sstruct!(
     moo_struct,
@@ -237,9 +241,10 @@ fn linear_struct() {
 #[test]
 fn interface() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
+  let program = compile(&interner, &keywords, &parse_arena, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
@@ -452,11 +457,13 @@ fn interface() {
 #[test]
 fn test_loading_from_member() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
+    &parse_arena,
     "func MyStruct() {
       return moo.x;
     }",
@@ -504,11 +511,13 @@ fn test_loading_from_member() {
 #[test]
 fn test_loading_from_member_2() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
+    &parse_arena,
     "func MyStruct() {
       return &moo.x;
     }",
@@ -561,11 +570,13 @@ fn test_loading_from_member_2() {
 #[test]
 fn constructing_members_borrowing_another_member() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
+    &parse_arena,
     "func MyStruct() {
       self.x = 4;
       self.y = &self.x;
@@ -635,7 +646,7 @@ fn constructing_members_borrowing_another_member() {
       ..
     }) => {
       assert_eq!(callable_name.name.as_str(), "MyStruct");
-      match arg_exprs.as_slice() {
+      match arg_exprs {
         [
           IExpressionSE::LocalLoad(LocalLoadSE {
             name: IVarNameS::ConstructingMemberName(x_name),
@@ -761,11 +772,13 @@ fn constructing_members_borrowing_another_member() {
 #[test]
 fn this_isnt_special_if_was_explicit_param() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
+    &parse_arena,
     "func moo(self &MyStruct) {
       println(self.x);
     }",

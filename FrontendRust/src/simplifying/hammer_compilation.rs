@@ -21,17 +21,18 @@ pub struct HammerCompilationOptions {
 }
 
 // From HammerCompilation.scala lines 25-66: HammerCompilation class
-pub struct HammerCompilation<'a, 'ctx> {
-  instantiated_compilation: InstantiatedCompilation<'a, 'ctx>,
+pub struct HammerCompilation<'a, 'ctx, 'p> {
+  instantiated_compilation: InstantiatedCompilation<'a, 'ctx, 'p>,
   #[allow(dead_code)]
   hamuts_cache: Option<()>, // ProgramH not yet ported
   #[allow(dead_code)]
   von_hammer_cache: Option<()>, // VonHammer not yet ported
 }
 
-impl<'a, 'ctx> HammerCompilation<'a, 'ctx>
+impl<'a, 'ctx, 'p> HammerCompilation<'a, 'ctx, 'p>
 where
   'a: 'ctx,
+  'a: 'p,
 {
   // From HammerCompilation.scala lines 25-40
   pub fn new(
@@ -40,6 +41,7 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
+    arena: &'p bumpalo::Bump,
   ) -> Self {
     let hammer_options = HammerCompilationOptions {
       debug_out: options.debug_out.clone(),
@@ -52,6 +54,7 @@ where
       packages_to_build,
       package_to_contents_resolver,
       hammer_options,
+      arena,
     );
 
     HammerCompilation {
@@ -74,7 +77,7 @@ where
   }
 
   // From HammerCompilation.scala line 46: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
     self.instantiated_compilation.get_parseds()
   }
 

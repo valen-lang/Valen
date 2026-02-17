@@ -22,9 +22,10 @@ use crate::parsing::tests::utils::*;
 #[test]
 fn ifs() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, "if true { doBlarks(&x) } else { }");
+  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if true { doBlarks(&x) } else { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition.as_ref(), IExpressionPE::ConstantBool);
@@ -60,9 +61,10 @@ fn ifs() {
 #[test]
 fn if_let() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, "if [u] = a {}");
+  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if [u] = a {}");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let let_ = cast!(if_.condition.as_ref(), IExpressionPE::Let);
@@ -102,9 +104,10 @@ fn if_let() {
 #[test]
 fn if_with_condition_declarations() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, "if x = 4; not x.isEmpty() { }");
+  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if x = 4; not x.isEmpty() { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition.as_ref(), IExpressionPE::Consecutor);
@@ -148,11 +151,13 @@ fn if_with_condition_declarations() {
 #[test]
 fn if_with_condition_declarations_and_block_contents() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "newLen = if num == 0 { 1 } else { 2 };",
   );
   let consecutor = cast!(expr, IExpressionPE::Consecutor);

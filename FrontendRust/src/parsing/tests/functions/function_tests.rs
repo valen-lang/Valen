@@ -26,9 +26,10 @@ use crate::parsing::tests::utils::{
 #[test]
 fn simple_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "func main() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func main() { }");
   let function = find_func_named(&program, "main");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.generic_parameters.is_none());
@@ -56,24 +57,25 @@ fn simple_function() {
 #[test]
 fn functions_with_weird_names() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "func !=() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func !=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "!=");
-  let program = compile(&interner, &keywords, "func <=() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func <=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "<=");
-  let program = compile(&interner, &keywords, "func >=() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func >=() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, ">=");
-  let program = compile(&interner, &keywords, "func <() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func <() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "<");
-  let program = compile(&interner, &keywords, "func >() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func >() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, ">");
-  let program = compile(&interner, &keywords, "func ==() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func ==() { }");
   assert_eq!(program.denizens.len(), 1);
   find_func_named(&program, "==");
 }
@@ -90,11 +92,13 @@ fn functions_with_weird_names() {
 #[test]
 fn function_then_struct() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
+    &parse_arena,
     r#"
       exported func main() int {}
 
@@ -124,9 +128,10 @@ fn function_then_struct() {
 #[test]
 fn simple_function_with_return() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum() int {3}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum() int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(function.header.attributes.is_empty());
@@ -151,13 +156,14 @@ fn simple_function_with_return() {
 #[test]
 fn pure_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "pure func sum() {3}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "pure func sum() {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::PureAttribute(_)]
   ));
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
@@ -181,12 +187,13 @@ fn pure_function() {
 #[test]
 fn extern_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "extern func sum();");
+  let program = compile(&interner, &keywords, &parse_arena, "extern func sum();");
   let function = find_func_named(&program, "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::ExternAttribute(_)]
   ));
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
@@ -206,11 +213,13 @@ fn extern_function() {
 #[test]
 fn function_ending_with_set() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     r#"
       func moo() {
         set bork = value
@@ -232,9 +241,10 @@ fn function_ending_with_set() {
 #[test]
 fn extern_function_generated() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, r#"extern("bork") func sum();"#);
+  let program = compile(&interner, &keywords, &parse_arena, r#"extern("bork") func sum();"#);
   let function = find_func_named(&program, "sum");
   let builtin = cast!(
     expect_1(&function.header.attributes),
@@ -258,12 +268,13 @@ fn extern_function_generated() {
 #[test]
 fn extern_function_with_return() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "extern func sum() int;");
+  let program = compile(&interner, &keywords, &parse_arena, "extern func sum() int;");
   let function = find_func_named(&program, "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::ExternAttribute(_)]
   ));
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
@@ -283,13 +294,14 @@ fn extern_function_with_return() {
 #[test]
 fn abstract_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum();");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "abstract func sum();");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::AbstractAttribute(_)]
   ));
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
@@ -309,11 +321,13 @@ fn abstract_function() {
 #[test]
 fn pure_and_default_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "pure func findNearbyUnits() i'int i'{ }",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -322,7 +336,7 @@ fn pure_and_default_region() {
     "findNearbyUnits"
   );
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::PureAttribute(_)]
   ));
   assert!(function.header.params.as_ref().unwrap().params.is_empty());
@@ -356,9 +370,10 @@ fn pure_and_default_region() {
 #[test]
 fn return_isolate() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func findNearbyUnits() 'int { }");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func findNearbyUnits() 'int { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(
     function.header.name.as_ref().unwrap().as_str(),
@@ -392,11 +407,13 @@ fn return_isolate() {
 #[test]
 fn coord_generic_with_associated_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func findNearbyUnits<t', t'T>(x T) { }",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -452,13 +469,14 @@ fn coord_generic_with_associated_region() {
 #[test]
 fn attribute_after_return() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() int;");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "abstract func sum() int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::AbstractAttribute(_)]
   ));
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "int");
@@ -481,13 +499,14 @@ fn attribute_after_return() {
 #[test]
 fn attribute_before_return() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "abstract func sum() Int;");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "abstract func sum() Int;");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(matches!(
-    function.header.attributes.as_slice(),
+    function.header.attributes,
     [IAttributeP::AbstractAttribute(_)]
   ));
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "Int");
@@ -510,9 +529,10 @@ fn attribute_before_return() {
 #[test]
 fn simple_function_with_identifying_rune() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A>(a A){a}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<A>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "A");
@@ -533,9 +553,10 @@ fn simple_function_with_identifying_rune() {
 #[test]
 fn simple_function_with_coord_typed_identifying_rune() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<A Ref>(a A){a}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<A Ref>(a A){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "A");
@@ -559,9 +580,10 @@ fn simple_function_with_coord_typed_identifying_rune() {
 #[test]
 fn simple_function_with_region_typed_identifying_rune() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<a'>(){}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<a'>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "a");
@@ -585,9 +607,10 @@ fn simple_function_with_region_typed_identifying_rune() {
 #[test]
 fn readonly_region_rune() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r' ro>(){}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<r' ro>(){}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "r");
@@ -597,7 +620,7 @@ fn readonly_region_rune() {
   );
   assert!(generic_param.coord_region.is_none());
   assert!(matches!(
-    generic_param.attributes.as_slice(),
+    generic_param.attributes,
     [IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)]
   ));
   assert!(generic_param.maybe_default.is_none());
@@ -614,9 +637,10 @@ fn readonly_region_rune() {
 #[test]
 fn simple_function_with_apostrophe_region_typed_identifying_rune() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<r'>(a &r'Marine){a}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<r'>(a &r'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "r");
@@ -640,11 +664,13 @@ fn simple_function_with_apostrophe_region_typed_identifying_rune() {
 #[test]
 fn pool_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func sum<r' = pool>(a &r'Marine){a}",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -675,11 +701,13 @@ fn pool_region() {
 #[test]
 fn pool_readonly_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func sum<r' ro = pool>(a &r'Marine){a}",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -691,7 +719,7 @@ fn pool_readonly_region() {
   );
   assert!(generic_param.coord_region.is_none());
   assert!(matches!(
-    generic_param.attributes.as_slice(),
+    generic_param.attributes,
     [IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)]
   ));
   assert_templex_name(generic_param.maybe_default.as_ref().unwrap(), "pool");
@@ -713,11 +741,13 @@ fn pool_readonly_region() {
 #[test]
 fn arena_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func sum<x' = arena>(a &x'Marine){a}",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -748,9 +778,10 @@ fn arena_region() {
 #[test]
 fn readonly_region() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum<x'>(a &x'Marine){a}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum<x'>(a &x'Marine){a}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let generic_param = expect_1(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(generic_param.name.as_str(), "x");
@@ -780,11 +811,13 @@ fn readonly_region() {
 #[test]
 fn virtual_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func doCivicDance(virtual this Car) int;",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -825,11 +858,13 @@ fn virtual_function() {
 #[test]
 fn bad_thing_for_body() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_denizen(
     &interner,
     &keywords,
+    &parse_arena,
     r#"
       func doCivicDance(virtual this Car) moo blork
     "#,
@@ -851,9 +886,10 @@ fn bad_thing_for_body() {
 #[test]
 fn function_with_parameter_and_return() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "func main(moo T) T { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func main(moo T) T { }");
   let function = find_func_named(&program, "main");
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   let pattern = param.pattern.as_ref().unwrap();
@@ -881,9 +917,10 @@ fn function_with_parameter_and_return() {
 #[test]
 fn function_with_generics() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, "func main<T>() { }");
+  let program = compile(&interner, &keywords, &parse_arena, "func main<T>() { }");
   let function = find_func_named(&program, "main");
   assert!(function.header.attributes.is_empty());
   assert!(function.header.template_rules.is_none());
@@ -913,11 +950,13 @@ fn function_with_generics() {
 #[test]
 fn impl_function() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func maxHp(virtual this Marine) { return 5; }",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -958,9 +997,10 @@ fn impl_function() {
 #[test]
 fn param() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func call(f F){f()}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func call(f F){f()}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let param = expect_1(&function.header.params.as_ref().unwrap().params);
   let pattern = param.pattern.as_ref().unwrap();
@@ -978,9 +1018,10 @@ fn param() {
 #[test]
 fn func_with_rules() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func sum () where X Int {3}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func sum () where X Int {3}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_eq!(function.header.name.as_ref().unwrap().as_str(), "sum");
   assert!(function.header.attributes.is_empty());
@@ -1008,11 +1049,13 @@ fn func_with_rules() {
 #[test]
 fn func_with_func_bound() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     "func sum<T>() where func moo(&T)void {3}",
   );
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
@@ -1054,9 +1097,10 @@ fn func_with_func_bound() {
 #[test]
 fn identifying_runes() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func wrap<A, F>(a A) { }");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func wrap<A, F>(a A) { }");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   let (a_rune, f_rune) = expect_2(&function.header.generic_parameters.as_ref().unwrap().params);
   assert_eq!(a_rune.name.as_str(), "A");
@@ -1098,9 +1142,10 @@ fn identifying_runes() {
 #[test]
 fn never_signature() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, "func __vbi_panic() __Never {}");
+  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "func __vbi_panic() __Never {}");
   let function = cast!(denizen, IDenizenP::TopLevelFunction);
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "__Never");
 }
@@ -1117,11 +1162,13 @@ fn never_signature() {
 #[test]
 fn should_require_identifying_runes() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_denizen(
     &interner,
     &keywords,
+    &parse_arena,
     r#"
       func do(callable) int {callable()}
     "#,
@@ -1147,11 +1194,13 @@ fn should_require_identifying_runes() {
 #[test]
 fn short_self() {
   let arena = Bump::new();
+  let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let denizen = compile_denizen_expect(
     &interner,
     &keywords,
+    &parse_arena,
     r#"
       interface IMoo {
         func moo(&self) {}
