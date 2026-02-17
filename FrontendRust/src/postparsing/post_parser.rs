@@ -29,6 +29,7 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::utils::range::{CodeLocationS, RangeS};
 use std::collections::HashMap;
@@ -43,6 +44,7 @@ pub struct ScoutCompilation<'a, 'ctx, 'p> {
   #[allow(dead_code)]
   keywords: &'ctx Keywords<'a>,
   parser_compilation: ParserCompilation<'a, 'ctx, 'p>,
+  scout_arena: &'p bumpalo::Bump,
   #[allow(dead_code)]
   scoutput_cache: Option<()>,
 }
@@ -75,6 +77,7 @@ where
       interner,
       keywords,
       parser_compilation,
+      scout_arena: arena,
       scoutput_cache: None,
     }
   }
@@ -410,9 +413,10 @@ object PostParser {
   def noVariableUses = VariableUses(Vector.empty)
   def noDeclarations = VariableDeclarations(Vector.empty)
 */
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
   pub fn no_variable_uses() -> VariableUses<'static> {
     VariableUses::empty()
@@ -435,9 +439,10 @@ where
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
 */
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
   pub fn eval_pos(file: &'a FileCoordinate<'a>, pos: i32) -> CodeLocationS<'a> {
     CodeLocationS {
@@ -534,11 +539,12 @@ where
 //    }
 //  }
 */
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
-  pub fn consecutive(exprs: Vec<IExpressionSE<'a>>) -> IExpressionSE<'a> {
+  pub fn consecutive(exprs: Vec<IExpressionSE<'a, 's>>) -> IExpressionSE<'a, 's> {
     assert!(!exprs.is_empty(), "POSTPARSER_CONSECUTIVE_EMPTY");
     if exprs.len() == 1 {
       return exprs.into_iter().next().unwrap();
@@ -699,25 +705,29 @@ where
 /*
 }
 */
-pub struct PostParser<'a, 'ctx> {
+pub struct PostParser<'a, 'ctx, 's> {
   pub global_options: GlobalOptions,
   pub interner: &'ctx Interner<'a>,
   pub keywords: &'ctx Keywords<'a>,
+  pub scout_arena: &'s bumpalo::Bump,
 }
 
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
   pub fn new(
     global_options: GlobalOptions,
     interner: &'ctx Interner<'a>,
     keywords: &'ctx Keywords<'a>,
+    scout_arena: &'s bumpalo::Bump,
   ) -> Self {
     Self {
       global_options,
       interner,
       keywords,
+      scout_arena,
     }
   }
 
@@ -734,7 +744,7 @@ class PostParser(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
     parsed: &FileP<'a, 'p>,
-  ) -> Result<ProgramS<'a>, ICompileErrorS<'a>>
+  ) -> Result<ProgramS<'a, 's>, ICompileErrorS<'a>>
   where
     'a: 'p,
   {
@@ -752,7 +762,7 @@ class PostParser(
       }
     }
 
-    let impls = Vec::<ImplS>::new();
+    let impls = Vec::<ImplS<'a, 's>>::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelImpl(_impl_p) = denizen {
         panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_IMPL_NOT_YET_IMPLEMENTED");
@@ -782,7 +792,7 @@ class PostParser(
       }
     }
 
-    let imports = Vec::<ImportS>::new();
+    let imports = Vec::<ImportS<'a, 's>>::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelImport(_import_p) = denizen {
         panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_IMPORT_NOT_YET_IMPLEMENTED");
@@ -790,12 +800,12 @@ class PostParser(
     }
 
     Ok(ProgramS {
-      structs,
-      interfaces,
-      impls,
-      implemented_functions,
-      exports,
-      imports,
+      structs: alloc_slice_from_vec(self.scout_arena, structs),
+      interfaces: alloc_slice_from_vec(self.scout_arena, interfaces),
+      impls: alloc_slice_from_vec(self.scout_arena, impls),
+      implemented_functions: alloc_slice_from_vec(self.scout_arena, implemented_functions),
+      exports: alloc_slice_from_vec(self.scout_arena, exports),
+      imports: alloc_slice_from_vec(self.scout_arena, imports),
     })
   }
 /*
@@ -1006,7 +1016,7 @@ class PostParser(
     &self,
     file: &'a FileCoordinate<'a>,
     head: &StructP<'a, 'p>,
-  ) -> Result<StructS<'a>, ICompileErrorS<'a>>
+  ) -> Result<StructS<'a, 's>, ICompileErrorS<'a>>
   where
     'a: 'p,
   {
@@ -1136,9 +1146,12 @@ class PostParser(
     Ok(StructS {
       range: struct_range_s.clone(),
       name: struct_name,
-      attributes,
+      attributes: alloc_slice_from_vec(self.scout_arena, attributes),
       weakable,
-      generic_params: Vec::new(),
+      generic_params: alloc_slice_from_vec(
+        self.scout_arena,
+        Vec::<GenericParameterS>::new(),
+      ),
       mutability_rune: mutability_rune.clone(),
       maybe_predicted_mutability: Some(MutabilityP::Mutable),
       tyype: TemplateTemplataType {
@@ -1150,11 +1163,11 @@ class PostParser(
         ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
       )]),
       header_predicted_rune_to_type: HashMap::new(),
-      header_rules,
+      header_rules: alloc_slice_from_vec(self.scout_arena, header_rules),
       members_rune_to_explicit_type,
       members_predicted_rune_to_type: HashMap::new(),
-      member_rules,
-      members,
+      member_rules: alloc_slice_from_vec(self.scout_arena, member_rules),
+      members: alloc_slice_from_vec(self.scout_arena, members),
     })
   }
 /*
@@ -1378,7 +1391,7 @@ class PostParser(
     &self,
     file: &'a FileCoordinate<'a>,
     interface: &crate::parsing::ast::InterfaceP<'a, 'p>,
-  ) -> Result<InterfaceS<'a>, ICompileErrorS<'a>>
+  ) -> Result<InterfaceS<'a, 's>, ICompileErrorS<'a>>
   where
     'a: 'p,
   {
@@ -1486,16 +1499,16 @@ class PostParser(
             name: method_name.str(),
             code_location: Self::eval_pos(file, method_name.range().begin()),
           }),
-          attributes: Vec::new(),
-          generic_params: generic_params.clone(),
+          attributes: alloc_slice_from_vec(self.scout_arena, Vec::new()),
+          generic_params: alloc_slice_from_vec(self.scout_arena, generic_params.clone()),
           rune_to_predicted_type: HashMap::new(),
           tyype: TemplateTemplataType {
             param_types: Vec::new(),
             return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
           },
-          params: Vec::new(),
+          params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
           maybe_ret_coord_rune: None,
-          rules: Vec::new(),
+          rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
           body: IBodyS::AbstractBody(AbstractBodyS {}),
         }
       })
@@ -1504,9 +1517,9 @@ class PostParser(
     Ok(InterfaceS {
       range: interface_range,
       name: interface_name,
-      attributes,
+      attributes: alloc_slice_from_vec(self.scout_arena, attributes),
       weakable,
-      generic_params: generic_params.clone(),
+      generic_params: alloc_slice_from_vec(self.scout_arena, generic_params.clone()),
       rune_to_explicit_type,
       mutability_rune,
       maybe_predicted_mutability: Some(MutabilityP::Mutable),
@@ -1515,8 +1528,8 @@ class PostParser(
         param_types: generic_params.iter().map(|x| x.tyype.tyype()).collect(),
         return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
       },
-      rules: Vec::new(),
-      internal_methods,
+      rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
+      internal_methods: alloc_slice_from_vec(self.scout_arena, internal_methods),
     })
   }
 /*

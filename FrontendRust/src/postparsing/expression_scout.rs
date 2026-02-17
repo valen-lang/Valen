@@ -46,10 +46,10 @@ trait IExpressionScoutDelegate {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-enum IScoutResult<'a, 'p> {
+enum IScoutResult<'a, 'p, 's> {
   LocalLookupResult(LocalLookupResultS<'a>),
   OutsideLookupResult(OutsideLookupResultS<'a, 'p>),
-  NormalResult(NormalResultS<'a>),
+  NormalResult(NormalResultS<'a, 's>),
 }
 /*
 // MIGALLOW: Rust IScoutResult doesn't need to be generic, because we never made use of that in
@@ -86,8 +86,8 @@ case class OutsideLookupResult(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-struct NormalResultS<'a> {
-  expr: IExpressionSE<'a>,
+struct NormalResultS<'a, 's> {
+  expr: IExpressionSE<'a, 's>,
 }
 
 /*
@@ -299,16 +299,17 @@ fn find_local<'a>(
 // - variable uses by self
 // - variable uses by child blocks
 // MIGTODO: rename all "scout" to "post parse" or something.
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
 fn scout_expression<'p>(
   &self,
   stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
   expression: &IExpressionPE<'a, 'p>,
-) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
 where
   'a: 'p,
 {
@@ -1363,7 +1364,7 @@ pub(crate) fn scout_expression_and_coerce<'p>(
     lidb: &mut LocationInDenizenBuilder,
     expression_p: &IExpressionPE<'a, 'p>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'a>, IExpressionSE<'a>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(StackFrame<'a>, IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
     'a: 'p,
   {
@@ -1466,7 +1467,7 @@ fn scout_elements_as_expressions<'p>(
     initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     exprs_p: &[IExpressionPE<'a, 'p>],
-  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(StackFrame<'a>, Vec<IExpressionSE<'a, 's>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
     'a: 'p,
   {

@@ -40,7 +40,7 @@ fn compile<'a, 'ctx, 'p>(
   keywords: &'ctx Keywords<'a>,
   arena: &'p Bump,
   code: &str,
-) -> ProgramS<'a>
+) -> ProgramS<'a, 'p>
 where
   'a: 'ctx,
   'a: 'p,
@@ -54,7 +54,7 @@ where
   };
 
   let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords);
+  let post_parser = PostParser::new(options, interner, keywords, arena);
   post_parser
     .scout_program(only_file.file_coord, &only_file)
     .unwrap()

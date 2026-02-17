@@ -39,6 +39,7 @@ use crate::postparsing::post_parser::{
 };
 use crate::postparsing::rules::rules::IRulexSR;
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
+use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 
@@ -97,16 +98,17 @@ class FunctionScout(
       keywords
     )
 */
-impl<'a, 'ctx> PostParser<'a, 'ctx>
+impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 's,
 {
   pub(crate) fn scout_function<'p>(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
     function: &FunctionP<'a, 'p>,
     maybe_parent: IFunctionParent<'a>,
-  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
   where
     'a: 'p,
   {
@@ -257,7 +259,7 @@ where
       .vars
       .iter()
       .filter_map(|declared| match &declared.name {
-        IVarNameS::ConstructingMemberName(member_name) => Some(*member_name),
+        IVarNameS::ConstructingMemberName(member_name) => Some(member_name.clone()),
         _ => None,
       })
       .collect();
@@ -265,7 +267,7 @@ where
     let expr_with_constructor = if constructing_member_names.is_empty() {
       expr_without_constructing_without_void
     } else {
-      let constructor_expr: IExpressionSE<'a> = IExpressionSE::FunctionCall(FunctionCallSE {
+      let constructor_expr: IExpressionSE<'a, 's> = IExpressionSE::FunctionCall(FunctionCallSE {
         range: body_range.clone(),
         location: lidb.child().consume(),
         callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
@@ -286,7 +288,7 @@ where
               target_ownership: LoadAsP::Move,
             })
           })
-          .collect::<Vec<IExpressionSE<'a>>>(),
+          .collect::<Vec<IExpressionSE<'a, 's>>>(),
       });
       for member_name in constructing_member_names {
         self_uses = self_uses.mark_moved(IVarNameS::ConstructingMemberName(member_name));
@@ -318,16 +320,19 @@ where
     Ok((FunctionS {
       range: Self::eval_range(file_coordinate, function.range),
       name: function_declaration_name,
-      attributes: vec![IFunctionAttributeS::UserFunction(UserFunctionS)],
-      generic_params: Vec::new(),
+      attributes: alloc_slice_from_vec(
+        self.scout_arena,
+        vec![IFunctionAttributeS::UserFunction(UserFunctionS)],
+      ),
+      generic_params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
       rune_to_predicted_type: HashMap::new(),
       tyype: TemplateTemplataType {
         param_types: Vec::new(),
         return_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
       },
-      params: Vec::new(),
+      params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
       maybe_ret_coord_rune: None,
-      rules: Vec::new(),
+      rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
       body: IBodyS::CodeBody(CodeBodyS {
         body: BodySE {
           range: body_range.clone(),
@@ -928,7 +933,7 @@ where
     &self,
     parent_stack_frame: StackFrame<'a>,
     function: &FunctionP<'a, 'p>,
-  ) -> Result<(FunctionS<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
   where
     'a: 'p,
   {
