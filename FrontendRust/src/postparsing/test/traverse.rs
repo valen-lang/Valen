@@ -473,10 +473,10 @@ where
         visit_rulex(pred, out, rule);
       }
       visit_pattern(pred, out, &x.pattern);
-      visit_expression(pred, out, x.expr.as_ref());
+      visit_expression(pred, out, x.expr);
     }
     IExpressionSE::Consecutor(x) => {
-      for expr in &x.exprs {
+      for expr in x.exprs {
         visit_expression(pred, out, expr);
       }
     }
@@ -486,8 +486,8 @@ where
     IExpressionSE::ConstantInt(_) => {}
     IExpressionSE::Dot(x) => visit_dot(pred, out, x),
     IExpressionSE::FunctionCall(x) => {
-      visit_expression(pred, out, x.callable_expr.as_ref());
-      for arg in &x.arg_exprs {
+      visit_expression(pred, out, x.callable_expr);
+      for arg in x.arg_exprs {
         visit_expression(pred, out, arg);
       }
     }
@@ -502,14 +502,14 @@ fn visit_return<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, ret: &'s ReturnSE<'a, 
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
-  visit_expression(pred, out, ret.inner.as_ref());
+  visit_expression(pred, out, ret.inner);
 }
 
 fn visit_dot<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, dot: &'s DotSE<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
-  visit_expression(pred, out, dot.left.as_ref());
+  visit_expression(pred, out, dot.left);
 }
 
 fn visit_outside_load<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'s OutsideLoadSE<'a>)
@@ -531,7 +531,7 @@ fn visit_ownershipped<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, ownershipped: &'
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
-  visit_expression(pred, out, ownershipped.inner_expr.as_ref());
+  visit_expression(pred, out, ownershipped.inner_expr);
 }
 
 fn visit_block<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, block: &'s BlockSE<'a, 's>)
@@ -542,7 +542,7 @@ where
   for local in &block.locals {
     visit_local(pred, out, local);
   }
-  visit_expression(pred, out, block.expr.as_ref());
+  visit_expression(pred, out, block.expr);
 }
 
 fn visit_pure<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, pure: &'s PureSE<'a, 's>)
@@ -550,7 +550,7 @@ where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::PureExpr(pure));
-  visit_expression(pred, out, pure.inner.as_ref());
+  visit_expression(pred, out, pure.inner);
 }
 
 fn visit_local<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, local: &'s LocalS<'a>)

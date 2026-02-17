@@ -16,6 +16,14 @@ class TemplexScout(
     interner: Interner,
   keywords: Keywords) {
 */
+fn add_literal_rule<'a>(
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _range_s: crate::utils::range::RangeS<'a>,
+  _value_sr: crate::postparsing::rules::rules::ILiteralSL,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented add_literal_rule");
+}
 /*
   def addLiteralRule(
     lidb: LocationInDenizenBuilder,
@@ -28,6 +36,14 @@ class TemplexScout(
     runeS
   }
 */
+fn add_rune_parent_env_lookup_rule<'a>(
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _range_s: crate::utils::range::RangeS<'a>,
+  _rune_s: crate::postparsing::names::IRuneS<'a>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented add_rune_parent_env_lookup_rule");
+}
 /*
   def addRuneParentEnvLookupRule(
     lidb: LocationInDenizenBuilder,
@@ -40,6 +56,15 @@ class TemplexScout(
     usage
   }
 */
+fn add_lookup_rule<'a>(
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _range_s: crate::utils::range::RangeS<'a>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _name_sn: crate::postparsing::names::IImpreciseNameS<'a>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented add_lookup_rule");
+}
 /*
   def addLookupRule(
     lidb: LocationInDenizenBuilder,
@@ -53,6 +78,11 @@ class TemplexScout(
     runeS
   }
 */
+fn translate_value_templex<'a, 'p>(
+  _templex: &crate::parsing::ast::ITemplexPT<'a, 'p>,
+) -> Option<crate::postparsing::rules::rules::ILiteralSL> {
+  panic!("Unimplemented translate_value_templex");
+}
 /*
   def translateValueTemplex(templex: ITemplexPT): Option[ILiteralSL] = {
     templex match {
@@ -67,6 +97,15 @@ class TemplexScout(
     }
   }
 */
+fn translate_templex<'a, 'p, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _templex: &crate::parsing::ast::ITemplexPT<'a, 'p>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented translate_templex");
+}
 /*
   // Returns:
   // - Rune for this type
@@ -311,6 +350,15 @@ class TemplexScout(
     })
   }
 */
+fn translate_type_into_rune<'a, 'p, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _type_p: &crate::parsing::ast::ITemplexPT<'a, 'p>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented translate_type_into_rune");
+}
 /*
   // Returns:
   // - Rune for this type
@@ -334,6 +382,16 @@ class TemplexScout(
     }
   }
 */
+fn translate_maybe_type_into_rune<'a, 'p, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::utils::range::RangeS<'a>,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _maybe_type_p: Option<&crate::parsing::ast::ITemplexPT<'a, 'p>>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented translate_maybe_type_into_rune");
+}
 /*
   // Returns:
   // - Rune for this type
@@ -353,9 +411,20 @@ class TemplexScout(
       case Some(typeP) => {
         translateTypeIntoRune(env, lidb, ruleBuilder, contextRegion, typeP)
       }
-    }
   }
+}
 */
+fn translate_maybe_type_into_maybe_rune<'a, 'p, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::utils::range::RangeS<'a>,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _maybe_type_p: Option<&crate::parsing::ast::ITemplexPT<'a, 'p>>,
+) -> Option<crate::postparsing::rules::rules::RuneUsage<'a>> {
+  panic!("Unimplemented translate_maybe_type_into_maybe_rune");
+}
 /*
   def translateMaybeTypeIntoMaybeRune(
     env: IEnvironmentS,

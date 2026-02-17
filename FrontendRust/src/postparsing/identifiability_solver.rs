@@ -23,6 +23,11 @@ sealed trait IIdentifiabilityRuleError
 // be derived from the identifying runes.
 object IdentifiabilitySolver {
 */
+fn get_runes<'a>(
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+) -> Vec<crate::postparsing::names::IRuneS<'a>> {
+  panic!("Unimplemented get_runes");
+}
 /*
   def getRunes(rule: IRulexSR): Vector[IRuneS] = {
     val sanityCheck =
@@ -60,6 +65,11 @@ object IdentifiabilitySolver {
     result.map(_.rune)
   }
 */
+fn get_puzzles<'a>(
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
+  panic!("Unimplemented get_puzzles");
+}
 /*
   def getPuzzles(rule: IRulexSR): Vector[Vector[IRuneS]] = {
     rule match {
@@ -106,6 +116,21 @@ object IdentifiabilitySolver {
     }
   }
 */
+fn solve_rule<'a>(
+  _state: (),
+  _rule_index: usize,
+  _call_range: &[crate::utils::range::RangeS<'a>],
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+) -> Result<(), ()> {
+  panic!("Unimplemented solve_rule");
+}
+fn solve_identifiability<'a>(
+  _range_s: crate::utils::range::RangeS<'a>,
+  _generic_parameters: &[crate::postparsing::ast::GenericParameterS<'a>],
+  _rules_array: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+) {
+  panic!("Unimplemented solve_identifiability");
+}
 /*
   private def solveRule(
     state: Unit,

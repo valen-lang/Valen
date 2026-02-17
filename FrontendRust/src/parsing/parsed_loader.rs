@@ -345,7 +345,7 @@ fn load_function<'a, 'p>(
     range: load_range(get_object_field(denizen, "range")),
     header: load_function_header(interner, arena, get_object_field(denizen, "header")),
     body: load_optional_object(get_object_field(denizen, "body"), |x| load_block(interner, arena, x))
-      .map(Box::new),
+      .map(|b| &*arena.alloc(b)),
   }
 }
 /*
@@ -808,7 +808,7 @@ fn load_block<'a, 'p>(
       get_object_field(jobj, "maybeDefaultRegion"),
       |x| load_region_rune(interner, x),
     ),
-    inner: Box::new(load_expression(interner, arena, get_object_field(jobj, "inner"))),
+    inner: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "inner"))),
   }
 }
 /*
@@ -896,7 +896,7 @@ fn load_expression<'a, 'p>(
   match get_type(jobj) {
     "Return" => IExpressionPE::Return(ReturnPE {
       range: load_range(get_object_field(jobj, "range")),
-      expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "expr"))),
+      expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "expr"))),
     }),
     "Void" => IExpressionPE::Void(VoidPE {
       range: load_range(get_object_field(jobj, "range")),
@@ -915,7 +915,7 @@ fn load_expression<'a, 'p>(
     }),
     "ConstantStr" => IExpressionPE::ConstantStr(ConstantStrPE {
       range: load_range(get_object_field(jobj, "range")),
-      value: get_string_field(jobj, "value").to_string(),
+      value: interner.intern(get_string_field(jobj, "value")),
     }),
     "ConstantFloat" => IExpressionPE::ConstantFloat(ConstantFloatPE {
       range: load_range(get_object_field(jobj, "range")),
@@ -938,7 +938,7 @@ fn load_expression<'a, 'p>(
     }
     "Dot" => IExpressionPE::Dot(DotPE {
       range: load_range(get_object_field(jobj, "range")),
-      left: Box::new(load_expression(interner, arena, get_object_field(jobj, "left"))),
+      left: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "left"))),
       operator_range: load_range(get_object_field(jobj, "operatorRange")),
       member: load_name(interner, get_object_field(jobj, "member")),
     }),
@@ -951,15 +951,15 @@ fn load_expression<'a, 'p>(
       IExpressionPE::FunctionCall(FunctionCallPE {
         range: load_range(get_object_field(jobj, "range")),
         operator_range: load_range(get_object_field(jobj, "operatorRange")),
-        callable_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "callableExpr"))),
+        callable_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "callableExpr"))),
         arg_exprs: alloc_slice_from_vec(arena, arg_exprs),
       })
     }
     "BinaryCall" => IExpressionPE::BinaryCall(BinaryCallPE {
       range: load_range(get_object_field(jobj, "range")),
       function_name: load_name(interner, get_object_field(jobj, "functionName")),
-      left_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "leftExpr"))),
-      right_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "rightExpr"))),
+      left_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "leftExpr"))),
+      right_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "rightExpr"))),
     }),
     "Lambda" => IExpressionPE::Lambda(LambdaPE {
       captures: load_optional_object(get_object_field(jobj, "captures"), load_unit),
@@ -970,28 +970,28 @@ fn load_expression<'a, 'p>(
     }),
     "If" => IExpressionPE::If(IfPE {
       range: load_range(get_object_field(jobj, "range")),
-      condition: Box::new(load_expression(interner, arena, get_object_field(jobj, "condition"))),
-      then_body: Box::new(load_block(interner, arena, get_object_field(jobj, "thenBody"))),
-      else_body: Box::new(load_block(interner, arena, get_object_field(jobj, "elseBody"))),
+      condition: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "condition"))),
+      then_body: &*arena.alloc(load_block(interner, arena, get_object_field(jobj, "thenBody"))),
+      else_body: &*arena.alloc(load_block(interner, arena, get_object_field(jobj, "elseBody"))),
     }),
     "SubExpression" => IExpressionPE::SubExpression(SubExpressionPE {
       range: load_range(get_object_field(jobj, "range")),
-      inner: Box::new(load_expression(interner, arena, get_object_field(jobj, "innerExpr"))),
+      inner: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "innerExpr"))),
     }),
     "Let" => IExpressionPE::Let(LetPE {
       range: load_range(get_object_field(jobj, "range")),
       pattern: load_pattern(interner, arena, get_object_field(jobj, "pattern")),
-      source: Box::new(load_expression(interner, arena, get_object_field(jobj, "source"))),
+      source: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "source"))),
     }),
     "While" => IExpressionPE::While(WhilePE {
       range: load_range(get_object_field(jobj, "range")),
-      condition: Box::new(load_expression(interner, arena, get_object_field(jobj, "condition"))),
-      body: Box::new(load_block(interner, arena, get_object_field(jobj, "body"))),
+      condition: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "condition"))),
+      body: &*arena.alloc(load_block(interner, arena, get_object_field(jobj, "body"))),
     }),
     "Mutate" => IExpressionPE::Mutate(MutatePE {
       range: load_range(get_object_field(jobj, "range")),
-      mutatee: Box::new(load_expression(interner, arena, get_object_field(jobj, "mutatee"))),
-      source: Box::new(load_expression(interner, arena, get_object_field(jobj, "source"))),
+      mutatee: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "mutatee"))),
+      source: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "source"))),
     }),
     "MethodCall" => {
       let arg_exprs: Vec<_> = get_array_field(jobj, "argExprs")
@@ -1001,9 +1001,9 @@ fn load_expression<'a, 'p>(
         .collect();
       IExpressionPE::MethodCall(MethodCallPE {
         range: load_range(get_object_field(jobj, "range")),
-        subject_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "subjectExpr"))),
+        subject_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "subjectExpr"))),
         operator_range: load_range(get_object_field(jobj, "operatorRange")),
-        method_lookup: Box::new(load_lookup(interner, arena, get_object_field(jobj, "method"))),
+        method_lookup: &*arena.alloc(load_lookup(interner, arena, get_object_field(jobj, "method"))),
         arg_exprs: alloc_slice_from_vec(arena, arg_exprs),
       })
     }
@@ -1021,29 +1021,29 @@ fn load_expression<'a, 'p>(
     "Augment" => IExpressionPE::Augment(AugmentPE {
       range: load_range(get_object_field(jobj, "range")),
       target_ownership: load_ownership(get_object_field(jobj, "targetOwnership")),
-      inner: Box::new(load_expression(interner, arena, get_object_field(jobj, "inner"))),
+      inner: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "inner"))),
     }),
     "Each" => IExpressionPE::Each(EachPE {
       range: load_range(get_object_field(jobj, "range")),
       maybe_pure: load_optional_object(get_object_field(jobj, "maybePure"), load_range),
       entry_pattern: load_pattern(interner, arena, get_object_field(jobj, "entryPattern")),
       in_keyword_range: load_range(get_object_field(jobj, "inRange")),
-      iterable_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "iterableExpr"))),
-      body: Box::new(load_block(interner, arena, get_object_field(jobj, "body"))),
+      iterable_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "iterableExpr"))),
+      body: &*arena.alloc(load_block(interner, arena, get_object_field(jobj, "body"))),
     }),
     "Destruct" => IExpressionPE::Destruct(DestructPE {
       range: load_range(get_object_field(jobj, "range")),
-      inner: Box::new(load_expression(interner, arena, get_object_field(jobj, "inner"))),
+      inner: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "inner"))),
     }),
     "And" => IExpressionPE::And(AndPE {
       range: load_range(get_object_field(jobj, "range")),
-      left: Box::new(load_expression(interner, arena, get_object_field(jobj, "left"))),
-      right: Box::new(load_block(interner, arena, get_object_field(jobj, "right"))),
+      left: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "left"))),
+      right: &*arena.alloc(load_block(interner, arena, get_object_field(jobj, "right"))),
     }),
     "Range" => IExpressionPE::Range(RangePE {
       range: load_range(get_object_field(jobj, "range")),
-      from_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "begin"))),
-      to_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "end"))),
+      from_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "begin"))),
+      to_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "end"))),
     }),
     "BraceCall" => {
       let arg_exprs: Vec<_> = get_array_field(jobj, "argExprs")
@@ -1054,14 +1054,14 @@ fn load_expression<'a, 'p>(
       IExpressionPE::BraceCall(BraceCallPE {
         range: load_range(get_object_field(jobj, "range")),
         operator_range: load_range(get_object_field(jobj, "operatorRange")),
-        subject_expr: Box::new(load_expression(interner, arena, get_object_field(jobj, "callableExpr"))),
+        subject_expr: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "callableExpr"))),
         arg_exprs: alloc_slice_from_vec(arena, arg_exprs),
         callable_readwrite: get_boolean_field(jobj, "callableReadwrite"),
       })
     }
     "Not" => IExpressionPE::Not(NotPE {
       range: load_range(get_object_field(jobj, "range")),
-      inner: Box::new(load_expression(interner, arena, get_object_field(jobj, "innerExpr"))),
+      inner: &*arena.alloc(load_expression(interner, arena, get_object_field(jobj, "innerExpr"))),
     }),
     "ConstructArray" => IExpressionPE::ConstructArray(load_construct_array(interner, arena, jobj)),
     "Lookup" => IExpressionPE::Lookup(load_lookup(interner, arena, jobj)),
@@ -1565,14 +1565,14 @@ fn load_rulex<'a, 'p>(
     }),
     "DotPR" => IRulexPR::Dot(DotPR {
       range: load_range(get_object_field(jobj, "range")),
-      container: Box::new(load_rulex(interner, arena, get_object_field(jobj, "container"))),
+      container: &*arena.alloc(load_rulex(interner, arena, get_object_field(jobj, "container"))),
       member_name: load_name(interner, get_object_field(jobj, "memberName")),
     }),
     "TemplexPR" => IRulexPR::Templex(load_templex(interner, arena, get_object_field(jobj, "templex"))),
     "EqualsPR" => IRulexPR::Equals(EqualsPR {
       range: load_range(get_object_field(jobj, "range")),
-      left: Box::new(load_rulex(interner, arena, get_object_field(jobj, "left"))),
-      right: Box::new(load_rulex(interner, arena, get_object_field(jobj, "right"))),
+      left: &*arena.alloc(load_rulex(interner, arena, get_object_field(jobj, "left"))),
+      right: &*arena.alloc(load_rulex(interner, arena, get_object_field(jobj, "right"))),
     }),
     "BuiltinCallPR" => IRulexPR::BuiltinCall(BuiltinCallPR {
       range: load_range(get_object_field(jobj, "range")),
@@ -1863,25 +1863,26 @@ fn load_templex<'a, 'p>(
   jobj: &Map<String, Value>,
 ) -> ITemplexPT<'a, 'p> {
   match get_type(jobj) {
-    "NameOrRuneT" => ITemplexPT::NameOrRune(NameOrRunePT {
-      name: load_name(interner, get_object_field(jobj, "rune")),
-    }),
+    "NameOrRuneT" => ITemplexPT::NameOrRune(NameOrRunePT(load_name(
+      interner,
+      get_object_field(jobj, "rune"),
+    ))),
     "InterpretedT" => ITemplexPT::Interpreted(InterpretedPT {
       range: load_range(get_object_field(jobj, "range")),
       maybe_ownership: load_optional_object(
         get_object_field(jobj, "maybeOwnership"),
         |x| load_ownership_pt(interner, x),
       )
-      .map(Box::new),
+      .map(|x| &*arena.alloc(x)),
       maybe_region: load_optional_object(get_object_field(jobj, "maybeRegion"), |x| {
         load_region_rune(interner, x)
       })
-      .map(Box::new),
-      inner: Box::new(load_templex(interner, arena, get_object_field(jobj, "inner"))),
+      .map(|x| &*arena.alloc(x)),
+      inner: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "inner"))),
     }),
     "CallT" => ITemplexPT::Call(CallPT {
       range: load_range(get_object_field(jobj, "range")),
-      template: Box::new(load_templex(interner, arena, get_object_field(jobj, "template"))),
+      template: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "template"))),
       args: alloc_slice_from_vec(
         arena,
         get_array_field(jobj, "args")
@@ -1891,14 +1892,14 @@ fn load_templex<'a, 'p>(
           .collect(),
       ),
     }),
-    "MutabilityT" => ITemplexPT::Mutability(MutabilityPT {
-      range: load_range(get_object_field(jobj, "range")),
-      mutability: load_mutability(get_object_field(jobj, "mutability")),
-    }),
-    "VariabilityT" => ITemplexPT::Variability(VariabilityPT {
-      range: load_range(get_object_field(jobj, "range")),
-      variability: load_variability(get_object_field(jobj, "variability")),
-    }),
+    "MutabilityT" => ITemplexPT::Mutability(MutabilityPT(
+      load_range(get_object_field(jobj, "range")),
+      load_mutability(get_object_field(jobj, "mutability")),
+    )),
+    "VariabilityT" => ITemplexPT::Variability(VariabilityPT(
+      load_range(get_object_field(jobj, "range")),
+      load_variability(get_object_field(jobj, "variability")),
+    )),
     "IntT" => ITemplexPT::Int(IntPT {
       range: load_range(get_object_field(jobj, "range")),
       value: get_long_field(jobj, "inner"),
@@ -1908,15 +1909,15 @@ fn load_templex<'a, 'p>(
     }),
     "RuntimeSizedArrayT" => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
       range: load_range(get_object_field(jobj, "range")),
-      mutability: Box::new(load_templex(interner, arena, get_object_field(jobj, "mutability"))),
-      element: Box::new(load_templex(interner, arena, get_object_field(jobj, "element"))),
+      mutability: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "mutability"))),
+      element: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "element"))),
     }),
     "StaticSizedArrayT" => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
       range: load_range(get_object_field(jobj, "range")),
-      mutability: Box::new(load_templex(interner, arena, get_object_field(jobj, "mutability"))),
-      variability: Box::new(load_templex(interner, arena, get_object_field(jobj, "variability"))),
-      size: Box::new(load_templex(interner, arena, get_object_field(jobj, "size"))),
-      element: Box::new(load_templex(interner, arena, get_object_field(jobj, "element"))),
+      mutability: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "mutability"))),
+      variability: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "variability"))),
+      size: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "size"))),
+      element: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "element"))),
     }),
     "ManualSequenceT" => ITemplexPT::Tuple(TuplePT {
       range: load_range(get_object_field(jobj, "range")),
@@ -1941,7 +1942,7 @@ fn load_templex<'a, 'p>(
           .map(|x| load_templex(interner, arena, x))
           .collect(),
       ),
-      return_type: Box::new(load_templex(interner, arena, get_object_field(jobj, "returnType"))),
+      return_type: &*arena.alloc(load_templex(interner, arena, get_object_field(jobj, "returnType"))),
     }),
     other => panic!("Not implemented: load_templex {}", other),
   }
@@ -2038,10 +2039,10 @@ fn load_templex<'a, 'p>(
   }
 */
 fn load_ownership_pt<'a>(_interner: &Interner<'a>, jobj: &Map<String, Value>) -> OwnershipPT {
-  OwnershipPT {
-    range: load_range(get_object_field(jobj, "range")),
-    ownership: load_ownership(get_object_field(jobj, "ownership")),
-  }
+  OwnershipPT(
+    load_range(get_object_field(jobj, "range")),
+    load_ownership(get_object_field(jobj, "ownership")),
+  )
 }
 /*
   private def loadOwnershipPT(jobj: JObject) = {

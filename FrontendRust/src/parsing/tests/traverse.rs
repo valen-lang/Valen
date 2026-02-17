@@ -5,7 +5,7 @@
 
 use bumpalo::Bump;
 use crate::lexing::RangeL;
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::compile;
@@ -302,7 +302,7 @@ where
   if let Some(maybe_default_region) = maybe_default_region {
     visit_region_rune(pred, out, maybe_default_region);
   }
-  visit_expression(pred, out, inner.as_ref());
+  visit_expression(pred, out, inner);
 }
 
 fn visit_function_return<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, return_: &'p FunctionReturnP<'a, 'p>)
@@ -600,13 +600,13 @@ where
     ITemplexPT::Point(PointPT {
       range: _range,
       inner,
-    }) => visit_templex(pred, out, inner.as_ref()),
+    }) => visit_templex(pred, out, inner),
     ITemplexPT::Call(CallPT {
       range: _range,
       template,
       args,
     }) => {
-      visit_templex(pred, out, template.as_ref());
+      visit_templex(pred, out, template);
       for arg in *args {
         visit_templex(pred, out, arg);
       }
@@ -618,15 +618,15 @@ where
       return_type,
     }) => {
       if let Some(mutability) = mutability {
-        visit_templex(pred, out, mutability.as_ref());
+        visit_templex(pred, out, mutability);
       }
-      visit_pack(pred, out, parameters.as_ref());
-      visit_templex(pred, out, return_type.as_ref());
+      visit_pack(pred, out, parameters);
+      visit_templex(pred, out, return_type);
     }
     ITemplexPT::Inline(InlinePT {
       range: _range,
       inner,
-    }) => visit_templex(pred, out, inner.as_ref()),
+    }) => visit_templex(pred, out, inner),
     ITemplexPT::Int(IntPT {
       range: _range,
       value: _value,
@@ -644,11 +644,8 @@ where
         visit_templex(pred, out, element);
       }
     }
-    ITemplexPT::Mutability(MutabilityPT {
-      range: _range,
-      mutability: _mutability,
-    }) => {}
-    ITemplexPT::NameOrRune(NameOrRunePT { name }) => visit_name(pred, out, name),
+    ITemplexPT::Mutability(MutabilityPT(_range, _mutability)) => {}
+    ITemplexPT::NameOrRune(NameOrRunePT(name)) => visit_name(pred, out, name),
     ITemplexPT::Interpreted(InterpretedPT {
       range: _range,
       maybe_ownership,
@@ -656,12 +653,12 @@ where
       inner,
     }) => {
       if let Some(maybe_ownership) = maybe_ownership {
-        visit_ownership(pred, out, maybe_ownership.as_ref());
+        visit_ownership(pred, out, maybe_ownership);
       }
       if let Some(maybe_region) = maybe_region {
-        visit_region_rune(pred, out, maybe_region.as_ref());
+        visit_region_rune(pred, out, maybe_region);
       }
-      visit_templex(pred, out, inner.as_ref());
+      visit_templex(pred, out, inner);
     }
     ITemplexPT::Ownership(ownership) => visit_ownership(pred, out, ownership),
     ITemplexPT::Pack(pack) => {
@@ -678,7 +675,7 @@ where
       for parameter in *parameters {
         visit_templex(pred, out, parameter);
       }
-      visit_templex(pred, out, return_type.as_ref());
+      visit_templex(pred, out, return_type);
     }
     ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
       range: _range,
@@ -687,23 +684,23 @@ where
       size,
       element,
     }) => {
-      visit_templex(pred, out, mutability.as_ref());
-      visit_templex(pred, out, variability.as_ref());
-      visit_templex(pred, out, size.as_ref());
-      visit_templex(pred, out, element.as_ref());
+      visit_templex(pred, out, mutability);
+      visit_templex(pred, out, variability);
+      visit_templex(pred, out, size);
+      visit_templex(pred, out, element);
     }
     ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
       range: _range,
       mutability,
       element,
     }) => {
-      visit_templex(pred, out, mutability.as_ref());
-      visit_templex(pred, out, element.as_ref());
+      visit_templex(pred, out, mutability);
+      visit_templex(pred, out, element);
     }
     ITemplexPT::Share(SharePT {
       range: _range,
       inner,
-    }) => visit_templex(pred, out, inner.as_ref()),
+    }) => visit_templex(pred, out, inner),
     ITemplexPT::String(StringPT {
       range: _range,
       str: _str,
@@ -713,10 +710,7 @@ where
       rune,
       tyype: _tyype,
     }) => visit_name(pred, out, rune),
-    ITemplexPT::Variability(VariabilityPT {
-      range: _range,
-      variability: _variability,
-    }) => {}
+    ITemplexPT::Variability(VariabilityPT(_range, _variability)) => {}
   }
 }
 
@@ -731,8 +725,8 @@ where
       left,
       right,
     }) => {
-      visit_rulex(pred, out, left.as_ref());
-      visit_rulex(pred, out, right.as_ref());
+      visit_rulex(pred, out, left);
+      visit_rulex(pred, out, right);
     }
     IRulexPR::Or(OrPR {
       range: _range,
@@ -747,7 +741,7 @@ where
       container,
       member_name,
     }) => {
-      visit_rulex(pred, out, container.as_ref());
+      visit_rulex(pred, out, container);
       visit_name(pred, out, member_name);
     }
     IRulexPR::Components(ComponentsPR {
@@ -811,7 +805,7 @@ where
         range: _range,
         inner,
       } = sub_expression;
-      visit_expression(pred, out, inner.as_ref());
+      visit_expression(pred, out, inner);
     }
     IExpressionPE::And(and_expr) => {
       let AndPE {
@@ -819,8 +813,8 @@ where
         left,
         right,
       } = and_expr;
-      visit_expression(pred, out, left.as_ref());
-      visit_block(pred, out, right.as_ref());
+      visit_expression(pred, out, left);
+      visit_block(pred, out, right);
     }
     IExpressionPE::Or(or_expr) => {
       let OrPE {
@@ -828,8 +822,8 @@ where
         left,
         right,
       } = or_expr;
-      visit_expression(pred, out, left.as_ref());
-      visit_block(pred, out, right.as_ref());
+      visit_expression(pred, out, left);
+      visit_block(pred, out, right);
     }
     IExpressionPE::If(if_expr) => {
       let IfPE {
@@ -838,9 +832,9 @@ where
         then_body,
         else_body,
       } = if_expr;
-      visit_expression(pred, out, condition.as_ref());
-      visit_block(pred, out, then_body.as_ref());
-      visit_block(pred, out, else_body.as_ref());
+      visit_expression(pred, out, condition);
+      visit_block(pred, out, then_body);
+      visit_block(pred, out, else_body);
     }
     IExpressionPE::While(while_expr) => {
       let WhilePE {
@@ -848,8 +842,8 @@ where
         condition,
         body,
       } = while_expr;
-      visit_expression(pred, out, condition.as_ref());
-      visit_block(pred, out, body.as_ref());
+      visit_expression(pred, out, condition);
+      visit_block(pred, out, body);
     }
     IExpressionPE::Each(each_expr) => {
       let EachPE {
@@ -861,8 +855,8 @@ where
         body,
       } = each_expr;
       visit_pattern(pred, out, entry_pattern);
-      visit_expression(pred, out, iterable_expr.as_ref());
-      visit_block(pred, out, body.as_ref());
+      visit_expression(pred, out, iterable_expr);
+      visit_block(pred, out, body);
     }
     IExpressionPE::Range(range_expr) => {
       let RangePE {
@@ -870,15 +864,15 @@ where
         from_expr,
         to_expr,
       } = range_expr;
-      visit_expression(pred, out, from_expr.as_ref());
-      visit_expression(pred, out, to_expr.as_ref());
+      visit_expression(pred, out, from_expr);
+      visit_expression(pred, out, to_expr);
     }
     IExpressionPE::Destruct(destruct_expr) => {
       let DestructPE {
         range: _range,
         inner,
       } = destruct_expr;
-      visit_expression(pred, out, inner.as_ref());
+      visit_expression(pred, out, inner);
     }
     IExpressionPE::Unlet(unlet_expr) => {
       let UnletPE {
@@ -893,15 +887,15 @@ where
         mutatee,
         source,
       } = mutate_expr;
-      visit_expression(pred, out, mutatee.as_ref());
-      visit_expression(pred, out, source.as_ref());
+      visit_expression(pred, out, mutatee);
+      visit_expression(pred, out, source);
     }
     IExpressionPE::Return(return_expr) => {
       let ReturnPE {
         range: _range,
         expr,
       } = return_expr;
-      visit_expression(pred, out, expr.as_ref());
+      visit_expression(pred, out, expr);
     }
     IExpressionPE::Break(_break_expr) => {}
     IExpressionPE::Let(let_expr) => {
@@ -911,7 +905,7 @@ where
         source,
       } = let_expr;
       visit_pattern(pred, out, pattern);
-      visit_expression(pred, out, source.as_ref());
+      visit_expression(pred, out, source);
     }
     IExpressionPE::Tuple(tuple_expr) => {
       let TuplePE {
@@ -966,7 +960,7 @@ where
         operator_range: _operator_range,
         member,
       } = dot_expr;
-      visit_expression(pred, out, left.as_ref());
+      visit_expression(pred, out, left);
       visit_name(pred, out, member);
     }
     IExpressionPE::Index(index_expr) => {
@@ -975,7 +969,7 @@ where
         left,
         args,
       } = index_expr;
-      visit_expression(pred, out, left.as_ref());
+      visit_expression(pred, out, left);
       for arg in *args {
         visit_expression(pred, out, arg);
       }
@@ -987,7 +981,7 @@ where
         callable_expr,
         arg_exprs,
       } = function_call_expr;
-      visit_expression(pred, out, callable_expr.as_ref());
+      visit_expression(pred, out, callable_expr);
       for arg in *arg_exprs {
         visit_expression(pred, out, arg);
       }
@@ -1000,7 +994,7 @@ where
         arg_exprs,
         callable_readwrite: _callable_readwrite,
       } = brace_call_expr;
-      visit_expression(pred, out, subject_expr.as_ref());
+      visit_expression(pred, out, subject_expr);
       for arg in *arg_exprs {
         visit_expression(pred, out, arg);
       }
@@ -1010,7 +1004,7 @@ where
         range: _range,
         inner,
       } = not_expr;
-      visit_expression(pred, out, inner.as_ref());
+      visit_expression(pred, out, inner);
     }
     IExpressionPE::Augment(augment_expr) => {
       let AugmentPE {
@@ -1018,7 +1012,7 @@ where
         target_ownership: _target_ownership,
         inner,
       } = augment_expr;
-      visit_expression(pred, out, inner.as_ref());
+      visit_expression(pred, out, inner);
     }
     IExpressionPE::Transmigrate(transmigrate_expr) => {
       let TransmigratePE {
@@ -1027,7 +1021,7 @@ where
         inner,
       } = transmigrate_expr;
       visit_name(pred, out, target_region);
-      visit_expression(pred, out, inner.as_ref());
+      visit_expression(pred, out, inner);
     }
     IExpressionPE::BinaryCall(binary_call_expr) => {
       let BinaryCallPE {
@@ -1037,8 +1031,8 @@ where
         right_expr,
       } = binary_call_expr;
       visit_name(pred, out, function_name);
-      visit_expression(pred, out, left_expr.as_ref());
-      visit_expression(pred, out, right_expr.as_ref());
+      visit_expression(pred, out, left_expr);
+      visit_expression(pred, out, right_expr);
     }
     IExpressionPE::MethodCall(method_call_expr) => {
       let MethodCallPE {
@@ -1048,8 +1042,8 @@ where
         method_lookup,
         arg_exprs,
       } = method_call_expr;
-      visit_expression(pred, out, subject_expr.as_ref());
-      visit_lookup(pred, out, method_lookup.as_ref());
+      visit_expression(pred, out, subject_expr);
+      visit_lookup(pred, out, method_lookup);
       for arg in *arg_exprs {
         visit_expression(pred, out, arg);
       }
@@ -1162,10 +1156,7 @@ where
   F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Ownership(ownership));
-  let OwnershipPT {
-    range: _range,
-    ownership: _ownership,
-  } = ownership;
+  let OwnershipPT(_range, _ownership) = ownership;
 }
 
 pub enum NodeRefP<'a, 'p> {
@@ -1256,11 +1247,11 @@ fn test_collect_where_finds_function_by_name() {
       &program,
       NodeRefP::Function(FunctionP {
           header: FunctionHeaderP {
-              name: Some(NameP(_, s)),
+              name: Some(NameP(_, StrI("main"))),
               ..
           },
           ..
-      }) if s.as_str() == "main" => Some(())
+      }) => Some(())
   )
   .is_empty());
 }

@@ -16,6 +16,16 @@ import scala.collection.mutable.ArrayBuffer
 /*
 class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexScout) {
 */
+fn translate_rulexes<'a, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _rules_p: &[crate::parsing::ast::IRulexPR<'a, '_>],
+) -> Vec<crate::postparsing::rules::rules::RuneUsage<'a>> {
+  panic!("Unimplemented translate_rulexes");
+}
 /*
   // Returns:
   // - new rules produced on the side while translating the given rules
@@ -31,6 +41,16 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
     rulesP.map(translateRulex(env, lidb.child(), builder, runeToExplicitType, contextRegion, _))
   }
 */
+fn translate_rulex<'a, 'env>(
+  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  _context_region: crate::postparsing::names::IRuneS<'a>,
+  _rulex: &crate::parsing::ast::IRulexPR<'a, '_>,
+) -> crate::postparsing::rules::rules::RuneUsage<'a> {
+  panic!("Unimplemented translate_rulex");
+}
 /*
   def translateRulex(
     env: IEnvironmentS,
@@ -213,6 +233,10 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
 
 object RuleScout {
 */
+fn translate_type<'a>(
+  _tyype: &crate::parsing::ast::ITypePR) -> crate::postparsing::itemplatatype::ITemplataType {
+  panic!("Unimplemented translate_type");
+}
 /*
   def translateType(tyype: ITypePR): ITemplataType = {
     tyype match {
@@ -230,6 +254,12 @@ object RuleScout {
     }
   }
 */
+fn get_rune_kind_template<'a>(
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rune: crate::postparsing::names::IRuneS<'a>,
+) -> crate::postparsing::names::IImpreciseNameS<'a> {
+  panic!("Unimplemented get_rune_kind_template");
+}
 /*
   // Gets the template name (or the kind name if not template)
   def getRuneKindTemplate(rulesS: IndexedSeq[IRulexSR], rune: IRuneS) = {
@@ -288,6 +318,27 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     case other => vimpl(other)
   })
 */
+fn mark_kind_equivalent<'a>(
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rune_a: crate::postparsing::names::IRuneS<'a>,
+  _rune_b: crate::postparsing::names::IRuneS<'a>,
+) {
+  panic!("Unimplemented mark_kind_equivalent");
+}
+fn find_transitively_equivalent_into<'a>(
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rune_to_kind_equivalent_runes: &std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, Vec<crate::postparsing::names::IRuneS<'a>>>,
+  _found_so_far: &mut std::collections::HashSet<crate::postparsing::names::IRuneS<'a>>,
+  _rune: crate::postparsing::names::IRuneS<'a>,
+) {
+  panic!("Unimplemented find_transitively_equivalent_into");
+}
+fn get_kind_equivalent_runes<'a>(
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rune: crate::postparsing::names::IRuneS<'a>,
+) -> std::collections::HashSet<crate::postparsing::names::IRuneS<'a>> {
+  panic!("Unimplemented get_kind_equivalent_runes");
+}
 /*
   private def findTransitivelyEquivalentInto(foundSoFar: mutable.HashSet[IRuneS], rune: IRuneS): Unit = {
     runeToKindEquivalentRunes.getOrElse(rune, Vector()).foreach(r => {
@@ -306,6 +357,15 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     set.toSet
   }
 */
+fn get_kind_equivalent_runes_iter<'a, I>(
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _runes: I,
+) -> std::collections::HashSet<crate::postparsing::names::IRuneS<'a>>
+where
+  I: Iterator<Item = crate::postparsing::names::IRuneS<'a>>,
+{
+  panic!("Unimplemented get_kind_equivalent_runes_iter");
+}
 /*
   def getKindEquivalentRunes(runes: Iterable[IRuneS]): Set[IRuneS] = {
     runes

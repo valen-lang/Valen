@@ -39,7 +39,7 @@ fn simple_function() {
   let body = function.body.as_ref().unwrap();
   assert!(body.maybe_pure.is_none());
   assert!(body.maybe_default_region.is_none());
-  assert!(matches!(body.inner.as_ref(), IExpressionPE::Void(_)));
+  assert!(matches!(body.inner, IExpressionPE::Void(_)));
 }
 /*
   test("Simple function") {
@@ -139,7 +139,7 @@ fn simple_function_with_return() {
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "int");
   let body = function.body.as_ref().unwrap();
   assert_eq!(
-    cast!(body.inner.as_ref(), IExpressionPE::ConstantInt).value,
+    cast!(body.inner, IExpressionPE::ConstantInt).value,
     3
   );
 }
@@ -170,7 +170,7 @@ fn pure_function() {
   assert!(function.header.ret.ret_type.is_none());
   let body = function.body.as_ref().unwrap();
   assert_eq!(
-    cast!(body.inner.as_ref(), IExpressionPE::ConstantInt).value,
+    cast!(body.inner, IExpressionPE::ConstantInt).value,
     3
   );
 }
@@ -347,11 +347,11 @@ fn pure_and_default_region() {
   assert!(ret_type.maybe_ownership.is_none());
   let ret_region = ret_type.maybe_region.as_ref().unwrap();
   assert_eq!(ret_region.name.as_ref().unwrap().as_str(), "i");
-  assert_templex_name(ret_type.inner.as_ref(), "int");
+  assert_templex_name(ret_type.inner, "int");
   let body = function.body.as_ref().unwrap();
   let default_region = body.maybe_default_region.as_ref().unwrap();
   assert_eq!(default_region.name.as_ref().unwrap().as_str(), "i");
-  assert!(matches!(body.inner.as_ref(), IExpressionPE::Void(_)));
+  assert!(matches!(body.inner, IExpressionPE::Void(_)));
 }
 /*
   test("Pure and default region") {
@@ -388,7 +388,7 @@ fn return_isolate() {
   assert!(ret_type.maybe_ownership.is_none());
   assert!(ret_type.maybe_region.is_some());
   assert!(ret_type.maybe_region.as_ref().unwrap().name.is_none());
-  assert_templex_name(ret_type.inner.as_ref(), "int");
+  assert_templex_name(ret_type.inner, "int");
 }
 /*
   test("Return isolate") {
@@ -897,7 +897,7 @@ fn function_with_parameter_and_return() {
   assert_templex_name(pattern.templex.as_ref().unwrap(), "T");
   assert_templex_name(function.header.ret.ret_type.as_ref().unwrap(), "T");
   assert!(matches!(
-    function.body.as_ref().unwrap().inner.as_ref(),
+    function.body.as_ref().unwrap().inner,
     IExpressionPE::Void(_)
   ));
 }
@@ -1031,7 +1031,7 @@ fn func_with_rules() {
   assert!(function.header.ret.ret_type.is_none());
   let body = function.body.as_ref().unwrap();
   assert_eq!(
-    cast!(body.inner.as_ref(), IExpressionPE::ConstantInt).value,
+    cast!(body.inner, IExpressionPE::ConstantInt).value,
     3
   );
 }
@@ -1067,12 +1067,12 @@ fn func_with_func_bound() {
   let first_param = expect_1(&function_bound.parameters);
   let interpreted = cast!(first_param, ITemplexPT::Interpreted);
   assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    interpreted.maybe_ownership.as_ref().unwrap().1,
     OwnershipP::Borrow
   );
   assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner.as_ref(), "T");
-  assert_templex_name(function_bound.return_type.as_ref(), "void");
+  assert_templex_name(interpreted.inner, "T");
+  assert_templex_name(function_bound.return_type, "void");
 }
 /*
   test("Func with func bound") {

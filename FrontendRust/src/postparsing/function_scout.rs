@@ -44,16 +44,19 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IFunctionParent<'a> {
+pub enum IFunctionParent<'a, 'env>
+where
+  'a: 'env,
+{
   FunctionNoParent,
   ParentInterface {
-    interface_env: FunctionEnvironmentS<'a>,
+    interface_env: FunctionEnvironmentS<'a, 'env>,
     interface_generic_params: Vec<GenericParameterS<'a>>,
     interface_rules: Vec<IRulexSR<'a>>,
     interface_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   },
   ParentFunction {
-    parent_stack_frame: StackFrame<'a>,
+    parent_stack_frame: StackFrame<'a, 'env>,
   },
 }
 
@@ -98,19 +101,20 @@ class FunctionScout(
       keywords
     )
 */
-impl<'a, 'ctx, 's> PostParser<'a, 'ctx, 's>
+impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
   'a: 'ctx,
+  'a: 'p,
   'a: 's,
 {
-  pub(crate) fn scout_function<'p>(
+  pub(crate) fn scout_function<'pp, 'env>(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
-    function: &FunctionP<'a, 'p>,
-    maybe_parent: IFunctionParent<'a>,
+    function: &FunctionP<'a, 'pp>,
+    maybe_parent: IFunctionParent<'a, 'env>,
   ) -> Result<(FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'p,
+    'a: 'pp,
   {
     match maybe_parent {
       IFunctionParent::FunctionNoParent => {}
@@ -233,27 +237,32 @@ where
       self.scout_expression_and_coerce(
         stack_frame,
         &mut lidb,
-        body.inner.as_ref(),
+        body.inner,
         LoadAsP::Use,
       )?;
-    let expr_without_constructing_without_void =
-      match body_expr {
-        IExpressionSE::Consecutor(mut consecutor) => {
-          while matches!(consecutor.exprs.last(), Some(IExpressionSE::Void(_))) {
-            consecutor.exprs.pop();
+    let expr_without_constructing_without_void: &'s IExpressionSE<'a, 's> = match body_expr {
+      IExpressionSE::Consecutor(consecutor) => {
+        let exprs: Vec<&'s IExpressionSE<'a, 's>> = {
+          let mut v: Vec<_> = consecutor.exprs.iter().copied().collect();
+          while matches!(v.last(), Some(IExpressionSE::Void(_))) {
+            v.pop();
           }
-          assert!(
-            !consecutor.exprs.is_empty(),
-            "POSTPARSER_SCOUT_FUNCTION_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
-          );
-          if consecutor.exprs.len() == 1 {
-            consecutor.exprs.remove(0)
-          } else {
-            IExpressionSE::Consecutor(consecutor)
-          }
+          v
+        };
+        assert!(
+          !exprs.is_empty(),
+          "POSTPARSER_SCOUT_FUNCTION_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
+        );
+        if exprs.len() == 1 {
+          exprs.into_iter().next().unwrap()
+        } else {
+          &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
+            exprs: alloc_slice_from_vec(self.scout_arena, exprs),
+          }))
         }
-        other => other,
-      };
+      }
+      other => other,
+    };
     let constructing_member_names: Vec<StrI<'a>> = stack_frame_after_body
       .locals
       .vars
@@ -264,43 +273,52 @@ where
       })
       .collect();
     let mut self_uses: VariableUses<'a> = self_uses_before_constructing;
-    let expr_with_constructor = if constructing_member_names.is_empty() {
+    let expr_with_constructor: &'s IExpressionSE<'a, 's> = if constructing_member_names.is_empty() {
       expr_without_constructing_without_void
     } else {
-      let constructor_expr: IExpressionSE<'a, 's> = IExpressionSE::FunctionCall(FunctionCallSE {
+      let callable_expr = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
+        range: body_range.clone(),
+        rules: Vec::new(),
+        name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          name: function_name.str(),
+        })),
+        maybe_template_args: None,
+        target_ownership: LoadAsP::LoadAsBorrow,
+      }));
+      let arg_exprs: Vec<&'s IExpressionSE<'a, 's>> = constructing_member_names
+        .iter()
+        .map(|member_name: &StrI<'a>| {
+          &*self.scout_arena.alloc(IExpressionSE::LocalLoad(LocalLoadSE {
+            range: body_range.clone(),
+            name: IVarNameS::ConstructingMemberName(*member_name),
+            target_ownership: LoadAsP::Move,
+          }))
+        })
+        .collect();
+      let constructor_expr = &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
         range: body_range.clone(),
         location: lidb.child().consume(),
-        callable_expr: Box::new(IExpressionSE::OutsideLoad(OutsideLoadSE {
-          range: body_range.clone(),
-          rules: Vec::new(),
-          name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-            name: function_name.str(),
-          })),
-          maybe_template_args: None,
-          target_ownership: LoadAsP::LoadAsBorrow,
-        })),
-        arg_exprs: constructing_member_names
-          .iter()
-          .map(|member_name: &StrI<'a>| {
-            IExpressionSE::LocalLoad(LocalLoadSE {
-              range: body_range.clone(),
-              name: IVarNameS::ConstructingMemberName(*member_name),
-              target_ownership: LoadAsP::Move,
-            })
-          })
-          .collect::<Vec<IExpressionSE<'a, 's>>>(),
-      });
+        callable_expr,
+        arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs),
+      }));
       for member_name in constructing_member_names {
         self_uses = self_uses.mark_moved(IVarNameS::ConstructingMemberName(member_name));
       }
       match expr_without_constructing_without_void {
-        IExpressionSE::Consecutor(mut consecutor) => {
-          consecutor.exprs.push(constructor_expr);
-          IExpressionSE::Consecutor(consecutor)
+        IExpressionSE::Consecutor(consecutor) => {
+          let mut exprs: Vec<&'s IExpressionSE<'a, 's>> =
+            consecutor.exprs.iter().copied().collect();
+          exprs.push(constructor_expr);
+          &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
+            exprs: alloc_slice_from_vec(self.scout_arena, exprs),
+          }))
         }
-        other => IExpressionSE::Consecutor(ConsecutorSE {
-          exprs: vec![other, constructor_expr],
-        }),
+        other => &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
+          exprs: alloc_slice_from_vec(
+            self.scout_arena,
+            vec![other, constructor_expr],
+          ),
+        })),
       }
     };
     let locals: Vec<LocalS<'a>> = stack_frame_after_body
@@ -340,7 +358,7 @@ where
           block: BlockSE {
             range: body_range,
             locals,
-            expr: Box::new(expr_with_constructor),
+            expr: expr_with_constructor,
           },
         },
       }),
@@ -459,7 +477,7 @@ where
         case Some(RegionRunePT(regionRange, regionName)) => {
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!functionEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.as_str().to_string()))
+            throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.str))
           }
           (evalRange(file, regionRange), rune, None)
         }
@@ -855,6 +873,19 @@ where
     (functionS, variableUses)
   }
 */
+fn create_closure_param<'env>(
+  _range: crate::lexing::ast::RangeL,
+  _func_name: IFunctionDeclarationNameS<'a>,
+  _lidb: &mut LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
+  _parent_stack_frame: StackFrame<'a, 'env>,
+  _closure_struct_region_rune: IRuneS<'a>,
+  _closure_struct_kind_rune: IRuneS<'a>,
+  _closure_struct_coord_rune: IRuneS<'a>,
+) -> crate::postparsing::ast::ParameterS<'a> {
+  panic!("Unimplemented create_closure_param");
+}
 /*
   private def createClosureParam(
     range: RangeL,
@@ -903,6 +934,13 @@ where
     ParameterS(closureParamRange, None, false, closurePattern)
   }
 */
+fn create_magic_parameters(
+  _lidb: &mut LocationInDenizenBuilder,
+  _lambda_magic_param_names: Vec<crate::postparsing::names::MagicParamNameS<'a>>,
+  _rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
+) -> Vec<crate::postparsing::ast::ParameterS<'a>> {
+  panic!("Unimplemented create_magic_parameters");
+}
 /*
   private def createMagicParameters(
     lidb: LocationInDenizenBuilder,
@@ -929,13 +967,13 @@ where
   }
 */
   #[allow(dead_code)]
-  pub(crate) fn scout_lambda<'p>(
+  pub(crate) fn scout_lambda<'pp, 'env>(
     &self,
-    parent_stack_frame: StackFrame<'a>,
-    function: &FunctionP<'a, 'p>,
+    parent_stack_frame: StackFrame<'a, 'env>,
+    function: &FunctionP<'a, 'pp>,
   ) -> Result<(FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'p,
+    'a: 'pp,
   {
     let file_coordinate = parent_stack_frame.file;
     self.scout_function(
@@ -953,6 +991,20 @@ where
     scoutFunction(file, functionP, ParentFunction(parentStackFrame))
   }
 */
+fn scout_body<'env>(
+  _function_env: FunctionEnvironmentS<'a, 'env>,
+  _parent_stack_frame: Option<StackFrame<'a, 'env>>,
+  _lidb: &mut LocationInDenizenBuilder,
+  _context_region: IRuneS<'a>,
+  _body0: &crate::parsing::ast::BlockPE<'a, 'p>,
+  _initial_declarations: VariableDeclarations<'a>,
+) -> (
+  crate::postparsing::expressions::BodySE<'a, 's>,
+  VariableUses<'a>,
+  Vec<crate::postparsing::names::MagicParamNameS<'a>>,
+) {
+  panic!("Unimplemented scout_body");
+}
 /*
   // Returns:
   // - Body.
@@ -1046,6 +1098,12 @@ where
     (bodySE, VariableUses(usesOfParentVariables), magicParamNames)
   }
 */
+fn scout_interface_member<'pp, 'env>(
+  _parent_interface: IFunctionParent<'a, 'env>,
+  _function_p: &crate::parsing::ast::FunctionP<'a, 'pp>,
+) -> FunctionS<'a, 's> {
+  panic!("Unimplemented scout_interface_member");
+}
 /*
   def scoutInterfaceMember(
     parentInterface: ParentInterface,

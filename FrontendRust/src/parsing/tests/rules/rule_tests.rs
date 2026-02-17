@@ -90,7 +90,7 @@ fn relations() {
     let func = cast!(cast!(expect_1(&builtin.args), IRulexPR::Templex), ITemplexPT::Func);
     assert_eq!(func.name.as_str(), "+");
     assert_templex_name(expect_1(&func.parameters), "T");
-    assert_templex_name(func.return_type.as_ref(), "int");
+    assert_templex_name(func.return_type, "int");
   }
 }
 /*
@@ -132,13 +132,13 @@ fn destructure_prototype() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "Prot[_, _, T] = moo");
   let equals = crate::collect_only_rulex!(&rule, NodeRefP::Rulex(IRulexPR::Equals(equals)) => Some(equals));
-  let left = cast!(equals.left.as_ref(), IRulexPR::Components);
+  let left = cast!(equals.left, IRulexPR::Components);
   assert_eq!(left.container, ITypePR::PrototypeType);
   let (first_, second_, t_) = expect_3(&left.components);
   cast!(cast!(first_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
   cast!(cast!(second_, IRulexPR::Templex), ITemplexPT::AnonymousRune);
   assert_templex_name(cast!(t_, IRulexPR::Templex), "T");
-  assert_templex_name(cast!(equals.right.as_ref(), IRulexPR::Templex), "moo");
+  assert_templex_name(cast!(equals.right, IRulexPR::Templex), "moo");
 }
 /*
   test("destructure prototype") {
@@ -162,7 +162,7 @@ fn func() {
   let func = crate::collect_only_rulex!(&rule, NodeRefP::Templex(ITemplexPT::Func(func)) => Some(func));
   assert_eq!(func.name.as_str(), "moo");
   assert!(func.parameters.is_empty());
-  assert_templex_name(func.return_type.as_ref(), "T");
+  assert_templex_name(func.return_type, "T");
 }
 /*
   test("func") {

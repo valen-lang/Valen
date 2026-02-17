@@ -79,7 +79,7 @@ fn templated_destructure() {
     ));
     assert!(destination.mutate.is_none());
     let call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
-    assert_templex_name(call.template.as_ref(), "Muta");
+    assert_templex_name(call.template, "Muta");
     let first_arg = expect_1(&call.args);
     assert_templex_name(first_arg, "int");
     let destructure = pattern.destructure.as_ref().unwrap();
@@ -95,7 +95,7 @@ fn templated_destructure() {
     ));
     assert!(destination.mutate.is_none());
     let call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
-    assert_templex_name(call.template.as_ref(), "Muta");
+    assert_templex_name(call.template, "Muta");
     let first_arg = expect_1(&call.args);
     assert_templex_name(first_arg, "R");
     let destructure = pattern.destructure.as_ref().unwrap();

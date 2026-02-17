@@ -13,7 +13,13 @@ import dev.vale.postparsing._
 import scala.collection.immutable.List
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
-
+*/
+fn get_parameter_captures<'a>(
+  _pattern: &crate::postparsing::patterns::AtomSP<'a>,
+) -> Vec<crate::postparsing::variable_uses::VariableDeclarationS<'a>> {
+  panic!("Unimplemented get_parameter_captures");
+}
+/*
 class PatternScout(
     interner: Interner,
     templexScout: TemplexScout) {
@@ -23,6 +29,13 @@ class PatternScout(
       maybeCapture.toVector.flatMap(getCaptureCaptures) ++
         maybeDestructure.toVector.flatten.flatMap(getParameterCaptures)
   }
+*/
+fn get_capture_captures<'a>(
+  _capture: &crate::postparsing::patterns::CaptureS<'a>,
+) -> Vec<crate::postparsing::variable_uses::VariableDeclarationS<'a>> {
+  panic!("Unimplemented get_capture_captures");
+}
+/*
   private def getCaptureCaptures(capture: CaptureS): Vector[VariableDeclaration] = {
     if (capture.mutate) {
       Vector()
@@ -30,7 +43,17 @@ class PatternScout(
       Vector(VariableDeclaration(capture.name))
     }
   }
-
+*/
+fn translate_pattern<'a, 'env>(
+  _stack_frame: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  _pattern_pp: &crate::parsing::ast::PatternPP<'a, '_>,
+) -> crate::postparsing::patterns::AtomSP<'a> {
+  panic!("Unimplemented translate_pattern");
+}
+/*
   // Returns:
   // - Region rune, or None if it's an ignore pattern
   // - The translated patterns

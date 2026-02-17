@@ -10,6 +10,31 @@ import dev.vale.{Interner, Keywords, StrI, postparsing}
 /*
 class LoopPostParser(interner: Interner, keywords: Keywords) {
 */
+fn scout_loop<'a, 'env, 's, F>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range_p: crate::lexing::ast::RangeL,
+  _pure: bool,
+  _make_contents: F,
+) -> (
+  crate::postparsing::expressions::BlockSE<'a, 's>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+)
+where
+  F: FnOnce(
+    crate::postparsing::post_parser::StackFrame<'a, 'env>,
+    &mut crate::postparsing::ast::LocationInDenizenBuilder,
+    bool,
+  ) -> (
+    crate::postparsing::post_parser::StackFrame<'a, 'env>,
+    crate::postparsing::expressions::BlockSE<'a, 's>,
+    crate::postparsing::variable_uses::VariableUses<'a>,
+    crate::postparsing::variable_uses::VariableUses<'a>,
+  ),
+{
+  panic!("Unimplemented scout_loop");
+}
 /*
   def scoutLoop(
     expressionScout: ExpressionScout,
@@ -32,6 +57,22 @@ class LoopPostParser(interner: Interner, keywords: Keywords) {
       })
   }
 */
+fn scout_each<'a, 'p, 'pp, 'env, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::lexing::ast::RangeL,
+  _pure: bool,
+  _entry_pattern_pp: &crate::parsing::ast::PatternPP<'a, 'p>,
+  _in_keyword_range: crate::lexing::ast::RangeL,
+  _iterable_expr: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
+  _body: &crate::parsing::ast::BlockPE<'a, 'p>,
+) -> (
+  crate::postparsing::expressions::BlockSE<'a, 's>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+) {
+  panic!("Unimplemented scout_each");
+}
 /*
   def scoutEach(
     expressionScout: ExpressionScout,
@@ -104,6 +145,21 @@ class LoopPostParser(interner: Interner, keywords: Keywords) {
       })
   }
 */
+fn scout_each_body<'a, 'p, 'pp, 'env, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::lexing::ast::RangeL,
+  _in_keyword_range: crate::lexing::ast::RangeL,
+  _entry_pattern_pp: &crate::parsing::ast::PatternPP<'a, 'p>,
+  _body_pe: &crate::parsing::ast::BlockPE<'a, 'p>,
+) -> (
+  crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+) {
+  panic!("Unimplemented scout_each_body");
+}
 /*
   def scoutEachBody(
     expressionScout: ExpressionScout,
@@ -203,6 +259,19 @@ class LoopPostParser(interner: Interner, keywords: Keywords) {
     (stackFrame5, loopBodySE, selfUses, childUses)
   }
 */
+fn scout_while<'a, 'p, 'pp, 'env, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::lexing::ast::RangeL,
+  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
+  _body: &crate::parsing::ast::BlockPE<'a, 'p>,
+) -> (
+  crate::postparsing::expressions::BlockSE<'a, 's>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+) {
+  panic!("Unimplemented scout_while");
+}
 /*
 
   def scoutWhile(
@@ -242,6 +311,20 @@ class LoopPostParser(interner: Interner, keywords: Keywords) {
       })
   }
 */
+fn scout_while_body<'a, 'p, 'pp, 'env, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
+  _range: crate::lexing::ast::RangeL,
+  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
+  _body_pe: &crate::parsing::ast::BlockPE<'a, 'p>,
+) -> (
+  crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+  crate::postparsing::variable_uses::VariableUses<'a>,
+) {
+  panic!("Unimplemented scout_while_body");
+}
 /*
   def scoutWhileBody(
     expressionScout: ExpressionScout,

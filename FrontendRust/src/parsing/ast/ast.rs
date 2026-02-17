@@ -385,7 +385,7 @@ case class InterfaceP(
 pub struct FunctionP<'a, 'p> {
   pub range: RangeL,
   pub header: FunctionHeaderP<'a, 'p>,
-  pub body: Option<Box<BlockPE<'a, 'p>>>,
+  pub body: Option<&'p BlockPE<'a, 'p>>,
 }
 /*
 case class FunctionP(

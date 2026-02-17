@@ -285,7 +285,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "body".to_string(),
-          value: Self::vonify_optional_owned(body, |b| Self::vonify_block(b.as_ref())),
+          value: Self::vonify_optional_owned(&body, |b| Self::vonify_block(*b)),
         },
       ],
     })
@@ -1489,7 +1489,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
         ],
       }),
-      ITemplexPT::Mutability(MutabilityPT { range, mutability }) => IVonData::Object(VonObject {
+      ITemplexPT::Mutability(MutabilityPT(range, mutability)) => IVonData::Object(VonObject {
         tyype: "MutabilityT".to_string(),
         id: None,
         members: vec![
@@ -1503,7 +1503,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
         ],
       }),
-      ITemplexPT::NameOrRune(NameOrRunePT { name: rune }) => IVonData::Object(VonObject {
+      ITemplexPT::NameOrRune(NameOrRunePT(rune)) => IVonData::Object(VonObject {
         tyype: "NameOrRuneT".to_string(),
         id: None,
         members: vec![VonMember {
@@ -1527,7 +1527,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           VonMember {
             field_name: "maybeOwnership".to_string(),
             value: match maybe_ownership {
-              Some(o) => Self::vonify_optional_owned(&Some(o.as_ref()), |t| Self::vonify_ownership_pt(t)),
+              Some(o) => Self::vonify_optional_owned(&Some(o), |t| Self::vonify_ownership_pt(*t)),
               None => {
                 Self::vonify_optional_owned::<&OwnershipPT, _>(&None, |t| Self::vonify_ownership_pt(t))
               }
@@ -1536,7 +1536,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           VonMember {
             field_name: "maybeRegion".to_string(),
             value: match maybe_region {
-              Some(r) => Self::vonify_optional_owned(&Some(r.as_ref()), |t| Self::vonify_region_rune(t)),
+              Some(r) => Self::vonify_optional_owned(&Some(r), |t| Self::vonify_region_rune(*t)),
               None => {
                 Self::vonify_optional_owned::<&RegionRunePT, _>(&None, |t| Self::vonify_region_rune(t))
               }
@@ -1548,7 +1548,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
         ],
       }),
-      ITemplexPT::Ownership(OwnershipPT { range, ownership }) => IVonData::Object(VonObject {
+      ITemplexPT::Ownership(OwnershipPT(range, ownership)) => IVonData::Object(VonObject {
         tyype: "OwnershipT".to_string(),
         id: None,
         members: vec![
@@ -1632,7 +1632,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           VonMember {
             field_name: "mutability".to_string(),
             value: match mutability {
-              Some(m) => Self::vonify_optional_owned(&Some(m.as_ref()), |t| Self::vonify_templex(t)),
+              Some(m) => Self::vonify_optional_owned(&Some(m), |t| Self::vonify_templex(*t)),
               None => Self::vonify_optional_owned::<&ITemplexPT, _>(&None, |t| Self::vonify_templex(t)),
             },
           },
@@ -1728,7 +1728,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
         ],
       }),
-      ITemplexPT::Variability(VariabilityPT { range, variability }) => {
+      ITemplexPT::Variability(VariabilityPT(range, variability)) => {
         IVonData::Object(VonObject {
           tyype: "VariabilityT".to_string(),
           id: None,
@@ -1783,11 +1783,11 @@ impl<'a, 'p> ParserVonifier<'a> {
       members: vec![
         VonMember {
           field_name: "range".to_string(),
-          value: Self::vonify_range(&thing.range),
+          value: Self::vonify_range(&thing.0),
         },
         VonMember {
           field_name: "ownership".to_string(),
-          value: Self::vonify_ownership(&thing.ownership),
+          value: Self::vonify_ownership(&thing.1),
         },
       ],
     })
@@ -2583,7 +2583,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           VonMember {
             field_name: "value".to_string(),
             value: IVonData::Str(VonStr {
-              value: value.clone(),
+              value: value.as_str().to_string(),
             }),
           },
         ],

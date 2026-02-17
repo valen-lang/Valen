@@ -11,6 +11,11 @@ import dev.vale.postparsing.rules._
 
 object PostParserErrorHumanizer {
 */
+fn humanize<'a>(
+  _err: &crate::postparsing::post_parser::ICompileErrorS<'a>,
+) -> String {
+  panic!("Unimplemented humanize");
+}
 /*
   def humanize(
     codeMap: CodeLocationS => String,
@@ -80,6 +85,11 @@ object PostParserErrorHumanizer {
     f"${posStr} error ${errorId}: ${errorStrBody}\n${nextStuff}\n"
   }
 */
+fn humanize_rune_type_error<'a>(
+  _error: &(),
+) -> String {
+  panic!("Unimplemented humanize_rune_type_error");
+}
 /*
   def humanizeRuneTypeError(
     codeMap: CodeLocationS => String,
@@ -102,6 +112,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_identifiability_rule_errorr<'a>(
+  _error: &(),
+) -> String {
+  panic!("Unimplemented humanize_identifiability_rule_errorr");
+}
 /*
   def humanizeIdentifiabilityRuleErrorr(
     codeMap: CodeLocationS => String,
@@ -112,6 +127,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_name<'a>(
+  _name: crate::postparsing::names::INameS<'a>,
+) -> String {
+  panic!("Unimplemented humanize_name");
+}
 /*
   def humanizeName(name: INameS): String = {
     name match {
@@ -137,6 +157,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_imprecise_name<'a>(
+  _name: crate::postparsing::names::IImpreciseNameS<'a>,
+) -> String {
+  panic!("Unimplemented humanize_imprecise_name");
+}
 /*
   def humanizeImpreciseName(name: IImpreciseNameS): String = {
     name match {
@@ -153,6 +178,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_rune<'a>(
+  _rune: crate::postparsing::names::IRuneS<'a>,
+) -> String {
+  panic!("Unimplemented humanize_rune");
+}
 /*
   def humanizeRune(rune: IRuneS): String = {
     rune match {
@@ -212,6 +242,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_templata_type(
+  _tyype: &crate::postparsing::itemplatatype::ITemplataType,
+) -> String {
+  panic!("Unimplemented humanize_templata_type");
+}
 /*
   def humanizeTemplataType(tyype: ITemplataType): String = {
     tyype match {
@@ -232,6 +267,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_rule<'a>(
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+) -> String {
+  panic!("Unimplemented humanize_rule");
+}
 /*
   def humanizeRule(rule: IRulexSR): String = {
     rule match {
@@ -282,6 +322,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_literal(
+  _literal: &crate::postparsing::rules::rules::ILiteralSL,
+) -> String {
+  panic!("Unimplemented humanize_literal");
+}
 /*
   def humanizeLiteral(literal: ILiteralSL): String = {
     literal match {
@@ -294,6 +339,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_mutability(
+  _p: crate::parsing::ast::MutabilityP,
+) -> String {
+  panic!("Unimplemented humanize_mutability");
+}
 /*
   def humanizeMutability(p: MutabilityP) = {
     p match {
@@ -302,6 +352,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_variability(
+  _p: crate::parsing::ast::VariabilityP,
+) -> String {
+  panic!("Unimplemented humanize_variability");
+}
 /*
   def humanizeVariability(p: VariabilityP) = {
     p match {
@@ -310,6 +365,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_ownership(
+  _p: crate::parsing::ast::OwnershipP,
+) -> String {
+  panic!("Unimplemented humanize_ownership");
+}
 /*
   def humanizeOwnership(p: OwnershipP) = {
     p match {
@@ -320,6 +380,11 @@ object PostParserErrorHumanizer {
     }
   }
 */
+fn humanize_region<'a>(
+  _r: &crate::postparsing::rules::rules::RuneUsage<'a>,
+) -> String {
+  panic!("Unimplemented humanize_region");
+}
 /*
   def humanizeRegion(r: RuneUsage) = {
     vimpl(r)

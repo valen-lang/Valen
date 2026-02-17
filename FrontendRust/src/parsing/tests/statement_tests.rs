@@ -13,8 +13,7 @@ import org.scalatest._
 class StatementTests extends FunSuite with Collector with TestParseUtils {
 */
 use bumpalo::Bump;
-use crate::cast;
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
@@ -27,15 +26,29 @@ fn simple_let() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "x = 4;");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (let_x, final_void) = expect_2(&consecutor.inners);
-  let let_x = cast!(let_x, IExpressionPE::Let);
-  let destination = let_x.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  assert!(let_x.pattern.templex.is_none());
-  assert!(let_x.pattern.destructure.is_none());
-  assert_eq!(cast!(let_x.source.as_ref(), IExpressionPE::ConstantInt).value, 4);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Let(LetPE {
+          pattern: PatternPP {
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+              ..
+            }),
+            templex: None,
+            destructure: None,
+            ..
+          },
+          source: IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+          ..
+        }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected x = 4; structure"),
+  }
 }
 /*
   test("Simple let") {
@@ -52,27 +65,50 @@ fn multiple_statements() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4");
-  let four = cast!(expr, IExpressionPE::ConstantInt);
-  assert_eq!(four.value, 4);
+  match &expr {
+    IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }) => {}
+    _ => panic!("expected 4"),
+  }
 
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4;");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (four, final_void) = expect_2(&consecutor.inners);
-  assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected 4;"),
+  }
 
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4; 3");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (four, three) = expect_2(&consecutor.inners);
-  assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(three, IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected 4; 3"),
+  }
 
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "4; 3;");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (four, three, final_void) = expect_3(&consecutor.inners);
-  assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(three, IExpressionPE::ConstantInt).value, 3);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected 4; 3;"),
+  }
 }
 /*
   test("multiple statements") {
@@ -105,23 +141,49 @@ fn test_8() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[x, y] = (4, 5);");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  assert!(let_.pattern.destination.is_none());
-  assert!(let_.pattern.templex.is_none());
-  let destructure = let_.pattern.destructure.as_ref().unwrap();
-  let (x_pattern, y_pattern) = expect_2(&destructure.patterns);
-  let x_destination = x_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(x_destination, "x");
-  assert!(x_pattern.templex.is_none());
-  assert!(x_pattern.destructure.is_none());
-  let y_destination = y_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(y_destination, "y");
-  assert!(y_pattern.templex.is_none());
-  assert!(y_pattern.destructure.is_none());
-  let tuple = cast!(let_.source.as_ref(), IExpressionPE::Tuple);
-  let (four, five) = expect_2(&tuple.elements);
-  assert_eq!(cast!(four, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(five, IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: None,
+        templex: None,
+        destructure: Some(DestructureP {
+          patterns: [
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            ..
+          ],
+          ..
+        }),
+        ..
+      },
+      source: IExpressionPE::Tuple(TuplePE {
+        elements: [
+          IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+          IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+          ..
+        ],
+        ..
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected [x, y] = (4, 5); structure"),
+  }
 }
 /*
   test("8") {
@@ -147,11 +209,21 @@ fn test_9() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "set x.a = 5;");
-  let mutate = cast!(expr, IExpressionPE::Mutate);
-  let dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
-  assert_lookup_name(dot.left.as_ref(), "x");
-  assert_eq!(dot.member.str().as_str(), "a");
-  assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::Mutate(MutatePE {
+      mutatee: IExpressionPE::Dot(DotPE {
+        left: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+        member: NameP(_, StrI("a")),
+        ..
+      }),
+      source: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected set x.a = 5; structure"),
+  }
 }
 /*
   test("9") {
@@ -168,15 +240,30 @@ fn test_1_pe() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, r#"set board.PE.PE.symbol = "v";"#);
-  let mutate = cast!(expr, IExpressionPE::Mutate);
-  let symbol_dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
-  assert_eq!(symbol_dot.member.str().as_str(), "symbol");
-  let second_pe_dot = cast!(symbol_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(second_pe_dot.member.str().as_str(), "PE");
-  let first_pe_dot = cast!(second_pe_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(first_pe_dot.member.str().as_str(), "PE");
-  assert_lookup_name(first_pe_dot.left.as_ref(), "board");
-  assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantStr).value, "v");
+  match &expr {
+    IExpressionPE::Mutate(MutatePE {
+      mutatee: IExpressionPE::Dot(DotPE {
+        left: IExpressionPE::Dot(DotPE {
+          left: IExpressionPE::Dot(DotPE {
+            left: IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("board"))),
+              template_args: None,
+            }),
+            member: NameP(_, StrI("PE")),
+            ..
+          }),
+          member: NameP(_, StrI("PE")),
+          ..
+        }),
+        member: NameP(_, StrI("symbol")),
+        ..
+      }),
+      source: IExpressionPE::ConstantStr(ConstantStrPE { value: StrI("v"), .. }),
+      ..
+    }) =>
+    {}
+    _ => panic!(r#"expected set board.PE.PE.symbol = "v"; structure"#),
+  }
 }
 /*
   test("1PE") {
@@ -193,12 +280,22 @@ fn test_simple_let() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "x = 3;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  let destination = let_.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  assert!(let_.pattern.templex.is_none());
-  assert!(let_.pattern.destructure.is_none());
-  assert_eq!(cast!(let_.source.as_ref(), IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      source: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected x = 3; structure"),
+  }
 }
 /*
   test("Test simple let") {
@@ -215,9 +312,17 @@ fn test_simple_mut() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "set x = 5;");
-  let mutate = cast!(expr, IExpressionPE::Mutate);
-  assert_lookup_name(mutate.mutatee.as_ref(), "x");
-  assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::Mutate(MutatePE {
+      mutatee: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      source: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected set x = 5; structure"),
+  }
 }
 /*
   test("Test simple mut") {
@@ -236,9 +341,17 @@ fn test_expr_starting_with_return() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "retcode()");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "retcode");
-  assert!(function_call.arg_exprs.is_empty());
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("retcode"))),
+        template_args: None,
+      }),
+      arg_exprs: [],
+      ..
+    }) => {}
+    _ => panic!("expected retcode() structure"),
+  }
 }
 /*
   test("Test expr starting with return") {
@@ -259,16 +372,37 @@ fn test_inner_set() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "oldArray = set list.array = newArray;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  let destination = let_.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "oldArray");
-  assert!(let_.pattern.templex.is_none());
-  assert!(let_.pattern.destructure.is_none());
-  let mutate = cast!(let_.source.as_ref(), IExpressionPE::Mutate);
-  let dot = cast!(mutate.mutatee.as_ref(), IExpressionPE::Dot);
-  assert_lookup_name(dot.left.as_ref(), "list");
-  assert_eq!(dot.member.str().as_str(), "array");
-  assert_lookup_name(mutate.source.as_ref(), "newArray");
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("oldArray"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      source: IExpressionPE::Mutate(MutatePE {
+        mutatee: IExpressionPE::Dot(DotPE {
+          left: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("list"))),
+            template_args: None,
+          }),
+          member: NameP(_, StrI("array")),
+          ..
+        }),
+        source: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("newArray"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      ..
+    }) =>
+    {}
+    _ => panic!("expected oldArray = set list.array = newArray; structure"),
+  }
 }
 /*
   test("Test inner set") {
@@ -294,10 +428,21 @@ fn test_if_statement_producing() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "if true { 3 } else { 4 }");
-  let if_ = cast!(expr, IExpressionPE::If);
-  assert!(cast!(if_.condition.as_ref(), IExpressionPE::ConstantBool).value);
-  assert_eq!(cast!(if_.then_body.inner.as_ref(), IExpressionPE::ConstantInt).value, 3);
-  assert_eq!(cast!(if_.else_body.inner.as_ref(), IExpressionPE::ConstantInt).value, 4);
+  match &expr {
+    IExpressionPE::If(IfPE {
+      condition: IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. }),
+      then_body: BlockPE {
+        inner: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        ..
+      },
+      else_body: BlockPE {
+        inner: IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected if true {{ 3 }} else {{ 4 }} structure"),
+  }
 }
 /*
   test("Test if-statement producing") {
@@ -320,8 +465,16 @@ fn test_destruct() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "destruct x;");
-  let destruct = cast!(expr, IExpressionPE::Destruct);
-  assert_lookup_name(destruct.inner.as_ref(), "x");
+  match &expr {
+    IExpressionPE::Destruct(DestructPE {
+      inner: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected destruct x; structure"),
+  }
 }
 /*
   test("Test destruct") {
@@ -338,8 +491,13 @@ fn test_unlet() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "unlet x");
-  let unlet = cast!(expr, IExpressionPE::Unlet);
-  assert_name(&unlet.name, "x");
+  match &expr {
+    IExpressionPE::Unlet(UnletPE {
+      name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+      ..
+    }) => {}
+    _ => panic!("expected unlet x structure"),
+  }
 }
 /*
   test("Test unlet") {
@@ -356,12 +514,21 @@ fn dot_on_function_calls_result() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "Wizard(8).charges");
-  let dot = cast!(expr, IExpressionPE::Dot);
-  let wizard_call = cast!(dot.left.as_ref(), IExpressionPE::FunctionCall);
-  assert_lookup_name(wizard_call.callable_expr.as_ref(), "Wizard");
-  let first_arg = expect_1(&wizard_call.arg_exprs);
-  assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 8);
-  assert_eq!(dot.member.str().as_str(), "charges");
+  match &expr {
+    IExpressionPE::Dot(DotPE {
+      left: IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("Wizard"))),
+          template_args: None,
+        }),
+        arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 8, .. }), ..],
+        ..
+      }),
+      member: NameP(_, StrI("charges")),
+      ..
+    }) => {}
+    _ => panic!("expected Wizard(8).charges structure"),
+  }
 }
 /*
   test("Dot on function call's result") {
@@ -383,12 +550,25 @@ fn let_with_pattern_with_only_a_capture() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "a = m;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  let destination = let_.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  assert!(let_.pattern.templex.is_none());
-  assert!(let_.pattern.destructure.is_none());
-  assert_lookup_name(let_.source.as_ref(), "m");
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      source: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("m"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a = m; structure"),
+  }
 }
 /*
   test("Let with pattern with only a capture") {
@@ -405,13 +585,25 @@ fn let_with_simple_pattern() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "a Moo = m;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  let destination = let_.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  let templex = let_.pattern.templex.as_ref().unwrap();
-  assert_templex_name(templex, "Moo");
-  assert!(let_.pattern.destructure.is_none());
-  assert_lookup_name(let_.source.as_ref(), "m");
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+          ..
+        }),
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Moo"))))),
+        destructure: None,
+        ..
+      },
+      source: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("m"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a Moo = m; structure"),
+  }
 }
 /*
   test("Let with simple pattern") {
@@ -430,17 +622,33 @@ fn let_with_simple_pattern_in_destructure() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[a Moo] = m;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  assert!(let_.pattern.destination.is_none());
-  assert!(let_.pattern.templex.is_none());
-  let destructure = let_.pattern.destructure.as_ref().unwrap();
-  let inner_pattern = expect_1(&destructure.patterns);
-  let destination = inner_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  let inner_templex = inner_pattern.templex.as_ref().unwrap();
-  assert_templex_name(inner_templex, "Moo");
-  assert!(inner_pattern.destructure.is_none());
-  assert_lookup_name(let_.source.as_ref(), "m");
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: None,
+        templex: None,
+        destructure: Some(DestructureP {
+          patterns: [PatternPP {
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+              ..
+            }),
+            templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Moo"))))),
+            destructure: None,
+            ..
+          }, ..],
+          ..
+        }),
+        ..
+      },
+      source: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("m"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected [a Moo] = m; structure"),
+  }
 }
 /*
   test("Let with simple pattern in destructure") {
@@ -461,13 +669,22 @@ fn let_with_destructuring_pattern() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "Muta[ ] = m;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  assert!(let_.pattern.destination.is_none());
-  let templex = let_.pattern.templex.as_ref().unwrap();
-  assert_templex_name(templex, "Muta");
-  let destructure = let_.pattern.destructure.as_ref().unwrap();
-  assert!(destructure.patterns.is_empty());
-  assert_lookup_name(let_.source.as_ref(), "m");
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: None,
+        templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("Muta"))))),
+        destructure: Some(DestructureP { patterns: [], .. }),
+        ..
+      },
+      source: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("m"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected Muta[ ] = m; structure"),
+  }
 }
 /*
   test("Let with destructuring pattern") {
@@ -484,21 +701,43 @@ fn destructure_pattern_with_let_and_set() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "[a, set x] = m;");
-  let let_ = cast!(expr, IExpressionPE::Let);
-  assert!(let_.pattern.destination.is_none());
-  assert!(let_.pattern.templex.is_none());
-  let destructure = let_.pattern.destructure.as_ref().unwrap();
-  let (a_pattern, x_pattern) = expect_2(&destructure.patterns);
-  let a_destination = a_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(a_destination, "a");
-  assert!(a_destination.mutate.is_none());
-  assert!(a_pattern.templex.is_none());
-  assert!(a_pattern.destructure.is_none());
-  let x_destination = x_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(x_destination, "x");
-  assert!(x_destination.mutate.is_some());
-  assert!(x_pattern.templex.is_none());
-  assert!(x_pattern.destructure.is_none());
+  match &expr {
+    IExpressionPE::Let(LetPE {
+      pattern: PatternPP {
+        destination: None,
+        templex: None,
+        destructure: Some(DestructureP {
+          patterns: [
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+                mutate: None,
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                mutate: Some(_),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            ..
+          ],
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected [a, set x] = m; structure"),
+  }
 }
 /*
   test("Destructure pattern with let and set") {
@@ -523,8 +762,13 @@ fn ret() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "return 3;");
-  let ret = cast!(expr, IExpressionPE::Return);
-  assert_eq!(cast!(ret.expr.as_ref(), IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::Return(ReturnPE {
+      expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected return 3; structure"),
+  }
 }
 /*
   test("Ret") {
@@ -541,14 +785,30 @@ fn foreach() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in myList { }");
-  let each = cast!(expr, IExpressionPE::Each);
-  assert!(each.maybe_pure.is_none());
-  let destination = each.entry_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "i");
-  assert!(each.entry_pattern.templex.is_none());
-  assert!(each.entry_pattern.destructure.is_none());
-  assert_lookup_name(each.iterable_expr.as_ref(), "myList");
-  cast!(each.body.inner.as_ref(), IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Each(EachPE {
+      maybe_pure: None,
+      entry_pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      iterable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("myList"))),
+        template_args: None,
+      }),
+      body: BlockPE {
+        inner: IExpressionPE::Void(_),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected foreach i in myList {{ }} structure"),
+  }
 }
 /*
   test("foreach") {
@@ -570,16 +830,34 @@ fn foreach_with_borrow() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in &myList { }");
-  let each = cast!(expr, IExpressionPE::Each);
-  assert!(each.maybe_pure.is_none());
-  let destination = each.entry_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "i");
-  assert!(each.entry_pattern.templex.is_none());
-  assert!(each.entry_pattern.destructure.is_none());
-  let borrow = cast!(each.iterable_expr.as_ref(), IExpressionPE::Augment);
-  assert_eq!(borrow.target_ownership, OwnershipP::Borrow);
-  assert_lookup_name(borrow.inner.as_ref(), "myList");
-  cast!(each.body.inner.as_ref(), IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Each(EachPE {
+      maybe_pure: None,
+      entry_pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      iterable_expr: IExpressionPE::Augment(AugmentPE {
+        target_ownership: OwnershipP::Borrow,
+        inner: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("myList"))),
+          template_args: None,
+        }),
+        ..
+      }),
+      body: BlockPE {
+        inner: IExpressionPE::Void(_),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected foreach i in &myList {{ }} structure"),
+  }
 }
 /*
   test("foreach with borrow") {
@@ -601,22 +879,50 @@ fn foreach_with_two_receivers() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach [a, b] in myList { }");
-  let each = cast!(expr, IExpressionPE::Each);
-  assert!(each.maybe_pure.is_none());
-  assert!(each.entry_pattern.destination.is_none());
-  assert!(each.entry_pattern.templex.is_none());
-  let destructure = each.entry_pattern.destructure.as_ref().unwrap();
-  let (a_pattern, b_pattern) = expect_2(&destructure.patterns);
-  let a_destination = a_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(a_destination, "a");
-  assert!(a_pattern.templex.is_none());
-  assert!(a_pattern.destructure.is_none());
-  let b_destination = b_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(b_destination, "b");
-  assert!(b_pattern.templex.is_none());
-  assert!(b_pattern.destructure.is_none());
-  assert_lookup_name(each.iterable_expr.as_ref(), "myList");
-  cast!(each.body.inner.as_ref(), IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Each(EachPE {
+      maybe_pure: None,
+      entry_pattern: PatternPP {
+        destination: None,
+        templex: None,
+        destructure: Some(DestructureP {
+          patterns: [
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("b"))),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            ..
+          ],
+          ..
+        }),
+        ..
+      },
+      iterable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("myList"))),
+        template_args: None,
+      }),
+      body: BlockPE {
+        inner: IExpressionPE::Void(_),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected foreach [a, b] in myList {{ }} structure"),
+  }
 }
 /*
   test("foreach with two receivers") {
@@ -644,22 +950,49 @@ fn foreach_complex_iterable() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "foreach i in myList = 3; myList { }");
-  let each = cast!(expr, IExpressionPE::Each);
-  assert!(each.maybe_pure.is_none());
-  let destination = each.entry_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "i");
-  assert!(each.entry_pattern.templex.is_none());
-  assert!(each.entry_pattern.destructure.is_none());
-  let iterable_consecutor = cast!(each.iterable_expr.as_ref(), IExpressionPE::Consecutor);
-  let (let_mylist, lookup_mylist) = expect_2(&iterable_consecutor.inners);
-  let let_mylist = cast!(let_mylist, IExpressionPE::Let);
-  let mylist_destination = let_mylist.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(mylist_destination, "myList");
-  assert!(let_mylist.pattern.templex.is_none());
-  assert!(let_mylist.pattern.destructure.is_none());
-  assert_eq!(cast!(let_mylist.source.as_ref(), IExpressionPE::ConstantInt).value, 3);
-  assert_lookup_name(lookup_mylist, "myList");
-  cast!(each.body.inner.as_ref(), IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Each(EachPE {
+      maybe_pure: None,
+      entry_pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      iterable_expr: IExpressionPE::Consecutor(ConsecutorPE {
+        inners: [
+          IExpressionPE::Let(LetPE {
+            pattern: PatternPP {
+              destination: Some(DestinationLocalP {
+                decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("myList"))),
+                ..
+              }),
+              templex: None,
+              destructure: None,
+              ..
+            },
+            source: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+            ..
+          }),
+          IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("myList"))),
+            template_args: None,
+          }),
+          ..
+        ],
+        ..
+      }),
+      body: BlockPE {
+        inner: IExpressionPE::Void(_),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected foreach i in myList = 3; myList {{ }} structure"),
+  }
 }
 /*
   test("foreach complex iterable") {
@@ -736,17 +1069,37 @@ fn test_blocks_trailing_void_presence() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "moo()");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "moo");
-  assert!(function_call.arg_exprs.is_empty());
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))),
+        template_args: None,
+      }),
+      arg_exprs: [],
+      ..
+    }) => {}
+    _ => panic!("expected moo() structure"),
+  }
 
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "moo();");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (moo_call, final_void) = expect_2(&consecutor.inners);
-  let moo_call = cast!(moo_call, IExpressionPE::FunctionCall);
-  assert_lookup_name(moo_call.callable_expr.as_ref(), "moo");
-  assert!(moo_call.arg_exprs.is_empty());
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::FunctionCall(FunctionCallPE {
+          callable_expr: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))),
+            template_args: None,
+          }),
+          arg_exprs: [],
+          ..
+        }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected moo(); structure"),
+  }
 }
 /*
   test("Test block's trailing void presence") {
@@ -777,10 +1130,23 @@ fn block_with_statement_and_result() {
       a
     ",
   );
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (b_lookup, a_lookup) = expect_2(&consecutor.inners);
-  assert_lookup_name(b_lookup, "b");
-  assert_lookup_name(a_lookup, "a");
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+          template_args: None,
+        }),
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+          template_args: None,
+        }),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected b; a structure"),
+  }
 }
 /*
   test("Block with statement and result") {
@@ -801,7 +1167,10 @@ fn block_with_result() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_statement_expect(&interner, &keywords, &parse_arena, "3");
-  assert_eq!(cast!(expr, IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }) => {}
+    _ => panic!("expected 3"),
+  }
 }
 /*
   test("Block with result") {
@@ -828,18 +1197,40 @@ fn block_with_result_that_could_be_an_expr() {
       doThings(a)
     ",
   );
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (let_a, do_things_call) = expect_2(&consecutor.inners);
-  let let_a = cast!(let_a, IExpressionPE::Let);
-  let destination = let_a.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  assert!(let_a.pattern.templex.is_none());
-  assert!(let_a.pattern.destructure.is_none());
-  assert_eq!(cast!(let_a.source.as_ref(), IExpressionPE::ConstantInt).value, 2);
-  let do_things_call = cast!(do_things_call, IExpressionPE::FunctionCall);
-  assert_lookup_name(do_things_call.callable_expr.as_ref(), "doThings");
-  let first_arg = expect_1(&do_things_call.arg_exprs);
-  assert_lookup_name(first_arg, "a");
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Let(LetPE {
+          pattern: PatternPP {
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+              ..
+            }),
+            templex: None,
+            destructure: None,
+            ..
+          },
+          source: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+          ..
+        }),
+        IExpressionPE::FunctionCall(FunctionCallPE {
+          callable_expr: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("doThings"))),
+            template_args: None,
+          }),
+          arg_exprs: [IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+            template_args: None,
+          }), ..],
+          ..
+        }),
+        ..
+      ],
+      ..
+    }) =>
+    {}
+    _ => panic!("expected a = 2; doThings(a) structure"),
+  }
 }
 /*
   test("Block with result that could be an expr") {
@@ -864,12 +1255,24 @@ fn mutating_as_statement() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "set x = 6;");
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (mutate, final_void) = expect_2(&consecutor.inners);
-  let mutate = cast!(mutate, IExpressionPE::Mutate);
-  assert_lookup_name(mutate.mutatee.as_ref(), "x");
-  assert_eq!(cast!(mutate.source.as_ref(), IExpressionPE::ConstantInt).value, 6);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Mutate(MutatePE {
+          mutatee: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          source: IExpressionPE::ConstantInt(ConstantIntPE { value: 6, .. }),
+          ..
+        }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected set x = 6; structure"),
+  }
 }
 /*
   test("Mutating as statement") {
@@ -898,8 +1301,16 @@ fn lone_block() {
       }
     ",
   );
-  let block = cast!(expr, IExpressionPE::Block);
-  assert_lookup_name(block.inner.as_ref(), "a");
+  match &expr {
+    IExpressionPE::Block(BlockPE {
+      inner: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected block {{ a }} structure"),
+  }
 }
 /*
   test("Lone block") {
@@ -1026,13 +1437,24 @@ fn empty_block() {
       return 3;
       ",
   );
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (block, ret, final_void) = expect_3(&consecutor.inners);
-  let block = cast!(block, IExpressionPE::Block);
-  cast!(block.inner.as_ref(), IExpressionPE::Void);
-  let ret = cast!(ret, IExpressionPE::Return);
-  assert_eq!(cast!(ret.expr.as_ref(), IExpressionPE::ConstantInt).value, 3);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Block(BlockPE {
+          inner: IExpressionPE::Void(_),
+          ..
+        }),
+        IExpressionPE::Return(ReturnPE {
+          expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+          ..
+        }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected block {{ }} return 3; structure"),
+  }
 }
 /*
   test("Empty block") {
@@ -1088,14 +1510,33 @@ fn foreach_2() {
       }
       ",
   );
-  let each = cast!(expr, IExpressionPE::Each);
-  assert!(each.maybe_pure.is_none());
-  let destination = each.entry_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "i");
-  assert!(each.entry_pattern.templex.is_none());
-  assert!(each.entry_pattern.destructure.is_none());
-  assert_lookup_name(each.iterable_expr.as_ref(), "a");
-  assert_lookup_name(each.body.inner.as_ref(), "i");
+  match &expr {
+    IExpressionPE::Each(EachPE {
+      maybe_pure: None,
+      entry_pattern: PatternPP {
+        destination: Some(DestinationLocalP {
+          decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("i"))),
+          ..
+        }),
+        templex: None,
+        destructure: None,
+        ..
+      },
+      iterable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+        template_args: None,
+      }),
+      body: BlockPE {
+        inner: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+          template_args: None,
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected foreach i in a {{ i }} structure"),
+  }
 }
 /*
   test("foreach 2") {
@@ -1132,15 +1573,29 @@ fn foreach_expr() {
       a = foreach i in c { i };
       ",
   );
-  let consecutor = cast!(expr, IExpressionPE::Consecutor);
-  let (let_a, final_void) = expect_2(&consecutor.inners);
-  let let_a = cast!(let_a, IExpressionPE::Let);
-  let destination = let_a.pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  assert!(let_a.pattern.templex.is_none());
-  assert!(let_a.pattern.destructure.is_none());
-  cast!(let_a.source.as_ref(), IExpressionPE::Each);
-  cast!(final_void, IExpressionPE::Void);
+  match &expr {
+    IExpressionPE::Consecutor(ConsecutorPE {
+      inners: [
+        IExpressionPE::Let(LetPE {
+          pattern: PatternPP {
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+              ..
+            }),
+            templex: None,
+            destructure: None,
+            ..
+          },
+          source: IExpressionPE::Each(_),
+          ..
+        }),
+        IExpressionPE::Void(_),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected a = foreach i in c {{ i }}; structure"),
+  }
 }
 /*
   test("foreach expr") {

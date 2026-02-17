@@ -1,12 +1,11 @@
 // cargo test --manifest-path FrontendRust/Cargo.toml --lib parsing::tests::expression_tests
 
-use bumpalo::Bump;
-use crate::cast;
 use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
+use bumpalo::Bump;
 
 /*
 // MIGALLOW: Rust code doesn't need to check bits == None like Scala does.
@@ -27,10 +26,7 @@ fn simple_int() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "4");
-  assert!(matches!(
-    expr,
-    IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })
-  ));
+  assert!(matches!(expr, IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })));
 }
 /*
   test("Simple int") {
@@ -45,10 +41,7 @@ fn simple_bool() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "true");
-  assert!(matches!(
-    expr,
-    IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. })
-  ));
+  assert!(matches!(expr, IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. })));
 }
 /*
   test("Simple bool") {
@@ -65,11 +58,7 @@ fn i64() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "4i64");
   assert!(matches!(
     expr,
-    IExpressionPE::ConstantInt(ConstantIntPE {
-      value: 4,
-      bits: Some(64),
-      ..
-    })
+    IExpressionPE::ConstantInt(ConstantIntPE { value: 4, bits: Some(64), .. })
   ));
 }
 /*
@@ -88,8 +77,8 @@ fn binary_operator() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("+")),
-      left_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
-      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
       ..
     }) => {}
     _ => panic!("expected 4 + 5 structure"),
@@ -109,10 +98,7 @@ fn floats() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "4.2");
-  assert!(matches!(
-    expr,
-    IExpressionPE::ConstantFloat(ConstantFloatPE { value: 4.2, .. })
-  ));
+  assert!(matches!(expr, IExpressionPE::ConstantFloat(ConstantFloatPE { value: 4.2, .. })));
 }
 /*
   test("Floats") {
@@ -129,8 +115,8 @@ fn number_range() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "0..5");
   match &expr {
     IExpressionPE::Range(RangePE {
-      from_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
-      to_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      from_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
+      to_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
       ..
     }) => {}
     _ => panic!("expected 0..5 structure"),
@@ -151,13 +137,21 @@ fn add_as_call() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "+(4, 5)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("+"))),
-        template_args: None,
-      }),
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("+"))),
+          template_args: None,
+        }),
       arg_exprs,
       ..
-    }) if matches!(arg_exprs, [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }), ..]) => {}
+    }) if matches!(
+      arg_exprs,
+      [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+        ..
+      ]
+    ) => {}
     _ => panic!("expected +(4, 5) structure"),
   }
 }
@@ -176,22 +170,18 @@ fn passing_eq_overload_set() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "moo(4, ==)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))),
-        ..
-      }),
-      arg_exprs,
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))),
+          ..
+        }),
+      arg_exprs:
+        [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("=="))),
+          template_args: None,
+        }), ..],
       ..
-    }) => {
-      match (arg_exprs.get(0), arg_exprs.get(1)) {
-        (Some(IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. })),
-         Some(IExpressionPE::Lookup(LookupPE {
-           name: IImpreciseNameP::LookupName(NameP(_, StrI("=="))),
-           template_args: None,
-         }))) => {}
-        _ => panic!("expected moo(4, ==) structure"),
-      }
-    }
+    }) => {}
     _ => panic!("expected moo(4, ==) structure"),
   }
 }
@@ -217,25 +207,25 @@ fn call_then_binary_operator() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("+")),
-      left_expr: box IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("str"))),
-          template_args: None,
+      left_expr:
+        IExpressionPE::FunctionCall(FunctionCallPE {
+          callable_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("str"))),
+              template_args: None,
+            }),
+          arg_exprs,
+          ..
         }),
-        arg_exprs,
-        ..
-      }),
-      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
       ..
-    }) => {
-      match arg_exprs {
-        [IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
-          template_args: None,
-        })] => {}
-        _ => panic!("expected str(i) + 5 structure"),
-      }
-    }
+    }) => match arg_exprs {
+      [IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+        template_args: None,
+      })] => {}
+      _ => panic!("expected str(i) + 5 structure"),
+    },
     _ => panic!("expected str(i) + 5 structure"),
   }
 }
@@ -261,14 +251,16 @@ fn range() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "a..b");
   match &expr {
     IExpressionPE::Range(RangePE {
-      from_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
-        template_args: None,
-      }),
-      to_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
-        template_args: None,
-      }),
+      from_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+          template_args: None,
+        }),
+      to_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+          template_args: None,
+        }),
       ..
     }) => {}
     _ => panic!("expected a..b structure"),
@@ -289,10 +281,11 @@ fn regular_call() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x(y)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
       arg_exprs,
       ..
     }) => match arg_exprs {
@@ -320,10 +313,11 @@ fn not() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "not y");
   match &expr {
     IExpressionPE::Not(NotPE {
-      inner: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
-        template_args: None,
-      }),
+      inner:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+          template_args: None,
+        }),
       ..
     }) => {}
     _ => panic!("expected not y structure"),
@@ -345,14 +339,16 @@ fn borrowing_result_of_function_call() {
   match &expr {
     IExpressionPE::Augment(AugmentPE {
       target_ownership: OwnershipP::Borrow,
-      inner: box IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
-          template_args: None,
+      inner:
+        IExpressionPE::FunctionCall(FunctionCallPE {
+          callable_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
+              template_args: None,
+            }),
+          arg_exprs,
+          ..
         }),
-        arg_exprs,
-        ..
-      }),
       ..
     }) if arg_exprs.is_empty() => {}
     _ => panic!("expected &Muta() structure"),
@@ -374,7 +370,7 @@ fn specifying_heap() {
   match &expr {
     IExpressionPE::Augment(AugmentPE {
       target_ownership: OwnershipP::Own,
-      inner: box IExpressionPE::FunctionCall(FunctionCallPE { .. }),
+      inner: IExpressionPE::FunctionCall(FunctionCallPE { .. }),
       ..
     }) => {}
     _ => panic!("expected ^Muta() structure"),
@@ -398,14 +394,16 @@ fn inline_call_ignored() {
   match &expr {
     IExpressionPE::Augment(AugmentPE {
       target_ownership: OwnershipP::Own,
-      inner: box IExpressionPE::FunctionCall(FunctionCallPE {
-        callable_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
-          template_args: None,
+      inner:
+        IExpressionPE::FunctionCall(FunctionCallPE {
+          callable_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("Muta"))),
+              template_args: None,
+            }),
+          arg_exprs,
+          ..
         }),
-        arg_exprs,
-        ..
-      }),
       ..
     }) if arg_exprs.is_empty() => {}
     _ => panic!("expected inl Muta() structure"),
@@ -427,14 +425,13 @@ fn method_call() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x . shout ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
-        template_args: None,
-      },
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+      method_lookup:
+        LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))), template_args: None },
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => {}
@@ -458,14 +455,13 @@ fn mapping_method_call() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x *. shout ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-        template_args: None,
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
-        template_args: None,
-      },
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+          template_args: None,
+        }),
+      method_lookup:
+        LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))), template_args: None },
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => {}
@@ -489,18 +485,18 @@ fn method_on_member() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x.moo.shout()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: box IExpressionPE::Dot(DotPE {
-        left: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-          template_args: None,
+      subject_expr:
+        IExpressionPE::Dot(DotPE {
+          left:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+              template_args: None,
+            }),
+          member: NameP(_, StrI("moo")),
+          ..
         }),
-        member: NameP(_, StrI("moo")),
-        ..
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
-        template_args: None,
-      },
+      method_lookup:
+        LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))), template_args: None },
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => {}
@@ -528,17 +524,17 @@ fn moving_method_call() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(x ).shout()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: box IExpressionPE::SubExpression(SubExpressionPE {
-        inner: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-          template_args: None,
+      subject_expr:
+        IExpressionPE::SubExpression(SubExpressionPE {
+          inner:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+              template_args: None,
+            }),
+          ..
         }),
-        ..
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))),
-        template_args: None,
-      },
+      method_lookup:
+        LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("shout"))), template_args: None },
       arg_exprs,
       ..
     }) if arg_exprs.is_empty() => {}
@@ -575,32 +571,32 @@ fn templated_function_call() {
   let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "toArray<imm>( &result)");
+  let expr =
+    compile_expression_expect(&interner, &keywords, &parse_arena, "toArray<imm>( &result)");
   match &expr {
     IExpressionPE::FunctionCall(FunctionCallPE {
-      callable_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
-        template_args: Some(TemplateArgsP {
-          args,
-          ..
+      callable_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
+          template_args: Some(TemplateArgsP { args, .. }),
         }),
-      }),
       arg_exprs,
       ..
-    }) => {
-      match (args, arg_exprs) {
-        ([ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }), ..],
-         [IExpressionPE::Augment(AugmentPE {
-           target_ownership: OwnershipP::Borrow,
-           inner: box IExpressionPE::Lookup(LookupPE {
-             name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
-             template_args: None,
-           }),
-           ..
-         })]) => {}
-        _ => panic!("expected toArray<imm>( &result) structure"),
-      }
-    }
+    }) => match (args, arg_exprs) {
+      (
+        [ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)), ..],
+        [IExpressionPE::Augment(AugmentPE {
+          target_ownership: OwnershipP::Borrow,
+          inner:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
+              template_args: None,
+            }),
+          ..
+        })],
+      ) => {}
+      _ => panic!("expected toArray<imm>( &result) structure"),
+    },
     _ => panic!("expected toArray<imm>( &result) structure"),
   }
 }
@@ -620,28 +616,26 @@ fn templated_method_call() {
   let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "result.toArray <imm> ()");
+  let expr =
+    compile_expression_expect(&interner, &keywords, &parse_arena, "result.toArray <imm> ()");
   match &expr {
     IExpressionPE::MethodCall(MethodCallPE {
-      subject_expr: box IExpressionPE::Lookup(LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
-        template_args: None,
-      }),
-      method_lookup: LookupPE {
-        name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
-        template_args: Some(TemplateArgsP {
-          args,
-          ..
+      subject_expr:
+        IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("result"))),
+          template_args: None,
         }),
-      },
+      method_lookup:
+        LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("toArray"))),
+          template_args: Some(TemplateArgsP { args, .. }),
+        },
       arg_exprs,
       ..
-    }) if arg_exprs.is_empty() => {
-      match args {
-        [ITemplexPT::Mutability(MutabilityPT { mutability: MutabilityP::Immutable, .. }), ..] => {}
-        _ => panic!("expected result.toArray <imm> () structure"),
-      }
-    }
+    }) if arg_exprs.is_empty() => match args {
+      [ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable)), ..] => {}
+      _ => panic!("expected result.toArray <imm> () structure"),
+    },
     _ => panic!("expected result.toArray <imm> () structure"),
   }
 }
@@ -663,20 +657,24 @@ fn custom_binaries() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("florgle")),
-      left_expr: box IExpressionPE::Not(NotPE {
-        inner: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
-          template_args: None,
+      left_expr:
+        IExpressionPE::Not(NotPE {
+          inner:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+              template_args: None,
+            }),
+          ..
         }),
-        ..
-      }),
-      right_expr: box IExpressionPE::Not(NotPE {
-        inner: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-          template_args: None,
+      right_expr:
+        IExpressionPE::Not(NotPE {
+          inner:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+              template_args: None,
+            }),
+          ..
         }),
-        ..
-      }),
       ..
     }) => {}
     _ => panic!("expected not y florgle not x structure"),
@@ -699,30 +697,36 @@ fn custom_with_noncustom_binaries() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI("florgle")),
-      left_expr: box IExpressionPE::BinaryCall(BinaryCallPE {
-        function_name: NameP(_, StrI("+")),
-        left_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
-          template_args: None,
+      left_expr:
+        IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("+")),
+          left_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+              template_args: None,
+            }),
+          right_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+              template_args: None,
+            }),
+          ..
         }),
-        right_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
-          template_args: None,
+      right_expr:
+        IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("*")),
+          left_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+              template_args: None,
+            }),
+          right_expr:
+            IExpressionPE::Lookup(LookupPE {
+              name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
+              template_args: None,
+            }),
+          ..
         }),
-        ..
-      }),
-      right_expr: box IExpressionPE::BinaryCall(BinaryCallPE {
-        function_name: NameP(_, StrI("*")),
-        left_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
-          template_args: None,
-        }),
-        right_expr: box IExpressionPE::Lookup(LookupPE {
-          name: IImpreciseNameP::LookupName(NameP(_, StrI("y"))),
-          template_args: None,
-        }),
-        ..
-      }),
       ..
     }) => {}
     _ => panic!("expected a + b florgle x * y structure"),
@@ -752,29 +756,45 @@ fn template_calling() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   {
-    let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "MyNone< int >()");// UIIOVCP
-    let function_call = cast!(expr, IExpressionPE::FunctionCall);
-    let mynone_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
-    assert_name(&mynone_lookup.name, "MyNone");
-    let template_args = mynone_lookup.template_args.as_ref().unwrap();
-    let first_template_arg = expect_1(&template_args.args);
-    assert_templex_name(first_template_arg, "int");
-    assert_eq!(function_call.arg_exprs.len(), 0);
+    let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "MyNone< int >()");
+    match &expr {
+      IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("MyNone"))),
+          template_args: Some(TemplateArgsP {
+            args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))), ..],
+            ..
+          }),
+        }),
+        arg_exprs: [],
+        ..
+      }) => {}
+      _ => panic!("expected MyNone<int>() structure"),
+    }
   }
 
   {
-    let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "MySome< MyNone <int> >()");// UIIOVCP
-    let function_call = cast!(expr, IExpressionPE::FunctionCall);
-    let mysome_lookup = cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lookup);
-    assert_name(&mysome_lookup.name, "MySome");
-    let template_args = mysome_lookup.template_args.as_ref().unwrap();
-    let first_template_arg = expect_1(&template_args.args);
-
-    let mynone_lookup = cast!(first_template_arg, ITemplexPT::Call);
-    assert_templex_name(&mynone_lookup.template, "MyNone");
-    let first_call_arg = expect_1(&mynone_lookup.args);
-    assert_templex_name(first_call_arg, "int");
-    assert_eq!(function_call.arg_exprs.len(), 0);
+    let expr =
+      compile_expression_expect(&interner, &keywords, &parse_arena, "MySome< MyNone <int> >()");
+    match &expr {
+      IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("MySome"))),
+          template_args: Some(TemplateArgsP {
+            args: [ITemplexPT::Call(CallPT {
+              template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("MyNone")))),
+              args: [ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))), ..],
+              ..
+            }), ..],
+            ..
+          }),
+        }),
+        arg_exprs: [],
+        ..
+      }) =>
+      {}
+      _ => panic!("expected MySome<MyNone<int>>() structure"),
+    }
   }
 }
 /*
@@ -802,8 +822,8 @@ fn greater_than_or_equal() {
   match &expr {
     IExpressionPE::BinaryCall(BinaryCallPE {
       function_name: NameP(_, StrI(">=")),
-      left_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 9, .. }),
-      right_expr: box IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+      left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 9, .. }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
       ..
     }) => {}
     _ => panic!("expected 9 >= 3 structure"),
@@ -829,16 +849,13 @@ fn indexing() {
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "arr [4]");
   match &expr {
     IExpressionPE::BraceCall(BraceCallPE {
-      subject_expr: box IExpressionPE::Lookup(LookupPE {
+      subject_expr: IExpressionPE::Lookup(LookupPE {
         name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
         template_args: None,
       }),
-      arg_exprs,
+      arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), ..],
       ..
-    }) => match arg_exprs {
-      [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }), ..] => {}
-      _ => panic!("expected arr [4] structure"),
-    },
+    }) => {}
     _ => panic!("expected arr [4] structure"),
   }
 }
@@ -855,15 +872,38 @@ fn single_arg_brace_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x => { x }");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  let params = function.header.params.as_ref().unwrap();
-  let first_param = expect_1(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert_lookup_name(&block.inner, "x");
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP {
+          params: Some(ParamsP {
+            params: [ParameterP {
+              pattern: Some(PatternPP {
+                destination: Some(DestinationLocalP {
+                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                  ..
+                }),
+                ..
+              }),
+              ..
+            }, ..],
+            ..
+          }),
+          ..
+        },
+        body: Some(BlockPE {
+          inner: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected x => {{ x }} structure"),
+  }
 }
 /*
   // MIGALLOW: Rust code doesn't need to check all the None values like Scala does.
@@ -887,15 +927,38 @@ fn single_arg_no_brace_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "x => x");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  let params = function.header.params.as_ref().unwrap();
-  let first_param = expect_1(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert_lookup_name(&block.inner, "x");
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP {
+          params: Some(ParamsP {
+            params: [ParameterP {
+              pattern: Some(PatternPP {
+                destination: Some(DestinationLocalP {
+                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                  ..
+                }),
+                ..
+              }),
+              ..
+            }, ..],
+            ..
+          }),
+          ..
+        },
+        body: Some(BlockPE {
+          inner: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected x => x structure"),
+  }
 }
 /*
   test("Single arg no-brace lambda") {
@@ -918,17 +981,39 @@ fn single_arg_typed_brace_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(x int) => { x }");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  let params = function.header.params.as_ref().unwrap();
-  let first_param = expect_1(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  let templex = pattern.templex.as_ref().unwrap();
-  assert_templex_name(templex, "int");
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert_lookup_name(&block.inner, "x");
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP {
+          params: Some(ParamsP {
+            params: [ParameterP {
+              pattern: Some(PatternPP {
+                destination: Some(DestinationLocalP {
+                  decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                  ..
+                }),
+                templex: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int"))))),
+                ..
+              }),
+              ..
+            }, ..],
+            ..
+          }),
+          ..
+        },
+        body: Some(BlockPE {
+          inner: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected (x int) => {{ x }} structure"),
+  }
 }
 /*
   test("Single arg typed brace lambda") {
@@ -951,12 +1036,17 @@ fn argless_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "{_}");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  assert!(function.header.ret.ret_type.is_none());
-  assert!(function.header.params.is_none());
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert!(matches!(*block.inner, IExpressionPE::MagicParamLookup(_)));
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP { params: None, ret: FunctionReturnP { ret_type: None, .. }, .. },
+        body: Some(BlockPE { inner: IExpressionPE::MagicParamLookup(_), .. }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected {{_}} structure"),
+  }
 }
 /*
   test("Argless lambda") {
@@ -978,18 +1068,50 @@ fn multi_arg_typed_brace_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(x, y) => x");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  let params = function.header.params.as_ref().unwrap();
-  let (first_param, second_param) = expect_2(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "x");
-  let pattern = second_param.pattern.as_ref().unwrap();
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "y");
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert_lookup_name(&block.inner, "x");
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP {
+          params: Some(ParamsP {
+            params: [
+              ParameterP {
+                pattern: Some(PatternPP {
+                  destination: Some(DestinationLocalP {
+                    decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                    ..
+                  }),
+                  ..
+                }),
+                ..
+              },
+              ParameterP {
+                pattern: Some(PatternPP {
+                  destination: Some(DestinationLocalP {
+                    decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
+                    ..
+                  }),
+                  ..
+                }),
+                ..
+              },
+            ],
+            ..
+          }),
+          ..
+        },
+        body: Some(BlockPE {
+          inner: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected (x, y) => x structure"),
+  }
 }
 /*
   test("Multi arg typed brace lambda") {
@@ -1017,21 +1139,55 @@ fn destructuring_lambda() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "([x, y]) => x");
-  let lambda = cast!(expr, IExpressionPE::Lambda);
-  let function = &lambda.function;
-  let params = function.header.params.as_ref().unwrap();
-  let first_param = expect_1(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  assert!(pattern.destination.is_none());
-  assert!(pattern.templex.is_none());
-  let destructure = pattern.destructure.as_ref().unwrap();
-  let (x_pattern, y_pattern) = expect_2(&destructure.patterns);
-  let x_destination = x_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(x_destination, "x");
-  let y_destination = y_pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(y_destination, "y");
-  let block = &lambda.function.body.as_ref().unwrap();
-  assert_lookup_name(&block.inner, "x");
+  match &expr {
+    IExpressionPE::Lambda(LambdaPE {
+      function: FunctionP {
+        header: FunctionHeaderP {
+          params: Some(ParamsP {
+            params: [ParameterP {
+              pattern: Some(PatternPP {
+                destination: None,
+                templex: None,
+                destructure: Some(DestructureP {
+                  patterns: [
+                    PatternPP {
+                      destination: Some(DestinationLocalP {
+                        decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("x"))),
+                        ..
+                      }),
+                      ..
+                    },
+                    PatternPP {
+                      destination: Some(DestinationLocalP {
+                        decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("y"))),
+                        ..
+                      }),
+                      ..
+                    },
+                  ],
+                  ..
+                }),
+                ..
+              }),
+              ..
+            }, ..],
+            ..
+          }),
+          ..
+        },
+        body: Some(BlockPE {
+          inner: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+            template_args: None,
+          }),
+          ..
+        }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected ([x, y]) => x structure"),
+  }
 }
 /*
   test("Destructuring lambda") {
@@ -1067,13 +1223,21 @@ fn dot_symbol() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, r#"myPath./("subdir")"#);
-  let method_call = cast!(expr, IExpressionPE::MethodCall);
-  assert_lookup_name(method_call.subject_expr.as_ref(), "myPath");
-  let method_lookup = cast!(&method_call.method_lookup.name, IImpreciseNameP::LookupName);
-  assert_eq!(method_lookup.as_str(), "/");
-  let first_arg = expect_1(&method_call.arg_exprs);
-  let constant_str = cast!(first_arg, IExpressionPE::ConstantStr);
-  assert_eq!(constant_str.value, "subdir");
+  match &expr {
+    IExpressionPE::MethodCall(MethodCallPE {
+      subject_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("myPath"))),
+        template_args: None,
+      }),
+      method_lookup: LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("/"))),
+        template_args: None,
+      },
+      arg_exprs: [IExpressionPE::ConstantStr(ConstantStrPE { value: StrI("subdir"), .. }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected myPath./(\"subdir\") structure"),
+  }
 }
 /*
   test("dot symbol") {
@@ -1094,16 +1258,15 @@ fn not_equal() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "3 != 4");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "!=");
-  assert_eq!(
-    cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    3
-  );
-  assert_eq!(
-    cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    4
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("!=")),
+      left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected 3 != 4 structure"),
+  }
 }
 /*
   test("!=") {
@@ -1120,13 +1283,17 @@ fn set_call_isnt_interpreted_as_a_set_expression() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "set(true)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "set");
-  let first_arg = expect_1(&function_call.arg_exprs);
-  assert!(matches!(
-    first_arg,
-    IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. })
-  ));
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("set"))),
+        template_args: None,
+      }),
+      arg_exprs: [IExpressionPE::ConstantBool(ConstantBoolPE { value: true, .. }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected set(true) structure"),
+  }
 }
 /*
   // MIGALLOW: Rust can check for the argument too.
@@ -1144,11 +1311,21 @@ fn two_d_array_access() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "arr.2.1");
-  let outer_dot = cast!(expr, IExpressionPE::Dot);
-  assert_eq!(outer_dot.member.as_str(), "1");
-  let inner_dot = cast!(outer_dot.left.as_ref(), IExpressionPE::Dot);
-  assert_eq!(inner_dot.member.as_str(), "2");
-  assert_lookup_name(&inner_dot.left, "arr");
+  match &expr {
+    IExpressionPE::Dot(DotPE {
+      left: IExpressionPE::Dot(DotPE {
+        left: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("arr"))),
+          template_args: None,
+        }),
+        member: NameP(_, StrI("2")),
+        ..
+      }),
+      member: NameP(_, StrI("1")),
+      ..
+    }) => {}
+    _ => panic!("expected arr.2.1 structure"),
+  }
 }
 /*
   test("2D array access") {
@@ -1171,9 +1348,14 @@ fn lambda_without_surrounding_parens() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "{ 0 }()");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  cast!(function_call.callable_expr.as_ref(), IExpressionPE::Lambda);
-  assert_eq!(function_call.arg_exprs.len(), 0);
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lambda(_),
+      arg_exprs: [],
+      ..
+    }) => {}
+    _ => panic!("expected {{ 0 }}() structure"),
+  }
 }
 /*
   test("lambda without surrounding parens") {
@@ -1190,10 +1372,20 @@ fn function_call() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "call(sum)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "call");
-  let first_arg = expect_1(&function_call.arg_exprs);
-  assert_lookup_name(first_arg, "sum");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("call"))),
+        template_args: None,
+      }),
+      arg_exprs: [IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("sum"))),
+        template_args: None,
+      }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected call(sum) structure"),
+  }
 }
 /*
   test("Function call") {
@@ -1213,12 +1405,20 @@ fn test_inner_expression_unlet() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "destroy(unlet enemy)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  assert_lookup_name(function_call.callable_expr.as_ref(), "destroy");
-  let first_arg = expect_1(&function_call.arg_exprs);
-  let unlet = cast!(first_arg, IExpressionPE::Unlet);
-  let lookup_name = cast!(&unlet.name, IImpreciseNameP::LookupName);
-  assert_eq!(lookup_name.as_str(), "enemy");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("destroy"))),
+        template_args: None,
+      }),
+      arg_exprs: [IExpressionPE::Unlet(UnletPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("enemy"))),
+        ..
+      }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected destroy(unlet enemy) structure"),
+  }
 }
 /*
   test("Test inner expression unlet") {
@@ -1278,23 +1478,23 @@ fn parens() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "2 * (5 - 7)");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "*");
-  assert_eq!(
-    cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    2
-  );
-  let subexpr = cast!(binary.right_expr.as_ref(), IExpressionPE::SubExpression);
-  let inner_binary = cast!(subexpr.inner.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(inner_binary.function_name.as_str(), "-");
-  assert_eq!(
-    cast!(inner_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    5
-  );
-  assert_eq!(
-    cast!(inner_binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    7
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("*")),
+      left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+      right_expr: IExpressionPE::SubExpression(SubExpressionPE {
+        inner: IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("-")),
+          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+          ..
+        }),
+        ..
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected 2 * (5 - 7) structure"),
+  }
 }
 /*
   test("parens") {
@@ -1309,23 +1509,23 @@ fn precedence_1() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(5 - 7) * 2");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "*");
-  let subexpr = cast!(binary.left_expr.as_ref(), IExpressionPE::SubExpression);
-  let inner_binary = cast!(subexpr.inner.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(inner_binary.function_name.as_str(), "-");
-  assert_eq!(
-    cast!(inner_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    5
-  );
-  assert_eq!(
-    cast!(inner_binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    7
-  );
-  assert_eq!(
-    cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    2
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("*")),
+      left_expr: IExpressionPE::SubExpression(SubExpressionPE {
+        inner: IExpressionPE::BinaryCall(BinaryCallPE {
+          function_name: NameP(_, StrI("-")),
+          left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+          right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+          ..
+        }),
+        ..
+      }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected (5 - 7) * 2 structure"),
+  }
 }
 /*
   test("Precedence 1") {
@@ -1340,22 +1540,20 @@ fn precedence_2() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "5 - 7 * 2");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "-");
-  assert_eq!(
-    cast!(binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    5
-  );
-  let right_binary = cast!(binary.right_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(right_binary.function_name.as_str(), "*");
-  assert_eq!(
-    cast!(right_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    7
-  );
-  assert_eq!(
-    cast!(right_binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    2
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("-")),
+      left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+      right_expr: IExpressionPE::BinaryCall(BinaryCallPE {
+        function_name: NameP(_, StrI("*")),
+        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 7, .. }),
+        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+        ..
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected 5 - 7 * 2 structure"),
+  }
 }
 /*
   test("Precedence 2") {
@@ -1370,20 +1568,18 @@ fn static_array_from_values() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[#](3, 5, 6)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(
-    &construct_array.size,
-    IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None })
-  ));
-  assert_eq!(construct_array.initializing_individual_elements, true);
-  assert_eq!(construct_array.args.len(), 3);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None }),
+      initializing_individual_elements: true,
+      args: [_, _, _, ..],
+      ..
+    }) => {}
+    _ => panic!("expected [#](3, 5, 6) structure"),
+  }
 }
 /*
   test("static array from values") {
@@ -1400,7 +1596,10 @@ fn static_array_from_values_with_newlines() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[#](\n3\n)");
-  cast!(expr, IExpressionPE::ConstructArray);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE { .. }) => {}
+    _ => panic!("expected [#](\\n3\\n) structure"),
+  }
 }
 /*
   test("static array from values with newlines") {
@@ -1417,20 +1616,20 @@ fn static_array_from_callable_with_rune() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[#N]({_ * 2})");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  let static_sized = cast!(&construct_array.size, IArraySizeP::StaticSized);
-  let size_templex = static_sized.size_pt.as_ref().unwrap();
-  assert_templex_name(size_templex, "N");
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  let first_arg = expect_1(&construct_array.args);
-  cast!(first_arg, IExpressionPE::Lambda);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
+        size_pt: Some(ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("N"))))),
+      }),
+      initializing_individual_elements: false,
+      args: [IExpressionPE::Lambda(_), ..],
+      ..
+    }) => {}
+    _ => panic!("expected [#N]({{_ * 2}}) structure"),
+  }
 }
 /*
   test("static array from callable with rune") {
@@ -1453,10 +1652,21 @@ fn less_than_or_equal() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "a <= b");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "<=");
-  assert_lookup_name(binary.left_expr.as_ref(), "a");
-  assert_lookup_name(binary.right_expr.as_ref(), "b");
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("<=")),
+      left_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+        template_args: None,
+      }),
+      right_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("b"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a <= b structure"),
+  }
 }
 /*
   test("Less than or equal") {
@@ -1473,19 +1683,20 @@ fn static_array_from_callable() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[#3](triple)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  let static_sized = cast!(&construct_array.size, IArraySizeP::StaticSized);
-  let size_templex = static_sized.size_pt.as_ref().unwrap();
-  assert_eq!(cast!(size_templex, ITemplexPT::Int).value, 3);
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  expect_1(&construct_array.args);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
+        size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
+      }),
+      initializing_individual_elements: false,
+      args: [_, ..],
+      ..
+    }) => {}
+    _ => panic!("expected [#3](triple) structure"),
+  }
 }
 /*
   test("static array from callable") {
@@ -1508,19 +1719,20 @@ fn immutable_static_array_from_callable() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "#[#3](triple)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Immutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  let static_sized = cast!(&construct_array.size, IArraySizeP::StaticSized);
-  let size_templex = static_sized.size_pt.as_ref().unwrap();
-  assert_eq!(cast!(size_templex, ITemplexPT::Int).value, 3);
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  expect_1(&construct_array.args);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
+      variability_pt: None,
+      size: IArraySizeP::StaticSized(StaticSizedArraySizeP {
+        size_pt: Some(ITemplexPT::Int(IntPT { value: 3, .. })),
+      }),
+      initializing_individual_elements: false,
+      args: [_, ..],
+      ..
+    }) => {}
+    _ => panic!("expected #[#3](triple) structure"),
+  }
 }
 /*
   test("immutable static array from callable") {
@@ -1543,20 +1755,18 @@ fn immutable_static_array_from_callable_no_size() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "#[#](3, 4, 5)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Immutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(
-    &construct_array.size,
-    IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None })
-  ));
-  assert_eq!(construct_array.initializing_individual_elements, true);
-  assert_eq!(construct_array.args.len(), 3);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
+      variability_pt: None,
+      size: IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: None }),
+      initializing_individual_elements: true,
+      args: [_, _, _, ..],
+      ..
+    }) => {}
+    _ => panic!("expected #[#](3, 4, 5) structure"),
+  }
 }
 /*
   test("immutable static array from callable, no size") {
@@ -1579,17 +1789,18 @@ fn runtime_array_from_callable_with_rune() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[](6, {_ * 2})");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(&construct_array.size, IArraySizeP::RuntimeSized));
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  assert_eq!(construct_array.args.len(), 2);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::RuntimeSized,
+      initializing_individual_elements: false,
+      args: [_, _, ..],
+      ..
+    }) => {}
+    _ => panic!("expected [](6, {{_ * 2}}) structure"),
+  }
 }
 /*
   test("runtime array from callable with rune") {
@@ -1612,17 +1823,18 @@ fn runtime_array_from_callable() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[](6, triple)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(&construct_array.size, IArraySizeP::RuntimeSized));
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  assert_eq!(construct_array.args.len(), 2);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::RuntimeSized,
+      initializing_individual_elements: false,
+      args: [_, _, ..],
+      ..
+    }) => {}
+    _ => panic!("expected [](6, triple) structure"),
+  }
 }
 /*
   test("runtime array from callable") {
@@ -1645,24 +1857,22 @@ fn double_rsa_with_type() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "[][]bool(42)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  let array_type = construct_array.type_pt.as_ref().unwrap();
-  let rsa = cast!(array_type, ITemplexPT::RuntimeSizedArray);
-  assert_eq!(
-    cast!(rsa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert_templex_name(&rsa.element, "bool");
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Mutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(&construct_array.size, IArraySizeP::RuntimeSized));
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  let first_arg = expect_1(&construct_array.args);
-  assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 42);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: Some(ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
+        mutability: ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable)),
+        element: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("bool")))),
+        ..
+      })),
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Mutable))),
+      variability_pt: None,
+      size: IArraySizeP::RuntimeSized,
+      initializing_individual_elements: false,
+      args: [IExpressionPE::ConstantInt(ConstantIntPE { value: 42, .. }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected [][]bool(42) structure"),
+  }
 }
 /*
   test("Double RSA with type") {
@@ -1686,17 +1896,18 @@ fn immutable_runtime_array_from_callable() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "#[](6, triple)");
-  let construct_array = cast!(expr, IExpressionPE::ConstructArray);
-  assert!(construct_array.type_pt.is_none());
-  let mutability = construct_array.mutability_pt.as_ref().unwrap();
-  assert_eq!(
-    cast!(mutability, ITemplexPT::Mutability).mutability,
-    MutabilityP::Immutable
-  );
-  assert!(construct_array.variability_pt.is_none());
-  assert!(matches!(&construct_array.size, IArraySizeP::RuntimeSized));
-  assert_eq!(construct_array.initializing_individual_elements, false);
-  assert_eq!(construct_array.args.len(), 2);
+  match &expr {
+    IExpressionPE::ConstructArray(ConstructArrayPE {
+      type_pt: None,
+      mutability_pt: Some(ITemplexPT::Mutability(MutabilityPT(_, MutabilityP::Immutable))),
+      variability_pt: None,
+      size: IArraySizeP::RuntimeSized,
+      initializing_individual_elements: false,
+      args: [_, _, ..],
+      ..
+    }) => {}
+    _ => panic!("expected #[](6, triple) structure"),
+  }
 }
 /*
   test("immutable runtime array from callable") {
@@ -1719,9 +1930,13 @@ fn one_element_tuple() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(3,)");
-  let tuple = cast!(expr, IExpressionPE::Tuple);
-  let first_element = expect_1(&tuple.elements);
-  assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::Tuple(TuplePE {
+      elements: [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected (3,) structure"),
+  }
 }
 /*
 
@@ -1737,8 +1952,10 @@ fn zero_element_tuple() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "()");
-  let tuple = cast!(expr, IExpressionPE::Tuple);
-  assert_eq!(tuple.elements.len(), 0);
+  match &expr {
+    IExpressionPE::Tuple(TuplePE { elements: [], .. }) => {}
+    _ => panic!("expected () structure"),
+  }
 }
 /*
   test("Zero element tuple") {
@@ -1753,10 +1970,17 @@ fn two_element_tuple() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(3,4)");
-  let tuple = cast!(expr, IExpressionPE::Tuple);
-  let (first_element, second_element) = expect_2(&tuple.elements);
-  assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
-  assert_eq!(cast!(second_element, IExpressionPE::ConstantInt).value, 4);
+  match &expr {
+    IExpressionPE::Tuple(TuplePE {
+      elements: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected (3,4) structure"),
+  }
 }
 /*
   test("Two element tuple") {
@@ -1771,11 +1995,18 @@ fn three_element_tuple() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(3,4,5)");
-  let tuple = cast!(expr, IExpressionPE::Tuple);
-  let (first_element, second_element, third_element) = expect_3(&tuple.elements);
-  assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
-  assert_eq!(cast!(second_element, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(third_element, IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::Tuple(TuplePE {
+      elements: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected (3,4,5) structure"),
+  }
 }
 /*
   test("Three element tuple") {
@@ -1790,11 +2021,18 @@ fn three_element_tuple_trailing_comma() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(3,4,5,)");
-  let tuple = cast!(expr, IExpressionPE::Tuple);
-  let (first_element, second_element, third_element) = expect_3(&tuple.elements);
-  assert_eq!(cast!(first_element, IExpressionPE::ConstantInt).value, 3);
-  assert_eq!(cast!(second_element, IExpressionPE::ConstantInt).value, 4);
-  assert_eq!(cast!(third_element, IExpressionPE::ConstantInt).value, 5);
+  match &expr {
+    IExpressionPE::Tuple(TuplePE {
+      elements: [
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+        IExpressionPE::ConstantInt(ConstantIntPE { value: 5, .. }),
+        ..
+      ],
+      ..
+    }) => {}
+    _ => panic!("expected (3,4,5,) structure"),
+  }
 }
 /*
   test("Three element tuple trailing comma") {
@@ -1809,9 +2047,17 @@ fn transmigrate() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "a'x");
-  let transmigrate = cast!(expr, IExpressionPE::Transmigrate);
-  assert_eq!(transmigrate.target_region.as_str(), "a");
-  assert_lookup_name(transmigrate.inner.as_ref(), "x");
+  match &expr {
+    IExpressionPE::Transmigrate(TransmigratePE {
+      target_region: NameP(_, StrI("a")),
+      inner: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("x"))),
+        template_args: None,
+      }),
+      ..
+    }) => {}
+    _ => panic!("expected a'x structure"),
+  }
 }
 /*
   test("Transmigrate") {
@@ -1826,16 +2072,26 @@ fn call_callable_expr() {
   let parse_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(something.callable)(3)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  let subexpr = cast!(
-    function_call.callable_expr.as_ref(),
-    IExpressionPE::SubExpression
-  );
-  let dot = cast!(subexpr.inner.as_ref(), IExpressionPE::Dot);
-  assert_lookup_name(&dot.left, "something");
-  assert_eq!(dot.member.as_str(), "callable");
-  expect_1(&function_call.arg_exprs);
+  let expr =
+    compile_expression_expect(&interner, &keywords, &parse_arena, "(something.callable)(3)");
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::SubExpression(SubExpressionPE {
+        inner: IExpressionPE::Dot(DotPE {
+          left: IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::LookupName(NameP(_, StrI("something"))),
+            template_args: None,
+          }),
+          member: NameP(_, StrI("callable")),
+          ..
+        }),
+        ..
+      }),
+      arg_exprs: [_arg, ..],
+      ..
+    }) => {}
+    _ => panic!("expected (something.callable)(3) structure"),
+  }
 }
 /*
   test("Call callable expr") {
@@ -1855,20 +2111,42 @@ fn array_indexing() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "board[i]");
-  let brace_call = cast!(expr, IExpressionPE::BraceCall);
-  assert_lookup_name(brace_call.subject_expr.as_ref(), "board");
-  let first_arg = expect_1(&brace_call.arg_exprs);
-  assert_lookup_name(first_arg, "i");
-  assert_eq!(brace_call.callable_readwrite, false);
+  match &expr {
+    IExpressionPE::BraceCall(BraceCallPE {
+      subject_expr: IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("board"))),
+        template_args: None,
+      }),
+      arg_exprs: [IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+        template_args: None,
+      }), ..],
+      callable_readwrite: false,
+      ..
+    }) => {}
+    _ => panic!("expected board[i] structure"),
+  }
 
   let expr2 = compile_expression_expect(&interner, &keywords, &parse_arena, "this.board[i]");
-  let brace_call2 = cast!(expr2, IExpressionPE::BraceCall);
-  let dot = cast!(brace_call2.subject_expr.as_ref(), IExpressionPE::Dot);
-  assert_lookup_name(&dot.left, "this");
-  assert_eq!(dot.member.as_str(), "board");
-  let first_arg2 = expect_1(&brace_call2.arg_exprs);
-  assert_lookup_name(first_arg2, "i");
-  assert_eq!(brace_call2.callable_readwrite, false);
+  match &expr2 {
+    IExpressionPE::BraceCall(BraceCallPE {
+      subject_expr: IExpressionPE::Dot(DotPE {
+        left: IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(_, StrI("this"))),
+          template_args: None,
+        }),
+        member: NameP(_, StrI("board")),
+        ..
+      }),
+      arg_exprs: [IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(_, StrI("i"))),
+        template_args: None,
+      }), ..],
+      callable_readwrite: false,
+      ..
+    }) => {}
+    _ => panic!("expected this.board[i] structure"),
+  }
 }
 /*
   test("Array indexing") {
@@ -1889,22 +2167,20 @@ fn mod_and_equal_precedence() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "8 mod 2 == 0");
-  let binary = cast!(expr, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "==");
-  let left_binary = cast!(binary.left_expr.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(left_binary.function_name.as_str(), "mod");
-  assert_eq!(
-    cast!(left_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    8
-  );
-  assert_eq!(
-    cast!(left_binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    2
-  );
-  assert_eq!(
-    cast!(binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    0
-  );
+  match &expr {
+    IExpressionPE::BinaryCall(BinaryCallPE {
+      function_name: NameP(_, StrI("==")),
+      left_expr: IExpressionPE::BinaryCall(BinaryCallPE {
+        function_name: NameP(_, StrI("mod")),
+        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 8, .. }),
+        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+        ..
+      }),
+      right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
+      ..
+    }) => {}
+    _ => panic!("expected 8 mod 2 == 0 structure"),
+  }
 }
 /*
   test("mod and == precedence") {
@@ -1927,22 +2203,22 @@ fn or_and_equal_precedence() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "2 == 0 or false");
-  let or = cast!(expr, IExpressionPE::Or);
-  let left_binary = cast!(or.left.as_ref(), IExpressionPE::BinaryCall);
-  assert_eq!(left_binary.function_name.as_str(), "==");
-  assert_eq!(
-    cast!(left_binary.left_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    2
-  );
-  assert_eq!(
-    cast!(left_binary.right_expr.as_ref(), IExpressionPE::ConstantInt).value,
-    0
-  );
-  let right_block = &or.right;
-  assert!(matches!(
-    *right_block.inner,
-    IExpressionPE::ConstantBool(ConstantBoolPE { value: false, .. })
-  ));
+  match &expr {
+    IExpressionPE::Or(OrPE {
+      left: IExpressionPE::BinaryCall(BinaryCallPE {
+        function_name: NameP(_, StrI("==")),
+        left_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 2, .. }),
+        right_expr: IExpressionPE::ConstantInt(ConstantIntPE { value: 0, .. }),
+        ..
+      }),
+      right: BlockPE {
+        inner: IExpressionPE::ConstantBool(ConstantBoolPE { value: false, .. }),
+        ..
+      },
+      ..
+    }) => {}
+    _ => panic!("expected 2 == 0 or false structure"),
+  }
 }
 /*
   test("or and == precedence") {
@@ -1964,26 +2240,55 @@ fn test_templated_lambda_param() {
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "(a => a + a)(3)");
-  let function_call = cast!(expr, IExpressionPE::FunctionCall);
-  let subexpr = cast!(
-    function_call.callable_expr.as_ref(),
-    IExpressionPE::SubExpression
-  );
-  let lambda = cast!(subexpr.inner.as_ref(), IExpressionPE::Lambda);
-  let params = lambda.function.header.params.as_ref().unwrap();
-  let first_param = expect_1(&params.params);
-  let pattern = first_param.pattern.as_ref().unwrap();
-  let destination = pattern.destination.as_ref().unwrap();
-  assert_destination_local_name(destination, "a");
-  assert!(pattern.templex.is_none());
-  assert!(pattern.destructure.is_none());
-  let block = lambda.function.body.as_ref().unwrap();
-  let binary = cast!(&*block.inner, IExpressionPE::BinaryCall);
-  assert_eq!(binary.function_name.as_str(), "+");
-  assert_lookup_name(binary.left_expr.as_ref(), "a");
-  assert_lookup_name(binary.right_expr.as_ref(), "a");
-  let first_arg = expect_1(&function_call.arg_exprs);
-  assert_eq!(cast!(first_arg, IExpressionPE::ConstantInt).value, 3);
+  match &expr {
+    IExpressionPE::FunctionCall(FunctionCallPE {
+      callable_expr: IExpressionPE::SubExpression(SubExpressionPE {
+        inner: IExpressionPE::Lambda(LambdaPE {
+          function: FunctionP {
+            header: FunctionHeaderP {
+              params: Some(ParamsP {
+                params: [ParameterP {
+                  pattern: Some(PatternPP {
+                    destination: Some(DestinationLocalP {
+                      decl: INameDeclarationP::LocalNameDeclaration(NameP(_, StrI("a"))),
+                      ..
+                    }),
+                    templex: None,
+                    destructure: None,
+                    ..
+                  }),
+                  ..
+                }, ..],
+                ..
+              }),
+              ..
+            },
+            body: Some(BlockPE {
+              inner: IExpressionPE::BinaryCall(BinaryCallPE {
+                function_name: NameP(_, StrI("+")),
+                left_expr: IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+                  template_args: None,
+                }),
+                right_expr: IExpressionPE::Lookup(LookupPE {
+                  name: IImpreciseNameP::LookupName(NameP(_, StrI("a"))),
+                  template_args: None,
+                }),
+                ..
+              }),
+              ..
+            }),
+            ..
+          },
+          ..
+        }),
+        ..
+      }),
+      arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 3, .. }), ..],
+      ..
+    }) => {}
+    _ => panic!("expected (a => a + a)(3) structure"),
+  }
 }
 /*
   test("Test templated lambda param") {

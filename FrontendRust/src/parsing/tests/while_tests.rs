@@ -25,11 +25,11 @@ fn simple_while_loop() {
   let keywords = Keywords::new(&interner);
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while true {}");
   let while_ = cast!(expr, IExpressionPE::While);
-  let condition = cast!(while_.condition.as_ref(), IExpressionPE::ConstantBool);
+  let condition = cast!(while_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
   assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
-  cast!(while_.body.inner.as_ref(), IExpressionPE::Void);
+  cast!(while_.body.inner, IExpressionPE::Void);
 }
 /*
   test("Simple while loop") {
@@ -49,11 +49,11 @@ fn result_after_while_loop() {
   let (while_expr, false_expr) = expect_2(&consecutor.inners);
 
   let while_ = cast!(while_expr, IExpressionPE::While);
-  let condition = cast!(while_.condition.as_ref(), IExpressionPE::ConstantBool);
+  let condition = cast!(while_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
   assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
-  cast!(while_.body.inner.as_ref(), IExpressionPE::Void);
+  cast!(while_.body.inner, IExpressionPE::Void);
 
   let false_ = cast!(false_expr, IExpressionPE::ConstantBool);
   assert!(!false_.value);
@@ -74,7 +74,7 @@ fn while_with_condition_declarations() {
   let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while x = 4; x > 6 { }");
   let while_ = cast!(expr, IExpressionPE::While);
 
-  let condition = cast!(while_.condition.as_ref(), IExpressionPE::Consecutor);
+  let condition = cast!(while_.condition, IExpressionPE::Consecutor);
   let (let_x, x_greater_than_six) = expect_2(&condition.inners);
 
   let let_x = cast!(let_x, IExpressionPE::Let);
@@ -82,20 +82,20 @@ fn while_with_condition_declarations() {
   assert_destination_local_name(x_destination, "x");
   assert!(let_x.pattern.templex.is_none());
   assert!(let_x.pattern.destructure.is_none());
-  let four = cast!(let_x.source.as_ref(), IExpressionPE::ConstantInt);
+  let four = cast!(let_x.source, IExpressionPE::ConstantInt);
   assert_eq!(four.value, 4);
   assert_eq!(four.bits, None);
 
   let greater_than = cast!(x_greater_than_six, IExpressionPE::BinaryCall);
   assert_eq!(greater_than.function_name.str().as_str(), ">");
-  assert_lookup_name(greater_than.left_expr.as_ref(), "x");
-  let six = cast!(greater_than.right_expr.as_ref(), IExpressionPE::ConstantInt);
+  assert_lookup_name(greater_than.left_expr, "x");
+  let six = cast!(greater_than.right_expr, IExpressionPE::ConstantInt);
   assert_eq!(six.value, 6);
   assert_eq!(six.bits, None);
 
   assert!(while_.body.maybe_pure.is_none());
   assert!(while_.body.maybe_default_region.is_none());
-  cast!(while_.body.inner.as_ref(), IExpressionPE::Void);
+  cast!(while_.body.inner, IExpressionPE::Void);
 }
 /*
   test("While with condition declarations") {

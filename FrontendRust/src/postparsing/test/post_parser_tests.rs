@@ -470,12 +470,12 @@ fn test_loading_from_member() {
   );
   let mystruct = program.lookup_function("MyStruct");
   let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
-  match code_body.body.block.expr.as_ref() {
+  match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
-        box IExpressionSE::Dot(DotSE {
+        IExpressionSE::Dot(DotSE {
           left:
-            box IExpressionSE::OutsideLoad(OutsideLoadSE {
+            IExpressionSE::OutsideLoad(OutsideLoadSE {
               name: IImpreciseNameS::CodeName(outside_name),
               maybe_template_args: None,
               target_ownership: LoadAsP::LoadAsBorrow,
@@ -524,15 +524,15 @@ fn test_loading_from_member_2() {
   );
   let mystruct = program.lookup_function("MyStruct");
   let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
-  match code_body.body.block.expr.as_ref() {
+  match code_body.body.block.expr {
     IExpressionSE::Return(ReturnSE {
       inner:
-        box IExpressionSE::Ownershipped(OwnershippedSE {
+        IExpressionSE::Ownershipped(OwnershippedSE {
           target_ownership: LoadAsP::LoadAsBorrow,
           inner_expr:
-            box IExpressionSE::Dot(DotSE {
+            IExpressionSE::Dot(DotSE {
               left:
-                box IExpressionSE::OutsideLoad(OutsideLoadSE {
+                IExpressionSE::OutsideLoad(OutsideLoadSE {
                   name: IImpreciseNameS::CodeName(outside_name),
                   maybe_template_args: None,
                   target_ownership: LoadAsP::LoadAsBorrow,
@@ -609,7 +609,7 @@ fn constructing_members_borrowing_another_member() {
   assert_eq!(second_local.child_moved, IVariableUseCertainty::NotUsed);
   assert_eq!(second_local.child_mutated, IVariableUseCertainty::NotUsed);
 
-  let consecutor = cast!(block.expr.as_ref(), IExpressionSE::Consecutor);
+  let consecutor = cast!(block.expr, IExpressionSE::Consecutor);
   let (first_expr, second_expr, third_expr) = expect_3(&consecutor.exprs);
 
   let let_x = cast!(first_expr, IExpressionSE::Let);
@@ -619,7 +619,7 @@ fn constructing_members_borrowing_another_member() {
     IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
   ));
   assert_eq!(let_x_capture.mutate, false);
-  assert_eq!(cast!(let_x.expr.as_ref(), IExpressionSE::ConstantInt).value, 4);
+  assert_eq!(cast!(let_x.expr, IExpressionSE::ConstantInt).value, 4);
 
   let let_y = cast!(second_expr, IExpressionSE::Let);
   let let_y_capture = let_y.pattern.name.as_ref().unwrap();
@@ -628,7 +628,7 @@ fn constructing_members_borrowing_another_member() {
     IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "y"
   ));
   assert_eq!(let_y_capture.mutate, false);
-  let local_load_x_borrow = cast!(let_y.expr.as_ref(), IExpressionSE::LocalLoad);
+  let local_load_x_borrow = cast!(let_y.expr, IExpressionSE::LocalLoad);
   assert!(matches!(
     local_load_x_borrow.name,
     IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
@@ -638,7 +638,7 @@ fn constructing_members_borrowing_another_member() {
   match third_expr {
     IExpressionSE::FunctionCall(FunctionCallSE {
       callable_expr:
-        box IExpressionSE::OutsideLoad(OutsideLoadSE {
+        IExpressionSE::OutsideLoad(OutsideLoadSE {
           name: IImpreciseNameS::CodeName(callable_name),
           ..
         }),
@@ -789,13 +789,13 @@ fn this_isnt_special_if_was_explicit_param() {
     &program,
     NodeRefS::Expression(IExpressionSE::FunctionCall(function_call)) => Some(function_call)
   );
-  let outside_load = cast!(function_call.callable_expr.as_ref(), IExpressionSE::OutsideLoad);
+  let outside_load = cast!(function_call.callable_expr, IExpressionSE::OutsideLoad);
   let code_name = cast!(&outside_load.name, IImpreciseNameS::CodeName);
   assert_eq!(code_name.name.as_str(), "println");
   let dot = cast!(expect_1(&function_call.arg_exprs), IExpressionSE::Dot);
   assert_eq!(dot.member.as_str(), "x");
   assert!(dot.borrow_container);
-  let local_load = cast!(dot.left.as_ref(), IExpressionSE::LocalLoad);
+  let local_load = cast!(dot.left, IExpressionSE::LocalLoad);
   let code_var_name = cast!(&local_load.name, IVarNameS::CodeVarName);
   assert_eq!(code_var_name.as_str(), "self");
   assert_eq!(local_load.target_ownership, LoadAsP::LoadAsBorrow);

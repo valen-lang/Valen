@@ -112,11 +112,11 @@ fn capture_with_borrow_tame() {
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    interpreted.maybe_ownership.as_ref().unwrap().1,
     OwnershipP::Borrow
   );
   assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner.as_ref(), "R");
+  assert_templex_name(interpreted.inner, "R");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -145,11 +145,11 @@ fn capture_with_self_in_front() {
   assert!(destination.mutate.is_none());
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    interpreted.maybe_ownership.as_ref().unwrap().1,
     OwnershipP::Weak
   );
   assert!(interpreted.maybe_region.is_none());
-  assert_templex_name(interpreted.inner.as_ref(), "R");
+  assert_templex_name(interpreted.inner, "R");
   assert!(pattern.destructure.is_none());
 }
 /*

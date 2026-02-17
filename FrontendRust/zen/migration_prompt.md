@@ -1,3 +1,50 @@
+======== PLACEHOLDERS
+
+You're going to help me migrate some code.
+
+First, please look at these files for guidelines to follow:
+- migration_process.md
+- migration_checks.md
+
+Then say "ready"
+
+==
+
+I'd like you to add a rust function header for every unmigrated Scala function you see.
+
+Feel free to use the `check_scala_rust_mapping.py` script to know what to add.
+
+It should have no instructions inside, just a `panic!("Unimplemented {function name here}");`. For example if we're trying to migrate this:
+
+    /*
+    def flattenExpressions(expr: IExpressionSE): Vector[IExpressionSE] = {
+      expr match {
+        case ConsecutorSE(exprs) => exprs.flatMap(flattenExpressions)
+        case other => Vector(other)
+      }
+    }
+    */
+
+then you should insert this rust function right above it:
+
+    fn flatten_expressions<'a, 's>(
+      expr: &IExpressionSE<'a, 's>,
+    ) -> Vec<&'s IExpressionSE<'a, 's>> {
+      panic!("Unimplemented flatten_expressions");
+    }
+    /*
+    def flattenExpressions(expr: IExpressionSE): Vector[IExpressionSE] = {
+      expr match {
+        case ConsecutorSE(exprs) => exprs.flatMap(flattenExpressions)
+        case other => Vector(other)
+      }
+    }
+    */
+
+DO NOT attempt to build, run, or test. Ignore the placement of impl blocks, and you don't have to add any impl blocks. Just add `fn` statements where they should be, and I'll add the necessarily impl blocks myself later.
+
+Feel free to leave off namespace qualifiers, for example `crate::postparsing::rules::rules::IRulexSR<'a>` can just be `IRulexSR<'a>`. I'll add the imports later.
+
 ======== MIGRATE
 
 You're going to help me migrate some code.
@@ -41,7 +88,7 @@ then say "ready"
 
 == (tests only)
 
-Someone just migrated this file, but im not sure they did it well. can you fix what they missed or got wrong?
+Someone just migrated this file, but im not sure they did it well. can you tell me what they missed or got wrong? don't fix it yet.
 
 == (impl only)
 

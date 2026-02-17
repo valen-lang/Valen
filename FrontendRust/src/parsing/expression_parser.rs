@@ -322,7 +322,7 @@ where
               case Ok(Some(symbol)) => {
                 vassert(MIN_PRECEDENCE == 1)
                 vassert(MAX_PRECEDENCE == 6)
-                val precedence = getPrecedence(symbol.str())
+                val precedence = getPrecedence(symbol.str)
                 elements += parsing.BinaryCallElement(symbol, precedence)
 
 
@@ -426,14 +426,14 @@ where
           iter.advance()
           Some(
             LookupPE(
-              LookupNameP(NameP(RangeL(range1.begin, range2.end), interner.intern(c1.toString + c2)))),
+              LookupNameP(NameP(RangeL(range1.begin, range2.end), interner.intern(StrI(c1.toString + c2)))),
               None))
         }
         case (Some(SymbolLE(range, c)), _, _) => {
           iter.advance()
           Some(
             LookupPE(
-              LookupNameP(NameP(range, interner.intern(c.toString)))),
+              LookupNameP(NameP(range, interner.intern(StrI(c.toString)))),
               None))
         }
         case (Some(WordLE(range, str)), _, _) => {
@@ -550,7 +550,7 @@ where
           if let StringPart::Literal { s, .. } = &parts[0] {
             return Ok(IExpressionPE::ConstantStr(ConstantStrPE {
               range,
-              value: s.clone(),
+              value: self.interner.intern(s),
             }));
           }
         }
@@ -562,7 +562,7 @@ where
             StringPart::Literal { range, s } => {
               parts_p.push(IExpressionPE::ConstantStr(ConstantStrPE {
                 range,
-                value: s,
+                value: self.interner.intern(&s),
               }));
             }
             StringPart::Expr(scramble) => {
@@ -720,7 +720,7 @@ where
       let range_pe = AugmentPE {
       range: RangeL(spree_begin, iter.get_prev_end_pos()),
       target_ownership: OwnershipP::Borrow,
-        inner: Box::new(expr_so_far),
+        inner: self.arena.alloc(expr_so_far),
       };
       return Ok(Some(IExpressionPE::Augment(range_pe)));
     }
@@ -749,7 +749,7 @@ where
         return Ok(Some(IExpressionPE::BraceCall(BraceCallPE {
           range: RangeL(spree_begin, iter.get_prev_end_pos()),
           operator_range: RangeL(operator_begin, iter.get_prev_end_pos()),
-          subject_expr: Box::new(expr_so_far),
+          subject_expr: self.arena.alloc(expr_so_far),
           arg_exprs: alloc_slice_from_vec(self.arena, arg_exprs),
           callable_readwrite: false,
         })));
@@ -762,8 +762,8 @@ where
       let operand = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
       let range_pe = RangePE {
         range: RangeL(spree_begin, iter.get_prev_end_pos()),
-        from_expr: Box::new(expr_so_far),
-        to_expr: Box::new(operand),
+        from_expr: self.arena.alloc(expr_so_far),
+        to_expr: self.arena.alloc(operand),
       };
       return Ok(Some(IExpressionPE::Range(range_pe)));
     }
@@ -866,9 +866,9 @@ where
         Some((range, arg_exprs)) => {
           return Ok(Some(IExpressionPE::MethodCall(MethodCallPE {
             range: RangeL(operator_begin, range.end()),
-            subject_expr: Box::new(expr_so_far),
+            subject_expr: self.arena.alloc(expr_so_far),
             operator_range: RangeL(operator_begin, operator_end),
-            method_lookup: Box::new(LookupPE {
+            method_lookup: self.arena.alloc(LookupPE {
               name: IImpreciseNameP::LookupName(name),
               template_args: maybe_template_args,
             }),
@@ -882,7 +882,7 @@ where
 
           return Ok(Some(IExpressionPE::Dot(DotPE {
             range: RangeL(spree_begin, iter.get_prev_end_pos()),
-            left: Box::new(expr_so_far),
+            left: self.arena.alloc(expr_so_far),
             operator_range: RangeL(operator_begin, operator_end),
             member: name,
           })));
@@ -958,7 +958,7 @@ where
               if (bits.nonEmpty) {
                 return Err(BadDot(iter.getPos()))
               }
-              NameP(RangeL(nameBegin, iter.getPrevEndPos()), interner.intern(int.toString)))
+              NameP(RangeL(nameBegin, iter.getPrevEndPos()), interner.intern(StrI(int.toString)))
             }
             case Some(SymbolLE(_, _)) => {
               val name =
@@ -999,7 +999,7 @@ where
             return Ok(
               Some(
                 MethodCallPE(
-                  RangeL(operatorBegin, range.end()),
+                  RangeL(operatorBegin, range.end),
                   exprSoFar,
                   RangeL(operatorBegin, operatorEnd),
                   LookupPE(LookupNameP(name), maybeTemplateArgs),
@@ -1046,7 +1046,7 @@ where
         Ok(Some(IExpressionPE::FunctionCall(FunctionCallPE {
           range: RangeL(spree_begin, range.end()),
           operator_range: RangeL(operator_begin, range.end()),
-          callable_expr: Box::new(expr_so_far),
+          callable_expr: self.arena.alloc(expr_so_far),
           arg_exprs: alloc_slice_from_vec(self.arena, args),
         })))
       }
@@ -1067,8 +1067,8 @@ where
           Ok(
             Some(
               FunctionCallPE(
-                RangeL(spreeBegin, range.end()),
-                RangeL(operatorBegin, range.end()),
+                RangeL(spreeBegin, range.end),
+                RangeL(operatorBegin, range.end),
                 exprSoFar,
                 args)))
         }
@@ -1420,7 +1420,7 @@ where
               self.parse_expression(&mut iters[0], false, templex_parser, pattern_parser)?;
             return Ok(Some(IExpressionPE::SubExpression(SubExpressionPE {
               range,
-              inner: Box::new(inner),
+              inner: self.arena.alloc(inner),
             })));
           }
         } else {
@@ -1546,7 +1546,7 @@ where
       let end = inner_pe.range().end();
       return Ok(IExpressionPE::Not(NotPE {
         range: RangeL::new(begin, end),
-        inner: Box::new(inner_pe),
+        inner: self.arena.alloc(inner_pe),
       }));
     }
 
@@ -1598,7 +1598,7 @@ where
         return Ok(IExpressionPE::Transmigrate(TransmigratePE {
           range: RangeL::new(begin, iter.get_prev_end_pos()),
           target_region: region_name,
-          inner: Box::new(inner_pe),
+          inner: self.arena.alloc(inner_pe),
         }));
       }
       _ => {}
@@ -1637,7 +1637,7 @@ where
       return Ok(IExpressionPE::Augment(AugmentPE {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         target_ownership,
-        inner: Box::new(inner_pe),
+        inner: self.arena.alloc(inner_pe),
       }));
     }
 
@@ -1672,7 +1672,7 @@ where
             case Err(e) => return Err(e)
             case Ok(x) => x
           }
-        return Ok(NotPE(RangeL(begin, innerPE.range().end()), innerPE))
+        return Ok(NotPE(RangeL(begin, innerPE.range.end), innerPE))
       }
 
       parseLoneBlock(iter) match {
@@ -1823,7 +1823,7 @@ where
       range: RangeL(begin, iter.get_prev_end_pos()),
       maybe_pure: pure,
       maybe_default_region: None,
-      inner: Box::new(inner),
+      inner: self.arena.alloc(inner),
     })))
   }
   /*
@@ -1891,7 +1891,7 @@ where
     // Mirrors ExpressionParser.scala line 693
     Ok(Some(IExpressionPE::Destruct(DestructPE {
       range: RangeL(begin, iter.get_prev_end_pos()),
-      inner: Box::new(inner_expr),
+      inner: self.arena.alloc(inner_expr),
     })))
   }
   /*
@@ -2218,7 +2218,7 @@ where
           maybe_pure: None,
           // Would we ever want a lambda with a different default region?
           maybe_default_region: None,
-          inner: Box::new(statements_p),
+          inner: self.arena.alloc(statements_p),
         }
       }
       Some(_) => {
@@ -2229,7 +2229,7 @@ where
           maybe_pure: None,
           // Would we ever want a lambda with a different default region?
           maybe_default_region: None,
-          inner: Box::new(result),
+          inner: self.arena.alloc(result),
         }
       }
       None => panic!("LAMBDA_MISSING_BODY: Expected body for lambda - not in Scala"),
@@ -2240,7 +2240,7 @@ where
       function: FunctionP {
         range: RangeL(begin, iter.get_prev_end_pos()),
         header: header_p,
-        body: Some(Box::new(body_p)),
+        body: Some(self.arena.alloc(body_p)),
       },
     };
 
@@ -2354,15 +2354,12 @@ where
     let begin = tentative_iter.get_pos();
 
     let mutability = if tentative_iter.try_skip_symbol('#') {
-      ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL(begin, tentative_iter.get_prev_end_pos()),
-        mutability: MutabilityP::Immutable,
-      })
+      ITemplexPT::Mutability(MutabilityPT(
+        RangeL(begin, tentative_iter.get_prev_end_pos()),
+        MutabilityP::Immutable,
+      ))
     } else {
-      ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL(begin, begin),
-        mutability: MutabilityP::Mutable,
-      })
+      ITemplexPT::Mutability(MutabilityPT(RangeL(begin, begin), MutabilityP::Mutable))
     };
 
     // If there's no square, we're not making an array.
@@ -2591,31 +2588,31 @@ where
       left_operand = if binary_call.str() == self.keywords.and {
         IExpressionPE::And(AndPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
-          left: Box::new(left_operand),
-          right: Box::new(BlockPE {
+          left: self.arena.alloc(left_operand),
+          right: self.arena.alloc(BlockPE {
             range: right_operand.range(),
             maybe_pure: None,
             maybe_default_region: None,
-            inner: Box::new(right_operand),
+            inner: self.arena.alloc(right_operand),
           }),
         })
       } else if binary_call.str() == self.keywords.or {
         IExpressionPE::Or(OrPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
-          left: Box::new(left_operand),
-          right: Box::new(BlockPE {
+          left: self.arena.alloc(left_operand),
+          right: self.arena.alloc(BlockPE {
             range: right_operand.range(),
             maybe_pure: None,
             maybe_default_region: None,
-            inner: Box::new(right_operand),
+            inner: self.arena.alloc(right_operand),
           }),
         })
       } else {
         IExpressionPE::BinaryCall(BinaryCallPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
           function_name: binary_call,
-          left_expr: Box::new(left_operand),
-          right_expr: Box::new(right_operand),
+          left_expr: self.arena.alloc(left_operand),
+          right_expr: self.arena.alloc(right_operand),
         })
       };
     }
@@ -2657,22 +2654,22 @@ where
         nextIndex = newNextIndex
 
         leftOperand =
-          binaryCall.symbol.str() match {
+          binaryCall.symbol.str match {
             case s if s == keywords.and => {
               AndPE(
-                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
+                RangeL(leftOperand.range.begin, leftOperand.range.end),
                 leftOperand,
                 BlockPE(rightOperand.range, None, None, rightOperand))
             }
             case s if s == keywords.or => {
               OrPE(
-                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
+                RangeL(leftOperand.range.begin, leftOperand.range.end),
                 leftOperand,
                 BlockPE(rightOperand.range, None, None, rightOperand))
             }
             case _ => {
               BinaryCallPE(
-                RangeL(leftOperand.range().begin(), leftOperand.range().end()),
+                RangeL(leftOperand.range.begin, leftOperand.range.end),
                 binaryCall.symbol,
                 leftOperand,
                 rightOperand)
@@ -2781,7 +2778,7 @@ where
           }
           case (Some(SymbolLE(range, s @ ('+' | '-' | '*' | '/'))), _, _) => {
             iter.advance()
-            NameP(range, interner.intern(s.toString)))
+            NameP(range, interner.intern(StrI(s.toString)))
           }
           case (Some(SymbolLE(_, '=')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '='))) => {
             val begin = iter.getPos()
@@ -2802,11 +2799,11 @@ where
           case (Some(SymbolLE(range1, s1 @ ('>' | '<' | '=' | '!'))), Some(SymbolLE(range2, '=')), _) => {
             iter.advance()
             iter.advance()
-            NameP(RangeL(range1.begin, range2.end), interner.intern(s1.toString + '=')))
+            NameP(RangeL(range1.begin, range2.end), interner.intern(StrI(s1.toString + '=')))
           }
           case (Some(SymbolLE(range, s @ ('>' | '<'))), _, _) => {
             iter.advance()
-            NameP(range, interner.intern(s.toString)))
+            NameP(range, interner.intern(StrI(s.toString)))
           }
           case _ => return Ok(None)
         }
@@ -3023,12 +3020,12 @@ where
 
     Ok(Some(IExpressionPE::While(WhilePE {
       range: RangeL(while_begin, iter.get_prev_end_pos()),
-      condition: Box::new(condition),
-      body: Box::new(BlockPE {
+      condition: self.arena.alloc(condition),
+      body: self.arena.alloc(BlockPE {
         range: body.range(),
         maybe_pure: pure,
         maybe_default_region: None,
-        inner: Box::new(body),
+        inner: self.arena.alloc(body),
       }),
     })))
   }
@@ -3108,7 +3105,7 @@ where
       range: RangeL(block_begin, iter.get_prev_end_pos()),
       maybe_pure: pure,
       maybe_default_region: None,
-      inner: Box::new(contents),
+      inner: self.arena.alloc(contents),
     })))
   }
   /*
@@ -3200,7 +3197,7 @@ where
         range: RangeL(else_begin, else_end),
         maybe_pure: None,
         maybe_default_region: None,
-        inner: Box::new(else_body),
+        inner: self.arena.alloc(else_body),
       })
     } else {
       None
@@ -3214,7 +3211,7 @@ where
           range: RangeL(pos, pos),
           maybe_pure: None,
           maybe_default_region: None,
-          inner: Box::new(IExpressionPE::Void(VoidPE {
+          inner: self.arena.alloc(IExpressionPE::Void(VoidPE {
             range: RangeL(pos, pos),
           })),
         }
@@ -3229,11 +3226,11 @@ where
         range: RangeL(cond_block.range().begin(), then_block.range.end()),
         maybe_pure: None,
         maybe_default_region: None,
-        inner: Box::new(IExpressionPE::If(IfPE {
+        inner: self.arena.alloc(IExpressionPE::If(IfPE {
           range: RangeL(cond_block.range().begin(), then_block.range.end()),
-          condition: Box::new(cond_block),
-          then_body: Box::new(then_block),
-          else_body: Box::new(root_else_block),
+          condition: self.arena.alloc(cond_block),
+          then_body: self.arena.alloc(then_block),
+          else_body: self.arena.alloc(root_else_block),
         })),
       };
     }
@@ -3241,9 +3238,9 @@ where
     let (root_condition, root_then) = root_if;
     Ok(Some(IExpressionPE::If(IfPE {
       range: RangeL(if_ladder_begin, iter.get_prev_end_pos()),
-      condition: Box::new(root_condition),
-      then_body: Box::new(root_then),
-      else_body: Box::new(root_else_block),
+      condition: self.arena.alloc(root_condition),
+      then_body: self.arena.alloc(root_then),
+      else_body: self.arena.alloc(root_else_block),
     })))
   }
 
@@ -3319,11 +3316,11 @@ where
             //     6
             //   }
             BlockPE(
-              RangeL(condBlock.range().begin(), thenBlock.range().end()),
+              RangeL(condBlock.range.begin, thenBlock.range.end),
               None,
               None,
               IfPE(
-                RangeL(condBlock.range().begin(), thenBlock.range().end()),
+                RangeL(condBlock.range.begin, thenBlock.range.end),
                 condBlock, thenBlock, elseBlock))
           }
         })
@@ -3378,7 +3375,7 @@ where
         range: RangeL(if_begin, iter.get_prev_end_pos()),
         maybe_pure: None,
         maybe_default_region: None,
-        inner: Box::new(body),
+        inner: self.arena.alloc(body),
       },
     ))
   }
@@ -3494,12 +3491,12 @@ where
       maybe_pure: pure,
       entry_pattern: pattern,
       in_keyword_range: in_range,
-      iterable_expr: Box::new(iterable_expr),
-      body: Box::new(BlockPE {
+      iterable_expr: self.arena.alloc(iterable_expr),
+      body: self.arena.alloc(BlockPE {
         range: body.range(),
         maybe_pure: None,
         maybe_default_region: None,
-        inner: Box::new(body),
+        inner: self.arena.alloc(body),
       }),
     })))
   }
@@ -3627,7 +3624,7 @@ where
 
     Ok(Some(IExpressionPE::Return(ReturnPE {
       range: RangeL(begin, iter.get_prev_end_pos()),
-      expr: Box::new(inner_expr),
+      expr: self.arena.alloc(inner_expr),
     })))
   }
   /*
@@ -3716,8 +3713,8 @@ where
 
     Ok(Some(IExpressionPE::Mutate(MutatePE {
       range: RangeL(mutate_begin, iter.get_prev_end_pos()),
-      mutatee: Box::new(mutatee_expr),
-      source: Box::new(source_expr),
+      mutatee: self.arena.alloc(mutatee_expr),
+      source: self.arena.alloc(source_expr),
     })))
   }
   /*
@@ -3813,7 +3810,7 @@ where
     Ok(Some(IExpressionPE::Let(LetPE {
       range: RangeL(pattern.range.begin(), source_expr.range().end()),
       pattern,
-      source: Box::new(source_expr),
+      source: self.arena.alloc(source_expr),
     })))
   }
   /*
@@ -3838,7 +3835,7 @@ where
           case Err(e) => return Err(e)
           case Ok(x) => x
         }
-      Ok(LetPE(RangeL(pattern.range().begin(), sourceExpr.range().end()), pattern, sourceExpr))
+      Ok(LetPE(RangeL(pattern.range.begin, sourceExpr.range.end), pattern, sourceExpr))
     }
   */
 }

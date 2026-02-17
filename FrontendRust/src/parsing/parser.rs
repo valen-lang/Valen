@@ -701,7 +701,7 @@ where
         val membersP =
           StructMembersP(
             contentsL.range,
-            U.map[ScrambleIterator, IStructContent]<'a>(
+            U.map[ScrambleIterator, IStructContent](
               new ScrambleIterator(contentsL).splitOnSymbol(';', false),
               member => {
                 parseStructMember(member) match {
@@ -1079,8 +1079,7 @@ where
   /// Parse an export-as declaration
   /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
   pub fn parse_export_as(&self, export_l: ExportAsL<'a>) -> ParseResult<ExportAsP<'a, 'p>> {
-    let export_contents = export_l.contents.clone();
-    let mut iter = ScrambleIterator::new(&export_contents);
+    let mut iter = ScrambleIterator::new(&export_l.contents);
 
     // Try to find "as" keyword and get everything before it
     // Mirrors ParseUtils.trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
@@ -1375,11 +1374,11 @@ where
         let FunctionBodyL { body: block_l } = body_l;
         let statements_p =
           expression_parser.parse_block(&block_l, templex_parser, pattern_parser)?;
-        Some(Box::new(BlockPE {
+        Some(&*self.arena.alloc(BlockPE {
           range: block_l.range,
           maybe_pure: None,
           maybe_default_region: maybe_default_region,
-          inner: Box::new(statements_p),
+          inner: &*self.arena.alloc(statements_p),
         }))
       }
       None => None,

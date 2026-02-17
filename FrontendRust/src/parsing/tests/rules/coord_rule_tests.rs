@@ -64,7 +64,7 @@ fn coord_with_rune() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "T Ref");
   let typed = cast!(rule, IRulexPR::Typed);
-  assert_eq!(typed.rune.unwrap().as_str(), "T");
+  assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
 }
 /*
@@ -106,8 +106,8 @@ fn coord_with_rune_and_destructure() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "T = Ref[_, _, _]");
   let equals = cast!(rule, IRulexPR::Equals);
-  assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "T");
-  let components = cast!(equals.right.as_ref(), IRulexPR::Components);
+  assert_templex_name(cast!(equals.left, IRulexPR::Templex), "T");
+  let components = cast!(equals.right, IRulexPR::Components);
   assert_eq!(components.container, ITypePR::CoordType);
   let (first, second, third) = expect_3(&components.components);
   assert!(matches!(cast!(first, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
@@ -116,13 +116,13 @@ fn coord_with_rune_and_destructure() {
 
   let rule = compile(&interner, &keywords, &parse_arena, "T = Ref[own, _, _]");
   let equals = cast!(rule, IRulexPR::Equals);
-  assert_templex_name(cast!(equals.left.as_ref(), IRulexPR::Templex), "T");
-  let components = cast!(equals.right.as_ref(), IRulexPR::Components);
+  assert_templex_name(cast!(equals.left, IRulexPR::Templex), "T");
+  let components = cast!(equals.right, IRulexPR::Components);
   assert_eq!(components.container, ITypePR::CoordType);
   let (first, second, third) = expect_3(&components.components);
   let first_templex = cast!(first, IRulexPR::Templex);
   let ownership = cast!(first_templex, ITemplexPT::Ownership);
-  assert_eq!(ownership.ownership, OwnershipP::Own);
+  assert_eq!(ownership.1, OwnershipP::Own);
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
 }
@@ -220,7 +220,7 @@ fn coord_with_specific_kind_rule() {
   assert_eq!(kind_components.container, ITypePR::KindType);
   let mutability_rule = expect_1(&kind_components.components);
   let mutability = cast!(cast!(mutability_rule, IRulexPR::Templex), ITemplexPT::Mutability);
-  assert_eq!(mutability.mutability, MutabilityP::Mutable);
+  assert_eq!(mutability.1, MutabilityP::Mutable);
 }
 /*
   test("Coord with specific Kind rule") {
@@ -244,10 +244,10 @@ fn coord_with_value() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "T Ref = int");
   let equals = cast!(rule, IRulexPR::Equals);
-  let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+  let typed = cast!(equals.left, IRulexPR::Typed);
   assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
-  assert_templex_name(cast!(equals.right.as_ref(), IRulexPR::Templex), "int");
+  assert_templex_name(cast!(equals.right, IRulexPR::Templex), "int");
 }
 /*
   test("Coord with value") {
@@ -267,13 +267,13 @@ fn coord_with_destructure_and_value() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "Ref[_, _, _] = int");
   let equals = cast!(rule, IRulexPR::Equals);
-  let components = cast!(equals.left.as_ref(), IRulexPR::Components);
+  let components = cast!(equals.left, IRulexPR::Components);
   assert_eq!(components.container, ITypePR::CoordType);
   let (first, second, third) = expect_3(&components.components);
   assert!(matches!(cast!(first, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(second, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
   assert!(matches!(cast!(third, IRulexPR::Templex), ITemplexPT::AnonymousRune(_)));
-  assert_templex_name(cast!(equals.right.as_ref(), IRulexPR::Templex), "int");
+  assert_templex_name(cast!(equals.right, IRulexPR::Templex), "int");
 }
 /*
   test("Coord with destructure and value") {
@@ -293,10 +293,10 @@ fn coord_with_sequence_in_value_spot() {
   let parse_arena = Bump::new();
   let rule = compile(&interner, &keywords, &parse_arena, "T Ref = (int, bool)");
   let equals = cast!(rule, IRulexPR::Equals);
-  let typed = cast!(equals.left.as_ref(), IRulexPR::Typed);
+  let typed = cast!(equals.left, IRulexPR::Typed);
   assert_eq!(typed.rune.as_ref().unwrap().as_str(), "T");
   assert_eq!(typed.tyype, ITypePR::CoordType);
-  let tuple = cast!(cast!(equals.right.as_ref(), IRulexPR::Templex), ITemplexPT::Tuple);
+  let tuple = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Tuple);
   let (int_, bool_) = expect_2(&tuple.elements);
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");

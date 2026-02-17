@@ -26,58 +26,33 @@ For readability, use specific variable names for the strings. Like:
 If the string uses characters that aren't valid in Rust identifiers, like "*", just make up something, like `star_`.
 
 
-# Use Imperative Instructions Over Very Complex Patterns (UIIOVCP)
+# Prefer Single Match Over Nested Matches (PSMONM)
 
-Instead of super long patterns like we see in this one:
+When matching on structure, use one match with nested patterns (including slice patterns) instead of multiple nested matches.
 
-    match func.header.ret.ret_type.as_ref() {
-          Some(ITemplexPT::Call(CallPT {
-              template: box ITemplexPT::NameOrRune(NameOrRunePT { name: NameP { str: ref ret_name, .. } }),
-          args: ref args,
-          ..
-      })) if ret_name.str == "IDesire"
-          && args.len() == 2
-          && matches!(
-                  &args[0],
-              ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP { str: ref r_, .. }), .. }) if r_.str == "r"
-          )
-          && matches!(
-                  &args[1],
-              ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP { str: ref i_, .. }), .. }) if i_.str == "i"
-          ) => {}
-      _ => panic!("Expected return type IDesire<r', i'>"),
+Avoid an outer match with an inner match:
+
+    match &expr {
+      IExpressionPE::FunctionCall(FunctionCallPE { arg_exprs, .. }) => {
+        match (arg_exprs.get(0), arg_exprs.get(1)) {
+          (Some(IExpressionPE::ConstantInt(..)), Some(IExpressionPE::Lookup(..))) => {}
+          _ => panic!("expected structure"),
+        }
+      }
+      _ => panic!("expected structure"),
     }
 
-Rule of thumb: if a pattern is 10 or more lines long, use imperative instructions instead. Like:
+Prefer a single match with slice patterns and nested destructuring:
 
-    let ret_type = func.header.ret.ret_type.as_ref().expect("Expected return type");
-    let ret_call = cast!(ret_type, ITemplexPT::Call);
-    let ret_name = &cast!(ret_call.template.as_ref(), ITemplexPT::NameOrRune);
-    assert!(ret_name.name.str.str == "IDesire");
-    assert!(ret_call.args.len() == 2);
-    assert_eq!(cast!(&ret_call.args[0], ITemplexPT::RegionRune).name.as_ref().unwrap().str.str, "r");
-    assert_eq!(cast!(&ret_call.args[1], ITemplexPT::RegionRune).name.as_ref().unwrap().str.str, "i");
-
-Inside a block like this, we shouldn't use any `match` statement, and
-we should prioritize conciseness and prefer statements that can fit on one (100 character) line.
-
-
-# No match statements in tests (NMSIT)
-
-Don't have match statements in tests.
-
-For example, no need for a descriptive panic statement in tests, like:
-
-    match err {
-          ParseError::UnrecognizedDenizenError(_) => {}
-      other => panic!("Expected UnrecognizedDenizenError, got {:?}", other),
+    match &expr {
+      IExpressionPE::FunctionCall(FunctionCallPE {
+        callable_expr: box IExpressionPE::Lookup(LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("moo"))), .. }),
+        arg_exprs: [IExpressionPE::ConstantInt(ConstantIntPE { value: 4, .. }),
+                    IExpressionPE::Lookup(LookupPE { name: IImpreciseNameP::LookupName(NameP(_, StrI("=="))), template_args: None }), ..],
+        ..
+      }) => {}
+      _ => panic!("expected moo(4, ==) structure"),
     }
-
-Use a macro instead like:
-
-    assert_matches!(err, ParseError::UnrecognizedDenizenError(_));
-
-If there's no obvious macro available, stop and ask for one to be implemented.
 
 
 # Tests prefer unwrap to expect for conciseness (TPUTEFC)
@@ -127,6 +102,8 @@ Use the expect_ functions, like expect_1, expect_2, expect_3, etc.:
  * Use assert_lookup_name when checking that an IExpressionPE is a Lookup with a specific name (and no template args).
  * Use assert_templex_name when checking that an ITemplexPT is a NameOrRune with a specific name.
  * Use assert_name when you already have an IImpreciseNameP and want to check that it's a LookupName with a specific string.
+
+Note that RSMSCP supersedes this. It's more important that Rust matches Scala.
 
 
 # Use collect_ macros to recursively search (UCMTRS)

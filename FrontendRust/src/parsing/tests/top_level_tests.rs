@@ -3,8 +3,7 @@
 #![allow(nonstandard_style)]
 
 use bumpalo::Bump;
-use crate::cast;
-use crate::interner::Interner;
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::ParseError;
 use crate::parsing::ast::*;
@@ -331,8 +330,8 @@ fn empty() {
     main,
     IDenizenP::TopLevelFunction(FunctionP {
       body:
-        Some(box BlockPE {
-          inner: box IExpressionPE::Void(VoidPE { .. }),
+        Some(BlockPE {
+          inner: IExpressionPE::Void(VoidPE { .. }),
           ..
         }),
       ..
@@ -361,10 +360,10 @@ fn exporting_int() {
   let program = compile(&interner, &keywords, &parse_arena, "export int as NumberThing;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    struct_: ITemplexPT::NameOrRune(NameOrRunePT { name: NameP(_, s) }),
-    exported_name: NameP(_, e),
+    struct_: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))),
+    exported_name: NameP(_, StrI("NumberThing")),
     ..
-  }) if s.as_str() == "int" && e.as_str() == "NumberThing")
+  }))
   );
 }
 /*
@@ -384,9 +383,9 @@ fn exporting_imm_array_1() {
   let program = compile(&interner, &keywords, &parse_arena, "export []<mut>int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP(_, IntArray_),
+    exported_name: NameP(_, StrI("IntArray")),
     ..
-  }) if IntArray_.as_str() == "IntArray")
+  }))
   );
 }
 
@@ -407,9 +406,9 @@ fn exporting_imm_array_2() {
   let program = compile(&interner, &keywords, &parse_arena, "export #[]int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
-    exported_name: NameP(_, IntArray_),
+    exported_name: NameP(_, StrI("IntArray")),
     ..
-  }) if IntArray_.as_str() == "IntArray")
+  }))
   );
 }
 
@@ -430,11 +429,11 @@ fn import_wildcard() {
   let program = compile(&interner, &keywords, &parse_arena, "import somemodule.*;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP(_, somemodule_),
-    package_steps: ref p,
-    importee_name: NameP(_, star_),
+    module_name: NameP(_, StrI("somemodule")),
+    package_steps: [],
+    importee_name: NameP(_, StrI("*")),
     ..
-  }) if somemodule_.as_str() == "somemodule" && star_.as_str() == "*")
+  }))
   );
 }
 
@@ -455,11 +454,11 @@ fn import_just_module_and_thing() {
   let program = compile(&interner, &keywords, &parse_arena, "import somemodule.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP(_, somemodule_),
-    package_steps: ref p,
-    importee_name: NameP(_, List_),
+    module_name: NameP(_, StrI("somemodule")),
+    package_steps: [],
+    importee_name: NameP(_, StrI("List")),
     ..
-  }) if somemodule_.as_str() == "somemodule" && List_.as_str() == "List" && p.is_empty())
+  }))
   );
 }
 
@@ -480,11 +479,11 @@ fn full_import() {
   let program = compile(&interner, &keywords, &parse_arena, "import somemodule.subpackage.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
-    module_name: NameP(_, somemodule_),
-    package_steps: ref p,
-    importee_name: NameP(_, List_),
+    module_name: NameP(_, StrI("somemodule")),
+    package_steps: [NameP(_, StrI("subpackage"))],
+    importee_name: NameP(_, StrI("List")),
     ..
-  }) if somemodule_.as_str() == "somemodule" && List_.as_str() == "List" && p.len() == 1 && p[0].str().as_str() == "subpackage")
+  }))
   );
 }
 /*
@@ -504,32 +503,15 @@ fn return_with_region_generics() {
   let keywords = Keywords::new(&interner);
   let program = compile(&interner, &keywords, &parse_arena, "func strongestDesire() IDesire<r', i'> { }");
   let func = find_func_named(&program, "strongestDesire");
-  let ret_type = func
-    .header
-    .ret
-    .ret_type
-    .as_ref()
-    .expect("Expected return type");
-  let ret_call = cast!(ret_type, ITemplexPT::Call);
-  let ret_name = &cast!(ret_call.template.as_ref(), ITemplexPT::NameOrRune);
-  assert!(ret_name.name.str() == "IDesire");
-  assert!(ret_call.args.len() == 2);
-  assert_eq!(
-    cast!(&ret_call.args[0], ITemplexPT::RegionRune)
-      .name
-      .as_ref()
-      .unwrap()
-      .str(),
-    "r"
-  );
-  assert_eq!(
-    cast!(&ret_call.args[1], ITemplexPT::RegionRune)
-      .name
-      .as_ref()
-      .unwrap()
-      .str(),
-    "i"
-  );
+  match func.header.ret.ret_type {
+    Some(ITemplexPT::Call(CallPT {
+      template: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("IDesire")))),
+      args: [ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP(_, StrI("r"))), .. }),
+             ITemplexPT::RegionRune(RegionRunePT { name: Some(NameP(_, StrI("i"))), .. })],
+      ..
+    })) => {}
+    _ => panic!("Expected return type IDesire<r', i'>"),
+  }
 }
 /*
   test("Return with region generics") {

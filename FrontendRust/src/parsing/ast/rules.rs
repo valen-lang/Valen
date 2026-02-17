@@ -23,8 +23,8 @@ pub enum IRulexPR<'a, 'p> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct EqualsPR<'a, 'p> {
   pub range: RangeL,
-  pub left: Box<IRulexPR<'a, 'p>>,
-  pub right: Box<IRulexPR<'a, 'p>>,
+  pub left: &'p IRulexPR<'a, 'p>,
+  pub right: &'p IRulexPR<'a, 'p>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -36,7 +36,7 @@ pub struct OrPR<'a, 'p> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct DotPR<'a, 'p> {
   pub range: RangeL,
-  pub container: Box<IRulexPR<'a, 'p>>,
+  pub container: &'p IRulexPR<'a, 'p>,
   pub member_name: NameP<'a>,
 }
 

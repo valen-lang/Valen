@@ -103,14 +103,14 @@ where
     ) {
       (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
       (false, Some(templex)) => templex.clone(),
-      (true, None) => ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL(template_args_begin, template_args_end),
-        mutability: MutabilityP::Immutable,
-      }),
-      (false, None) => ITemplexPT::Mutability(MutabilityPT {
-        range: RangeL(template_args_begin, template_args_end),
-        mutability: MutabilityP::Mutable,
-      }),
+      (true, None) => ITemplexPT::Mutability(MutabilityPT(
+        RangeL(template_args_begin, template_args_end),
+        MutabilityP::Immutable,
+      )),
+      (false, None) => ITemplexPT::Mutability(MutabilityPT(
+        RangeL(template_args_begin, template_args_end),
+        MutabilityP::Mutable,
+      )),
     };
 
     let variability = maybe_template_args
@@ -118,10 +118,10 @@ where
       .and_then(|v| v.get(1))
       .cloned()
       .unwrap_or_else(|| {
-        ITemplexPT::Variability(VariabilityPT {
-          range: RangeL(template_args_begin, template_args_end),
-          variability: VariabilityP::Final,
-        })
+        ITemplexPT::Variability(VariabilityPT(
+          RangeL(template_args_begin, template_args_end),
+          VariabilityP::Final,
+        ))
       });
 
     let element_type = self.parse_templex(iter)?;
@@ -129,15 +129,15 @@ where
     let result = match maybe_size_templex {
       None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-        mutability: Box::new(mutability),
-        element: Box::new(element_type),
+        mutability: &*self.arena.alloc(mutability),
+        element: &*self.arena.alloc(element_type),
       }),
       Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-        mutability: Box::new(mutability),
-        variability: Box::new(variability),
-        size: Box::new(size_templex),
-        element: Box::new(element_type),
+        mutability: &*self.arena.alloc(mutability),
+        variability: &*self.arena.alloc(variability),
+        size: &*self.arena.alloc(size_templex),
+        element: &*self.arena.alloc(element_type),
       }),
     };
 
@@ -470,7 +470,7 @@ where
       name,
       params_range: RangeL(args_begin, args_end),
       parameters: args,
-      return_type: Box::new(return_type),
+      return_type: &*self.arena.alloc(return_type),
     });
 
     Ok(Some(result))
@@ -615,25 +615,13 @@ where
 
     // Parse ownership prefix (^, @, &&, &)
     let maybe_ownership = if iter.try_skip_symbol('^') {
-      Some(OwnershipPT {
-        range: RangeL(begin, iter.get_pos()),
-        ownership: OwnershipP::Own,
-      })
+      Some(OwnershipPT(RangeL(begin, iter.get_pos()), OwnershipP::Own))
     } else if iter.try_skip_symbol('@') {
-      Some(OwnershipPT {
-        range: RangeL(begin, iter.get_pos()),
-        ownership: OwnershipP::Share,
-      })
+      Some(OwnershipPT(RangeL(begin, iter.get_pos()), OwnershipP::Share))
     } else if iter.try_skip_symbols(&['&', '&']) {
-      Some(OwnershipPT {
-        range: RangeL(begin, iter.get_pos()),
-        ownership: OwnershipP::Weak,
-      })
+      Some(OwnershipPT(RangeL(begin, iter.get_pos()), OwnershipP::Weak))
     } else if iter.try_skip_symbol('&') {
-      Some(OwnershipPT {
-        range: RangeL(begin, iter.get_pos()),
-        ownership: OwnershipP::Borrow,
-      })
+      Some(OwnershipPT(RangeL(begin, iter.get_pos()), OwnershipP::Borrow))
     } else {
       None
     };
@@ -652,9 +640,9 @@ where
 
     Ok(Some(ITemplexPT::Interpreted(InterpretedPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-      maybe_ownership: maybe_ownership.map(Box::new),
-      maybe_region: maybe_region.map(Box::new),
-      inner: Box::new(inner),
+      maybe_ownership: maybe_ownership.map(|x| &*self.arena.alloc(x)),
+      maybe_region: maybe_region.map(|x| &*self.arena.alloc(x)),
+      inner: &*self.arena.alloc(inner),
     })))
   }
   /*
@@ -812,28 +800,16 @@ where
       }));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.own) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Own,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Own)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.borrow) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Borrow,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Borrow)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.weak) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Weak,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Weak)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.share) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Share,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Share)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.inl) {
       return Ok(ITemplexPT::Location(LocationPT {
@@ -848,47 +824,26 @@ where
       }));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.imm) {
-      return Ok(ITemplexPT::Mutability(MutabilityPT {
-        range,
-        mutability: MutabilityP::Immutable,
-      }));
+      return Ok(ITemplexPT::Mutability(MutabilityPT(range, MutabilityP::Immutable)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.r#mut) {
-      return Ok(ITemplexPT::Mutability(MutabilityPT {
-        range,
-        mutability: MutabilityP::Mutable,
-      }));
+      return Ok(ITemplexPT::Mutability(MutabilityPT(range, MutabilityP::Mutable)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.vary) {
-      return Ok(ITemplexPT::Variability(VariabilityPT {
-        range,
-        variability: VariabilityP::Varying,
-      }));
+      return Ok(ITemplexPT::Variability(VariabilityPT(range, VariabilityP::Varying)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.fiinal) {
-      return Ok(ITemplexPT::Variability(VariabilityPT {
-        range,
-        variability: VariabilityP::Final,
-      }));
+      return Ok(ITemplexPT::Variability(VariabilityPT(range, VariabilityP::Final)));
     }
     // Duplicate checks for weak, own, share (lines 392-403 in Scala)
     if let Some(range) = iter.try_skip_word(self.keywords.weak) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Weak,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Weak)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.own) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Own,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Own)));
     }
     if let Some(range) = iter.try_skip_word(self.keywords.share) {
-      return Ok(ITemplexPT::Ownership(OwnershipPT {
-        range,
-        ownership: OwnershipP::Share,
-      }));
+      return Ok(ITemplexPT::Ownership(OwnershipPT(range, OwnershipP::Share)));
     }
 
     // Try parsing prototype (lines 404-408)
@@ -933,9 +888,7 @@ where
       }
       INodeLEEnum::Word(WordLE { range, str }) => {
         iter.advance();
-        Ok(ITemplexPT::NameOrRune(NameOrRunePT {
-          name: NameP(range, str),
-        }))
+        Ok(ITemplexPT::NameOrRune(NameOrRunePT(NameP(range, str))))
       }
       _ => Err(ParseError::BadTypeExpression(iter.get_pos())),
     }
@@ -1063,7 +1016,7 @@ where
       Some(args) => {
         return Ok(ITemplexPT::Call(CallPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-          template: Box::new(atom),
+          template: &*self.arena.alloc(atom),
           args,
         }));
       }
@@ -1483,8 +1436,8 @@ where
         let right = self.parse_rule_atom(iter)?;
         Ok(IRulexPR::Equals(EqualsPR {
           range: RangeL(left.range().begin(), right.range().end()),
-          left: Box::new(left),
-          right: Box::new(right),
+          left: &*self.arena.alloc(left),
+          right: &*self.arena.alloc(right),
         }))
       }
     }

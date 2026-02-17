@@ -46,7 +46,7 @@ fn ignoring_name() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ int");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -68,7 +68,7 @@ fn static_sized_array() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]MutableStruct");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -79,15 +79,15 @@ fn static_sized_array() {
     ITemplexPT::StaticSizedArray
   );
   assert_eq!(
-    cast!(ssa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
     MutabilityP::Mutable
   );
   assert_eq!(
-    cast!(ssa.variability.as_ref(), ITemplexPT::Variability).variability,
+    cast!(ssa.variability, ITemplexPT::Variability).1,
     VariabilityP::Final
   );
-  assert_eq!(cast!(ssa.size.as_ref(), ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element.as_ref(), "MutableStruct");
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -110,7 +110,7 @@ fn static_sized_array_with_imm() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm>MutableStruct");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -121,15 +121,15 @@ fn static_sized_array_with_imm() {
     ITemplexPT::StaticSizedArray
   );
   assert_eq!(
-    cast!(ssa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
     MutabilityP::Immutable
   );
   assert_eq!(
-    cast!(ssa.variability.as_ref(), ITemplexPT::Variability).variability,
+    cast!(ssa.variability, ITemplexPT::Variability).1,
     VariabilityP::Final
   );
-  assert_eq!(cast!(ssa.size.as_ref(), ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element.as_ref(), "MutableStruct");
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -152,7 +152,7 @@ fn static_sized_array_with_imm_and_vary() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm, vary>MutableStruct");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -163,15 +163,15 @@ fn static_sized_array_with_imm_and_vary() {
     ITemplexPT::StaticSizedArray
   );
   assert_eq!(
-    cast!(ssa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
     MutabilityP::Immutable
   );
   assert_eq!(
-    cast!(ssa.variability.as_ref(), ITemplexPT::Variability).variability,
+    cast!(ssa.variability, ITemplexPT::Variability).1,
     VariabilityP::Varying
   );
-  assert_eq!(cast!(ssa.size.as_ref(), ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element.as_ref(), "MutableStruct");
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -194,7 +194,7 @@ fn runtime_sized_array() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ #[]int");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -205,10 +205,10 @@ fn runtime_sized_array() {
     ITemplexPT::RuntimeSizedArray
   );
   assert_eq!(
-    cast!(rsa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
+    cast!(rsa.mutability, ITemplexPT::Mutability).1,
     MutabilityP::Immutable
   );
-  assert_templex_name(rsa.element.as_ref(), "int");
+  assert_templex_name(rsa.element, "int");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -231,7 +231,7 @@ fn sequence_type() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ (int, bool)");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -261,7 +261,7 @@ fn static_sized_array_with_borrow() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ &[#3]MutableStruct");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -269,21 +269,21 @@ fn static_sized_array_with_borrow() {
   assert!(destination.mutate.is_none());
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    interpreted.maybe_ownership.unwrap().1,
     OwnershipP::Borrow
   );
   assert!(interpreted.maybe_region.is_none());
-  let ssa = cast!(interpreted.inner.as_ref(), ITemplexPT::StaticSizedArray);
+  let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
   assert_eq!(
-    cast!(ssa.mutability.as_ref(), ITemplexPT::Mutability).mutability,
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
     MutabilityP::Mutable
   );
   assert_eq!(
-    cast!(ssa.variability.as_ref(), ITemplexPT::Variability).variability,
+    cast!(ssa.variability, ITemplexPT::Variability).1,
     VariabilityP::Final
   );
-  assert_eq!(cast!(ssa.size.as_ref(), ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element.as_ref(), "MutableStruct");
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -311,7 +311,7 @@ fn static_sized_array_with_weak() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ &&[#3]<_, _>MutableStruct");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
@@ -319,15 +319,15 @@ fn static_sized_array_with_weak() {
   assert!(destination.mutate.is_none());
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
-    interpreted.maybe_ownership.as_ref().unwrap().ownership,
+    interpreted.maybe_ownership.unwrap().1,
     OwnershipP::Weak
   );
   assert!(interpreted.maybe_region.is_none());
-  let ssa = cast!(interpreted.inner.as_ref(), ITemplexPT::StaticSizedArray);
-  cast!(ssa.mutability.as_ref(), ITemplexPT::AnonymousRune);
-  cast!(ssa.variability.as_ref(), ITemplexPT::AnonymousRune);
-  assert_eq!(cast!(ssa.size.as_ref(), ITemplexPT::Int).value, 3);
-  assert_templex_name(ssa.element.as_ref(), "MutableStruct");
+  let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
+  cast!(ssa.mutability, ITemplexPT::AnonymousRune);
+  cast!(ssa.variability, ITemplexPT::AnonymousRune);
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
   assert!(pattern.destructure.is_none());
 }
 /*
@@ -355,17 +355,17 @@ fn call_type() {
   let keywords = Keywords::new(&interner);
   let parse_arena = Bump::new();
   let pattern = compile(&interner, &keywords, &parse_arena, "_ MyOption<MyList<int>>");
-  let destination = pattern.destination.as_ref().unwrap();
+  let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
     INameDeclarationP::IgnoredLocalNameDeclaration(_)
   ));
   assert!(destination.mutate.is_none());
   let myoption_call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
-  assert_templex_name(myoption_call.template.as_ref(), "MyOption");
+  assert_templex_name(myoption_call.template, "MyOption");
   let mylist_type = expect_1(&myoption_call.args);
   let mylist_call = cast!(mylist_type, ITemplexPT::Call);
-  assert_templex_name(mylist_call.template.as_ref(), "MyList");
+  assert_templex_name(mylist_call.template, "MyList");
   let int_type = expect_1(&mylist_call.args);
   assert_templex_name(int_type, "int");
   assert!(pattern.destructure.is_none());

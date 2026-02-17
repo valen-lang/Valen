@@ -70,12 +70,12 @@ fn templated_impl() {
   assert!(impl_.template_rules.is_none());
 
   let struct_ = cast!(impl_.struct_.as_ref().unwrap(), ITemplexPT::Call);
-  assert_templex_name(struct_.template.as_ref(), "SomeStruct");
+  assert_templex_name(struct_.template, "SomeStruct");
   let struct_template_arg = expect_1(&struct_.args);
   assert_templex_name(struct_template_arg, "T");
 
   let interface = cast!(&impl_.interface, ITemplexPT::Call);
-  assert_templex_name(interface.template.as_ref(), "MyInterface");
+  assert_templex_name(interface.template, "MyInterface");
   let interface_template_arg = expect_1(&interface.args);
   assert_templex_name(interface_template_arg, "T");
   assert_eq!(impl_.attributes.len(), 0);
@@ -112,10 +112,10 @@ fn impling_a_template_call() {
   assert_templex_name(impl_.struct_.as_ref().unwrap(), "MyIntIdentity");
 
   let interface = cast!(&impl_.interface, ITemplexPT::Call);
-  assert_templex_name(interface.template.as_ref(), "IFunction1");
+  assert_templex_name(interface.template, "IFunction1");
   let (mutability_arg, int_arg1, int_arg2) = expect_3(&interface.args);
   assert_eq!(
-    cast!(mutability_arg, ITemplexPT::Mutability).mutability,
+    cast!(mutability_arg, ITemplexPT::Mutability).1,
     MutabilityP::Mutable
   );
   assert_templex_name(int_arg1, "int");

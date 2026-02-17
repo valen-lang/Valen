@@ -1,5 +1,5 @@
 
-# M1: Rust should mirror Scala as close as possible
+# M1: Rust should mirror Scala as close as possible (RSMSCP)
 
 Keep making sure that everything in the rust version mirrors almost exactly whats in the scala version. Down to the functions, their positions relative to each other, their names, their logic, and if possible variable names too.
 
