@@ -1029,6 +1029,23 @@ fn reports_when_mutating_nonexistant_local() {
     }
   }
 */
+#[test]
+fn reports_when_extern_function_has_body() {
+  let arena = Bump::new();
+  let parse_arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let keywords = Keywords::new(&interner);
+  let err = compile_for_error(
+    &interner,
+    &keywords,
+    &parse_arena,
+    "extern func bork() int {\n  3\n}",
+  );
+  match &err {
+    ICompileErrorS::ExternHasBodyS(_) => {}
+    _ => panic!("expected ExternHasBody(_), got {:?}", err),
+  }
+}
 /*
   test("Reports when extern function has body") {
     val err = compileForError(

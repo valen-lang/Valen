@@ -131,6 +131,7 @@ pub struct CompileErrorExceptionS<'a> {
 pub enum ICompileErrorS<'a> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'a>),
   CouldntFindRuneS(CouldntFindRuneS<'a>),
+  ExternHasBodyS(ExternHasBodyS<'a>),
   RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
 
@@ -139,6 +140,7 @@ impl ICompileErrorS<'_> {
     match self {
       ICompileErrorS::CouldntFindVarToMutateS(x) => &x.range,
       ICompileErrorS::CouldntFindRuneS(x) => &x.range,
+      ICompileErrorS::ExternHasBodyS(x) => &x.range,
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
     }
   }
@@ -154,6 +156,11 @@ pub struct CouldntFindVarToMutateS<'a> {
 pub struct CouldntFindRuneS<'a> {
   pub range: RangeS<'a>,
   pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExternHasBodyS<'a> {
+  pub range: RangeS<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]

@@ -27,8 +27,8 @@ import scala.collection.immutable.{List, Range}
 use crate::StrI;
 use crate::parsing::ast::{FunctionP, IAttributeP, INameDeclarationP, ITemplexPT, LoadAsP};
 use crate::postparsing::ast::{
-  AdditiveS, CodeBodyS, ExportS, ExternS, FunctionS, GenericParameterS, IBodyS, IFunctionAttributeS,
-  LocationInDenizenBuilder, PureS,
+  AdditiveS, CodeBodyS, ExportS, ExternBodyS, ExternS, FunctionS, GenericParameterS, IBodyS,
+  IFunctionAttributeS, LocationInDenizenBuilder, PureS,
 };
 use crate::postparsing::expressions::{
   BodySE, ConsecutorSE, IExpressionSE,
@@ -39,7 +39,7 @@ use crate::postparsing::names::{
   IRuneValS, IVarNameS, ImplicitRuneS,
 };
 use crate::postparsing::post_parser::{
-  FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
+  ExternHasBodyS, FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
 };
 use crate::postparsing::rules::rules::{IRulexSR, MaybeCoercingLookupSR, RuneUsage};
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
@@ -252,17 +252,6 @@ where
         Some(ret_coord_rune)
       }
     };
-    let body = function
-      .body
-      .as_ref()
-      .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_BODY"));
-    if body.maybe_pure.is_some() {
-      panic!("POSTPARSER_SCOUT_PURE_BLOCKS_NOT_YET_IMPLEMENTED");
-    }
-    if body.maybe_default_region.is_some() {
-      panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
-    }
-
     let function_declaration_name = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
       name: function_name.str(),
       code_location: Self::eval_pos(file_coordinate, function_name.range().begin()),
@@ -287,17 +276,42 @@ where
       }
       VariableDeclarations { vars }
     };
-    let (body_s, variable_uses, magic_param_names) = self.scout_body(
-      function_environment,
-      None,
-      &mut lidb,
-      default_region_rune,
-      body,
-      initial_declarations,
-    )?;
-    if !magic_param_names.is_empty() {
-      panic!("POSTPARSER_SCOUT_FUNCTION_MAGIC_PARAMS_NOT_YET_IMPLEMENTED");
-    }
+    let has_extern_attr = function
+      .header
+      .attributes
+      .iter()
+      .any(|attr| matches!(attr, IAttributeP::ExternAttribute(_)));
+    let (body_s, variable_uses) = if has_extern_attr {
+      if function.body.is_some() {
+        return Err(ICompileErrorS::ExternHasBodyS(ExternHasBodyS {
+          range: Self::eval_range(file_coordinate, function.range),
+        }));
+      }
+      (IBodyS::ExternBody(ExternBodyS {}), VariableUses::empty())
+    } else {
+      let body = function
+        .body
+        .as_ref()
+        .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_WITHOUT_BODY"));
+      if body.maybe_pure.is_some() {
+        panic!("POSTPARSER_SCOUT_PURE_BLOCKS_NOT_YET_IMPLEMENTED");
+      }
+      if body.maybe_default_region.is_some() {
+        panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NOT_YET_IMPLEMENTED");
+      }
+      let (body_s, variable_uses, magic_param_names) = self.scout_body(
+        function_environment,
+        None,
+        &mut lidb,
+        default_region_rune,
+        body,
+        initial_declarations,
+      )?;
+      if !magic_param_names.is_empty() {
+        panic!("POSTPARSER_SCOUT_FUNCTION_MAGIC_PARAMS_NOT_YET_IMPLEMENTED");
+      }
+      (IBodyS::CodeBody(CodeBodyS { body: body_s }), variable_uses)
+    };
     Ok((FunctionS {
       range: Self::eval_range(file_coordinate, function.range),
       name: function_declaration_name,
@@ -311,9 +325,7 @@ where
       params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
       maybe_ret_coord_rune,
       rules: alloc_slice_from_vec(self.scout_arena, rules),
-      body: IBodyS::CodeBody(CodeBodyS {
-        body: body_s,
-      }),
+      body: body_s,
     }, variable_uses))
   }
 /*
