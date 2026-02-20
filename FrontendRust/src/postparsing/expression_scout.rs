@@ -161,7 +161,7 @@ pub(crate) fn scout_block(
         .name
         .as_ref()
         .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NAME_MISSING"));
-      let region_rune_s: IRuneS<'a> = IRuneS::CodeRune::<'a>(self.interner.intern_rune(CodeRuneS::<'a> {
+      let region_rune_s: IRuneS<'a> = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS::<'a> {
         name: region_rune_name.str(),
       }));
       if !parent_stack_frame.parent_env.all_declared_runes().contains(&region_rune_s) {
