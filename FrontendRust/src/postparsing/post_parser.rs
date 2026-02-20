@@ -1,31 +1,35 @@
 // From Frontend/PostParsingPass/src/dev/vale/postparsing/PostParser.scala
 // Coordinates the Scout (post-parsing) pass
 
+// MIGTODO: rename Denizen to Definition, and maybe Citizen to TypeDefinition
+
 use crate::compile_options::GlobalOptions;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::{
-  FileP, IAttributeP, IDenizenP, IMacroInclusionP, IStructContent, ITemplexPT, MutabilityP, StructP,
+  FileP, IAttributeP, IDenizenP, IMacroInclusionP, IStructContent, ITemplexPT,
+  MutabilityP, StructP,
 };
 use crate::parsing::parser::ParserCompilation;
 use crate::postparsing::ast::{
-  AbstractBodyS, ExportS, FunctionS, GenericParameterS, IBodyS, ICitizenAttributeS,
-  ImportS, ImplS, InterfaceS, IStructMemberS, MacroCallS, NormalStructMemberS, ProgramS, SealedS,
+  CoordGenericParameterTypeS, ExportS, GenericParameterS, IBodyS, ICitizenAttributeS,
+  IGenericParameterTypeS, ImportS, ImplS, InterfaceS, IStructMemberS, MacroCallS, NormalStructMemberS, ProgramS, SealedS,
   StructS,
 };
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, TemplateTemplataType,
+  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
+  TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS,
-  INameS, IRuneS, IRuneValS, IVarNameS, TopLevelInterfaceDeclarationNameS,
+  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS,
+  IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
 };
 use crate::postparsing::rules::rules::{
-  ILiteralSL, IRulexSR, LiteralSR, MaybeCoercingLookupSR, MutabilityLiteralSL, RuneUsage,
+  IRulexSR, RuneUsage,
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
@@ -54,7 +58,7 @@ where
   'a: 'ctx,
   'a: 'p,
 {
-  // From PostParser.scala lines 922-928
+  // MIGALLOW: new -> new (From PostParser.scala lines 922-928)
   pub fn new(
     interner: &'ctx Interner<'a>,
     keywords: &'ctx Keywords<'a>,
@@ -131,6 +135,16 @@ pub struct CompileErrorExceptionS<'a> {
 pub enum ICompileErrorS<'a> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'a>),
   CouldntFindRuneS(CouldntFindRuneS<'a>),
+  StatementAfterReturnS(StatementAfterReturnS<'a>),
+  VariableNameAlreadyExists(VariableNameAlreadyExists<'a>),
+  InterfaceMethodNeedsSelf(InterfaceMethodNeedsSelf<'a>),
+  RuneExplicitTypeConflictS(RuneExplicitTypeConflictS<'a>),
+  InitializingRuntimeSizedArrayRequiresSizeAndCallable(
+    InitializingRuntimeSizedArrayRequiresSizeAndCallable<'a>,
+  ),
+  InitializingStaticSizedArrayRequiresSizeAndCallable(
+    InitializingStaticSizedArrayRequiresSizeAndCallable<'a>,
+  ),
   ExternHasBodyS(ExternHasBodyS<'a>),
   RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
@@ -140,6 +154,12 @@ impl ICompileErrorS<'_> {
     match self {
       ICompileErrorS::CouldntFindVarToMutateS(x) => &x.range,
       ICompileErrorS::CouldntFindRuneS(x) => &x.range,
+      ICompileErrorS::StatementAfterReturnS(x) => &x.range,
+      ICompileErrorS::VariableNameAlreadyExists(x) => &x.range,
+      ICompileErrorS::InterfaceMethodNeedsSelf(x) => &x.range,
+      ICompileErrorS::RuneExplicitTypeConflictS(x) => &x.range,
+      ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(x) => &x.range,
+      ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(x) => &x.range,
       ICompileErrorS::ExternHasBodyS(x) => &x.range,
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
     }
@@ -156,6 +176,39 @@ pub struct CouldntFindVarToMutateS<'a> {
 pub struct CouldntFindRuneS<'a> {
   pub range: RangeS<'a>,
   pub name: String,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct StatementAfterReturnS<'a> {
+  pub range: RangeS<'a>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct VariableNameAlreadyExists<'a> {
+  pub range: RangeS<'a>,
+  pub name: IVarNameS<'a>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InterfaceMethodNeedsSelf<'a> {
+  pub range: RangeS<'a>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct RuneExplicitTypeConflictS<'a> {
+  pub range: RangeS<'a>,
+  pub rune: IRuneS<'a>,
+  pub types: Vec<ITemplataType>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'a> {
+  pub range: RangeS<'a>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'a> {
+  pub range: RangeS<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -260,21 +313,21 @@ case class FunctionEnvironmentS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct EnvironmentS<'a, 'env> {
+pub struct EnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
-  pub parent_env: Option<&'env EnvironmentS<'a, 'env>>,
+  pub parent_env: Option<Box<EnvironmentS<'a>>>,
   pub name: INameS<'a>,
   pub user_declared_runes: Vec<IRuneS<'a>>,
 }
 
-impl<'a, 'env> EnvironmentS<'a, 'env> {
+impl<'a> EnvironmentS<'a> {
   pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
     self.user_declared_runes.clone()
   }
 
   pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
     let mut runes = self.user_declared_runes.clone();
-    if let Some(parent_env) = self.parent_env {
+    if let Some(parent_env) = &self.parent_env {
       for rune in parent_env.all_declared_runes() {
         if !runes.contains(&rune) {
           runes.push(rune);
@@ -286,12 +339,28 @@ impl<'a, 'env> EnvironmentS<'a, 'env> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IEnvironmentS<'a, 'env> {
-  Environment(EnvironmentS<'a, 'env>),
-  FunctionEnvironment(FunctionEnvironmentS<'a, 'env>),
+pub enum IEnvironmentS<'a> {
+  Environment(EnvironmentS<'a>),
+  FunctionEnvironment(FunctionEnvironmentS<'a>),
 }
 
-impl<'a, 'env> IEnvironmentS<'a, 'env> {
+impl<'a> IEnvironmentS<'a> {
+  pub fn file(&self) -> &'a FileCoordinate<'a> {
+    match self {
+      IEnvironmentS::Environment(environment) => environment.file,
+      IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
+    }
+  }
+
+  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+    match self {
+      IEnvironmentS::Environment(environment) => environment.local_declared_runes(),
+      IEnvironmentS::FunctionEnvironment(function_environment) => {
+        function_environment.local_declared_runes()
+      }
+    }
+  }
+
   pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
     match self {
       IEnvironmentS::Environment(environment) => environment.all_declared_runes(),
@@ -301,23 +370,23 @@ impl<'a, 'env> IEnvironmentS<'a, 'env> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionEnvironmentS<'a, 'env> {
+pub struct FunctionEnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
   pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: Option<&'env IEnvironmentS<'a, 'env>>,
+  pub parent_env: Option<Box<IEnvironmentS<'a>>>,
   pub declared_runes: Vec<IRuneS<'a>>,
   pub num_explicit_params: i32,
   pub is_interface_internal_method: bool,
 }
 
-impl<'a, 'env> FunctionEnvironmentS<'a, 'env> {
+impl<'a> FunctionEnvironmentS<'a> {
   pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
     self.declared_runes.clone()
   }
 
   pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
     let mut runes = self.declared_runes.clone();
-    if let Some(parent_env) = self.parent_env {
+    if let Some(parent_env) = &self.parent_env {
       for rune in parent_env.all_declared_runes() {
         if !runes.contains(&rune) {
           runes.push(rune);
@@ -327,15 +396,11 @@ impl<'a, 'env> FunctionEnvironmentS<'a, 'env> {
     runes
   }
 
-  pub fn child<'s>(&self, arena: &'s bumpalo::Bump) -> FunctionEnvironmentS<'a, 'env>
-  where
-    's: 'env,
-  {
-    let parent = &*arena.alloc(IEnvironmentS::FunctionEnvironment(self.clone()));
-    FunctionEnvironmentS {
+  pub fn child(&self) -> FunctionEnvironmentS<'a> {
+    FunctionEnvironmentS::<'a> {
       file: self.file,
       name: self.name.clone(),
-      parent_env: Some(parent),
+      parent_env: Some(Box::new(IEnvironmentS::FunctionEnvironment(self.clone()))),
       declared_runes: Vec::new(),
       num_explicit_params: self.num_explicit_params,
       is_interface_internal_method: false,
@@ -344,47 +409,17 @@ impl<'a, 'env> FunctionEnvironmentS<'a, 'env> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StackFrame<'a, 'env> {
+pub struct StackFrame<'a> {
   pub file: &'a FileCoordinate<'a>,
   pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: FunctionEnvironmentS<'a, 'env>,
-  pub maybe_parent: Option<&'env StackFrame<'a, 'env>>,
+  pub parent_env: FunctionEnvironmentS<'a>,
+  pub maybe_parent: Option<Box<StackFrame<'a>>>,
   pub context_region: IRuneS<'a>,
   pub pure_height: i32,
   pub locals: VariableDeclarations<'a>,
 }
 
-impl<'a, 'env> StackFrame<'a, 'env> {
-  pub fn plus(&self, new_vars: &VariableDeclarations<'a>) -> StackFrame<'a, 'env> {
-    StackFrame::<'a, 'env> {
-      file: self.file,
-      name: self.name.clone(),
-      parent_env: self.parent_env.clone(),
-      maybe_parent: self.maybe_parent.clone(),
-      context_region: self.context_region.clone(),
-      pure_height: self.pure_height,
-      locals: self.locals.plus_plus(new_vars),
-    }
-  }
-
-  pub fn all_declarations(&self) -> VariableDeclarations<'_> {
-    match &self.maybe_parent {
-      Some(parent) => self.locals.plus_plus(&parent.all_declarations()),
-      None => self.locals.plus_plus(&PostParser::no_declarations()),
-    }
-  }
-
-  pub fn find_variable(&self, name: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>> {
-    match self.locals.find(name) {
-      Some(full_name_s) => Some(full_name_s),
-      None => match &self.maybe_parent {
-        None => None,
-        Some(parent) => parent.find_variable(name),
-      },
-    }
-  }
-}
-
+impl<'a> StackFrame<'a> {
 /*
 case class StackFrame(
     file: FileCoordinate,
@@ -394,13 +429,49 @@ case class StackFrame(
     contextRegion: IRuneS,
     pureHeight: Int,
     locals: VariableDeclarations) {
+*/
+/*
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+*/
+// MIGALLOW: ++ -> plus
+pub fn plus(&self, new_vars: &VariableDeclarations<'a>) -> StackFrame<'a> {
+  StackFrame::<'a> {
+    file: self.file,
+    name: self.name.clone(),
+    parent_env: self.parent_env.clone(),
+    maybe_parent: self.maybe_parent.clone(),
+    context_region: self.context_region.clone(),
+    pure_height: self.pure_height,
+    locals: self.locals.plus_plus(new_vars),
+  }
+}
+/*
   def ++(newVars: VariableDeclarations): StackFrame = {
     StackFrame(file, name, parentEnv, maybeParent, contextRegion, pureHeight, locals ++ newVars)
   }
+*/
+
+pub fn all_declarations(&self) -> VariableDeclarations<'_> {
+  match &self.maybe_parent {
+    Some(parent) => self.locals.plus_plus(&parent.all_declarations()),
+    None => self.locals.plus_plus(&PostParser::no_declarations()),
+  }
+}
+/*
   def allDeclarations: VariableDeclarations = {
     locals ++ maybeParent.map(_.allDeclarations).getOrElse(PostParser.noDeclarations)
   }
+*/
+pub fn find_variable(&self, name: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>> {
+  match self.locals.find(name) {
+    Some(full_name_s) => Some(full_name_s),
+    None => match &self.maybe_parent {
+      None => None,
+      Some(parent) => parent.find_variable(name),
+    },
+  }
+}
+/*
   def findVariable(name: IImpreciseNameS): Option[IVarNameS] = {
     locals.find(name) match {
       case Some(fullNameS) => Some(fullNameS)
@@ -412,6 +483,9 @@ case class StackFrame(
       }
     }
   }
+  */
+}
+/*
 }
 */
 /*
@@ -423,6 +497,8 @@ object PostParser {
   def noVariableUses = VariableUses(Vector.empty)
   def noDeclarations = VariableDeclarations(Vector.empty)
 */
+// MIGALLOW: noVariableUses -> no_variable_uses
+// MIGALLOW: noDeclarations -> no_declarations
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
   'a: 'ctx,
@@ -544,33 +620,6 @@ fn get_human_name<'a, 'p>(
     }
   }
 */
-/*
-//  def knownEndsInVoid(expr: IExpressionSE): Boolean = {
-//    expr match {
-//      case VoidSE(_) => true
-//      case ReturnSE(_, _) => true
-//      case DestructSE(_, _) => true
-//      case IfSE(_, _, thenBody, elseBody) => knownEndsInVoid(thenBody) && knownEndsInVoid(elseBody)
-//      case WhileSE(_, _) => true
-//    }
-//  }
-*/
-/*
-//  def pruneTrailingVoids(exprs: Vector[IExpressionSE]): Vector[IExpressionSE] = {
-//    if (exprs.size >= 2) {
-//      exprs.last match {
-//        case VoidSE(_) => {
-//          exprs.init.last match {
-//            case ReturnSE(_, _) => return exprs.init
-//            case VoidSE(_) => return pruneTrailingVoids(exprs.init)
-//            case
-//          }
-//        }
-//        case _ =>
-//      }
-//    }
-//  }
-*/
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
   'a: 'ctx,
@@ -608,17 +657,145 @@ where
     }
   }
 */
-fn scout_generic_parameter<'a, 'p, 'env>(
-  _templex_scout: &(),
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
+fn scout_generic_parameter<'a, 'p>(
+  interner: &crate::interner::Interner<'a>,
+  env: crate::postparsing::post_parser::IEnvironmentS<'a>,
   _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
   _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
   _context_region: crate::postparsing::names::IRuneS<'a>,
-  _generic_param_p: &crate::parsing::ast::GenericParameterP<'a, 'p>,
-  _param_rune_s: crate::postparsing::rules::rules::RuneUsage<'a>,
+  generic_param_p: &crate::parsing::ast::GenericParameterP<'a, 'p>,
+  param_rune_s: crate::postparsing::rules::rules::RuneUsage<'a>,
 ) -> crate::postparsing::ast::GenericParameterS<'a> {
-  panic!("Unimplemented scout_generic_parameter");
+  let file = match &env {
+    crate::postparsing::post_parser::IEnvironmentS::Environment(environment) => environment.file,
+    crate::postparsing::post_parser::IEnvironmentS::FunctionEnvironment(function_environment) => {
+      function_environment.file
+    }
+  };
+  let generic_param_range_s = PostParser::eval_range(file, generic_param_p.range);
+  let rune_s = param_rune_s;
+
+  let type_s = match &generic_param_p.maybe_type {
+    None => ITemplataType::CoordTemplataType(CoordTemplataType {}),
+    Some(type_p) => crate::postparsing::rules::rule_scout::translate_type(type_p.tyype),
+  };
+  rune_to_explicit_type.push((rune_s.rune.clone(), type_s.clone()));
+
+  let maybe_explicit_coord_region_s = match generic_param_p.coord_region.as_ref() {
+    Some(region_rune) => Some(crate::postparsing::rules::rules::RuneUsage {
+      range: PostParser::eval_range(file, region_rune.range),
+      rune: interner.intern_rune(crate::postparsing::names::IRuneValS::CodeRune(
+        crate::postparsing::names::CodeRuneS {
+          name: match &region_rune.name {
+            None => panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_COORD_REGION_NAME_MISSING"),
+            Some(region_name) => region_name.str(),
+          },
+        },
+      )),
+    }),
+    None => None,
+  };
+
+  let generic_param_type_s = match type_s {
+    ITemplataType::CoordTemplataType(_) => {
+      let immutable_attrs = generic_param_p
+        .attributes
+        .iter()
+        .filter(|x| matches!(x, crate::parsing::ast::IRuneAttributeP::ImmutableRuneAttribute(_)))
+        .collect::<Vec<_>>();
+      let mutable_attrs = generic_param_p
+        .attributes
+        .iter()
+        .filter(|x| matches!(x, crate::parsing::ast::IRuneAttributeP::MutableRuneAttribute(_)))
+        .collect::<Vec<_>>();
+      let remaining_attributes = generic_param_p
+        .attributes
+        .iter()
+        .filter(|x| {
+          !matches!(
+            x,
+            crate::parsing::ast::IRuneAttributeP::ImmutableRuneAttribute(_)
+              | crate::parsing::ast::IRuneAttributeP::MutableRuneAttribute(_)
+          )
+        })
+        .collect::<Vec<_>>();
+      if !remaining_attributes.is_empty() {
+        panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_COORD_RUNE_ATTRIBUTE");
+      }
+      IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
+        coord_region: maybe_explicit_coord_region_s,
+        kind_mutable: immutable_attrs.is_empty(),
+        region_mutable: !mutable_attrs.is_empty(),
+      })
+    }
+    ITemplataType::RegionTemplataType(_) => {
+      let mutability_attrs = generic_param_p
+        .attributes
+        .iter()
+        .filter_map(|x| match x {
+          crate::parsing::ast::IRuneAttributeP::ImmutableRegionRuneAttribute(_) => {
+            Some(crate::postparsing::ast::IRegionMutabilityS::ImmutableRegion)
+          }
+          crate::parsing::ast::IRuneAttributeP::AdditiveRegionRuneAttribute(_) => {
+            Some(crate::postparsing::ast::IRegionMutabilityS::AdditiveRegion)
+          }
+          crate::parsing::ast::IRuneAttributeP::ReadWriteRegionRuneAttribute(_) => {
+            Some(crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion)
+          }
+          crate::parsing::ast::IRuneAttributeP::ReadOnlyRegionRuneAttribute(_) => {
+            Some(crate::postparsing::ast::IRegionMutabilityS::ReadOnlyRegion)
+          }
+          _ => None,
+        })
+        .collect::<Vec<_>>();
+      let remaining_attributes = generic_param_p
+        .attributes
+        .iter()
+        .filter(|x| {
+          !matches!(
+            x,
+            crate::parsing::ast::IRuneAttributeP::ImmutableRegionRuneAttribute(_)
+              | crate::parsing::ast::IRuneAttributeP::AdditiveRegionRuneAttribute(_)
+              | crate::parsing::ast::IRuneAttributeP::ReadWriteRegionRuneAttribute(_)
+              | crate::parsing::ast::IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)
+          )
+        })
+        .collect::<Vec<_>>();
+      if !remaining_attributes.is_empty() {
+        panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_REGION_RUNE_ATTRIBUTE");
+      }
+      if mutability_attrs.len() > 1 {
+        panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_MULTIPLE_REGION_MUTABILITIES");
+      }
+      IGenericParameterTypeS::RegionGenericParameterType(
+        crate::postparsing::ast::RegionGenericParameterTypeS {
+        mutability: mutability_attrs
+          .first()
+          .cloned()
+          .unwrap_or(crate::postparsing::ast::IRegionMutabilityS::ReadOnlyRegion),
+        },
+      )
+    }
+    _ => {
+      if !generic_param_p.attributes.is_empty() {
+        panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_OTHER_RUNE_ATTRIBUTE");
+      }
+      IGenericParameterTypeS::OtherGenericParameterType(
+        crate::postparsing::ast::OtherGenericParameterTypeS { tyype: type_s },
+      )
+    }
+  };
+  if generic_param_p.maybe_default.is_some() {
+    panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_DEFAULT_NOT_YET_IMPLEMENTED");
+  }
+
+  crate::postparsing::ast::GenericParameterS {
+    range: generic_param_range_s,
+    rune: rune_s,
+    tyype: generic_param_type_s,
+    default: None,
+  }
 }
 /*
   def scoutGenericParameter(
@@ -765,6 +942,7 @@ where
   'a: 'p,
   'a: 's,
 {
+  // MIGALLOW: new -> new
   pub fn new(
     global_options: GlobalOptions,
     interner: &'ctx Interner<'a>,
@@ -809,10 +987,10 @@ class PostParser(
       }
     }
 
-    let impls = Vec::<ImplS<'a, 's>>::new();
+    let mut impls = Vec::<ImplS<'a, 's>>::new();
     for denizen in parsed.denizens {
-      if let IDenizenP::TopLevelImpl(_impl_p) = denizen {
-        panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_IMPL_NOT_YET_IMPLEMENTED");
+      if let IDenizenP::TopLevelImpl(impl_p) = denizen {
+        impls.push(self.scout_impl(file_coordinate, impl_p)?);
       }
     }
 
@@ -886,10 +1064,304 @@ class PostParser(
   }
 */
 fn scout_impl(
-  _file: &crate::utils::code_hierarchy::FileCoordinate<'a>,
-  _impl0: &crate::parsing::ast::ImplP<'a, 'p>,
-) -> crate::postparsing::ast::ImplS<'a, 's> {
-  panic!("Unimplemented scout_impl");
+  &self,
+  file: &'a FileCoordinate<'a>,
+  impl0: &crate::parsing::ast::ImplP<'a, 'p>,
+) -> Result<crate::postparsing::ast::ImplS<'a, 's>, ICompileErrorS<'a>> {
+  let range_s = PostParser::eval_range(file, impl0.range);
+
+  match &impl0.interface {
+    ITemplexPT::Interpreted(interpreted) => {
+      panic!(
+        "POSTPARSER_SCOUT_IMPL_CANT_OWNERSHIP_INTERFACE_IN_IMPL_NOT_YET_MIGRATED: {:?}",
+        PostParser::eval_range(file, interpreted.range)
+      );
+    }
+    _ => {}
+  }
+
+  match &impl0.struct_ {
+    Some(ITemplexPT::Interpreted(interpreted)) => {
+      panic!(
+        "POSTPARSER_SCOUT_IMPL_CANT_OWNERSHIP_STRUCT_IN_IMPL_NOT_YET_MIGRATED: {:?}",
+        PostParser::eval_range(file, interpreted.range)
+      );
+    }
+    _ => {}
+  }
+
+  let template_rules_p = impl0
+    .template_rules
+    .as_ref()
+    .map(|template_rules_p| template_rules_p.rules)
+    .unwrap_or(&[]);
+
+  let code_location = range_s.begin.clone();
+  let impl_name = ImplDeclarationNameS { code_location };
+
+  let user_specified_identifying_runes = impl0
+    .generic_params
+    .as_ref()
+    .map(|generic_parameters_p| {
+      generic_parameters_p
+        .params
+        .iter()
+        .map(|generic_parameter_p| RuneUsage {
+          range: PostParser::eval_range(file, generic_parameter_p.name.range()),
+          rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: generic_parameter_p.name.str(),
+          })),
+        })
+        .collect::<Vec<_>>()
+    })
+    .unwrap_or_default();
+
+  // Mirrors:
+  // RulePUtils.getOrderedRuneDeclarationsFromRulexesWithDuplicates(templateRulesP)
+  let runes_from_rules =
+    crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates(
+      template_rules_p,
+    )
+    .into_iter()
+    .map(|name_p| RuneUsage {
+      range: PostParser::eval_range(file, name_p.range()),
+      rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: name_p.str() })),
+    })
+    .collect::<Vec<_>>();
+
+  let mut user_declared_runes = user_specified_identifying_runes.clone();
+  user_declared_runes.extend(runes_from_rules);
+
+  let user_declared_runes_set = user_declared_runes
+    .iter()
+    .map(|rune_usage| rune_usage.rune.clone())
+    .collect::<Vec<_>>();
+
+  let impl_env = IEnvironmentS::Environment(EnvironmentS {
+    file,
+    parent_env: None,
+    name: INameS::ImplDeclaration(impl_name.clone()),
+    user_declared_runes: user_declared_runes
+      .iter()
+      .map(|rune_usage| rune_usage.rune.clone())
+      .collect(),
+  });
+
+  let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
+  let mut rule_builder = Vec::<IRulexSR<'a>>::new();
+  let mut rune_to_explicit_type = Vec::<(IRuneS<'a>, ITemplataType)>::new();
+
+  let default_region_rune_range_s = RangeS {
+    begin: range_s.end.clone(),
+    end: range_s.end.clone(),
+  };
+  let default_region_rune_s = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
+    crate::postparsing::names::DenizenDefaultRegionRuneS {
+      denizen_name: INameS::ImplDeclaration(impl_name.clone()),
+    },
+  ));
+  let maybe_region_generic_param = Some(GenericParameterS {
+    range: default_region_rune_range_s.clone(),
+    rune: RuneUsage {
+      range: default_region_rune_range_s.clone(),
+      rune: default_region_rune_s.clone(),
+    },
+    tyype: IGenericParameterTypeS::RegionGenericParameterType(
+      crate::postparsing::ast::RegionGenericParameterTypeS {
+        mutability: crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion,
+      },
+    ),
+    default: None,
+  });
+
+  let generic_parameters_p = impl0
+    .generic_params
+    .as_ref()
+    .map(|generic_parameters_p| generic_parameters_p.params)
+    .unwrap_or(&[]);
+
+  // We'll add the implicit runes to the end, see IRRAE.
+  let user_specified_generic_parameters_s = generic_parameters_p
+    .iter()
+    .zip(user_specified_identifying_runes.iter())
+    .map(|(g, r)| {
+      let mut child_lidb = lidb.child();
+      scout_generic_parameter(
+        self.interner,
+        impl_env.clone(),
+        &mut child_lidb,
+        &mut rune_to_explicit_type,
+        &mut rule_builder,
+        default_region_rune_s.clone(),
+        g,
+        r.clone(),
+      )
+    })
+    .collect::<Vec<_>>();
+  let _user_specified_runes_implicit_region_runes_s =
+    maybe_region_generic_param.as_ref().map(|_x| Vec::<GenericParameterS<'a>>::new());
+
+  {
+    let mut child_lidb = lidb.child();
+    crate::postparsing::rules::rule_scout::translate_rulexes(
+      self.interner,
+      self.keywords,
+      impl_env.clone(),
+      &mut child_lidb,
+      &mut rule_builder,
+      &mut rune_to_explicit_type,
+      default_region_rune_s.clone(),
+      template_rules_p,
+    );
+  }
+
+  let struct_ = match &impl0.struct_ {
+    None => {
+      return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
+        range: range_s.clone(),
+        message: "Impl needs struct!".to_string(),
+      }));
+    }
+    Some(x) => x,
+  };
+
+  let struct_rune = {
+    let mut child_lidb = lidb.child();
+    crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
+      self.interner,
+        self.keywords,
+      impl_env.clone(),
+      &mut child_lidb,
+      range_s.clone(),
+      &mut rule_builder,
+      default_region_rune_s.clone(),
+      Some(struct_),
+    )
+  };
+
+  let interface_rune = {
+    let mut child_lidb = lidb.child();
+    crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
+      self.interner,
+        self.keywords,
+      impl_env.clone(),
+      &mut child_lidb,
+      range_s.clone(),
+      &mut rule_builder,
+      default_region_rune_s.clone(),
+      Some(&impl0.interface),
+    )
+  };
+
+  let sub_citizen_imprecise_name = match struct_ {
+    ITemplexPT::Call(call)
+      if matches!(call.template, ITemplexPT::NameOrRune(_))
+        && match call.template {
+          ITemplexPT::NameOrRune(name)
+            if !user_declared_runes_set.contains(&self.interner.intern_rune(IRuneValS::CodeRune(
+              CodeRuneS {
+                name: name.0.str(),
+              },
+            ))) =>
+          {
+            true
+          }
+          _ => false,
+        } =>
+    {
+      let ITemplexPT::NameOrRune(name) = call.template else {
+        panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
+      };
+      self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: name.0.str(),
+      }))
+    }
+    ITemplexPT::NameOrRune(name)
+      if !user_declared_runes_set.contains(&self.interner.intern_rune(IRuneValS::CodeRune(
+        CodeRuneS {
+          name: name.0.str(),
+        },
+      ))) =>
+    {
+      self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: name.0.str(),
+      }))
+    }
+    _ => {
+      return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
+        range: PostParser::eval_range(file, struct_.range()),
+        message: "Can't determine name of struct!".to_string(),
+      }));
+    }
+  };
+
+  let super_interface_imprecise_name = match &impl0.interface {
+    ITemplexPT::Call(call)
+      if matches!(call.template, ITemplexPT::NameOrRune(_))
+        && match call.template {
+          ITemplexPT::NameOrRune(name)
+            if !user_declared_runes_set.contains(&self.interner.intern_rune(IRuneValS::CodeRune(
+              CodeRuneS {
+                name: name.0.str(),
+              },
+            ))) =>
+          {
+            true
+          }
+          _ => false,
+        } =>
+    {
+      let ITemplexPT::NameOrRune(name) = call.template else {
+        panic!("POSTPARSER_SCOUT_IMPL_IMPOSSIBLE_CALL_TEMPLATE_SHAPE");
+      };
+      self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: name.0.str(),
+      }))
+    }
+    ITemplexPT::NameOrRune(name)
+      if !user_declared_runes_set.contains(&self.interner.intern_rune(IRuneValS::CodeRune(
+        CodeRuneS {
+          name: name.0.str(),
+        },
+      ))) =>
+    {
+      self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+        name: name.0.str(),
+      }))
+    }
+    _ => {
+      return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
+        // Intentionally mirrors Scala's `struct.range` here.
+        range: PostParser::eval_range(file, struct_.range()),
+        message: "Can't determine name of struct!".to_string(),
+      }));
+    }
+  };
+
+  let generic_parameters_s = user_specified_generic_parameters_s;
+  // ++ userSpecifiedRunesImplicitRegionRunesS
+  let _maybe_region_generic_param = maybe_region_generic_param;
+
+  let tyype = ITemplataType::TemplateTemplataType(TemplateTemplataType {
+    param_types: generic_parameters_s
+      .iter()
+      .map(|generic_parameter_s| generic_parameter_s.tyype.tyype())
+      .collect(),
+    return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+  });
+
+  Ok(ImplS {
+    range: range_s,
+    name: impl_name,
+    user_specified_identifying_runes: alloc_slice_from_vec(self.scout_arena, generic_parameters_s),
+    rules: alloc_slice_from_vec(self.scout_arena, rule_builder),
+    rune_to_explicit_type: rune_to_explicit_type.into_iter().collect::<HashMap<_, _>>(),
+    tyype,
+    struct_kind_rune: struct_rune,
+    sub_citizen_imprecise_name,
+    interface_kind_rune: interface_rune,
+    super_interface_imprecise_name,
+  })
 }
 /*
   private def scoutImpl(file: FileCoordinate, impl0: ImplP): ImplS = {
@@ -1067,10 +1539,30 @@ fn scout_import(
 */
 fn predict_mutability(
   _range_s: crate::utils::range::RangeS<'a>,
-  _mutability_rune_s: crate::postparsing::names::IRuneS<'a>,
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  mutability_rune_s: crate::postparsing::names::IRuneS<'a>,
+  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
 ) -> Option<crate::parsing::ast::MutabilityP> {
-  panic!("Unimplemented predict_mutability");
+  let predicted_mutabilities = rules_s
+    .iter()
+    .filter_map(|rule| match rule {
+      crate::postparsing::rules::rules::IRulexSR::Literal(literal_rule)
+        if literal_rule.rune.rune == mutability_rune_s
+          && matches!(literal_rule.literal, crate::postparsing::rules::rules::ILiteralSL::MutabilityLiteral(_)) =>
+      {
+        let crate::postparsing::rules::rules::ILiteralSL::MutabilityLiteral(ref mutability_literal) = literal_rule.literal else {
+          unreachable!()
+        };
+        Some(mutability_literal.mutability)
+      }
+      _ => None,
+    })
+    .collect::<Vec<_>>();
+
+  match predicted_mutabilities.len() {
+    0 => None,
+    1 => predicted_mutabilities.first().copied(),
+    _ => panic!("POSTPARSER_PREDICT_MUTABILITY_TOO_MANY_MUTABILITIES"),
+  }
 }
 /*
   private def predictMutability(rangeS: RangeS, mutabilityRuneS: IRuneS, rulesS: Vector[IRulexSR]):
@@ -1093,154 +1585,323 @@ fn predict_mutability(
     file: &'a FileCoordinate<'a>,
     head: &StructP<'a, 'p>,
   ) -> Result<StructS<'a, 's>, ICompileErrorS<'a>> {
-    if head.mutability.is_some() {
-      panic!("POSTPARSER_SCOUT_STRUCT_MUTABILITY_NOT_YET_IMPLEMENTED");
-    }
-    if head.identifying_runes.is_some() {
-      panic!("POSTPARSER_SCOUT_STRUCT_IDENTIFYING_RUNES_NOT_YET_IMPLEMENTED");
-    }
-    if head.template_rules.is_some() {
-      panic!("POSTPARSER_SCOUT_STRUCT_TEMPLATE_RULES_NOT_YET_IMPLEMENTED");
-    }
-    if head.maybe_default_region_rune.is_some() {
-      panic!("POSTPARSER_SCOUT_STRUCT_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED");
-    }
-
+    // evan: check the order of these various chunks of logic
     let struct_range_s = Self::eval_range(file, head.range);
     let struct_name = crate::postparsing::names::TopLevelStructDeclarationNameS {
       name: head.name.str(),
       range: Self::eval_range(file, head.name.range()),
     };
+    let body_range_s = Self::eval_range(file, head.body_range);
+    let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
 
-    let mutability_rune = RuneUsage {
-      range: struct_range_s.clone(),
-      rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-        name: self.interner.intern("__struct_mutability"),
-      })),
-    };
-    let header_rules = vec![IRulexSR::Literal(LiteralSR {
-      range: struct_range_s.clone(),
-      rune: mutability_rune.clone(),
-      literal: ILiteralSL::MutabilityLiteral(MutabilityLiteralSL {
-        mutability: MutabilityP::Mutable,
-      }),
-    })];
+    let generic_parameters_p = head
+      .identifying_runes
+      .as_ref()
+      .map(|x| x.params.to_vec())
+      .unwrap_or_default();
+    let user_specified_identifying_runes = generic_parameters_p
+      .iter()
+      .map(|generic_parameter| RuneUsage {
+        range: Self::eval_range(file, generic_parameter.name.range()),
+        rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: generic_parameter.name.str(),
+        })),
+      })
+      .collect::<Vec<_>>();
+    let template_rules_p = head
+      .template_rules
+      .as_ref()
+      .map(|x| x.rules.to_vec())
+      .unwrap_or_default();
+    let runes_from_rules =
+      crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates(
+        &template_rules_p,
+      )
+      .iter()
+      .map(|name_p| RuneUsage {
+        range: Self::eval_range(file, name_p.range()),
+        rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: name_p.str(),
+        })),
+      })
+      .collect::<Vec<_>>();
+    let user_declared_runes = user_specified_identifying_runes
+      .iter()
+      .chain(runes_from_rules.iter())
+      .cloned()
+      .collect::<Vec<_>>();
+    let struct_env = IEnvironmentS::Environment(EnvironmentS {
+      file,
+      parent_env: None,
+      name: INameS::TopLevelStructDeclaration(struct_name.clone()),
+      user_declared_runes: user_declared_runes
+        .iter()
+        .map(|x| x.rune.clone())
+        .collect::<Vec<_>>(),
+    });
 
-    let mut members = Vec::new();
-    let mut member_rules = Vec::new();
-    let mut members_rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
-    for content in head.members.contents {
-      match content {
-        IStructContent::NormalStructMember(member) => {
-          let member_range = Self::eval_range(file, member.range);
-          let member_rune = RuneUsage {
-            range: member_range.clone(),
-            rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-              name: self
-                .interner
-                .intern(&format!("__member_{}", member.name.str().as_str())),
-            })),
+    let mut header_rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut header_rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
+
+    let (_default_region_rune_range_s, default_region_rune_s, _maybe_region_generic_param) =
+      match &head.maybe_default_region_rune {
+        None => {
+          let region_range = RangeS {
+            begin: body_range_s.begin.clone(),
+            end: body_range_s.begin.clone(),
           };
-          let lookup_name = match &member.tyype {
-            ITemplexPT::NameOrRune(name_or_rune) => CodeNameS {
-              name: name_or_rune.0.str(),
+          let rune = self
+            .interner
+            .intern_rune(IRuneValS::DenizenDefaultRegionRune(
+              crate::postparsing::names::DenizenDefaultRegionRuneS {
+              denizen_name: INameS::TopLevelStructDeclaration(struct_name.clone()),
+            }));
+          let implicit_region_generic_param = GenericParameterS {
+            range: region_range.clone(),
+            rune: RuneUsage {
+              range: region_range.clone(),
+              rune: rune.clone(),
             },
-            _ => {
-              panic!("POSTPARSER_SCOUT_STRUCT_MEMBER_TYPE_NOT_YET_IMPLEMENTED");
-            }
+            tyype: IGenericParameterTypeS::RegionGenericParameterType(
+              crate::postparsing::ast::RegionGenericParameterTypeS {
+                mutability: crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion,
+              },
+            ),
+            default: None,
           };
-          member_rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
-            range: Self::eval_range(file, member.tyype.range()),
-            rune: member_rune.clone(),
-            name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
-              name: lookup_name.name,
-            })),
+          (region_range, rune, Some(implicit_region_generic_param))
+        }
+        Some(region_rune_p) => {
+          let region_range_s = Self::eval_range(file, region_rune_p.range);
+          let region_name = match &region_rune_p.name {
+            None => panic!("impl isolates"),
+            Some(name) => name.str(),
+          };
+          let rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: region_name,
           }));
+          if !struct_env.all_declared_runes().contains(&rune) {
+            return Err(ICompileErrorS::CouldntFindRuneS(CouldntFindRuneS {
+              range: region_range_s.clone(),
+              name: region_name.as_str().to_string(),
+            }));
+          }
+          (region_range_s, rune, None)
+        }
+      };
+
+    let struct_user_specified_generic_parameters_s = generic_parameters_p
+      .iter()
+      .zip(user_specified_identifying_runes.iter())
+      .map(|(g, r)| {
+        scout_generic_parameter(
+          self.interner,
+          struct_env.clone(),
+          &mut lidb.child(),
+          &mut header_rune_to_explicit_type,
+          &mut header_rule_builder,
+          default_region_rune_s.clone(),
+          g,
+          r.clone(),
+        )
+      })
+      .collect::<Vec<_>>();
+    let generic_parameters_s = struct_user_specified_generic_parameters_s;
+
+    crate::postparsing::rules::rule_scout::translate_rulexes(
+      self.interner,
+      self.keywords,
+      struct_env.clone(),
+      &mut lidb.child(),
+      &mut header_rule_builder,
+      &mut header_rune_to_explicit_type,
+      default_region_rune_s.clone(),
+      &template_rules_p,
+    );
+
+    let mut member_rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut members_rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
+
+    let mutability = head.mutability.clone().unwrap_or(ITemplexPT::Mutability(
+      crate::parsing::ast::MutabilityPT(
+        RangeL(head.body_range.begin(), head.body_range.begin()),
+        MutabilityP::Mutable,
+      ),
+    ));
+    let mutability_rune_s = crate::postparsing::rules::templex_scout::translate_templex(
+      self.interner,
+      self.keywords,
+      struct_env.clone(),
+      &mut lidb.child(),
+      &mut header_rule_builder,
+      default_region_rune_s.clone(),
+      &mutability,
+    );
+    header_rune_to_explicit_type.push((
+      mutability_rune_s.rune.clone(),
+      ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+    ));
+
+    let members_s = head
+      .members
+      .contents
+      .iter()
+      .flat_map(|member| match member {
+        IStructContent::NormalStructMember(member) => {
+          let member_rune = crate::postparsing::rules::templex_scout::translate_templex(
+            self.interner,
+            self.keywords,
+            struct_env.clone(),
+            &mut lidb.child(),
+            &mut member_rule_builder,
+            default_region_rune_s.clone(),
+            &member.tyype,
+          );
           members_rune_to_explicit_type.insert(
             member_rune.rune.clone(),
             ITemplataType::CoordTemplataType(CoordTemplataType {}),
           );
-          members.push(IStructMemberS::NormalStructMember(NormalStructMemberS {
-            range: member_range,
+          vec![IStructMemberS::NormalStructMember(NormalStructMemberS {
+            range: Self::eval_range(file, member.range),
             name: member.name.str(),
             variability: member.variability,
             type_rune: member_rune,
-          }));
+          })]
         }
-        IStructContent::VariadicStructMember(_member) => {
-          panic!("Unimplemented: variadic struct members");
+        IStructContent::VariadicStructMember(member) => {
+          let member_rune = crate::postparsing::rules::templex_scout::translate_templex(
+            self.interner,
+            self.keywords,
+            struct_env.clone(),
+            &mut lidb.child(),
+            &mut member_rule_builder,
+            default_region_rune_s.clone(),
+            &member.tyype,
+          );
+          members_rune_to_explicit_type.insert(
+            member_rune.rune.clone(),
+            ITemplataType::PackTemplataType(crate::postparsing::itemplatatype::PackTemplataType {
+              element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            }),
+          );
+          vec![IStructMemberS::VariadicStructMember(
+            crate::postparsing::ast::VariadicStructMemberS {
+              range: Self::eval_range(file, member.range),
+              variability: member.variability,
+              type_rune: member_rune,
+            },
+          )]
         }
         IStructContent::StructMethod(_) => {
-          // Scala currently drops struct methods here:
-          //   case StructMethodP(_) => Vector.empty
+          Vec::new()
         }
-      }
-    }
+      })
+      .collect::<Vec<_>>();
 
-    let mut weakable = false;
-    let mut first_linear_attr_range = None;
-    let mut attributes = Vec::<ICitizenAttributeS>::new();
-    for attribute in head.attributes {
-      match attribute {
-        IAttributeP::WeakableAttribute(_) => {
-          weakable = true;
-        }
-        IAttributeP::LinearAttribute(attr) => {
-          if first_linear_attr_range.is_none() {
-            first_linear_attr_range = Some(attr.range);
-          }
-        }
-        IAttributeP::SealedAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Sealed(SealedS));
-        }
-        IAttributeP::ExportAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Export(ExportS {
-            package_coordinate: file.package_coord,
-          }));
-        }
-        IAttributeP::MacroCall(attr) => {
-          attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
-            range: Self::eval_range(file, attr.range),
-            include: attr.inclusion,
-            macro_name: attr.name.str(),
-          }));
-        }
-        other => panic!("POSTPARSER_SCOUT_STRUCT_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
-      }
-    }
-    if let Some(range) = first_linear_attr_range {
-      attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
-        range: Self::eval_range(file, range),
+    let header_rules_s = header_rule_builder;
+    let member_rules_s = member_rule_builder;
+    let all_rules_s = header_rules_s
+      .iter()
+      .chain(member_rules_s.iter())
+      .cloned()
+      .collect::<Vec<_>>();
+    let mut all_rune_to_explicit_type = header_rune_to_explicit_type.clone();
+    all_rune_to_explicit_type.extend(
+      members_rune_to_explicit_type
+        .iter()
+        .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
+    );
+
+    let identifying_runes_s = user_specified_identifying_runes
+      .iter()
+      .map(|x| x.rune.clone())
+      .collect::<Vec<_>>();
+    let rune_to_predicted_type = Self::predict_rune_types(
+      struct_range_s.clone(),
+      &identifying_runes_s,
+      &mut all_rune_to_explicit_type,
+      &all_rules_s,
+    )?;
+    let predicted_mutability =
+      Self::predict_mutability(struct_range_s.clone(), mutability_rune_s.rune.clone(), &all_rules_s);
+    let runes_from_header = user_declared_runes
+      .iter()
+      .map(|x| x.rune.clone())
+      .chain(header_rules_s.iter().flat_map(|rule| {
+        rule
+          .rune_usages()
+          .into_iter()
+          .map(|usage| usage.rune.clone())
+      }))
+      .collect::<std::collections::HashSet<_>>();
+    let header_rune_to_predicted_type = rune_to_predicted_type
+      .iter()
+      .filter(|(rune, _)| runes_from_header.contains(*rune))
+      .map(|(rune, tyype)| (rune.clone(), tyype.clone()))
+      .collect::<HashMap<_, _>>();
+    let members_rune_to_predicted_type = rune_to_predicted_type
+      .iter()
+      .filter(|(rune, _)| !runes_from_header.contains(*rune))
+      .map(|(rune, tyype)| (rune.clone(), tyype.clone()))
+      .collect::<HashMap<_, _>>();
+
+    let tyype = TemplateTemplataType {
+      param_types: generic_parameters_s
+        .iter()
+        .map(|x| x.tyype.tyype())
+        .collect::<Vec<_>>(),
+      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+    };
+    let weakable = head
+      .attributes
+      .iter()
+      .any(|attr| matches!(attr, IAttributeP::WeakableAttribute(_)));
+    let attrs_without_linear_s = Self::translate_citizen_attributes(
+      file,
+      INameS::TopLevelStructDeclaration(struct_name.clone()),
+      &head
+        .attributes
+        .iter()
+        .filter(|attr| {
+          !matches!(
+            attr,
+            IAttributeP::WeakableAttribute(_) | IAttributeP::LinearAttribute(_)
+          )
+        })
+        .cloned()
+        .collect::<Vec<_>>(),
+    );
+    let mut attrs_s = attrs_without_linear_s;
+    if let Some(IAttributeP::LinearAttribute(attr)) = head
+      .attributes
+      .iter()
+      .find(|attr| matches!(attr, IAttributeP::LinearAttribute(_)))
+    {
+      attrs_s.push(ICitizenAttributeS::MacroCall(MacroCallS {
+        range: Self::eval_range(file, attr.range),
         include: IMacroInclusionP::DontCallMacro,
         macro_name: self.keywords.derive_struct_drop,
       }));
     }
 
     Ok(StructS {
-      range: struct_range_s.clone(),
+      range: struct_range_s,
       name: struct_name,
-      attributes: alloc_slice_from_vec(self.scout_arena, attributes),
+      attributes: alloc_slice_from_vec(self.scout_arena, attrs_s),
       weakable,
-      generic_params: alloc_slice_from_vec(
-        self.scout_arena,
-        Vec::<GenericParameterS>::new(),
-      ),
-      mutability_rune: mutability_rune.clone(),
-      maybe_predicted_mutability: Some(MutabilityP::Mutable),
-      tyype: TemplateTemplataType {
-        param_types: Vec::new(),
-        return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
-      },
-      header_rune_to_explicit_type: HashMap::from([(
-        mutability_rune.rune.clone(),
-        ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
-      )]),
-      header_predicted_rune_to_type: HashMap::new(),
-      header_rules: alloc_slice_from_vec(self.scout_arena, header_rules),
+      generic_params: alloc_slice_from_vec(self.scout_arena, generic_parameters_s),
+      mutability_rune: mutability_rune_s,
+      maybe_predicted_mutability: predicted_mutability,
+      tyype,
+      header_rune_to_explicit_type: header_rune_to_explicit_type
+        .into_iter()
+        .collect::<HashMap<_, _>>(),
+      header_predicted_rune_to_type: header_rune_to_predicted_type,
+      header_rules: alloc_slice_from_vec(self.scout_arena, header_rules_s),
       members_rune_to_explicit_type,
-      members_predicted_rune_to_type: HashMap::new(),
-      member_rules: alloc_slice_from_vec(self.scout_arena, member_rules),
-      members: alloc_slice_from_vec(self.scout_arena, members),
+      members_predicted_rune_to_type: members_rune_to_predicted_type,
+      member_rules: alloc_slice_from_vec(self.scout_arena, member_rules_s),
+      members: alloc_slice_from_vec(self.scout_arena, members_s),
     })
   }
 /*
@@ -1393,11 +2054,31 @@ fn predict_mutability(
   }
 */
 fn translate_citizen_attributes(
-  _file: &crate::utils::code_hierarchy::FileCoordinate<'a>,
+  file: &'a crate::utils::code_hierarchy::FileCoordinate<'a>,
   _denizen_name: crate::postparsing::names::INameS<'a>,
-  _attrs_p: &[crate::parsing::ast::IAttributeP<'a>],
+  attrs_p: &[crate::parsing::ast::IAttributeP<'a>],
 ) -> Vec<crate::postparsing::ast::ICitizenAttributeS<'a>> {
-  panic!("Unimplemented translate_citizen_attributes");
+  attrs_p
+    .iter()
+    .map(|attr_p| match attr_p {
+      crate::parsing::ast::IAttributeP::ExportAttribute(_) => {
+        crate::postparsing::ast::ICitizenAttributeS::Export(crate::postparsing::ast::ExportS {
+          package_coordinate: file.package_coord,
+        })
+      }
+      crate::parsing::ast::IAttributeP::SealedAttribute(_) => {
+        crate::postparsing::ast::ICitizenAttributeS::Sealed(crate::postparsing::ast::SealedS)
+      }
+      crate::parsing::ast::IAttributeP::MacroCall(macro_call_p) => {
+        crate::postparsing::ast::ICitizenAttributeS::MacroCall(crate::postparsing::ast::MacroCallS {
+          range: PostParser::eval_range(file, macro_call_p.range),
+          include: macro_call_p.inclusion,
+          macro_name: macro_call_p.name.str(),
+        })
+      }
+      _ => panic!("POSTPARSER_TRANSLATE_CITIZEN_ATTRIBUTES_NOT_YET_IMPLEMENTED"),
+    })
+    .collect()
 }
 /*
   def translateCitizenAttributes(file: FileCoordinate, denizenName: INameS, attrsP: Vector[IAttributeP]): Vector[ICitizenAttributeS] = {
@@ -1410,12 +2091,51 @@ fn translate_citizen_attributes(
   }
 */
 fn predict_rune_types(
-  _range_s: crate::utils::range::RangeS<'a>,
+  range_s: crate::utils::range::RangeS<'a>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
-  _rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
+  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
   _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-) -> std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType> {
-  panic!("Unimplemented predict_rune_types");
+) -> Result<
+  std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  ICompileErrorS<'a>,
+> {
+  let mut grouped_explicit_types = std::collections::HashMap::<
+    crate::postparsing::names::IRuneS<'a>,
+    Vec<crate::postparsing::itemplatatype::ITemplataType>,
+  >::new();
+  for (rune, explicit_type) in rune_to_explicit_type.iter() {
+    grouped_explicit_types
+      .entry(rune.clone())
+      .or_default()
+      .push(explicit_type.clone());
+  }
+
+  let mut rune_to_explicit_type = std::collections::HashMap::<
+    crate::postparsing::names::IRuneS<'a>,
+    crate::postparsing::itemplatatype::ITemplataType,
+  >::new();
+  for (rune, explicit_types) in grouped_explicit_types {
+    let mut distinct_explicit_types =
+      Vec::<crate::postparsing::itemplatatype::ITemplataType>::new();
+    for explicit_type in explicit_types {
+      if !distinct_explicit_types.contains(&explicit_type) {
+        distinct_explicit_types.push(explicit_type);
+      }
+    }
+    if distinct_explicit_types.len() > 1 {
+      return Err(ICompileErrorS::RuneExplicitTypeConflictS(RuneExplicitTypeConflictS {
+        range: range_s.clone(),
+        rune,
+        types: distinct_explicit_types,
+      }));
+    }
+    let explicit_type = match distinct_explicit_types.first() {
+      None => panic!("POSTPARSER_PREDICT_RUNE_TYPES_EMPTY_EXPLICIT_TYPE_GROUP"),
+      Some(tyype) => tyype.clone(),
+    };
+    rune_to_explicit_type.insert(rune, explicit_type);
+  }
+  Ok(rune_to_explicit_type)
 }
 /*
 
@@ -1507,8 +2227,8 @@ fn check_identifiability(
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
     );
     assert!(
-      interface.maybe_identifying_runes.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_IDENTIFYING_RUNES_REQUIRE_RULE_SOLVER_NOT_YET_IMPLEMENTED"
+      interface.template_rules.is_none(),
+      "POSTPARSER_SCOUT_INTERFACE_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
     );
 
     let mut weakable = false;
@@ -1550,8 +2270,33 @@ fn check_identifiability(
       }));
     }
 
-    let generic_params = Vec::<GenericParameterS>::new();
-    let rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
+    let mut generic_params = Vec::<GenericParameterS>::new();
+    let mut rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
+    if let Some(identifying_runes) = &interface.maybe_identifying_runes {
+      for identifying_rune in identifying_runes.params {
+        let rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: identifying_rune.name.str(),
+        }));
+        let rune_usage = RuneUsage {
+          range: Self::eval_range(file, identifying_rune.name.range()),
+          rune: rune.clone(),
+        };
+        generic_params.push(GenericParameterS {
+          range: Self::eval_range(file, identifying_rune.range),
+          rune: rune_usage,
+          tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
+            coord_region: None,
+            kind_mutable: true,
+            region_mutable: false,
+          }),
+          default: None,
+        });
+        rune_to_explicit_type.insert(
+          rune,
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        );
+      }
+    }
 
     let mutability_rune = RuneUsage {
       range: interface_range.clone(),
@@ -1560,51 +2305,17 @@ fn check_identifiability(
       })),
     };
 
-    let internal_methods = interface
-      .members
-      .iter()
-      .map(|member| {
-        assert!(
-          member.body.is_none(),
-          "POSTPARSER_SCOUT_INTERFACE_MEMBER_BODY_NOT_YET_IMPLEMENTED"
-        );
-        assert!(
-          member.header.attributes.is_empty(),
-          "POSTPARSER_SCOUT_INTERFACE_MEMBER_ATTRIBUTES_NOT_YET_IMPLEMENTED"
-        );
-        assert!(
-          member.header.generic_parameters.is_none(),
-          "POSTPARSER_SCOUT_INTERFACE_MEMBER_GENERIC_PARAMETERS_NOT_YET_IMPLEMENTED"
-        );
-        assert!(
-          member.header.template_rules.is_none(),
-          "POSTPARSER_SCOUT_INTERFACE_MEMBER_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
-        );
-        let method_name = member
-          .header
-          .name
-          .as_ref()
-          .unwrap_or_else(|| panic!("POSTPARSER_INTERFACE_MEMBER_WITHOUT_NAME"));
-        FunctionS {
-          range: Self::eval_range(file, member.range),
-          name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
-            name: method_name.str(),
-            code_location: Self::eval_pos(file, method_name.range().begin()),
-          }),
-          attributes: alloc_slice_from_vec(self.scout_arena, Vec::new()),
-          generic_params: alloc_slice_from_vec(self.scout_arena, generic_params.clone()),
-          rune_to_predicted_type: HashMap::new(),
-          tyype: TemplateTemplataType {
-            param_types: Vec::new(),
-            return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
-          },
-          params: alloc_slice_from_vec(self.scout_arena, Vec::new()),
-          maybe_ret_coord_rune: None,
-          rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
-          body: IBodyS::AbstractBody(AbstractBodyS {}),
-        }
-      })
-      .collect();
+    let interface_rules = Vec::<IRulexSR>::new();
+    let mut internal_methods = Vec::new();
+    for member in interface.members {
+      internal_methods.push(self.scout_interface_member(
+        file,
+        member,
+        &generic_params,
+        &interface_rules,
+        &rune_to_explicit_type,
+      )?);
+    }
 
     Ok(InterfaceS {
       range: interface_range,
@@ -1620,7 +2331,7 @@ fn check_identifiability(
         param_types: generic_params.iter().map(|x| x.tyype.tyype()).collect(),
         return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
       },
-      rules: alloc_slice_from_vec(self.scout_arena, Vec::new()),
+      rules: alloc_slice_from_vec(self.scout_arena, interface_rules),
       internal_methods: alloc_slice_from_vec(self.scout_arena, internal_methods),
     })
   }

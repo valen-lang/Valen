@@ -39,8 +39,8 @@ pub struct LetSE<'a, 's> {
 pub struct IfSE<'a, 's> {
   pub range: RangeS<'a>,
   pub condition: &'s IExpressionSE<'a, 's>,
-  pub then_body: BlockSE<'a, 's>,
-  pub else_body: BlockSE<'a, 's>,
+  pub then_body: &'s BlockSE<'a, 's>,
+  pub else_body: &'s BlockSE<'a, 's>,
 }
 /*
 case class IfSE(
@@ -57,7 +57,7 @@ case class IfSE(
 #[derive(Clone, Debug, PartialEq)]
 pub struct LoopSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub body: BlockSE<'a, 's>,
+  pub body: &'s BlockSE<'a, 's>,
 }
 /*
 case class LoopSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -77,7 +77,7 @@ case class BreakSE(range: RangeS) extends IExpressionSE {
 #[derive(Clone, Debug, PartialEq)]
 pub struct WhileSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub body: BlockSE<'a, 's>,
+  pub body: &'s BlockSE<'a, 's>,
 }
 /*
 case class WhileSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -88,7 +88,7 @@ case class WhileSE(range: RangeS, body: BlockSE) extends IExpressionSE {
 #[derive(Clone, Debug, PartialEq)]
 pub struct MapSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub body: BlockSE<'a, 's>,
+  pub body: &'s BlockSE<'a, 's>,
 }
 /*
 case class MapSE(range: RangeS, body: BlockSE) extends IExpressionSE {
@@ -192,7 +192,7 @@ case class LocalS(
 pub struct BodySE<'a, 's> {
   pub range: RangeS<'a>,
   pub closured_names: Vec<IVarNameS<'a>>,
-  pub block: BlockSE<'a, 's>,
+  pub block: &'s BlockSE<'a, 's>,
 }
 
 /*
@@ -273,7 +273,7 @@ pub enum IExpressionSE<'a, 's> {
   NewRuntimeSizedArray(NewRuntimeSizedArraySE<'a, 's>),
   RepeaterPack(RepeaterPackSE<'a, 's>),
   RepeaterPackIterator(RepeaterPackIteratorSE<'a, 's>),
-  Block(BlockSE<'a, 's>),
+  Block(&'s BlockSE<'a, 's>),
   Pure(PureSE<'a, 's>),
   Return(ReturnSE<'a, 's>),
   ConstantInt(ConstantIntSE<'a>),

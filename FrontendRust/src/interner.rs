@@ -257,6 +257,18 @@ impl<'a> Interner<'a> {
         let r = self.arena.alloc(p);
         IImpreciseNameS::CodeName(r)
       }
+      IterableName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::IterableName(r)
+      }
+      IteratorName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::IteratorName(r)
+      }
+      IterationOptionName(p) => {
+        let r = self.arena.alloc(p);
+        IImpreciseNameS::IterationOptionName(r)
+      }
       LambdaImpreciseName(p) => {
         let r = self.arena.alloc(p);
         IImpreciseNameS::LambdaImpreciseName(r)

@@ -16,13 +16,49 @@ class TemplexScout(
     interner: Interner,
   keywords: Keywords) {
 */
+
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::parsing::ast::{
+  BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, LocationPT, MutabilityPT, NameOrRunePT,
+  NameP, OwnershipPT, RegionRunePT, StringPT, VariabilityPT,
+};
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::names::{
+  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, ImplicitRuneS, IRuneS,
+};
+use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
+use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
+use crate::postparsing::rules::rules::IRulexSR::{Lookup, MaybeCoercingCall, MaybeCoercingLookup};
+use crate::postparsing::rules::rules::{
+  BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL, LookupSR,
+  MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
+  RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
+};
+use crate::utils::range::RangeS;
+use std::collections::HashMap;
+
 fn add_literal_rule<'a>(
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _range_s: crate::utils::range::RangeS<'a>,
-  _value_sr: crate::postparsing::rules::rules::ILiteralSL,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented add_literal_rule");
+  interner: &Interner<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  range_s: RangeS<'a>,
+  value_sr: ILiteralSL,
+) -> RuneUsage<'a> {
+  let mut child_lidb = lidb.child();
+  let rune_s = RuneUsage {
+    range: range_s.clone(),
+    rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+      lid: child_lidb.consume(),
+    })),
+  };
+  rule_builder.push(IRulexSR::Literal(LiteralSR {
+    range: range_s,
+    rune: rune_s.clone(),
+    literal: value_sr,
+  }));
+  rune_s
 }
 /*
   def addLiteralRule(
@@ -37,12 +73,21 @@ fn add_literal_rule<'a>(
   }
 */
 fn add_rune_parent_env_lookup_rule<'a>(
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _range_s: crate::utils::range::RangeS<'a>,
-  _rune_s: crate::postparsing::names::IRuneS<'a>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented add_rune_parent_env_lookup_rule");
+  _lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  range_s: RangeS<'a>,
+  rune_s: IRuneS<'a>,
+) -> RuneUsage<'a> {
+  let usage = RuneUsage {
+    range: range_s.clone(),
+    rune: rune_s,
+  };
+  rule_builder.push(IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR {
+      range: range_s,
+      rune: usage.clone(),
+    },
+  ));
+  usage
 }
 /*
   def addRuneParentEnvLookupRule(
@@ -57,13 +102,27 @@ fn add_rune_parent_env_lookup_rule<'a>(
   }
 */
 fn add_lookup_rule<'a>(
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _range_s: crate::utils::range::RangeS<'a>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _name_sn: crate::postparsing::names::IImpreciseNameS<'a>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented add_lookup_rule");
+  interner: &Interner<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  range_s: RangeS<'a>,
+  // Nearest enclosing region marker, see RADTGCA.
+  _context_region: IRuneS<'a>,
+  name_sn: IImpreciseNameS<'a>,
+) -> RuneUsage<'a> {
+  let mut child_lidb = lidb.child();
+  let rune_s = RuneUsage {
+    range: range_s.clone(),
+    rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+      lid: child_lidb.consume(),
+    })),
+  };
+  rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
+    range: range_s,
+    rune: rune_s.clone(),
+    name: name_sn,
+  }));
+  rune_s
 }
 /*
   def addLookupRule(
@@ -79,9 +138,42 @@ fn add_lookup_rule<'a>(
   }
 */
 fn translate_value_templex<'a, 'p>(
-  _templex: &crate::parsing::ast::ITemplexPT<'a, 'p>,
-) -> Option<crate::postparsing::rules::rules::ILiteralSL> {
-  panic!("Unimplemented translate_value_templex");
+  templex: &ITemplexPT<'a, 'p>,
+) -> Option<ILiteralSL> {
+  match templex {
+    ITemplexPT::Int(IntPT { value, .. }) => Some(ILiteralSL::IntLiteral(IntLiteralSL {
+      value: *value,
+    })),
+    ITemplexPT::Bool(BoolPT { value, .. }) => Some(ILiteralSL::BoolLiteral(BoolLiteralSL {
+      value: *value,
+    })),
+    ITemplexPT::Mutability(MutabilityPT(_, mutability)) => Some(ILiteralSL::MutabilityLiteral(
+      MutabilityLiteralSL {
+        mutability: *mutability,
+      },
+    )),
+    ITemplexPT::Variability(VariabilityPT(_, variability)) => Some(ILiteralSL::VariabilityLiteral(
+      VariabilityLiteralSL {
+        variability: *variability,
+      },
+    )),
+    ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(
+      StringLiteralSL {
+        value: str.clone(),
+      },
+    )),
+    ITemplexPT::Location(LocationPT { location, .. }) => Some(ILiteralSL::LocationLiteral(
+      LocationLiteralSL {
+        location: *location,
+      },
+    )),
+    ITemplexPT::Ownership(OwnershipPT(_, ownership)) => Some(ILiteralSL::OwnershipLiteral(
+      OwnershipLiteralSL {
+        ownership: *ownership,
+      },
+    )),
+    _ => None,
+  }
 }
 /*
   def translateValueTemplex(templex: ITemplexPT): Option[ILiteralSL] = {
@@ -97,14 +189,303 @@ fn translate_value_templex<'a, 'p>(
     }
   }
 */
-fn translate_templex<'a, 'p, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _templex: &crate::parsing::ast::ITemplexPT<'a, 'p>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented translate_templex");
+// Returns:
+// - Rune for this type
+pub fn translate_templex<'a, 'p>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  // Nearest enclosing region marker, see RADTGCA.
+  context_region: IRuneS<'a>,
+  templex: &ITemplexPT<'a, 'p>,
+) -> RuneUsage<'a> {
+  let file = env.file();
+  match translate_value_templex(templex) {
+    Some(x) => {
+      let mut child_lidb = lidb.child();
+      add_literal_rule(
+        interner,
+        &mut child_lidb,
+        rule_builder,
+        PostParser::eval_range(file, templex.range()),
+        x,
+      )
+    }
+    None => match templex {
+      ITemplexPT::Inline(inline) => translate_templex(
+        interner,
+        keywords,
+        env,
+        lidb,
+        rule_builder,
+        context_region,
+        inline.inner,
+      ),
+      ITemplexPT::AnonymousRune(anonymous_rune) => {
+        let mut child_lidb = lidb.child();
+        let rune = RuneUsage {
+          range: PostParser::eval_range(file, anonymous_rune.range),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        rune
+      }
+      ITemplexPT::RegionRune(RegionRunePT {
+        range: _,
+        name: None,
+      }) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::RegionRune(RegionRunePT {
+        range,
+        name: Some(name),
+      }) => {
+        let is_rune_from_local_env = env.local_declared_runes().contains(
+          &interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+        );
+        if is_rune_from_local_env {
+          RuneUsage {
+            range: PostParser::eval_range(file, *range),
+            rune: interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+          }
+        } else {
+          // It's from a parent env
+          let mut child_lidb = lidb.child();
+          add_rune_parent_env_lookup_rule(
+            &mut child_lidb,
+            rule_builder,
+            PostParser::eval_range(file, *range),
+            interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+          )
+        }
+      }
+      ITemplexPT::NameOrRune(NameOrRunePT(name_or_rune)) => {
+        let is_rune_from_env = env.all_declared_runes().contains(&interner.intern_rune(CodeRune(
+          CodeRuneS {
+            name: name_or_rune.str(),
+          },
+        )));
+        if is_rune_from_env {
+          let is_rune_from_local_env = env.local_declared_runes().contains(
+            &interner.intern_rune(CodeRune(CodeRuneS {
+              name: name_or_rune.str(),
+            })),
+          );
+          if is_rune_from_local_env {
+            RuneUsage {
+              range: PostParser::eval_range(file, name_or_rune.range()),
+              rune: interner.intern_rune(CodeRune(CodeRuneS {
+                name: name_or_rune.str(),
+              })),
+            }
+          } else {
+            // It's from a parent env
+            let mut child_lidb = lidb.child();
+            add_rune_parent_env_lookup_rule(
+              &mut child_lidb,
+              rule_builder,
+              PostParser::eval_range(file, name_or_rune.range()),
+              interner.intern_rune(CodeRune(CodeRuneS {
+                name: name_or_rune.str(),
+              })),
+            )
+          }
+        } else {
+          // e.g. "int"
+          let name = interner.intern_imprecise_name(CodeName(CodeNameS {
+            name: name_or_rune.str(),
+          }));
+          let mut child_lidb = lidb.child();
+          add_lookup_rule(
+            interner,
+            &mut child_lidb,
+            rule_builder,
+            PostParser::eval_range(file, name_or_rune.range()),
+            context_region,
+            name,
+          )
+          // For lookups like these, we bring them into the current region.
+        }
+      }
+      ITemplexPT::Interpreted(_interpreted) => {
+        panic!("POSTPARSER_TRANSLATE_TEMPLEX_INTERPRETED_NOT_YET_IMPLEMENTED")
+      }
+      ITemplexPT::Call(_call) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_CALL_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::Function(_function) => {
+        panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNCTION_NOT_YET_IMPLEMENTED")
+      }
+      ITemplexPT::Func(_func) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNC_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::Pack(_pack) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_PACK_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::StaticSizedArray(static_sized_array) => {
+        let range_s = PostParser::eval_range(file, static_sized_array.range);
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        let mut child_lidb = lidb.child();
+        let template_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        rule_builder.push(Lookup(LookupSR {
+          range: range_s.clone(),
+          rune: template_rune_s.clone(),
+          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+            name: keywords.static_array,
+          })),
+        }));
+        let mut child_lidb = lidb.child();
+        let size_rune_s = translate_templex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          rule_builder,
+          context_region.clone(),
+          static_sized_array.size,
+        );
+        let mut child_lidb = lidb.child();
+        let mutability_rune_s = translate_templex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          rule_builder,
+          context_region.clone(),
+          static_sized_array.mutability,
+        );
+        let mut child_lidb = lidb.child();
+        let variability_rune_s = translate_templex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          rule_builder,
+          context_region.clone(),
+          static_sized_array.variability,
+        );
+        let mut child_lidb = lidb.child();
+        let element_rune_s = translate_templex(
+          interner,
+          keywords,
+          env,
+          &mut child_lidb,
+          rule_builder,
+          context_region,
+          static_sized_array.element,
+        );
+        rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          template_rune: template_rune_s,
+          args: vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s],
+        }));
+        result_rune_s
+      }
+      ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
+        let range_s = PostParser::eval_range(file, runtime_sized_array.range);
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        let mut child_lidb = lidb.child();
+        let template_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        rule_builder.push(Lookup(LookupSR {
+          range: range_s.clone(),
+          rune: template_rune_s.clone(),
+          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+            name: keywords.array,
+          })),
+        }));
+        let mut child_lidb = lidb.child();
+        let mutability_rune_s = translate_templex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          rule_builder,
+          context_region.clone(),
+          runtime_sized_array.mutability,
+        );
+        let mut child_lidb = lidb.child();
+        let element_rune_s = translate_templex(
+          interner,
+          keywords,
+          env,
+          &mut child_lidb,
+          rule_builder,
+          context_region,
+          runtime_sized_array.element,
+        );
+        rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          template_rune: template_rune_s,
+          args: vec![mutability_rune_s, element_rune_s],
+        }));
+        result_rune_s
+      }
+      ITemplexPT::Tuple(tuple) => {
+        let range_s = PostParser::eval_range(file, tuple.range);
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        let mut child_lidb = lidb.child();
+        let template_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
+          range: range_s.clone(),
+          rune: template_rune_s.clone(),
+          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+            name: keywords.tuple_human_name[tuple.elements.len()],
+          })),
+        }));
+        let mut element_runes = Vec::<RuneUsage<'a>>::new();
+        for element in tuple.elements {
+          let mut child_lidb = lidb.child();
+          element_runes.push(translate_templex(
+            interner,
+            keywords,
+            env.clone(),
+            &mut child_lidb,
+            rule_builder,
+            context_region.clone(),
+            element,
+          ));
+        }
+        rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          template_rune: template_rune_s,
+          args: element_runes,
+        }));
+        result_rune_s
+      }
+      _ => panic!("POSTPARSER_TRANSLATE_TEMPLEX_NOT_YET_IMPLEMENTED"),
+    },
+  }
 }
 /*
   // Returns:
@@ -350,14 +731,49 @@ fn translate_templex<'a, 'p, 'env>(
     })
   }
 */
-fn translate_type_into_rune<'a, 'p, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _type_p: &crate::parsing::ast::ITemplexPT<'a, 'p>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented translate_type_into_rune");
+// Returns:
+// - Rune for this type
+fn translate_type_into_rune<'a, 'p>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  // Nearest enclosing region marker, see RADTGCA.
+  context_region: IRuneS<'a>,
+  type_p: &ITemplexPT<'a, 'p>,
+) -> RuneUsage<'a> {
+  let file = env.file();
+  match type_p {
+    NameOrRune(NameOrRunePT(NameP(
+      range,
+      name_or_rune,
+    )))
+      if env.all_declared_runes().contains(&interner.intern_rune(CodeRune(CodeRuneS {
+        name: *name_or_rune,
+      }))) =>
+    {
+      let result_rune_s = RuneUsage {
+        range: PostParser::eval_range(file, *range),
+        rune: interner.intern_rune(CodeRune(CodeRuneS {
+          name: *name_or_rune,
+        })),
+      };
+      result_rune_s
+    }
+    non_rune_templex_p => {
+      let mut child_lidb = lidb.child();
+      translate_templex(
+        interner,
+        keywords,
+        env,
+        &mut child_lidb,
+        rule_builder,
+        context_region,
+        non_rune_templex_p,
+      )
+    }
+  }
 }
 /*
   // Returns:
@@ -372,8 +788,6 @@ fn translate_type_into_rune<'a, 'p, 'env>(
     typeP match {
       case NameOrRunePT(NameP(range, nameOrRune)) if env.allDeclaredRunes().contains(CodeRuneS(nameOrRune)) => {
         val resultRuneS = rules.RuneUsage(PostParser.evalRange(env.file, range), CodeRuneS(nameOrRune))
-        //        ruleBuilder += ValueLeafSR(range, resultRuneS, EnvRuneLookupSR(CodeRuneS(nameOrRune)))
-        //        resultRuneS
         resultRuneS
       }
       case nonRuneTemplexP => {
@@ -382,15 +796,33 @@ fn translate_type_into_rune<'a, 'p, 'env>(
     }
   }
 */
-fn translate_maybe_type_into_rune<'a, 'p, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::utils::range::RangeS<'a>,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _maybe_type_p: Option<&crate::parsing::ast::ITemplexPT<'a, 'p>>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented translate_maybe_type_into_rune");
+// Returns:
+// - Rune for this type
+pub fn translate_maybe_type_into_rune<'a, 'p>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeS<'a>,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  context_region: IRuneS<'a>,
+  maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
+) -> RuneUsage<'a> {
+  match maybe_type_p {
+    None => {
+      let mut child_lidb = lidb.child();
+      let result_rune_s = RuneUsage {
+        range,
+        rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+          lid: child_lidb.consume(),
+        })),
+      };
+      result_rune_s
+    }
+    Some(type_p) => {
+      translate_type_into_rune(interner, keywords, env, lidb, rule_builder, context_region, type_p)
+    }
+  }
 }
 /*
   // Returns:
@@ -414,15 +846,15 @@ fn translate_maybe_type_into_rune<'a, 'p, 'env>(
   }
 }
 */
-fn translate_maybe_type_into_maybe_rune<'a, 'p, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::utils::range::RangeS<'a>,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _maybe_type_p: Option<&crate::parsing::ast::ITemplexPT<'a, 'p>>,
-) -> Option<crate::postparsing::rules::rules::RuneUsage<'a>> {
+fn translate_maybe_type_into_maybe_rune<'a, 'p>(
+  _env: IEnvironmentS<'a>,
+  _lidb: &mut LocationInDenizenBuilder,
+  _range: RangeS<'a>,
+  _rule_builder: &mut Vec<IRulexSR<'a>>,
+  _rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
+  _context_region: IRuneS<'a>,
+  _maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
+) -> Option<RuneUsage<'a>> {
   panic!("Unimplemented translate_maybe_type_into_maybe_rune");
 }
 /*

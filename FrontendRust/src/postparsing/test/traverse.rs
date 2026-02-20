@@ -11,14 +11,15 @@ use crate::postparsing::expressions::{
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, ExportAsNameS as ExportAsNameFromNamesS, FunctionNameS,
-  IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS, ImplDeclarationNameS,
+  IFunctionDeclarationNameS, IImpreciseNameS, INameS, IRuneS, IVarNameS, ImplDeclarationNameS, ImplicitRuneS,
   LambdaDeclarationNameS, TopLevelCitizenDeclarationNameS, TopLevelInterfaceDeclarationNameS,
-  TopLevelStructDeclarationNameS,
+  TopLevelStructDeclarationNameS, MagicParamRuneS,
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LocationLiteralSL, MaybeCoercingLookupSR,
-  MutabilityLiteralSL, OwnershipLiteralSL, StringLiteralSL, VariabilityLiteralSL,
+  BoolLiteralSL, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LocationLiteralSL, LookupSR,
+  MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
+  StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -82,6 +83,8 @@ pub enum NodeRefS<'a, 's> {
   PlaceholderRule(&'s crate::postparsing::rules::rules::PlaceholderRuleSR<'a>),
   LiteralRule(&'s LiteralSR<'a>),
   MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'a>),
+  LookupRule(&'s LookupSR<'a>),
+  MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'a>),
   RuneUsage(&'s RuneUsage<'a>),
   Literal(&'s ILiteralSL),
   IntLiteral(&'s IntLiteralSL),
@@ -106,6 +109,8 @@ pub enum NodeRefS<'a, 's> {
   VarName(&'s IVarNameS<'a>),
   Rune(&'s IRuneS<'a>),
   CodeRune(&'a CodeRuneS<'a>),
+  ImplicitRune(&'s ImplicitRuneS),
+  MagicParamRune(&'s MagicParamRuneS),
   DenizenDefaultRegionRune(&'s DenizenDefaultRegionRuneS<'a>),
 }
 
@@ -753,6 +758,22 @@ where
       visit_rune_usage(pred, out, &x.rune);
       visit_imprecise_name(pred, out, &x.name);
     }
+    IRulexSR::Lookup(x) => {
+      collect_if(pred, out, NodeRefS::LookupRule(x));
+      visit_rune_usage(pred, out, &x.rune);
+      visit_imprecise_name(pred, out, &x.name);
+    }
+    IRulexSR::MaybeCoercingCall(x) => {
+      collect_if(pred, out, NodeRefS::MaybeCoercingCallRule(x));
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.template_rune);
+      for arg in &x.args {
+        visit_rune_usage(pred, out, arg);
+      }
+    }
+    IRulexSR::RuneParentEnvLookup(x) => {
+      visit_rune_usage(pred, out, &x.rune);
+    }
   }
 }
 
@@ -820,6 +841,8 @@ where
   collect_if(pred, out, NodeRefS::Rune(rune));
   match rune {
     IRuneS::CodeRune(x) => collect_if(pred, out, NodeRefS::CodeRune(x)),
+    IRuneS::ImplicitRune(x) => collect_if(pred, out, NodeRefS::ImplicitRune(x)),
+    IRuneS::MagicParamRune(x) => collect_if(pred, out, NodeRefS::MagicParamRune(x)),
     IRuneS::DenizenDefaultRegionRune(x) => {
       collect_if(pred, out, NodeRefS::DenizenDefaultRegionRune(x));
       visit_name(pred, out, &x.denizen_name);
@@ -853,6 +876,11 @@ where
   match node {
     NodeRefS::Program(program) => collect_in_program(program, predicate),
     NodeRefS::Struct(strukt) => collect_in_struct(strukt, predicate),
+    NodeRefS::Impl(impl_) => {
+      let mut out = Vec::new();
+      visit_impl(predicate, &mut out, impl_);
+      out
+    }
     NodeRefS::Expression(expression) => collect_in_sexpression(expression, predicate),
     _ => panic!("POSTPARSING_TEST_COLLECT_IN_SNODE_NODE_KIND_NOT_YET_IMPLEMENTED"),
   }

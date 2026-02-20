@@ -10,8 +10,20 @@ import dev.vale.{Interner, Keywords, StrI, postparsing}
 /*
 class LoopPostParser(interner: Interner, keywords: Keywords) {
 */
-fn scout_loop<'a, 'env, 's, F>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+use crate::parsing::ast::{
+  AugmentPE, BlockPE, ConsecutorPE, DestinationLocalP, FunctionCallPE, IExpressionPE,
+  IImpreciseNameP, INameDeclarationP, LetPE, LoadAsP, LookupPE, NameP, OwnershipP, PatternPP,
+};
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::expressions::{
+  BlockSE, BreakSE, IExpressionSE, MapSE, VoidSE, WhileSE,
+};
+use crate::postparsing::post_parser::{ICompileErrorS, PostParser, StackFrame};
+use crate::postparsing::variable_uses::VariableUses;
+use crate::lexing::ast::RangeL;
+
+fn scout_loop<'a, 's, F>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,
   _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
   _range_p: crate::lexing::ast::RangeL,
   _pure: bool,
@@ -23,11 +35,11 @@ fn scout_loop<'a, 'env, 's, F>(
 )
 where
   F: FnOnce(
-    crate::postparsing::post_parser::StackFrame<'a, 'env>,
+    crate::postparsing::post_parser::StackFrame<'a>,
     &mut crate::postparsing::ast::LocationInDenizenBuilder,
     bool,
   ) -> (
-    crate::postparsing::post_parser::StackFrame<'a, 'env>,
+    crate::postparsing::post_parser::StackFrame<'a>,
     crate::postparsing::expressions::BlockSE<'a, 's>,
     crate::postparsing::variable_uses::VariableUses<'a>,
     crate::postparsing::variable_uses::VariableUses<'a>,
@@ -57,21 +69,154 @@ where
       })
   }
 */
-fn scout_each<'a, 'p, 'pp, 'env, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::lexing::ast::RangeL,
+pub(crate) fn scout_each<'a, 'p, 'ctx, 's>(
+  post_parser: &PostParser<'a, 'p, 'ctx, 's>,
+  stack_frame0: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeL,
   _pure: bool,
-  _entry_pattern_pp: &crate::parsing::ast::PatternPP<'a, 'p>,
-  _in_keyword_range: crate::lexing::ast::RangeL,
-  _iterable_expr: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
-  _body: &crate::parsing::ast::BlockPE<'a, 'p>,
-) -> (
-  crate::postparsing::expressions::BlockSE<'a, 's>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_each");
+  entry_pattern_pp: &PatternPP<'a, 'p>,
+  in_keyword_range: RangeL,
+  iterable_expr: &IExpressionPE<'a, 'p>,
+  body: &BlockPE<'a, 'p>,
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+where
+  'a: 'ctx,
+  'a: 'p,
+  'a: 'p,
+  'a: 's,
+{
+  let each_range_s = PostParser::eval_range(stack_frame0.file, range);
+  let parent_env0 = stack_frame0.parent_env.clone();
+  let context_region0 = stack_frame0.context_region.clone();
+  let mut each_lidb = lidb.child();
+  let (each_block_s, self_uses, child_uses) = post_parser.new_block(
+    parent_env0,
+    Some(stack_frame0),
+    &mut each_lidb,
+    each_range_s.clone(),
+    context_region0,
+    PostParser::no_declarations(),
+    |stack_frame1, each_contents_lidb| {
+      let (stack_frame2, let_iterable_se, let_iterable_self_uses, let_iterable_child_uses) = {
+        let let_iterable_expr_p = IExpressionPE::Let(LetPE {
+          range: in_keyword_range,
+          pattern: PatternPP {
+            range: in_keyword_range,
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::IterableNameDeclaration(in_keyword_range),
+              mutate: None,
+            }),
+            templex: None,
+            destructure: None,
+          },
+          source: iterable_expr,
+        });
+        post_parser.scout_expression_and_coerce(
+          stack_frame1,
+          &mut each_contents_lidb.child(),
+          &let_iterable_expr_p,
+          LoadAsP::Use,
+        )?
+      };
+      let (stack_frame3, let_iterator_se, let_iterator_self_uses, let_iterator_child_uses) = {
+        let begin_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::LookupName(NameP(in_keyword_range, post_parser.keywords.begin)),
+          template_args: None,
+        });
+        let iterable_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+          name: IImpreciseNameP::IterableName(in_keyword_range),
+          template_args: None,
+        });
+        let iterable_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+          range: in_keyword_range,
+          target_ownership: OwnershipP::Borrow,
+          inner: &iterable_lookup_expr_p,
+        });
+        let begin_args = [iterable_borrow_expr_p];
+        let begin_call_expr_p = IExpressionPE::FunctionCall(FunctionCallPE {
+          range: in_keyword_range,
+          operator_range: in_keyword_range,
+          callable_expr: &begin_lookup_expr_p,
+          arg_exprs: &begin_args,
+        });
+        let let_iterator_expr_p = IExpressionPE::Let(LetPE {
+          range: in_keyword_range,
+          pattern: PatternPP {
+            range: in_keyword_range,
+            destination: Some(DestinationLocalP {
+              decl: INameDeclarationP::IteratorNameDeclaration(in_keyword_range),
+              mutate: None,
+            }),
+            templex: None,
+            destructure: None,
+          },
+          source: &begin_call_expr_p,
+        });
+        post_parser.scout_expression_and_coerce(
+          stack_frame2,
+          &mut each_contents_lidb.child(),
+          &let_iterator_expr_p,
+          LoadAsP::Use,
+        )?
+      };
+      let parent_env3 = stack_frame3.parent_env.clone();
+      let context_region3 = stack_frame3.context_region.clone();
+      let (loop_se, loop_body_self_uses, loop_body_child_uses) = post_parser.new_block(
+        parent_env3,
+        Some(stack_frame3.clone()),
+        &mut each_contents_lidb.child(),
+        each_range_s.clone(),
+        context_region3,
+        PostParser::no_declarations(),
+        |stack_frame4, loop_lidb| {
+          let parent_env4 = stack_frame4.parent_env.clone();
+          let context_region4 = stack_frame4.context_region.clone();
+          let (loop_body_se, loop_body_self_uses, loop_body_child_uses) = post_parser.new_block(
+            parent_env4,
+            Some(stack_frame4.clone()),
+            &mut loop_lidb.child(),
+            each_range_s.clone(),
+            context_region4,
+            PostParser::no_declarations(),
+            |stack_frame5, loop_body_lidb| {
+              scout_each_body(
+                post_parser,
+                stack_frame5,
+                loop_body_lidb,
+                range,
+                in_keyword_range,
+                entry_pattern_pp,
+                body,
+              )
+            },
+          )?;
+          let loop_se = if body.inner.produces_result() {
+            &*post_parser.scout_arena.alloc(IExpressionSE::Map(MapSE {
+              range: each_range_s.clone(),
+              body: loop_body_se,
+            }))
+          } else {
+            &*post_parser.scout_arena.alloc(IExpressionSE::While(WhileSE {
+              range: each_range_s.clone(),
+              body: loop_body_se,
+            }))
+          };
+          Ok((stack_frame4.clone(), loop_se, loop_body_self_uses, loop_body_child_uses))
+        },
+      )?;
+      let loop_se = &*post_parser.scout_arena.alloc(IExpressionSE::Block(loop_se));
+      let contents_se = post_parser.consecutive(vec![let_iterable_se, let_iterator_se, loop_se]);
+      let self_uses = let_iterable_self_uses
+        .then_merge(&let_iterator_self_uses)
+        .then_merge(&loop_body_self_uses);
+      let child_uses = let_iterable_child_uses
+        .then_merge(&let_iterator_child_uses)
+        .then_merge(&loop_body_child_uses);
+      Ok((stack_frame3, contents_se, self_uses, child_uses))
+    },
+  )?;
+  Ok((each_block_s, self_uses, child_uses))
 }
 /*
   def scoutEach(
@@ -145,20 +290,194 @@ fn scout_each<'a, 'p, 'pp, 'env, 's>(
       })
   }
 */
-fn scout_each_body<'a, 'p, 'pp, 'env, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::lexing::ast::RangeL,
-  _in_keyword_range: crate::lexing::ast::RangeL,
-  _entry_pattern_pp: &crate::parsing::ast::PatternPP<'a, 'p>,
-  _body_pe: &crate::parsing::ast::BlockPE<'a, 'p>,
-) -> (
-  crate::postparsing::post_parser::StackFrame<'a, 'env>,
-  &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_each_body");
+fn scout_each_body<'a, 'p, 'ctx, 's>(
+  post_parser: &PostParser<'a, 'p, 'ctx, 's>,
+  stack_frame0: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeL,
+  in_keyword_range: RangeL,
+  entry_pattern_pp: &PatternPP<'a, 'p>,
+  body_pe: &BlockPE<'a, 'p>,
+) -> Result<
+  (
+    StackFrame<'a>,
+    &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
+    VariableUses<'a>,
+    VariableUses<'a>,
+  ),
+  ICompileErrorS<'a>,
+>
+where
+  'a: 'ctx,
+  'a: 'p,
+  'a: 's,
+{
+  let each_range_s = PostParser::eval_range(stack_frame0.file, range);
+  let (stack_frame4, if_se, if_self_uses, if_child_uses) = PostParser::new_if(
+    stack_frame0,
+    lidb,
+    range,
+    |stack_frame1, condition_lidb| {
+      let next_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(in_keyword_range, post_parser.keywords.next)),
+        template_args: None,
+      });
+      let iterator_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::IteratorName(in_keyword_range),
+        template_args: None,
+      });
+      let iterator_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+        range: in_keyword_range,
+        target_ownership: OwnershipP::Borrow,
+        inner: &iterator_lookup_expr_p,
+      });
+      let next_args = [iterator_borrow_expr_p];
+      let next_call_expr_p = IExpressionPE::FunctionCall(FunctionCallPE {
+        range: in_keyword_range,
+        operator_range: in_keyword_range,
+        callable_expr: &next_lookup_expr_p,
+        arg_exprs: &next_args,
+      });
+      let let_iteration_option_expr_p = IExpressionPE::Let(LetPE {
+        range: entry_pattern_pp.range,
+        pattern: PatternPP {
+          range: in_keyword_range,
+          destination: Some(DestinationLocalP {
+            decl: INameDeclarationP::IterationOptionNameDeclaration(in_keyword_range),
+            mutate: None,
+          }),
+          templex: None,
+          destructure: None,
+        },
+        source: &next_call_expr_p,
+      });
+      let is_empty_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::LookupName(NameP(in_keyword_range, post_parser.keywords.is_empty)),
+        template_args: None,
+      });
+      let iteration_option_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+        name: IImpreciseNameP::IterationOptionName(in_keyword_range),
+        template_args: None,
+      });
+      let iteration_option_borrow_expr_p = IExpressionPE::Augment(AugmentPE {
+        range: in_keyword_range,
+        target_ownership: OwnershipP::Borrow,
+        inner: &iteration_option_lookup_expr_p,
+      });
+      let is_empty_args = [iteration_option_borrow_expr_p];
+      let is_empty_call_expr_p = IExpressionPE::FunctionCall(FunctionCallPE {
+        range: in_keyword_range,
+        operator_range: in_keyword_range,
+        callable_expr: &is_empty_lookup_expr_p,
+        arg_exprs: &is_empty_args,
+      });
+      let condition_inners = [let_iteration_option_expr_p, is_empty_call_expr_p];
+      let condition_expr_p = IExpressionPE::Consecutor(ConsecutorPE {
+        inners: &condition_inners,
+      });
+      let (stack_frame3, cond_se, cond_self_uses, cond_child_uses) = post_parser.scout_expression_and_coerce(
+        stack_frame1,
+        condition_lidb,
+        &condition_expr_p,
+        LoadAsP::Use,
+      )?;
+      Ok((stack_frame3, cond_se, cond_self_uses, cond_child_uses))
+    },
+    |stack_frame1, then_lidb| {
+      let parent_env1 = stack_frame1.parent_env.clone();
+      let context_region1 = stack_frame1.context_region.clone();
+      let (then_s, then_uses, then_child_uses) = post_parser.new_block(
+        parent_env1,
+        Some(stack_frame1.clone()),
+        then_lidb,
+        each_range_s.clone(),
+        context_region1,
+        PostParser::no_declarations(),
+        |stack_frame2, then_inner_lidb| {
+          let iteration_option_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+            name: IImpreciseNameP::IterationOptionName(in_keyword_range),
+            template_args: None,
+          });
+          let (stack_frame3, lookup_se, lookup_self_uses, lookup_child_uses) = post_parser
+            .scout_expression_and_coerce(
+              stack_frame2,
+              then_inner_lidb,
+              &iteration_option_lookup_expr_p,
+              LoadAsP::Use,
+            )?;
+          let break_s = &*post_parser.scout_arena.alloc(IExpressionSE::Break(BreakSE {
+            range: each_range_s.clone(),
+          }));
+          let lookup_and_break_se = post_parser.consecutive(vec![lookup_se, break_s]);
+          Ok((stack_frame3, lookup_and_break_se, lookup_self_uses, lookup_child_uses))
+        },
+      )?;
+      Ok((stack_frame1, then_s, then_uses, then_child_uses))
+    },
+    |stack_frame1, _else_lidb| {
+      // Else does nothing
+      let else_s = &*post_parser.scout_arena.alloc(BlockSE {
+        range: each_range_s.clone(),
+        locals: Vec::new(),
+        expr: &*post_parser.scout_arena.alloc(IExpressionSE::Void(VoidSE {
+          range: each_range_s.clone(),
+        })),
+      });
+      Ok((
+        stack_frame1,
+        else_s,
+        PostParser::no_variable_uses(),
+        PostParser::no_variable_uses(),
+      ))
+    },
+  )?;
+  let if_se = &*post_parser.scout_arena.alloc(IExpressionSE::If(if_se));
+
+  let (stack_frame5, consume_some_se, consume_some_self_uses, consume_some_child_uses) = {
+    let get_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+      name: IImpreciseNameP::LookupName(NameP(in_keyword_range, post_parser.keywords.get)),
+      template_args: None,
+    });
+    let iteration_option_lookup_expr_p = IExpressionPE::Lookup(LookupPE {
+      name: IImpreciseNameP::IterationOptionName(in_keyword_range),
+      template_args: None,
+    });
+    let get_args = [iteration_option_lookup_expr_p];
+    let get_call_expr_p = IExpressionPE::FunctionCall(FunctionCallPE {
+      range: in_keyword_range,
+      operator_range: in_keyword_range,
+      callable_expr: &get_lookup_expr_p,
+      arg_exprs: &get_args,
+    });
+    let consume_some_expr_p = IExpressionPE::Let(LetPE {
+      range: in_keyword_range,
+      pattern: entry_pattern_pp.clone(),
+      source: &get_call_expr_p,
+    });
+    let mut consume_some_lidb = lidb.child();
+    post_parser.scout_expression_and_coerce(
+      stack_frame4,
+      &mut consume_some_lidb,
+      &consume_some_expr_p,
+      LoadAsP::Use,
+    )?
+  };
+
+  let (user_body_se, user_body_self_uses, user_body_child_uses) = post_parser.scout_block(
+    stack_frame5.clone(),
+    &mut lidb.child(),
+    PostParser::no_declarations(),
+    body_pe,
+  )?;
+
+  let self_uses = if_self_uses
+    .then_merge(&consume_some_self_uses)
+    .then_merge(&user_body_self_uses);
+  let child_uses = if_child_uses
+    .then_merge(&consume_some_child_uses)
+    .then_merge(&user_body_child_uses);
+  let loop_body_se = post_parser.consecutive(vec![if_se, consume_some_se, user_body_se]);
+  Ok((stack_frame5, loop_body_se, self_uses, child_uses))
 }
 /*
   def scoutEachBody(
@@ -259,11 +578,11 @@ fn scout_each_body<'a, 'p, 'pp, 'env, 's>(
     (stackFrame5, loopBodySE, selfUses, childUses)
   }
 */
-fn scout_while<'a, 'p, 'pp, 'env, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+fn scout_while<'a, 'p, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,
   _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
   _range: crate::lexing::ast::RangeL,
-  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
+  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'p>,
   _body: &crate::parsing::ast::BlockPE<'a, 'p>,
 ) -> (
   crate::postparsing::expressions::BlockSE<'a, 's>,
@@ -311,14 +630,14 @@ fn scout_while<'a, 'p, 'pp, 'env, 's>(
       })
   }
 */
-fn scout_while_body<'a, 'p, 'pp, 'env, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+fn scout_while_body<'a, 'p, 's>(
+  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,
   _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
   _range: crate::lexing::ast::RangeL,
-  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'pp>,
+  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'p>,
   _body_pe: &crate::parsing::ast::BlockPE<'a, 'p>,
 ) -> (
-  crate::postparsing::post_parser::StackFrame<'a, 'env>,
+  crate::postparsing::post_parser::StackFrame<'a>,
   &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
   crate::postparsing::variable_uses::VariableUses<'a>,
   crate::postparsing::variable_uses::VariableUses<'a>,

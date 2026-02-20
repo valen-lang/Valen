@@ -8,7 +8,7 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
-use crate::parsing::parse_utils::try_skip_past_equals_while;
+use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::utils::arena_utils::alloc_slice_from_vec;
 use bumpalo::Bump;
@@ -627,7 +627,7 @@ where
     };
 
     // Parse region (e.g., a' in a'T)
-    let maybe_region = Self::parse_region_helper(iter)?;
+    let maybe_region = parse_region(iter)?;
 
     // If we have neither ownership nor region, return None
     match (&maybe_ownership, &maybe_region) {
@@ -687,7 +687,7 @@ where
   ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
 
-    let region = match Self::parse_region_helper(&mut tentative_iter)? {
+    let region = match parse_region(&mut tentative_iter)? {
       None => return Ok(None),
       Some(region_rune) => region_rune,
     };
@@ -722,42 +722,6 @@ where
       Ok(Some(region))
     }
   */
-
-  /// Helper to parse region - mirrors Parser.parseRegion in Parser.scala lines 826-853
-  fn parse_region_helper(
-    original_iter: &mut ScrambleIterator<'a, '_>,
-  ) -> ParseResult<Option<RegionRunePT<'a>>> {
-    let mut tentative_iter = original_iter.clone();
-
-    let rune_begin = tentative_iter.get_pos();
-    let maybe_rune = if tentative_iter.try_skip_symbol('\'') {
-      // Anonymous region, in other words an isolate
-      None
-    } else {
-      let region_rune = match tentative_iter.next_word() {
-        None => return Ok(None),
-        Some(r) => r,
-      };
-
-      if !tentative_iter.try_skip_symbol('\'') {
-        return Ok(None);
-      }
-
-      Some(region_rune)
-    };
-    let rune_end = tentative_iter.get_prev_end_pos();
-
-    original_iter.skip_to(&tentative_iter);
-
-    let range = RangeL(rune_begin, rune_end);
-    Ok(Some(RegionRunePT {
-      range,
-      name: maybe_rune.map(|z| NameP(
-        RangeL(rune_begin, rune_end),
-        z.str,
-      )),
-    }))
-  }
 
   /// Parse templex atom and any following calls/prefixes/suffixes
   /// Mirrors parseTemplexAtomAndCallAndPrefixesAndSuffixes in TemplexParser.scala lines 326-334

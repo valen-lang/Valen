@@ -2874,7 +2874,7 @@ where
         .expect("parse_mut_expr should return Some when next_is_set_expr is true")
     } else {
       // Try to parse as let statement
-      match self.try_parse_let(iter, stop_on_curlied, templex_parser, pattern_parser)? {
+      match self.parse_let(iter, stop_on_curlied, templex_parser, pattern_parser)? {
         Some(let_expr) => let_expr,
         None => self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?,
       }
@@ -3756,7 +3756,7 @@ where
     }
   */
 
-  fn try_parse_let(
+  fn parse_let(
     &self,
     iter: &mut ScrambleIterator<'a, '_>,
     stop_on_curlied: bool,

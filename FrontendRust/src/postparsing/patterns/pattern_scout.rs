@@ -44,8 +44,8 @@ fn get_capture_captures<'a>(
     }
   }
 */
-fn translate_pattern<'a, 'env>(
-  _stack_frame: crate::postparsing::post_parser::StackFrame<'a, 'env>,
+fn translate_pattern<'a>(
+  _stack_frame: crate::postparsing::post_parser::StackFrame<'a>,
   _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
   _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
   _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,

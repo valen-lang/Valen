@@ -192,7 +192,7 @@ fn resolve_package_contents<'a>(
 }
 
 /*
-  MIGTODO: dedup the above with FileSystemResolver.
+  AFTERM: dedup the above with FileSystemResolver.
   def resolvePackageContents(
     interner: Interner,
       inputs: Vector[IFrontendInput],

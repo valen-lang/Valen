@@ -1,3 +1,4 @@
+
 # Prefer find_func_named Over Name Matching (PFFNONM)
 
 Instead of doing a collect_where to find a function by name, use find_func_named. Same with find_struct_named etc.

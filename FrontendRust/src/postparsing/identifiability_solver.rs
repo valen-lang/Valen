@@ -124,13 +124,6 @@ fn solve_rule<'a>(
 ) -> Result<(), ()> {
   panic!("Unimplemented solve_rule");
 }
-fn solve_identifiability<'a>(
-  _range_s: crate::utils::range::RangeS<'a>,
-  _generic_parameters: &[crate::postparsing::ast::GenericParameterS<'a>],
-  _rules_array: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-) {
-  panic!("Unimplemented solve_identifiability");
-}
 /*
   private def solveRule(
     state: Unit,
@@ -286,7 +279,15 @@ fn solve_identifiability<'a>(
     }
   }
 */
+fn solve_identifiability<'a>(
+  _range_s: crate::utils::range::RangeS<'a>,
+  _generic_parameters: &[crate::postparsing::ast::GenericParameterS<'a>],
+  _rules_array: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+) {
+  panic!("Unimplemented solve_identifiability");
+}
 /*
+  // MIGALLOW: solve -> solve_identifiability
   def solve(
     sanityCheck: Boolean,
     useOptimizedSolver: Boolean,

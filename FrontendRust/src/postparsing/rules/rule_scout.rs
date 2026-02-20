@@ -16,15 +16,50 @@ import scala.collection.mutable.ArrayBuffer
 /*
 class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexScout) {
 */
-fn translate_rulexes<'a, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _rules_p: &[crate::parsing::ast::IRulexPR<'a, '_>],
-) -> Vec<crate::postparsing::rules::rules::RuneUsage<'a>> {
-  panic!("Unimplemented translate_rulexes");
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::parsing::ast::{IRulexPR, ITypePR};
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
+  LocationTemplataType, MutabilityTemplataType, OwnershipTemplataType, PackTemplataType,
+  PrototypeTemplataType, RegionTemplataType, VariabilityTemplataType,
+};
+use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneS};
+use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
+use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
+use crate::postparsing::rules::templex_scout::translate_templex;
+use std::collections::{HashMap, HashSet};
+
+// Returns:
+// - new rules produced on the side while translating the given rules
+// - the translated versions of the given rules
+pub fn translate_rulexes<'a>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  builder: &mut Vec<IRulexSR<'a>>,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
+  context_region: IRuneS<'a>,
+  rules_p: &[IRulexPR<'a, '_>],
+) -> Vec<RuneUsage<'a>> {
+  rules_p
+    .iter()
+    .map(|rule_p| {
+      let mut child_lidb = lidb.child();
+      translate_rulex(
+        interner,
+        keywords,
+        env.clone(),
+        &mut child_lidb,
+        builder,
+        rune_to_explicit_type,
+        context_region.clone(),
+        rule_p,
+      )
+    })
+    .collect()
 }
 /*
   // Returns:
@@ -41,16 +76,54 @@ fn translate_rulexes<'a, 'env>(
     rulesP.map(translateRulex(env, lidb.child(), builder, runeToExplicitType, contextRegion, _))
   }
 */
-fn translate_rulex<'a, 'env>(
-  _env: crate::postparsing::post_parser::IEnvironmentS<'a, 'env>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _rune_to_explicit_type: &mut std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  _rulex: &crate::parsing::ast::IRulexPR<'a, '_>,
-) -> crate::postparsing::rules::rules::RuneUsage<'a> {
-  panic!("Unimplemented translate_rulex");
+fn translate_rulex<'a>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  builder: &mut Vec<IRulexSR<'a>>,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
+  context_region: IRuneS<'a>,
+  rulex: &IRulexPR<'a, '_>,
+) -> RuneUsage<'a> {
+  let file = match &env {
+    IEnvironmentS::Environment(environment) => environment.file,
+    IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
+  };
+  match rulex {
+    IRulexPR::Typed(typed_rule) => {
+      let rune = match &typed_rule.rune {
+        Some(rune_name) => interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: rune_name.str() })),
+        None => {
+          let mut child_lidb = lidb.child();
+          interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          }))
+        }
+      };
+      let tyype = translate_type(typed_rule.tyype);
+      rune_to_explicit_type.push((rune.clone(), tyype));
+      RuneUsage {
+        range: PostParser::eval_range(file, typed_rule.range),
+        rune,
+      }
+    }
+    IRulexPR::Templex(templex) => {
+      let mut child_lidb = lidb.child();
+      translate_templex(
+        interner,
+        keywords,
+        env,
+        &mut child_lidb,
+        builder,
+        context_region,
+        templex,
+      )
+    }
+    _ => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED"),
+  }
 }
+
 /*
   def translateRulex(
     env: IEnvironmentS,
@@ -233,9 +306,25 @@ fn translate_rulex<'a, 'env>(
 
 object RuleScout {
 */
-fn translate_type<'a>(
-  _tyype: &crate::parsing::ast::ITypePR) -> crate::postparsing::itemplatatype::ITemplataType {
-  panic!("Unimplemented translate_type");
+pub fn translate_type(tyype: ITypePR) -> ITemplataType {
+  match tyype {
+    ITypePR::PrototypeType => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
+    ITypePR::IntType => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+    ITypePR::BoolType => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
+    ITypePR::OwnershipType => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
+    ITypePR::MutabilityType => ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+    ITypePR::VariabilityType => ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+    ITypePR::LocationType => ITemplataType::LocationTemplataType(LocationTemplataType {}),
+    ITypePR::CoordType => ITemplataType::CoordTemplataType(CoordTemplataType {}),
+    ITypePR::CoordListType => ITemplataType::PackTemplataType(PackTemplataType {
+      element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
+    }),
+    ITypePR::KindType => ITemplataType::KindTemplataType(KindTemplataType {}),
+    ITypePR::RegionType => ITemplataType::RegionTemplataType(RegionTemplataType {}),
+    ITypePR::CitizenTemplateType => {
+      panic!("POSTPARSER_TRANSLATE_TYPE_CITIZEN_TEMPLATE_NOT_YET_IMPLEMENTED")
+    }
+  }
 }
 /*
   def translateType(tyype: ITypePR): ITemplataType = {
@@ -255,9 +344,9 @@ fn translate_type<'a>(
   }
 */
 fn get_rune_kind_template<'a>(
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _rune: crate::postparsing::names::IRuneS<'a>,
-) -> crate::postparsing::names::IImpreciseNameS<'a> {
+  _rules_s: &[IRulexSR<'a>],
+  _rune: IRuneS<'a>,
+) -> IImpreciseNameS<'a> {
   panic!("Unimplemented get_rune_kind_template");
 }
 /*
@@ -319,25 +408,19 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
   })
 */
 fn mark_kind_equivalent<'a>(
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _rune_a: crate::postparsing::names::IRuneS<'a>,
-  _rune_b: crate::postparsing::names::IRuneS<'a>,
+  _rules_s: &[IRulexSR<'a>],
+  _rune_a: IRuneS<'a>,
+  _rune_b: IRuneS<'a>,
 ) {
   panic!("Unimplemented mark_kind_equivalent");
 }
 fn find_transitively_equivalent_into<'a>(
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _rune_to_kind_equivalent_runes: &std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, Vec<crate::postparsing::names::IRuneS<'a>>>,
-  _found_so_far: &mut std::collections::HashSet<crate::postparsing::names::IRuneS<'a>>,
-  _rune: crate::postparsing::names::IRuneS<'a>,
+  _rules_s: &[IRulexSR<'a>],
+  _rune_to_kind_equivalent_runes: &HashMap<IRuneS<'a>, Vec<IRuneS<'a>>>,
+  _found_so_far: &mut HashSet<IRuneS<'a>>,
+  _rune: IRuneS<'a>,
 ) {
   panic!("Unimplemented find_transitively_equivalent_into");
-}
-fn get_kind_equivalent_runes<'a>(
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _rune: crate::postparsing::names::IRuneS<'a>,
-) -> std::collections::HashSet<crate::postparsing::names::IRuneS<'a>> {
-  panic!("Unimplemented get_kind_equivalent_runes");
 }
 /*
   private def findTransitivelyEquivalentInto(foundSoFar: mutable.HashSet[IRuneS], rune: IRuneS): Unit = {
@@ -349,7 +432,14 @@ fn get_kind_equivalent_runes<'a>(
     })
   }
 */
+fn get_kind_equivalent_runes<'a>(
+  _rules_s: &[IRulexSR<'a>],
+  _rune: IRuneS<'a>,
+) -> HashSet<IRuneS<'a>> {
+  panic!("Unimplemented get_kind_equivalent_runes");
+}
 /*
+  // MIGALLOW: getKindEquivalentRunes -> get_kind_equivalent_runes
   def getKindEquivalentRunes(rune: IRuneS): Set[IRuneS] = {
     val set = mutable.HashSet[IRuneS]()
     set += rune
@@ -358,15 +448,16 @@ fn get_kind_equivalent_runes<'a>(
   }
 */
 fn get_kind_equivalent_runes_iter<'a, I>(
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rules_s: &[IRulexSR<'a>],
   _runes: I,
-) -> std::collections::HashSet<crate::postparsing::names::IRuneS<'a>>
+) -> HashSet<IRuneS<'a>>
 where
-  I: Iterator<Item = crate::postparsing::names::IRuneS<'a>>,
+  I: Iterator<Item = IRuneS<'a>>,
 {
   panic!("Unimplemented get_kind_equivalent_runes_iter");
 }
 /*
+  // MIGALLOW: getKindEquivalentRunes -> get_kind_equivalent_runes_iter
   def getKindEquivalentRunes(runes: Iterable[IRuneS]): Set[IRuneS] = {
     runes
       .map(getKindEquivalentRunes)

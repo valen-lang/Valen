@@ -39,6 +39,9 @@ pub enum IRulexSR<'a> {
   Placeholder(PlaceholderRuleSR<'a>),
   Literal(LiteralSR<'a>),
   MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
+  Lookup(LookupSR<'a>),
+  MaybeCoercingCall(MaybeCoercingCallSR<'a>),
+  RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
 }
 
 impl IRulexSR<'_> {
@@ -47,6 +50,9 @@ impl IRulexSR<'_> {
       IRulexSR::Placeholder(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
       IRulexSR::MaybeCoercingLookup(x) => &x.range,
+      IRulexSR::Lookup(x) => &x.range,
+      IRulexSR::MaybeCoercingCall(x) => &x.range,
+      IRulexSR::RuneParentEnvLookup(x) => &x.range,
     }
   }
 
@@ -55,6 +61,13 @@ impl IRulexSR<'_> {
       IRulexSR::Placeholder(_) => vec![],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
       IRulexSR::MaybeCoercingLookup(x) => vec![x.rune.clone()],
+      IRulexSR::Lookup(x) => vec![x.rune.clone()],
+      IRulexSR::MaybeCoercingCall(x) => {
+        let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
+        usages.extend(x.args.clone());
+        usages
+      }
+      IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
     }
   }
 }
@@ -279,8 +292,14 @@ case class MaybeCoercingLookupSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-/*
 // A rule that looks up something that's not a Kind, so it doesn't need a default region.
+#[derive(Clone, Debug, PartialEq)]
+pub struct LookupSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+  pub name: IImpreciseNameS<'a>,
+}
+/*
 case class LookupSR(
   range: RangeS,
   rune: RuneUsage,
@@ -291,6 +310,13 @@ case class LookupSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct MaybeCoercingCallSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub template_rune: RuneUsage<'a>,
+  pub args: Vec<RuneUsage<'a>>,
+}
 /*
 case class MaybeCoercingCallSR(
   range: RangeS,
@@ -325,6 +351,11 @@ case class IndexListSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, listRune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct RuneParentEnvLookupSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+}
 /*
 case class RuneParentEnvLookupSR(
   range: RangeS,

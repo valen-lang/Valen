@@ -1,21 +1,27 @@
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
-  BlockPE, IExpressionPE, IImpreciseNameP, INameDeclarationP, ITemplexPT, LoadAsP, OwnershipP,
+  BlockPE, IArraySizeP, IExpressionPE, IImpreciseNameP, INameDeclarationP, ITemplexPT, LoadAsP,
+  OwnershipP,
 };
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
-  BlockSE, ConstantBoolSE, ConstantIntSE, DotSE, ExprMutateSE, FunctionCallSE, IExpressionSE,
-  IfSE, LetSE, LocalLoadSE, LocalMutateSE, OutsideLoadSE, OwnershippedSE, ReturnSE, RuneLookupSE,
-  VoidSE,
+  BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
+  IExpressionSE, IfSE, LetSE, LocalLoadSE, LocalMutateSE, OutsideLoadSE, OwnershippedSE, PureSE,
+  ReturnSE, RuneLookupSE, VoidSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS,
+  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+  IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS, IterableNameS, IteratorNameS,
+  IterationOptionNameS,
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::post_parser::{
-  CouldntFindVarToMutateS, FunctionEnvironmentS, ICompileErrorS, PostParser, StackFrame,
+  CouldntFindRuneS, CouldntFindVarToMutateS, FunctionEnvironmentS, ICompileErrorS,
+  InitializingRuntimeSizedArrayRequiresSizeAndCallable,
+  InitializingStaticSizedArrayRequiresSizeAndCallable, PostParser, StackFrame, StatementAfterReturnS,
+  VariableNameAlreadyExists,
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::arena_utils::alloc_slice_from_vec;
@@ -44,17 +50,9 @@ import scala.collection.mutable.ArrayBuffer
 import dev.vale.postparsing.rules.RuleScout
 //import dev.vale.postparsing.templatepredictor.PredictorEvaluator
 */
-fn scout_lambda<'a, 'p, 'env>(
-  _parent_stack_frame: StackFrame<'a, 'env>,
-  _lambda_function0: &crate::parsing::ast::FunctionP<'a, 'p>,
-) -> (
-  crate::postparsing::ast::FunctionS<'a, 'a>,
-  VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_lambda");
-}
 /*
 trait IExpressionScoutDelegate {
+  // MIGALLOW: dont need to bring this trait method into rust.
   def scoutLambda(
     parentStackFrame: StackFrame,
     lambdaFunction0: FunctionP):
@@ -62,7 +60,7 @@ trait IExpressionScoutDelegate {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-enum IScoutResult<'a, 'p, 's> {
+pub(crate) enum IScoutResult<'a, 'p, 's> {
   LocalLookupResult(LocalLookupResultS<'a>),
   OutsideLookupResult(OutsideLookupResultS<'a, 'p>),
   NormalResult(NormalResultS<'a, 's>),
@@ -73,7 +71,7 @@ enum IScoutResult<'a, 'p, 's> {
 sealed trait IScoutResult[+T <: IExpressionSE]
 */
 #[derive(Clone, Debug, PartialEq)]
-struct LocalLookupResultS<'a> {
+pub(crate) struct LocalLookupResultS<'a> {
   range: RangeS<'a>,
   name: IVarNameS<'a>,
 }
@@ -84,7 +82,7 @@ case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResul
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-struct OutsideLookupResultS<'a, 'p> {
+pub(crate) struct OutsideLookupResultS<'a, 'p> {
   range: RangeS<'a>,
   name: StrI<'a>,
   template_args: Option<&'p [ITemplexPT<'a, 'p>]>,
@@ -102,8 +100,8 @@ case class OutsideLookupResult(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-struct NormalResultS<'a, 's> {
-  expr: &'s IExpressionSE<'a, 's>,
+pub(crate) struct NormalResultS<'a, 's> {
+  pub(crate) expr: &'s IExpressionSE<'a, 's>,
 }
 
 /*
@@ -115,6 +113,12 @@ case class NormalResult[+T <: IExpressionSE](expr: T) extends IScoutResult[T] {
   def range: RangeS = expr.range
 }
 */
+impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
+where
+  'a: 'ctx,
+  'a: 'p,
+  'a: 's,
+{
 /*
 class ExpressionScout(
     delegate: IExpressionScoutDelegate,
@@ -125,7 +129,7 @@ class ExpressionScout(
     keywords: Keywords) {
   val loopPostParser = new LoopPostParser(interner, keywords)
 */
-fn ends_with_return<'a, 's>(_expr_se: &IExpressionSE<'a, 's>) -> bool {
+fn ends_with_return(_expr_se: &IExpressionSE<'a, 's>) -> bool {
   panic!("Unimplemented ends_with_return");
 }
 /*
@@ -137,17 +141,69 @@ fn ends_with_return<'a, 's>(_expr_se: &IExpressionSE<'a, 's>) -> bool {
     }
   }
 */
-fn scout_block<'a, 'p, 'pp, 'env, 's>(
-  _parent_stack_frame: StackFrame<'a, 'env>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _initial_locals: VariableDeclarations<'a>,
-  _block_pe: &BlockPE<'a, 'p>,
-) -> (
-  &'s IExpressionSE<'a, 's>,
-  VariableUses<'a>,
-  VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_block");
+pub(crate) fn scout_block(
+  &self,
+  parent_stack_frame: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  // When we scout a function, it might hand in things here because it wants them to be considered part of
+  // the body's block, so that we get to reuse the code at the bottom of function, tracking uses etc.
+  initial_locals: VariableDeclarations<'a>,
+  block_pe: &'p BlockPE<'a, 'p>,
+) -> Result<(&'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+{
+  let file = parent_stack_frame.file;
+  let range_s = PostParser::eval_range(file, block_pe.range);
+  assert!(block_pe.maybe_default_region.is_none());
+  let context_region: IRuneS<'a> = match &block_pe.maybe_default_region {
+    None => parent_stack_frame.context_region.clone(),
+    Some(region_rune_pt) => {
+      let region_rune_name = region_rune_pt
+        .name
+        .as_ref()
+        .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_BLOCK_DEFAULT_REGION_NAME_MISSING"));
+      let region_rune_s: IRuneS<'a> = IRuneS::CodeRune::<'a>(self.interner.intern_rune(CodeRuneS::<'a> {
+        name: region_rune_name.str(),
+      }));
+      if !parent_stack_frame.parent_env.all_declared_runes().contains(&region_rune_s) {
+        return Err(ICompileErrorS::CouldntFindRuneS(CouldntFindRuneS {
+          range: range_s.clone(),
+          name: region_rune_name.str().as_str().to_string(),
+        }));
+      }
+      region_rune_s
+    }
+  };
+  let function_body_env: FunctionEnvironmentS<'a> = parent_stack_frame.parent_env.clone();
+  let mut child_lidb = lidb.child();
+  let (block_s, self_uses_of_things_from_above, child_uses_of_things_from_above) = self.new_block(
+    function_body_env,
+    Some(parent_stack_frame),
+    &mut child_lidb,
+    range_s,
+    context_region,
+    initial_locals,
+    |stack_frame1, block_lidb| {
+      let (stack_frame2, inner_expr_s, self_uses, child_uses) =
+        self.scout_expression_and_coerce(stack_frame1, block_lidb, block_pe.inner, LoadAsP::Use)?;
+      Ok((stack_frame2, inner_expr_s, self_uses, child_uses))
+    },
+  )?;
+  let resulting_expr_s = if block_pe.maybe_pure.is_some() {
+    let block_s = &*self.scout_arena.alloc(block_s);
+    &*self.scout_arena.alloc(IExpressionSE::Pure(PureSE {
+      range: PostParser::eval_range(file, block_pe.range),
+      location: lidb.child().consume(),
+      inner: &*self.scout_arena.alloc(IExpressionSE::Block(block_s)),
+    }))
+  } else {
+    let block_s = &*self.scout_arena.alloc(block_s);
+    &*self.scout_arena.alloc(IExpressionSE::Block(block_s))
+  };
+  Ok((
+    resulting_expr_s,
+    self_uses_of_things_from_above,
+    child_uses_of_things_from_above,
+  ))
 }
 /*
   def scoutBlock(
@@ -193,13 +249,30 @@ fn scout_block<'a, 'p, 'pp, 'env, 's>(
     (resultingExprSE, selfUsesOfThingsFromAbove, childUsesOfThingsFromAbove)
   }
 */
-fn scout_impure_block<'a, 'p, 'pp, 'env, 's>(
-  _parent_stack_frame: StackFrame<'a, 'env>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _initial_locals: VariableDeclarations<'a>,
-  _block_pe: &BlockPE<'a, 'p>,
-) -> (BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>) {
-  panic!("Unimplemented scout_impure_block");
+fn scout_impure_block(
+  &self,
+  parent_stack_frame: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  initial_locals: VariableDeclarations<'a>,
+  block_pe: &BlockPE<'a, 'p>,
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+where
+  'a: 'p,
+{
+  let (expr_s, self_uses_of_things_from_above, child_uses_of_things_from_above) = self.scout_block(
+    parent_stack_frame,
+    lidb,
+    initial_locals,
+    block_pe,
+  )?;
+  match expr_s {
+    IExpressionSE::Block(block_s) => Ok((
+      *block_s,
+      self_uses_of_things_from_above,
+      child_uses_of_things_from_above,
+    )),
+    _ => panic!("POSTPARSER_SCOUT_IMPURE_BLOCK_EXPECTED_BLOCK"),
+  }
 }
 /*
   def scoutImpureBlock(
@@ -218,29 +291,23 @@ fn scout_impure_block<'a, 'p, 'pp, 'env, 's>(
     }
   }
 */
-impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
-{
-  pub(crate) fn new_block<'env, F>(
+  pub(crate) fn new_block<F>(
     &self,
-    function_body_env: FunctionEnvironmentS<'a, 'env>,
-    parent_stack_frame: Option<StackFrame<'a, 'env>>,
+    function_body_env: FunctionEnvironmentS<'a>,
+    parent_stack_frame: Option<StackFrame<'a>>,
     lidb: &mut LocationInDenizenBuilder,
     range_s: RangeS<'a>,
     context_region: IRuneS<'a>,
     initial_locals: VariableDeclarations<'a>,
     scout_contents: F,
-  ) -> Result<(BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
     F: FnOnce(
-      StackFrame<'a, 'env>,
+      StackFrame<'a>,
       &mut LocationInDenizenBuilder,
     ) -> Result<
       (
-        StackFrame<'a, 'env>,
+        StackFrame<'a>,
         &'s IExpressionSE<'a, 's>,
         VariableUses<'a>,
         VariableUses<'a>,
@@ -248,16 +315,17 @@ where
       ICompileErrorS<'a>,
     >,
   {
-    if parent_stack_frame.is_some() {
-      panic!("POSTPARSER_NEW_BLOCK_PARENT_STACK_FRAME_NOT_YET_IMPLEMENTED");
-    }
-    let initial_stack_frame = StackFrame {
+    let maybe_parent = parent_stack_frame.clone().map(Box::new);
+    let pure_height = parent_stack_frame
+      .map(|parent| parent.pure_height + 1)
+      .unwrap_or(0);
+    let initial_stack_frame = StackFrame::<'a> {
       file: function_body_env.file,
       name: function_body_env.name.clone(),
       parent_env: function_body_env,
-      maybe_parent: None,
+      maybe_parent,
       context_region,
-      pure_height: 0,
+      pure_height,
       locals: initial_locals,
     };
     let mut inner_lidb = lidb.child();
@@ -378,16 +446,16 @@ where
         .collect(),
     };
     Ok((
-      BlockSE {
+      &*self.scout_arena.alloc(
+      BlockSE::<'a, 's> {
         range: range_s,
         locals,
         expr: expr_with_constructing_if_necessary,
-      },
+      }),
       self_uses_of_things_from_above,
       child_uses_of_things_from_above,
     ))
   }
-}
 /*
   def newBlock(
     functionBodyEnv: FunctionEnvironmentS,
@@ -481,8 +549,9 @@ where
     (blockSE, selfUsesOfThingsFromAbove, childUsesOfThingsFromAbove)
   }
 */
-fn find_local<'a, 's, 'env>(
-  stack_frame: &StackFrame<'a, 'env>,
+fn find_local(
+  &self,
+  stack_frame: &StackFrame<'a>,
   range: RangeS<'a>,
   imprecise_name: &IImpreciseNameS<'a>,
 ) -> Option<LocalLookupResultS<'a>> {
@@ -507,21 +576,15 @@ fn find_local<'a, 's, 'env>(
 // - new expression
 // - variable uses by self
 // - variable uses by child blocks
-// MIGTODO: rename all "scout" to "post parse" or something.
-impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
-{
-fn scout_expression<'pp, 'env>(
+// AFTERM: rename all "scout" to "post parse" or something.
+fn scout_expression(
   &self,
-  stack_frame: StackFrame<'a, 'env>,
+  stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  expression: &IExpressionPE<'a, 'pp>,
-) -> Result<(StackFrame<'a, 'env>, IScoutResult<'a, 'pp, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  expression: &'p IExpressionPE<'a, 'p>,
+) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
 where
-  'a: 'pp,
+  'a: 'p,
 {
 /*
   // Returns:
@@ -559,7 +622,7 @@ where
     IExpressionPE::Return(ret) => {
       let mut ret_expr_lidb = lidb.child();
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = self.scout_expression_and_coerce(
-        stack_frame.clone(),
+        stack_frame,
         &mut ret_expr_lidb,
         ret.expr,
         LoadAsP::Use,
@@ -594,7 +657,7 @@ where
       let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = {
         let mut inner_lidb = lidb.child();
         let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses) = self.scout_expression_and_coerce(
-          stack_frame.clone(),
+          stack_frame,
           &mut inner_lidb,
           augment.inner,
           load_as,
@@ -653,7 +716,7 @@ where
               .is_none()
           {
             return Ok((
-              stack_frame,
+              stack_frame.clone(),
               IScoutResult::LocalLookupResult(LocalLookupResultS {
                 range: PostParser::eval_range(&file_coordinate, lookup.name.range()),
                 name: IVarNameS::ConstructingMemberName(dot.member.str()),
@@ -667,7 +730,7 @@ where
       let (stack_frame1, container_expr_s, self_uses, child_uses) = {
         let mut dot_left_lidb = lidb.child();
         let (stack_frame1, container_expr_s, self_uses, child_uses) = self.scout_expression_and_coerce(
-          stack_frame,
+          stack_frame.clone(),
           &mut dot_left_lidb,
           dot.left,
           LoadAsP::LoadAsBorrow,
@@ -714,9 +777,9 @@ where
           let imprecise_name = self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(
             CodeNameS { name: lookup_name.str() },
           ));
-          if let Some(local_lookup_result) = find_local(&stack_frame, range.clone(), &imprecise_name) {
+          if let Some(local_lookup_result) = self.find_local(&stack_frame, range.clone(), &imprecise_name) {
             return Ok((
-              stack_frame,
+              stack_frame.clone(),
               IScoutResult::LocalLookupResult(local_lookup_result),
               VariableUses::empty(),
               VariableUses::empty(),
@@ -737,15 +800,69 @@ where
               })
             };
             Ok((
-              stack_frame,
+              stack_frame.clone(),
               lookup_result,
               VariableUses::empty(),
               VariableUses::empty(),
             ))
           }
         }
+        (IImpreciseNameP::IterableName(name_range), None) => {
+          let range = PostParser::eval_range(&file_coordinate, lookup.name.range());
+          let imprecise_name = self
+            .interner
+            .intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameS {
+              range: PostParser::eval_range(&file_coordinate, *name_range),
+            }));
+          if let Some(local_lookup_result) = self.find_local(&stack_frame, range, &imprecise_name) {
+            Ok((
+              stack_frame.clone(),
+              IScoutResult::LocalLookupResult(local_lookup_result),
+              VariableUses::empty(),
+              VariableUses::empty(),
+            ))
+          } else {
+            panic!("POSTPARSER_SCOUT_ITERABLE_LOOKUP_NOT_FOUND")
+          }
+        }
+        (IImpreciseNameP::IteratorName(name_range), None) => {
+          let range = PostParser::eval_range(&file_coordinate, lookup.name.range());
+          let imprecise_name = self
+            .interner
+            .intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameS {
+              range: PostParser::eval_range(&file_coordinate, *name_range),
+            }));
+          if let Some(local_lookup_result) = self.find_local(&stack_frame, range, &imprecise_name) {
+            Ok((
+              stack_frame.clone(),
+              IScoutResult::LocalLookupResult(local_lookup_result),
+              VariableUses::empty(),
+              VariableUses::empty(),
+            ))
+          } else {
+            panic!("POSTPARSER_SCOUT_ITERATOR_LOOKUP_NOT_FOUND")
+          }
+        }
+        (IImpreciseNameP::IterationOptionName(name_range), None) => {
+          let range = PostParser::eval_range(&file_coordinate, lookup.name.range());
+          let imprecise_name = self.interner.intern_imprecise_name(
+            IImpreciseNameValS::IterationOptionName(IterationOptionNameS {
+              range: PostParser::eval_range(&file_coordinate, *name_range),
+            }),
+          );
+          if let Some(local_lookup_result) = self.find_local(&stack_frame, range, &imprecise_name) {
+            Ok((
+              stack_frame.clone(),
+              IScoutResult::LocalLookupResult(local_lookup_result),
+              VariableUses::empty(),
+              VariableUses::empty(),
+            ))
+          } else {
+            panic!("POSTPARSER_SCOUT_ITERATION_OPTION_LOOKUP_NOT_FOUND")
+          }
+        }
         (IImpreciseNameP::LookupName(lookup_name), Some(template_args)) => Ok((
-          stack_frame,
+          stack_frame.clone(),
           IScoutResult::OutsideLookupResult(OutsideLookupResultS {
             range: PostParser::eval_range(&file_coordinate, lookup.name.range()),
             name: lookup_name.str(),
@@ -915,6 +1032,15 @@ where
       );
       let declared_name = match &destination.decl {
         INameDeclarationP::LocalNameDeclaration(local_name) => IVarNameS::CodeVarName(local_name.str()),
+        INameDeclarationP::IterableNameDeclaration(range_l) => {
+          IVarNameS::IterableName(PostParser::eval_range(&file_coordinate, *range_l))
+        }
+        INameDeclarationP::IteratorNameDeclaration(range_l) => {
+          IVarNameS::IteratorName(PostParser::eval_range(&file_coordinate, *range_l))
+        }
+        INameDeclarationP::IterationOptionNameDeclaration(range_l) => {
+          IVarNameS::IterationOptionName(PostParser::eval_range(&file_coordinate, *range_l))
+        }
         // WARNING: This is inaccurate and doesn't match scala, and we need to change this to call out to translatePattern ASAP!
         INameDeclarationP::ConstructingMemberNameDeclaration(member_name) => {
           IVarNameS::ConstructingMemberName(member_name.str())
@@ -933,7 +1059,12 @@ where
       };
       let name_already_exists = stack_frame1.locals.vars.iter().any(|decl| decl.name == declared_name);
       let declarations_from_pattern = if name_already_exists {
-        panic!("POSTPARSER_SCOUT_LET_VARIABLE_NAME_ALREADY_EXISTS_NOT_YET_IMPLEMENTED")
+        return Err(ICompileErrorS::VariableNameAlreadyExists(
+          VariableNameAlreadyExists {
+            range: PostParser::eval_range(&file_coordinate, lett.range),
+            name: declared_name,
+          },
+        ));
       } else {
         VariableDeclarations {
           vars: vec![VariableDeclarationS {
@@ -997,7 +1128,7 @@ where
     IExpressionPE::Mutate(mutate) => {
       let (stack_frame1, source_expr_s, source_inner_self_uses, source_child_uses) = {
         let mut source_expr_lidb = lidb.child();
-        // MIGTODO: consider doing &mut StackFrame instead of clone, everywhere.
+        // AFTERM: consider doing &mut StackFrame instead of clone, everywhere.
         self.scout_expression_and_coerce(
           stack_frame,
           &mut source_expr_lidb,
@@ -1066,7 +1197,7 @@ where
     }
     */
     IExpressionPE::ConstantInt(constant_int) => Ok((
-      stack_frame,
+      stack_frame.clone(),
         IScoutResult::NormalResult(NormalResultS {
           expr: &*self.scout_arena.alloc(IExpressionSE::ConstantInt(ConstantIntSE {
             range: PostParser::eval_range(&file_coordinate, constant_int.range),
@@ -1103,7 +1234,9 @@ where
           }
           (true, IExpressionSE::Void(_)) => {}
           (true, _) => {
-            panic!("POSTPARSER_SCOUT_STATEMENT_AFTER_RETURN_NOT_YET_IMPLEMENTED");
+            return Err(ICompileErrorS::StatementAfterReturnS(StatementAfterReturnS {
+              range: expr_s.range(),
+            }));
           }
         }
       }
@@ -1166,7 +1299,7 @@ where
     IExpressionPE::SubExpression(sub_expression) => {
       let mut sub_expression_lidb = lidb.child();
       let (stack_frame1, sub_expression_s, sub_self_uses, sub_child_uses) = self.scout_expression_and_coerce(
-        stack_frame.clone(),
+        stack_frame,
         &mut sub_expression_lidb,
         sub_expression.inner,
         LoadAsP::Use,
@@ -1187,6 +1320,19 @@ where
       (stackFrame1, NormalResult(inner1), innerSelfUses, innerChildUses)
     }
     */
+    IExpressionPE::Lambda(lambda) => {
+      let (function_s, child_uses) = self.scout_lambda(stack_frame.clone(), &lambda.function)?;
+      Ok((
+        stack_frame.clone(),
+        IScoutResult::NormalResult(NormalResultS {
+          expr: &*self
+            .scout_arena
+            .alloc(IExpressionSE::Function(FunctionSE { function: function_s })),
+        }),
+        VariableUses::empty(),
+        child_uses,
+      ))
+    }
         /*
         case lam @ LambdaPE(captures,_) => {
           val (function1, childUses) =
@@ -1264,7 +1410,7 @@ where
         }
         */
     IExpressionPE::ConstantBool(constant_bool) => Ok((
-      stack_frame,
+      stack_frame.clone(),
       IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::ConstantBool(ConstantBoolSE {
           range: PostParser::eval_range(&file_coordinate, constant_bool.range),
@@ -1277,12 +1423,165 @@ where
         /*
         case ConstantBoolPE(range,value) => (stackFrame0, NormalResult(vale.postparsing.ConstantBoolSE(evalRange(range), value)), noVariableUses, noVariableUses)
         */
+    IExpressionPE::ConstantStr(constant_str) => Ok((
+      stack_frame.clone(),
+      IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::ConstantStr(ConstantStrSE {
+          range: PostParser::eval_range(&file_coordinate, constant_str.range),
+          value: constant_str.value.as_str().to_string(),
+        })),
+      }),
+      VariableUses::empty(),
+      VariableUses::empty(),
+    )),
         /*
         case ConstantStrPE(range, value) => {
           (stackFrame0, NormalResult(vale.postparsing.ConstantStrSE(evalRange(range), value)), noVariableUses, noVariableUses)
         }
+        */
+    IExpressionPE::ConstructArray(construct_array) => {
+      let range_s = PostParser::eval_range(&file_coordinate, construct_array.range);
+      let mut args_lidb = lidb.child();
+      let (_stack_frame1, args_s, _self_uses, _child_uses) =
+        self.scout_elements_as_expressions(stack_frame, &mut args_lidb, &construct_array.args)?;
+      match construct_array.size {
+        IArraySizeP::RuntimeSized => {
+          assert!(
+            !construct_array.initializing_individual_elements,
+            "POSTPARSER_SCOUT_CONSTRUCT_ARRAY_RUNTIME_INIT_INDIVIDUAL_ELEMENTS_NOT_YET_IMPLEMENTED"
+          );
+          if args_s.is_empty() || args_s.len() > 2 {
+            return Err(
+              ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(
+                InitializingRuntimeSizedArrayRequiresSizeAndCallable { range: range_s },
+              ),
+            );
+          }
+          panic!("POSTPARSER_SCOUT_CONSTRUCT_ARRAY_RUNTIME_NOT_YET_IMPLEMENTED");
+        }
+        IArraySizeP::StaticSized(_) => {
+          if !construct_array.initializing_individual_elements && args_s.len() != 1 {
+            return Err(
+              ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(
+                InitializingStaticSizedArrayRequiresSizeAndCallable { range: range_s },
+              ),
+            );
+          }
+          panic!("POSTPARSER_SCOUT_CONSTRUCT_ARRAY_STATIC_NOT_YET_IMPLEMENTED");
+        }
+      }
+    }
+    /*
+    case ConstructArrayPE(rangeP, maybeTypePT, maybeMutabilityPT, maybeVariabilityPT, size, initializingIndividualElements, argsPE) => {
+      val rangeS = evalRange(rangeP)
+      val ruleBuilder = mutable.ArrayBuffer[IRulexSR]()
+      val maybeTypeRuneS =
+        maybeTypePT.map(typePT => {
+          templexScout.translateTemplex(
+            stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, typePT)
+        })
+      val mutabilityRuneS =
+        maybeMutabilityPT match {
+          case None => {
+            val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+            ruleBuilder += LiteralSR(rangeS, rune, MutabilityLiteralSL(MutableP))
+            rune
+          }
+          case Some(mutabilityPT) => {
+            templexScout.translateTemplex(
+              stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, mutabilityPT)
+          }
+        }
+      val variabilityRuneS =
+        maybeVariabilityPT match {
+          case None => {
+            val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+            ruleBuilder += rules.LiteralSR(rangeS, rune, VariabilityLiteralSL(FinalP))
+            rune
+          }
+          case Some(variabilityPT) => {
+            templexScout.translateTemplex(
+              stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, variabilityPT)
+          }
+        }
+
+      val (stackFrame1, argsSE, selfUses, childUses) =
+        scoutElementsAsExpressions(stackFrame0, lidb.child(), argsPE)
+
+      val result =
+        size match {
+          case RuntimeSizedP => {
+            vassert(!initializingIndividualElements)
+            if (argsSE.isEmpty || argsSE.size > 2) {
+              throw CompileErrorExceptionS(InitializingRuntimeSizedArrayRequiresSizeAndCallable(rangeS))
+            }
+            val sizeSE = argsSE.head
+            val callableSE = argsSE.lift(1)
+
+            NewRuntimeSizedArraySE(rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, sizeSE, callableSE)
+          }
+          case StaticSizedP(maybeSizePT) => {
+            val maybeSizeRuneS =
+              maybeSizePT match {
+                case None => None
+                case Some(sizePT) => {
+                  Some(
+                    templexScout.translateTemplex(
+                      stackFrame0.parentEnv,
+                      lidb.child(),
+                      ruleBuilder,
+                      stackFrame0.contextRegion,
+                      sizePT))
+                }
+              }
+
+            if (initializingIndividualElements) {
+              val sizeRuneS =
+                maybeSizeRuneS match {
+                  case Some(s) => s
+                  case None => {
+                    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                    ruleBuilder += rules.LiteralSR(rangeS, runeS, IntLiteralSL(argsSE.size))
+                    runeS
+                  }
+                }
+
+              StaticArrayFromValuesSE(
+                rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, variabilityRuneS, sizeRuneS, argsSE.toVector)
+            } else {
+              if (argsSE.size != 1) {
+                throw CompileErrorExceptionS(InitializingStaticSizedArrayRequiresSizeAndCallable(rangeS))
+              }
+              val sizeRuneS = vassertSome(maybeSizeRuneS)
+              val Vector(callableSE) = argsSE
+              StaticArrayFromCallableSE(
+                rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, variabilityRuneS, sizeRuneS, callableSE)
+            }
+          }
+        }
+
+      (stackFrame1, NormalResult(result), selfUses, childUses)
+    }
+    */
+        /*
         case ConstantFloatPE(range,value) => (stackFrame0, NormalResult(ConstantFloatSE(evalRange(range), value)), noVariableUses, noVariableUses)
         */
+    IExpressionPE::MagicParamLookup(magic_param_lookup) => {
+      let range_s = PostParser::eval_range(&file_coordinate, magic_param_lookup.range);
+      let name = IVarNameS::MagicParamName(PostParser::eval_pos(
+        &file_coordinate,
+        magic_param_lookup.range.begin(),
+      ));
+      Ok((
+        stack_frame.clone(),
+        IScoutResult::LocalLookupResult(LocalLookupResultS {
+          range: range_s,
+          name: name.clone(),
+        }),
+        VariableUses::empty().mark_moved(name),
+        VariableUses::empty(),
+      ))
+    }
         /*
         case MagicParamLookupPE(range) => {
           val name = interner.intern(MagicParamNameS(PostParser.evalPos(stackFrame0.file, range.begin)))
@@ -1351,6 +1650,56 @@ where
           (stackFrame2, NormalResult(resultSE), callableSelfUses.thenMerge(argSelfUses), callableChildUses.thenMerge(argChildUses))
         }
         */
+    IExpressionPE::MethodCall(method_call) => {
+      let load_subject_as = match method_call.subject_expr {
+        IExpressionPE::Lookup(_) => LoadAsP::LoadAsBorrow,
+        _ => LoadAsP::Use,
+      };
+      let method_lookup_expr = IExpressionPE::Lookup(method_call.method_lookup.clone());
+      let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses) = {
+        let mut callable_lidb = lidb.child();
+        self.scout_expression_and_coerce(
+          stack_frame,
+          &mut callable_lidb,
+          &method_lookup_expr,
+          LoadAsP::LoadAsBorrow,
+        )?
+      };
+      let (stack_frame2, subject_expr_s, subject_self_uses, subject_child_uses) = {
+        let mut subject_lidb = lidb.child();
+        self.scout_expression_and_coerce(
+          stack_frame1,
+          &mut subject_lidb,
+          method_call.subject_expr,
+          load_subject_as,
+        )?
+      };
+      let (stack_frame3, tail_arg_exprs_s, tail_args_self_uses, tail_args_child_uses) = {
+        let mut args_lidb = lidb.child();
+        self.scout_elements_as_expressions(stack_frame2, &mut args_lidb, method_call.arg_exprs)?
+      };
+
+      let mut arg_exprs_s = vec![subject_expr_s];
+      arg_exprs_s.extend(tail_arg_exprs_s);
+      let result = IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
+          range: PostParser::eval_range(&file_coordinate, method_call.range),
+          location: lidb.child().consume(),
+          callable_expr: callable_expr_s,
+          arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs_s),
+        })),
+      });
+      Ok((
+        stack_frame3,
+        result,
+        callable_self_uses
+          .then_merge(&subject_self_uses)
+          .then_merge(&tail_args_self_uses),
+        callable_child_uses
+          .then_merge(&subject_child_uses)
+          .then_merge(&tail_args_child_uses),
+      ))
+    }
         /*
         case MethodCallPE(range, subjectExpr, operatorRange, memberLookup, methodArgs) => {
           val loadSubjectAs =
@@ -1380,98 +1729,6 @@ where
           val (stackFrame1, elements1, selfUses, childUses) =
             scoutElementsAsExpressions(stackFrame0, lidb.child(), elementsPE)
           (stackFrame1, NormalResult(TupleSE(evalRange(range), elements1.toVector)), selfUses, childUses)
-        }
-        */
-        /*
-        case ConstructArrayPE(rangeP, maybeTypePT, maybeMutabilityPT, maybeVariabilityPT, size, initializingIndividualElements, argsPE) => {
-          val rangeS = evalRange(rangeP)
-          val ruleBuilder = mutable.ArrayBuffer[IRulexSR]()
-          val maybeTypeRuneS =
-            maybeTypePT.map(typePT => {
-              templexScout.translateTemplex(
-                stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, typePT)
-            })
-          val mutabilityRuneS =
-            maybeMutabilityPT match {
-              case None => {
-                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-                ruleBuilder += LiteralSR(rangeS, rune, MutabilityLiteralSL(MutableP))
-                rune
-              }
-              case Some(mutabilityPT) => {
-                templexScout.translateTemplex(
-                  stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, mutabilityPT)
-              }
-            }
-          val variabilityRuneS =
-            maybeVariabilityPT match {
-              case None => {
-                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-                ruleBuilder += rules.LiteralSR(rangeS, rune, VariabilityLiteralSL(FinalP))
-                rune
-              }
-              case Some(variabilityPT) => {
-                templexScout.translateTemplex(
-                  stackFrame0.parentEnv, lidb.child(), ruleBuilder, stackFrame0.contextRegion, variabilityPT)
-              }
-            }
-
-          val (stackFrame1, argsSE, selfUses, childUses) =
-            scoutElementsAsExpressions(stackFrame0, lidb.child(), argsPE)
-
-          val result =
-            size match {
-              case RuntimeSizedP => {
-                vassert(!initializingIndividualElements)
-                if (argsSE.isEmpty || argsSE.size > 2) {
-                  throw CompileErrorExceptionS(InitializingRuntimeSizedArrayRequiresSizeAndCallable(rangeS))
-                }
-                val sizeSE = argsSE.head
-                val callableSE = argsSE.lift(1)
-
-                NewRuntimeSizedArraySE(rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, sizeSE, callableSE)
-              }
-              case StaticSizedP(maybeSizePT) => {
-                val maybeSizeRuneS =
-                  maybeSizePT match {
-                    case None => None
-                    case Some(sizePT) => {
-                      Some(
-                        templexScout.translateTemplex(
-                          stackFrame0.parentEnv,
-                          lidb.child(),
-                          ruleBuilder,
-                          stackFrame0.contextRegion,
-                          sizePT))
-                    }
-                  }
-
-                if (initializingIndividualElements) {
-                  val sizeRuneS =
-                    maybeSizeRuneS match {
-                      case Some(s) => s
-                      case None => {
-                        val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-                        ruleBuilder += rules.LiteralSR(rangeS, runeS, IntLiteralSL(argsSE.size))
-                        runeS
-                      }
-                    }
-
-                  StaticArrayFromValuesSE(
-                    rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, variabilityRuneS, sizeRuneS, argsSE.toVector)
-                } else {
-                  if (argsSE.size != 1) {
-                    throw CompileErrorExceptionS(InitializingStaticSizedArrayRequiresSizeAndCallable(rangeS))
-                  }
-                  val sizeRuneS = vassertSome(maybeSizeRuneS)
-                  val Vector(callableSE) = argsSE
-                  StaticArrayFromCallableSE(
-                    rangeS, ruleBuilder.toVector, maybeTypeRuneS, mutabilityRuneS, variabilityRuneS, sizeRuneS, callableSE)
-                }
-              }
-            }
-
-          (stackFrame1, NormalResult(result), selfUses, childUses)
         }
         */
         /*
@@ -1562,6 +1819,47 @@ where
           (stackFrame0, NormalResult(loopSE), loopSelfUses, loopChildUses)
         }
         */
+    IExpressionPE::Each(each) => {
+      assert!(
+        each.maybe_pure.is_none(),
+        "POSTPARSER_SCOUT_EACH_PURE_NOT_YET_IMPLEMENTED"
+      );
+      assert!(
+        each.entry_pattern.templex.is_none(),
+        "POSTPARSER_SCOUT_EACH_ENTRY_PATTERN_TEMPLEX_NOT_YET_IMPLEMENTED"
+      );
+      assert!(
+        each.entry_pattern.destructure.is_none(),
+        "POSTPARSER_SCOUT_EACH_ENTRY_PATTERN_DESTRUCTURE_NOT_YET_IMPLEMENTED"
+      );
+      assert!(
+        each.body.maybe_pure.is_none(),
+        "POSTPARSER_SCOUT_EACH_BODY_PURE_NOT_YET_IMPLEMENTED"
+      );
+      assert!(
+        each.body.maybe_default_region.is_none(),
+        "POSTPARSER_SCOUT_EACH_BODY_DEFAULT_REGION_NOT_YET_IMPLEMENTED"
+      );
+      let (loop_s, self_uses, child_uses) = crate::postparsing::loop_post_parser::scout_each(
+        self,
+        stack_frame.clone(),
+        lidb,
+        each.range,
+        each.maybe_pure.is_some(),
+        &each.entry_pattern,
+        each.in_keyword_range,
+        each.iterable_expr,
+        each.body,
+      )?;
+      Ok((
+        stack_frame.clone(),
+        IScoutResult::NormalResult(NormalResultS {
+          expr: &*self.scout_arena.alloc(IExpressionSE::Block(loop_s)),
+        }),
+        self_uses,
+        child_uses,
+      ))
+    }
         /*
         case EachPE(range, maybePure, entryPatternPP, inKeywordRange, iterableExpr, body) => {
           val (loopSE, selfUses, childUses) =
@@ -1596,34 +1894,53 @@ where
   }
 */
 
-fn new_if<'env, FCond, FThen, FElse>(
-  _stack_frame0: StackFrame<'a, 'env>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _range: RangeL,
-  _make_condition: FCond,
-  _make_then: FThen,
-  _make_else: FElse,
-) -> (StackFrame<'a, 'env>, IfSE<'a, 's>, VariableUses<'a>, VariableUses<'a>)
+pub(crate) fn new_if<FCond, FThen, FElse>(
+  stack_frame0: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeL,
+  make_condition: FCond,
+  make_then: FThen,
+  make_else: FElse,
+) -> Result<(StackFrame<'a>, IfSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
 where
   FCond: FnOnce(
-    StackFrame<'a, 'env>,
+    StackFrame<'a>,
     &mut LocationInDenizenBuilder,
-  ) -> (
-    StackFrame<'a, 'env>,
-    &'s IExpressionSE<'a, 's>,
-    VariableUses<'a>,
-    VariableUses<'a>,
-  ),
+  ) -> Result<
+    (
+      StackFrame<'a>,
+      &'s IExpressionSE<'a, 's>,
+      VariableUses<'a>,
+      VariableUses<'a>,
+    ),
+    ICompileErrorS<'a>,
+  >,
   FThen: FnOnce(
-    StackFrame<'a, 'env>,
+    StackFrame<'a>,
     &mut LocationInDenizenBuilder,
-  ) -> (StackFrame<'a, 'env>, BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>),
+  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>,
   FElse: FnOnce(
-    StackFrame<'a, 'env>,
+    StackFrame<'a>,
     &mut LocationInDenizenBuilder,
-  ) -> (StackFrame<'a, 'env>, BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>),
+  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>,
 {
-  panic!("Unimplemented new_if");
+  let file = stack_frame0.file;
+  let (stack_frame1, cond_se, cond_uses, cond_child_uses) = make_condition(stack_frame0, &mut lidb.child())?;
+  let (stack_frame2, then_se, then_uses, then_child_uses) = make_then(stack_frame1, &mut lidb.child())?;
+  let (stack_frame3, else_se, else_uses, else_child_uses) = make_else(stack_frame2, &mut lidb.child())?;
+
+  let self_case_uses = then_uses.branch_merge(&else_uses);
+  let self_uses = cond_uses.then_merge(&self_case_uses);
+  let child_case_uses = then_child_uses.branch_merge(&else_child_uses);
+  let child_uses = cond_child_uses.then_merge(&child_case_uses);
+
+  let if_se = IfSE {
+    range: PostParser::eval_range(file, range),
+    condition: cond_se,
+    then_body: then_se,
+    else_body: else_se,
+  };
+  Ok((stack_frame3, if_se, self_uses, child_uses))
 }
 /*
   def newIf(
@@ -1652,15 +1969,15 @@ where
     (stackFrame3, ifSE, selfUses, childUses)
   }
 */
-pub(crate) fn scout_expression_and_coerce<'pp, 'env>(
+pub(crate) fn scout_expression_and_coerce(
     &self,
-    stack_frame: StackFrame<'a, 'env>,
+    stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    expression_p: &IExpressionPE<'a, 'pp>,
+    expression_p: &IExpressionPE<'a, 'p>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'a, 'env>, &'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(StackFrame<'a>, &'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'pp,
+    'a: 'p,
   {
     let mut expression_lidb = lidb.child();
     let (next_stack_frame, first_result_s, first_inner_self_uses, first_child_uses) = self.scout_expression(
@@ -1763,14 +2080,14 @@ pub(crate) fn scout_expression_and_coerce<'pp, 'env>(
     (namesFromInsideFirst, firstExpr1, firstSelfUses, firstChildUses)
   }
 */
-fn scout_elements_as_expressions<'pp, 'env>(
+pub(crate) fn scout_elements_as_expressions(
     &self,
-    initial_stack_frame: StackFrame<'a, 'env>,
+    initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
-    exprs_p: &[IExpressionPE<'a, 'pp>],
-  ) -> Result<(StackFrame<'a, 'env>, Vec<&'s IExpressionSE<'a, 's>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+    exprs_p: &[IExpressionPE<'a, 'p>],
+  ) -> Result<(StackFrame<'a>, Vec<&'s IExpressionSE<'a, 's>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
   where
-    'a: 'pp,
+    'a: 'p,
   {
     let mut self_uses = VariableUses::empty();
     let mut child_uses = VariableUses::empty();
@@ -1814,6 +2131,7 @@ fn scout_elements_as_expressions<'pp, 'env>(
 }
 */
 }
+
 /*
 object ExpressionScout {
 */
@@ -1831,3 +2149,4 @@ fn flatten_expressions<'a, 's>(
   }
 }
 */
+

@@ -16,7 +16,7 @@ import scala.collection.immutable.Map
 object ParserTestCompilation {
 */
 
-/// MIGTODO: Check this is faithful to old Scala
+/// AFTERM: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
 pub fn test<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,

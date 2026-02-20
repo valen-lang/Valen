@@ -7,7 +7,7 @@ use crate::lexing::errors::FailedParse;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ExpressionParser;
-use crate::parsing::parse_utils::try_skip_past_keyword_while;
+use crate::parsing::parse_utils::{parse_region as parse_region_shared, try_skip_past_keyword_while};
 use crate::parsing::pattern_parser::PatternParser;
 use crate::parsing::scramble_iterator::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
@@ -350,7 +350,7 @@ where
   ) -> ParseResult<Option<RegionRunePT<'a>>> {
     let mut tentative_iter = original_iter.clone();
 
-    let region = match self.parse_region(&mut tentative_iter)? {
+    let region = match parse_region_shared(&mut tentative_iter)? {
       Some(region) => {
         // Check if the next token immediately follows (no gap)
         match tentative_iter.peek_cloned() {
@@ -389,42 +389,12 @@ where
     }
   */
 
-  /// Parse optional region marker
+  /// Parse optional region marker - delegates to shared parse_region (Parser.parseRegion in Scala)
   fn parse_region(
     &self,
     original_iter: &mut ScrambleIterator<'a, '_>,
   ) -> ParseResult<Option<RegionRunePT<'a>>> {
-    let mut tentative_iter = original_iter.clone();
-    let rune_begin = tentative_iter.get_pos();
-
-    let maybe_rune = if tentative_iter.try_skip_symbol('\'') {
-      // Anonymous region (isolate)
-      None
-    } else {
-      let region_rune = match tentative_iter.next_word() {
-        None => return Ok(None),
-        Some(r) => r,
-      };
-
-      if !tentative_iter.try_skip_symbol('\'') {
-        return Ok(None);
-      }
-
-      Some(region_rune)
-    };
-
-    let rune_end = tentative_iter.get_prev_end_pos();
-    original_iter.skip_to(&tentative_iter);
-
-    let range = RangeL(rune_begin, rune_end);
-
-    Ok(Some(RegionRunePT::<'a> {
-      range,
-      name: maybe_rune.map(|z| NameP(
-        RangeL(rune_begin, rune_end),
-        z.str,
-      )),
-    }))
+    parse_region_shared(original_iter)
   }
   /*
     def parseRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {

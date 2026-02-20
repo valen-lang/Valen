@@ -36,6 +36,9 @@ trait IImpreciseNameS extends IInterning
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameS<'a> {
   CodeName(&'a CodeNameS<'a>),
+  IterableName(&'a IterableNameS<'a>),
+  IteratorName(&'a IteratorNameS<'a>),
+  IterationOptionName(&'a IterationOptionNameS<'a>),
   LambdaImpreciseName(&'a LambdaImpreciseNameS),
   PlaceholderImpreciseName(&'a PlaceholderImpreciseNameS),
   LambdaStructImpreciseName(&'a LambdaStructImpreciseNameS<'a>),
@@ -58,6 +61,9 @@ impl<'a> IImpreciseNameS<'a> {
   pub fn canonical_ptr(&self) -> *const () {
     match self {
       IImpreciseNameS::CodeName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::IterableName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::IteratorName(r) => *r as *const _ as *const (),
+      IImpreciseNameS::IterationOptionName(r) => *r as *const _ as *const (),
       IImpreciseNameS::LambdaImpreciseName(r) => *r as *const _ as *const (),
       IImpreciseNameS::PlaceholderImpreciseName(r) => *r as *const _ as *const (),
       IImpreciseNameS::LambdaStructImpreciseName(r) => *r as *const _ as *const (),
@@ -128,6 +134,9 @@ pub struct RuneNameValS<'a> {
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameValS<'a> {
   CodeName(CodeNameS<'a>),
+  IterableName(IterableNameS<'a>),
+  IteratorName(IteratorNameS<'a>),
+  IterationOptionName(IterationOptionNameS<'a>),
   LambdaImpreciseName(LambdaImpreciseNameS),
   PlaceholderImpreciseName(PlaceholderImpreciseNameS),
   LambdaStructImpreciseName(LambdaStructImpreciseNameValS<'a>),

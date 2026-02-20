@@ -54,8 +54,6 @@ First, please look at these files for guidelines to follow:
 - migration_checks.md
 - testing.md
 
-Then look at expression_tests.rs for an example.
-
 Then say "ready"
 
 == (tests only)
@@ -70,12 +68,17 @@ Implement anything in src/postparsing that is directly and immediately needed to
 
 CRITICAL RULES:
 
- * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment.
+ * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
  * Anything you add should be *directly immediately above* the Scala comment. NOT below the comment. NOT in a different file. Feel free to slice scala comments apart so the new rust code can be directly above the old scala code.
  * Only *iteratively* implement the bare minimum that you need to make it compile. Add panic!/assert! placeholders until it compiles, then implement only the panic!s/assert!s your test runs into.
 
+If any of these sound like a problem, then stop and ask me for help.
 
 The test we'll be working to enable is 
+
+== (followup)
+
+/migration-correct
 
 ======== CHECKS
 
@@ -86,43 +89,13 @@ Look again at these files for guidelines to follow (they might have changed):
 
 then say "ready"
 
-== (tests only)
+==
 
-Someone just migrated this file, but im not sure they did it well. can you tell me what they missed or got wrong? don't fix it yet.
-
-For example:
-
-- Is there something that Scala checks that Rust does not?
-- Are there any mismatches between what Rust is checking for and what Scala is checking for?
-
-== (impl only)
-
-Someone just added this new rust code. Does it correspond well to the scala code below it? And does it conform to all the checks in migration_checks.md? Are there any other differences that we should be worried about? It's okay if there are panic!s for unimplemented parts, but I want to know about any other problems. this passes tests, so we don't want to implement any missing logic, but we might want to put in assertions and panics. everything should either be correct or panic!ing.
-
-The new code in question is: 
+/migration-diff-review
 
 == (followup impl)
 
-Go ahead and fix. However, you *cannot use your own novel code* to fix. The only way to make this better is to bring the rust code closer to the old scala code. Look at migration_process.md again, it may have changed.
-
-CRITICAL RULES:
-
- * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment.
- * Anything you add should be *directly immediately above* the Scala comment. NOT below the comment. NOT in a different file. Feel free to slice scala comments apart so the new rust code can be directly above the old scala code.
- * Only *iteratively* implement the bare minimum that you need to make it compile. Add panic!/assert! placeholders until it compiles, then implement only the panic!s/assert!s your test runs into.
-
-proceed.
-
-== (final questions)
-
-Please do a `git diff HEAD` and look at the whole thing.
-
-Is there anything we can do to make this more closely match the old Scala code? For example:
-
-- Is the Rust code inlining code from somewhere where Scala instead makes a call to another function?
-- Is there any code that isn't directly above the old Scala code that inspired it? If so, that's likely novel code, which we DON'T WANT.
-- Did we make everything closer to scala behavior, or is there anything that is now further from scala behavior?
-- Do the if-statements/match-statements/loops match up between the Rust version and the Scala version? They should. But feel free to ignore any branches with panic!s in them.
+/migration-drive
 
 
 ======== NOTES
@@ -156,3 +129,8 @@ it just put in a temporary hack like:
 so perhaps:
  * we should just say that it can only add panics in branches? but then it would create default values which isnt right
  * we should just do the pre-pass that creates rust stubs.
+
+
+
+
+wow, it sucks at dealing with lifetimes.

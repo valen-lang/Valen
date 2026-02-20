@@ -127,7 +127,7 @@ pub struct ExternS<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuiltinS<'a> {
-  // MIGTODO: can we give everything a lifetime into an arena so we can
+  // AFTERM: can we give everything a lifetime into an arena so we can
   // all have references instead of using Arc everywhere?
   pub generator_name: StrI<'a>,
 }
@@ -888,6 +888,7 @@ pub struct LocationInDenizenBuilder {
 }
 
 impl LocationInDenizenBuilder {
+  // MIGALLOW: new -> new
   pub fn new(path: Vec<i32>) -> Self {
     Self {
       path,
@@ -1031,6 +1032,7 @@ impl<'a, 's> ICitizenDenizenS<'a, 's> {
   }
 }
 
+// MIGALLOW: unapply -> as_citizen_denizen
 pub fn as_citizen_denizen<'a, 's>(x: &IDenizenS<'a, 's>) -> Option<ICitizenDenizenS<'a, 's>> {
   match x {
     IDenizenS::TopLevelStruct(s) => Some(ICitizenDenizenS::TopLevelStruct(s.clone())),

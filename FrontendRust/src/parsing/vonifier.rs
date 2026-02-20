@@ -13,30 +13,7 @@ pub struct ParserVonifier<'a> {
 impl<'a, 'p> ParserVonifier<'a> {
   /// Helper to vonify optional values
   /// Mirrors vonifyOptional in ParserVonifier.scala lines 11-16
-  pub fn vonify_optional_ref<T, F>(opt: &Option<&'a T>, func: F) -> IVonData
-  where
-    F: Fn(&'a T) -> IVonData,
-  {
-    match opt {
-      None => IVonData::Object(VonObject {
-        tyype: "None".to_string(),
-        id: None,
-        members: vec![],
-      }),
-      Some(value) => IVonData::Object(VonObject {
-        tyype: "Some".to_string(),
-        id: None,
-        members: vec![VonMember {
-          field_name: "value".to_string(),
-          value: func(value),
-        }],
-      }),
-    }
-  }
-
-  /// Helper to vonify optional values
-  /// Mirrors vonifyOptional in ParserVonifier.scala lines 11-16
-  pub fn vonify_optional_owned<T, F>(opt: &Option<T>, func: F) -> IVonData
+  pub fn vonify_optional<T, F>(opt: &Option<T>, func: F) -> IVonData
   where
     F: Fn(&T) -> IVonData,
   {
@@ -234,19 +211,19 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "mutability".to_string(),
-          value: Self::vonify_optional_owned(mutability, Self::vonify_templex),
+          value: Self::vonify_optional(mutability, Self::vonify_templex),
         },
         VonMember {
           field_name: "identifyingRunes".to_string(),
-          value: Self::vonify_optional_owned(identifying_runes, Self::vonify_identifying_runes),
+          value: Self::vonify_optional(identifying_runes, Self::vonify_identifying_runes),
         },
         VonMember {
           field_name: "templateRules".to_string(),
-          value: Self::vonify_optional_owned(template_rules, Self::vonify_template_rules),
+          value: Self::vonify_optional(template_rules, Self::vonify_template_rules),
         },
         VonMember {
           field_name: "maybeDefaultRegion".to_string(),
-          value: Self::vonify_optional_owned(maybe_default_region_rune, Self::vonify_region_rune),
+          value: Self::vonify_optional(maybe_default_region_rune, Self::vonify_region_rune),
         },
         VonMember {
           field_name: "bodyRange".to_string(),
@@ -285,7 +262,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "body".to_string(),
-          value: Self::vonify_optional_owned(&body, |b| Self::vonify_block(*b)),
+          value: Self::vonify_optional(&body, |b| Self::vonify_block(*b)),
         },
       ],
     })
@@ -327,19 +304,19 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "mutability".to_string(),
-          value: Self::vonify_optional_owned(mutability, Self::vonify_templex),
+          value: Self::vonify_optional(mutability, Self::vonify_templex),
         },
         VonMember {
           field_name: "maybeIdentifyingRunes".to_string(),
-          value: Self::vonify_optional_owned(maybe_identifying_runes, Self::vonify_identifying_runes),
+          value: Self::vonify_optional(maybe_identifying_runes, Self::vonify_identifying_runes),
         },
         VonMember {
           field_name: "templateRules".to_string(),
-          value: Self::vonify_optional_owned(template_rules, Self::vonify_template_rules),
+          value: Self::vonify_optional(template_rules, Self::vonify_template_rules),
         },
         VonMember {
           field_name: "maybeDefaultRegion".to_string(),
-          value: Self::vonify_optional_owned(maybe_default_region_rune, Self::vonify_region_rune),
+          value: Self::vonify_optional(maybe_default_region_rune, Self::vonify_region_rune),
         },
         VonMember {
           field_name: "bodyRange".to_string(),
@@ -380,7 +357,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "identifyingRunes".to_string(),
-          value: Self::vonify_optional_owned(generic_params, Self::vonify_identifying_runes),
+          value: Self::vonify_optional(generic_params, Self::vonify_identifying_runes),
         },
         VonMember {
           field_name: "attributes".to_string(),
@@ -391,11 +368,11 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "templateRules".to_string(),
-          value: Self::vonify_optional_owned(template_rules, Self::vonify_template_rules),
+          value: Self::vonify_optional(template_rules, Self::vonify_template_rules),
         },
         VonMember {
           field_name: "struct".to_string(),
-          value: Self::vonify_optional_owned(struct_, Self::vonify_templex),
+          value: Self::vonify_optional(struct_, Self::vonify_templex),
         },
         VonMember {
           field_name: "interface".to_string(),
@@ -494,7 +471,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "name".to_string(),
-          value: Self::vonify_optional_owned(name, Self::vonify_name),
+          value: Self::vonify_optional(name, Self::vonify_name),
         },
         VonMember {
           field_name: "attributes".to_string(),
@@ -505,15 +482,15 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "maybeUserSpecifiedIdentifyingRunes".to_string(),
-          value: Self::vonify_optional_owned(generic_parameters, Self::vonify_identifying_runes),
+          value: Self::vonify_optional(generic_parameters, Self::vonify_identifying_runes),
         },
         VonMember {
           field_name: "templateRules".to_string(),
-          value: Self::vonify_optional_owned(template_rules, Self::vonify_template_rules),
+          value: Self::vonify_optional(template_rules, Self::vonify_template_rules),
         },
         VonMember {
           field_name: "params".to_string(),
-          value: Self::vonify_optional_owned(params, Self::vonify_params),
+          value: Self::vonify_optional(params, Self::vonify_params),
         },
         VonMember {
           field_name: "return".to_string(),
@@ -527,7 +504,7 @@ impl<'a, 'p> ParserVonifier<'a> {
               },
               VonMember {
                 field_name: "retType".to_string(),
-                value: Self::vonify_optional_owned(&ret.ret_type, Self::vonify_templex),
+                value: Self::vonify_optional(&ret.ret_type, Self::vonify_templex),
               },
             ],
           }),
@@ -581,19 +558,19 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "selfBorrow".to_string(),
-          value: Self::vonify_optional_owned(self_borrow, Self::vonify_range),
+          value: Self::vonify_optional(self_borrow, Self::vonify_range),
         },
         VonMember {
           field_name: "maybePreChecked".to_string(),
-          value: Self::vonify_optional_owned(maybe_pre_checked, Self::vonify_range),
+          value: Self::vonify_optional(maybe_pre_checked, Self::vonify_range),
         },
         VonMember {
           field_name: "virtuality".to_string(),
-          value: Self::vonify_optional_owned(virtuality, Self::vonify_virtuality),
+          value: Self::vonify_optional(virtuality, Self::vonify_virtuality),
         },
         VonMember {
           field_name: "pattern".to_string(),
-          value: Self::vonify_optional_owned(pattern, Self::vonify_pattern),
+          value: Self::vonify_optional(pattern, Self::vonify_pattern),
         },
       ],
     })
@@ -619,15 +596,15 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "capture".to_string(),
-          value: Self::vonify_optional_owned(destination, Self::vonify_destination_local),
+          value: Self::vonify_optional(destination, Self::vonify_destination_local),
         },
         VonMember {
           field_name: "templex".to_string(),
-          value: Self::vonify_optional_owned(templex, Self::vonify_templex),
+          value: Self::vonify_optional(templex, Self::vonify_templex),
         },
         VonMember {
           field_name: "destructure".to_string(),
-          value: Self::vonify_optional_owned(destructure, Self::vonify_destructure),
+          value: Self::vonify_optional(destructure, Self::vonify_destructure),
         },
       ],
     })
@@ -768,68 +745,88 @@ impl<'a, 'p> ParserVonifier<'a> {
     })
   }
 
-  /// Vonify struct contents
+  /// Vonify struct contents - dispatches to vonify_struct_member, vonify_struct_method, vonify_variadic_struct_member
   /// Mirrors vonifyStructContents in ParserVonifier.scala lines 95-101
   fn vonify_struct_contents(thing: &IStructContent<'a, 'p>) -> IVonData {
     match thing {
-      IStructContent::StructMethod(function) => IVonData::Object(VonObject {
-        tyype: "StructMethod".to_string(),
-        id: None,
-        members: vec![VonMember {
-          field_name: "function".to_string(),
-          value: Self::vonify_function(function),
-        }],
-      }),
-      IStructContent::NormalStructMember(NormalStructMemberP {
-        range,
-        name,
-        variability,
-        tyype,
-      }) => IVonData::Object(VonObject {
-        tyype: "NormalStructMember".to_string(),
-        id: None,
-        members: vec![
-          VonMember {
-            field_name: "range".to_string(),
-            value: Self::vonify_range(range),
-          },
-          VonMember {
-            field_name: "name".to_string(),
-            value: Self::vonify_name(name),
-          },
-          VonMember {
-            field_name: "variability".to_string(),
-            value: Self::vonify_variability(variability),
-          },
-          VonMember {
-            field_name: "type".to_string(),
-            value: Self::vonify_templex(tyype),
-          },
-        ],
-      }),
-      IStructContent::VariadicStructMember(VariadicStructMemberP {
-        range,
-        variability,
-        tyype,
-      }) => IVonData::Object(VonObject {
-        tyype: "VariadicStructMember".to_string(),
-        id: None,
-        members: vec![
-          VonMember {
-            field_name: "range".to_string(),
-            value: Self::vonify_range(range),
-          },
-          VonMember {
-            field_name: "variability".to_string(),
-            value: Self::vonify_variability(variability),
-          },
-          VonMember {
-            field_name: "type".to_string(),
-            value: Self::vonify_templex(tyype),
-          },
-        ],
-      }),
+      IStructContent::StructMethod(function) => Self::vonify_struct_method(function),
+      IStructContent::NormalStructMember(sm) => Self::vonify_struct_member(sm),
+      IStructContent::VariadicStructMember(sm) => Self::vonify_variadic_struct_member(sm),
     }
+  }
+
+  /// Vonify struct method (StructMethodP(func) in Scala; Rust enum has function directly)
+  /// Mirrors vonifyStructMethod in ParserVonifier.scala lines 125-132
+  fn vonify_struct_method(function: &FunctionP<'a, 'p>) -> IVonData {
+    IVonData::Object(VonObject {
+      tyype: "StructMethod".to_string(),
+      id: None,
+      members: vec![VonMember {
+        field_name: "function".to_string(),
+        value: Self::vonify_function(function),
+      }],
+    })
+  }
+
+  /// Vonify normal struct member
+  /// Mirrors vonifyStructMember in ParserVonifier.scala lines 102-112
+  fn vonify_struct_member(thing: &NormalStructMemberP<'a, 'p>) -> IVonData {
+    let NormalStructMemberP {
+      range,
+      name,
+      variability,
+      tyype,
+    } = thing;
+    IVonData::Object(VonObject {
+      tyype: "NormalStructMember".to_string(),
+      id: None,
+      members: vec![
+        VonMember {
+          field_name: "range".to_string(),
+          value: Self::vonify_range(range),
+        },
+        VonMember {
+          field_name: "name".to_string(),
+          value: Self::vonify_name(name),
+        },
+        VonMember {
+          field_name: "variability".to_string(),
+          value: Self::vonify_variability(variability),
+        },
+        VonMember {
+          field_name: "type".to_string(),
+          value: Self::vonify_templex(tyype),
+        },
+      ],
+    })
+  }
+
+  /// Vonify variadic struct member
+  /// Mirrors vonifyVariadicStructMember in ParserVonifier.scala lines 114-123
+  fn vonify_variadic_struct_member(thing: &VariadicStructMemberP<'a, 'p>) -> IVonData {
+    let VariadicStructMemberP {
+      range,
+      variability,
+      tyype,
+    } = thing;
+    IVonData::Object(VonObject {
+      tyype: "VariadicStructMember".to_string(),
+      id: None,
+      members: vec![
+        VonMember {
+          field_name: "range".to_string(),
+          value: Self::vonify_range(range),
+        },
+        VonMember {
+          field_name: "variability".to_string(),
+          value: Self::vonify_variability(variability),
+        },
+        VonMember {
+          field_name: "type".to_string(),
+          value: Self::vonify_templex(tyype),
+        },
+      ],
+    })
   }
 
   /// Vonify virtuality
@@ -860,7 +857,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "mutate".to_string(),
-          value: Self::vonify_optional_owned(mutate, Self::vonify_range),
+          value: Self::vonify_optional(mutate, Self::vonify_range),
         },
       ],
     })
@@ -1066,7 +1063,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
           VonMember {
             field_name: "rune".to_string(),
-            value: Self::vonify_optional_owned(rune, Self::vonify_name),
+            value: Self::vonify_optional(rune, Self::vonify_name),
           },
           VonMember {
             field_name: "type".to_string(),
@@ -1201,11 +1198,11 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "maybeType".to_string(),
-          value: Self::vonify_optional_owned(maybe_type, Self::vonify_generic_parameter_type),
+          value: Self::vonify_optional(maybe_type, Self::vonify_generic_parameter_type),
         },
         VonMember {
           field_name: "maybeCoordRegion".to_string(),
-          value: Self::vonify_optional_owned(coord_region, Self::vonify_region_rune),
+          value: Self::vonify_optional(coord_region, Self::vonify_region_rune),
         },
         VonMember {
           field_name: "attributes".to_string(),
@@ -1216,7 +1213,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "maybeDefault".to_string(),
-          value: Self::vonify_optional_owned(maybe_default, Self::vonify_templex),
+          value: Self::vonify_optional(maybe_default, Self::vonify_templex),
         },
       ],
     })
@@ -1334,29 +1331,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "name".to_string(),
-          value: Self::vonify_optional_owned(name, Self::vonify_name),
-        },
-      ],
-    })
-  }
-
-  /// Vonify pack
-  fn vonify_pack(thing: &PackPT<'a, 'p>) -> IVonData {
-    let PackPT { range, members } = thing;
-    IVonData::Object(VonObject {
-      tyype: "PackT".to_string(),
-      id: None,
-      members: vec![
-        VonMember {
-          field_name: "range".to_string(),
-          value: Self::vonify_range(range),
-        },
-        VonMember {
-          field_name: "members".to_string(),
-          value: IVonData::Array(VonArray {
-            id: None,
-            members: members.iter().map(Self::vonify_templex).collect(),
-          }),
+          value: Self::vonify_optional(name, Self::vonify_name),
         },
       ],
     })
@@ -1526,19 +1501,29 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
           VonMember {
             field_name: "maybeOwnership".to_string(),
-            value: match maybe_ownership {
-              Some(o) => Self::vonify_optional_owned(&Some(o), |t| Self::vonify_ownership_pt(*t)),
-              None => {
-                Self::vonify_optional_owned::<&OwnershipPT, _>(&None, |t| Self::vonify_ownership_pt(t))
-              }
-            },
+            value: Self::vonify_optional(maybe_ownership, |o| {
+              IVonData::Object(VonObject {
+                tyype: "OwnershipT".to_string(),
+                id: None,
+                members: vec![
+                  VonMember {
+                    field_name: "range".to_string(),
+                    value: Self::vonify_range(&o.0),
+                  },
+                  VonMember {
+                    field_name: "ownership".to_string(),
+                    value: Self::vonify_ownership(&o.1),
+                  },
+                ],
+              })
+            }),
           },
           VonMember {
             field_name: "maybeRegion".to_string(),
             value: match maybe_region {
-              Some(r) => Self::vonify_optional_owned(&Some(r), |t| Self::vonify_region_rune(*t)),
+              Some(r) => Self::vonify_optional(&Some(r), |t| Self::vonify_region_rune(*t)),
               None => {
-                Self::vonify_optional_owned::<&RegionRunePT, _>(&None, |t| Self::vonify_region_rune(t))
+                Self::vonify_optional::<&RegionRunePT, _>(&None, |t| Self::vonify_region_rune(t))
               }
             },
           },
@@ -1632,13 +1617,29 @@ impl<'a, 'p> ParserVonifier<'a> {
           VonMember {
             field_name: "mutability".to_string(),
             value: match mutability {
-              Some(m) => Self::vonify_optional_owned(&Some(m), |t| Self::vonify_templex(*t)),
-              None => Self::vonify_optional_owned::<&ITemplexPT, _>(&None, |t| Self::vonify_templex(t)),
+              Some(m) => Self::vonify_optional(&Some(m), |t| Self::vonify_templex(*t)),
+              None => Self::vonify_optional::<&ITemplexPT, _>(&None, |t| Self::vonify_templex(t)),
             },
           },
           VonMember {
             field_name: "params".to_string(),
-            value: Self::vonify_pack(parameters),
+            value: IVonData::Object(VonObject {
+              tyype: "PackT".to_string(),
+              id: None,
+              members: vec![
+                VonMember {
+                  field_name: "range".to_string(),
+                  value: Self::vonify_range(&parameters.range),
+                },
+                VonMember {
+                  field_name: "members".to_string(),
+                  value: IVonData::Array(VonArray {
+                    id: None,
+                    members: parameters.members.iter().map(Self::vonify_templex).collect(),
+                  }),
+                },
+              ],
+            }),
           },
           VonMember {
             field_name: "returnType".to_string(),
@@ -1646,7 +1647,23 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
         ],
       }),
-      ITemplexPT::Pack(pack_pt) => Self::vonify_pack(pack_pt),
+      ITemplexPT::Pack(PackPT { range, members }) => IVonData::Object(VonObject {
+        tyype: "PackT".to_string(),
+        id: None,
+        members: vec![
+          VonMember {
+            field_name: "range".to_string(),
+            value: Self::vonify_range(range),
+          },
+          VonMember {
+            field_name: "members".to_string(),
+            value: IVonData::Array(VonArray {
+              id: None,
+              members: members.iter().map(Self::vonify_templex).collect(),
+            }),
+          },
+        ],
+      }),
       ITemplexPT::Func(FuncPT {
         range,
         name,
@@ -1775,24 +1792,6 @@ impl<'a, 'p> ParserVonifier<'a> {
     })
   }
 
-  /// Vonify ownership PT (ownership templex)
-  fn vonify_ownership_pt(thing: &OwnershipPT) -> IVonData {
-    IVonData::Object(VonObject {
-      tyype: "OwnershipT".to_string(),
-      id: None,
-      members: vec![
-        VonMember {
-          field_name: "range".to_string(),
-          value: Self::vonify_range(&thing.0),
-        },
-        VonMember {
-          field_name: "ownership".to_string(),
-          value: Self::vonify_ownership(&thing.1),
-        },
-      ],
-    })
-  }
-
   /// Vonify ownership
   /// Mirrors vonifyOwnership in ParserVonifier.scala lines 769-776
   fn vonify_ownership(thing: &OwnershipP) -> IVonData {
@@ -1854,28 +1853,6 @@ impl<'a, 'p> ParserVonifier<'a> {
     })
   }
 
-  /// Vonify lookup (needed for MethodCallPE)
-  fn vonify_lookup(thing: &LookupPE<'a, 'p>) -> IVonData {
-    let LookupPE {
-      name,
-      template_args,
-    } = thing;
-    IVonData::Object(VonObject {
-      tyype: "Lookup".to_string(),
-      id: None,
-      members: vec![
-        VonMember {
-          field_name: "name".to_string(),
-          value: Self::vonify_imprecise_name(name),
-        },
-        VonMember {
-          field_name: "templateArgs".to_string(),
-          value: Self::vonify_optional_owned(template_args, Self::vonify_template_args),
-        },
-      ],
-    })
-  }
-
   /// Vonify imprecise name
   /// Mirrors vonifyImpreciseName in ParserVonifier.scala lines 322-329
   fn vonify_imprecise_name(thing: &IImpreciseNameP<'a>) -> IVonData {
@@ -1934,11 +1911,11 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "maybePure".to_string(),
-          value: Self::vonify_optional_owned(maybe_pure, Self::vonify_range),
+          value: Self::vonify_optional(maybe_pure, Self::vonify_range),
         },
         VonMember {
           field_name: "maybeDefaultRegion".to_string(),
-          value: Self::vonify_optional_owned(maybe_default_region, Self::vonify_region_rune),
+          value: Self::vonify_optional(maybe_default_region, Self::vonify_region_rune),
         },
         VonMember {
           field_name: "inner".to_string(),
@@ -2002,7 +1979,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         id: None,
         members: vec![VonMember {
           field_name: "size".to_string(),
-          value: Self::vonify_optional_owned(&static_sized.size_pt, Self::vonify_templex),
+          value: Self::vonify_optional(&static_sized.size_pt, Self::vonify_templex),
         }],
       }),
     }
@@ -2031,15 +2008,15 @@ impl<'a, 'p> ParserVonifier<'a> {
         },
         VonMember {
           field_name: "type".to_string(),
-          value: Self::vonify_optional_owned(type_pt, Self::vonify_templex),
+          value: Self::vonify_optional(type_pt, Self::vonify_templex),
         },
         VonMember {
           field_name: "mutability".to_string(),
-          value: Self::vonify_optional_owned(mutability_pt, Self::vonify_templex),
+          value: Self::vonify_optional(mutability_pt, Self::vonify_templex),
         },
         VonMember {
           field_name: "variability".to_string(),
-          value: Self::vonify_optional_owned(variability_pt, Self::vonify_templex),
+          value: Self::vonify_optional(variability_pt, Self::vonify_templex),
         },
         VonMember {
           field_name: "size".to_string(),
@@ -2286,7 +2263,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
           VonMember {
             field_name: "maybePure".to_string(),
-            value: Self::vonify_optional_owned(maybe_pure, Self::vonify_range),
+            value: Self::vonify_optional(maybe_pure, Self::vonify_range),
           },
           VonMember {
             field_name: "entryPattern".to_string(),
@@ -2347,7 +2324,20 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
           VonMember {
             field_name: "method".to_string(),
-            value: Self::vonify_lookup(method_lookup),
+            value: IVonData::Object(VonObject {
+              tyype: "Lookup".to_string(),
+              id: None,
+              members: vec![
+                VonMember {
+                  field_name: "name".to_string(),
+                  value: Self::vonify_imprecise_name(&method_lookup.name),
+                },
+                VonMember {
+                  field_name: "templateArgs".to_string(),
+                  value: Self::vonify_optional(&method_lookup.template_args, Self::vonify_template_args),
+                },
+              ],
+            }),
           },
           VonMember {
             field_name: "argExprs".to_string(),
@@ -2440,7 +2430,7 @@ impl<'a, 'p> ParserVonifier<'a> {
             },
             VonMember {
               field_name: "bits".to_string(),
-              value: Self::vonify_optional_owned(bits, |b| IVonData::Int(VonInt { value: *b as i64 })),
+              value: Self::vonify_optional(bits, |b| IVonData::Int(VonInt { value: *b as i64 })),
             },
           ],
         })
@@ -2524,7 +2514,7 @@ impl<'a, 'p> ParserVonifier<'a> {
           },
           VonMember {
             field_name: "templateArgs".to_string(),
-            value: Self::vonify_optional_owned(template_args, Self::vonify_template_args),
+            value: Self::vonify_optional(template_args, Self::vonify_template_args),
           },
         ],
       }),
@@ -2679,7 +2669,7 @@ impl<'a, 'p> ParserVonifier<'a> {
         members: vec![
           VonMember {
             field_name: "captures".to_string(),
-            value: Self::vonify_optional_owned(captures, Self::vonify_unit),
+            value: Self::vonify_optional(captures, Self::vonify_unit),
           },
           VonMember {
             field_name: "function".to_string(),

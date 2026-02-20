@@ -120,12 +120,44 @@ case object CitizenTemplateTypePR extends ITypePR
 
 /*
 object RulePUtils {
-
+*/
+pub fn get_ordered_rune_declarations_from_rulexes_with_duplicates<'a, 'p>(
+  rulexes: &'p [IRulexPR<'a, 'p>],
+) -> Vec<NameP<'a>> {
+  rulexes
+    .iter()
+    .flat_map(get_ordered_rune_declarations_from_rulex_with_duplicates)
+    .collect()
+}
+/*
   def getOrderedRuneDeclarationsFromRulexesWithDuplicates(rulexes: Vector[IRulexPR]):
   Vector[NameP] = {
     rulexes.flatMap(getOrderedRuneDeclarationsFromRulexWithDuplicates)
   }
-
+*/
+pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'a, 'p>(
+  rulex: &IRulexPR<'a, 'p>,
+) -> Vec<NameP<'a>> {
+  match rulex {
+    IRulexPR::Pack(pack) => get_ordered_rune_declarations_from_rulexes_with_duplicates(pack.elements),
+    IRulexPR::Equals(equals) => {
+      let mut out = get_ordered_rune_declarations_from_rulex_with_duplicates(equals.left);
+      out.extend(get_ordered_rune_declarations_from_rulex_with_duplicates(equals.right));
+      out
+    }
+    IRulexPR::Or(or) => get_ordered_rune_declarations_from_rulexes_with_duplicates(or.possibilities),
+    IRulexPR::Dot(dot) => get_ordered_rune_declarations_from_rulex_with_duplicates(dot.container),
+    IRulexPR::Components(components) => {
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(components.components)
+    }
+    IRulexPR::Typed(typed) => typed.rune.iter().cloned().collect(),
+    IRulexPR::Templex(templex) => get_ordered_rune_declarations_from_templex_with_duplicates(templex),
+    IRulexPR::BuiltinCall(builtin_call) => {
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(builtin_call.args)
+    }
+  }
+}
+/*
   def getOrderedRuneDeclarationsFromRulexWithDuplicates(rulex: IRulexPR): Vector[NameP] = {
     rulex match {
       case PackPR(range, elements) => getOrderedRuneDeclarationsFromRulexesWithDuplicates(elements)
@@ -139,11 +171,98 @@ object RulePUtils {
       case BuiltinCallPR(range, name, args) => getOrderedRuneDeclarationsFromRulexesWithDuplicates(args)
     }
   }
-
+*/
+pub fn get_ordered_rune_declarations_from_templexes_with_duplicates<'a, 'p>(
+  templexes: &'p [ITemplexPT<'a, 'p>],
+) -> Vec<NameP<'a>> {
+  templexes
+    .iter()
+    .flat_map(get_ordered_rune_declarations_from_templex_with_duplicates)
+    .collect()
+}
+/*
   def getOrderedRuneDeclarationsFromTemplexesWithDuplicates(templexes: Vector[ITemplexPT]): Vector[NameP] = {
     templexes.flatMap(getOrderedRuneDeclarationsFromTemplexWithDuplicates)
   }
-
+*/
+pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'a, 'p>(
+  templex: &ITemplexPT<'a, 'p>,
+) -> Vec<NameP<'a>> {
+  match templex {
+    ITemplexPT::Interpreted(interpreted) => {
+      get_ordered_rune_declarations_from_templex_with_duplicates(interpreted.inner)
+    }
+    ITemplexPT::String(_)
+    | ITemplexPT::Int(_)
+    | ITemplexPT::Mutability(_)
+    | ITemplexPT::Variability(_)
+    | ITemplexPT::Location(_)
+    | ITemplexPT::Ownership(_)
+    | ITemplexPT::Bool(_)
+    | ITemplexPT::NameOrRune(_)
+    | ITemplexPT::AnonymousRune(_) => {
+      Vec::new()
+    }
+    ITemplexPT::RegionRune(_) => panic!(
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_REGION_RUNE_NOT_IN_SCALA_MATCH"
+    ),
+    ITemplexPT::TypedRune(typed_rune) => vec![typed_rune.rune.clone()],
+    ITemplexPT::Call(call) => {
+      let mut templexes = vec![(*call.template).clone()];
+      templexes.extend(call.args.iter().cloned());
+      get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
+    }
+    ITemplexPT::Function(function) => {
+      let mutability_templexes = function
+        .mutability
+        .iter()
+        .map(|x| (*x).clone())
+        .collect::<Vec<_>>();
+      let mut out =
+        get_ordered_rune_declarations_from_templexes_with_duplicates(&mutability_templexes);
+      out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(
+        &ITemplexPT::Pack(function.parameters.clone()),
+      ));
+      out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(
+        function.return_type,
+      ));
+      out
+    }
+    ITemplexPT::Func(func) => {
+      let mut templexes = func.parameters.to_vec();
+      templexes.push((*func.return_type).clone());
+      get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
+    }
+    ITemplexPT::Pack(pack) => get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members),
+    ITemplexPT::StaticSizedArray(static_sized_array) => {
+      let templexes = vec![
+        (*static_sized_array.mutability).clone(),
+        (*static_sized_array.variability).clone(),
+        (*static_sized_array.size).clone(),
+        (*static_sized_array.element).clone(),
+      ];
+      get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
+    }
+    ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
+      let templexes = vec![
+        (*runtime_sized_array.mutability).clone(),
+        (*runtime_sized_array.element).clone(),
+      ];
+      get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
+    }
+    ITemplexPT::Tuple(tuple) => get_ordered_rune_declarations_from_templexes_with_duplicates(tuple.elements),
+    ITemplexPT::Inline(_) => panic!(
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_INLINE_NOT_IN_SCALA_MATCH"
+    ),
+    ITemplexPT::Point(_) => panic!(
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_POINT_NOT_IN_SCALA_MATCH"
+    ),
+    ITemplexPT::Share(_) => panic!(
+      "PARSING_AST_RULES_GET_ORDERED_RUNE_DECLS_SHARE_NOT_IN_SCALA_MATCH"
+    ),
+  }
+}
+/*
   def getOrderedRuneDeclarationsFromTemplexWithDuplicates(templex: ITemplexPT): Vector[NameP] = {
     templex match {
       case InterpretedPT(_, _, _, inner) => getOrderedRuneDeclarationsFromTemplexWithDuplicates(inner)
@@ -170,5 +289,7 @@ object RulePUtils {
       case TuplePT(_, elements) => getOrderedRuneDeclarationsFromTemplexesWithDuplicates(elements)
     }
   }
+*/
+/*
 }
 */

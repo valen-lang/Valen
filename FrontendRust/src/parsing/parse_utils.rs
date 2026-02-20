@@ -3,7 +3,12 @@ use crate::lexing::ast::INodeLE;
 use crate::lexing::ast::INodeLEEnum;
 use crate::lexing::ast::SymbolLE;
 use crate::lexing::WordLE;
+use crate::lexing::ast::RangeL;
+use crate::lexing::errors::ParseError;
+use crate::parsing::ast::{NameP, RegionRunePT};
 use crate::parsing::ScrambleIterator;
+
+type ParseResult<T> = Result<T, ParseError>;
 /*
 package dev.vale.parsing
 
@@ -12,6 +17,40 @@ import dev.vale.lexing.{SymbolLE, WordLE}
 
 object ParseUtils {
 */
+
+/// Parse optional region marker (e.g., 'a or ' for isolate).
+/// Shared between Parser and TemplexParser - mirrors Parser.parseRegion in Parser.scala lines 861-888.
+pub fn parse_region<'a>(
+  original_iter: &mut ScrambleIterator<'a, '_>,
+) -> ParseResult<Option<RegionRunePT<'a>>> {
+  let mut tentative_iter = original_iter.clone();
+  let rune_begin = tentative_iter.get_pos();
+
+  let maybe_rune = if tentative_iter.try_skip_symbol('\'') {
+    None
+  } else {
+    let region_rune = match tentative_iter.next_word() {
+      None => return Ok(None),
+      Some(r) => r,
+    };
+
+    if !tentative_iter.try_skip_symbol('\'') {
+      return Ok(None);
+    }
+
+    Some(region_rune)
+  };
+
+  let rune_end = tentative_iter.get_prev_end_pos();
+  original_iter.skip_to(&tentative_iter);
+
+  let range = RangeL(rune_begin, rune_end);
+
+  Ok(Some(RegionRunePT {
+    range,
+    name: maybe_rune.map(|z| NameP(RangeL(rune_begin, rune_end), z.str)),
+  }))
+}
 
 /// Helper method to skip past an equals sign while a condition is true
 /// Mirrors ParseUtils.trySkipPastEqualsWhile in ParseUtils.scala
