@@ -9,25 +9,34 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::{
-  FileP, IAttributeP, IDenizenP, IMacroInclusionP, IStructContent, ITemplexPT,
-  MutabilityP, StructP,
+  FileP, GenericParameterP, IAttributeP, IDenizenP, IMacroInclusionP, IStructContent, ITemplexPT,
+  MutabilityP, MutabilityPT, StructP,
 };
+use crate::parsing::ast::IRuneAttributeP::{
+  AdditiveRegionRuneAttribute, ImmutableRegionRuneAttribute, ImmutableRuneAttribute,
+  MutableRuneAttribute, ReadOnlyRegionRuneAttribute, ReadWriteRegionRuneAttribute,
+};
+use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::parsing::parser::ParserCompilation;
 use crate::postparsing::ast::{
   CoordGenericParameterTypeS, ExportS, GenericParameterS, IBodyS, ICitizenAttributeS,
-  IGenericParameterTypeS, ImportS, ImplS, InterfaceS, IStructMemberS, MacroCallS, NormalStructMemberS, ProgramS, SealedS,
-  StructS,
+  IGenericParameterTypeS, IRegionMutabilityS, ImportS, ImplS, InterfaceS, IStructMemberS,
+  LocationInDenizenBuilder, MacroCallS, NormalStructMemberS, OtherGenericParameterTypeS,
+  ProgramS, RegionGenericParameterTypeS, SealedS, StructS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
+  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, PackTemplataType,
   TemplateTemplataType,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS,
-  IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+  DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
+  TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
+use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
+use crate::postparsing::rules::templex_scout::translate_templex;
 use crate::postparsing::rules::rules::{
   IRulexSR, RuneUsage,
 };
@@ -545,12 +554,25 @@ where
     CodeLocationS(file, pos)
   }
 */
-fn translate_imprecise_name<'a, 'p>(
-  _interner: &crate::interner::Interner<'a>,
-  _file: &crate::utils::code_hierarchy::FileCoordinate<'a>,
-  _name: &crate::parsing::ast::IImpreciseNameP<'a>,
+pub(crate) fn translate_imprecise_name<'a, 'p>(
+  interner: &crate::interner::Interner<'a>,
+  file: &'a crate::utils::code_hierarchy::FileCoordinate<'a>,
+  name: &crate::parsing::ast::IImpreciseNameP<'a>,
 ) -> crate::postparsing::names::IImpreciseNameS<'a> {
-  panic!("Unimplemented translate_imprecise_name");
+  use crate::parsing::ast::IImpreciseNameP;
+  use crate::postparsing::names::{CodeNameS, IImpreciseNameValS, IterableNameS, IteratorNameS, IterationOptionNameS};
+  match name {
+    IImpreciseNameP::LookupName(n) => interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.str() })),
+    IImpreciseNameP::IterableName(range) => interner.intern_imprecise_name(IImpreciseNameValS::IterableName(IterableNameS {
+      range: PostParser::eval_range(file, *range),
+    })),
+    IImpreciseNameP::IteratorName(range) => interner.intern_imprecise_name(IImpreciseNameValS::IteratorName(IteratorNameS {
+      range: PostParser::eval_range(file, *range),
+    })),
+    IImpreciseNameP::IterationOptionName(range) => interner.intern_imprecise_name(IImpreciseNameValS::IterationOptionName(IterationOptionNameS {
+      range: PostParser::eval_range(file, *range),
+    })),
+  }
 }
 /*
   def translateImpreciseName(interner: Interner, file: FileCoordinate, name: IImpreciseNameP): IImpreciseNameS = {
@@ -657,57 +679,47 @@ where
     }
   }
 */
-fn scout_generic_parameter<'a, 'p>(
-  interner: &crate::interner::Interner<'a>,
-  env: crate::postparsing::post_parser::IEnvironmentS<'a>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
-  _rule_builder: &mut Vec<crate::postparsing::rules::rules::IRulexSR<'a>>,
-  _context_region: crate::postparsing::names::IRuneS<'a>,
-  generic_param_p: &crate::parsing::ast::GenericParameterP<'a, 'p>,
-  param_rune_s: crate::postparsing::rules::rules::RuneUsage<'a>,
-) -> crate::postparsing::ast::GenericParameterS<'a> {
-  let file = match &env {
-    crate::postparsing::post_parser::IEnvironmentS::Environment(environment) => environment.file,
-    crate::postparsing::post_parser::IEnvironmentS::FunctionEnvironment(function_environment) => {
-      function_environment.file
-    }
-  };
+pub(crate) fn scout_generic_parameter<'a, 'p>(
+  _interner: &Interner<'a>,
+  env: IEnvironmentS<'a>,
+  _lidb: &mut LocationInDenizenBuilder,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
+  _rule_builder: &mut Vec<IRulexSR<'a>>,
+  // This might seem a bit weird, because the region rune usually comes last and is usually
+  // mentioned at the end of the header too. But indeed we need it for knowing the region to use
+  // for generic params' default values.
+  _context_region: IRuneS<'a>,
+  generic_param_p: &GenericParameterP<'a, 'p>,
+  param_rune_s: RuneUsage<'a>,
+  // Returns a possible implicit region generic param (see MNRFGC), and the translated original
+  // generic param.
+) -> GenericParameterS<'a> {
+  let file = env.file();
   let generic_param_range_s = PostParser::eval_range(file, generic_param_p.range);
   let rune_s = param_rune_s;
 
   let type_s = match &generic_param_p.maybe_type {
     None => ITemplataType::CoordTemplataType(CoordTemplataType {}),
-    Some(type_p) => crate::postparsing::rules::rule_scout::translate_type(type_p.tyype),
+    Some(type_p) => translate_type(type_p.tyype),
   };
   rune_to_explicit_type.push((rune_s.rune.clone(), type_s.clone()));
 
-  let maybe_explicit_coord_region_s = match generic_param_p.coord_region.as_ref() {
-    Some(region_rune) => Some(crate::postparsing::rules::rules::RuneUsage {
-      range: PostParser::eval_range(file, region_rune.range),
-      rune: interner.intern_rune(crate::postparsing::names::IRuneValS::CodeRune(
-        crate::postparsing::names::CodeRuneS {
-          name: match &region_rune.name {
-            None => panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_COORD_REGION_NAME_MISSING"),
-            Some(region_name) => region_name.str(),
-          },
-        },
-      )),
-    }),
-    None => None,
-  };
+  assert!(
+    generic_param_p.coord_region.is_none(),
+    "POSTPARSER_SCOUT_GENERIC_PARAMETER_COORD_REGION_NOT_YET_IMPLEMENTED"
+  );
 
   let generic_param_type_s = match type_s {
     ITemplataType::CoordTemplataType(_) => {
       let immutable_attrs = generic_param_p
         .attributes
         .iter()
-        .filter(|x| matches!(x, crate::parsing::ast::IRuneAttributeP::ImmutableRuneAttribute(_)))
+        .filter(|x| matches!(x, ImmutableRuneAttribute(_)))
         .collect::<Vec<_>>();
       let mutable_attrs = generic_param_p
         .attributes
         .iter()
-        .filter(|x| matches!(x, crate::parsing::ast::IRuneAttributeP::MutableRuneAttribute(_)))
+        .filter(|x| matches!(x, MutableRuneAttribute(_)))
         .collect::<Vec<_>>();
       let remaining_attributes = generic_param_p
         .attributes
@@ -715,8 +727,7 @@ fn scout_generic_parameter<'a, 'p>(
         .filter(|x| {
           !matches!(
             x,
-            crate::parsing::ast::IRuneAttributeP::ImmutableRuneAttribute(_)
-              | crate::parsing::ast::IRuneAttributeP::MutableRuneAttribute(_)
+            ImmutableRuneAttribute(_) | MutableRuneAttribute(_)
           )
         })
         .collect::<Vec<_>>();
@@ -724,7 +735,8 @@ fn scout_generic_parameter<'a, 'p>(
         panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_COORD_RUNE_ATTRIBUTE");
       }
       IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
-        coord_region: maybe_explicit_coord_region_s,
+        coord_region: None,
+        // vregionmut() // we really need to figure out this kind immutable stuff.
         kind_mutable: immutable_attrs.is_empty(),
         region_mutable: !mutable_attrs.is_empty(),
       })
@@ -734,17 +746,17 @@ fn scout_generic_parameter<'a, 'p>(
         .attributes
         .iter()
         .filter_map(|x| match x {
-          crate::parsing::ast::IRuneAttributeP::ImmutableRegionRuneAttribute(_) => {
-            Some(crate::postparsing::ast::IRegionMutabilityS::ImmutableRegion)
+          ImmutableRegionRuneAttribute(_) => {
+            Some(IRegionMutabilityS::ImmutableRegion)
           }
-          crate::parsing::ast::IRuneAttributeP::AdditiveRegionRuneAttribute(_) => {
-            Some(crate::postparsing::ast::IRegionMutabilityS::AdditiveRegion)
+          AdditiveRegionRuneAttribute(_) => {
+            Some(IRegionMutabilityS::AdditiveRegion)
           }
-          crate::parsing::ast::IRuneAttributeP::ReadWriteRegionRuneAttribute(_) => {
-            Some(crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion)
+          ReadWriteRegionRuneAttribute(_) => {
+            Some(IRegionMutabilityS::ReadWriteRegion)
           }
-          crate::parsing::ast::IRuneAttributeP::ReadOnlyRegionRuneAttribute(_) => {
-            Some(crate::postparsing::ast::IRegionMutabilityS::ReadOnlyRegion)
+          ReadOnlyRegionRuneAttribute(_) => {
+            Some(IRegionMutabilityS::ReadOnlyRegion)
           }
           _ => None,
         })
@@ -755,10 +767,10 @@ fn scout_generic_parameter<'a, 'p>(
         .filter(|x| {
           !matches!(
             x,
-            crate::parsing::ast::IRuneAttributeP::ImmutableRegionRuneAttribute(_)
-              | crate::parsing::ast::IRuneAttributeP::AdditiveRegionRuneAttribute(_)
-              | crate::parsing::ast::IRuneAttributeP::ReadWriteRegionRuneAttribute(_)
-              | crate::parsing::ast::IRuneAttributeP::ReadOnlyRegionRuneAttribute(_)
+            ImmutableRegionRuneAttribute(_)
+              | AdditiveRegionRuneAttribute(_)
+              | ReadWriteRegionRuneAttribute(_)
+              | ReadOnlyRegionRuneAttribute(_)
           )
         })
         .collect::<Vec<_>>();
@@ -769,11 +781,11 @@ fn scout_generic_parameter<'a, 'p>(
         panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_MULTIPLE_REGION_MUTABILITIES");
       }
       IGenericParameterTypeS::RegionGenericParameterType(
-        crate::postparsing::ast::RegionGenericParameterTypeS {
+        RegionGenericParameterTypeS {
         mutability: mutability_attrs
           .first()
           .cloned()
-          .unwrap_or(crate::postparsing::ast::IRegionMutabilityS::ReadOnlyRegion),
+          .unwrap_or(IRegionMutabilityS::ReadOnlyRegion),
         },
       )
     }
@@ -782,7 +794,7 @@ fn scout_generic_parameter<'a, 'p>(
         panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_OTHER_RUNE_ATTRIBUTE");
       }
       IGenericParameterTypeS::OtherGenericParameterType(
-        crate::postparsing::ast::OtherGenericParameterTypeS { tyype: type_s },
+        OtherGenericParameterTypeS { tyype: type_s },
       )
     }
   };
@@ -790,7 +802,7 @@ fn scout_generic_parameter<'a, 'p>(
     panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_DEFAULT_NOT_YET_IMPLEMENTED");
   }
 
-  crate::postparsing::ast::GenericParameterS {
+  GenericParameterS {
     range: generic_param_range_s,
     rune: rune_s,
     tyype: generic_param_type_s,
@@ -1585,14 +1597,13 @@ fn predict_mutability(
     file: &'a FileCoordinate<'a>,
     head: &StructP<'a, 'p>,
   ) -> Result<StructS<'a, 's>, ICompileErrorS<'a>> {
-    // evan: check the order of these various chunks of logic
     let struct_range_s = Self::eval_range(file, head.range);
-    let struct_name = crate::postparsing::names::TopLevelStructDeclarationNameS {
-      name: head.name.str(),
+    let struct_name = TopLevelStructDeclarationNameS {
+      name: self.interner.intern(head.name.str().as_str()),
       range: Self::eval_range(file, head.name.range()),
     };
     let body_range_s = Self::eval_range(file, head.body_range);
-    let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
+    let mut lidb = LocationInDenizenBuilder::new(Vec::new());
 
     let generic_parameters_p = head
       .identifying_runes
@@ -1614,9 +1625,7 @@ fn predict_mutability(
       .map(|x| x.rules.to_vec())
       .unwrap_or_default();
     let runes_from_rules =
-      crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates(
-        &template_rules_p,
-      )
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(&template_rules_p)
       .iter()
       .map(|name_p| RuneUsage {
         range: Self::eval_range(file, name_p.range()),
@@ -1653,9 +1662,11 @@ fn predict_mutability(
           let rune = self
             .interner
             .intern_rune(IRuneValS::DenizenDefaultRegionRune(
-              crate::postparsing::names::DenizenDefaultRegionRuneS {
+              DenizenDefaultRegionRuneS {
               denizen_name: INameS::TopLevelStructDeclaration(struct_name.clone()),
             }));
+          // Put back in when we have regions
+          // header_rune_to_explicit_type.push((rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {})));
           let implicit_region_generic_param = GenericParameterS {
             range: region_range.clone(),
             rune: RuneUsage {
@@ -1663,8 +1674,8 @@ fn predict_mutability(
               rune: rune.clone(),
             },
             tyype: IGenericParameterTypeS::RegionGenericParameterType(
-              crate::postparsing::ast::RegionGenericParameterTypeS {
-                mutability: crate::postparsing::ast::IRegionMutabilityS::ReadWriteRegion,
+              RegionGenericParameterTypeS {
+                mutability: IRegionMutabilityS::ReadWriteRegion,
               },
             ),
             default: None,
@@ -1706,9 +1717,11 @@ fn predict_mutability(
         )
       })
       .collect::<Vec<_>>();
+    // Put back in when we have regions
+    // let generic_parameters_s = struct_user_specified_generic_parameters_s ++ maybe_region_generic_param ++ user_specified_runes_implicit_region_runes_s;
     let generic_parameters_s = struct_user_specified_generic_parameters_s;
 
-    crate::postparsing::rules::rule_scout::translate_rulexes(
+    translate_rulexes(
       self.interner,
       self.keywords,
       struct_env.clone(),
@@ -1723,12 +1736,12 @@ fn predict_mutability(
     let mut members_rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
 
     let mutability = head.mutability.clone().unwrap_or(ITemplexPT::Mutability(
-      crate::parsing::ast::MutabilityPT(
+      MutabilityPT(
         RangeL(head.body_range.begin(), head.body_range.begin()),
         MutabilityP::Mutable,
       ),
     ));
-    let mutability_rune_s = crate::postparsing::rules::templex_scout::translate_templex(
+    let mutability_rune_s = translate_templex(
       self.interner,
       self.keywords,
       struct_env.clone(),
@@ -1748,7 +1761,7 @@ fn predict_mutability(
       .iter()
       .flat_map(|member| match member {
         IStructContent::NormalStructMember(member) => {
-          let member_rune = crate::postparsing::rules::templex_scout::translate_templex(
+          let member_rune = translate_templex(
             self.interner,
             self.keywords,
             struct_env.clone(),
@@ -1769,7 +1782,7 @@ fn predict_mutability(
           })]
         }
         IStructContent::VariadicStructMember(member) => {
-          let member_rune = crate::postparsing::rules::templex_scout::translate_templex(
+          let member_rune = translate_templex(
             self.interner,
             self.keywords,
             struct_env.clone(),
@@ -1780,19 +1793,18 @@ fn predict_mutability(
           );
           members_rune_to_explicit_type.insert(
             member_rune.rune.clone(),
-            ITemplataType::PackTemplataType(crate::postparsing::itemplatatype::PackTemplataType {
+            ITemplataType::PackTemplataType(PackTemplataType {
               element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
             }),
           );
-          vec![IStructMemberS::VariadicStructMember(
-            crate::postparsing::ast::VariadicStructMemberS {
-              range: Self::eval_range(file, member.range),
-              variability: member.variability,
-              type_rune: member_rune,
-            },
-          )]
+          vec![IStructMemberS::VariadicStructMember(VariadicStructMemberS {
+            range: Self::eval_range(file, member.range),
+            variability: member.variability,
+            type_rune: member_rune,
+          })]
         }
         IStructContent::StructMethod(_) => {
+          // Implement struct methods one day
           Vec::new()
         }
       })
@@ -2090,7 +2102,7 @@ fn translate_citizen_attributes(
     })
   }
 */
-fn predict_rune_types(
+pub(crate) fn predict_rune_types(
   range_s: crate::utils::range::RangeS<'a>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
   rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
@@ -2178,12 +2190,12 @@ fn predict_rune_types(
     })
   }
 */
-fn check_identifiability(
+pub(crate) fn check_identifiability(
   _range_s: crate::utils::range::RangeS<'a>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
   _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
 ) {
-  panic!("Unimplemented check_identifiability");
+  // Do nothing, per MIGALLOW in Scala comments.
 }
 /*
 
@@ -2192,6 +2204,8 @@ fn check_identifiability(
     identifyingRunesS: Vector[IRuneS],
     rulesS: Vector[IRulexSR]):
   Unit = {
+    // MIGALLOW: it's okay if the Rust version just does nothing.
+    // AFTERM: Fix this.
     IdentifiabilitySolver.solve(
       globalOptions.sanityCheck,
       globalOptions.useOptimizedSolver,

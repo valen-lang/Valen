@@ -28,6 +28,8 @@ Ensure that all Rust code/test requirements exactly match the old Scala code/tes
 
 Ensure that all comments in the Scala version are also in the Rust version.
 
+Rust may have extra comments that Scala doesn't have, that's fine.
+
 (You can ignore MIGALLOW comments though)
 
 

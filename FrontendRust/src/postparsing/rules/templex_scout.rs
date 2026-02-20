@@ -34,7 +34,7 @@ use crate::postparsing::rules::rules::IRulexSR::{Lookup, MaybeCoercingCall, Mayb
 use crate::postparsing::rules::rules::{
   BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL, LookupSR,
   MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
-  RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
+  PlaceholderRuleSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::utils::range::RangeS;
 use std::collections::HashMap;
@@ -201,8 +201,24 @@ pub fn translate_templex<'a, 'p>(
   context_region: IRuneS<'a>,
   templex: &ITemplexPT<'a, 'p>,
 ) -> RuneUsage<'a> {
+  /*
+    // Returns:
+    // - Rune for this type
+    def translateTemplex(
+      env: IEnvironmentS,
+      lidb: LocationInDenizenBuilder,
+      ruleBuilder: ArrayBuffer[IRulexSR],
+      contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
+      templex: ITemplexPT):
+    RuneUsage = {
+      Profiler.frame(() => {
+        val evalRange = (range: RangeL) => PostParser.evalRange(env.file, range)
+  */
   let file = env.file();
   match translate_value_templex(templex) {
+    /*
+          translateValueTemplex(templex) match {
+    */
     Some(x) => {
       let mut child_lidb = lidb.child();
       add_literal_rule(
@@ -213,7 +229,17 @@ pub fn translate_templex<'a, 'p>(
         x,
       )
     }
+    /*
+    case Some(x) => {
+      val rune = addLiteralRule(lidb.child(), ruleBuilder, evalRange(templex.range), x)
+      rune
+    }
+    */
     None => match templex {
+      /*
+      case None => {
+        templex match {
+      */
       ITemplexPT::Inline(inline) => translate_templex(
         interner,
         keywords,
@@ -223,6 +249,9 @@ pub fn translate_templex<'a, 'p>(
         context_region,
         inline.inner,
       ),
+/*
+      case InlinePT(range, inner) => translateTemplex(env, lidb, ruleBuilder, contextRegion, inner)
+*/
       ITemplexPT::AnonymousRune(anonymous_rune) => {
         let mut child_lidb = lidb.child();
         let rune = RuneUsage {
@@ -233,10 +262,21 @@ pub fn translate_templex<'a, 'p>(
         };
         rune
       }
+/*
+      case AnonymousRunePT(range) => {
+        val rune = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
+        rune
+      }
+*/
       ITemplexPT::RegionRune(RegionRunePT {
         range: _,
         name: None,
       }) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_RUNE_NONE_NOT_YET_IMPLEMENTED"),
+/*
+      case RegionRunePT(range, None) => {
+        vimpl() // isolates
+      }
+*/
       ITemplexPT::RegionRune(RegionRunePT {
         range,
         name: Some(name),
@@ -260,6 +300,19 @@ pub fn translate_templex<'a, 'p>(
           )
         }
       }
+/*
+      case RegionRunePT(range, Some(NameP(_, name))) => {
+        val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(name))
+        if (isRuneFromLocalEnv) {
+          val rune = rules.RuneUsage(evalRange(range), CodeRuneS(name))
+          rune
+        } else {
+          // It's from a parent env
+          val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(name))
+          rune
+        }
+      }
+*/
       ITemplexPT::NameOrRune(NameOrRunePT(name_or_rune)) => {
         let is_rune_from_env = env.all_declared_runes().contains(&interner.intern_rune(CodeRune(
           CodeRuneS {
@@ -308,15 +361,194 @@ pub fn translate_templex<'a, 'p>(
           // For lookups like these, we bring them into the current region.
         }
       }
-      ITemplexPT::Interpreted(_interpreted) => {
-        panic!("POSTPARSER_TRANSLATE_TEMPLEX_INTERPRETED_NOT_YET_IMPLEMENTED")
+/*
+      case NameOrRunePT(NameP(range, nameOrRune)) => {
+        val isRuneFromEnv = env.allDeclaredRunes().contains(CodeRuneS(nameOrRune))
+        if (isRuneFromEnv) {
+          val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(nameOrRune))
+          if (isRuneFromLocalEnv) {
+            val rune = rules.RuneUsage(evalRange(range), CodeRuneS(nameOrRune))
+            rune
+          } else {
+            // It's from a parent env
+            val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(nameOrRune))
+            rune
+          }
+        } else {
+          // e.g. "int"
+          val name = interner.intern(CodeNameS(nameOrRune))
+          val rune = addLookupRule(lidb.child(), ruleBuilder, evalRange(range), contextRegion, name)
+          // For lookups like these, we bring them into the current region.
+          rune
+        }
       }
+*/
+      ITemplexPT::Interpreted(interpreted) => {
+        let range_s = PostParser::eval_range(file, interpreted.range);
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+
+        let maybe_region_rune = interpreted.maybe_region.as_ref().map(|region_rune| {
+          let region_name = region_rune
+            .name
+            .as_ref()
+            .unwrap_or_else(|| panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_NAME_NOT_YET_IMPLEMENTED"))
+            .str();
+          let rune = interner.intern_rune(CodeRune(CodeRuneS { name: region_name }));
+          assert!(
+            env.all_declared_runes().contains(&rune),
+            "POSTPARSER_TRANSLATE_TEMPLEX_UNKNOWN_REGION_NOT_YET_IMPLEMENTED"
+          );
+          RuneUsage {
+            range: PostParser::eval_range(file, interpreted.range),
+            rune,
+          }
+        });
+        let new_region = match maybe_region_rune {
+          None => context_region.clone(),
+          Some(ref region_rune) => region_rune.rune.clone(),
+        };
+        let mut child_lidb = lidb.child();
+        let _inner_rune_s = translate_templex(
+          interner,
+          keywords,
+          env,
+          &mut child_lidb,
+          rule_builder,
+          new_region,
+          interpreted.inner,
+        );
+        let _ = interpreted.maybe_ownership.map(|OwnershipPT(_, ownership)| ownership);
+        rule_builder.push(IRulexSR::Placeholder(PlaceholderRuleSR {
+          range: range_s,
+        }));
+        result_rune_s
+      }
+/*
+      case InterpretedPT(range, ownership, maybeRegion, innerP) => {
+        val rangeS = evalRange(range)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+
+        val maybeRegionRune =
+          maybeRegion.map(runeName => {
+            val rune = CodeRuneS(vassertSome(runeName.name).str) // impl isolates
+            if (!env.allDeclaredRunes().contains(rune)) {
+              throw CompileErrorExceptionS(UnknownRegionError(rangeS, rune.name.str))
+            }
+            rules.RuneUsage(evalRange(range), rune)
+          })
+
+        // We need to use region as the new context region for everything under us, since
+        // region annotations apply deeply.
+        val newRegion =
+          maybeRegionRune match {
+            case None => contextRegion
+            case Some(rune) => rune.rune
+          }
+
+        val innerRuneS =
+          translateTemplex(env, lidb.child(), ruleBuilder, newRegion, innerP)
+
+        ruleBuilder += rules.AugmentSR(evalRange(range), resultRuneS, ownership.map(_.ownership), innerRuneS)
+
+        resultRuneS
+      }
+*/
       ITemplexPT::Call(_call) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_CALL_NOT_YET_IMPLEMENTED"),
+/*
+      case CallPT(rangeP, template, args) => {
+        val rangeS = evalRange(rangeP)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder +=
+          rules.MaybeCoercingCallSR(
+            rangeS,
+            resultRuneS,
+            translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, template),
+            args.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
+        resultRuneS
+      }
+*/
       ITemplexPT::Function(_function) => {
         panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNCTION_NOT_YET_IMPLEMENTED")
       }
+/*
+      case FunctionPT(rangeP, mutability, paramsPack, returnType) => {
+        val rangeS = evalRange(rangeP)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val templateNameRuneS =
+          addLookupRule(
+            lidb.child(), ruleBuilder, rangeS, contextRegion, interner.intern(CodeNameS(keywords.IFUNCTION)))
+        val mutabilityRuneS =
+          mutability match {
+            case None => addLiteralRule(lidb.child(), ruleBuilder, rangeS, rules.MutabilityLiteralSL(MutableP))
+            case Some(m) => translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, m)
+          }
+        ruleBuilder +=
+          rules.MaybeCoercingCallSR(
+            rangeS,
+            resultRuneS,
+            templateNameRuneS,
+            Vector(
+              mutabilityRuneS,
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion,  paramsPack),
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnType)))
+        resultRuneS
+      }
+*/
       ITemplexPT::Func(_func) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNC_NOT_YET_IMPLEMENTED"),
+/*
+      case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {
+        val rangeS = PostParser.evalRange(env.file, range)
+        val paramsRangeS = PostParser.evalRange(env.file, paramsRangeL)
+        val paramsS =
+          paramsP.map(paramP => {
+            translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, paramP)
+          })
+        val paramListRuneS = rules.RuneUsage(paramsRangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder += PackSR(paramsRangeS, paramListRuneS, paramsS.toVector)
+
+        val returnRuneS = translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnTypeP)
+
+        val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
+
+        // Only appears in call site; filtered out when solving definition
+        ruleBuilder += CallSiteFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
+        // Only appears in definition; filtered out when solving call site
+        ruleBuilder += DefinitionFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
+        // Only appears in call site; filtered out when solving definition
+        ruleBuilder += ResolveSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
+
+        resultRuneS
+      }
+*/
       ITemplexPT::Pack(_pack) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_PACK_NOT_YET_IMPLEMENTED"),
+/*
+      case PackPT(rangeP, members) => {
+        val rangeS = PostParser.evalRange(env.file, rangeP)
+
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder +=
+          MaybeCoercingLookupSR(
+            rangeS,
+            templateRuneS,
+            CodeNameS(keywords.tupleHumanName(members.length)))
+
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder += MaybeCoercingCallSR(
+          rangeS,
+          resultRuneS,
+          templateRuneS,
+          members.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
+
+
+        resultRuneS
+      }
+*/
       ITemplexPT::StaticSizedArray(static_sized_array) => {
         let range_s = PostParser::eval_range(file, static_sized_array.range);
         let mut child_lidb = lidb.child();
@@ -388,6 +620,29 @@ pub fn translate_templex<'a, 'p>(
         }));
         result_rune_s
       }
+/*
+      case StaticSizedArrayPT(rangeP, mutability, variability, size, element) => {
+        val rangeS = evalRange(rangeP)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder +=
+          rules.LookupSR(
+            rangeS,
+            templateRuneS,
+            interner.intern(CodeNameS(keywords.StaticArray)))
+        ruleBuilder +=
+          MaybeCoercingCallSR(
+            rangeS,
+            resultRuneS,
+            templateRuneS,
+            Vector(
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, size),
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, variability),
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
+        resultRuneS
+      }
+*/
       ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
         let range_s = PostParser::eval_range(file, runtime_sized_array.range);
         let mut child_lidb = lidb.child();
@@ -439,6 +694,27 @@ pub fn translate_templex<'a, 'p>(
         }));
         result_rune_s
       }
+/*
+      case RuntimeSizedArrayPT(rangeP, mutability, element) => {
+        val rangeS = evalRange(rangeP)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder +=
+          rules.LookupSR(
+            rangeS,
+            templateRuneS,
+            interner.intern(CodeNameS(keywords.Array)))
+        ruleBuilder +=
+          MaybeCoercingCallSR(
+            rangeS,
+            resultRuneS,
+            templateRuneS,
+            Vector(
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
+              translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
+        resultRuneS
+      }
+*/
       ITemplexPT::Tuple(tuple) => {
         let range_s = PostParser::eval_range(file, tuple.range);
         let mut child_lidb = lidb.child();
@@ -483,248 +759,30 @@ pub fn translate_templex<'a, 'p>(
         }));
         result_rune_s
       }
+/*
+      case TuplePT(rangeP, elements) => {
+        val rangeS = evalRange(rangeP)
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        ruleBuilder +=
+          rules.MaybeCoercingLookupSR(
+            rangeS,
+            templateRuneS,
+            interner.intern(CodeNameS(keywords.tupleHumanName(elements.length))))
+        ruleBuilder +=
+          rules.MaybeCoercingCallSR(
+            rangeS,
+            resultRuneS,
+            templateRuneS,
+            elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
+        resultRuneS
+      }
+*/
       _ => panic!("POSTPARSER_TRANSLATE_TEMPLEX_NOT_YET_IMPLEMENTED"),
     },
   }
 }
 /*
-  // Returns:
-  // - Rune for this type
-  def translateTemplex(
-    env: IEnvironmentS,
-    lidb: LocationInDenizenBuilder,
-    ruleBuilder: ArrayBuffer[IRulexSR],
-    contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
-    templex: ITemplexPT):
-  RuneUsage = {
-    Profiler.frame(() => {
-      val evalRange = (range: RangeL) => PostParser.evalRange(env.file, range)
-
-      translateValueTemplex(templex) match {
-        case Some(x) => {
-          val rune = addLiteralRule(lidb.child(), ruleBuilder, evalRange(templex.range), x)
-          rune
-        }
-        case None => {
-          templex match {
-            case InlinePT(range, inner) => translateTemplex(env, lidb, ruleBuilder, contextRegion, inner)
-            case AnonymousRunePT(range) => {
-              val rune = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
-              rune
-            }
-            case RegionRunePT(range, None) => {
-              vimpl() // isolates
-            }
-            case RegionRunePT(range, Some(NameP(_, name))) => {
-              val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(name))
-              if (isRuneFromLocalEnv) {
-                val rune = rules.RuneUsage(evalRange(range), CodeRuneS(name))
-                rune
-              } else {
-                // It's from a parent env
-                val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(name))
-                rune
-              }
-            }
-            case NameOrRunePT(NameP(range, nameOrRune)) => {
-              val isRuneFromEnv = env.allDeclaredRunes().contains(CodeRuneS(nameOrRune))
-              if (isRuneFromEnv) {
-                val isRuneFromLocalEnv = env.localDeclaredRunes().contains(CodeRuneS(nameOrRune))
-                if (isRuneFromLocalEnv) {
-                  val rune = rules.RuneUsage(evalRange(range), CodeRuneS(nameOrRune))
-                  rune
-                } else {
-                  // It's from a parent env
-                  val rune = addRuneParentEnvLookupRule(lidb.child(), ruleBuilder, evalRange(range), CodeRuneS(nameOrRune))
-                  rune
-                }
-              } else {
-                // e.g. "int"
-                val name = interner.intern(CodeNameS(nameOrRune))
-                val rune = addLookupRule(lidb.child(), ruleBuilder, evalRange(range), contextRegion, name)
-                // For lookups like these, we bring them into the current region.
-                rune
-              }
-            }
-            case InterpretedPT(range, ownership, maybeRegion, innerP) => {
-              val rangeS = evalRange(range)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-
-              val maybeRegionRune =
-                maybeRegion.map(runeName => {
-                  val rune = CodeRuneS(vassertSome(runeName.name).str) // impl isolates
-                  if (!env.allDeclaredRunes().contains(rune)) {
-                    throw CompileErrorExceptionS(UnknownRegionError(rangeS, rune.name.str))
-                  }
-                  rules.RuneUsage(evalRange(range), rune)
-                })
-
-              // We need to use region as the new context region for everything under us, since
-              // region annotations apply deeply.
-              val newRegion =
-                maybeRegionRune match {
-                  case None => contextRegion
-                  case Some(rune) => rune.rune
-                }
-
-              val innerRuneS =
-                translateTemplex(env, lidb.child(), ruleBuilder, newRegion, innerP)
-
-              ruleBuilder += rules.AugmentSR(evalRange(range), resultRuneS, ownership.map(_.ownership), innerRuneS)
-
-              resultRuneS
-            }
-            case CallPT(rangeP, template, args) => {
-              val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                rules.MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, template),
-                  args.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-              resultRuneS
-            }
-            case FunctionPT(rangeP, mutability, paramsPack, returnType) => {
-              val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              val templateNameRuneS =
-                addLookupRule(
-                  lidb.child(), ruleBuilder, rangeS, contextRegion, interner.intern(CodeNameS(keywords.IFUNCTION)))
-              val mutabilityRuneS =
-                mutability match {
-                  case None => addLiteralRule(lidb.child(), ruleBuilder, rangeS, rules.MutabilityLiteralSL(MutableP))
-                  case Some(m) => translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, m)
-                }
-              ruleBuilder +=
-                rules.MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  templateNameRuneS,
-                  Vector(
-                    mutabilityRuneS,
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion,  paramsPack),
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnType)))
-              resultRuneS
-            }
-            case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {
-              val rangeS = PostParser.evalRange(env.file, range)
-              val paramsRangeS = PostParser.evalRange(env.file, paramsRangeL)
-              val paramsS =
-                paramsP.map(paramP => {
-                  translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, paramP)
-                })
-              val paramListRuneS = rules.RuneUsage(paramsRangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder += PackSR(paramsRangeS, paramListRuneS, paramsS.toVector)
-
-              val returnRuneS = translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnTypeP)
-
-              val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
-
-              // Only appears in call site; filtered out when solving definition
-              ruleBuilder += CallSiteFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-              // Only appears in definition; filtered out when solving call site
-              ruleBuilder += DefinitionFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-              // Only appears in call site; filtered out when solving definition
-              ruleBuilder += ResolveSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
-
-              resultRuneS
-            }
-            case PackPT(rangeP, members) => {
-              val rangeS = PostParser.evalRange(env.file, rangeP)
-
-              val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                MaybeCoercingLookupSR(
-                  rangeS,
-                  templateRuneS,
-                  CodeNameS(keywords.tupleHumanName(members.length)))
-
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder += MaybeCoercingCallSR(
-                rangeS,
-                resultRuneS,
-                templateRuneS,
-                members.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-
-
-              resultRuneS
-//              val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
-//              ruleBuilder +=
-//                rules.PackSR(
-//                  evalRange(range),
-//                  resultRuneS,
-//                  members.map(translateTemplex(env, lidb.child(), ruleBuilder, _)).toVector)
-//              resultRuneS
-            }
-            case StaticSizedArrayPT(rangeP, mutability, variability, size, element) => {
-              val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                rules.LookupSR(
-                  rangeS,
-                  templateRuneS,
-                  interner.intern(CodeNameS(keywords.StaticArray)))
-              ruleBuilder +=
-                MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  templateRuneS,
-                  Vector(
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, size),
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, variability),
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
-              resultRuneS
-            }
-            case RuntimeSizedArrayPT(rangeP, mutability, element) => {
-              val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                rules.LookupSR(
-                  rangeS,
-                  templateRuneS,
-                  interner.intern(CodeNameS(keywords.Array)))
-              ruleBuilder +=
-                MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  templateRuneS,
-                  Vector(
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, mutability),
-                    translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, element)))
-              resultRuneS
-            }
-            case TuplePT(rangeP, elements) => {
-              val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                rules.MaybeCoercingLookupSR(
-                  rangeS,
-                  templateRuneS,
-                  interner.intern(CodeNameS(keywords.tupleHumanName(elements.length))))
-              ruleBuilder +=
-                rules.MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  templateRuneS,
-                  elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-//              ruleBuilder +=
-//                rules.CallSR(
-//                  evalRange(range),
-//                  resultRuneS,
-//                  templateRuneS,
-//                  Vector(packRuneS))
-//              ruleBuilder +=
-//                rules.PackSR(
-//                  evalRange(range),
-//                  packRuneS,
-//                  elements.map(translateTemplex(env, lidb.child(), ruleBuilder, _)).toVector)
-              resultRuneS
-            }
           }
         }
       }
@@ -846,16 +904,37 @@ pub fn translate_maybe_type_into_rune<'a, 'p>(
   }
 }
 */
-fn translate_maybe_type_into_maybe_rune<'a, 'p>(
-  _env: IEnvironmentS<'a>,
-  _lidb: &mut LocationInDenizenBuilder,
-  _range: RangeS<'a>,
-  _rule_builder: &mut Vec<IRulexSR<'a>>,
-  _rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
-  _context_region: IRuneS<'a>,
-  _maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
+pub(crate) fn translate_maybe_type_into_maybe_rune<'a, 'p>(
+  interner: &Interner<'a>,
+  keywords: &Keywords<'a>,
+  env: IEnvironmentS<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeS<'a>,
+  rule_builder: &mut Vec<IRulexSR<'a>>,
+  rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
+  context_region: IRuneS<'a>,
+  maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
 ) -> Option<RuneUsage<'a>> {
-  panic!("Unimplemented translate_maybe_type_into_maybe_rune");
+  if maybe_type_p.is_none() {
+    None
+  } else {
+    let mut child_lidb = lidb.child();
+    let result_rune = translate_maybe_type_into_rune(
+      interner,
+      keywords,
+      env,
+      &mut child_lidb,
+      range,
+      rule_builder,
+      context_region,
+      maybe_type_p,
+    );
+    rune_to_explicit_type.insert(
+      result_rune.rune.clone(),
+      ITemplataType::CoordTemplataType(crate::postparsing::itemplatatype::CoordTemplataType {}),
+    );
+    Some(result_rune)
+  }
 }
 /*
   def translateMaybeTypeIntoMaybeRune(
