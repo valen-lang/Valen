@@ -37,30 +37,39 @@ pub struct PlaceholderRuleSR<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub enum IRulexSR<'a> {
   Placeholder(PlaceholderRuleSR<'a>),
+  Equals(EqualsSR<'a>),
   Literal(LiteralSR<'a>),
   MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
   Lookup(LookupSR<'a>),
   MaybeCoercingCall(MaybeCoercingCallSR<'a>),
   RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
   Augment(AugmentSR<'a>),
+  OneOf(OneOfSR<'a>),
+  IsInterface(IsInterfaceSR<'a>),
+  CoordComponents(CoordComponentsSR<'a>),
 }
 
 impl IRulexSR<'_> {
   pub fn range(&self) -> &RangeS<'_> {
     match self {
       IRulexSR::Placeholder(x) => &x.range,
+      IRulexSR::Equals(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
       IRulexSR::MaybeCoercingLookup(x) => &x.range,
       IRulexSR::Lookup(x) => &x.range,
       IRulexSR::MaybeCoercingCall(x) => &x.range,
       IRulexSR::RuneParentEnvLookup(x) => &x.range,
       IRulexSR::Augment(x) => &x.range,
+      IRulexSR::OneOf(x) => &x.range,
+      IRulexSR::IsInterface(x) => &x.range,
+      IRulexSR::CoordComponents(x) => &x.range,
     }
   }
 
   pub fn rune_usages(&self) -> Vec<RuneUsage<'_>> {
     match self {
       IRulexSR::Placeholder(_) => vec![],
+      IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
       IRulexSR::MaybeCoercingLookup(x) => vec![x.rune.clone()],
       IRulexSR::Lookup(x) => vec![x.rune.clone()],
@@ -71,6 +80,11 @@ impl IRulexSR<'_> {
       }
       IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
       IRulexSR::Augment(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
+      IRulexSR::OneOf(x) => vec![x.rune.clone()],
+      IRulexSR::IsInterface(x) => vec![x.rune.clone()],
+      IRulexSR::CoordComponents(x) => {
+        vec![x.result_rune.clone(), x.ownership_rune.clone(), x.kind_rune.clone()]
+      }
     }
   }
 }
@@ -86,6 +100,12 @@ trait IRulexSR {
   def runeUsages: Vector[RuneUsage]
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct EqualsSR<'a> {
+  pub range: RangeS<'a>,
+  pub left: RuneUsage<'a>,
+  pub right: RuneUsage<'a>,
+}
 /*
 case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IRulexSR {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
@@ -141,6 +161,13 @@ case class KindComponentsSR(
   override def runeUsages: Vector[RuneUsage] = Vector(kindRune, mutabilityRune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoordComponentsSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub ownership_rune: RuneUsage<'a>,
+  pub kind_rune: RuneUsage<'a>,
+}
 /*
 case class CoordComponentsSR(
   range: RangeS,
@@ -200,6 +227,12 @@ case class DefinitionFuncSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct OneOfSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+  pub literals: Vec<ILiteralSL>,
+}
 /*
 // See Possible Values Shouldnt Be Used For Inference (PVSBUFI)
 case class OneOfSR(
@@ -221,6 +254,11 @@ case class IsConcreteSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct IsInterfaceSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+}
 /*
 case class IsInterfaceSR(
   range: RangeS,

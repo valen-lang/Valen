@@ -137,7 +137,7 @@ fn add_lookup_rule<'a>(
     runeS
   }
 */
-fn translate_value_templex<'a, 'p>(
+pub fn translate_value_templex<'a, 'p>(
   templex: &ITemplexPT<'a, 'p>,
 ) -> Option<ILiteralSL> {
   match templex {
@@ -463,7 +463,46 @@ pub fn translate_templex<'a, 'p>(
         resultRuneS
       }
 */
-      ITemplexPT::Call(_call) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_CALL_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::Call(call) => {
+        let range_s = PostParser::eval_range(file, call.range);
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: range_s.clone(),
+          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        let mut child_lidb = lidb.child();
+        let template_rune_s = translate_templex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          rule_builder,
+          context_region.clone(),
+          call.template,
+        );
+        let mut arg_runes = Vec::<RuneUsage<'a>>::new();
+        for arg in call.args {
+          let mut child_lidb = lidb.child();
+          arg_runes.push(translate_templex(
+            interner,
+            keywords,
+            env.clone(),
+            &mut child_lidb,
+            rule_builder,
+            context_region.clone(),
+            arg,
+          ));
+        }
+        rule_builder.push(MaybeCoercingCall(MaybeCoercingCallSR {
+          range: range_s,
+          result_rune: result_rune_s.clone(),
+          template_rune: template_rune_s,
+          args: arg_runes,
+        }));
+        result_rune_s
+      }
 /*
       case CallPT(rangeP, template, args) => {
         val rangeS = evalRange(rangeP)

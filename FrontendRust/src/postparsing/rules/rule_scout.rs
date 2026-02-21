@@ -18,7 +18,7 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
 */
 use crate::interner::Interner;
 use crate::keywords::Keywords;
-use crate::parsing::ast::{IRulexPR, ITypePR};
+use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT, OwnershipPT};
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
@@ -27,7 +27,11 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
-use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
+use crate::postparsing::rules::rules::{
+  CoordComponentsSR, EqualsSR, IntLiteralSL, IsInterfaceSR, IRulexSR, OneOfSR,
+  OwnershipLiteralSL, RuneUsage,
+};
+use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::templex_scout::translate_templex;
 use std::collections::{HashMap, HashSet};
 
@@ -119,6 +123,178 @@ fn translate_rulex<'a>(
         context_region,
         templex,
       )
+    }
+    IRulexPR::Equals(EqualsPR { range, left, right }) => {
+      let mut child_lidb = lidb.child();
+      let rune = interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+        lid: child_lidb.consume(),
+      }));
+      let left_usage = {
+        let mut child_lidb = lidb.child();
+        translate_rulex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          builder,
+          rune_to_explicit_type,
+          context_region.clone(),
+          left,
+        )
+      };
+      let right_usage = {
+        let mut child_lidb = lidb.child();
+        translate_rulex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          builder,
+          rune_to_explicit_type,
+          context_region.clone(),
+          right,
+        )
+      };
+      builder.push(IRulexSR::Equals(EqualsSR {
+        range: PostParser::eval_range(file, *range),
+        left: left_usage,
+        right: right_usage,
+      }));
+      RuneUsage {
+        range: PostParser::eval_range(file, *range),
+        rune,
+      }
+    }
+    IRulexPR::BuiltinCall(BuiltinCallPR { range, name, args }) => {
+      if name.str() == keywords.is_interface {
+        assert_eq!(args.len(), 1, "POSTPARSER_IS_INTERFACE_ARGS_LEN");
+        let mut child_lidb = lidb.child();
+        let arg_rune = translate_rulex(
+          interner,
+          keywords,
+          env.clone(),
+          &mut child_lidb,
+          builder,
+          rune_to_explicit_type,
+          context_region.clone(),
+          &args[0],
+        );
+        // val resultRune = ImplicitRuneS(lidb.child().consume())
+        builder.push(IRulexSR::IsInterface(IsInterfaceSR {
+          range: PostParser::eval_range(file, *range),
+          rune: arg_rune.clone(),
+        }));
+        // runeToExplicitType.put(resultRune, KindTemplataType())
+        rune_to_explicit_type.push((
+          arg_rune.rune.clone(),
+          ITemplataType::KindTemplataType(KindTemplataType {}),
+        ));
+        RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: arg_rune.rune,
+        }
+      } else if name.str() == keywords.implements {
+        // Only appears in definition; filtered out when solving call site
+        // Only appears in call site; filtered out when solving definition
+        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_IMPLEMENTS_NOT_YET_IMPLEMENTED")
+      } else if name.str() == keywords.ref_list_compound_mutability {
+        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REF_LIST_COMPOUND_MUTABILITY_NOT_YET_IMPLEMENTED")
+      } else if name.str() == keywords.refs {
+        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REFS_NOT_YET_IMPLEMENTED")
+      } else if name.str() == keywords.any {
+        let literals: Vec<ILiteralSL> = args
+          .iter()
+          .map(|arg| match arg {
+            IRulexPR::Templex(templex) => match templex {
+              ITemplexPT::Int(IntPT { value, .. }) => {
+                ILiteralSL::IntLiteral(IntLiteralSL { value: *value })
+              }
+              ITemplexPT::Ownership(OwnershipPT(_, ownership)) => {
+                ILiteralSL::OwnershipLiteral(OwnershipLiteralSL {
+                  ownership: *ownership,
+                })
+              }
+              _ => panic!("POSTPARSER_BUILTINCALL_ANY_ARG_NOT_INT_OR_OWNERSHIP"),
+            },
+            _ => panic!("POSTPARSER_BUILTINCALL_ANY_ARG_NOT_TEMPLEX"),
+          })
+          .collect();
+        assert!(!literals.is_empty(), "POSTPARSER_ANY_LITERALS_EMPTY");
+        let distinct_types: HashSet<_> =
+          literals.iter().map(|l| l.get_type()).collect();
+        assert_eq!(distinct_types.len(), 1, "POSTPARSER_ANY_LITERALS_MIXED_TYPES");
+        let explicit_type = literals.first().unwrap().get_type();
+        let mut child_lidb = lidb.child();
+        let result_rune = RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        builder.push(IRulexSR::OneOf(OneOfSR {
+          range: PostParser::eval_range(file, *range),
+          rune: result_rune.clone(),
+          literals,
+        }));
+        rune_to_explicit_type.push((result_rune.rune.clone(), explicit_type));
+        result_rune
+      } else {
+        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_NOT_YET_IMPLEMENTED")
+      }
+    }
+    IRulexPR::Components(ComponentsPR {
+      range,
+      container: tyype,
+      components,
+    }) => {
+      let mut rune_child_lidb = lidb.child();
+      let rune = RuneUsage {
+        range: PostParser::eval_range(file, *range),
+        rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+          lid: rune_child_lidb.consume(),
+        })),
+      };
+      rune_to_explicit_type.push((rune.rune.clone(), translate_type(*tyype)));
+      match tyype {
+        ITypePR::CoordType => {
+          // vregionmut() // Put back in with regions
+          // if (componentsP.size != 3) {
+          //   vfail("Ref rule should have three components! Found: " + componentsP.size)
+          // }
+          if components.len() != 2 {
+            panic!("POSTPARSER_COMPONENTS_REF_SHOULD_HAVE_TWO_COMPONENTS")
+          }
+          // vregionmut() // Put back in with regions
+          // val Vector(ownershipRuneS, regionRuneS, kindRuneS) =
+          let mut translate_child_lidb = lidb.child();
+          let component_usages = translate_rulexes(
+            interner,
+            keywords,
+            env,
+            &mut translate_child_lidb,
+            builder,
+            rune_to_explicit_type,
+            context_region,
+            components,
+          );
+          let ownership_rune = component_usages[0].clone();
+          let kind_rune = component_usages[1].clone();
+          builder.push(IRulexSR::CoordComponents(CoordComponentsSR {
+            range: PostParser::eval_range(file, *range),
+            result_rune: rune.clone(),
+            ownership_rune,
+            kind_rune,
+          }));
+        }
+        ITypePR::KindType => {
+          panic!("POSTPARSER_COMPONENTS_KIND_TYPE_NOT_YET_IMPLEMENTED")
+        }
+        ITypePR::PrototypeType => {
+          panic!("POSTPARSER_COMPONENTS_PROTOTYPE_TYPE_NOT_YET_IMPLEMENTED")
+        }
+        _ => panic!("POSTPARSER_COMPONENTS_INVALID_TYPE_FOR_COMPONENTS_RULE"),
+      }
+      rune
     }
     _ => panic!("POSTPARSER_TRANSLATE_RULEX_NOT_YET_IMPLEMENTED"),
   }

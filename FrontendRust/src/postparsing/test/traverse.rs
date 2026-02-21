@@ -17,9 +17,9 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  AugmentSR, BoolLiteralSL, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LocationLiteralSL,
-  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
-  StringLiteralSL, VariabilityLiteralSL,
+  AugmentSR, BoolLiteralSL, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL, IRulexSR,
+  IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR,
+  MutabilityLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -81,11 +81,15 @@ pub enum NodeRefS<'a, 's> {
 
   Rulex(&'s IRulexSR<'a>),
   PlaceholderRule(&'s crate::postparsing::rules::rules::PlaceholderRuleSR<'a>),
+  EqualsRule(&'s EqualsSR<'a>),
   LiteralRule(&'s LiteralSR<'a>),
   MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'a>),
   LookupRule(&'s LookupSR<'a>),
   MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'a>),
   AugmentRule(&'s AugmentSR<'a>),
+  OneOfRule(&'s OneOfSR<'a>),
+  IsInterfaceRule(&'s IsInterfaceSR<'a>),
+  CoordComponentsRule(&'s CoordComponentsSR<'a>),
   RuneUsage(&'s RuneUsage<'a>),
   Literal(&'s ILiteralSL),
   IntLiteral(&'s IntLiteralSL),
@@ -749,6 +753,11 @@ where
     IRulexSR::Placeholder(x) => {
       collect_if(pred, out, NodeRefS::PlaceholderRule(x));
     }
+    IRulexSR::Equals(x) => {
+      collect_if(pred, out, NodeRefS::EqualsRule(x));
+      visit_rune_usage(pred, out, &x.left);
+      visit_rune_usage(pred, out, &x.right);
+    }
     IRulexSR::Literal(x) => {
       collect_if(pred, out, NodeRefS::LiteralRule(x));
       visit_rune_usage(pred, out, &x.rune);
@@ -779,6 +788,23 @@ where
       collect_if(pred, out, NodeRefS::AugmentRule(x));
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.inner_rune);
+    }
+    IRulexSR::OneOf(x) => {
+      collect_if(pred, out, NodeRefS::OneOfRule(x));
+      visit_rune_usage(pred, out, &x.rune);
+      for literal in &x.literals {
+        visit_literal(pred, out, literal);
+      }
+    }
+    IRulexSR::IsInterface(x) => {
+      collect_if(pred, out, NodeRefS::IsInterfaceRule(x));
+      visit_rune_usage(pred, out, &x.rune);
+    }
+    IRulexSR::CoordComponents(x) => {
+      collect_if(pred, out, NodeRefS::CoordComponentsRule(x));
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.ownership_rune);
+      visit_rune_usage(pred, out, &x.kind_rune);
     }
   }
 }
