@@ -45,8 +45,8 @@ use crate::postparsing::names::{
   MagicParamRuneS,
 };
 use crate::postparsing::post_parser::{
-  ExternHasBodyS, FunctionEnvironmentS, ICompileErrorS, IEnvironmentS, InterfaceMethodNeedsSelf, PostParser,
-  RangedInternalErrorS, StackFrame,
+  CouldntFindRuneS, ExternHasBodyS, FunctionEnvironmentS, ICompileErrorS, IEnvironmentS,
+  InterfaceMethodNeedsSelf, PostParser, RangedInternalErrorS, StackFrame,
 };
 use crate::postparsing::post_parser::scout_generic_parameter;
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
@@ -175,9 +175,6 @@ where
         user_declared_runes.push(rune_usage);
       }
     }
-    if !generic_parameters_p.is_empty() {
-      panic!("POSTPARSER_SCOUT_FUNCTION_GENERICS_NOT_YET_IMPLEMENTED");
-    }
     if is_parent_interface {
       assert!(
         user_declared_runes.is_empty(),
@@ -280,7 +277,31 @@ where
         };
         (rune, Some(implicit_region_generic_param))
       }
-      Some(_) => panic!("POSTPARSER_SCOUT_FUNCTION_DEFAULT_REGION_NOT_YET_IMPLEMENTED"),
+      /*
+      case Some(RegionRunePT(regionRange, regionName)) => {
+        val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
+        if (!functionEnv.allDeclaredRunes().contains(rune)) {
+          throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.str))
+        }
+        (evalRange(file, regionRange), rune, None)
+      }
+      */
+      Some(region_rune_pt) => {
+        let region_name = region_rune_pt
+          .name
+          .as_ref()
+          .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_FUNCTION_DEFAULT_REGION_NAME_MISSING"));
+        let rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: region_name.str(),
+        }));
+        if !function_environment.all_declared_runes().contains(&rune) {
+          return Err(ICompileErrorS::CouldntFindRuneS(CouldntFindRuneS {
+            range: Self::eval_range(file_coordinate, function.range),
+            name: region_name.str().as_str().to_string(),
+          }));
+        }
+        (rune, None)
+      }
     };
     let template_rules_p = function
       .header

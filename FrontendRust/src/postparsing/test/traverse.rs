@@ -17,8 +17,8 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LocationLiteralSL, LookupSR,
-  MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
+  AugmentSR, BoolLiteralSL, ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, LocationLiteralSL,
+  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
   StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
@@ -85,6 +85,7 @@ pub enum NodeRefS<'a, 's> {
   MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'a>),
   LookupRule(&'s LookupSR<'a>),
   MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'a>),
+  AugmentRule(&'s AugmentSR<'a>),
   RuneUsage(&'s RuneUsage<'a>),
   Literal(&'s ILiteralSL),
   IntLiteral(&'s IntLiteralSL),
@@ -773,6 +774,11 @@ where
     }
     IRulexSR::RuneParentEnvLookup(x) => {
       visit_rune_usage(pred, out, &x.rune);
+    }
+    IRulexSR::Augment(x) => {
+      collect_if(pred, out, NodeRefS::AugmentRule(x));
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.inner_rune);
     }
   }
 }

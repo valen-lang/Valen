@@ -42,6 +42,7 @@ pub enum IRulexSR<'a> {
   Lookup(LookupSR<'a>),
   MaybeCoercingCall(MaybeCoercingCallSR<'a>),
   RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
+  Augment(AugmentSR<'a>),
 }
 
 impl IRulexSR<'_> {
@@ -53,6 +54,7 @@ impl IRulexSR<'_> {
       IRulexSR::Lookup(x) => &x.range,
       IRulexSR::MaybeCoercingCall(x) => &x.range,
       IRulexSR::RuneParentEnvLookup(x) => &x.range,
+      IRulexSR::Augment(x) => &x.range,
     }
   }
 
@@ -68,6 +70,7 @@ impl IRulexSR<'_> {
         usages
       }
       IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
+      IRulexSR::Augment(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
     }
   }
 }
@@ -366,6 +369,13 @@ case class RuneParentEnvLookupSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct AugmentSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub ownership: Option<OwnershipP>,
+  pub inner_rune: RuneUsage<'a>,
+}
 /*
 // InterpretedAR will overwrite inner's permission and ownership to the given ones.
 // We turned InterpretedAR into this

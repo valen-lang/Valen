@@ -32,9 +32,9 @@ use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::IRulexSR::{Lookup, MaybeCoercingCall, MaybeCoercingLookup};
 use crate::postparsing::rules::rules::{
-  BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL, LookupSR,
-  MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
-  PlaceholderRuleSR, RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
+  AugmentSR, BoolLiteralSL, ILiteralSL, IntLiteralSL, IRulexSR, LiteralSR, LocationLiteralSL,
+  LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR, MutabilityLiteralSL, OwnershipLiteralSL,
+  RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::utils::range::RangeS;
 use std::collections::HashMap;
@@ -414,7 +414,7 @@ pub fn translate_templex<'a, 'p>(
           Some(ref region_rune) => region_rune.rune.clone(),
         };
         let mut child_lidb = lidb.child();
-        let _inner_rune_s = translate_templex(
+        let inner_rune_s = translate_templex(
           interner,
           keywords,
           env,
@@ -423,9 +423,13 @@ pub fn translate_templex<'a, 'p>(
           new_region,
           interpreted.inner,
         );
-        let _ = interpreted.maybe_ownership.map(|OwnershipPT(_, ownership)| ownership);
-        rule_builder.push(IRulexSR::Placeholder(PlaceholderRuleSR {
-          range: range_s,
+        let ownership =
+          interpreted.maybe_ownership.map(|OwnershipPT(_, ownership)| *ownership);
+        rule_builder.push(IRulexSR::Augment(AugmentSR {
+          range: range_s.clone(),
+          result_rune: result_rune_s.clone(),
+          ownership,
+          inner_rune: inner_rune_s,
         }));
         result_rune_s
       }
