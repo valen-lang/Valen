@@ -876,6 +876,11 @@ where
   match node {
     NodeRefS::Program(program) => collect_in_program(program, predicate),
     NodeRefS::Struct(strukt) => collect_in_struct(strukt, predicate),
+    NodeRefS::Function(function) => {
+      let mut out = Vec::new();
+      visit_function(predicate, &mut out, function);
+      out
+    }
     NodeRefS::Impl(impl_) => {
       let mut out = Vec::new();
       visit_impl(predicate, &mut out, impl_);

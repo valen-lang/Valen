@@ -637,12 +637,6 @@ where
           body_s.closured_names
         );
       }
-      if is_parent_function && !body_s.closured_names.is_empty() {
-        panic!(
-          "POSTPARSER_SCOUT_LAMBDA_CLOSURE_CAPTURES_NOT_YET_IMPLEMENTED: {:?}",
-          body_s.closured_names
-        );
-      }
       if is_parent_function && !magic_param_names.is_empty() && !explicit_params_s.is_empty() {
         return Err(ICompileErrorS::RangedInternalErrorS(RangedInternalErrorS {
           range: Self::eval_range(file_coordinate, function.range),

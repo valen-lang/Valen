@@ -578,18 +578,78 @@ where
     (stackFrame5, loopBodySE, selfUses, childUses)
   }
 */
-fn scout_while<'a, 'p, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::lexing::ast::RangeL,
-  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'p>,
-  _body: &crate::parsing::ast::BlockPE<'a, 'p>,
-) -> (
-  crate::postparsing::expressions::BlockSE<'a, 's>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_while");
+pub(crate) fn scout_while<'a, 'p, 'ctx, 's>(
+  post_parser: &PostParser<'a, 'p, 'ctx, 's>,
+  stack_frame0: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeL,
+  condition_pe: &IExpressionPE<'a, 'p>,
+  body: &BlockPE<'a, 'p>,
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+where
+  'a: 'ctx,
+  'a: 'p,
+  'a: 's,
+{
+  let while_range_s = PostParser::eval_range(stack_frame0.file, range);
+  let parent_env0 = stack_frame0.parent_env.clone();
+  let context_region0 = stack_frame0.context_region.clone();
+  let (loop_s, loop_body_self_uses, loop_body_child_uses) = post_parser.new_block(
+    parent_env0,
+    Some(stack_frame0),
+    &mut lidb.child(),
+    while_range_s.clone(),
+    context_region0,
+    PostParser::no_declarations(),
+    |stack_frame1, inner_lidb| {
+      let parent_env1 = stack_frame1.parent_env.clone();
+      let context_region1 = stack_frame1.context_region.clone();
+      let (inner_loop_s, loop_body_self_uses, loop_body_child_uses) = post_parser.new_block(
+        parent_env1,
+        Some(stack_frame1.clone()),
+        &mut inner_lidb.child(),
+        while_range_s.clone(),
+        context_region1,
+        PostParser::no_declarations(),
+        |stack_frame4, innermost_lidb| {
+          let parent_env4 = stack_frame4.parent_env.clone();
+          let context_region4 = stack_frame4.context_region.clone();
+          let (loop_body_se, loop_body_self_uses, loop_body_child_uses) = post_parser.new_block(
+            parent_env4,
+            Some(stack_frame4.clone()),
+            &mut innermost_lidb.child(),
+            while_range_s.clone(),
+            context_region4,
+            PostParser::no_declarations(),
+            |stack_frame5, body_lidb| {
+              scout_while_body(
+                post_parser,
+                stack_frame5,
+                body_lidb,
+                range,
+                condition_pe,
+                body,
+              )
+            },
+          )?;
+          let while_se = &*post_parser.scout_arena.alloc(IExpressionSE::While(WhileSE {
+            range: while_range_s.clone(),
+            body: loop_body_se,
+          }));
+          Ok((stack_frame4, while_se, loop_body_self_uses, loop_body_child_uses))
+        },
+      )?;
+      let inner_loop_expr =
+        &*post_parser.scout_arena.alloc(IExpressionSE::Block(inner_loop_s));
+      Ok((
+        stack_frame1,
+        inner_loop_expr,
+        loop_body_self_uses,
+        loop_body_child_uses,
+      ))
+    },
+  )?;
+  Ok((loop_s, loop_body_self_uses, loop_body_child_uses))
 }
 /*
 
@@ -630,19 +690,91 @@ fn scout_while<'a, 'p, 's>(
       })
   }
 */
-fn scout_while_body<'a, 'p, 's>(
-  _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,
-  _lidb: &mut crate::postparsing::ast::LocationInDenizenBuilder,
-  _range: crate::lexing::ast::RangeL,
-  _condition_pe: &crate::parsing::ast::IExpressionPE<'a, 'p>,
-  _body_pe: &crate::parsing::ast::BlockPE<'a, 'p>,
-) -> (
-  crate::postparsing::post_parser::StackFrame<'a>,
-  &'s crate::postparsing::expressions::IExpressionSE<'a, 's>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-  crate::postparsing::variable_uses::VariableUses<'a>,
-) {
-  panic!("Unimplemented scout_while_body");
+fn scout_while_body<'a, 'p, 'ctx, 's>(
+  post_parser: &PostParser<'a, 'p, 'ctx, 's>,
+  stack_frame0: StackFrame<'a>,
+  lidb: &mut LocationInDenizenBuilder,
+  range: RangeL,
+  condition_pe: &IExpressionPE<'a, 'p>,
+  body_pe: &BlockPE<'a, 'p>,
+) -> Result<
+  (
+    StackFrame<'a>,
+    &'s IExpressionSE<'a, 's>,
+    VariableUses<'a>,
+    VariableUses<'a>,
+  ),
+  ICompileErrorS<'a>,
+>
+where
+  'a: 'ctx,
+  'a: 'p,
+  'a: 's,
+{
+  let while_range_s = PostParser::eval_range(stack_frame0.file, range);
+  let (stack_frame4, if_se, if_self_uses, if_child_uses) = PostParser::new_if(
+    stack_frame0,
+    lidb,
+    range,
+    |stack_frame2, condition_lidb| {
+      let (stack_frame3, cond_se, cond_self_uses, cond_child_uses) =
+        post_parser.scout_expression_and_coerce(
+          stack_frame2,
+          condition_lidb,
+          condition_pe,
+          LoadAsP::Use,
+        )?;
+      Ok((stack_frame3, cond_se, cond_self_uses, cond_child_uses))
+    },
+    |stack_frame2, _then_lidb| {
+      // Then does nothing, just continue on
+      let void_s = &*post_parser.scout_arena.alloc(BlockSE {
+        range: while_range_s.clone(),
+        locals: Vec::new(),
+        expr: &*post_parser.scout_arena.alloc(IExpressionSE::Void(VoidSE {
+          range: while_range_s.clone(),
+        })),
+      });
+      Ok((
+        stack_frame2,
+        void_s,
+        PostParser::no_variable_uses(),
+        PostParser::no_variable_uses(),
+      ))
+    },
+    |stack_frame3, else_lidb| {
+      let parent_env3 = stack_frame3.parent_env.clone();
+      let context_region3 = stack_frame3.context_region.clone();
+      let (then_s, then_uses, then_child_uses) = post_parser.new_block(
+        parent_env3,
+        Some(stack_frame3.clone()),
+        else_lidb,
+        while_range_s.clone(),
+        context_region3,
+        PostParser::no_declarations(),
+        |stack_frame4, _break_lidb| {
+          let break_s = &*post_parser.scout_arena.alloc(IExpressionSE::Break(BreakSE {
+            range: while_range_s.clone(),
+          }));
+          Ok((stack_frame4, break_s, PostParser::no_variable_uses(), PostParser::no_variable_uses()))
+        },
+      )?;
+      Ok((stack_frame3, then_s, then_uses, then_child_uses))
+    },
+  )?;
+  let if_se = &*post_parser.scout_arena.alloc(IExpressionSE::If(if_se));
+
+  let (user_body_se, user_body_self_uses, user_body_child_uses) = post_parser.scout_block(
+    stack_frame4.clone(),
+    &mut lidb.child(),
+    PostParser::no_declarations(),
+    body_pe,
+  )?;
+
+  let self_uses = if_self_uses.then_merge(&user_body_self_uses);
+  let child_uses = if_child_uses.then_merge(&user_body_child_uses);
+  let loop_body_se = post_parser.consecutive(vec![if_se, user_body_se]);
+  Ok((stack_frame4, loop_body_se, self_uses, child_uses))
 }
 /*
   def scoutWhileBody(

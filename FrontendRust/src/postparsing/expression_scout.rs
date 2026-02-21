@@ -25,7 +25,7 @@ use crate::postparsing::post_parser::translate_imprecise_name;
 use crate::postparsing::patterns::pattern_scout::{get_parameter_captures, translate_pattern};
 use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::translate_templex;
-use crate::postparsing::loop_post_parser::scout_each;
+use crate::postparsing::loop_post_parser::{scout_each, scout_while};
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::utils::range::RangeS;
@@ -1725,7 +1725,72 @@ where
           (stackFrameZ, NormalResult(ifSE), selfUses, childUses)
         }
         */
-        /*
+    IExpressionPE::If(if_expr) => {
+      let range_s = PostParser::eval_range(file_coordinate, if_expr.range);
+      let mut block_lidb = lidb.child();
+      let (result_se, self_uses, child_uses) = self.new_block(
+        stack_frame.parent_env.clone(),
+        Some(stack_frame.clone()),
+        &mut block_lidb,
+        range_s,
+        stack_frame.context_region.clone(),
+        PostParser::no_declarations(),
+        |stack_frame1, block_lidb| {
+          let (stack_frame2, cond_se, cond_uses, cond_child_uses) = {
+            let mut cond_lidb = block_lidb.child();
+            self.scout_expression_and_coerce(
+              stack_frame1,
+              &mut cond_lidb,
+              if_expr.condition,
+              LoadAsP::Use,
+            )?
+          };
+          let (then_se, then_uses, then_child_uses) = {
+            let mut then_lidb = block_lidb.child();
+            self.scout_impure_block(
+              stack_frame2.clone(),
+              &mut then_lidb,
+              PostParser::no_declarations(),
+              if_expr.then_body,
+            )?
+          };
+          let (else_se, else_uses, else_child_uses) = {
+            let mut else_lidb = block_lidb.child();
+            self.scout_impure_block(
+              stack_frame2.clone(),
+              &mut else_lidb,
+              PostParser::no_declarations(),
+              if_expr.else_body,
+            )?
+          };
+          let self_case_uses = then_uses.branch_merge(&else_uses);
+          let self_uses = cond_uses.then_merge(&self_case_uses);
+          let child_case_uses = then_child_uses.branch_merge(&else_child_uses);
+          let child_uses = cond_child_uses.then_merge(&child_case_uses);
+          let if_se = &*self.scout_arena.alloc(IfSE {
+            range: PostParser::eval_range(file_coordinate, if_expr.range),
+            condition: cond_se,
+            then_body: then_se,
+            else_body: else_se,
+          });
+          Ok((
+            stack_frame2,
+            &*self.scout_arena.alloc(IExpressionSE::If(if_se.clone())),
+            self_uses,
+            child_uses,
+          ))
+        },
+      )?;
+      Ok((
+        stack_frame,
+        IScoutResult::NormalResult(NormalResultS {
+          expr: &*self.scout_arena.alloc(IExpressionSE::Block(result_se)),
+        }),
+        self_uses,
+        child_uses,
+      ))
+    }
+    /*
         case IfPE(range, condition, thenBody, elseBody) => {
           val (resultSE, selfUses, childUses) =
             newBlock(
@@ -1754,6 +1819,24 @@ where
           (stackFrame0, NormalResult(resultSE), selfUses, childUses)
         }
         */
+    IExpressionPE::While(while_expr) => {
+      let (loop_s, loop_self_uses, loop_child_uses) = scout_while(
+        self,
+        stack_frame.clone(),
+        lidb,
+        while_expr.range,
+        while_expr.condition,
+        while_expr.body,
+      )?;
+      Ok((
+        stack_frame,
+        IScoutResult::NormalResult(NormalResultS {
+          expr: &*self.scout_arena.alloc(IExpressionSE::Block(loop_s)),
+        }),
+        loop_self_uses,
+        loop_child_uses,
+      ))
+    }
         /*
         case WhilePE(range, conditionPE, uncombinedBodyPE) => {
           val (loopSE, loopSelfUses, loopChildUses) =
