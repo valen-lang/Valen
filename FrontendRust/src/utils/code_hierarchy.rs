@@ -319,6 +319,11 @@ class FileCoordinateMap[Contents](
     }
   }
 
+  /// Companion-object style constructor for tests. Mirrors FileCoordinateMap.test(interner, contents).
+  pub fn test(interner: &Interner<'a>, contents: Contents) -> Self {
+    crate::utils::code_hierarchy::test(interner, contents)
+  }
+
 // mig: fn apply
   pub fn apply(&self, coord: &'a FileCoordinate<'a>) -> &Contents {
     self

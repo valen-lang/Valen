@@ -3,45 +3,6 @@ use std::path::Path;
 use crate::utils::code_hierarchy::{FileCoordinate, FileCoordinateMap};
 use crate::utils::range::{CodeLocationS, RangeS};
 
-// Mirrors SourceCodeUtils.scala:humanizePackage
-fn humanize_package<'a>(package_coord: &'a crate::utils::code_hierarchy::PackageCoordinate<'a>) -> String {
-  let mut result = package_coord.module.as_str().to_string();
-  for p in package_coord.packages.iter() {
-    result.push('.');
-    result.push_str(p.as_str());
-  }
-  result
-}
-
-// Mirrors SourceCodeUtils.scala:humanizeFile
-pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
-  format!(
-    "{}:{}",
-    humanize_package(coordinate.package_coord),
-    coordinate.filepath.as_str()
-  )
-}
-
-// Mirrors SourceCodeUtils.scala:humanizePos(filenamesAndSources, codeLocationS)
-pub fn humanize_pos_code_map<'a>(
-  code_map: &FileCoordinateMap<'a, String>,
-  code_location_s: &CodeLocationS<'a>,
-) -> String {
-  let file = code_location_s.file.as_ref();
-  if code_location_s.offset < 0 {
-    return format!("{}:{}", humanize_file(file), code_location_s.offset);
-  }
-  let source = code_map
-    .get_by_value(file)
-    .expect("humanize_pos_code_map: coordinate not found in code map");
-  humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
-}
-
-// Mirrors SourceCodeUtils.scala:humanizePos
-pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
-  humanize_pos_path(&file_path.display().to_string(), source, pos)
-}
-
 // Mirrors SourceCodeUtils.scala:humanizePos(humanizedFilePath, source, pos)
 pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> String {
   let mut line = 0;
@@ -64,7 +25,116 @@ pub fn humanize_pos_path(humanized_file_path: &str, source: &str, pos: i32) -> S
   )
 }
 
-// Mirrors SourceCodeUtils.scala:nextThingAndRestOfLine
+/*
+
+package dev.vale
+
+import scala.collection.mutable.ArrayBuffer
+
+object SourceCodeUtils {
+*/
+// mig: fn humanize_package
+fn humanize_package<'a>(package_coord: &'a crate::utils::code_hierarchy::PackageCoordinate<'a>) -> String {
+  let mut result = package_coord.module.as_str().to_string();
+  for p in package_coord.packages.iter() {
+    result.push('.');
+    result.push_str(p.as_str());
+  }
+  result
+}
+/*
+  def humanizePackage(packageCoord: PackageCoordinate): String = {
+    val PackageCoordinate(module, packages) = packageCoord
+    module.str + packages.map("." + _.str).mkString("")
+  }
+*/
+// mig: fn humanize_file
+pub fn humanize_file<'a>(coordinate: &FileCoordinate<'a>) -> String {
+  format!(
+    "{}:{}",
+    humanize_package(coordinate.package_coord),
+    coordinate.filepath.as_str()
+  )
+}
+/*
+  def humanizeFile(coordinate: FileCoordinate): String = {
+    val FileCoordinate(packageCoord, filepath) = coordinate
+    humanizePackage(packageCoord) + ":" + filepath
+  }
+*/
+// mig: fn humanize_pos
+pub fn humanize_pos_code_map<'a>(
+  code_map: &FileCoordinateMap<'a, String>,
+  code_location_s: &CodeLocationS<'a>,
+) -> String {
+  let file = code_location_s.file.as_ref();
+  if code_location_s.offset < 0 {
+    return format!("{}:{}", humanize_file(file), code_location_s.offset);
+  }
+  let source = code_map
+    .get_by_value(file)
+    .expect("humanize_pos_code_map: coordinate not found in code map");
+  humanize_pos_path(&humanize_file(file), source, code_location_s.offset)
+}
+/*
+  def humanizePos(
+    filenamesAndSources: FileCoordinateMap[String],
+    codeLocationS: CodeLocationS):
+  String = {
+    val CodeLocationS(file, pos) = codeLocationS
+//    if (file.isInternal) {
+//      return humanizeFile(file)
+//    }
+
+    if (codeLocationS.offset < 0) {
+      return humanizeFile(file) + ":" + codeLocationS.offset.toString
+    }
+
+    val source = filenamesAndSources(file)
+
+    humanizePos(humanizeFile(file), source, pos)
+  }
+*/
+// mig: fn humanize_pos
+pub fn humanize_pos(file_path: &Path, source: &str, pos: i32) -> String {
+  humanize_pos_path(&file_path.display().to_string(), source, pos)
+}
+/*
+  def humanizePos(
+    humanizedFilePath: String,
+    source: String,
+    pos: Int):
+  String = {
+    var line = 0
+    var lineBegin = 0
+    var i = 0
+    while (i < pos) {
+      if (source(i) == '\n') {
+        lineBegin = i + 1
+        line = line + 1
+      }
+      i = i + 1
+    }
+    humanizedFilePath + ":" + (line + 1) + ":" + (i - lineBegin + 1)
+  }
+*/
+// mig: fn next_thing_and_rest_of_line
+fn next_thing_and_rest_of_line_code_map<'a>(
+  _code_map: &FileCoordinateMap<'a, String>,
+  _file: &FileCoordinate<'a>,
+  _position: i32,
+) -> String {
+  panic!("Unimplemented: next_thing_and_rest_of_line");
+}
+/*
+  def nextThingAndRestOfLine(
+      filenamesAndSources: FileCoordinateMap[String],
+      file: FileCoordinate,
+      position: Int): String = {
+    nextThingAndRestOfLine(filenamesAndSources(file), position)
+  }
+*/
+// mig: fn next_thing_and_rest_of_line
 pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
   let remaining = &source[pos..];
   remaining
@@ -74,8 +144,30 @@ pub fn next_thing_and_rest_of_line(source: &str, pos: usize) -> String {
     .trim()
     .to_string()
 }
-
-// Mirrors SourceCodeUtils.scala:lineRangeContaining
+/*
+  def nextThingAndRestOfLine(
+    text: String,
+    position: Int): String = {
+    // TODO: can optimize this
+    text.slice(position, text.length).trim().split("\\n")(0).trim()
+  }
+*/
+// mig: fn line_begin
+fn line_begin<'a>(
+  _code_map: &FileCoordinateMap<'a, String>,
+  _code_location_s: &CodeLocationS<'a>,
+) -> CodeLocationS<'a> {
+  panic!("Unimplemented: line_begin");
+}
+/*
+  def lineBegin(
+    filenamesAndSources: FileCoordinateMap[String],
+    codeLocationS: CodeLocationS):
+  CodeLocationS = {
+    lineRangeContaining(filenamesAndSources, codeLocationS).begin
+  }
+*/
+// mig: fn line_range_containing
 pub fn line_range_containing<'a>(
   code_map: &FileCoordinateMap<'a, String>,
   code_location_s: &CodeLocationS<'a>,
@@ -132,8 +224,36 @@ pub fn line_range_containing<'a>(
   }
   panic!("line_range_containing: offset beyond text");
 }
-
-// Mirrors SourceCodeUtils.scala:linesBetween
+/*
+  def lineRangeContaining(
+    filenamesAndSources: FileCoordinateMap[String],
+    codeLocationS: CodeLocationS):
+  RangeS = {
+    val CodeLocationS(file, offset) = codeLocationS
+    if (offset < 0) {
+      return RangeS(CodeLocationS(file, -1), CodeLocationS(file, 0))
+    }
+    val text = filenamesAndSources(file)
+    // TODO: can optimize this perhaps
+    var lineBegin = 0;
+    while (lineBegin < text.length) {
+      val lineEnd =
+        text.indexOf('\n', lineBegin) match {
+          case -1 => return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, text.length))
+          case other => other
+        }
+      if (lineBegin <= offset && offset <= lineEnd) {
+        return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineEnd))
+      }
+      lineBegin = lineEnd + 1
+    }
+    if (offset == text.length) {
+      return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineBegin))
+    }
+    vfail()
+  }
+*/
+// mig: fn lines_between
 pub fn lines_between<'a>(
   code_map: &FileCoordinateMap<'a, String>,
   begin_code_loc: &CodeLocationS<'a>,
@@ -182,126 +302,7 @@ pub fn lines_between<'a>(
   }
   result
 }
-
-// Mirrors SourceCodeUtils.scala:lineContaining
-pub fn line_containing<'a>(
-  code_map: &FileCoordinateMap<'a, String>,
-  code_location_s: &CodeLocationS<'a>,
-) -> String {
-  if code_location_s.file.as_ref().is_internal() {
-    return humanize_file(code_location_s.file.as_ref());
-  }
-  let range = line_range_containing(code_map, code_location_s);
-  let text = code_map
-    .get_by_value(code_location_s.file.as_ref())
-    .expect("line_containing: coordinate not found in code map");
-  let begin = range.begin.offset as usize;
-  let end = range.end.offset as usize;
-  text[begin..end].to_string()
-}
-
 /*
-
-package dev.vale
-
-import scala.collection.mutable.ArrayBuffer
-
-object SourceCodeUtils {
-  def humanizePackage(packageCoord: PackageCoordinate): String = {
-    val PackageCoordinate(module, packages) = packageCoord
-    module.str + packages.map("." + _.str).mkString("")
-  }
-
-  def humanizeFile(coordinate: FileCoordinate): String = {
-    val FileCoordinate(packageCoord, filepath) = coordinate
-    humanizePackage(packageCoord) + ":" + filepath
-  }
-
-  def humanizePos(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  String = {
-    val CodeLocationS(file, pos) = codeLocationS
-//    if (file.isInternal) {
-//      return humanizeFile(file)
-//    }
-
-    if (codeLocationS.offset < 0) {
-      return humanizeFile(file) + ":" + codeLocationS.offset.toString
-    }
-
-    val source = filenamesAndSources(file)
-
-    humanizePos(humanizeFile(file), source, pos)
-  }
-
-  def humanizePos(
-    humanizedFilePath: String,
-    source: String,
-    pos: Int):
-  String = {
-    var line = 0
-    var lineBegin = 0
-    var i = 0
-    while (i < pos) {
-      if (source(i) == '\n') {
-        lineBegin = i + 1
-        line = line + 1
-      }
-      i = i + 1
-    }
-    humanizedFilePath + ":" + (line + 1) + ":" + (i - lineBegin + 1)
-  }
-
-  def nextThingAndRestOfLine(
-      filenamesAndSources: FileCoordinateMap[String],
-      file: FileCoordinate,
-      position: Int): String = {
-    nextThingAndRestOfLine(filenamesAndSources(file), position)
-  }
-
-  def nextThingAndRestOfLine(
-    text: String,
-    position: Int): String = {
-    // TODO: can optimize this
-    text.slice(position, text.length).trim().split("\\n")(0).trim()
-  }
-
-  def lineBegin(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  CodeLocationS = {
-    lineRangeContaining(filenamesAndSources, codeLocationS).begin
-  }
-
-  def lineRangeContaining(
-    filenamesAndSources: FileCoordinateMap[String],
-    codeLocationS: CodeLocationS):
-  RangeS = {
-    val CodeLocationS(file, offset) = codeLocationS
-    if (offset < 0) {
-      return RangeS(CodeLocationS(file, -1), CodeLocationS(file, 0))
-    }
-    val text = filenamesAndSources(file)
-    // TODO: can optimize this perhaps
-    var lineBegin = 0;
-    while (lineBegin < text.length) {
-      val lineEnd =
-        text.indexOf('\n', lineBegin) match {
-          case -1 => return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, text.length))
-          case other => other
-        }
-      if (lineBegin <= offset && offset <= lineEnd) {
-        return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineEnd))
-      }
-      lineBegin = lineEnd + 1
-    }
-    if (offset == text.length) {
-      return RangeS(CodeLocationS(file, lineBegin), CodeLocationS(file, lineBegin))
-    }
-    vfail()
-  }
-
   // Includes the line containing the begin and end code locs.
   def linesBetween(
     filenamesAndSources: FileCoordinateMap[String],
@@ -334,7 +335,24 @@ object SourceCodeUtils {
       RangeS(CodeLocationS(file, begin), CodeLocationS(file, end))
     }).toVector
   }
-
+*/
+// mig: fn line_containing
+pub fn line_containing<'a>(
+  code_map: &FileCoordinateMap<'a, String>,
+  code_location_s: &CodeLocationS<'a>,
+) -> String {
+  if code_location_s.file.as_ref().is_internal() {
+    return humanize_file(code_location_s.file.as_ref());
+  }
+  let range = line_range_containing(code_map, code_location_s);
+  let text = code_map
+    .get_by_value(code_location_s.file.as_ref())
+    .expect("line_containing: coordinate not found in code map");
+  let begin = range.begin.offset as usize;
+  let end = range.end.offset as usize;
+  text[begin..end].to_string()
+}
+/*
   def lineContaining(
       filenamesAndSources: FileCoordinateMap[String],
       codeLocationS: CodeLocationS):
@@ -347,5 +365,7 @@ object SourceCodeUtils {
     val text = filenamesAndSources(codeLocationS.file)
     text.substring(lineBegin, lineEnd)
   }
+*/
+/*
 }
 */
