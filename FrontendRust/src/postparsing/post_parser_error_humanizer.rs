@@ -11,10 +11,41 @@ import dev.vale.postparsing.rules._
 
 object PostParserErrorHumanizer {
 */
-fn humanize<'a>(
-  _err: &crate::postparsing::post_parser::ICompileErrorS<'a>,
-) -> String {
-  panic!("Unimplemented humanize");
+use crate::postparsing::names::{INameS, IVarNameS};
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::utils::range::{CodeLocationS, RangeS};
+
+pub fn humanize<'a, HP, LB, LRC, LC>(
+  humanize_pos: HP,
+  _lines_between: LB,
+  _line_range_containing: LRC,
+  line_containing: LC,
+  err: &'a ICompileErrorS<'a>,
+) -> String
+where
+  HP: Fn(&CodeLocationS<'a>) -> String,
+  LB: Fn(&CodeLocationS<'a>, &CodeLocationS<'a>) -> Vec<RangeS<'a>>,
+  LRC: Fn(&CodeLocationS<'a>) -> RangeS<'a>,
+  LC: Fn(&CodeLocationS<'a>) -> String,
+{
+  let error_str_body = match err {
+    ICompileErrorS::VariableNameAlreadyExists(x) => {
+      format!(
+        "Local named {} already exists!\n(If you meant to modify the variable, use the `set` keyword beforehand.)",
+        humanize_name(INameS::VarName(x.name.clone()))
+      )
+    }
+    ICompileErrorS::InterfaceMethodNeedsSelf(_) => {
+      "Interface's method needs a virtual param of interface's type!".to_string()
+    }
+    ICompileErrorS::ExternHasBodyS(_) => "Extern function can't have a body too.".to_string(),
+    _ => panic!("Unimplemented humanize branch for {:?}", err),
+  };
+  let range = err.range();
+  let pos_str = humanize_pos(&range.begin);
+  let next_stuff = line_containing(&range.begin);
+  let error_id = "S";
+  format!("{} error {}: {}\n{}\n", pos_str, error_id, error_str_body, next_stuff)
 }
 /*
   def humanize(
@@ -127,10 +158,14 @@ fn humanize_identifiability_rule_errorr<'a>(
     }
   }
 */
-fn humanize_name<'a>(
-  _name: crate::postparsing::names::INameS<'a>,
-) -> String {
-  panic!("Unimplemented humanize_name");
+fn humanize_name<'a>(name: INameS<'a>) -> String {
+  match name {
+    INameS::VarName(var_name) => match var_name {
+      IVarNameS::CodeVarName(n) => n.as_str().to_string(),
+      _ => panic!("Unimplemented humanize_name branch for IVarNameS"),
+    },
+    _ => panic!("Unimplemented humanize_name branch for INameS"),
+  }
 }
 /*
   def humanizeName(name: INameS): String = {

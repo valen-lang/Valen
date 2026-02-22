@@ -1,4 +1,5 @@
 use crate::utils::code_hierarchy::FileCoordinate;
+use crate::Interner;
 use std::sync::Arc;
 
 /*
@@ -44,6 +45,24 @@ pub struct CodeLocationS<'a> {
   pub offset: i32,
 }
 
+impl<'a> CodeLocationS<'a> {
+  // Keep in sync with CodeLocation2
+  pub fn test_zero(interner: &Interner<'a>) -> CodeLocationS<'a> {
+    Self::internal(interner, -1)
+  }
+
+  pub fn internal(interner: &Interner<'a>, internal_num: i32) -> CodeLocationS<'a> {
+    assert!(internal_num < 0, "CodeLocationS::internal - internal_num must be negative");
+    let package_coord =
+      interner.intern_package_coordinate(interner.intern(""), &[]);
+    let file = interner.intern_file_coordinate(package_coord, "internal");
+    CodeLocationS {
+      file: Arc::new(file.clone()),
+      offset: internal_num,
+    }
+  }
+}
+
 /*
 case class CodeLocationS(
   // The index in the original source code files list.
@@ -69,7 +88,16 @@ pub struct RangeS<'a> {
   pub end: CodeLocationS<'a>,
 }
 
-impl RangeS<'_> {
+impl<'a> RangeS<'a> {
+  // Should only be used in tests.
+  pub fn test_zero(interner: &Interner<'a>) -> RangeS<'a> {
+    let tz = CodeLocationS::test_zero(interner);
+    RangeS {
+      begin: tz.clone(),
+      end: tz,
+    }
+  }
+
   pub fn file(&self) -> &Arc<FileCoordinate<'_>> {
     &self.begin.file
   }

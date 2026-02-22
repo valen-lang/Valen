@@ -1,3 +1,17 @@
+use bumpalo::Bump;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::post_parser::{
+  ExternHasBodyS, ICompileErrorS, InterfaceMethodNeedsSelf, VariableNameAlreadyExists,
+};
+use crate::postparsing::post_parser_error_humanizer::humanize;
+use crate::postparsing::names::IVarNameS;
+use crate::utils::code_hierarchy::FileCoordinateMap;
+use crate::utils::range::RangeS;
+use crate::utils::source_code_utils::{
+  humanize_pos_code_map, line_containing, line_range_containing, lines_between,
+};
+use crate::{Interner, Keywords};
+
 /*
 package dev.vale.postparsing
 
@@ -9,6 +23,18 @@ import org.scalatest._
 
 class PostParserErrorHumanizerTests extends FunSuite with Matchers {
 */
+fn compile<'a, 'ctx, 'p>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
+  code: &str,
+) -> ProgramS<'a, 'p>
+where
+  'a: 'ctx,
+  'a: 'p,
+{
+  panic!("Unimplemented: compile");
+}
 /*
   private def compile(code: String): ProgramS = {
     val interner = new Interner()
@@ -24,17 +50,53 @@ class PostParserErrorHumanizerTests extends FunSuite with Matchers {
             e))
       }
       case Ok(t) => t.expectOne()
-    }
   }
+}
 */
+fn compile_for_error<'a, 'ctx, 'p>(
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  arena: &'p Bump,
+  code: &str,
+) -> ICompileErrorS<'a>
+where
+  'a: 'ctx,
+  'a: 'p,
+{
+  panic!("Unimplemented: compile_for_error");
+}
 /*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e
       case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
-    }
   }
+}
 */
+#[test]
+fn humanize_errors() {
+  let arena = Bump::new();
+  let interner = Interner::with_arena(&arena);
+  let code_map = FileCoordinateMap::<'_, String>::test(&interner, "blah blah blah\nblah blah blah".to_string());
+  let tz = RangeS::test_zero(&interner);
+
+  let humanize_pos = |x: &_| humanize_pos_code_map(&code_map, x);
+  let lines_between_fn = |x: &_, y: &_| lines_between(&code_map, x, y);
+  let line_range_containing_fn = |x: &_| line_range_containing(&code_map, x);
+  let line_containing_fn = |x: &_| line_containing(&code_map, x);
+
+  let err1 = ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
+    range: tz.clone(),
+    name: IVarNameS::CodeVarName(interner.intern("Spaceship")),
+  });
+  assert!(!humanize(humanize_pos, lines_between_fn, line_range_containing_fn, line_containing_fn, &err1).is_empty());
+
+  let err2 = ICompileErrorS::InterfaceMethodNeedsSelf(InterfaceMethodNeedsSelf { range: tz.clone() });
+  assert!(!humanize(humanize_pos, lines_between_fn, line_range_containing_fn, line_containing_fn, &err2).is_empty());
+
+  let err3 = ICompileErrorS::ExternHasBodyS(ExternHasBodyS { range: tz.clone() });
+  assert!(!humanize(humanize_pos, lines_between_fn, line_range_containing_fn, line_containing_fn, &err3).is_empty());
+}
 /*
   test("Humanize errors") {
     val interner = new Interner()
