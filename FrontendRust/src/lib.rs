@@ -16,6 +16,8 @@ pub mod simplifying;
 pub mod typing;
 pub mod utils;
 pub mod von;
+#[path = "solver/lib.rs"]
+pub mod solver;
 
 pub use interner::{Interner, StrI};
 pub use keywords::Keywords;

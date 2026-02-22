@@ -1,3 +1,4 @@
+/*
 package dev.vale.solver
 
 import dev.vale.{Collector, Err, Interner, Ok, RangeS, vassert, vfail}
@@ -6,6 +7,10 @@ import org.scalatest._
 import scala.collection.immutable.Map
 
 class SolverTests extends FunSuite with Matchers with Collector {
+*/
+// mig: const complex_rule_set
+const complex_rule_set_rules: Vec<()> = vec![];
+/*
   val complexRuleSet =
     Vector(
       Literal(-3L, "1448"),
@@ -16,20 +21,43 @@ class SolverTests extends FunSuite with Matchers with Collector {
       Equals(-1L, -5L),
       CoordComponents(-1L, -2L, -3L),
       Equals(-6L, -7L))
+*/
+// mig: const complex_rule_set_equals_rules
+const complex_rule_set_equals_rules: Vec<i32> = vec![];
+/*
   val complexRuleSetEqualsRules = Vector(3, 5, 7)
-
+*/
+/*
+*/
+// mig: fn test_simple_and_optimized
+    fn test_simple_and_optimized() {
+        panic!("Unimplemented: test_simple_and_optimized");
+    }
+/*
   def testSimpleAndOptimized(testName: String, testTags : org.scalatest.Tag*)(testFun : Boolean => scala.Any)(implicit pos : org.scalactic.source.Position) : scala.Unit = {
     test(testName + " (simple solver)", testTags: _*){ testFun(false) }(pos)
     test(testName + " (optimized solver)", testTags: _*){ testFun(true) }(pos)
   }
-
+*/
+// mig: fn simple_int_rule
+    #[test]
+    fn simple_int_rule() {
+        panic!("Unmigrated test: simple_int_rule");
+    }
+/*
   test("Simple int rule") {
     val rules =
       Vector(
         Literal(-1L, "1337"))
     getConclusions(rules, true) shouldEqual Map(-1L -> "1337")
   }
-
+*/
+// mig: fn equals_transitive
+    #[test]
+    fn equals_transitive() {
+        panic!("Unmigrated test: equals_transitive");
+    }
+/*
   test("Equals transitive") {
     val rules =
       Vector(
@@ -38,16 +66,26 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "1337", -2L -> "1337")
   }
-
-
+*/
+// mig: fn incomplete_solve
+    #[test]
+    fn incomplete_solve() {
+        panic!("Unmigrated test: incomplete_solve");
+    }
+/*
   test("Incomplete solve") {
     val rules =
       Vector(
         OneOf(-1L, Vector("1448", "1337")))
     getConclusions(rules, false) shouldEqual Map()
   }
-
-
+*/
+// mig: fn half_complete_solve
+    #[test]
+    fn half_complete_solve() {
+        panic!("Unmigrated test: half_complete_solve");
+    }
+/*
   test("Half-complete solve") {
     // Note how these two rules aren't connected to each other at all
     val rules =
@@ -56,8 +94,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
         Literal(-2L, "1337"))
     getConclusions(rules, false) shouldEqual Map(-2L -> "1337")
   }
-
-
+*/
+// mig: fn one_of
+    #[test]
+    fn one_of() {
+        panic!("Unmigrated test: one_of");
+    }
+/*
   test("OneOf") {
     val rules =
       Vector(
@@ -65,8 +108,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
         Literal(-1L, "1337"))
     getConclusions(rules, true) shouldEqual Map(-1L -> "1337")
   }
-
-
+*/
+// mig: fn solves_a_components_rule
+    #[test]
+    fn solves_a_components_rule() {
+        panic!("Unmigrated test: solves_a_components_rule");
+    }
+/*
   test("Solves a components rule") {
     val rules =
       Vector(
@@ -76,8 +124,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "1337/1448", -2L -> "1337", -3L -> "1448")
   }
-
-
+*/
+// mig: fn reverse_solve_a_components_rule
+    #[test]
+    fn reverse_solve_a_components_rule() {
+        panic!("Unmigrated test: reverse_solve_a_components_rule");
+    }
+/*
   test("Reverse-solve a components rule") {
     val rules =
       Vector(
@@ -86,8 +139,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "1337/1448", -2L -> "1337", -3L -> "1448")
   }
-
-
+*/
+// mig: fn test_infer_pack
+    #[test]
+    fn test_infer_pack() {
+        panic!("Unmigrated test: test_infer_pack");
+    }
+/*
   test("Test infer Pack") {
     val rules =
       Vector(
@@ -97,8 +155,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "1337", -2L -> "1448", -3L -> "1337,1448")
   }
-
-
+*/
+// mig: fn test_infer_pack_from_result
+    #[test]
+    fn test_infer_pack_from_result() {
+        panic!("Unmigrated test: test_infer_pack_from_result");
+    }
+/*
   test("Test infer Pack from result") {
     val rules =
       Vector(
@@ -107,8 +170,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "1337", -2L -> "1448", -3L -> "1337,1448")
   }
-
-
+*/
+// mig: fn test_infer_pack_from_empty_result
+    #[test]
+    fn test_infer_pack_from_empty_result() {
+        panic!("Unmigrated test: test_infer_pack_from_empty_result");
+    }
+/*
   test("Test infer Pack from empty result") {
     val rules =
       Vector(
@@ -117,22 +185,37 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-3L -> "")
   }
-
-
+*/
+// mig: fn test_cant_solve_empty_pack
+    #[test]
+    fn test_cant_solve_empty_pack() {
+        panic!("Unmigrated test: test_cant_solve_empty_pack");
+    }
+/*
   test("Test cant solve empty Pack") {
     val rules =
       Vector(
         Pack(-3L, Vector()))
     getConclusions(rules, false) shouldEqual Map()
   }
-
-
+*/
+// mig: fn complex_rule_set
+    #[test]
+    fn complex_rule_set() {
+        panic!("Unmigrated test: complex_rule_set");
+    }
+/*
   test("Complex rule set") {
     val conclusions = getConclusions(complexRuleSet, true)
     conclusions.get(-7L) shouldEqual Some("1337/1448/1337/1448")
   }
-
-
+*/
+// mig: fn test_receiving_struct_to_struct
+    #[test]
+    fn test_receiving_struct_to_struct() {
+        panic!("Unmigrated test: test_receiving_struct_to_struct");
+    }
+/*
   test("Test receiving struct to struct") {
     val rules =
       Vector(
@@ -141,8 +224,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "Firefly", -2L -> "Firefly")
   }
-
-
+*/
+// mig: fn test_receive_struct_from_sent_interface
+    #[test]
+    fn test_receive_struct_from_sent_interface() {
+        panic!("Unmigrated test: test_receive_struct_from_sent_interface");
+    }
+/*
   test("Test receive struct from sent interface") {
     val rules =
       Vector(
@@ -165,8 +253,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
       }
     }
   }
-
-
+*/
+// mig: fn test_receive_interface_from_sent_struct
+    #[test]
+    fn test_receive_interface_from_sent_struct() {
+        panic!("Unmigrated test: test_receive_interface_from_sent_struct");
+    }
+/*
   test("Test receive interface from sent struct") {
     val rules =
       Vector(
@@ -177,8 +270,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "ISpaceship", -2L -> "Firefly")
   }
-
-
+*/
+// mig: fn test_complex_solve_most_specific_ancestor
+    #[test]
+    fn test_complex_solve_most_specific_ancestor() {
+        panic!("Unmigrated test: test_complex_solve_most_specific_ancestor");
+    }
+/*
   test("Test complex solve: most specific ancestor") {
     val rules =
       Vector(
@@ -188,8 +286,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "Firefly", -2L -> "Firefly")
   }
-
-
+*/
+// mig: fn test_complex_solve_calculate_common_ancestor
+    #[test]
+    fn test_complex_solve_calculate_common_ancestor() {
+        panic!("Unmigrated test: test_complex_solve_calculate_common_ancestor");
+    }
+/*
   test("Test complex solve: calculate common ancestor") {
     val rules =
       Vector(
@@ -201,8 +304,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     getConclusions(rules, true) shouldEqual
       Map(-1L -> "ISpaceship", -2L -> "Firefly", -3L -> "Serenity")
   }
-
-
+*/
+// mig: fn test_complex_solve_descendant_satisfying_call
+    #[test]
+    fn test_complex_solve_descendant_satisfying_call() {
+        panic!("Unmigrated test: test_complex_solve_descendant_satisfying_call");
+    }
+/*
   test("Test complex solve: descendant satisfying call") {
     val rules =
       Vector(
@@ -218,8 +326,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
         -2 -> "Flamethrower:int",
         -3 -> "IWeapon")
   }
-
-
+*/
+// mig: fn partial_solve
+    #[test]
+    fn partial_solve() {
+        panic!("Unmigrated test: partial_solve");
+    }
+/*
   test("Partial Solve") {
     val interner = new Interner()
 
@@ -267,6 +380,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
     secondConclusions.toMap shouldEqual
       Map(-1 -> "Firefly", -2 -> "A", -3 -> "Firefly:A")
   }
+*/
+// mig: fn predicting
+    #[test]
+    fn predicting() {
+        panic!("Unmigrated test: predicting");
+    }
+/*
 //
 //  test("bork") {
 //    // It'll be nice to partially solve some rules, for example before we put them in the overload index.
@@ -290,7 +410,14 @@ class SolverTests extends FunSuite with Matchers with Collector {
     // we can figure out that #2 is 1337, even if we don't know #1 yet.
     // This is useful for recursive types.
     // See: Recursive Types Must Have Types Predicted (RTMHTP)
-
+*/
+// mig: fn solve_with_puzzler
+    fn solve_with_puzzler<R: super::test_rules::IRule>(
+        _puzzler: impl Fn(&R) -> Vec<Vec<i64>>,
+    ) -> std::collections::HashMap<i64, String> {
+        panic!("Unimplemented: solve_with_puzzler");
+    }
+/*
     def solveWithPuzzler(puzzler: IRule => Vector[Vector[Long]]) = {
       val interner = new Interner()
 
@@ -339,8 +466,13 @@ class SolverTests extends FunSuite with Matchers with Collector {
 //    vassert(ruleExecutionOrder.length == 3)
     conclusions shouldEqual Map(-1L -> "Firefly", -2L -> "1337", -3L -> "Firefly:1337")
   }
-
-
+*/
+// mig: fn test_conflict
+    #[test]
+    fn test_conflict() {
+        panic!("Unmigrated test: test_conflict");
+    }
+/*
   test("Test conflict") {
     val rules =
       Vector(
@@ -352,7 +484,12 @@ class SolverTests extends FunSuite with Matchers with Collector {
       }
     }
   }
-
+*/
+// mig: fn expect_solve_failure
+    fn expect_solve_failure<R: super::test_rules::IRule>(_rules: Vec<R>) {
+        panic!("Unimplemented: expect_solve_failure");
+    }
+/*
   private def expectSolveFailure(rules: IndexedSeq[IRule]):
   FailedSolve[IRule, Long, String, String] = {
     val interner = new Interner()
@@ -377,7 +514,16 @@ class SolverTests extends FunSuite with Matchers with Collector {
     }) {}
     vfail("Incorrectly completed the solve")
   }
-
+*/
+// mig: fn get_conclusions
+    fn get_conclusions<R: super::test_rules::IRule>(
+        _rules: Vec<R>,
+        _expect_complete_solve: bool,
+        _initially_known_runes: std::collections::HashMap<i64, String>,
+    ) -> std::collections::HashMap<i64, String> {
+        panic!("Unimplemented: get_conclusions");
+    }
+/*
   private def getConclusions(
     rules: IndexedSeq[IRule],
     expectCompleteSolve: Boolean,
@@ -411,3 +557,4 @@ class SolverTests extends FunSuite with Matchers with Collector {
     conclusionsMap
   }
 }
+*/

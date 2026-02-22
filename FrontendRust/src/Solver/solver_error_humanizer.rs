@@ -1,3 +1,4 @@
+/*
 package dev.vale.solver
 
 import dev.vale.{CodeLocationS, FileCoordinateMap, RangeS, repeatStr}
@@ -5,6 +6,28 @@ import dev.vale.SourceCodeUtils.{lineContaining, lineRangeContaining, linesBetwe
 import dev.vale.RangeS
 
 object SolverErrorHumanizer {
+*/
+use crate::utils::range::{CodeLocationS, RangeS};
+
+// mig: fn humanize_failed_solve
+pub fn humanize_failed_solve<'a, Rule, RuneId, Conclusion, ErrType, SolveResult>(
+  _code_map: impl Fn(&CodeLocationS<'a>) -> String,
+  _lines_between: impl Fn(&CodeLocationS<'a>, &CodeLocationS<'a>) -> Vec<RangeS<'a>>,
+  _line_range_containing: impl Fn(&CodeLocationS<'a>) -> RangeS<'a>,
+  _line_containing: impl Fn(&CodeLocationS<'a>) -> String,
+  _humanize_rune: impl Fn(&RuneId) -> String,
+  _humanize_conclusion: impl Fn(&Conclusion) -> String,
+  _humanize_rule_error: impl Fn(&ErrType) -> String,
+  _get_rule_range: impl Fn(&Rule) -> RangeS<'a>,
+  _get_rune_usages: impl Fn(&Rule) -> Vec<(RuneId, RangeS<'a>)>,
+  _rule_to_runes: impl Fn(&Rule) -> Vec<RuneId>,
+  _rule_to_string: impl Fn(&Rule) -> String,
+  _result: &SolveResult,
+) -> (String, Vec<CodeLocationS<'a>>)
+{
+  panic!("Unimplemented: humanize_failed_solve");
+}
+/*
   def humanizeFailedSolve[Rule, RuneID, Conclusion, ErrType](
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
@@ -111,3 +134,4 @@ object SolverErrorHumanizer {
   }
 
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.solver
 
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
@@ -5,9 +6,31 @@ import org.scalatest._
 
 import scala.collection.immutable.Map
 
+*/
+// mig: struct TestRuleSolver
+pub struct TestRuleSolver {
+    _interner: (),
+}
+/*
 class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
+*/
+// mig: impl TestRuleSolver
+impl TestRuleSolver {
+/*
+*/
+// mig: fn sanity_check_conclusion
+fn sanity_check_conclusion(&self, _env: &(), _state: &(), _rune: i64, _conclusion: &str) {
+    panic!("Unimplemented: sanity_check_conclusion");
+}
+/*
   override def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
 
+*/
+// mig: fn instantiate_ancestor_template
+fn instantiate_ancestor_template(&self, _descendants: Vec<String>, _ancestor_template: &str) -> String {
+    panic!("Unimplemented: instantiate_ancestor_template");
+}
+/*
   def instantiateAncestorTemplate(descendants: Vector[String], ancestorTemplate: String): String = {
     // IRL, we may want to doublecheck that all descendants *can* instantiate as the ancestor template.
     val descendant = descendants.head
@@ -20,6 +43,12 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     }
   }
 
+*/
+// mig: fn get_ancestors
+fn get_ancestors(&self, _descendant: &str, _include_self: bool) -> Vec<String> {
+    panic!("Unimplemented: get_ancestors");
+}
+/*
   def getAncestors(descendant: String, includeSelf: Boolean): Vector[String] = {
     val selfAndAncestors =
       getTemplate(descendant) match {
@@ -35,11 +64,29 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     selfAndAncestors ++ (if (includeSelf) List(descendant) else List())
   }
 
+*/
+// mig: fn get_template
+fn get_template(&self, _tyype: &str) -> String {
+    panic!("Unimplemented: get_template");
+}
+/*
   // Turns eg Flamethrower:int into Flamethrower. Firefly just stays Firefly.
   def getTemplate(tyype: String): String = {
     if (tyype.contains(":")) tyype.split(":")(0) else tyype
   }
 
+*/
+// mig: fn complex_solve
+fn complex_solve<SS, StS>(
+    &self,
+    _state: &(),
+    _env: &(),
+    _solver_state: &SS,
+    _step_state: &StS,
+) -> Result<(), crate::solver::ISolverError<i64, String, String>> {
+    panic!("Unimplemented: complex_solve");
+}
+/*
   override def complexSolve(state: Unit, env: Unit, solverState: ISolverState[IRule, Long, String], stepState: IStepState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
     val unsolvedRules = stepState.getUnsolvedRules()
     val receiverRunes = unsolvedRules.collect({ case Send(_, receiverRune) => receiverRune })
@@ -61,6 +108,20 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     Ok(())
   }
 
+*/
+// mig: fn solve
+fn solve<SS, StS, R: super::test_rules::IRule>(
+    &self,
+    _state: &(),
+    _env: &(),
+    _solver_state: &SS,
+    _rule_index: i32,
+    _rule: &R,
+    _step_state: &StS,
+) -> Result<(), crate::solver::ISolverError<i64, String, String>> {
+    panic!("Unimplemented: solve");
+}
+/*
   override def solve(state: Unit, env: Unit, solverState: ISolverState[IRule, Long, String], ruleIndex: Int, rule: IRule, stepState: IStepState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
     rule match {
       case Equals(leftRune, rightRune) => {
@@ -163,6 +224,17 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     }
   }
 
+*/
+// mig: fn solve_receives
+fn solve_receives(
+    &self,
+    _senders: Vec<String>,
+    _call_templates: Vec<String>,
+    _any_unknown_constraints: bool,
+) -> Option<String> {
+    panic!("Unimplemented: solve_receives");
+}
+/*
   private def solveReceives(
     senders: Vector[String],
     callTemplates: Vector[String],
@@ -189,6 +261,16 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     }
   }
 
+*/
+// mig: fn narrow
+fn narrow(
+    &self,
+    _ancestor_template_unnarrowed: std::collections::HashSet<String>,
+    _any_unknown_constraints: bool,
+) -> std::collections::HashSet<String> {
+    panic!("Unimplemented: narrow");
+}
+/*
   def narrow(
     ancestorTemplateUnnarrowed: Set[String],
     anyUnknownConstraints: Boolean):
@@ -211,4 +293,6 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     ancestorTemplate
   }
 
+}
+*/
 }
