@@ -39,8 +39,9 @@ pub enum IIdentifiabilityRuleError {}
 // be derived from the identifying runes.
 object IdentifiabilitySolver {
 */
-fn get_runes<'a>(_rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
-  panic!("Unimplemented get_runes");
+fn get_runes<'a, 's>(rule: &'s IRulexSR<'a>) -> Vec<IRuneS<'a>>
+where 'a: 's {
+  rule.rune_usages().into_iter().map(|u| u.rune).collect()
 }
 /*
   def getRunes(rule: IRulexSR): Vector[IRuneS] = {

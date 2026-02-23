@@ -49,8 +49,8 @@ pub enum IRulexSR<'a> {
   CoordComponents(CoordComponentsSR<'a>),
 }
 
-impl IRulexSR<'_> {
-  pub fn range(&self) -> &RangeS<'_> {
+impl<'a> IRulexSR<'a> {
+  pub fn range<'s>(&'s self) -> &'s RangeS<'a> {
     match self {
       IRulexSR::Placeholder(x) => &x.range,
       IRulexSR::Equals(x) => &x.range,
@@ -66,7 +66,7 @@ impl IRulexSR<'_> {
     }
   }
 
-  pub fn rune_usages(&self) -> Vec<RuneUsage<'_>> {
+  pub fn rune_usages<'s>(&'s self) -> Vec<RuneUsage<'a>> {
     match self {
       IRulexSR::Placeholder(_) => vec![],
       IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],

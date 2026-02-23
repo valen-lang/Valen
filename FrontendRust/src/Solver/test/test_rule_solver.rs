@@ -179,8 +179,8 @@ fn get_template(&self, tyype: &str) -> String {
 // mig: fn complex_solve_impl
 fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
     &self,
-    state: &(),
-    env: &(),
+    _state: &(),
+    _env: &(),
     solver_state: &mut S,
 ) -> Result<(), ISolverError<i64, String, String>> {
     let range_s = vec![RangeS::test_zero(self.interner)];
@@ -284,9 +284,9 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
 // mig: fn solve_impl
 fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
   &self,
-  state: &(),
-  env: &(),
-  rule_index: i32,
+  _state: &(),
+  _env: &(),
+  _rule_index: i32,
   rule: &TestRule,
   solver_state: &mut S,
 ) -> Result<(), ISolverError<i64, String, String>> {

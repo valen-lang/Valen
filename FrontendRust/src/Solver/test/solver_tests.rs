@@ -9,7 +9,7 @@ import scala.collection.immutable.Map
 class SolverTests extends FunSuite with Matchers with Collector {
 */
 // mig: const complex_rule_set
-const complex_rule_set_rules: Vec<()> = vec![];
+const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
 /*
   val complexRuleSet =
     Vector(
@@ -23,7 +23,7 @@ const complex_rule_set_rules: Vec<()> = vec![];
       Equals(-6L, -7L))
 */
 // mig: const complex_rule_set_equals_rules
-const complex_rule_set_equals_rules: Vec<i32> = vec![];
+const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
 /*
   val complexRuleSetEqualsRules = Vector(3, 5, 7)
 */
