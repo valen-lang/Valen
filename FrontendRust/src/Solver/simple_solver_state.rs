@@ -10,9 +10,6 @@ import scala.collection.mutable.ArrayBuffer
 object SimpleSolverState {
 */
 // mig: fn apply
-fn apply<Rule, Rune, Conclusion>() -> SimpleSolverState<Rule, Rune, Conclusion> {
-    panic!("Unimplemented: apply");
-}
 /*
   def apply[Rule, Rune, Conclusion](): SimpleSolverState[Rule, Rune, Conclusion] = {
     SimpleSolverState[Rule, Rune, Conclusion](
@@ -26,6 +23,12 @@ fn apply<Rule, Rune, Conclusion>() -> SimpleSolverState<Rule, Rune, Conclusion> 
 }
 
 */
+struct CurrentStep<Rule, Rune, Conclusion> {
+    step: super::Step<Rule, Rune, Conclusion>,
+    num_new_conclusions: i32,
+}
+/*
+*/
 // mig: struct SimpleSolverState
 pub struct SimpleSolverState<Rule, Rune, Conclusion> {
     steps: Vec<super::Step<Rule, Rune, Conclusion>>,
@@ -34,9 +37,8 @@ pub struct SimpleSolverState<Rule, Rune, Conclusion> {
     rules: Vec<Rule>,
     open_rule_to_puzzle_to_runes: std::collections::HashMap<i32, Vec<Vec<i32>>>,
     canonical_rune_to_conclusion: std::collections::HashMap<i32, Conclusion>,
+    current_step: Option<CurrentStep<Rule, Rune, Conclusion>>,
 }
-// mig: impl SimpleSolverState
-impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion> {
 /*
 case class SimpleSolverState[Rule, Rune, Conclusion](
   private var steps: Vector[Step[Rule, Rune, Conclusion]],
@@ -52,24 +54,60 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 ) extends ISolverState[Rule, Rune, Conclusion] {
 
 */
-// mig: fn equals
-    fn equals(&self, _obj: &dyn std::any::Any) -> bool {
-        panic!("Unimplemented: equals");
+// mig: impl SimpleSolverState
+impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion>
+where
+    Rule: Clone,
+    Rune: Clone + std::hash::Hash + Eq,
+    Conclusion: Clone + PartialEq,
+{
+    pub fn new() -> Self {
+        SimpleSolverState {
+            steps: vec![],
+            user_rune_to_canonical_rune: std::collections::HashMap::new(),
+            canonical_rune_to_user_rune: std::collections::HashMap::new(),
+            rules: vec![],
+            open_rule_to_puzzle_to_runes: std::collections::HashMap::new(),
+            canonical_rune_to_conclusion: std::collections::HashMap::new(),
+            current_step: None,
+        }
     }
+
+    // mig: fn remove_rule
+    fn remove_rule(&mut self, _rule_index: i32) {
+        panic!("Unimplemented: remove_rule");
+    }
+}
+
+// mig: impl ISolverState for SimpleSolverState
+impl<Rule, Rune, Conclusion> super::ISolverState<Rule, Rune, Conclusion>
+    for SimpleSolverState<Rule, Rune, Conclusion>
+where
+    Rule: Clone,
+    Rune: Clone + std::hash::Hash + Eq,
+    Conclusion: Clone + PartialEq,
+{
 /*
+    // MIGALLOW: No equals yet until we know it's really necessary
   override def equals(obj: Any): Boolean = vcurious();
-*/
-// mig: fn hash_code
-    fn hash_code(&self) -> i32 {
-        panic!("Unimplemented: hash_code");
-    }
-/*
+  // MIGALLOW: No hashCode yet until we know it's really necessary
   override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
 */
 // mig: fn deep_clone
-    fn deep_clone(&self) -> SimpleSolverState<Rule, Rune, Conclusion> {
-        panic!("Unimplemented: deep_clone");
+    fn deep_clone(&self) -> Self
+    where
+        Self: Sized,
+    {
+        SimpleSolverState {
+            steps: self.steps.clone(),
+            user_rune_to_canonical_rune: self.user_rune_to_canonical_rune.clone(),
+            canonical_rune_to_user_rune: self.canonical_rune_to_user_rune.clone(),
+            rules: self.rules.clone(),
+            open_rule_to_puzzle_to_runes: self.open_rule_to_puzzle_to_runes.clone(),
+            canonical_rune_to_conclusion: self.canonical_rune_to_conclusion.clone(),
+            current_step: None,
+        }
     }
 /*
   def deepClone(): SimpleSolverState[Rule, Rune, Conclusion] = {
@@ -95,24 +133,28 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
 */
 // mig: fn get_rule
-    fn get_rule(&self, _rule_index: i32) -> Rule {
-        panic!("Unimplemented: get_rule");
+    fn get_rule(&self, rule_index: i32) -> &Rule {
+        &self.rules[rule_index as usize]
     }
 /*
   override def getRule(ruleIndex: Int): Rule = rules(ruleIndex)
 
 */
 // mig: fn get_conclusion
-    fn get_conclusion(&self, _rune: Rune) -> Option<Conclusion> {
-        panic!("Unimplemented: get_conclusion");
+    fn get_conclusion(&self, rune: Rune) -> Option<Conclusion> {
+        let canonical = self.get_canonical_rune(rune);
+        self.canonical_rune_to_conclusion.get(&canonical).cloned()
     }
 /*
   override def getConclusion(rune: Rune): Option[Conclusion] = canonicalRuneToConclusion.get(getCanonicalRune(rune))
 
 */
 // mig: fn get_user_rune
-    fn get_user_rune(&self, _rune: i32) -> Rune {
-        panic!("Unimplemented: get_user_rune");
+    fn get_user_rune(&self, rune: i32) -> Rune {
+        self.canonical_rune_to_user_rune
+            .get(&rune)
+            .expect("rune must exist")
+            .clone()
     }
 /*
   override def getUserRune(rune: Int): Rune = canonicalRuneToUserRune(rune)
@@ -120,7 +162,10 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn get_conclusions
     fn get_conclusions(&self) -> Vec<(i32, Conclusion)> {
-        panic!("Unimplemented: get_conclusions");
+        self.canonical_rune_to_conclusion
+            .iter()
+            .map(|(k, v)| (*k, v.clone()))
+            .collect()
     }
 /*
   override def getConclusions(): Stream[(Int, Conclusion)] = {
@@ -130,7 +175,15 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn userify_conclusions
     fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
-        panic!("Unimplemented: userify_conclusions");
+        self.canonical_rune_to_conclusion
+            .iter()
+            .map(|(canonical_rune, conclusion)| {
+                (
+                    self.get_user_rune(*canonical_rune),
+                    conclusion.clone(),
+                )
+            })
+            .collect()
     }
 /*
   override def userifyConclusions(): Stream[(Rune, Conclusion)] = {
@@ -142,7 +195,10 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn get_all_runes
     fn get_all_runes(&self) -> std::collections::HashSet<i32> {
-        panic!("Unimplemented: get_all_runes");
+        self.open_rule_to_puzzle_to_runes
+            .values()
+            .flat_map(|v| v.iter().flat_map(|r| r.iter().cloned()))
+            .collect()
     }
 /*
   override def getAllRunes(): Set[Int] = {
@@ -151,8 +207,17 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
 */
 // mig: fn add_rune
-    fn add_rune(&mut self, _rune: Rune) -> i32 {
-        panic!("Unimplemented: add_rune");
+    fn add_rune(&mut self, rune: Rune) -> i32 {
+        assert!(
+            !self.user_rune_to_canonical_rune.contains_key(&rune),
+            "vassert: rune must not already be registered"
+        );
+        let new_canonical_rune = self.user_rune_to_canonical_rune.len() as i32;
+        self.user_rune_to_canonical_rune
+            .insert(rune.clone(), new_canonical_rune);
+        self.canonical_rune_to_user_rune
+            .insert(new_canonical_rune, rune);
+        new_canonical_rune
     }
 /*
   override def addRune(rune: Rune): Int = {
@@ -166,7 +231,7 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn get_all_rules
     fn get_all_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_all_rules");
+        self.rules.clone()
     }
 /*
   override def getAllRules(): Vector[Rule] = {
@@ -175,8 +240,10 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
 */
 // mig: fn add_rule
-    fn add_rule(&mut self, _rule: Rule) -> i32 {
-        panic!("Unimplemented: add_rule");
+    fn add_rule(&mut self, rule: Rule) -> i32 {
+        let new_canonical_rule = self.rules.len() as i32;
+        self.rules.push(rule);
+        new_canonical_rule
     }
 /*
   override def addRule(rule: Rule): Int = {
@@ -188,8 +255,13 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
 */
 // mig: fn get_canonical_rune
-    fn get_canonical_rune(&self, _rune: Rune) -> i32 {
-        panic!("Unimplemented: get_canonical_rune");
+    
+
+    fn get_canonical_rune(&self, rune: Rune) -> i32 {
+        *self
+            .user_rune_to_canonical_rune
+            .get(&rune)
+            .expect("vassertSome: rune must be registered")
     }
 /*
   override def getCanonicalRune(rune: Rune): Int = {
@@ -198,8 +270,12 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
 */
 // mig: fn add_puzzle
-    fn add_puzzle(&mut self, _rule_index: i32, _runes: Vec<i32>) {
-        panic!("Unimplemented: add_puzzle");
+    fn add_puzzle(&mut self, rule_index: i32, runes: Vec<i32>) {
+        let entry = self
+            .open_rule_to_puzzle_to_runes
+            .entry(rule_index)
+            .or_insert_with(Vec::new);
+        entry.push(runes);
     }
 /*
   override def addPuzzle(ruleIndex: Int, runes: Vector[Int]): Unit = {
@@ -210,7 +286,17 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn get_next_solvable
     fn get_next_solvable(&self) -> Option<i32> {
-        panic!("Unimplemented: get_next_solvable");
+        for (&rule_index, puzzle_to_runes) in &self.open_rule_to_puzzle_to_runes {
+            let has_solvable_puzzle = puzzle_to_runes.iter().any(|runes| {
+                runes
+                    .iter()
+                    .all(|r| self.canonical_rune_to_conclusion.contains_key(r))
+            });
+            if has_solvable_puzzle {
+                return Some(rule_index);
+            }
+        }
+        None
     }
 /*
   override def getNextSolvable(): Option[Int] = {
@@ -228,25 +314,46 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 */
 // mig: fn get_unsolved_rules
     fn get_unsolved_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_unsolved_rules");
+        self.open_rule_to_puzzle_to_runes
+            .keys()
+            .map(|&idx| self.rules[idx as usize].clone())
+            .collect()
     }
 /*
   override def getUnsolvedRules(): Vector[Rule] = {
     openRuleToPuzzleToRunes.keySet.toVector.map(rules)
   }
 
-  // Returns whether it's a new conclusion
-  def concludeRune[ErrType](newlySolvedRune: Int, newConclusion: Conclusion):
 */
 // mig: fn conclude_rune
     fn conclude_rune<ErrType>(
         &mut self,
-        _newly_solved_rune: i32,
-        _new_conclusion: Conclusion,
+        newly_solved_rune: i32,
+        new_conclusion: Conclusion,
     ) -> Result<bool, super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: conclude_rune");
+        let is_new = match self.canonical_rune_to_conclusion.get(&newly_solved_rune) {
+            Some(existing) => {
+                if *existing != new_conclusion {
+                    return Err(super::ISolverError::SolverConflict(
+                        super::SolverConflict {
+                            rune: self.get_user_rune(newly_solved_rune),
+                            previous_conclusion: existing.clone(),
+                            new_conclusion,
+                            _phantom: std::marker::PhantomData,
+                        },
+                    ));
+                }
+                false
+            }
+            None => true,
+        };
+        self.canonical_rune_to_conclusion
+            .insert(newly_solved_rune, new_conclusion);
+        Ok(is_new)
     }
 /*
+  // Returns whether it's a new conclusion
+  def concludeRune[ErrType](newlySolvedRune: Int, newConclusion: Conclusion):
   Result[Boolean, ISolverError[Rune, Conclusion, ErrType]] = {
     val isNew =
       canonicalRuneToConclusion.get(newlySolvedRune) match {
@@ -266,18 +373,28 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     Ok(isNew)
   }
 
-  // Success returns number of new conclusions
-  override def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
 */
 // mig: fn mark_rules_solved
     fn mark_rules_solved<ErrType>(
         &mut self,
-        _rule_indices: Vec<i32>,
-        _new_conclusions: std::collections::HashMap<i32, Conclusion>,
+        rule_indices: Vec<i32>,
+        new_conclusions: std::collections::HashMap<i32, Conclusion>,
     ) -> Result<i32, super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: mark_rules_solved");
+        let mut num_new_conclusions = 0;
+        for (newly_solved_rune, new_conclusion) in new_conclusions {
+            let is_new = self.conclude_rune::<ErrType>(newly_solved_rune, new_conclusion)?;
+            if is_new {
+                num_new_conclusions += 1;
+            }
+        }
+        for rule_index in rule_indices {
+            self.remove_rule(rule_index);
+        }
+        Ok(num_new_conclusions)
     }
 /*
+  // Success returns number of new conclusions
+  override def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
   Result[Int, ISolverError[Rune, Conclusion, ErrType]] = {
     val numNewConclusions =
       newConclusions.map({ case (newlySolvedRune, newConclusion) =>
@@ -292,30 +409,74 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     Ok(numNewConclusions)
   }
 
-  private def removeRule(ruleIndex: Int) = {
 */
-// mig: fn remove_rule
-    fn remove_rule(&mut self, _rule_index: i32) {
-        panic!("Unimplemented: remove_rule");
+
+    fn step_conclude_rune<ErrType>(
+        &mut self,
+        _range_s: Vec<crate::utils::range::RangeS<'_>>,
+        rune: Rune,
+        conclusion: Conclusion,
+    ) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>> {
+        panic!("TODO: call conclude_rune")
+    }
+
+    fn step_add_rule(&mut self, rule: Rule, puzzles: Vec<Vec<Rune>>) {
+        let rule_index = self.add_rule(rule.clone());
+        for puzzle_user_runes in &puzzles {
+            let canonical_runes: Vec<i32> = puzzle_user_runes
+                .iter()
+                .map(|r| self.get_canonical_rune(r.clone()))
+                .collect();
+            self.add_puzzle(rule_index, canonical_runes.clone());
+        }
+        let current = self
+            .current_step
+            .as_mut()
+            .expect("step_add_rule called outside of step");
+        current.step.added_rules.push(rule);
+    }
+
+    fn begin_step(&mut self, complex: bool, solved_rules: Vec<(i32, Rule)>) {
+        self.current_step = Some(CurrentStep {
+            step: super::Step {
+                complex,
+                solved_rules,
+                added_rules: vec![],
+                conclusions: std::collections::HashMap::new(),
+            },
+            num_new_conclusions: 0,
+        });
+    }
+
+    fn end_step(
+        &mut self,
+        rule_indices_to_remove: Vec<i32>,
+    ) -> (super::Step<Rule, Rune, Conclusion>, i32) {
+        let current = self
+            .current_step
+            .take()
+            .expect("end_step called without begin_step");
+        for idx in rule_indices_to_remove {
+            self.remove_rule(idx);
+        }
+        self.steps.push(current.step.clone());
+        (current.step, current.num_new_conclusions)
+    }
+
+    fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
+        self.steps.clone()
     }
 }
+
 /*
+  private def removeRule(ruleIndex: Int) = {
     openRuleToPuzzleToRunes = openRuleToPuzzleToRunes - ruleIndex
   }
 
+
+  // MIGALLOW: No SimpleStepState in Rust
   class SimpleStepState(
-*/
-// mig: struct SimpleStepState
-pub struct SimpleStepState<Rule, Rune, Conclusion> {
-    _rule_to_puzzles: std::marker::PhantomData<fn(Rule) -> Vec<Vec<Rune>>>,
-    _complex: bool,
-    _rules: Vec<(i32, Rule)>,
-    _phantom_conclusion: std::marker::PhantomData<Conclusion>,
-}
-// mig: impl SimpleStepState
-impl<Rule, Rune, Conclusion> SimpleStepState<Rule, Rune, Conclusion> {
-/*
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
+  ruleToPuzzles: Rule => Vector[Vector[Rune]],
     complex: Boolean,
     rules: Vector[(Int, Rule)]
   ) extends IStepState[Rule, Rune, Conclusion] {
@@ -323,35 +484,17 @@ impl<Rule, Rune, Conclusion> SimpleStepState<Rule, Rune, Conclusion> {
     private var tentativeStep: Step[Rule, Rune, Conclusion] = Step(complex, rules, Vector(), Map())
 
     def close(): Step[Rule, Rune, Conclusion] = {
-*/
-// mig: fn close
-    fn close(&mut self) -> super::Step<Rule, Rune, Conclusion> {
-        panic!("Unimplemented: close");
-    }
-/*
       vassert(alive)
       alive = false
       tentativeStep
     }
 
     override def getConclusion(requestedUserRune: Rune): Option[Conclusion] = {
-*/
-// mig: fn get_conclusion
-    fn get_conclusion(&self, _requested_user_rune: Rune) -> Option<Conclusion> {
-        panic!("Unimplemented: get_conclusion");
-    }
-/*
       vassert(alive)
       SimpleSolverState.this.getConclusion(requestedUserRune)
     }
 
     override def addRule(rule: Rule): Unit = {
-*/
-// mig: fn add_rule
-    fn add_rule(&mut self, _rule: Rule) {
-        panic!("Unimplemented: add_rule");
-    }
-/*
       vassert(alive)
       val ruleIndex = SimpleSolverState.this.addRule(rule)
       tentativeStep = tentativeStep.copy(addedRules = tentativeStep.addedRules :+ rule)
@@ -362,48 +505,17 @@ impl<Rule, Rune, Conclusion> SimpleStepState<Rule, Rune, Conclusion> {
     }
 
     override def getUnsolvedRules(): Vector[Rule] = {
-*/
-// mig: fn get_unsolved_rules
-    fn get_unsolved_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_unsolved_rules");
-    }
-/*
       vassert(alive)
       SimpleSolverState.this.getUnsolvedRules()
     }
 
     override def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedUserRune: Rune, conclusion: Conclusion): Unit = {
-*/
-// mig: fn conclude_rune
-    fn conclude_rune<ErrType>(
-        &mut self,
-        _range_s: Vec<()>,
-        _newly_solved_user_rune: Rune,
-        _conclusion: Conclusion,
-    ) {
-        panic!("Unimplemented: conclude_rune");
-    }
-}
-/*
       vassert(alive)
-//      val newlySolvedCanonicalRune = SimpleSolverState.this.userRuneToCanonicalRune(newlySolvedUserRune)
       tentativeStep = tentativeStep.copy(conclusions = tentativeStep.conclusions + (newlySolvedUserRune -> conclusion))
-//      Ok(true)
     }
   }
 
   override def initialStep[ErrType](
-*/
-// mig: fn initial_step
-impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion> {
-    fn initial_step<ErrType, StS>(
-        &mut self,
-        _rule_to_puzzles: impl Fn(Rule) -> Vec<Vec<Rune>>,
-        _step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: initial_step");
-    }
-/*
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
     step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
   Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
@@ -422,18 +534,6 @@ impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion> {
   }
 
   override def simpleStep[ErrType](
-*/
-// mig: fn simple_step
-    fn simple_step<ErrType, StS>(
-        &mut self,
-        _rule_to_puzzles: impl Fn(Rule) -> Vec<Vec<Rune>>,
-        _rule_index: i32,
-        _rule: Rule,
-        _step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: simple_step");
-    }
-/*
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
     ruleIndex: Int,
     rule: Rule,
@@ -454,16 +554,6 @@ impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion> {
   }
 
   override def complexStep[ErrType](
-*/
-// mig: fn complex_step
-    fn complex_step<ErrType, StS>(
-        &mut self,
-        _rule_to_puzzles: impl Fn(Rule) -> Vec<Vec<Rune>>,
-        _step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: complex_step");
-    }
-/*
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
     step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
   Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
@@ -481,13 +571,6 @@ impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion> {
     }
   }
 
-*/
-// mig: fn get_steps
-    fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
-        panic!("Unimplemented: get_steps");
-    }
-}
-/*
   override def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream
 }
 */

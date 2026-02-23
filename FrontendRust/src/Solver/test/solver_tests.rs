@@ -330,7 +330,60 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn partial_solve
     #[test]
     fn partial_solve() {
-        panic!("Unmigrated test: partial_solve");
+        use super::test_rules::{Call, Literal, TestRule};
+        use crate::solver::Solver;
+        use crate::utils::range::RangeS;
+        use bumpalo::Bump;
+
+        let arena = Bump::new();
+        let interner = crate::Interner::with_arena(&arena);
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal { rune: -2, value: "A".to_string() }),
+            TestRule::Call(Call {
+                result_rune: -3,
+                name_rune: -1,
+                arg_rune: -2,
+            }),
+        ];
+        let all_runes: Vec<i64> = {
+            let mut v: Vec<i64> = rules.iter().flat_map(|r| r.all_runes()).collect();
+            v.sort();
+            v.dedup();
+            v
+        };
+        let delegate = super::test_rule_solver::TestRuleSolver {
+            interner: &interner,
+        };
+        let mut solver = Solver::new(
+            true,
+            delegate,
+            vec![RangeS::test_zero(&interner)],
+            rules,
+            std::collections::HashMap::new(),
+            all_runes,
+        );
+
+        while solver.advance(&(), &()).expect("advance") {}
+        let first_conclusions: std::collections::HashMap<i64, String> =
+            solver.userify_conclusions().into_iter().collect();
+        assert_eq!(first_conclusions.get(&-2), Some(&"A".to_string()));
+
+        let canonical_1 = solver.get_canonical_rune(&-1i64);
+        let mut new_conclusions = std::collections::HashMap::new();
+        new_conclusions.insert(canonical_1, "Firefly".to_string());
+        solver
+            .mark_rules_solved(vec![], new_conclusions)
+            .expect("mark_rules_solved");
+
+        while solver.advance(&(), &()).expect("advance") {}
+        let second_conclusions: std::collections::HashMap<i64, String> =
+            solver.userify_conclusions().into_iter().collect();
+        assert_eq!(second_conclusions.get(&-1), Some(&"Firefly".to_string()));
+        assert_eq!(second_conclusions.get(&-2), Some(&"A".to_string()));
+        assert_eq!(
+            second_conclusions.get(&-3),
+            Some(&"Firefly:A".to_string())
+        );
     }
 /*
   test("Partial Solve") {

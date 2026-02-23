@@ -61,3 +61,7 @@ If you make them into Rust enums, and the enums have fields in them, adhere to E
 
 Port the structure exactly as it is in Scala, with panics for the parts that aren't implemented yet.
 
+
+# P11: Returning Result is Fine
+
+Scala threw exceptions whenever it encountered an error. Rust should instead return Result. Because of this, a vast number of functions in Rust will have Result, because one of their indirect callees is returning a Result. This is fine.

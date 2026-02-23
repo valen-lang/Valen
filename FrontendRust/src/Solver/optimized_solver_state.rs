@@ -8,9 +8,33 @@ import scala.collection.mutable.ArrayBuffer
 
 object OptimizedSolverState {
 */
+// mig: struct CurrentStep (replaces OptimizedStepState inner class)
+struct CurrentStep<Rule, Rune, Conclusion> {
+    step: super::Step<Rule, Rune, Conclusion>,
+    num_new_conclusions: i32,
+}
+
 // mig: fn apply
 pub fn apply<Rule, Rune, Conclusion>() -> OptimizedSolverState<Rule, Rune, Conclusion> {
-    panic!("Unimplemented: apply");
+    OptimizedSolverState {
+        steps: Vec::new(),
+        user_rune_to_canonical_rune: std::collections::HashMap::new(),
+        canonical_rune_to_user_rune: std::collections::HashMap::new(),
+        rules: Vec::new(),
+        puzzle_to_rule: Vec::new(),
+        puzzle_to_runes: Vec::new(),
+        rule_to_puzzles: Vec::new(),
+        rune_to_puzzles: Vec::new(),
+        noop_rules: Vec::new(),
+        puzzle_to_executed: Vec::new(),
+        puzzle_to_num_unknown_runes: Vec::new(),
+        puzzle_to_unknown_runes: Vec::new(),
+        puzzle_to_index_in_num_unknowns: Vec::new(),
+        num_unknowns_to_num_puzzles: (0..=20).map(|_| 0).collect(),
+        num_unknowns_to_puzzles: (0..=20).map(|_| Vec::new()).collect(),
+        rune_to_conclusion: Vec::new(),
+        current_step: None,
+    }
 }
 /*
   def apply[Rule, Rune, Conclusion](): OptimizedSolverState[Rule, Rune, Conclusion] = {
@@ -37,7 +61,34 @@ pub fn apply<Rule, Rune, Conclusion>() -> OptimizedSolverState<Rule, Rune, Concl
 */
 // mig: struct OptimizedSolverState
 pub struct OptimizedSolverState<Rule, Rune, Conclusion> {
-    _marker: std::marker::PhantomData<(Rule, Rune, Conclusion)>,
+    steps: Vec<super::Step<Rule, Rune, Conclusion>>,
+
+    user_rune_to_canonical_rune: std::collections::HashMap<Rune, i32>,
+    canonical_rune_to_user_rune: std::collections::HashMap<i32, Rune>,
+
+    rules: Vec<Rule>,
+
+    puzzle_to_rule: Vec<i32>,
+    puzzle_to_runes: Vec<Vec<i32>>,
+
+    rule_to_puzzles: Vec<Vec<i32>>,
+
+    rune_to_puzzles: Vec<Vec<i32>>,
+
+    noop_rules: Vec<i32>,
+
+    puzzle_to_executed: Vec<bool>,
+
+    puzzle_to_num_unknown_runes: Vec<i32>,
+    puzzle_to_unknown_runes: Vec<Vec<i32>>,
+    puzzle_to_index_in_num_unknowns: Vec<i32>,
+
+    num_unknowns_to_num_puzzles: Vec<i32>,
+    num_unknowns_to_puzzles: Vec<Vec<i32>>,
+
+    rune_to_conclusion: Vec<Option<Conclusion>>,
+
+    current_step: Option<CurrentStep<Rule, Rune, Conclusion>>,
 }
 /*
 case class OptimizedSolverState[Rule, Rune, Conclusion](
@@ -101,14 +152,14 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
 ) extends ISolverState[Rule, Rune, Conclusion] {
 
 */
-// mig: impl OptimizedSolverState
-impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {}
-/*
-*/
-// mig: struct OptimizedStepState
-pub struct OptimizedStepState<Rule, Rune, Conclusion> {
-    _marker: std::marker::PhantomData<(Rule, Rune, Conclusion)>,
-}
+// mig: impl ISolverState for OptimizedSolverState (panic stubs for new step lifecycle methods)
+impl<Rule, Rune, Conclusion> super::ISolverState<Rule, Rune, Conclusion>
+    for OptimizedSolverState<Rule, Rune, Conclusion>
+where
+    Rule: Clone,
+    Rune: Clone,
+    Conclusion: Clone,
+{
 /*
   class OptimizedStepState(
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
@@ -117,14 +168,7 @@ pub struct OptimizedStepState<Rule, Rune, Conclusion> {
   ) extends IStepState[Rule, Rune, Conclusion] {
     private var alive = true
     private var tentativeStep: Step[Rule, Rune, Conclusion] = Step(complex, rules, Vector(), Map())
-
 */
-// mig: impl OptimizedStepState
-impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
-// mig: fn close
-    pub fn close(&self) -> crate::solver::Step<Rule, Rune, Conclusion> {
-        panic!("Unimplemented: close");
-    }
 /*
     def close(): Step[Rule, Rune, Conclusion] = {
       vassert(alive)
@@ -133,8 +177,9 @@ impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
     }
 */
 // mig: fn get_conclusion
-    pub fn get_conclusion(&self, _requested_user_rune: &Rune) -> Option<Conclusion> {
-        panic!("Unimplemented: get_conclusion");
+    
+    fn get_conclusion(&self, rune: Rune) -> Option<Conclusion> {
+        OptimizedSolverState::get_conclusion(self, rune)
     }
 /*
     override def getConclusion(requestedUserRune: Rune): Option[Conclusion] = {
@@ -143,9 +188,9 @@ impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
     }
 */
 // mig: fn add_rule
-    pub fn add_rule(&mut self, _rule: Rule) {
-        panic!("Unimplemented: add_rule");
-    }
+  fn add_rule(&mut self, rule: Rule) -> i32 {
+      OptimizedSolverState::add_rule(self, rule)
+  }
 /*
     override def addRule(rule: Rule): Unit = {
       vassert(alive)
@@ -158,9 +203,9 @@ impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
     }
 */
 // mig: fn get_unsolved_rules
-    pub fn get_unsolved_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_unsolved_rules");
-    }
+  fn get_unsolved_rules(&self) -> Vec<Rule> {
+      OptimizedSolverState::get_unsolved_rules(self)
+  }
 /*
     override def getUnsolvedRules(): Vector[Rule] = {
       vassert(alive)
@@ -168,13 +213,81 @@ impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
     }
 */
 // mig: fn conclude_rune
-    pub fn conclude_rune<ErrType>(
+    
+  fn conclude_rune<ErrType>(
+    &mut self,
+    newly_solved_rune: i32,
+    conclusion: Conclusion,
+  ) -> Result<bool, super::ISolverError<Rune, Conclusion, ErrType>> {
+      OptimizedSolverState::conclude_rune::<ErrType>(self, newly_solved_rune, conclusion)
+  }
+
+    // AFTERM: Collapse this delegating.
+    fn deep_clone(&self) -> Self {
+        OptimizedSolverState::deep_clone(self)
+    }
+    fn get_canonical_rune(&self, rune: Rune) -> i32 {
+        OptimizedSolverState::get_canonical_rune(self, rune)
+    }
+    fn get_user_rune(&self, rune: i32) -> Rune {
+        OptimizedSolverState::get_user_rune(self, rune)
+    }
+    fn get_rule(&self, rule_index: i32) -> &Rule {
+        OptimizedSolverState::get_rule(self, rule_index)
+    }
+    fn get_conclusions(&self) -> Vec<(i32, Conclusion)> {
+        OptimizedSolverState::get_conclusions(self)
+    }
+    fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
+        OptimizedSolverState::userify_conclusions(self)
+    }
+    fn get_next_solvable(&self) -> Option<i32> {
+        OptimizedSolverState::get_next_solvable(self)
+    }
+    fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
+        OptimizedSolverState::get_steps(self)
+    }
+    fn add_rune(&mut self, rune: Rune) -> i32 {
+        OptimizedSolverState::add_rune(self, rune)
+    }
+    fn get_all_runes(&self) -> std::collections::HashSet<i32> {
+        OptimizedSolverState::get_all_runes(self)
+    }
+    fn get_all_rules(&self) -> Vec<Rule> {
+        OptimizedSolverState::get_all_rules(self)
+    }
+    fn add_puzzle(&mut self, rule_index: i32, runes: Vec<i32>) {
+        OptimizedSolverState::add_puzzle(self, rule_index, runes)
+    }
+    fn sanity_check(&self) {
+        OptimizedSolverState::sanity_check(self)
+    }
+    fn mark_rules_solved<ErrType>(
         &mut self,
-        _range_s: &[()],
-        _newly_solved_user_rune: &Rune,
+        rule_indices: Vec<i32>,
+        new_conclusions: std::collections::HashMap<i32, Conclusion>,
+    ) -> Result<i32, super::ISolverError<Rune, Conclusion, ErrType>> {
+        OptimizedSolverState::mark_rules_solved::<ErrType>(self, rule_indices, new_conclusions)
+    }
+    fn begin_step(&mut self, _complex: bool, _solved_rules: Vec<(i32, Rule)>) {
+        panic!("Unimplemented: OptimizedSolverState::begin_step");
+    }
+    fn end_step(
+        &mut self,
+        _rule_indices_to_remove: Vec<i32>,
+    ) -> (super::Step<Rule, Rune, Conclusion>, i32) {
+        panic!("Unimplemented: OptimizedSolverState::end_step");
+    }
+    fn step_conclude_rune<ErrType>(
+        &mut self,
+        _range_s: Vec<crate::utils::range::RangeS<'_>>,
+        _rune: Rune,
         _conclusion: Conclusion,
-    ) {
-        panic!("Unimplemented: conclude_rune");
+    ) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>> {
+        panic!("Unimplemented: OptimizedSolverState::step_conclude_rune");
+    }
+    fn step_add_rule(&mut self, _rule: Rule, _puzzles: Vec<Vec<Rune>>) {
+        panic!("Unimplemented: OptimizedSolverState::step_add_rule");
     }
 }
 /*
@@ -186,6 +299,7 @@ impl<Rule, Rune, Conclusion> OptimizedStepState<Rule, Rune, Conclusion> {
     }
   }
 */
+
 // mig: impl OptimizedSolverState
 impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
 // mig: fn equals
@@ -203,7 +317,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   override def hashCode(): Int = vfail() // is mutable, should never be hashed
 */
 // mig: fn deep_clone
-    pub fn deep_clone(&self) -> OptimizedSolverState<Rule, Rune, Conclusion> {
+    pub fn deep_clone(&self) -> Self {
         panic!("Unimplemented: deep_clone");
     }
 /*
@@ -261,7 +375,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn get_steps
-    pub fn get_steps(&self) -> Vec<crate::solver::Step<Rule, Rune, Conclusion>> {
+    pub fn get_steps(&self) -> Vec<super::Step<Rule, Rune, Conclusion>> {
         panic!("Unimplemented: get_steps");
     }
 /*
@@ -314,7 +428,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn get_canonical_rune
-    pub fn get_canonical_rune(&self, _rune: &Rune) -> i32 {
+    pub fn get_canonical_rune(&self, _rune: Rune) -> i32 {
         panic!("Unimplemented: get_canonical_rune");
     }
 /*
@@ -336,7 +450,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn get_rule
-    pub fn get_rule(&self, _rule_index: usize) -> Rule {
+    pub fn get_rule(&self, _rule_index: i32) -> &Rule {
         panic!("Unimplemented: get_rule");
     }
 /*
@@ -345,7 +459,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn add_rule
-    pub fn add_rule(&mut self, _rule: Rule) -> usize {
+    pub fn add_rule(&mut self, _rule: Rule) -> i32 {
         panic!("Unimplemented: add_rule");
     }
 /*
@@ -380,7 +494,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn get_next_solvable
-    pub fn get_next_solvable(&self) -> Option<usize> {
+    pub fn get_next_solvable(&self) -> Option<i32> {
         panic!("Unimplemented: get_next_solvable");
     }
 /*
@@ -406,7 +520,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn get_conclusion
-    pub fn get_conclusion(&self, _rune: &Rune) -> Option<Conclusion> {
+    pub fn get_conclusion(&self, _rune: Rune) -> Option<Conclusion> {
         panic!("Unimplemented: get_conclusion");
     }
 /*
@@ -415,7 +529,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn add_rune
-    pub fn add_rune(&mut self, _rune: Rune) -> usize {
+    pub fn add_rune(&mut self, _rune: Rune) -> i32 {
         panic!("Unimplemented: add_rune");
     }
 /*
@@ -447,7 +561,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   override def getAllRules(): Vector[Rule] = rules.toVector
 */
 // mig: fn add_puzzle
-    pub fn add_puzzle(&mut self, _rule_index: usize, _runes_vec: &[i32]) {
+    pub fn add_puzzle(&mut self, _rule_index: i32, _runes: Vec<i32>) {
         panic!("Unimplemented: add_puzzle");
     }
 /*
@@ -499,9 +613,9 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
 // mig: fn mark_rules_solved
     pub fn mark_rules_solved<ErrType>(
         &mut self,
-        _rule_indices: &[usize],
-        _new_conclusions: &std::collections::HashMap<usize, Conclusion>,
-    ) -> Result<usize, ()> {
+        _rule_indices: Vec<i32>,
+        _new_conclusions: std::collections::HashMap<i32, Conclusion>,
+    ) -> Result<i32, super::ISolverError<Rune, Conclusion, ErrType>> {
         panic!("Unimplemented: mark_rules_solved");
     }
 /*
@@ -577,9 +691,9 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
 // mig: fn conclude_rune
     pub fn conclude_rune<ErrType>(
         &mut self,
-        _newly_solved_rune: usize,
+        _newly_solved_rune: i32,
         _conclusion: Conclusion,
-    ) -> Result<bool, ()> {
+    ) -> Result<bool, super::ISolverError<Rune, Conclusion, ErrType>> {
         panic!("Unimplemented: conclude_rune");
     }
 /*
@@ -666,7 +780,7 @@ impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
   }
 */
 // mig: fn remove_rule
-    pub fn remove_rule(&mut self, _rule_index: usize) {
+    pub fn remove_rule(&mut self, _rule_index: i32) {
         panic!("Unimplemented: remove_rule");
     }
 /*

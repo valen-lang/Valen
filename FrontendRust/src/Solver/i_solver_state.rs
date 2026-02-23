@@ -1,8 +1,4 @@
 /*
-*/
-// mig: trait IStepState
-pub trait IStepState<Rule, Rune, Conclusion> {
-/*
 package dev.vale.solver
 
 import dev.vale.{Err, RangeS, Result}
@@ -10,40 +6,38 @@ import dev.vale.{Err, RangeS, Result}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-trait IStepState[Rule, Rune, Conclusion] {
 */
-// mig: fn get_conclusion
-    fn get_conclusion(&self, rune: Rune) -> Option<Conclusion>;
-/*
-  def getConclusion(rune: Rune): Option[Conclusion]
-*/
-// mig: fn add_rule
-    fn add_rule(&mut self, rule: Rule);
-/*
-  def addRule(rule: Rule): Unit
-*/
-// mig: fn get_unsolved_rules
-    fn get_unsolved_rules(&self) -> Vec<Rule>;
-/*
-//  def addPuzzle(ruleIndex: Int, runes: Vector[Rune])
-  def getUnsolvedRules(): Vector[Rule]
-*/
-// mig: fn conclude_rune
-    fn conclude_rune<ErrType>(
-        &mut self,
-        range_s: Vec<crate::utils::range::RangeS<'_>>,
-        newly_solved_rune: Rune,
-        conclusion: Conclusion,
-    ) where Self: Sized;
-/*
-  def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedRune: Rune, conclusion: Conclusion): Unit
-}
-*/
-}
 // mig: trait ISolverState
 pub trait ISolverState<Rule, Rune, Conclusion> {
+  /*
+  // MIGALLOW: IStepState merged into ISolverState
+trait IStepState[Rule, Rune, Conclusion] {
+
+  def getConclusion(rune: Rune): Option[Conclusion]
+*/
+  // mig: fn step_add_rule
+  // from IStepState.addRule, takes puzzles explicitly
+  fn step_add_rule(&mut self, rule: Rule, puzzles: Vec<Vec<Rune>>);
+
 /*
+  def addRule(rule: Rule): Unit
+//  def addPuzzle(ruleIndex: Int, runes: Vector[Rune])
+  def getUnsolvedRules(): Vector[Rule]
+  */
+
+// mig: fn step_conclude_rune (from IStepState.concludeRune, commits immediately)
+fn step_conclude_rune<ErrType>(
+  &mut self,
+  range_s: Vec<crate::utils::range::RangeS<'_>>,
+  rune: Rune,
+  conclusion: Conclusion,
+) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>;
+
+  /*
+  def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedRune: Rune, conclusion: Conclusion): Unit
+}
 trait ISolverState[Rule, Rune, Conclusion] {
+// MIGALLOW: IStepState merged into ISolverState
 */
 // mig: fn deep_clone
     fn deep_clone(&self) -> Self
@@ -125,7 +119,9 @@ trait ISolverState[Rule, Rune, Conclusion] {
 // mig: fn sanity_check
     fn sanity_check(&self);
 /*
-  def sanityCheck(): Unit
+  // Success returns number of new conclusions
+  def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
+  Result[Int, ISolverError[Rune, Conclusion, ErrType]]
 */
 // mig: fn mark_rules_solved
     fn mark_rules_solved<ErrType>(
@@ -134,34 +130,13 @@ trait ISolverState[Rule, Rune, Conclusion] {
         new_conclusions: std::collections::HashMap<i32, Conclusion>,
     ) -> Result<i32, super::ISolverError<Rune, Conclusion, ErrType>>;
 /*
-  // Success returns number of new conclusions
-  def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
-  Result[Int, ISolverError[Rune, Conclusion, ErrType]]
-*/
-// mig: fn initial_step
-    fn initial_step<ErrType, F, StS>(
-        &mut self,
-        rule_to_puzzles: F,
-        step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>>
-    where
-        F: Fn(&Rule) -> Vec<Vec<Rune>>;
-/*
   def initialStep[ErrType](
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
     step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
   Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]]
 */
-// mig: fn simple_step
-    fn simple_step<ErrType, F, StS>(
-        &mut self,
-        rule_to_puzzles: F,
-        rule_index: i32,
-        rule: Rule,
-        step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>>
-    where
-        F: Fn(&Rule) -> Vec<Vec<Rune>>;
+// mig: fn begin_step (replaces initialStep/simpleStep/complexStep)
+    fn begin_step(&mut self, complex: bool, solved_rules: Vec<(i32, Rule)>);
 /*
   def simpleStep[ErrType](
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
@@ -170,21 +145,18 @@ trait ISolverState[Rule, Rune, Conclusion] {
     step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
   Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]]
 */
-// mig: fn complex_step
-    fn complex_step<ErrType, F, StS>(
+// mig: fn end_step
+    fn end_step(
         &mut self,
-        rule_to_puzzles: F,
-        step: impl FnOnce(&mut StS) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>>,
-    ) -> Result<super::Step<Rule, Rune, Conclusion>, super::ISolverError<Rune, Conclusion, ErrType>>
-    where
-        F: Fn(&Rule) -> Vec<Vec<Rune>>;
+        rule_indices_to_remove: Vec<i32>,
+    ) -> (super::Step<Rule, Rune, Conclusion>, i32);
 /*
   def complexStep[ErrType](
     ruleToPuzzles: Rule => Vector[Vector[Rune]],
     step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
   Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]]
 */
-// mig: fn conclude_rune
+    // mig: fn conclude_rune
     fn conclude_rune<ErrType>(
         &mut self,
         newly_solved_rune: i32,

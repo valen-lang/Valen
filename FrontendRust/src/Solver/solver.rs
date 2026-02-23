@@ -9,7 +9,12 @@ import scala.collection.mutable
 */
 use std::marker::PhantomData;
 
+use super::i_solver_state::ISolverState;
+use super::simple_solver_state::SimpleSolverState;
+use crate::utils::range::RangeS as RangeSTy;
+
 // mig: struct Step
+#[derive(Clone, Debug)]
 pub struct Step<Rule, Rune, Conclusion> {
     pub complex: bool,
     pub solved_rules: Vec<(i32, Rule)>,
@@ -85,6 +90,7 @@ case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
 }
 */
 // mig: struct FailedSolve
+#[derive(Debug)]
 pub struct FailedSolve<Rule, Rune, Conclusion, ErrType> {
     pub steps: Vec<Step<Rule, Rune, Conclusion>>,
     pub unsolved_rules: Vec<Rule>,
@@ -104,6 +110,7 @@ case class FailedSolve[Rule, Rune, Conclusion, ErrType](
 }
 */
 // mig: struct SolverConflict
+#[derive(Debug)]
 pub struct SolverConflict<Rune, Conclusion, ErrType> {
     pub rune: Rune,
     pub previous_conclusion: Conclusion,
@@ -122,6 +129,7 @@ case class SolverConflict[Rune, Conclusion, ErrType](
 }
 */
 // mig: struct RuleError
+#[derive(Debug)]
 pub struct RuleError<Rune, Conclusion, ErrType> {
     pub err: ErrType,
     pub _phantom: PhantomData<(Rune, Conclusion)>,
@@ -135,6 +143,7 @@ case class RuleError[Rune, Conclusion, ErrType](
 ) extends ISolverError[Rune, Conclusion, ErrType]
 */
 // mig: trait ISolverError
+#[derive(Debug)]
 pub enum ISolverError<Rune, Conclusion, ErrType> {
     SolverConflict(SolverConflict<Rune, Conclusion, ErrType>),
     RuleError(RuleError<Rune, Conclusion, ErrType>),
@@ -142,41 +151,27 @@ pub enum ISolverError<Rune, Conclusion, ErrType> {
 /*
 sealed trait ISolverError[Rune, Conclusion, ErrType]
 */
-// mig: trait ISolveRule
-pub trait ISolveRule<Rule, Rune, Env, State, Conclusion, ErrType> {
-    fn solve<SS, StS>(
-        &self,
-        _state: &State,
-        _env: &Env,
-        _solver_state: &SS,
-        _rule_index: i32,
-        _rule: &Rule,
-        _step_state: &StS,
-    ) -> Result<(), ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: solve");
-    }
-    fn complex_solve<SS, StS>(
-        &self,
-        _state: &State,
-        _env: &Env,
-        _solver_state: &SS,
-        _step_state: &StS,
-    ) -> Result<(), ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: complex_solve");
-    }
-    fn sanity_check_conclusion(&self, _env: &Env, _state: &State, _rune: &Rune, _conclusion: &Conclusion) {
-        panic!("Unimplemented: sanity_check_conclusion");
-    }
-}
+pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType> {
+  fn rule_to_puzzles(&self, rule: &Rule) -> Vec<Vec<Rune>>;
+  fn rule_to_runes(&self, rule: &Rule) -> Vec<Rune>;
 /*
 // Given enough user specified template params and param inputs, we should be able to
 // infer everything.
 // This class's purpose is to take those things, and see if it can figure out as many
 // inferences as possible.
 
+// MIGALLOW: ISolveRule -> SolverDelegate
 trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
 */
 // mig: fn solve
+fn solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
+  &self,
+  state: &State,
+  env: &Env,
+  rule_index: i32,
+  rule: &Rule,
+  solver_state: &mut S,
+) -> Result<(), ISolverError<Rune, Conclusion, ErrType>>;
 /*
   def solve(
     state: State,
@@ -189,6 +184,13 @@ trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
 
 */
 // mig: fn complex_solve
+
+fn complex_solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
+  &self,
+  state: &State,
+  env: &Env,
+  solver_state: &mut S,
+) -> Result<(), ISolverError<Rune, Conclusion, ErrType>>;
 /*
   // Called when we can't do any regular solves, we don't have enough
   // runes. This is where we do more interesting rules, like SMCMST.
@@ -202,27 +204,34 @@ trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
 
 */
 // mig: fn sanity_check_conclusion
+fn sanity_check_conclusion(&self, env: &Env, state: &State, rune: &Rune, conclusion: &Conclusion);
 /*
   def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
 }
+*/
+}
+
+type SolverStateImpl<Rule, Rune, Conclusion> = SimpleSolverState<Rule, Rune, Conclusion>;
+/*
 
 */
 // mig: struct Solver
-pub struct Solver<Rule, Rune, Env, State, Conclusion, ErrType> {
-    _sanity_check: bool,
-    _use_optimized_solver: bool,
-    _interner: (),
-    _rule_to_puzzles: (),
-    _rule_to_runes: (),
-    _solve_rule: (),
-    _setup_range: (),
-    _initial_rules: (),
-    _initially_known_runes: (),
-    _all_runes: (),
-    _phantom: PhantomData<(Rule, Rune, Env, State, Conclusion, ErrType)>,
+pub struct Solver<'a, Rule, Rune, Env, State, Conclusion, ErrType, D> {
+    sanity_check: bool,
+    solver_state: SolverStateImpl<Rule, Rune, Conclusion>,
+    delegate: D,
+    setup_range: Vec<RangeSTy<'a>>,
+    all_runes: Vec<Rune>,
+    _phantom: PhantomData<(Env, State, ErrType)>,
 }
 // mig: impl Solver
-impl<Rule, Rune, Env, State, Conclusion, ErrType> Solver<Rule, Rune, Env, State, Conclusion, ErrType> {
+impl<'a, Rule, Rune, Env, State, Conclusion, ErrType, D> Solver<'a, Rule, Rune, Env, State, Conclusion, ErrType, D>
+where
+    Rule: Clone,
+    Rune: Clone + std::hash::Hash + Eq,
+    Conclusion: Clone + PartialEq,
+    D: SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>,
+{
     /*
 class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     sanityCheck: Boolean,
@@ -235,7 +244,57 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     initialRules: IndexedSeq[Rule],
     initiallyKnownRunes: Map[Rune, Conclusion],
     allRunes: Vector[Rune]) {
-
+  */
+  pub fn new(
+    sanity_check: bool,
+    delegate: D,
+    setup_range: Vec<RangeSTy<'a>>,
+    initial_rules: Vec<Rule>,
+    initially_known_runes: std::collections::HashMap<Rune, Conclusion>,
+    all_runes: Vec<Rune>,
+  ) -> Self {
+    let mut solver_state = SolverStateImpl::new();
+    for rune in &all_runes {
+        solver_state.add_rune(rune.clone());
+    }
+    if sanity_check {
+        solver_state.sanity_check();
+    }
+    // manual_step equivalent: begin_step, step_conclude_rune for each known, end_step
+    solver_state.begin_step(false, vec![]);
+    for (rune, conclusion) in initially_known_runes {
+        let _ = solver_state.step_conclude_rune::<ErrType>(
+            setup_range.clone(),
+            rune,
+            conclusion,
+        );
+    }
+    let _ = solver_state.end_step(vec![]);
+    if sanity_check {
+        solver_state.sanity_check();
+    }
+    for rule in initial_rules {
+        let rule_index = solver_state.add_rule(rule.clone());
+        let puzzles = delegate.rule_to_puzzles(&rule);
+        for puzzle in puzzles {
+            let canonical_runes: Vec<i32> =
+                puzzle.iter().map(|r| solver_state.get_canonical_rune(r.clone())).collect();
+            solver_state.add_puzzle(rule_index, canonical_runes);
+        }
+        if sanity_check {
+            solver_state.sanity_check();
+        }
+    }
+    Solver {
+        sanity_check,
+        solver_state,
+        delegate,
+        setup_range,
+        all_runes,
+        _phantom: PhantomData,
+    }
+  }
+  /*
   private val solverState =
     if (useOptimizedSolver) {
       OptimizedSolverState[Rule, Rune, Conclusion]()
@@ -273,7 +332,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn get_all_rules
     pub fn get_all_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_all_rules");
+        self.solver_state.get_all_rules()
     }
 /*
   def getAllRules(): Vector[Rule] = {
@@ -282,8 +341,10 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
 */
     // mig: fn add_rules
-    pub fn add_rules(&mut self, _rules: Vec<Rule>) {
-        panic!("Unimplemented: add_rules");
+    pub fn add_rules(&mut self, rules: Vec<Rule>) {
+        for rule in rules {
+            self.add_rule(rule);
+        }
     }
 /*
   def addRules(rules: Vector[Rule]): Unit = {
@@ -292,8 +353,19 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
 */
     // mig: fn add_rule
-    pub fn add_rule(&mut self, _rule: Rule) {
-        panic!("Unimplemented: add_rule");
+    pub fn add_rule(&mut self, rule: Rule) {
+        let rule_index = self.solver_state.add_rule(rule.clone());
+        let puzzles = self.delegate.rule_to_puzzles(&rule);
+        for puzzle in puzzles {
+            let canonical_runes: Vec<i32> = puzzle
+                .iter()
+                .map(|r| self.solver_state.get_canonical_rune(r.clone()))
+                .collect();
+            self.solver_state.add_puzzle(rule_index, canonical_runes);
+        }
+        if self.sanity_check {
+            self.solver_state.sanity_check();
+        }
     }
 /*
   def addRule(rule: Rule): Unit = {
@@ -339,7 +411,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn userify_conclusions
     pub fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
-        panic!("Unimplemented: userify_conclusions");
+        self.solver_state.userify_conclusions()
     }
 /*
   def userifyConclusions(): Stream[(Rune, Conclusion)] = {
@@ -348,8 +420,8 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
 */
     // mig: fn get_conclusion
-    pub fn get_conclusion(&self, _rune: &Rune) -> Option<Conclusion> {
-        panic!("Unimplemented: get_conclusion");
+    pub fn get_conclusion(&self, rune: &Rune) -> Option<Conclusion> {
+        self.solver_state.get_conclusion(rune.clone())
     }
 /*
   def getConclusion(rune: Rune): Option[Conclusion] = {
@@ -359,7 +431,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn is_complete
     pub fn is_complete(&self) -> bool {
-        panic!("Unimplemented: is_complete");
+        self.solver_state.userify_conclusions().len() == self.all_runes.len()
     }
 /*
   def isComplete(): Boolean = {
@@ -371,10 +443,11 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     // mig: fn mark_rules_solved
     pub fn mark_rules_solved(
         &mut self,
-        _rule_indices: Vec<i32>,
-        _new_conclusions: std::collections::HashMap<i32, Conclusion>,
+        rule_indices: Vec<i32>,
+        new_conclusions: std::collections::HashMap<i32, Conclusion>,
     ) -> Result<i32, ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: mark_rules_solved");
+        self.solver_state
+            .mark_rules_solved(rule_indices, new_conclusions)
     }
 /*
   def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
@@ -384,8 +457,8 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
 */
     // mig: fn get_canonical_rune
-    pub fn get_canonical_rune(&self, _rune: &Rune) -> i32 {
-        panic!("Unimplemented: get_canonical_rune");
+    pub fn get_canonical_rune(&self, rune: &Rune) -> i32 {
+        self.solver_state.get_canonical_rune(rune.clone())
     }
 /*
   def getCanonicalRune(rune: Rune): Int = {
@@ -395,7 +468,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn get_steps
     pub fn get_steps(&self) -> Vec<Step<Rule, Rune, Conclusion>> {
-        panic!("Unimplemented: get_steps");
+        self.solver_state.get_steps()
     }
 /*
   def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = {
@@ -405,7 +478,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn get_all_runes
     pub fn get_all_runes(&self) -> std::collections::HashSet<i32> {
-        panic!("Unimplemented: get_all_runes");
+        self.solver_state.get_all_runes()
     }
 /*
   def getAllRunes(): Set[Int] = {
@@ -414,8 +487,8 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
 */
     // mig: fn get_user_rune
-    pub fn get_user_rune(&self, _rune: i32) -> Rune {
-        panic!("Unimplemented: get_user_rune");
+    pub fn get_user_rune(&self, rune: i32) -> Rune {
+        self.solver_state.get_user_rune(rune)
     }
 /*
   def getUserRune(rune: Int): Rune = {
@@ -425,7 +498,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 */
     // mig: fn get_unsolved_rules
     pub fn get_unsolved_rules(&self) -> Vec<Rule> {
-        panic!("Unimplemented: get_unsolved_rules");
+        self.solver_state.get_unsolved_rules()
     }
 /*
   def getUnsolvedRules(): Vector[Rule] = {
@@ -436,10 +509,74 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     // mig: fn advance
     pub fn advance(
         &mut self,
-        _env: &Env,
-        _state: &State,
+        env: &Env,
+        state: &State,
     ) -> Result<bool, FailedSolve<Rule, Rune, Conclusion, ErrType>> {
-        panic!("Unimplemented: advance");
+        if self.sanity_check {
+            self.solver_state.sanity_check();
+            for (rune, conclusion) in self.solver_state.userify_conclusions() {
+                self.delegate
+                    .sanity_check_conclusion(env, state, &rune, &conclusion);
+            }
+        }
+
+        // Stage 1: simple solve
+        if let Some(rule_index) = self.solver_state.get_next_solvable() {
+            let rule = self.solver_state.get_rule(rule_index).clone();
+            self.solver_state
+                .begin_step(false, vec![(rule_index, rule.clone())]);
+            match self.delegate.solve(
+                state,
+                env,
+                rule_index,
+                &rule,
+                &mut self.solver_state,
+            ) {
+                Ok(()) => {
+                    let (_step, _num_new) = self.solver_state.end_step(vec![rule_index]);
+                    if self.sanity_check {
+                        self.solver_state.sanity_check();
+                    }
+                    return Ok(true);
+                }
+                Err(e) => {
+                    return Err(FailedSolve {
+                        steps: self.solver_state.get_steps(),
+                        unsolved_rules: self.solver_state.get_unsolved_rules(),
+                        error: e,
+                    });
+                }
+            }
+        }
+
+        // Stage 2: complex solve
+        if !self.solver_state.get_unsolved_rules().is_empty() {
+            self.solver_state.begin_step(true, vec![]);
+            match self
+                .delegate
+                .complex_solve(state, env, &mut self.solver_state)
+            {
+                Ok(()) => {
+                    let (_step, num_new) = self.solver_state.end_step(vec![]);
+                    if self.sanity_check {
+                        self.solver_state.sanity_check();
+                    }
+                    if num_new > 0 {
+                        return Ok(true);
+                    }
+                }
+                Err(e) => {
+                    return Err(FailedSolve {
+                        steps: self.solver_state.get_steps(),
+                        unsolved_rules: self.solver_state.get_unsolved_rules(),
+                        error: e,
+                    });
+                }
+            }
+        }
+
+        // Stage 3: done
+        Ok(false)
     }
 /*
   // Returns true if there's more to be done, false if we've gotten as far as we can.
