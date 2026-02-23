@@ -42,7 +42,15 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn simple_int_rule
     #[test]
     fn simple_int_rule() {
-        panic!("Unmigrated test: simple_int_rule");
+        use super::test_rules::{Literal, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal { rune: -1, value: "1337".to_string() }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [(-1, "1337".to_string())].into_iter().collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Simple int rule") {
@@ -55,7 +63,23 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn equals_transitive
     #[test]
     fn equals_transitive() {
-        panic!("Unmigrated test: equals_transitive");
+        use super::test_rules::{Equals, Literal, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Equals(Equals {
+                left_rune: -2,
+                right_rune: -1,
+            }),
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "1337".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> =
+            [(-1, "1337".to_string()), (-2, "1337".to_string())].into_iter().collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Equals transitive") {
@@ -70,7 +94,16 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn incomplete_solve
     #[test]
     fn incomplete_solve() {
-        panic!("Unmigrated test: incomplete_solve");
+        use super::test_rules::{OneOf, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![TestRule::OneOf(OneOf {
+            coord_rune: -1,
+            possible_values: vec!["1448".to_string(), "1337".to_string()],
+        })];
+        let result = get_conclusions(rules, false, HashMap::new());
+        let expected: HashMap<i64, String> = HashMap::new();
+        assert_eq!(result, expected);
     }
 /*
   test("Incomplete solve") {
@@ -83,7 +116,23 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn half_complete_solve
     #[test]
     fn half_complete_solve() {
-        panic!("Unmigrated test: half_complete_solve");
+        use super::test_rules::{Literal, OneOf, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::OneOf(OneOf {
+                coord_rune: -1,
+                possible_values: vec!["1448".to_string(), "1337".to_string()],
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "1337".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, false, HashMap::new());
+        let expected: HashMap<i64, String> =
+            [(-2, "1337".to_string())].into_iter().collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Half-complete solve") {
@@ -98,7 +147,23 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn one_of
     #[test]
     fn one_of() {
-        panic!("Unmigrated test: one_of");
+        use super::test_rules::{Literal, OneOf, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::OneOf(OneOf {
+                coord_rune: -1,
+                possible_values: vec!["1448".to_string(), "1337".to_string()],
+            }),
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "1337".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> =
+            [(-1, "1337".to_string())].into_iter().collect();
+        assert_eq!(result, expected);
     }
 /*
   test("OneOf") {
@@ -112,7 +177,33 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn solves_a_components_rule
     #[test]
     fn solves_a_components_rule() {
-        panic!("Unmigrated test: solves_a_components_rule");
+        use super::test_rules::{CoordComponents, Literal, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::CoordComponents(CoordComponents {
+                coord_rune: -1,
+                ownership_rune: -2,
+                kind_rune: -3,
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "1337".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "1448".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "1337/1448".to_string()),
+            (-2, "1337".to_string()),
+            (-3, "1448".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Solves a components rule") {
@@ -128,7 +219,29 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn reverse_solve_a_components_rule
     #[test]
     fn reverse_solve_a_components_rule() {
-        panic!("Unmigrated test: reverse_solve_a_components_rule");
+        use super::test_rules::{CoordComponents, Literal, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::CoordComponents(CoordComponents {
+                coord_rune: -1,
+                ownership_rune: -2,
+                kind_rune: -3,
+            }),
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "1337/1448".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "1337/1448".to_string()),
+            (-2, "1337".to_string()),
+            (-3, "1448".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Reverse-solve a components rule") {
@@ -143,7 +256,26 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_infer_pack
     #[test]
     fn test_infer_pack() {
-        panic!("Unmigrated test: test_infer_pack");
+        use super::test_rules::{Literal, Pack, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal { rune: -1, value: "1337".to_string() }),
+            TestRule::Literal(Literal { rune: -2, value: "1448".to_string() }),
+            TestRule::Pack(Pack {
+                result_rune: -3,
+                member_runes: vec![-1, -2],
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "1337".to_string()),
+            (-2, "1448".to_string()),
+            (-3, "1337,1448".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test infer Pack") {
@@ -159,7 +291,28 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_infer_pack_from_result
     #[test]
     fn test_infer_pack_from_result() {
-        panic!("Unmigrated test: test_infer_pack_from_result");
+        use super::test_rules::{Literal, Pack, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "1337,1448".to_string(),
+            }),
+            TestRule::Pack(Pack {
+                result_rune: -3,
+                member_runes: vec![-1, -2],
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "1337".to_string()),
+            (-2, "1448".to_string()),
+            (-3, "1337,1448".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test infer Pack from result") {
@@ -174,7 +327,22 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_infer_pack_from_empty_result
     #[test]
     fn test_infer_pack_from_empty_result() {
-        panic!("Unmigrated test: test_infer_pack_from_empty_result");
+        use super::test_rules::{Literal, Pack, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "".to_string(),
+            }),
+            TestRule::Pack(Pack {
+                result_rune: -3,
+                member_runes: vec![],
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [(-3, "".to_string())].into_iter().collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test infer Pack from empty result") {
@@ -189,7 +357,16 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_cant_solve_empty_pack
     #[test]
     fn test_cant_solve_empty_pack() {
-        panic!("Unmigrated test: test_cant_solve_empty_pack");
+        use super::test_rules::{Pack, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![TestRule::Pack(Pack {
+            result_rune: -3,
+            member_runes: vec![],
+        })];
+        let result = get_conclusions(rules, false, HashMap::new());
+        let expected: HashMap<i64, String> = HashMap::new();
+        assert_eq!(result, expected);
     }
 /*
   test("Test cant solve empty Pack") {
@@ -202,7 +379,50 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn complex_rule_set
     #[test]
     fn complex_rule_set() {
-        panic!("Unmigrated test: complex_rule_set");
+        use super::test_rules::{CoordComponents, Equals, Literal, OneOf, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "1448".to_string(),
+            }),
+            TestRule::CoordComponents(CoordComponents {
+                coord_rune: -6,
+                ownership_rune: -5,
+                kind_rune: -5,
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "1337".to_string(),
+            }),
+            TestRule::Equals(Equals {
+                left_rune: -4,
+                right_rune: -2,
+            }),
+            TestRule::OneOf(OneOf {
+                coord_rune: -4,
+                possible_values: vec!["1337".to_string(), "73".to_string()],
+            }),
+            TestRule::Equals(Equals {
+                left_rune: -1,
+                right_rune: -5,
+            }),
+            TestRule::CoordComponents(CoordComponents {
+                coord_rune: -1,
+                ownership_rune: -2,
+                kind_rune: -3,
+            }),
+            TestRule::Equals(Equals {
+                left_rune: -6,
+                right_rune: -7,
+            }),
+        ];
+        let conclusions = get_conclusions(rules, true, HashMap::new());
+        assert_eq!(
+            conclusions.get(&-7),
+            Some(&"1337/1448/1337/1448".to_string())
+        );
     }
 /*
   test("Complex rule set") {
@@ -213,7 +433,27 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_receiving_struct_to_struct
     #[test]
     fn test_receiving_struct_to_struct() {
-        panic!("Unmigrated test: test_receiving_struct_to_struct");
+        use super::test_rules::{Literal, Send, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "Firefly".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "Firefly".to_string()),
+            (-2, "Firefly".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test receiving struct to struct") {
@@ -228,7 +468,64 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_receive_struct_from_sent_interface
     #[test]
     fn test_receive_struct_from_sent_interface() {
-        panic!("Unmigrated test: test_receive_struct_from_sent_interface");
+        use super::test_rules::{Literal, Send, TestRule};
+        use crate::solver::ISolverError;
+        use std::collections::HashSet;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "Firefly".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "ISpaceship".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+        ];
+        let failed = expect_solve_failure(rules);
+
+        // MIGALLOW: Rust's immediate-commit design means FailedSolve.steps differs from Scala.
+        // The step that produced the conflicting conclusion is never recorded. Steps contain
+        // only (-1, "Firefly") and (-2, "ISpaceship"). Scala would also have (-2, "Firefly").
+        // The conflicting conclusion is captured in error (SolverConflict).
+        let conclusions_set: HashSet<(i64, String)> = failed
+            .steps
+            .iter()
+            .flat_map(|s| {
+                s.conclusions
+                    .iter()
+                    .map(|(r, c)| (*r, c.clone()))
+            })
+            .collect();
+        let expected_conclusions: HashSet<(i64, String)> = [
+            (-1, "Firefly".to_string()),
+            (-2, "ISpaceship".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(conclusions_set, expected_conclusions);
+
+        assert_eq!(failed.unsolved_rules.len(), 1);
+        match &failed.unsolved_rules[0] {
+            TestRule::Send(s) => {
+                assert_eq!(s.sender_rune, -2);
+                assert_eq!(s.receiver_rune, -1);
+            }
+            _ => panic!("Expected Send in unsolved_rules"),
+        }
+
+        match &failed.error {
+            ISolverError::SolverConflict(conflict) => {
+                assert_eq!(conflict.rune, -2);
+                assert_eq!(conflict.previous_conclusion, "ISpaceship");
+                assert_eq!(conflict.new_conclusion, "Firefly");
+            }
+            _ => panic!("Expected SolverConflict(-2, \"ISpaceship\", \"Firefly\")"),
+        }
     }
 /*
   test("Test receive struct from sent interface") {
@@ -257,7 +554,31 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_receive_interface_from_sent_struct
     #[test]
     fn test_receive_interface_from_sent_struct() {
-        panic!("Unmigrated test: test_receive_interface_from_sent_struct");
+        use super::test_rules::{Literal, Send, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "ISpaceship".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "Firefly".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "ISpaceship".to_string()),
+            (-2, "Firefly".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test receive interface from sent struct") {
@@ -274,7 +595,27 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_complex_solve_most_specific_ancestor
     #[test]
     fn test_complex_solve_most_specific_ancestor() {
-        panic!("Unmigrated test: test_complex_solve_most_specific_ancestor");
+        use super::test_rules::{Literal, Send, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "Firefly".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "Firefly".to_string()),
+            (-2, "Firefly".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test complex solve: most specific ancestor") {
@@ -290,7 +631,36 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_complex_solve_calculate_common_ancestor
     #[test]
     fn test_complex_solve_calculate_common_ancestor() {
-        panic!("Unmigrated test: test_complex_solve_calculate_common_ancestor");
+        use super::test_rules::{Literal, Send, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "Firefly".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "Serenity".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+            TestRule::Send(Send {
+                sender_rune: -3,
+                receiver_rune: -1,
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "ISpaceship".to_string()),
+            (-2, "Firefly".to_string()),
+            (-3, "Serenity".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test complex solve: calculate common ancestor") {
@@ -308,7 +678,38 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_complex_solve_descendant_satisfying_call
     #[test]
     fn test_complex_solve_descendant_satisfying_call() {
-        panic!("Unmigrated test: test_complex_solve_descendant_satisfying_call");
+        use super::test_rules::{Call, Literal, Send, TestRule};
+        use std::collections::HashMap;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "Flamethrower:int".to_string(),
+            }),
+            TestRule::Send(Send {
+                sender_rune: -2,
+                receiver_rune: -1,
+            }),
+            TestRule::Call(Call {
+                result_rune: -1,
+                name_rune: -3,
+                arg_rune: -4,
+            }),
+            TestRule::Literal(Literal {
+                rune: -3,
+                value: "IWeapon".to_string(),
+            }),
+        ];
+        let result = get_conclusions(rules, true, HashMap::new());
+        let expected: HashMap<i64, String> = [
+            (-1, "IWeapon:int".to_string()),
+            (-4, "int".to_string()),
+            (-2, "Flamethrower:int".to_string()),
+            (-3, "IWeapon".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(result, expected);
     }
 /*
   test("Test complex solve: descendant satisfying call") {
@@ -437,7 +838,25 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn predicting
     #[test]
     fn predicting() {
-        panic!("Unmigrated test: predicting");
+        use super::test_rules::TestRule;
+        use std::collections::HashMap;
+
+        let predictions = solve_with_puzzler(|rule: &TestRule| match rule {
+            TestRule::Lookup(_) => vec![],
+            other => other.all_puzzles(),
+        });
+        assert_eq!(predictions.len(), 1, "predicting mode should solve only rune -2");
+        assert_eq!(predictions.get(&-2), Some(&"1337".to_string()));
+
+        let conclusions = solve_with_puzzler(|rule: &TestRule| rule.all_puzzles());
+        let expected: HashMap<i64, String> = [
+            (-1, "Firefly".to_string()),
+            (-2, "1337".to_string()),
+            (-3, "Firefly:1337".to_string()),
+        ]
+        .into_iter()
+        .collect();
+        assert_eq!(conclusions, expected);
     }
 /*
 //
@@ -465,10 +884,51 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
     // See: Recursive Types Must Have Types Predicted (RTMHTP)
 */
 // mig: fn solve_with_puzzler
-    fn solve_with_puzzler<R: super::test_rules::IRule>(
-        _puzzler: impl Fn(&R) -> Vec<Vec<i64>>,
+    fn solve_with_puzzler(
+        puzzler: impl Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>,
     ) -> std::collections::HashMap<i64, String> {
-        panic!("Unimplemented: solve_with_puzzler");
+        use super::test_rules::{Call, Lookup, Literal, TestRule};
+        use crate::solver::Solver;
+        use crate::utils::range::RangeS;
+        use bumpalo::Bump;
+
+        let arena = Bump::new();
+        let interner = crate::Interner::with_arena(&arena);
+        let rules: Vec<TestRule> = vec![
+            TestRule::Lookup(Lookup {
+                rune: -1,
+                name: "Firefly".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -2,
+                value: "1337".to_string(),
+            }),
+            TestRule::Call(Call {
+                result_rune: -3,
+                name_rune: -1,
+                arg_rune: -2,
+            }),
+        ];
+        let all_runes: Vec<i64> = {
+            let mut v: Vec<i64> = rules.iter().flat_map(|r| r.all_runes()).collect();
+            v.sort();
+            v.dedup();
+            v
+        };
+        let delegate = super::test_rule_solver::CustomPuzzlerDelegate {
+            base: super::test_rule_solver::TestRuleSolver { interner: &interner },
+            puzzler,
+        };
+        let mut solver = Solver::new(
+            true,
+            delegate,
+            vec![RangeS::test_zero(&interner)],
+            rules,
+            std::collections::HashMap::new(),
+            all_runes,
+        );
+        while solver.advance(&(), &()).expect("advance") {}
+        solver.userify_conclusions().into_iter().collect()
     }
 /*
     def solveWithPuzzler(puzzler: IRule => Vector[Vector[Long]]) = {
@@ -523,7 +983,29 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
 // mig: fn test_conflict
     #[test]
     fn test_conflict() {
-        panic!("Unmigrated test: test_conflict");
+        use super::test_rules::{Literal, TestRule};
+        use crate::solver::ISolverError;
+
+        let rules: Vec<TestRule> = vec![
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "1448".to_string(),
+            }),
+            TestRule::Literal(Literal {
+                rune: -1,
+                value: "1337".to_string(),
+            }),
+        ];
+        let failed = expect_solve_failure(rules);
+        match &failed.error {
+            ISolverError::SolverConflict(conflict) => {
+                let mut conclusions =
+                    vec![conflict.previous_conclusion.clone(), conflict.new_conclusion.clone()];
+                conclusions.sort();
+                assert_eq!(conclusions, ["1337", "1448"]);
+            }
+            _ => panic!("Expected SolverConflict"),
+        }
     }
 /*
   test("Test conflict") {
@@ -539,8 +1021,46 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
   }
 */
 // mig: fn expect_solve_failure
-    fn expect_solve_failure<R: super::test_rules::IRule>(_rules: Vec<R>) {
-        panic!("Unimplemented: expect_solve_failure");
+    fn expect_solve_failure(
+        rules: Vec<super::test_rules::TestRule>,
+    ) -> crate::solver::FailedSolve<super::test_rules::TestRule, i64, String, String> {
+        use crate::solver::Solver;
+        use crate::utils::range::RangeS;
+        use bumpalo::Bump;
+        use std::collections::HashMap;
+
+        let arena = Bump::new();
+        let interner = crate::Interner::with_arena(&arena);
+        let all_runes: Vec<i64> = {
+            let mut v: Vec<i64> = rules.iter().flat_map(|r| r.all_runes()).collect();
+            v.sort();
+            v.dedup();
+            v
+        };
+        let delegate = super::test_rule_solver::TestRuleSolver {
+            interner: &interner,
+        };
+        let mut solver = Solver::new(
+            true,
+            delegate,
+            vec![RangeS::test_zero(&interner)],
+            rules,
+            HashMap::new(),
+            all_runes,
+        );
+
+        loop {
+            match solver.advance(&(), &()) {
+                Ok(continue_flag) => {
+                    if !continue_flag {
+                        break;
+                    }
+                }
+                Err(f) => return f,
+            }
+        }
+
+        panic!("Incorrectly completed the solve")
     }
 /*
   private def expectSolveFailure(rules: IndexedSeq[IRule]):
@@ -569,12 +1089,50 @@ const complex_rule_set_equals_rules: Vec<i32> = vec![];
   }
 */
 // mig: fn get_conclusions
-    fn get_conclusions<R: super::test_rules::IRule>(
-        _rules: Vec<R>,
-        _expect_complete_solve: bool,
-        _initially_known_runes: std::collections::HashMap<i64, String>,
+    fn get_conclusions(
+        rules: Vec<super::test_rules::TestRule>,
+        expect_complete_solve: bool,
+        initially_known_runes: std::collections::HashMap<i64, String>,
     ) -> std::collections::HashMap<i64, String> {
-        panic!("Unimplemented: get_conclusions");
+        use crate::solver::Solver;
+        use crate::utils::range::RangeS;
+        use bumpalo::Bump;
+
+        let arena = Bump::new();
+        let interner = crate::Interner::with_arena(&arena);
+        let all_runes_from_rules: std::collections::HashSet<i64> =
+            rules.iter().flat_map(|r| r.all_runes()).collect();
+        let all_runes: Vec<i64> = {
+            let mut v: Vec<i64> = rules
+                .iter()
+                .flat_map(|r| r.all_runes())
+                .chain(initially_known_runes.keys().cloned())
+                .collect();
+            v.sort();
+            v.dedup();
+            v
+        };
+        let delegate = super::test_rule_solver::TestRuleSolver {
+            interner: &interner,
+        };
+        let mut solver = Solver::new(
+            true,
+            delegate,
+            vec![RangeS::test_zero(&interner)],
+            rules,
+            initially_known_runes,
+            all_runes,
+        );
+
+        while solver.advance(&(), &()).expect("advance") {}
+
+        let conclusions: std::collections::HashMap<i64, String> =
+            solver.userify_conclusions().into_iter().collect();
+        let conclusions_keys: std::collections::HashSet<i64> =
+            conclusions.keys().cloned().collect();
+        assert_eq!(expect_complete_solve, conclusions_keys == all_runes_from_rules);
+
+        conclusions
     }
 /*
   private def getConclusions(

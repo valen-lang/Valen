@@ -15,6 +15,12 @@ use crate::utils::range::RangeS;
 pub struct TestRuleSolver<'a> {
     pub interner: &'a crate::Interner<'a>,
 }
+
+// MIGALLOW: Scala passed ruleToPuzzles as a Solver constructor closure; Rust stores it in the delegate.
+pub struct CustomPuzzlerDelegate<'a, F: Fn(&TestRule) -> Vec<Vec<i64>>> {
+    pub base: TestRuleSolver<'a>,
+    pub puzzler: F,
+}
 // mig: impl SolverDelegate for TestRuleSolver
 impl<'a> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolver<'a> {
   /*
@@ -52,6 +58,41 @@ impl<'a> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolve
         // Scala: empty impl
     }
 }
+
+impl<'a, F: Fn(&TestRule) -> Vec<Vec<i64>>> SolverDelegate<TestRule, i64, (), (), String, String> for CustomPuzzlerDelegate<'a, F> {
+    fn rule_to_puzzles(&self, rule: &TestRule) -> Vec<Vec<i64>> {
+        (self.puzzler)(rule)
+    }
+
+    fn rule_to_runes(&self, rule: &TestRule) -> Vec<i64> {
+        self.base.rule_to_runes(rule)
+    }
+
+    fn solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
+        &self,
+        state: &(),
+        env: &(),
+        rule_index: i32,
+        rule: &TestRule,
+        solver_state: &mut S,
+    ) -> Result<(), ISolverError<i64, String, String>> {
+        self.base.solve(state, env, rule_index, rule, solver_state)
+    }
+
+    fn complex_solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
+        &self,
+        state: &(),
+        env: &(),
+        solver_state: &mut S,
+    ) -> Result<(), ISolverError<i64, String, String>> {
+        self.base.complex_solve(state, env, solver_state)
+    }
+
+    fn sanity_check_conclusion(&self, env: &(), state: &(), rune: &i64, conclusion: &String) {
+        self.base.sanity_check_conclusion(env, state, rune, conclusion)
+    }
+}
+
 // mig: impl TestRuleSolver
 impl<'a> TestRuleSolver<'a> {
 /*

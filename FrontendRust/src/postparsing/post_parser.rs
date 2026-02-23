@@ -2195,7 +2195,7 @@ pub(crate) fn check_identifiability(
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
   _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
 ) {
-  // Do nothing, per MIGALLOW in Scala comments.
+  // panic!("Unimplemented check_identifiability");
 }
 /*
 

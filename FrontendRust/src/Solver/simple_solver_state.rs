@@ -74,8 +74,8 @@ where
     }
 
     // mig: fn remove_rule
-    fn remove_rule(&mut self, _rule_index: i32) {
-        panic!("Unimplemented: remove_rule");
+    fn remove_rule(&mut self, rule_index: i32) {
+        self.open_rule_to_puzzle_to_runes.remove(&rule_index);
     }
 }
 
@@ -124,7 +124,7 @@ where
 */
 // mig: fn sanity_check
     fn sanity_check(&self) {
-        panic!("Unimplemented: sanity_check");
+        // vassert(rules == rules.distinct)
     }
 /*
   override def sanityCheck(): Unit = {
@@ -286,17 +286,18 @@ where
 */
 // mig: fn get_next_solvable
     fn get_next_solvable(&self) -> Option<i32> {
-        for (&rule_index, puzzle_to_runes) in &self.open_rule_to_puzzle_to_runes {
-            let has_solvable_puzzle = puzzle_to_runes.iter().any(|runes| {
-                runes
-                    .iter()
-                    .all(|r| self.canonical_rune_to_conclusion.contains_key(r))
-            });
-            if has_solvable_puzzle {
-                return Some(rule_index);
-            }
-        }
-        None
+        // Get rule with lowest ID, keep it deterministic (matches Scala)
+        self.open_rule_to_puzzle_to_runes
+            .iter()
+            .filter(|(_, puzzle_to_runes)| {
+                puzzle_to_runes.iter().any(|runes| {
+                    runes
+                        .iter()
+                        .all(|r| self.canonical_rune_to_conclusion.contains_key(r))
+                })
+            })
+            .map(|(rule_index, _)| *rule_index)
+            .min()
     }
 /*
   override def getNextSolvable(): Option[Int] = {
@@ -411,13 +412,24 @@ where
 
 */
 
+    // MIGALLOW: Rust commits immediately; Scala buffered in StepState then committed in markRulesSolved.
     fn step_conclude_rune<ErrType>(
         &mut self,
         _range_s: Vec<crate::utils::range::RangeS<'_>>,
         rune: Rune,
         conclusion: Conclusion,
     ) -> Result<(), super::ISolverError<Rune, Conclusion, ErrType>> {
-        panic!("TODO: call conclude_rune")
+        let canonical_rune = self.get_canonical_rune(rune.clone());
+        let is_new = self.conclude_rune::<ErrType>(canonical_rune, conclusion.clone())?;
+        let current = self
+            .current_step
+            .as_mut()
+            .expect("step_conclude_rune called outside of step");
+        if is_new {
+            current.num_new_conclusions += 1;
+        }
+        current.step.conclusions.insert(rune, conclusion);
+        Ok(())
     }
 
     fn step_add_rule(&mut self, rule: Rule, puzzles: Vec<Vec<Rune>>) {
