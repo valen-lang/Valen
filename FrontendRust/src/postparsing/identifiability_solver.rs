@@ -9,6 +9,20 @@ import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 */
+use crate::interner::Interner;
+use crate::postparsing::names::IRuneS;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::solver::{
+    IncompleteOrFailedSolve, IncompleteSolve, ISolverError, Solver, SolverDelegate,
+};
+use crate::utils::range::RangeS;
+use std::collections::{HashMap, HashSet};
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IdentifiabilitySolveError<'a> {
+  pub range: Vec<RangeS<'a>>,
+  pub failed_solve: IncompleteOrFailedSolve<IRulexSR<'a>, IRuneS<'a>, bool, IIdentifiabilityRuleError>,
+}
 /*
 case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, Boolean, IIdentifiabilityRuleError]) {
   vpass()
@@ -17,15 +31,15 @@ case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: IIncomple
 /*
 sealed trait IIdentifiabilityRuleError
 */
+#[derive(Clone, Debug, PartialEq)]
+pub enum IIdentifiabilityRuleError {}
 /*
 // Identifiability is whether the denizen has enough identifying runes to uniquely identify all its
 // instantiations. It's only used as a check, and will throw an error if there's a rune that can't
 // be derived from the identifying runes.
 object IdentifiabilitySolver {
 */
-fn get_runes<'a>(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
-) -> Vec<crate::postparsing::names::IRuneS<'a>> {
+fn get_runes<'a>(_rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
   panic!("Unimplemented get_runes");
 }
 /*
@@ -65,9 +79,7 @@ fn get_runes<'a>(
     result.map(_.rune)
   }
 */
-fn get_puzzles<'a>(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
-) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
+fn get_puzzles<'a>(_rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
   panic!("Unimplemented get_puzzles");
 }
 /*
@@ -119,8 +131,8 @@ fn get_puzzles<'a>(
 fn solve_rule<'a>(
   _state: (),
   _rule_index: usize,
-  _call_range: &[crate::utils::range::RangeS<'a>],
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  _call_range: &[RangeS<'a>],
+  _rule: &IRulexSR<'a>,
 ) -> Result<(), ()> {
   panic!("Unimplemented solve_rule");
 }
@@ -279,12 +291,146 @@ fn solve_rule<'a>(
     }
   }
 */
-fn solve_identifiability<'a>(
-  _range_s: crate::utils::range::RangeS<'a>,
-  _generic_parameters: &[crate::postparsing::ast::GenericParameterS<'a>],
-  _rules_array: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-) {
-  panic!("Unimplemented solve_identifiability");
+struct IdentifiabilitySolverDelegate<'a> {
+  call_range: Vec<RangeS<'a>>,
+}
+
+impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiabilityRuleError>
+  for IdentifiabilitySolverDelegate<'a>
+{
+  fn rule_to_puzzles(&self, rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
+    get_puzzles(rule)
+  }
+
+  fn rule_to_runes(&self, rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
+    get_runes(rule)
+  }
+
+  fn solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+    &self,
+    _state: &(),
+    _env: &(),
+    rule_index: i32,
+    rule: &IRulexSR<'a>,
+    solver_state: &mut S,
+  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+    solve_rule_impl(
+      rule_index,
+      &self.call_range,
+      rule,
+      solver_state,
+    )
+  }
+
+  fn complex_solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+    &self,
+    _state: &(),
+    _env: &(),
+    _solver_state: &mut S,
+  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+    Ok(())
+  }
+
+  fn sanity_check_conclusion(
+    &self,
+    _env: &(),
+    _state: &(),
+    _rune: &IRuneS<'a>,
+    _conclusion: &bool,
+  ) {
+  }
+}
+
+fn solve_rule_impl<'a, S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+  _rule_index: i32,
+  _call_range: &[RangeS<'a>],
+  _rule: &IRulexSR<'a>,
+  _solver_state: &mut S,
+) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+  panic!("Unimplemented solve_rule_impl")
+}
+/*
+  // delegate solve calls solveRule(state, env, ruleIndex, callRange, rule, stepState)
+*/
+pub(crate) fn solve_identifiability<'a>(
+  sanity_check: bool,
+  _use_optimized_solver: bool,
+  _interner: &Interner<'a>,
+  call_range: &[RangeS<'a>],
+  rules: &[IRulexSR<'a>],
+  identifying_runes: &[IRuneS<'a>],
+) -> Result<HashMap<IRuneS<'a>, bool>, IdentifiabilitySolveError<'a>> {
+  let initially_known_runes: HashMap<_, _> =
+    identifying_runes.iter().map(|r| (r.clone(), true)).collect();
+
+  let all_runes: Vec<IRuneS<'a>> = {
+    let mut set = HashSet::new();
+    let mut out = Vec::new();
+    for r in rules
+      .iter()
+      .flat_map(get_runes)
+      .chain(initially_known_runes.keys().cloned())
+    {
+      if set.insert(r.clone()) {
+        out.push(r);
+      }
+    }
+    out
+  };
+
+  let delegate = IdentifiabilitySolverDelegate {
+    call_range: call_range.to_vec(),
+  };
+  let mut solver = Solver::new(
+    sanity_check,
+    delegate,
+    call_range.to_vec(),
+    rules.to_vec(),
+    initially_known_runes,
+    all_runes,
+  );
+
+  while {
+    match solver.advance(&(), &()) {
+      Ok(continue_) => continue_,
+      Err(e) => {
+        return Err(IdentifiabilitySolveError {
+          range: call_range.to_vec(),
+          failed_solve: IncompleteOrFailedSolve::Failed(e),
+        })
+      }
+    }
+  } {}
+  // If we get here, then there's nothing more the solver can do.
+
+  let steps = solver.get_steps();
+  let conclusions: HashMap<_, _> = solver.userify_conclusions().into_iter().collect();
+
+  let all_rune_ids = solver.get_all_runes();
+  let all_runes_user: HashSet<IRuneS<'a>> = all_rune_ids
+    .iter()
+    .map(|&id| solver.get_user_rune(id))
+    .collect();
+  let conclusions_set: HashSet<_> = conclusions.keys().cloned().collect();
+  let unsolved_runes: HashSet<_> = all_runes_user
+    .difference(&conclusions_set)
+    .cloned()
+    .collect();
+
+  if !unsolved_runes.is_empty() {
+    Err(IdentifiabilitySolveError {
+      range: call_range.to_vec(),
+      failed_solve: IncompleteOrFailedSolve::Incomplete(IncompleteSolve {
+        steps,
+        unsolved_rules: solver.get_unsolved_rules(),
+        unknown_runes: unsolved_runes,
+        incomplete_conclusions: conclusions,
+        _phantom: std::marker::PhantomData,
+      }),
+    })
+  } else {
+    Ok(conclusions)
+  }
 }
 /*
   // MIGALLOW: solve -> solve_identifiability

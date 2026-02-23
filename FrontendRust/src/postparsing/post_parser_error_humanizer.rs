@@ -39,6 +39,9 @@ where
       "Interface's method needs a virtual param of interface's type!".to_string()
     }
     ICompileErrorS::ExternHasBodyS(_) => "Extern function can't have a body too.".to_string(),
+    ICompileErrorS::IdentifyingRunesIncompleteS(_) => {
+      "Not enough identifying runes.".to_string()
+    }
     _ => panic!("Unimplemented humanize branch for {:?}", err),
   };
   let range = err.range();

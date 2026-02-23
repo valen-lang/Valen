@@ -786,14 +786,14 @@ where
       &rules_array,
     )?;
     rune_to_predicted_type.retain(|_, tyype| !matches!(tyype, ITemplataType::RegionTemplataType(_)));
-    Self::check_identifiability(
+    self.check_identifiability(
       range_s,
       &generic_params
         .iter()
         .map(|generic_param| generic_param.rune.rune.clone())
         .collect::<Vec<_>>(),
       &rules_array,
-    );
+    )?;
 
     let tyype = TemplateTemplataType {
       param_types: generic_params

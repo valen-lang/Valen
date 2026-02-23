@@ -155,6 +155,7 @@ pub enum ICompileErrorS<'a> {
     InitializingStaticSizedArrayRequiresSizeAndCallable<'a>,
   ),
   ExternHasBodyS(ExternHasBodyS<'a>),
+  IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS<'a>),
   RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
 
@@ -170,6 +171,7 @@ impl ICompileErrorS<'_> {
       ICompileErrorS::InitializingRuntimeSizedArrayRequiresSizeAndCallable(x) => &x.range,
       ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(x) => &x.range,
       ICompileErrorS::ExternHasBodyS(x) => &x.range,
+      ICompileErrorS::IdentifyingRunesIncompleteS(x) => &x.range,
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
     }
   }
@@ -223,6 +225,12 @@ pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'a> {
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExternHasBodyS<'a> {
   pub range: RangeS<'a>,
+}
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct IdentifyingRunesIncompleteS<'a> {
+  pub range: RangeS<'a>,
+  pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'a>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -2191,11 +2199,25 @@ pub(crate) fn predict_rune_types(
   }
 */
 pub(crate) fn check_identifiability(
-  _range_s: crate::utils::range::RangeS<'a>,
-  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-) {
-  // panic!("Unimplemented check_identifiability");
+  &self,
+  range_s: RangeS<'a>,
+  identifying_runes_s: &[IRuneS<'a>],
+  rules_s: &[IRulexSR<'a>],
+) -> Result<(), ICompileErrorS<'a>> {
+  match crate::postparsing::identifiability_solver::solve_identifiability(
+    self.global_options.sanity_check,
+    self.global_options.use_optimized_solver,
+    self.interner,
+    &[range_s.clone()],
+    rules_s,
+    identifying_runes_s,
+  ) {
+    Ok(_) => Ok(()),
+    Err(e) => Err(ICompileErrorS::IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS {
+      range: range_s,
+      error: e,
+    })),
+  }
 }
 /*
 
@@ -2204,8 +2226,6 @@ pub(crate) fn check_identifiability(
     identifyingRunesS: Vector[IRuneS],
     rulesS: Vector[IRulexSR]):
   Unit = {
-    // MIGALLOW: it's okay if the Rust version just does nothing.
-    // AFTERM: Fix this.
     IdentifiabilitySolver.solve(
       globalOptions.sanityCheck,
       globalOptions.useOptimizedSolver,

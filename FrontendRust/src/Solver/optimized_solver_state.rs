@@ -9,13 +9,19 @@ import scala.collection.mutable.ArrayBuffer
 object OptimizedSolverState {
 */
 // mig: struct CurrentStep (replaces OptimizedStepState inner class)
-struct CurrentStep<Rule, Rune, Conclusion> {
+struct CurrentStep<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     step: super::Step<Rule, Rune, Conclusion>,
     num_new_conclusions: i32,
 }
 
 // mig: fn apply
-pub fn apply<Rule, Rune, Conclusion>() -> OptimizedSolverState<Rule, Rune, Conclusion> {
+pub fn apply<Rule, Rune, Conclusion>() -> OptimizedSolverState<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     OptimizedSolverState {
         steps: Vec::new(),
         user_rune_to_canonical_rune: std::collections::HashMap::new(),
@@ -60,7 +66,10 @@ pub fn apply<Rule, Rune, Conclusion>() -> OptimizedSolverState<Rule, Rune, Concl
 }
 */
 // mig: struct OptimizedSolverState
-pub struct OptimizedSolverState<Rule, Rune, Conclusion> {
+pub struct OptimizedSolverState<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     steps: Vec<super::Step<Rule, Rune, Conclusion>>,
 
     user_rune_to_canonical_rune: std::collections::HashMap<Rune, i32>,
@@ -157,7 +166,7 @@ impl<Rule, Rune, Conclusion> super::ISolverState<Rule, Rune, Conclusion>
     for OptimizedSolverState<Rule, Rune, Conclusion>
 where
     Rule: Clone,
-    Rune: Clone,
+    Rune: Clone + Eq + std::hash::Hash,
     Conclusion: Clone,
 {
 /*
@@ -301,7 +310,10 @@ where
 */
 
 // mig: impl OptimizedSolverState
-impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion> {
+impl<Rule, Rune, Conclusion> OptimizedSolverState<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
 // mig: fn equals
     pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
         panic!("Unimplemented: equals");

@@ -14,34 +14,121 @@ use super::simple_solver_state::SimpleSolverState;
 use crate::utils::range::RangeS as RangeSTy;
 
 // mig: struct Step
-#[derive(Clone, Debug)]
-pub struct Step<Rule, Rune, Conclusion> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct Step<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     pub complex: bool,
     pub solved_rules: Vec<(i32, Rule)>,
     pub added_rules: Vec<Rule>,
     pub conclusions: std::collections::HashMap<Rune, Conclusion>,
 }
 // mig: impl Step
-impl<Rule, Rune, Conclusion> Step<Rule, Rune, Conclusion> {}
+impl<Rule, Rune, Conclusion> Step<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
+}
 /*
 case class Step[Rule, Rune, Conclusion](complex: Boolean, solvedRules: Vector[(Int, Rule)], addedRules: Vector[Rule], conclusions: Map[Rune, Conclusion])
 
 
 */
-// mig: trait ISolverOutcome
-pub trait ISolverOutcome<Rule, Rune, Conclusion, ErrType> {
-    fn get_or_die(&self) -> std::collections::HashMap<Rune, Conclusion>;
+#[derive(Clone, Debug, PartialEq)]
+pub enum SolverOutcome<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+    Complete(CompleteSolve<Rule, Rune, Conclusion, ErrType>),
+    Incomplete(IncompleteSolve<Rule, Rune, Conclusion, ErrType>),
+    Failed(FailedSolve<Rule, Rune, Conclusion, ErrType>),
 }
+impl<Rule, Rune, Conclusion, ErrType> SolverOutcome<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+    pub fn get_or_die(&self) -> std::collections::HashMap<Rune, Conclusion>
+    where
+        Rule: Clone,
+        Rune: Clone + std::hash::Hash + Eq,
+        Conclusion: Clone,
+    {
+        match self {
+            SolverOutcome::Complete(c) => c.conclusions.clone(),
+            SolverOutcome::Incomplete(_) | SolverOutcome::Failed(_) => {
+                panic!("get_or_die called on Incomplete or Failed solve")
+            }
+        }
+    }
+
+    pub fn to_incomplete_or_failed(
+        self,
+    ) -> Option<IncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>> {
+        match self {
+            SolverOutcome::Complete(_) => None,
+            SolverOutcome::Incomplete(i) => Some(IncompleteOrFailedSolve::Incomplete(i)),
+            SolverOutcome::Failed(f) => Some(IncompleteOrFailedSolve::Failed(f)),
+        }
+    }
+}
+
 /*
 sealed trait ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
   def getOrDie(): Map[Rune, Conclusion]
 }
 */
-// mig: trait IIncompleteOrFailedSolve
-pub trait IIncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>: ISolverOutcome<Rule, Rune, Conclusion, ErrType> {
-    fn unsolved_rules(&self) -> Vec<Rule>;
-    fn unsolved_runes(&self) -> Vec<Rune>;
-    fn steps(&self) -> Vec<Step<Rule, Rune, Conclusion>>;
+#[derive(Clone, Debug, PartialEq)]
+pub enum IncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+    Incomplete(IncompleteSolve<Rule, Rune, Conclusion, ErrType>),
+    Failed(FailedSolve<Rule, Rune, Conclusion, ErrType>),
+}
+impl<Rule, Rune, Conclusion, ErrType> IncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+    pub fn unsolved_rules(&self) -> Vec<Rule>
+    where
+        Rule: Clone,
+    {
+        match self {
+            IncompleteOrFailedSolve::Incomplete(i) => i.unsolved_rules.clone(),
+            IncompleteOrFailedSolve::Failed(f) => f.unsolved_rules.clone(),
+        }
+    }
+
+    pub fn unsolved_runes(&self) -> Vec<Rune>
+    where
+        Rune: Clone,
+    {
+        match self {
+            IncompleteOrFailedSolve::Incomplete(i) => i.unknown_runes.iter().cloned().collect(),
+            IncompleteOrFailedSolve::Failed(_) => Vec::new(),
+        }
+    }
+
+    pub fn steps(&self) -> Vec<Step<Rule, Rune, Conclusion>>
+    where
+        Rule: Clone,
+        Rune: Clone,
+        Conclusion: Clone,
+    {
+        match self {
+            IncompleteOrFailedSolve::Incomplete(i) => i.steps.clone(),
+            IncompleteOrFailedSolve::Failed(f) => f.steps.clone(),
+        }
+    }
+
+    pub fn get_or_die(&self) -> std::collections::HashMap<Rune, Conclusion>
+    where
+        Rune: Clone + std::hash::Hash + Eq,
+        Conclusion: Clone,
+    {
+        panic!("get_or_die called on IncompleteOrFailedSolve")
+    }
 }
 /*
 sealed trait IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
@@ -51,13 +138,21 @@ sealed trait IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] extends I
 }
 */
 // mig: struct CompleteSolve
-pub struct CompleteSolve<Rule, Rune, Conclusion, ErrType> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct CompleteSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
     pub steps: Vec<Step<Rule, Rune, Conclusion>>,
     pub conclusions: std::collections::HashMap<Rune, Conclusion>,
     pub _phantom: PhantomData<ErrType>,
 }
 // mig: impl CompleteSolve
-impl<Rule, Rune, Conclusion, ErrType> CompleteSolve<Rule, Rune, Conclusion, ErrType> {}
+impl<Rule, Rune, Conclusion, ErrType> CompleteSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+}
 /*
 case class CompleteSolve[Rule, Rune, Conclusion, ErrType](
   steps: Stream[Step[Rule, Rune, Conclusion]],
@@ -67,7 +162,11 @@ case class CompleteSolve[Rule, Rune, Conclusion, ErrType](
 }
 */
 // mig: struct IncompleteSolve
-pub struct IncompleteSolve<Rule, Rune, Conclusion, ErrType> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct IncompleteSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
     pub steps: Vec<Step<Rule, Rune, Conclusion>>,
     pub unsolved_rules: Vec<Rule>,
     pub unknown_runes: std::collections::HashSet<Rune>,
@@ -75,7 +174,12 @@ pub struct IncompleteSolve<Rule, Rune, Conclusion, ErrType> {
     pub _phantom: PhantomData<ErrType>,
 }
 // mig: impl IncompleteSolve
-impl<Rule, Rune, Conclusion, ErrType> IncompleteSolve<Rule, Rune, Conclusion, ErrType> {}
+impl<Rule, Rune, Conclusion, ErrType> IncompleteSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+}
+
 /*
 case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
   steps: Stream[Step[Rule, Rune, Conclusion]],
@@ -90,14 +194,21 @@ case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
 }
 */
 // mig: struct FailedSolve
-#[derive(Debug)]
-pub struct FailedSolve<Rule, Rune, Conclusion, ErrType> {
+#[derive(Clone, Debug, PartialEq)]
+pub struct FailedSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
     pub steps: Vec<Step<Rule, Rune, Conclusion>>,
     pub unsolved_rules: Vec<Rule>,
     pub error: ISolverError<Rune, Conclusion, ErrType>,
 }
 // mig: impl FailedSolve
-impl<Rule, Rune, Conclusion, ErrType> FailedSolve<Rule, Rune, Conclusion, ErrType> {}
+impl<Rule, Rune, Conclusion, ErrType> FailedSolve<Rule, Rune, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
+}
 /*
 case class FailedSolve[Rule, Rune, Conclusion, ErrType](
   steps: Stream[Step[Rule, Rune, Conclusion]],
@@ -110,7 +221,7 @@ case class FailedSolve[Rule, Rune, Conclusion, ErrType](
 }
 */
 // mig: struct SolverConflict
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct SolverConflict<Rune, Conclusion, ErrType> {
     pub rune: Rune,
     pub previous_conclusion: Conclusion,
@@ -129,7 +240,7 @@ case class SolverConflict[Rune, Conclusion, ErrType](
 }
 */
 // mig: struct RuleError
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct RuleError<Rune, Conclusion, ErrType> {
     pub err: ErrType,
     pub _phantom: PhantomData<(Rune, Conclusion)>,
@@ -143,7 +254,7 @@ case class RuleError[Rune, Conclusion, ErrType](
 ) extends ISolverError[Rune, Conclusion, ErrType]
 */
 // mig: trait ISolverError
-#[derive(Debug)]
+#[derive(Clone, Debug, PartialEq)]
 pub enum ISolverError<Rune, Conclusion, ErrType> {
     SolverConflict(SolverConflict<Rune, Conclusion, ErrType>),
     RuleError(RuleError<Rune, Conclusion, ErrType>),
@@ -151,7 +262,10 @@ pub enum ISolverError<Rune, Conclusion, ErrType> {
 /*
 sealed trait ISolverError[Rune, Conclusion, ErrType]
 */
-pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType> {
+pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>
+where
+    Rune: Eq + std::hash::Hash,
+{
   fn rule_to_puzzles(&self, rule: &Rule) -> Vec<Vec<Rune>>;
   fn rule_to_runes(&self, rule: &Rule) -> Vec<Rune>;
 /*
@@ -216,7 +330,10 @@ type SolverStateImpl<Rule, Rune, Conclusion> = SimpleSolverState<Rule, Rune, Con
 
 */
 // mig: struct Solver
-pub struct Solver<'a, Rule, Rune, Env, State, Conclusion, ErrType, D> {
+pub struct Solver<'a, Rule, Rune, Env, State, Conclusion, ErrType, D>
+where
+    Rune: Eq + std::hash::Hash,
+{
     sanity_check: bool,
     solver_state: SolverStateImpl<Rule, Rune, Conclusion>,
     delegate: D,

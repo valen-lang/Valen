@@ -23,14 +23,20 @@ object SimpleSolverState {
 }
 
 */
-struct CurrentStep<Rule, Rune, Conclusion> {
+struct CurrentStep<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     step: super::Step<Rule, Rune, Conclusion>,
     num_new_conclusions: i32,
 }
 /*
 */
 // mig: struct SimpleSolverState
-pub struct SimpleSolverState<Rule, Rune, Conclusion> {
+pub struct SimpleSolverState<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
     steps: Vec<super::Step<Rule, Rune, Conclusion>>,
     user_rune_to_canonical_rune: std::collections::HashMap<Rune, i32>,
     canonical_rune_to_user_rune: std::collections::HashMap<i32, Rune>,

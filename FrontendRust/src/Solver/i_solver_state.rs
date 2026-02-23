@@ -8,7 +8,10 @@ import scala.collection.mutable.ArrayBuffer
 
 */
 // mig: trait ISolverState
-pub trait ISolverState<Rule, Rune, Conclusion> {
+pub trait ISolverState<Rule, Rune, Conclusion>
+where
+    Rune: Eq + std::hash::Hash,
+{
   /*
   // MIGALLOW: IStepState merged into ISolverState
 trait IStepState[Rule, Rune, Conclusion] {

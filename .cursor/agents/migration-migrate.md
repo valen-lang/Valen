@@ -32,3 +32,4 @@ CRITICAL RULES:
     * In other words, **conservatively implement as little as possible.**
     * In other words, **aggressively panic!** for anything that might not be executed by current tests. This will help us minimize our current changes.
  * If you're unsure about anything, or there's a choice to be made, pause and ask me for help. I like being a part of things, so please don't hesitate.
+ * If you run into any lifetime errors, and your first fix doesn't work (or has related errors) then STOP so I can look at it.
