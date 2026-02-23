@@ -77,24 +77,55 @@ where
 
     rules: Vec<Rule>,
 
+    // For each rule, what are all the runes involved in it
+    // (rule_to_runes is computed from rules and not stored)
+
+    // For example, if rule 7 says:
+    //   1 = Ref(2, 3, 4, 5)
+    // then 2, 3, 4, 5 together could solve the rule, or 1 could solve the rule.
+    // In other words, the two sets of runes that could solve the rule are:
+    // - [1]
+    // - [2, 3, 4, 5]
+    // Here we have two "puzzles". The runes in a puzzle are called "pieces".
+    // Puzzles are identified up-front by Astronomer.
+
+    // This tracks, for each puzzle, what rule does it refer to
     puzzle_to_rule: Vec<i32>,
+    // This tracks, for each puzzle, what runes does it have
     puzzle_to_runes: Vec<Vec<i32>>,
 
+    // For every rule, this is which puzzles can solve it.
     rule_to_puzzles: Vec<Vec<i32>>,
 
+    // For every rune, this is which puzzles it participates in.
     rune_to_puzzles: Vec<Vec<i32>>,
 
+    // Rules that we don't need to execute (e.g. Equals rules)
     noop_rules: Vec<i32>,
 
+    // For each puzzle, whether it's been actually executed or not
     puzzle_to_executed: Vec<bool>,
 
+    // Together, these basically form a Vec<Vec<i32>>
     puzzle_to_num_unknown_runes: Vec<i32>,
     puzzle_to_unknown_runes: Vec<Vec<i32>>,
+    // This is the puzzle's index in the below num_unknowns_to_puzzles map.
     puzzle_to_index_in_num_unknowns: Vec<i32>,
 
+    // Together, these basically form a Vec<Vec<i32>>
+    // which will have five elements: 0, 1, 2, 3, 4
+    // At slot 4 is all the puzzles that have 4 unknowns left
+    // At slot 3 is all the puzzles that have 3 unknowns left
+    // At slot 2 is all the puzzles that have 2 unknowns left
+    // At slot 1 is all the puzzles that have 1 unknowns left
+    // At slot 0 is all the puzzles that have 0 unknowns left
+    // We will:
+    // - Move a puzzle from one set to the next set if we solve one of its runes
+    // - Solve any puzzle that has 0 unknowns left
     num_unknowns_to_num_puzzles: Vec<i32>,
     num_unknowns_to_puzzles: Vec<Vec<i32>>,
 
+    // For each rune, whether it's solved already
     rune_to_conclusion: Vec<Option<Conclusion>>,
 
     current_step: Option<CurrentStep<Rule, Rune, Conclusion>>,
