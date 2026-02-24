@@ -4,7 +4,7 @@ You're going to help me migrate some code.
 
 First, please look at these files for guidelines to follow:
 - migration_process.md
-- migration_checks.md
+- migration_principles.md
 
 Then say "ready"
 
@@ -51,7 +51,7 @@ You're going to help me migrate some code.
 
 First, please look at these files for guidelines to follow:
 - migration_process.md
-- migration_checks.md
+- migration_principles.md
 - testing.md
 
 Then say "ready"
@@ -84,7 +84,7 @@ The test we'll be working to enable is
 
 Look again at these files for guidelines to follow (they might have changed):
 - migration_process.md
-- migration_checks.md
+- migration_principles.md
 - testing.md
 
 then say "ready"

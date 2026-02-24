@@ -1,6 +1,6 @@
 please read:
 1. migration_report_instructions.md
-2. migration_checks.md
+2. migration_principles.md
 3. migration_differences.md
 4. testing.md
 
