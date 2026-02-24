@@ -32,7 +32,7 @@ where
     ICompileErrorS::VariableNameAlreadyExists(x) => {
       format!(
         "Local named {} already exists!\n(If you meant to modify the variable, use the `set` keyword beforehand.)",
-        humanize_name(INameS::VarName(x.name.clone()))
+        humanize_var_name(x.name.clone())
       )
     }
     ICompileErrorS::InterfaceMethodNeedsSelf(_) => {
@@ -161,12 +161,17 @@ fn humanize_identifiability_rule_errorr<'a>(
     }
   }
 */
+fn humanize_var_name<'a>(var_name: IVarNameS<'a>) -> String {
+  match var_name {
+    IVarNameS::CodeVarName(n) => n.as_str().to_string(),
+    IVarNameS::ClosureParamName(_) => "(closure)".to_string(),
+    _ => panic!("Unimplemented humanize_var_name branch for IVarNameS"),
+  }
+}
+
 fn humanize_name<'a>(name: INameS<'a>) -> String {
   match name {
-    INameS::VarName(var_name) => match var_name {
-      IVarNameS::CodeVarName(n) => n.as_str().to_string(),
-      _ => panic!("Unimplemented humanize_name branch for IVarNameS"),
-    },
+    INameS::VarName(var_name) => humanize_var_name((*var_name).clone()),
     _ => panic!("Unimplemented humanize_name branch for INameS"),
   }
 }

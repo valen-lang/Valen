@@ -3,7 +3,7 @@ package dev.vale.postparsing
 
 import dev.vale.{CodeLocationS, IInterning, Interner, PackageCoordinate, RangeS, StrI, vassert, vcheck, vimpl, vpass}
 */
-use crate::interner::StrI;
+use crate::interner::{Interner, StrI};
 use crate::postparsing::ast::LocationInDenizen;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -11,28 +11,92 @@ use crate::utils::range::{CodeLocationS, RangeS};
 /*
 trait INameS extends IInterning
 */
+/// Canonical interned name. Storage uses arena-backed refs; use `ptr_eq` for identity.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum INameS<'a> {
-  FunctionDeclaration(IFunctionDeclarationNameS<'a>),
+  FunctionDeclaration(&'a IFunctionDeclarationNameS<'a>),
+  ImplDeclaration(&'a ImplDeclarationNameS<'a>),
+  AnonymousSubstructImplDeclaration(&'a AnonymousSubstructImplDeclarationNameS<'a>),
+  ExportAsName(&'a ExportAsNameS<'a>),
+  LetName(&'a LetNameS<'a>),
+  TopLevelStructDeclaration(&'a TopLevelStructDeclarationNameS<'a>),
+  TopLevelInterfaceDeclaration(&'a TopLevelInterfaceDeclarationNameS<'a>),
+  LambdaStructDeclaration(&'a LambdaStructDeclarationNameS<'a>),
+  AnonymousSubstructTemplateName(&'a AnonymousSubstructTemplateNameS<'a>),
+  RuneName(&'a RuneNameS<'a>),
+  RuntimeSizedArrayDeclarationName(&'a RuntimeSizedArrayDeclarationNameS),
+  StaticSizedArrayDeclarationName(&'a StaticSizedArrayDeclarationNameS),
+  GlobalFunctionFamilyName(&'a GlobalFunctionFamilyNameS),
+  ArbitraryName(&'a ArbitraryNameS),
+  VarName(&'a IVarNameS<'a>),
+}
+
+impl<'a> INameS<'a> {
+  /// Pointer to the canonical interned payload.
+  pub fn canonical_ptr(&self) -> *const () {
+    match self {
+      INameS::FunctionDeclaration(r) => *r as *const _ as *const (),
+      INameS::ImplDeclaration(r) => *r as *const _ as *const (),
+      INameS::AnonymousSubstructImplDeclaration(r) => *r as *const _ as *const (),
+      INameS::ExportAsName(r) => *r as *const _ as *const (),
+      INameS::LetName(r) => *r as *const _ as *const (),
+      INameS::TopLevelStructDeclaration(r) => *r as *const _ as *const (),
+      INameS::TopLevelInterfaceDeclaration(r) => *r as *const _ as *const (),
+      INameS::LambdaStructDeclaration(r) => *r as *const _ as *const (),
+      INameS::AnonymousSubstructTemplateName(r) => *r as *const _ as *const (),
+      INameS::RuneName(r) => *r as *const _ as *const (),
+      INameS::RuntimeSizedArrayDeclarationName(r) => *r as *const _ as *const (),
+      INameS::StaticSizedArrayDeclarationName(r) => *r as *const _ as *const (),
+      INameS::GlobalFunctionFamilyName(r) => *r as *const _ as *const (),
+      INameS::ArbitraryName(r) => *r as *const _ as *const (),
+      INameS::VarName(r) => *r as *const _ as *const (),
+    }
+  }
+
+  /// Returns true iff both refer to the same canonical interned value.
+  #[inline(always)]
+  pub fn ptr_eq(&self, other: &INameS<'a>) -> bool {
+    std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
+  }
+}
+
+/// Value/key form for interner lookups. Shallow Val structs reference canonical INameS/IFunctionDeclarationNameS/etc.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum INameValS<'a> {
+  FunctionDeclaration(IFunctionDeclarationNameValS<'a>),
   ImplDeclaration(ImplDeclarationNameS<'a>),
-  AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameS<'a>),
+  AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS<'a>),
   ExportAsName(ExportAsNameS<'a>),
   LetName(LetNameS<'a>),
   TopLevelStructDeclaration(TopLevelStructDeclarationNameS<'a>),
   TopLevelInterfaceDeclaration(TopLevelInterfaceDeclarationNameS<'a>),
   LambdaStructDeclaration(LambdaStructDeclarationNameS<'a>),
-  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'a>),
-  RuneName(RuneNameS<'a>),
+  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameValS<'a>),
+  RuneName(RuneNameValS<'a>),
   RuntimeSizedArrayDeclarationName(RuntimeSizedArrayDeclarationNameS),
   StaticSizedArrayDeclarationName(StaticSizedArrayDeclarationNameS),
   GlobalFunctionFamilyName(GlobalFunctionFamilyNameS),
   ArbitraryName(ArbitraryNameS),
-  VarName(IVarNameS<'a>),
+  VarName(IVarNameValS<'a>),
+}
+
+/// Shallow: inner already canonical.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructImplDeclarationNameValS<'a> {
+  pub interface: &'a TopLevelInterfaceDeclarationNameS<'a>,
+}
+
+/// Shallow: interface_name already canonical.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct AnonymousSubstructTemplateNameValS<'a> {
+  pub interface_name: &'a TopLevelInterfaceDeclarationNameS<'a>,
 }
 
 /*
 trait IImpreciseNameS extends IInterning
 */
+// AFTERM: Add arcana for how these sometimes contain INameS even though
+// INameS arent interned. Should be fine, but worth looking out for.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameS<'a> {
   CodeName(&'a CodeNameS<'a>),
@@ -90,38 +154,38 @@ impl<'a> IImpreciseNameS<'a> {
 /// Value-struct for LambdaStructImpreciseNameS key. Shallow: references canonical child.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructImpreciseNameValS<'a> {
-  pub lambda_name: &'a IImpreciseNameS<'a>,
+  pub lambda_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for AnonymousSubstructTemplateImpreciseNameS key. Shallow: references canonical child.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameValS<'a> {
-  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub interface_imprecise_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for AnonymousSubstructConstructorTemplateImpreciseNameS key. Shallow: references canonical child.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameValS<'a> {
-  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub interface_imprecise_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for ImplImpreciseNameS key. Shallow: references canonical children.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameValS<'a> {
-  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
-  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for ImplSubCitizenImpreciseNameS key. Shallow: references canonical child.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameValS<'a> {
-  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for ImplSuperInterfaceImpreciseNameS key. Shallow: references canonical child.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameValS<'a> {
-  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: IImpreciseNameS<'a>,
 }
 
 /// Value-struct for RuneNameS key. Shallow: references canonical child rune.
@@ -158,10 +222,32 @@ pub enum IImpreciseNameValS<'a> {
 sealed trait IVarNameS extends INameS
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ClosureParamNameS<'a> {
+  pub code_location: CodeLocationS<'a>,
+}
+/*
+case class ClosureParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
+*/
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarNameS<'a> {
   CodeVarName(StrI<'a>),
   ConstructingMemberName(StrI<'a>),
-  ClosureParamName(CodeLocationS<'a>),
+  ClosureParamName(&'a ClosureParamNameS<'a>),
+  MagicParamName(CodeLocationS<'a>),
+  IterableName(RangeS<'a>),
+  IteratorName(RangeS<'a>),
+  IterationOptionName(RangeS<'a>),
+  WhileCondResultName(RangeS<'a>),
+  SelfName,
+  AnonymousSubstructMemberName(i32),
+}
+
+/// Value form for interner lookups.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IVarNameValS<'a> {
+  CodeVarName(StrI<'a>),
+  ConstructingMemberName(StrI<'a>),
+  ClosureParamName(ClosureParamNameS<'a>),
   MagicParamName(CodeLocationS<'a>),
   IterableName(RangeS<'a>),
   IteratorName(RangeS<'a>),
@@ -179,6 +265,54 @@ pub enum IFunctionDeclarationNameS<'a> {
   ConstructorName(&'a ConstructorNameS<'a>),
   ImmConcreteDestructorName(&'a ImmConcreteDestructorNameS<'a>),
   ImmInterfaceDestructorName(&'a ImmInterfaceDestructorNameS<'a>),
+}
+
+/// Value form for interner lookups. Shallow variant holds canonical IFunctionDeclarationNameS.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IFunctionDeclarationNameValS<'a> {
+  FunctionName(FunctionNameS<'a>),
+  LambdaDeclarationName(LambdaDeclarationNameS<'a>),
+  ForwarderFunctionDeclarationName(ForwarderFunctionDeclarationNameValS<'a>),
+  ConstructorName(ConstructorNameS<'a>),
+  ImmConcreteDestructorName(ImmConcreteDestructorNameS<'a>),
+  ImmInterfaceDestructorName(ImmInterfaceDestructorNameS<'a>),
+}
+
+/// Shallow: inner already canonical.
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ForwarderFunctionDeclarationNameValS<'a> {
+  pub inner: IFunctionDeclarationNameS<'a>,
+  pub index: i32,
+}
+
+impl<'a> IFunctionDeclarationNameS<'a> {
+  /// Convert to value form for interning. Clones through refs.
+  pub fn to_val(&self) -> IFunctionDeclarationNameValS<'a> {
+    use crate::postparsing::names::ForwarderFunctionDeclarationNameValS;
+    match self {
+      IFunctionDeclarationNameS::FunctionName(x) => {
+        IFunctionDeclarationNameValS::FunctionName(x.clone())
+      }
+      IFunctionDeclarationNameS::LambdaDeclarationName(x) => {
+        IFunctionDeclarationNameValS::LambdaDeclarationName(x.clone())
+      }
+      IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(r) => {
+        IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(ForwarderFunctionDeclarationNameValS {
+          inner: r.inner.clone(),
+          index: r.index,
+        })
+      }
+      IFunctionDeclarationNameS::ConstructorName(r) => {
+        IFunctionDeclarationNameValS::ConstructorName((*r).clone())
+      }
+      IFunctionDeclarationNameS::ImmConcreteDestructorName(r) => {
+        IFunctionDeclarationNameValS::ImmConcreteDestructorName((*r).clone())
+      }
+      IFunctionDeclarationNameS::ImmInterfaceDestructorName(r) => {
+        IFunctionDeclarationNameValS::ImmInterfaceDestructorName((*r).clone())
+      }
+    }
+  }
 }
 
 /*
@@ -224,6 +358,11 @@ case class LambdaDeclarationNameS(
   override def getImpreciseName(interner: Interner): LambdaImpreciseNameS = interner.intern(LambdaImpreciseNameS())
 }
 */
+impl<'a> LambdaDeclarationNameS<'a> {
+  pub fn get_imprecise_name(&self, interner: &Interner<'a>) -> IImpreciseNameS<'a> {
+    interner.intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameS {}))
+  }
+}
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaImpreciseNameS {}
 /*
@@ -343,9 +482,19 @@ case class LambdaStructDeclarationNameS(lambdaName: LambdaDeclarationNameS) exte
   def getImpreciseName(interner: Interner): LambdaStructImpreciseNameS = interner.intern(LambdaStructImpreciseNameS(lambdaName.getImpreciseName(interner)))
 }
 */
+impl<'a> LambdaStructDeclarationNameS<'a> {
+  pub fn get_imprecise_name(&self, interner: &Interner<'a>) -> IImpreciseNameS<'a> {
+    let lambda_imprecise_name = self.lambda_name.get_imprecise_name(interner);
+    interner.intern_imprecise_name(IImpreciseNameValS::LambdaStructImpreciseName(
+      LambdaStructImpreciseNameValS {
+        lambda_name: lambda_imprecise_name,
+      },
+    ))
+  }
+}
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructImpreciseNameS<'a> {
-  pub lambda_name: &'a IImpreciseNameS<'a>,
+  pub lambda_name: IImpreciseNameS<'a>,
 }
 /*
 case class LambdaStructImpreciseNameS(lambdaName: LambdaImpreciseNameS) extends IImpreciseNameS {  }
@@ -385,13 +534,6 @@ pub struct LetNameS<'a> {
 case class LetNameS(codeLocation: CodeLocationS) extends INameS {  }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ClosureParamNameS<'a> {
-  pub code_location: CodeLocationS<'a>,
-}
-/*
-case class ClosureParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
-*/
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ClosureParamImpreciseNameS {}
 /*
 case class ClosureParamImpreciseNameS() extends IImpreciseNameS {  }
@@ -423,7 +565,7 @@ case class AnonymousSubstructTemplateNameS(interfaceName: TopLevelInterfaceDecla
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameS<'a> {
-  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub interface_imprecise_name: IImpreciseNameS<'a>,
 }
 /*
 case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -432,7 +574,7 @@ case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImp
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameS<'a> {
-  pub interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub interface_imprecise_name: IImpreciseNameS<'a>,
 }
 /*
 case class AnonymousSubstructConstructorTemplateImpreciseNameS(interfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS {
@@ -1248,16 +1390,16 @@ case class ImmInterfaceDestructorNameS(packageCoordinate: PackageCoordinate) ext
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameS<'a> {
-  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
-  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: IImpreciseNameS<'a>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameS<'a> {
-  pub sub_citizen_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
 }
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameS<'a> {
-  pub super_interface_imprecise_name: &'a IImpreciseNameS<'a>,
+  pub super_interface_imprecise_name: IImpreciseNameS<'a>,
 }
 /*
 case class ImplImpreciseNameS(subCitizenImpreciseName: IImpreciseNameS, superInterfaceImpreciseName: IImpreciseNameS) extends IImpreciseNameS { }

@@ -596,7 +596,7 @@ case class UnletSE(range: RangeS, name: IVarNameS) extends IExpressionSE {
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionSE<'a, 's> {
-  pub function: FunctionS<'a, 's>,
+  pub function: &'s FunctionS<'a, 's>,
 }
 /*
 case class FunctionSE(function: FunctionS) extends IExpressionSE {

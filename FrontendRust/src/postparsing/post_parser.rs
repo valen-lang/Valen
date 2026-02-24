@@ -32,7 +32,7 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS,
-  DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
+  INameValS, DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
@@ -671,7 +671,6 @@ where
     let slice = alloc_slice_from_vec(self.scout_arena, flattened);
     &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE { exprs: slice }))
   }
-}
 /*
   def consecutive(exprs: Vector[IExpressionSE]): IExpressionSE = {
     if (exprs.isEmpty) {
@@ -687,8 +686,8 @@ where
     }
   }
 */
-pub(crate) fn scout_generic_parameter<'a, 'p>(
-  _interner: &Interner<'a>,
+pub(crate) fn scout_generic_parameter(
+  &self,
   env: IEnvironmentS<'a>,
   _lidb: &mut LocationInDenizenBuilder,
   rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
@@ -701,7 +700,7 @@ pub(crate) fn scout_generic_parameter<'a, 'p>(
   param_rune_s: RuneUsage<'a>,
   // Returns a possible implicit region generic param (see MNRFGC), and the translated original
   // generic param.
-) -> GenericParameterS<'a> {
+) -> GenericParameterS<'a, 's> {
   let file = env.file();
   let generic_param_range_s = PostParser::eval_range(file, generic_param_p.range);
   let rune_s = param_rune_s;
@@ -810,13 +809,13 @@ pub(crate) fn scout_generic_parameter<'a, 'p>(
     panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_DEFAULT_NOT_YET_IMPLEMENTED");
   }
 
-  GenericParameterS {
-    range: generic_param_range_s,
-    rune: rune_s,
-    tyype: generic_param_type_s,
-    default: None,
+  return GenericParameterS {
+      range: generic_param_range_s,
+      rune: rune_s,
+      tyype: generic_param_type_s,
+      default: None,
+    };
   }
-}
 /*
   def scoutGenericParameter(
       templexScout: TemplexScout,
@@ -945,6 +944,7 @@ pub(crate) fn scout_generic_parameter<'a, 'p>(
     genericParamS
   }
 */
+}
 /*
 }
 */
@@ -1014,7 +1014,7 @@ class PostParser(
       }
     }
 
-    let mut implemented_functions = Vec::new();
+    let mut implemented_functions: Vec<&'s crate::postparsing::ast::FunctionS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelFunction(function_p) = denizen {
         let (function_s, function_uses) =
@@ -1160,7 +1160,7 @@ fn scout_impl(
   let impl_env = IEnvironmentS::Environment(EnvironmentS {
     file,
     parent_env: None,
-    name: INameS::ImplDeclaration(impl_name.clone()),
+    name: self.interner.intern_name(INameValS::ImplDeclaration(impl_name.clone())),
     user_declared_runes: user_declared_runes
       .iter()
       .map(|rune_usage| rune_usage.rune.clone())
@@ -1177,7 +1177,7 @@ fn scout_impl(
   };
   let default_region_rune_s = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
     crate::postparsing::names::DenizenDefaultRegionRuneS {
-      denizen_name: INameS::ImplDeclaration(impl_name.clone()),
+      denizen_name: self.interner.intern_name(INameValS::ImplDeclaration(impl_name.clone())),
     },
   ));
   let maybe_region_generic_param = Some(GenericParameterS {
@@ -1206,8 +1206,7 @@ fn scout_impl(
     .zip(user_specified_identifying_runes.iter())
     .map(|(g, r)| {
       let mut child_lidb = lidb.child();
-      scout_generic_parameter(
-        self.interner,
+      self.scout_generic_parameter(
         impl_env.clone(),
         &mut child_lidb,
         &mut rune_to_explicit_type,
@@ -1219,7 +1218,7 @@ fn scout_impl(
     })
     .collect::<Vec<_>>();
   let _user_specified_runes_implicit_region_runes_s =
-    maybe_region_generic_param.as_ref().map(|_x| Vec::<GenericParameterS<'a>>::new());
+    maybe_region_generic_param.as_ref().map(|_x| Vec::<GenericParameterS<'a, 's>>::new());
 
   {
     let mut child_lidb = lidb.child();
@@ -1650,7 +1649,7 @@ fn predict_mutability(
     let struct_env = IEnvironmentS::Environment(EnvironmentS {
       file,
       parent_env: None,
-      name: INameS::TopLevelStructDeclaration(struct_name.clone()),
+      name: self.interner.intern_name(INameValS::TopLevelStructDeclaration(struct_name.clone())),
       user_declared_runes: user_declared_runes
         .iter()
         .map(|x| x.rune.clone())
@@ -1671,7 +1670,9 @@ fn predict_mutability(
             .interner
             .intern_rune(IRuneValS::DenizenDefaultRegionRune(
               DenizenDefaultRegionRuneS {
-              denizen_name: INameS::TopLevelStructDeclaration(struct_name.clone()),
+              denizen_name: self.interner.intern_name(INameValS::TopLevelStructDeclaration(
+                struct_name.clone(),
+              )),
             }));
           // Put back in when we have regions
           // header_rune_to_explicit_type.push((rune.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {})));
@@ -1713,8 +1714,7 @@ fn predict_mutability(
       .iter()
       .zip(user_specified_identifying_runes.iter())
       .map(|(g, r)| {
-        scout_generic_parameter(
-          self.interner,
+        self.scout_generic_parameter(
           struct_env.clone(),
           &mut lidb.child(),
           &mut header_rune_to_explicit_type,
@@ -1878,7 +1878,7 @@ fn predict_mutability(
       .any(|attr| matches!(attr, IAttributeP::WeakableAttribute(_)));
     let attrs_without_linear_s = Self::translate_citizen_attributes(
       file,
-      INameS::TopLevelStructDeclaration(struct_name.clone()),
+      self.interner.intern_name(INameValS::TopLevelStructDeclaration(struct_name.clone())),
       &head
         .attributes
         .iter()
@@ -2366,7 +2366,7 @@ pub(crate) fn check_identifiability(
         return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
       },
       rules: alloc_slice_from_vec(self.scout_arena, interface_rules),
-      internal_methods: alloc_slice_from_vec(self.scout_arena, internal_methods),
+      internal_methods: crate::utils::arena_utils::alloc_slice_from_vec_of_refs(self.scout_arena, internal_methods),
     })
   }
 /*

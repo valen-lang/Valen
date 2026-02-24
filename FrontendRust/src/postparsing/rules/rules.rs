@@ -29,14 +29,9 @@ case class RuneUsage(range: RangeS, rune: IRuneS) {
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PlaceholderRuleSR<'a> {
-  pub range: RangeS<'a>,
-}
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IRulexSR<'a> {
-  Placeholder(PlaceholderRuleSR<'a>),
   Equals(EqualsSR<'a>),
   Literal(LiteralSR<'a>),
   MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
@@ -47,12 +42,12 @@ pub enum IRulexSR<'a> {
   OneOf(OneOfSR<'a>),
   IsInterface(IsInterfaceSR<'a>),
   CoordComponents(CoordComponentsSR<'a>),
+  CoerceToCoord(CoerceToCoordSR<'a>),
 }
 
 impl<'a> IRulexSR<'a> {
   pub fn range<'s>(&'s self) -> &'s RangeS<'a> {
     match self {
-      IRulexSR::Placeholder(x) => &x.range,
       IRulexSR::Equals(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
       IRulexSR::MaybeCoercingLookup(x) => &x.range,
@@ -63,12 +58,12 @@ impl<'a> IRulexSR<'a> {
       IRulexSR::OneOf(x) => &x.range,
       IRulexSR::IsInterface(x) => &x.range,
       IRulexSR::CoordComponents(x) => &x.range,
+      IRulexSR::CoerceToCoord(x) => &x.range,
     }
   }
 
   pub fn rune_usages<'s>(&'s self) -> Vec<RuneUsage<'a>> {
     match self {
-      IRulexSR::Placeholder(_) => vec![],
       IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
       IRulexSR::MaybeCoercingLookup(x) => vec![x.rune.clone()],
@@ -85,6 +80,7 @@ impl<'a> IRulexSR<'a> {
       IRulexSR::CoordComponents(x) => {
         vec![x.result_rune.clone(), x.ownership_rune.clone(), x.kind_rune.clone()]
       }
+      IRulexSR::CoerceToCoord(x) => vec![x.coord_rune.clone(), x.kind_rune.clone()],
     }
   }
 }
@@ -277,6 +273,12 @@ case class IsStructSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoerceToCoordSR<'a> {
+  pub range: RangeS<'a>,
+  pub coord_rune: RuneUsage<'a>,
+  pub kind_rune: RuneUsage<'a>,
+}
 /*
 // TODO: Get rid of this in favor of just CoordComponentsSR.
 case class CoerceToCoordSR(

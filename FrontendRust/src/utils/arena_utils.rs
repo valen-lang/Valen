@@ -13,7 +13,7 @@ use bumpalo::Bump;
 /// Allocate a copy of a slice in the arena.
 /// For `Copy` payloads (e.g. RangeL, NameP).
 #[inline(always)]
-pub fn alloc_slice_copy<'p, T: Copy>(arena: &'p Bump, slice: &[T]) -> &'p [T] {
+pub fn alloc_slice_copy<'x, T: Copy>(arena: &'x Bump, slice: &[T]) -> &'x [T] {
   arena.alloc_slice_copy(slice)
 }
 
@@ -21,7 +21,7 @@ pub fn alloc_slice_copy<'p, T: Copy>(arena: &'p Bump, slice: &[T]) -> &'p [T] {
 /// For non-Copy node vectors (e.g. Vec<IExpressionPE<'a>>).
 /// Iterator must be ExactSizeIterator (e.g. Vec::into_iter()).
 #[inline(always)]
-pub fn alloc_slice_fill_iter<'p, T, I>(arena: &'p Bump, iter: I) -> &'p [T]
+pub fn alloc_slice_fill_iter<'x, T, I>(arena: &'x Bump, iter: I) -> &'x [T]
 where
   I: IntoIterator<Item = T>,
   I::IntoIter: ExactSizeIterator,
@@ -31,6 +31,12 @@ where
 
 /// Convenience: allocate a slice from a Vec (moves elements).
 #[inline(always)]
-pub fn alloc_slice_from_vec<'p, T>(arena: &'p Bump, vec: Vec<T>) -> &'p [T] {
+pub fn alloc_slice_from_vec<'x, T>(arena: &'x Bump, vec: Vec<T>) -> &'x [T] {
   arena.alloc_slice_fill_iter(vec.into_iter())
+}
+
+/// Convenience: allocate a slice from a Vec of refs.
+#[inline(always)]
+pub fn alloc_slice_from_vec_of_refs<'x, T>(arena: &'x Bump, vec: Vec<&'x T>) -> &'x [&'x T] {
+  arena.alloc_slice_copy(&vec)
 }

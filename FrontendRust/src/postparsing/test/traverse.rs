@@ -17,9 +17,10 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::patterns::{AtomSP, CaptureS};
 use crate::postparsing::rules::rules::{
-  AugmentSR, BoolLiteralSL, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL, IRulexSR,
-  IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR, MaybeCoercingLookupSR,
-  MutabilityLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL, VariabilityLiteralSL,
+  AugmentSR, BoolLiteralSL, CoerceToCoordSR, CoordComponentsSR, EqualsSR, ILiteralSL, IntLiteralSL,
+  IRulexSR, IsInterfaceSR, LiteralSR, LocationLiteralSL, LookupSR, MaybeCoercingCallSR,
+  MaybeCoercingLookupSR, MutabilityLiteralSL, OneOfSR, OwnershipLiteralSL, StringLiteralSL,
+  VariabilityLiteralSL,
 };
 use crate::postparsing::rules::RuneUsage;
 
@@ -58,8 +59,8 @@ pub enum NodeRefS<'a, 's> {
   NormalStructMember(&'s NormalStructMemberS<'a>),
   VariadicStructMember(&'s VariadicStructMemberS<'a>),
 
-  GenericParameter(&'s GenericParameterS<'a>),
-  GenericParameterDefault(&'s GenericParameterDefaultS<'a>),
+  GenericParameter(&'s GenericParameterS<'a, 's>),
+  GenericParameterDefault(&'s GenericParameterDefaultS<'a, 's>),
   GenericParameterType(&'s IGenericParameterTypeS<'a>),
   Parameter(&'s ParameterS<'a>),
   SimpleParameter(&'s SimpleParameterS<'a>),
@@ -80,7 +81,6 @@ pub enum NodeRefS<'a, 's> {
   Capture(&'s CaptureS<'a>),
 
   Rulex(&'s IRulexSR<'a>),
-  PlaceholderRule(&'s crate::postparsing::rules::rules::PlaceholderRuleSR<'a>),
   EqualsRule(&'s EqualsSR<'a>),
   LiteralRule(&'s LiteralSR<'a>),
   MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'a>),
@@ -90,6 +90,7 @@ pub enum NodeRefS<'a, 's> {
   OneOfRule(&'s OneOfSR<'a>),
   IsInterfaceRule(&'s IsInterfaceSR<'a>),
   CoordComponentsRule(&'s CoordComponentsSR<'a>),
+  CoerceToCoordRule(&'s CoerceToCoordSR<'a>),
   RuneUsage(&'s RuneUsage<'a>),
   Literal(&'s ILiteralSL),
   IntLiteral(&'s IntLiteralSL),
@@ -427,7 +428,7 @@ where
   visit_pattern(pred, out, &parameter.pattern);
 }
 
-fn visit_generic_parameter<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'s GenericParameterS<'a>)
+fn visit_generic_parameter<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'s GenericParameterS<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
@@ -439,7 +440,7 @@ where
   }
 }
 
-fn visit_generic_parameter_default<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, default: &'s GenericParameterDefaultS<'a>)
+fn visit_generic_parameter_default<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, default: &'s GenericParameterDefaultS<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
@@ -750,9 +751,6 @@ where
 {
   collect_if(pred, out, NodeRefS::Rulex(rulex));
   match rulex {
-    IRulexSR::Placeholder(x) => {
-      collect_if(pred, out, NodeRefS::PlaceholderRule(x));
-    }
     IRulexSR::Equals(x) => {
       collect_if(pred, out, NodeRefS::EqualsRule(x));
       visit_rune_usage(pred, out, &x.left);
@@ -806,6 +804,11 @@ where
       visit_rune_usage(pred, out, &x.ownership_rune);
       visit_rune_usage(pred, out, &x.kind_rune);
     }
+    IRulexSR::CoerceToCoord(x) => {
+      collect_if(pred, out, NodeRefS::CoerceToCoordRule(x));
+      visit_rune_usage(pred, out, &x.coord_rune);
+      visit_rune_usage(pred, out, &x.kind_rune);
+    }
   }
 }
 
@@ -847,7 +850,33 @@ where
   collect_if(pred, out, NodeRefS::ImpreciseName(name));
   match name {
     IImpreciseNameS::CodeName(x) => collect_if(pred, out, NodeRefS::CodeName(x)),
-    _ => panic!("POSTPARSING_TRAVERSE_IMPRECISE_NAME_NOT_YET_IMPLEMENTED"),
+    IImpreciseNameS::LambdaStructImpreciseName(x) => visit_imprecise_name(pred, out, &x.lambda_name),
+    IImpreciseNameS::AnonymousSubstructTemplateImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.interface_imprecise_name)
+    }
+    IImpreciseNameS::AnonymousSubstructConstructorTemplateImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.interface_imprecise_name)
+    }
+    IImpreciseNameS::ImplImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.sub_citizen_imprecise_name);
+      visit_imprecise_name(pred, out, &x.super_interface_imprecise_name);
+    }
+    IImpreciseNameS::ImplSubCitizenImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.sub_citizen_imprecise_name)
+    }
+    IImpreciseNameS::ImplSuperInterfaceImpreciseName(x) => {
+      visit_imprecise_name(pred, out, &x.super_interface_imprecise_name)
+    }
+    IImpreciseNameS::RuneName(x) => visit_rune(pred, out, x.rune),
+    IImpreciseNameS::IterableName(_)
+    | IImpreciseNameS::IteratorName(_)
+    | IImpreciseNameS::IterationOptionName(_)
+    | IImpreciseNameS::LambdaImpreciseName(_)
+    | IImpreciseNameS::PlaceholderImpreciseName(_)
+    | IImpreciseNameS::ClosureParamImpreciseName(_)
+    | IImpreciseNameS::PrototypeName(_)
+    | IImpreciseNameS::SelfName(_)
+    | IImpreciseNameS::ArbitraryName(_) => {}
   }
 }
 

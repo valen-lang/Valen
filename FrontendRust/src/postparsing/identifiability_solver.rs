@@ -33,6 +33,56 @@ sealed trait IIdentifiabilityRuleError
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum IIdentifiabilityRuleError {}
+
+struct IdentifiabilitySolverDelegate<'a> {
+  call_range: Vec<RangeS<'a>>,
+}
+
+impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiabilityRuleError>
+  for IdentifiabilitySolverDelegate<'a>
+{
+  fn rule_to_puzzles(&self, rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
+    get_puzzles(rule)
+  }
+
+  fn rule_to_runes(&self, rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
+    get_runes(rule)
+  }
+
+  fn solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+    &self,
+    _state: &(),
+    _env: &(),
+    rule_index: i32,
+    rule: &IRulexSR<'a>,
+    solver_state: &mut S,
+  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+    solve_rule_impl(
+      rule_index,
+      &self.call_range,
+      rule,
+      solver_state,
+    )
+  }
+
+  fn complex_solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+    &self,
+    _state: &(),
+    _env: &(),
+    _solver_state: &mut S,
+  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+    Ok(())
+  }
+
+  fn sanity_check_conclusion(
+    &self,
+    _env: &(),
+    _state: &(),
+    _rune: &IRuneS<'a>,
+    _conclusion: &bool,
+  ) {
+  }
+}
 /*
 // Identifiability is whether the denizen has enough identifying runes to uniquely identify all its
 // instantiations. It's only used as a check, and will throw an error if there's a rune that can't
@@ -80,8 +130,34 @@ where 'a: 's {
     result.map(_.rune)
   }
 */
-fn get_puzzles<'a>(_rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
-  panic!("Unimplemented get_puzzles");
+fn get_puzzles<'a>(rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
+  match rule {
+    IRulexSR::Equals(x) => vec![vec![x.left.rune.clone()], vec![x.right.rune.clone()]],
+    IRulexSR::MaybeCoercingLookup(_) => vec![vec![]],
+    IRulexSR::Lookup(_) => vec![vec![]],
+    IRulexSR::RuneParentEnvLookup(_) => {
+      // This Vector() literally means nothing can solve this puzzle.
+      // It needs to be passed in via identifying rune.
+      vec![]
+    }
+    IRulexSR::MaybeCoercingCall(x) => {
+      // We can't determine the template from the result and args because we might be coercing its
+      // returned kind to a coord. So we need the template.
+      // We can't determine the return type because we don't know whether we're coercing or not.
+      let mut second = vec![x.template_rune.rune.clone()];
+      second.extend(x.args.iter().map(|a| a.rune.clone()));
+      vec![
+        vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()],
+        second,
+      ]
+    }
+    IRulexSR::Augment(_) => vec![vec![]],
+    IRulexSR::OneOf(_) => vec![vec![]],
+    IRulexSR::IsInterface(_) => vec![vec![]],
+    IRulexSR::CoordComponents(_) => vec![vec![]],
+    IRulexSR::CoerceToCoord(_) => vec![vec![]],
+    IRulexSR::Literal(_) => vec![vec![]],
+  }
 }
 /*
   def getPuzzles(rule: IRulexSR): Vector[Vector[IRuneS]] = {
@@ -129,13 +205,119 @@ fn get_puzzles<'a>(_rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
     }
   }
 */
-fn solve_rule<'a>(
-  _state: (),
-  _rule_index: usize,
-  _call_range: &[RangeS<'a>],
-  _rule: &IRulexSR<'a>,
-) -> Result<(), ()> {
-  panic!("Unimplemented solve_rule");
+fn solve_rule_impl<'a, S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
+  _rule_index: i32,
+  call_range: &[RangeS<'a>],
+  rule: &IRulexSR<'a>,
+  solver_state: &mut S,
+) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
+  let mut range_s = vec![rule.range().clone()];
+  range_s.extend(call_range.iter().cloned());
+  match rule {
+    IRulexSR::CoordComponents(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.result_rune.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.ownership_rune.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.kind_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::MaybeCoercingCall(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.result_rune.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.template_rune.rune.clone(),
+        true,
+      )?;
+      for arg in &x.args {
+        solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+          range_s.clone(),
+          arg.rune.clone(),
+          true,
+        )?;
+      }
+      Ok(())
+    }
+    IRulexSR::OneOf(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::Equals(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.left.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.right.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::IsInterface(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::Literal(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::Lookup(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::MaybeCoercingLookup(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::RuneParentEnvLookup(_) => {
+      // Scala: vimpl() - env check not yet migrated
+      Ok(())
+    }
+    IRulexSR::Augment(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.result_rune.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.inner_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::CoerceToCoord(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(),
+        x.kind_rune.rune.clone(),
+        true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.coord_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+  }
 }
 /*
   private def solveRule(
@@ -291,67 +473,6 @@ fn solve_rule<'a>(
 //      }
     }
   }
-*/
-struct IdentifiabilitySolverDelegate<'a> {
-  call_range: Vec<RangeS<'a>>,
-}
-
-impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiabilityRuleError>
-  for IdentifiabilitySolverDelegate<'a>
-{
-  fn rule_to_puzzles(&self, rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
-    get_puzzles(rule)
-  }
-
-  fn rule_to_runes(&self, rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
-    get_runes(rule)
-  }
-
-  fn solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
-    &self,
-    _state: &(),
-    _env: &(),
-    rule_index: i32,
-    rule: &IRulexSR<'a>,
-    solver_state: &mut S,
-  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
-    solve_rule_impl(
-      rule_index,
-      &self.call_range,
-      rule,
-      solver_state,
-    )
-  }
-
-  fn complex_solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
-    &self,
-    _state: &(),
-    _env: &(),
-    _solver_state: &mut S,
-  ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
-    Ok(())
-  }
-
-  fn sanity_check_conclusion(
-    &self,
-    _env: &(),
-    _state: &(),
-    _rune: &IRuneS<'a>,
-    _conclusion: &bool,
-  ) {
-  }
-}
-
-fn solve_rule_impl<'a, S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
-  _rule_index: i32,
-  _call_range: &[RangeS<'a>],
-  _rule: &IRulexSR<'a>,
-  _solver_state: &mut S,
-) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
-  panic!("Unimplemented solve_rule_impl")
-}
-/*
-  // delegate solve calls solveRule(state, env, ruleIndex, callRange, rule, stepState)
 */
 pub(crate) fn solve_identifiability<'a>(
   sanity_check: bool,

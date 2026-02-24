@@ -42,21 +42,22 @@ pub struct ProgramS<'a, 's> {
   pub structs: &'s [StructS<'a, 's>],
   pub interfaces: &'s [InterfaceS<'a, 's>],
   pub impls: &'s [ImplS<'a, 's>],
-  pub implemented_functions: &'s [FunctionS<'a, 's>],
+  pub implemented_functions: &'s [&'s FunctionS<'a, 's>],
   pub exports: &'s [ExportAsS<'a, 's>],
   pub imports: &'s [ImportS<'a, 's>],
 }
 
 impl<'a, 's> ProgramS<'a, 's> {
-  pub fn lookup_function(&self, name: &str) -> &FunctionS<'a, 's> {
-    let matches: Vec<&FunctionS<'a, 's>> = self
+  pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'a, 's> {
+    let matches: Vec<&'s FunctionS<'a, 's>> = self
       .implemented_functions
       .iter()
       .filter(|f| match &f.name {
         IFunctionDeclarationNameS::FunctionName(n) => n.name.as_str() == name,
         _ => false,
       })
-      .collect();
+      .map(|f| *f)
+      .collect::<Vec<&'s FunctionS<'a, 's>>>();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
@@ -216,7 +217,7 @@ impl<'a, 's> ICitizenS<'a, 's> {
     }
   }
 
-  pub fn generic_params(&self) -> &'s [GenericParameterS<'a>] {
+  pub fn generic_params(&self) -> &'s [GenericParameterS<'a, 's>] {
     match self {
       ICitizenS::Struct(s) => s.generic_params,
       ICitizenS::Interface(i) => i.generic_params,
@@ -237,7 +238,7 @@ pub struct StructS<'a, 's> {
   pub name: TopLevelStructDeclarationNameS<'a>,
   pub attributes: &'s [ICitizenAttributeS<'a>],
   pub weakable: bool,
-  pub generic_params: &'s [GenericParameterS<'a>],
+  pub generic_params: &'s [GenericParameterS<'a, 's>],
   pub mutability_rune: RuneUsage<'a>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
   pub tyype: TemplateTemplataType,
@@ -374,14 +375,14 @@ pub struct InterfaceS<'a, 's> {
   pub name: TopLevelInterfaceDeclarationNameS<'a>,
   pub attributes: &'s [ICitizenAttributeS<'a>],
   pub weakable: bool,
-  pub generic_params: &'s [GenericParameterS<'a>],
+  pub generic_params: &'s [GenericParameterS<'a, 's>],
   pub rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   pub mutability_rune: RuneUsage<'a>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
   pub predicted_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
   pub tyype: TemplateTemplataType,
   pub rules: &'s [IRulexSR<'a>],
-  pub internal_methods: &'s [FunctionS<'a, 's>],
+  pub internal_methods: &'s [&'s FunctionS<'a, 's>],
 }
 
 /*
@@ -439,7 +440,7 @@ case class InterfaceS(
 pub struct ImplS<'a, 's> {
   pub range: RangeS<'a>,
   pub name: ImplDeclarationNameS<'a>,
-  pub user_specified_identifying_runes: &'s [GenericParameterS<'a>],
+  pub user_specified_identifying_runes: &'s [GenericParameterS<'a, 's>],
   pub rules: &'s [IRulexSR<'a>],
   pub rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   pub tyype: ITemplataType,
@@ -597,7 +598,7 @@ pub struct GeneratedBodyS<'a> {
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CodeBodyS<'a, 's> {
-  pub body: BodySE<'a, 's>,
+  pub body: &'s BodySE<'a, 's>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
@@ -734,11 +735,11 @@ case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericPara
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct GenericParameterS<'a> {
+pub struct GenericParameterS<'a, 's> {
   pub range: RangeS<'a>,
   pub rune: RuneUsage<'a>,
   pub tyype: IGenericParameterTypeS<'a>,
-  pub default: Option<GenericParameterDefaultS<'a>>,
+  pub default: Option<GenericParameterDefaultS<'a, 's>>,
 }
 
 /*
@@ -755,9 +756,9 @@ case class GenericParameterS(
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct GenericParameterDefaultS<'a> {
+pub struct GenericParameterDefaultS<'a, 's> {
   pub result_rune: IRuneS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: Vec<&'s IRulexSR<'a>>,
 }
 
 /*
@@ -770,15 +771,15 @@ case class GenericParameterDefaultS(
 #[derive(Clone, Debug, PartialEq)]
 pub struct FunctionS<'a, 's> {
   pub range: RangeS<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
+  pub name: &'a IFunctionDeclarationNameS<'a>,
   pub attributes: &'s [IFunctionAttributeS<'a>],
-  pub generic_params: &'s [GenericParameterS<'a>],
+  pub generic_params: &'s [GenericParameterS<'a, 's>],
   pub rune_to_predicted_type: HashMap<IRuneS<'a>, ITemplataType>,
   pub tyype: TemplateTemplataType,
   pub params: &'s [ParameterS<'a>],
   pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
   pub rules: &'s [IRulexSR<'a>],
-  pub body: IBodyS<'a, 's>,
+  pub body: &'s IBodyS<'a, 's>,
 }
 
 impl<'a, 's> FunctionS<'a, 's> {

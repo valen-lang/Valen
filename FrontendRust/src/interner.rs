@@ -1,12 +1,15 @@
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::postparsing::names::{
-  IImpreciseNameS, IImpreciseNameValS, IRuneS, IRuneValS,
+  IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
+  IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IVarNameS, IVarNameValS,
   ImplicitRegionRuneS, ImplicitCoercionOwnershipRuneS, ImplicitCoercionKindRuneS,
+  RuneNameS,
   ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
   DispatcherRuneFromImplS, CaseRuneFromImplS,
-  LambdaStructImpreciseNameS, AnonymousSubstructTemplateImpreciseNameS,
+  LambdaStructImpreciseNameS,
+  AnonymousSubstructTemplateImpreciseNameS,
   AnonymousSubstructConstructorTemplateImpreciseNameS, ImplImpreciseNameS,
-  ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS, RuneNameS,
+  ImplSubCitizenImpreciseNameS, ImplSuperInterfaceImpreciseNameS,
 };
 use bumpalo::Bump;
 use std::collections::HashMap;
@@ -150,6 +153,7 @@ struct InternerInner<'a> {
   package_coord_to_ref: HashMap<PackageCoordinate<'a>, &'a PackageCoordinate<'a>>,
   file_coord_to_ref: HashMap<FileCoordLookupKey<'a>, &'a FileCoordinate<'a>>,
   imprecise_name_val_to_ref: HashMap<IImpreciseNameValS<'a>, IImpreciseNameS<'a>>,
+  name_val_to_ref: HashMap<INameValS<'a>, INameS<'a>>,
   rune_val_to_ref: HashMap<IRuneValS<'a>, IRuneS<'a>>,
 }
 
@@ -162,6 +166,7 @@ impl<'a> Interner<'a> {
         package_coord_to_ref: HashMap::new(),
         file_coord_to_ref: HashMap::new(),
         imprecise_name_val_to_ref: HashMap::new(),
+        name_val_to_ref: HashMap::new(),
         rune_val_to_ref: HashMap::new(),
       }),
       _marker: PhantomData,
@@ -233,19 +238,16 @@ impl<'a> Interner<'a> {
     new_ref
   }
 
-  /// Canonical imprecise-name entrypoint: intern an IImpreciseNameValS value key and return canonical IImpreciseNameS.
+  /// Canonical imprecise-name entrypoint: intern an IImpreciseNameValS value key and return canonical IImpreciseNameS<'a>.
   pub fn intern_imprecise_name(&self, val: IImpreciseNameValS<'a>) -> IImpreciseNameS<'a> {
     {
       let inner = self.inner.borrow();
       if let Some(existing) = inner.imprecise_name_val_to_ref.get(&val) {
-        // Fast path: return the already-canonicalized payload.
         return existing.clone();
       }
     }
-    let canonical = self.alloc_imprecise_name_canonical(val.clone());
+    let canonical: IImpreciseNameS<'a> = self.alloc_imprecise_name_canonical(val.clone());
     let mut inner = self.inner.borrow_mut();
-    // Keep the original value key in the map; identity comparisons should be done on
-    // the canonical payload pointer (`ptr_eq` / `canonical_ptr`), not on `==`.
     inner.imprecise_name_val_to_ref.insert(val, canonical.clone());
     canonical
   }
@@ -348,6 +350,154 @@ impl<'a> Interner<'a> {
         let r = self.arena.alloc(p);
         IImpreciseNameS::ArbitraryName(r)
       }
+    }
+  }
+
+  /// Canonical name entrypoint: intern an INameValS value key and return canonical INameS<'a>.
+  pub fn intern_name(&self, val: INameValS<'a>) -> INameS<'a> {
+    {
+      let inner = self.inner.borrow();
+      if let Some(existing) = inner.name_val_to_ref.get(&val) {
+        return existing.clone();
+      }
+    }
+    let canonical = self.alloc_name_canonical(val.clone());
+    let mut inner = self.inner.borrow_mut();
+    inner.name_val_to_ref.insert(val, canonical.clone());
+    canonical
+  }
+
+  fn alloc_name_canonical(&self, val: INameValS<'a>) -> INameS<'a> {
+    use crate::postparsing::names::{
+      AnonymousSubstructImplDeclarationNameValS, AnonymousSubstructTemplateNameValS,
+    };
+    match val {
+      INameValS::FunctionDeclaration(v) => {
+        let inner = self.alloc_function_declaration_name_canonical(v);
+        let r = self.arena.alloc(inner);
+        INameS::FunctionDeclaration(r)
+      }
+      INameValS::ImplDeclaration(p) => {
+        let r = self.arena.alloc(p);
+        INameS::ImplDeclaration(r)
+      }
+      INameValS::AnonymousSubstructImplDeclaration(AnonymousSubstructImplDeclarationNameValS {
+        interface,
+      }) => {
+        let payload = crate::postparsing::names::AnonymousSubstructImplDeclarationNameS {
+          interface: interface.clone(),
+        };
+        let r = self.arena.alloc(payload);
+        INameS::AnonymousSubstructImplDeclaration(r)
+      }
+      INameValS::ExportAsName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::ExportAsName(r)
+      }
+      INameValS::LetName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::LetName(r)
+      }
+      INameValS::TopLevelStructDeclaration(p) => {
+        let r = self.arena.alloc(p);
+        INameS::TopLevelStructDeclaration(r)
+      }
+      INameValS::TopLevelInterfaceDeclaration(p) => {
+        let r = self.arena.alloc(p);
+        INameS::TopLevelInterfaceDeclaration(r)
+      }
+      INameValS::LambdaStructDeclaration(p) => {
+        let r = self.arena.alloc(p);
+        INameS::LambdaStructDeclaration(r)
+      }
+      INameValS::AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameValS {
+        interface_name,
+      }) => {
+        let payload = crate::postparsing::names::AnonymousSubstructTemplateNameS {
+          interface_name: interface_name.clone(),
+        };
+        let r = self.arena.alloc(payload);
+        INameS::AnonymousSubstructTemplateName(r)
+      }
+      INameValS::RuneName(v) => {
+        let payload = RuneNameS { rune: v.rune };
+        let r = self.arena.alloc(payload);
+        INameS::RuneName(r)
+      }
+      INameValS::RuntimeSizedArrayDeclarationName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::RuntimeSizedArrayDeclarationName(r)
+      }
+      INameValS::StaticSizedArrayDeclarationName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::StaticSizedArrayDeclarationName(r)
+      }
+      INameValS::GlobalFunctionFamilyName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::GlobalFunctionFamilyName(r)
+      }
+      INameValS::ArbitraryName(p) => {
+        let r = self.arena.alloc(p);
+        INameS::ArbitraryName(r)
+      }
+      INameValS::VarName(v) => {
+        let inner = self.alloc_var_name_canonical(v);
+        let r = self.arena.alloc(inner);
+        INameS::VarName(r)
+      }
+    }
+  }
+
+  fn alloc_function_declaration_name_canonical(
+    &self,
+    val: IFunctionDeclarationNameValS<'a>,
+  ) -> IFunctionDeclarationNameS<'a> {
+    use crate::postparsing::names::{ForwarderFunctionDeclarationNameS, ForwarderFunctionDeclarationNameValS};
+    match val {
+      IFunctionDeclarationNameValS::FunctionName(p) => IFunctionDeclarationNameS::FunctionName(p),
+      IFunctionDeclarationNameValS::LambdaDeclarationName(p) => {
+        IFunctionDeclarationNameS::LambdaDeclarationName(p)
+      }
+      IFunctionDeclarationNameValS::ForwarderFunctionDeclarationName(
+        ForwarderFunctionDeclarationNameValS { inner, index },
+      ) => {
+        let payload = ForwarderFunctionDeclarationNameS {
+          inner: inner.clone(),
+          index,
+        };
+        let r = self.arena.alloc(payload);
+        IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(r)
+      }
+      IFunctionDeclarationNameValS::ConstructorName(p) => {
+        let r = self.arena.alloc(p);
+        IFunctionDeclarationNameS::ConstructorName(r)
+      }
+      IFunctionDeclarationNameValS::ImmConcreteDestructorName(p) => {
+        let r = self.arena.alloc(p);
+        IFunctionDeclarationNameS::ImmConcreteDestructorName(r)
+      }
+      IFunctionDeclarationNameValS::ImmInterfaceDestructorName(p) => {
+        let r = self.arena.alloc(p);
+        IFunctionDeclarationNameS::ImmInterfaceDestructorName(r)
+      }
+    }
+  }
+
+  fn alloc_var_name_canonical(&self, val: IVarNameValS<'a>) -> IVarNameS<'a> {
+    match val {
+      IVarNameValS::CodeVarName(n) => IVarNameS::CodeVarName(n),
+      IVarNameValS::ConstructingMemberName(n) => IVarNameS::ConstructingMemberName(n),
+      IVarNameValS::ClosureParamName(p) => {
+        let r = self.arena.alloc(p);
+        IVarNameS::ClosureParamName(r)
+      }
+      IVarNameValS::MagicParamName(p) => IVarNameS::MagicParamName(p),
+      IVarNameValS::IterableName(p) => IVarNameS::IterableName(p),
+      IVarNameValS::IteratorName(p) => IVarNameS::IteratorName(p),
+      IVarNameValS::IterationOptionName(p) => IVarNameS::IterationOptionName(p),
+      IVarNameValS::WhileCondResultName(p) => IVarNameS::WhileCondResultName(p),
+      IVarNameValS::SelfName => IVarNameS::SelfName,
+      IVarNameValS::AnonymousSubstructMemberName(i) => IVarNameS::AnonymousSubstructMemberName(i),
     }
   }
 
