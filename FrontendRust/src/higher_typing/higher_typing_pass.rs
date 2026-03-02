@@ -8,73 +8,6 @@ use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-
-// From HigherTypingPass.scala lines 793-836: HigherTypingCompilation class
-pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
-  scout_compilation: ScoutCompilation<'a, 'ctx, 'p>,
-  #[allow(dead_code)]
-  astrouts_cache: Option<()>, // PackageCoordinateMap[ProgramA] not yet ported
-}
-
-impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p>
-where
-  'a: 'ctx,
-  'a: 'p,
-{
-  // From HigherTypingPass.scala lines 793-799
-  pub fn new(
-    interner: &'ctx Interner<'a>,
-    keywords: &'ctx Keywords<'a>,
-    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
-    global_options: GlobalOptions,
-    arena: &'p bumpalo::Bump,
-  ) -> Self {
-    let scout_compilation = ScoutCompilation::new(
-      interner,
-      keywords,
-      packages_to_build,
-      package_to_contents_resolver,
-      global_options,
-      arena,
-    );
-
-    HigherTypingCompilation {
-      scout_compilation,
-      astrouts_cache: None,
-    }
-  }
-
-  // From HigherTypingPass.scala line 802: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-    self.scout_compilation.get_code_map()
-  }
-
-  // From HigherTypingPass.scala line 803: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
-    self.scout_compilation.get_parseds()
-  }
-
-  // From HigherTypingPass.scala line 804: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-    self.scout_compilation.get_vpst_map()
-  }
-
-  // From HigherTypingPass.scala line 805: getScoutput
-  pub fn get_scoutput(&mut self) -> Result<(), String> {
-    panic!("HigherTypingCompilation.get_scoutput not yet implemented - see HigherTypingPass.scala line 805")
-  }
-
-  // From HigherTypingPass.scala lines 807-820: getAstrouts
-  pub fn get_astrouts(&mut self) -> Result<(), String> {
-    panic!("HigherTypingCompilation.get_astrouts not yet implemented - see HigherTypingPass.scala lines 807-820")
-  }
-
-  // From HigherTypingPass.scala lines 821-835: expectAstrouts
-  pub fn expect_astrouts(&mut self) -> () {
-    panic!("HigherTypingCompilation.expect_astrouts not yet implemented - see HigherTypingPass.scala lines 821-835")
-  }
-}
 /*
 package dev.vale.highertyping
 
@@ -1023,6 +956,7 @@ fn run_pass<'a>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a>>) -> Res
 
 */
 // mig: struct HigherTypingCompilation
+
 pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
   global_options: GlobalOptions,
   interner: &'ctx Interner<'a>,
@@ -1032,36 +966,64 @@ pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
 }
 
 // mig: impl HigherTypingCompilation
-impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p> {
-}
-/*
-class HigherTypingCompilation(
-  globalOptions: GlobalOptions,
-  val interner: Interner,
-  val keywords: Keywords,
-  packagesToBuild: Vector[PackageCoordinate],
-  packageToContentsResolver: IPackageResolver[Map[String, String]]) {
-  var scoutCompilation = new ScoutCompilation(globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
-  var astroutsCache: Option[PackageCoordinateMap[ProgramA]] = None
+impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p>
+where
+    'a: 'ctx,
+    'a: 'p,
+{
+  /*
+  class HigherTypingCompilation(
+    globalOptions: GlobalOptions,
+    val interner: Interner,
+    val keywords: Keywords,
+    packagesToBuild: Vector[PackageCoordinate],
+    packageToContentsResolver: IPackageResolver[Map[String, String]]) {
+    var scoutCompilation = new ScoutCompilation(globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
+    var astroutsCache: Option[PackageCoordinateMap[ProgramA]] = None
 
-*/
+  */
+  // From HigherTypingPass.scala lines 793-799
+  pub fn new(
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
+    global_options: GlobalOptions,
+    arena: &'p bumpalo::Bump,
+  ) -> Self {
+    let scout_compilation = ScoutCompilation::new(
+      interner,
+      keywords,
+      packages_to_build,
+      package_to_contents_resolver,
+      global_options,
+      arena,
+    );
+
+    HigherTypingCompilation {
+      scout_compilation,
+      astrouts_cache: None,
+    }
+  }
+
 // mig: fn get_code_map
-fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-  panic!("Unimplemented: get_code_map");
+pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  self.scout_compilation.get_code_map()
 }
+
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getCodeMap()
 */
 // mig: fn get_parseds
-fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
-  panic!("Unimplemented: get_parseds");
+pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
+  self.scout_compilation.get_parseds()
 }
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = scoutCompilation.getParseds()
 */
 // mig: fn get_vpst_map
 fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-  panic!("Unimplemented: get_vpst_map");
+  self.scout_compilation.get_vpst_map()
 }
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getVpstMap()
@@ -1098,6 +1060,7 @@ fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICo
 fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a>> {
   panic!("Unimplemented: expect_astrouts");
 }
+} // end impl HigherTypingCompilation
 /*
   def expectAstrouts(): PackageCoordinateMap[ProgramA] = {
     getAstrouts() match {
