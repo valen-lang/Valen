@@ -1,0 +1,87 @@
+# Frontend Rust - Scala to Rust Migration Project
+
+This is a Rust compiler frontend being migrated from Scala. The project is **mid-migration** with extensive commented Scala code alongside working Rust implementations.
+
+## Project Overview
+
+The codebase implements a compiler frontend with parsing, post-parsing validation/transformation, and type solving. The original Scala implementation used garbage collection; the Rust version uses arena allocation with explicit lifetime management.
+
+## Key Directories
+
+- **`src/postparsing/`** - Post-parsing pass: validates and transforms parsed AST (actively migrating)
+- **`src/solver/`** - Type solver/inference engine (actively migrating)
+- **`src/interner.rs`** - String and type interning with arena-backed allocation
+- **`src/postparsing/names.rs`** - Name resolution and scope management
+- **`src/postparsing/function_scout.rs`** - Function signature extraction and validation
+- **`src/postparsing/post_parser.rs`** - Main post-parser orchestration
+
+## Migration Philosophy
+
+We're doing **incremental, safe migration**. Many functions have commented-out Scala code above working (or placeholder) Rust implementations. The migration process uses systematic "slicing" to isolate and translate individual definitions.
+
+## Lifetime Model
+
+The Rust codebase uses **four arena lifetimes** (see `.claude/rules/postparser/postparser-lifetimes.mdc` for full details):
+
+- **`'a`** - Interner arena (longest-lived): all interned strings, names, types, coordinates
+- **`'p`** - Parser AST arena: input nodes from the parser
+- **`'s`** - Scout (postparser output) arena: transformed output nodes
+- **`'ctx`** - Context/infrastructure borrows: `&'ctx Interner<'a>`, `&'ctx Keywords<'a>`
+
+**Critical invariant:** `'a` always outlives everything else. Never accept rustc's lifetime suggestions without checking the rules first.
+
+## Conventions
+
+All rules in `.claude/rules/` are **path-targeted** and auto-load when editing relevant files. They contain:
+
+- Scala→Rust type mappings
+- Allowable differences between implementations
+- Architecture and organization maps
+- Style guidelines
+
+## Migration Subagents
+
+The codebase includes specialized subagents for systematic migration. These are autonomous agents that can be invoked using the Task tool.
+
+### Slice Pipeline (Full Migration)
+- **`slice-orchestrator`** - Orchestrates the full migration pipeline on a Rust file
+- **`slice-start`** - Add `// mig:` marker comments above Scala definitions
+- **`slice-rustify`** - Convert Scala-style markers to Rust-style
+- **`slice-placehold`** - Generate Rust placeholder stubs
+- **`slice-reconcile-mark`** - Mark old definitions as obsolete
+- **`slice-reconcile-copy`** - Copy old code into stubs
+- **`slice-reconcile-delete`** - Remove obsolete definitions
+
+### Incremental Migration
+- **`migration-migrate`** - Partially migrate specific Scala code sections
+- **`migration-diagnoser`** - Diagnose migration issues and differences
+- **`migration-check-specific`** - Check specific definitions for correctness
+- **`migration-gate`** - Validate migration readiness before proceeding
+
+### Verification
+- **`agent-check-correct-loop`** - Loop-based correctness verification
+
+All subagents are defined in `.claude/agents/` and can be invoked using the Task tool.
+
+## Build & Test
+
+Always run **`cargo build --lib`** after making changes. The project builds as a library.
+
+Use **`cargo check`** for faster iteration during development.
+
+The build may have warnings during migration - that's expected. Focus on getting it to compile first.
+
+## Working with This Project
+
+1. When editing postparser files, relevant lifetime and migration rules auto-load
+2. Use the slice subagents for systematic translation of commented Scala code
+3. Use migration subagents for incremental fixes and verification
+4. Always verify builds succeed after changes
+5. Respect the lifetime invariants - see the rules for guidance when rustc complains
+
+## Notes
+
+- **Interning:** Rust interns more aggressively than Scala. This is intentional and allowed.
+- **Panics:** `panic!()` placeholders are acceptable during mid-migration. Scala's `vimpl` maps to Rust `panic!`.
+- **Naming:** Rust uses `snake_case` (e.g., `self_uses`) vs Scala's `camelCase` (e.g., `selfUses`).
+- **Profiling:** Rust doesn't need Scala's `Profiler.frame(() => { ... })` wrappers.

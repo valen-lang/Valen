@@ -1,0 +1,15 @@
+{
+  "hooks_disabled": {
+    "PreToolUse": [
+      {
+        "matcher": "Write|Edit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "echo Wait dont modify this project && exit 2"
+          }
+        ]
+      }
+    ]
+  }
+}

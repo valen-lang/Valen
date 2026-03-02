@@ -1,0 +1,26 @@
+---
+description: How to build and test FrontendRust
+paths: src/**/*
+---
+
+# FrontendRust Build & Test
+
+## Build
+
+```bash
+cargo build --manifest-path FrontendRust/Cargo.toml --lib
+```
+
+## Run All Tests
+
+```bash
+cargo test --manifest-path FrontendRust/Cargo.toml --lib
+```
+
+## Run Specific Test Module
+
+```bash
+cargo test --manifest-path FrontendRust/Cargo.toml --lib postparsing::test::post_parser_tests
+```
+
+Replace `postparsing::test::post_parser_tests` with the desired test module path.

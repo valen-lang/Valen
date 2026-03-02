@@ -16,3 +16,7 @@ scala_defs.txt
 stdout.txt
 test_integration.sh
 test_output/
+
+# Claude Code
+*/.claude/settings.local.json
+*/.claude/worktrees/

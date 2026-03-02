@@ -1,0 +1,27 @@
+---
+description: PostParser lifetimes explanation + guidelines: what to do when rustc gives us borrow checking / lifetime errors
+paths: src/postparsing/*.rs
+---
+
+# PostParser Lifetimes
+
+ * Don't accept rustc's suggestions of what lifetimes to add. It's often incorrect.
+ * `'a` always outlives everything else.
+    * `'a: 's` is always correct. `'s: 'a` is always incorrect.
+    * `'a: 'p` is always correct. `'p: 'a` is always incorrect.
+    * `'a: 'ctx` is always correct. `'ctx: 'a` is always incorrect.
+
+There should only be these lifetimes:
+
+ * 'a for the interned things.
+ * 'p for the "parseds AST" arena, for the AST that came out of the parser.
+    * Every AST, expression, templex etc. (though not interned things) (e.g. BlockPE, BlockPT, etc.) should be inside the 's arena.
+ * 's for the "postparseds AST" arena, for the AST that is coming out of the postparser.
+    * Every AST, expression, templex etc. (though not interned things) (e.g. BlockSE, BlockST, etc.) should be inside the 's arena.
+ * 'ctx for various state that the postparser is temporarily using.
+
+We should never handle any ASTs or any interned things directly on the stack. They should only ever be in an arena, so they should always have a lifetime. For example, `&'s BlockSE<'a, 's>` is incorrect and `&'a BlockSE<'a, 's>` is incorrect, but `&'s BlockSE<'a, 's>` is correct. A lone `BlockSE<'a, 's>` could be correct in a return type.
+
+If there is a lifetime that is not in the above, it's a bug, and you need to stop and ask a human.
+
+We currently only pass StackFrame, IEnvironmentS, EnvironmentS, FunctionEnvironmentS around by value.
