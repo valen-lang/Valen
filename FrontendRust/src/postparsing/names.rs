@@ -327,6 +327,11 @@ trait IImplDeclarationNameS extends INameS {
   def packageCoordinate: PackageCoordinate
 }
 */
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IImplDeclarationNameS<'a> {
+  ImplDeclarationName(ImplDeclarationNameS<'a>),
+  AnonymousSubstructImplDeclarationName(AnonymousSubstructImplDeclarationNameS<'a>),
+}
 /*
 trait ICitizenDeclarationNameS extends INameS {
   def range: RangeS
@@ -433,6 +438,11 @@ object TopLevelCitizenDeclarationNameS {
 /*
 sealed trait IStructDeclarationNameS extends ICitizenDeclarationNameS
 */
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub enum IStructDeclarationNameS<'a> {
+  TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'a>),
+  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'a>),
+}
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TopLevelStructDeclarationNameS<'a> {
   pub name: StrI<'a>,

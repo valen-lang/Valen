@@ -37,6 +37,7 @@ Generate a `const` with a placeholder value.
 
 # Guidelines
 
+ * **This step should ONLY add lines. It must NEVER delete or replace any existing lines.** All comments (both `/* */` blocks and `// mig:` comments) must remain exactly as they are. The Scala code inside comments must not be touched, moved, or removed. If you find yourself deleting a line, you are doing it wrong.
  * **Ignore all existing Rust code in the file.** Only operate on `// mig:` comments.
  * **Keep every `// mig:` comment in place.** Add the Rust stub right below it; do not remove or replace the comment.
  * Infer signatures from the Scala code below each mig comment. Guessing is fine.

@@ -20,3 +20,5 @@ test_output/
 # Claude Code
 */.claude/settings.local.json
 */.claude/worktrees/
+Rabble
+.DS_Store

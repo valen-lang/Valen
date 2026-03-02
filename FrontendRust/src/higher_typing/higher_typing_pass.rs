@@ -95,11 +95,36 @@ import scala.collection.immutable.List
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+*/
+// mig: struct Astrouts
+pub struct Astrouts<'a> {
+  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS, Option<ITemplataType>>,
+  code_location_to_struct: std::collections::HashMap<CodeLocationS, StructA<'a>>,
+  code_location_to_interface: std::collections::HashMap<CodeLocationS, InterfaceA<'a>>,
+}
+
+// mig: impl Astrouts
+impl<'a> Astrouts<'a> {
+}
+/*
 case class Astrouts(
   codeLocationToMaybeType: mutable.HashMap[CodeLocationS, Option[ITemplataType]],
   codeLocationToStruct: mutable.HashMap[CodeLocationS, StructA],
   codeLocationToInterface: mutable.HashMap[CodeLocationS, InterfaceA])
 
+*/
+// mig: struct EnvironmentA
+pub struct EnvironmentA<'a> {
+  maybe_name: Option<&'a INameS<'a>>,
+  maybe_parent_env: Option<&'a EnvironmentA<'a>>,
+  code_map: PackageCoordinateMap<'a, ProgramS<'a>>,
+  rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>,
+}
+
+// mig: impl EnvironmentA
+impl<'a> EnvironmentA<'a> {
+}
+/*
 // Environments dont have an AbsoluteName, because an environment can span multiple
 // files.
 case class EnvironmentA(
@@ -107,7 +132,20 @@ case class EnvironmentA(
     maybeParentEnv: Option[EnvironmentA],
     codeMap: PackageCoordinateMap[ProgramS],
     runeToType: Map[IRuneS, ITemplataType]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+*/
+// mig: fn equals
+fn equals(&self, obj: &dyn std::any::Any) -> bool {
+  panic!("Unimplemented: equals");
+}
+/*
+  override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+fn hash_code(&self) -> i32 {
+  panic!("Unimplemented: hash_code");
+}
+/*
+  override def hashCode(): Int = vcurious()
 
   val structsS: Vector[StructS] = codeMap.packageCoordToContents.values.flatMap(_.structs).toVector
   val interfacesS: Vector[InterfaceS] = codeMap.packageCoordToContents.values.flatMap(_.interfaces).toVector
@@ -116,12 +154,24 @@ case class EnvironmentA(
   val exportsS: Vector[ExportAsS] = codeMap.packageCoordToContents.values.flatMap(_.exports).toVector
   val imports: Vector[ImportS] = codeMap.packageCoordToContents.values.flatMap(_.imports).toVector
 
+*/
+// mig: fn add_runes
+fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>) -> EnvironmentA<'a> {
+  panic!("Unimplemented: add_runes");
+}
+/*
   def addRunes(newruneToType: Map[IRuneS, ITemplataType]): EnvironmentA = {
     EnvironmentA(maybeName, maybeParentEnv, codeMap, runeToType ++ newruneToType)
   }
 }
 
 object HigherTypingPass {
+*/
+// mig: fn explicify_lookups
+fn explicify_lookups(env: &dyn IRuneTypeSolverEnv, rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR>) -> Result<(), IRuneTypingLookupFailedError> {
+  panic!("Unimplemented: explicify_lookups");
+}
+/*
   def explicifyLookups(
     // We take in this instead of an EnvironmentA because the typing pass calls this method too.
     env: IRuneTypeSolverEnv,
@@ -227,6 +277,12 @@ object HigherTypingPass {
     Ok(())
   }
 
+*/
+// mig: fn coerce_kind_lookup_to_coord
+fn coerce_kind_lookup_to_coord(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS) {
+  panic!("Unimplemented: coerce_kind_lookup_to_coord");
+}
+/*
   private def coerceKindLookupToCoord(
     runeAToType: mutable.HashMap[IRuneS, ITemplataType],
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -240,6 +296,12 @@ object HigherTypingPass {
     ruleBuilder += CoerceToCoordSR(range, resultRune, kindRune)
   }
 
+*/
+// mig: fn coerce_kind_template_lookup_to_kind
+fn coerce_kind_template_lookup_to_kind(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS, actual_template_type: TemplateTemplataType) {
+  panic!("Unimplemented: coerce_kind_template_lookup_to_kind");
+}
+/*
   private def coerceKindTemplateLookupToKind(
     runeAToType: mutable.HashMap[IRuneS, ITemplataType],
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -254,6 +316,12 @@ object HigherTypingPass {
     ruleBuilder += CallSR(range, resultRune, templateRune, Vector())
   }
 
+*/
+// mig: fn coerce_kind_template_lookup_to_coord
+fn coerce_kind_template_lookup_to_coord(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS, ttt: TemplateTemplataType) {
+  panic!("Unimplemented: coerce_kind_template_lookup_to_coord");
+}
+/*
   private def coerceKindTemplateLookupToCoord(
     runeAToType: mutable.HashMap[IRuneS, ITemplataType],
     ruleBuilder: ArrayBuffer[IRulexSR],
@@ -272,6 +340,19 @@ object HigherTypingPass {
   }
 }
 
+*/
+// mig: struct HigherTypingPass
+pub struct HigherTypingPass<'a, 'ctx> {
+  global_options: GlobalOptions,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  primitives: std::collections::HashMap<StrI<'a>, ITemplataType>,
+}
+
+// mig: impl HigherTypingPass
+impl<'a, 'ctx> HigherTypingPass<'a, 'ctx> {
+}
+/*
 class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keywords: Keywords) {
   val primitives =
     Map(
@@ -293,6 +374,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
 
 
 
+*/
+// mig: fn imprecise_name_matches_absolute_name
+fn imprecise_name_matches_absolute_name(needle_imprecise_name_s: &IImpreciseNameS, absolute_name: &INameS) -> bool {
+  panic!("Unimplemented: imprecise_name_matches_absolute_name");
+}
+/*
   // Returns whether the imprecise name could be referring to the absolute name.
   // See MINAAN for what we're doing here.
   def impreciseNameMatchesAbsoluteName(
@@ -306,6 +393,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     }
   }
 
+*/
+// mig: fn lookup_types
+fn lookup_types<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, needle_imprecise_name_s: &IImpreciseNameS) -> Vec<IRuneTypeSolverLookupResult> {
+  panic!("Unimplemented: lookup_types");
+}
+/*
   def lookupTypes(
     astrouts: Astrouts,
     env: EnvironmentA,
@@ -362,6 +455,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     }
   }
 
+*/
+// mig: fn lookup_type
+fn lookup_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, range: RangeS, name: &IImpreciseNameS) -> Result<IRuneTypeSolverLookupResult, ILookupFailedErrorA> {
+  panic!("Unimplemented: lookup_type");
+}
+/*
   def lookupType(
     astrouts: Astrouts,
     env: EnvironmentA,
@@ -375,6 +474,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     }
   }
 
+*/
+// mig: fn translate_struct
+fn translate_struct<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, struct_s: &StructS<'a>) -> StructA<'a> {
+  panic!("Unimplemented: translate_struct");
+}
+/*
   def translateStruct(
     astrouts: Astrouts,
     env: EnvironmentA,
@@ -484,6 +589,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     structA
   }
 
+*/
+// mig: fn get_interface_type
+fn get_interface_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, interface_s: &InterfaceS<'a>) -> ITemplataType {
+  panic!("Unimplemented: get_interface_type");
+}
+/*
   def getInterfaceType(
     astrouts: Astrouts,
     env: EnvironmentA,
@@ -492,6 +603,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     interfaceS.tyype
   }
 
+*/
+// mig: fn translate_interface
+fn translate_interface<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, interface_s: &InterfaceS<'a>) -> InterfaceA<'a> {
+  panic!("Unimplemented: translate_interface");
+}
+/*
   def translateInterface(astrouts: Astrouts,  env: EnvironmentA, interfaceS: InterfaceS): InterfaceA = {
     val InterfaceS(rangeS, nameS, attributesS, weakable, genericParametersS, runeToExplicitType, mutabilityRuneS, maybePredictedMutability, predictedRuneToType, tyype, rulesWithImplicitlyCoercingLookupsS, internalMethodsS) = interfaceS
 
@@ -576,6 +693,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     interfaceA
   }
 
+*/
+// mig: fn translate_impl
+fn translate_impl<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, impl_s: &ImplS<'a>) -> ImplA<'a> {
+  panic!("Unimplemented: translate_impl");
+}
+/*
   def translateImpl(astrouts: Astrouts,  env: EnvironmentA, implS: ImplS): ImplA = {
     val ImplS(rangeS, nameS, identifyingRunesS, rulesWithImplicitlyCoercingLookupsS, runeToExplicitType, tyype, structKindRuneS, subCitizenImpreciseName, interfaceKindRuneS, superInterfaceImpreciseName) = implS
 
@@ -630,6 +753,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
       superInterfaceImpreciseName)
   }
 
+*/
+// mig: fn translate_export
+fn translate_export<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, export_s: &ExportAsS<'a>) -> ExportAsA<'a> {
+  panic!("Unimplemented: translate_export");
+}
+/*
   def translateExport(astrouts: Astrouts,  env: EnvironmentA, exportS: ExportAsS): ExportAsA = {
     val ExportAsS(rangeS, rulesWithImplicitlyCoercingLookupsS, exportName, rune, exportedName) = exportS
 
@@ -679,6 +808,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
       rune)
   }
 
+*/
+// mig: fn translate_function
+fn translate_function<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, function_s: &FunctionS<'a>) -> FunctionA<'a> {
+  panic!("Unimplemented: translate_function");
+}
+/*
   def translateFunction(astrouts: Astrouts, env: EnvironmentA, functionS: FunctionS): FunctionA = {
     val FunctionS(rangeS, nameS, attributesS, identifyingRunesS, runeToExplicitType, tyype, paramsS, maybeRetCoordRune, rulesWithImplicitlyCoercingLookupsS, bodyS) = functionS
 
@@ -725,6 +860,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
       bodyS)
   }
 
+*/
+// mig: fn calculate_rune_types
+fn calculate_rune_types<'a>(astrouts: &Astrouts<'a>, range_s: RangeS, identifying_runes_s: Vec<&'a IRuneS<'a>>, rune_to_explicit_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, params_s: Vec<&ParameterS<'a>>, rules_s: Vec<IRulexSR>, env: &EnvironmentA<'a>) -> std::collections::HashMap<&'a IRuneS<'a>, ITemplataType> {
+  panic!("Unimplemented: calculate_rune_types");
+}
+/*
   private def calculateRuneTypes(
     astrouts: Astrouts,
     rangeS: RangeS,
@@ -762,6 +903,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     runeSToType
   }
 
+*/
+// mig: fn translate_program
+fn translate_program<'a>(code_map: PackageCoordinateMap<'a, ProgramS<'a>>, primitives: std::collections::HashMap<StrI<'a>, ITemplataType>, supplied_functions: Vec<FunctionA<'a>>, supplied_interfaces: Vec<InterfaceA<'a>>) -> ProgramA<'a> {
+  panic!("Unimplemented: translate_program");
+}
+/*
   def translateProgram(
       codeMap: PackageCoordinateMap[ProgramS],
       primitives: Map[StrI, ITemplataType],
@@ -794,6 +941,12 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
     ProgramA(structsA, suppliedInterfaces ++ interfacesA, implsA, suppliedFunctions ++ functionsA, exportsA)
   }
 
+*/
+// mig: fn run_pass
+fn run_pass<'a>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a>>) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICompileErrorA> {
+  panic!("Unimplemented: run_pass");
+}
+/*
   def runPass(separateProgramsS: FileCoordinateMap[ProgramS]):
   Either[PackageCoordinateMap[ProgramA], ICompileErrorA] = {
     Profiler.frame(() => {
@@ -868,6 +1021,20 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
   }
 }
 
+*/
+// mig: struct HigherTypingCompilation
+pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
+  global_options: GlobalOptions,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  scout_compilation: ScoutCompilation<'a, 'ctx, 'p>,
+  astrouts_cache: Option<PackageCoordinateMap<'a, ProgramA<'a>>>,
+}
+
+// mig: impl HigherTypingCompilation
+impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p> {
+}
+/*
 class HigherTypingCompilation(
   globalOptions: GlobalOptions,
   val interner: Interner,
@@ -877,11 +1044,41 @@ class HigherTypingCompilation(
   var scoutCompilation = new ScoutCompilation(globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
   var astroutsCache: Option[PackageCoordinateMap[ProgramA]] = None
 
+*/
+// mig: fn get_code_map
+fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  panic!("Unimplemented: get_code_map");
+}
+/*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getCodeMap()
+*/
+// mig: fn get_parseds
+fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
+  panic!("Unimplemented: get_parseds");
+}
+/*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = scoutCompilation.getParseds()
+*/
+// mig: fn get_vpst_map
+fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  panic!("Unimplemented: get_vpst_map");
+}
+/*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getVpstMap()
+*/
+// mig: fn get_scoutput
+fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a>>, ICompileErrorS> {
+  panic!("Unimplemented: get_scoutput");
+}
+/*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = scoutCompilation.getScoutput()
 
+*/
+// mig: fn get_astrouts
+fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICompileErrorA> {
+  panic!("Unimplemented: get_astrouts");
+}
+/*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = {
     astroutsCache match {
       case Some(astrouts) => Ok(astrouts)
@@ -896,6 +1093,12 @@ class HigherTypingCompilation(
       }
     }
   }
+*/
+// mig: fn expect_astrouts
+fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a>> {
+  panic!("Unimplemented: expect_astrouts");
+}
+/*
   def expectAstrouts(): PackageCoordinateMap[ProgramA] = {
     getAstrouts() match {
       case Ok(x) => x

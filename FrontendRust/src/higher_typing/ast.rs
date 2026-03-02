@@ -10,13 +10,29 @@ import dev.vale.postparsing._
 
 import scala.collection.immutable.List
 */
+
+use std::collections::HashMap;
+use crate::interner::StrI;
+use crate::parsing::MutabilityP;
+use crate::postparsing::ast::{
+    GenericParameterS, ICitizenAttributeS, IFunctionAttributeS,
+    IStructMemberS, ParameterS, IBodyS,
+};
+use crate::postparsing::itemplatatype::{ITemplataType, TemplateTemplataType};
+use crate::postparsing::names::{
+    INameS, IRuneS, IStructDeclarationNameS, IImplDeclarationNameS,
+    IImpreciseNameS, IFunctionDeclarationNameS, TopLevelInterfaceDeclarationNameS,
+};
+use crate::postparsing::rules::{IRulexSR, RuneUsage};
+use crate::utils::range::RangeS;
+
 // mig: struct ProgramA
-pub struct ProgramA {
-    pub structs: Vec<StructA>,
-    pub interfaces: Vec<InterfaceA>,
-    pub impls: Vec<ImplA>,
-    pub functions: Vec<FunctionA>,
-    pub exports: Vec<ExportAsA>,
+pub struct ProgramA<'a, 's> {
+    pub structs: Vec<StructA<'a, 's>>,
+    pub interfaces: Vec<InterfaceA<'a, 's>>,
+    pub impls: Vec<ImplA<'a, 's>>,
+    pub functions: Vec<FunctionA<'a, 's>>,
+    pub exports: Vec<ExportAsA<'a>>,
 }
 /*
 case class ProgramA(
@@ -27,7 +43,7 @@ case class ProgramA(
     exports: Vector[ExportAsA]) {
 */
 // mig: impl ProgramA
-impl ProgramA {
+impl<'a, 's> ProgramA<'a, 's> {
 /*
 */
 // mig: fn equals
@@ -45,9 +61,9 @@ pub fn hash_code(&self) -> i32 {
   override def hashCode(): Int = vcurious()
 
 */
-// mig: fn lookup_function
-pub fn lookup_function(&self, name: INameS) -> FunctionA {
-    panic!("Unimplemented: lookup_function");
+// mig: fn lookup_function_by_name
+pub fn lookup_function_by_name(&self, name: &INameS<'a>) -> &FunctionA<'a, 's> {
+    panic!("Unimplemented: lookup_function_by_name");
 }
 /*
   def lookupFunction(name: INameS) = {
@@ -56,9 +72,9 @@ pub fn lookup_function(&self, name: INameS) -> FunctionA {
     matches.head
   }
 */
-// mig: fn lookup_function
-pub fn lookup_function(&self, name: String) -> FunctionA {
-    panic!("Unimplemented: lookup_function");
+// mig: fn lookup_function_by_str
+pub fn lookup_function_by_str(&self, name: &str) -> &FunctionA<'a, 's> {
+    panic!("Unimplemented: lookup_function_by_str");
 }
 /*
   def lookupFunction(name: String) = {
@@ -73,7 +89,7 @@ pub fn lookup_function(&self, name: String) -> FunctionA {
   }
 */
 // mig: fn lookup_interface
-pub fn lookup_interface(&self, name: INameS) -> InterfaceA {
+pub fn lookup_interface(&self, name: &INameS<'a>) -> &InterfaceA<'a, 's> {
     panic!("Unimplemented: lookup_interface");
 }
 /*
@@ -85,9 +101,9 @@ pub fn lookup_interface(&self, name: INameS) -> InterfaceA {
     }
   }
 */
-// mig: fn lookup_struct
-pub fn lookup_struct(&self, name: INameS) -> StructA {
-    panic!("Unimplemented: lookup_struct");
+// mig: fn lookup_struct_by_name
+pub fn lookup_struct_by_name(&self, name: &INameS<'a>) -> &StructA<'a, 's> {
+    panic!("Unimplemented: lookup_struct_by_name");
 }
 /*
   def lookupStruct(name: INameS) = {
@@ -98,9 +114,10 @@ pub fn lookup_struct(&self, name: INameS) -> StructA {
     }
   }
 */
-// mig: fn lookup_struct
-pub fn lookup_struct(&self, name: String) -> StructA {
-    panic!("Unimplemented: lookup_struct");
+// mig: fn lookup_struct_by_str
+pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'a, 's> {
+    panic!("Unimplemented: lookup_struct_by_str");
+}
 }
 /*
   def lookupStruct(name: String) = {
@@ -117,20 +134,20 @@ pub fn lookup_struct(&self, name: String) -> StructA {
 }
 */
 // mig: struct StructA
-pub struct StructA {
-    pub range: RangeS,
-    pub name: IStructDeclarationNameS,
-    pub attributes: Vec<ICitizenAttributeS>,
+pub struct StructA<'a, 's> {
+    pub range: RangeS<'a>,
+    pub name: IStructDeclarationNameS<'a>,
+    pub attributes: Vec<ICitizenAttributeS<'a>>,
     pub weakable: bool,
-    pub mutability_rune: RuneUsage,
+    pub mutability_rune: RuneUsage<'a>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: Vec<GenericParameterS>,
-    pub header_rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub header_rules: Vec<IRulexSR>,
-    pub members_rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub member_rules: Vec<IRulexSR>,
-    pub members: Vec<IStructMemberS>,
+    pub generic_parameters: Vec<GenericParameterS<'a, 's>>,
+    pub header_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub header_rules: Vec<IRulexSR<'a>>,
+    pub members_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub member_rules: Vec<IRulexSR<'a>>,
+    pub members: Vec<IStructMemberS<'a>>,
 }
 /*
 case class StructA(
@@ -160,7 +177,7 @@ case class StructA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl StructA
-impl StructA {
+impl<'a, 's> StructA<'a, 's> {
 /*
 */
 // mig: fn hash_code
@@ -208,6 +225,7 @@ pub fn hash_code(&self) -> i32 {
 pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
+}
 /*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[StructA]) { return false }
@@ -221,16 +239,16 @@ pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
 }
 */
 // mig: struct ImplA
-pub struct ImplA {
-    pub range: RangeS,
-    pub name: IImplDeclarationNameS,
-    pub generic_params: Vec<GenericParameterS>,
-    pub rules: Vec<IRulexSR>,
-    pub rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub sub_citizen_rune: RuneUsage,
-    pub sub_citizen_imprecise_name: IImpreciseNameS,
-    pub interface_kind_rune: RuneUsage,
-    pub super_interface_imprecise_name: IImpreciseNameS,
+pub struct ImplA<'a, 's> {
+    pub range: RangeS<'a>,
+    pub name: IImplDeclarationNameS<'a>,
+    pub generic_params: Vec<GenericParameterS<'a, 's>>,
+    pub rules: Vec<IRulexSR<'a>>,
+    pub rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub sub_citizen_rune: RuneUsage<'a>,
+    pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
+    pub interface_kind_rune: RuneUsage<'a>,
+    pub super_interface_imprecise_name: IImpreciseNameS<'a>,
 }
 /*
 case class ImplA(
@@ -253,7 +271,7 @@ case class ImplA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl ImplA
-impl ImplA {
+impl<'a, 's> ImplA<'a, 's> {
 /*
 */
 // mig: fn hash_code
@@ -267,6 +285,7 @@ pub fn hash_code(&self) -> i32 {
 pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
+}
 /*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[ImplA]) { return false }
@@ -277,12 +296,12 @@ pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
 }
 */
 // mig: struct ExportAsA
-pub struct ExportAsA {
-    pub range: RangeS,
-    pub exported_name: StrI,
-    pub rules: Vec<IRulexSR>,
-    pub rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub type_rune: RuneUsage,
+pub struct ExportAsA<'a> {
+    pub range: RangeS<'a>,
+    pub exported_name: StrI<'a>,
+    pub rules: Vec<IRulexSR<'a>>,
+    pub rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub type_rune: RuneUsage<'a>,
 }
 /*
 case class ExportAsA(
@@ -295,7 +314,7 @@ case class ExportAsA(
   val hash = range.hashCode() + exportedName.hashCode
 */
 // mig: impl ExportAsA
-impl ExportAsA {
+impl<'a> ExportAsA<'a> {
 /*
 */
 // mig: fn hash_code
@@ -309,6 +328,7 @@ pub fn hash_code(&self) -> i32 {
 pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
+}
 /*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[ImplA]) { return false }
@@ -319,17 +339,17 @@ pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
 }
 */
 // mig: trait CitizenA
-pub trait CitizenA {
+pub trait CitizenA<'a, 's> {
 /*
 sealed trait CitizenA {
 */
 // mig: fn tyype
-fn tyype(&self) -> TemplateTemplataType;
+fn tyype(&self) -> &TemplateTemplataType;
 /*
   def tyype: TemplateTemplataType
 */
 // mig: fn generic_parameters
-fn generic_parameters(&self) -> Vec<GenericParameterS>;
+fn generic_parameters(&self) -> &[GenericParameterS<'a, 's>];
 /*
   def genericParameters: Vector[GenericParameterS]
 */
@@ -338,18 +358,18 @@ fn generic_parameters(&self) -> Vec<GenericParameterS>;
 }
 */
 // mig: struct InterfaceA
-pub struct InterfaceA {
-    pub range: RangeS,
-    pub name: TopLevelInterfaceDeclarationNameS,
-    pub attributes: Vec<ICitizenAttributeS>,
+pub struct InterfaceA<'a, 's> {
+    pub range: RangeS<'a>,
+    pub name: TopLevelInterfaceDeclarationNameS<'a>,
+    pub attributes: Vec<ICitizenAttributeS<'a>>,
     pub weakable: bool,
-    pub mutability_rune: RuneUsage,
+    pub mutability_rune: RuneUsage<'a>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: Vec<GenericParameterS>,
-    pub rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub rules: Vec<IRulexSR>,
-    pub internal_methods: Vec<FunctionA>,
+    pub generic_parameters: Vec<GenericParameterS<'a, 's>>,
+    pub rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub rules: Vec<IRulexSR<'a>>,
+    pub internal_methods: Vec<FunctionA<'a, 's>>,
 }
 /*
 case class InterfaceA(
@@ -397,7 +417,7 @@ case class InterfaceA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl InterfaceA
-impl InterfaceA {
+impl<'a, 's> InterfaceA<'a, 's> {
 /*
 */
 // mig: fn hash_code
@@ -410,6 +430,7 @@ pub fn hash_code(&self) -> i32 {
 // mig: fn equals
 pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
+}
 }
 /*
   override def equals(obj: Any): Boolean = {
@@ -431,12 +452,14 @@ pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
 */
 // mig: mod interface_name
 pub mod interface_name {
+    use super::*;
 /*
 object interfaceName {
 */
 // mig: fn unapply
-pub fn unapply(interface_a: InterfaceA) -> Option<INameS> {
+pub fn unapply<'a, 's>(interface_a: &'s InterfaceA<'a, 's>) -> Option<&'a TopLevelInterfaceDeclarationNameS<'a>> {
     panic!("Unimplemented: unapply");
+}
 }
 /*
   // The extraction method (mandatory)
@@ -450,12 +473,14 @@ pub fn unapply(interface_a: InterfaceA) -> Option<INameS> {
 */
 // mig: mod struct_name
 pub mod struct_name {
+    use super::*;
 /*
 object structName {
 */
 // mig: fn unapply
-pub fn unapply(struct_a: StructA) -> Option<INameS> {
+pub fn unapply<'a, 's>(struct_a: &'s StructA<'a, 's>) -> Option<&'a IStructDeclarationNameS<'a>> {
     panic!("Unimplemented: unapply");
+}
 }
 /*
   // The extraction method (mandatory)
@@ -484,17 +509,17 @@ pub fn unapply(struct_a: StructA) -> Option<INameS> {
 // Underlying class for all XYZFunctionS types
 */
 // mig: struct FunctionA
-pub struct FunctionA {
-    pub range: RangeS,
-    pub name: IFunctionDeclarationNameS,
-    pub attributes: Vec<IFunctionAttributeS>,
+pub struct FunctionA<'a, 's> {
+    pub range: RangeS<'a>,
+    pub name: IFunctionDeclarationNameS<'a>,
+    pub attributes: Vec<IFunctionAttributeS<'a>>,
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: Vec<GenericParameterS>,
-    pub rune_to_type: HashMap<IRuneS, ITemplataType>,
-    pub params: Vec<ParameterS>,
-    pub maybe_ret_coord_rune: Option<RuneUsage>,
-    pub rules: Vec<IRulexSR>,
-    pub body: IBodyS,
+    pub generic_parameters: Vec<GenericParameterS<'a, 's>>,
+    pub rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+    pub params: Vec<ParameterS<'a>>,
+    pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
+    pub rules: Vec<IRulexSR<'a>>,
+    pub body: IBodyS<'a, 's>,
 }
 /*
 case class FunctionA(
@@ -545,7 +570,7 @@ case class FunctionA(
   vassert(range.begin.file.packageCoordinate == name.packageCoordinate)
 */
 // mig: impl FunctionA
-impl FunctionA {
+impl<'a, 's> FunctionA<'a, 's> {
 /*
 */
 // mig: fn hash_code
@@ -593,6 +618,7 @@ pub fn is_light(&self) -> bool {
 // mig: fn is_lambda
 pub fn is_lambda(&self) -> bool {
     panic!("Unimplemented: is_lambda");
+}
 }
 /*
   def isLambda(): Boolean = {
