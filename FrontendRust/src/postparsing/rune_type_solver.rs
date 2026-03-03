@@ -1,4 +1,6 @@
 /*
+// AFTERM: consider moving to higher_typing
+
 package dev.vale.postparsing
 
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vpass, vwat}
@@ -10,18 +12,52 @@ import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 */
+// mig: struct RuneTypeSolveError
+pub struct RuneTypeSolveError<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub failed_solve: (),
+}
+// mig: impl RuneTypeSolveError
+impl<'a> RuneTypeSolveError<'a> {
+}
 /*
 case class RuneTypeSolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataType, IRuneTypeRuleError]) {
   vpass()
 }
 */
+// mig: enum IRuneTypeRuleError
+pub enum IRuneTypeRuleError<'a> {
+  _Phantom(std::marker::PhantomData<&'a ()>),
+}
 /*
 sealed trait IRuneTypeRuleError
+*/
+// mig: struct FoundCitizenDidntMatchExpectedType
+pub struct FoundCitizenDidntMatchExpectedType<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl FoundCitizenDidntMatchExpectedType
+impl<'a> FoundCitizenDidntMatchExpectedType<'a> {
+}
+/*
 case class FoundCitizenDidntMatchExpectedType(
   range: List[RangeS],
   expectedType: ITemplataType,
   actualType: ITemplataType
 ) extends IRuneTypeRuleError
+*/
+// mig: struct FoundTemplataDidntMatchExpectedType
+pub struct FoundTemplataDidntMatchExpectedType<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl FoundTemplataDidntMatchExpectedType
+impl<'a> FoundTemplataDidntMatchExpectedType<'a> {
+}
+/*
 case class FoundTemplataDidntMatchExpectedType(
   range: List[RangeS],
   expectedType: ITemplataType,
@@ -30,6 +66,14 @@ case class FoundTemplataDidntMatchExpectedType(
   vpass()
 }
 */
+// mig: struct NotEnoughArgumentsForGenericCall
+pub struct NotEnoughArgumentsForGenericCall<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub index_of_non_defaulting_param: i32,
+}
+// mig: impl NotEnoughArgumentsForGenericCall
+impl<'a> NotEnoughArgumentsForGenericCall<'a> {
+}
 /*
 case class NotEnoughArgumentsForGenericCall(
   range: List[RangeS],
@@ -39,6 +83,16 @@ case class NotEnoughArgumentsForGenericCall(
   vpass()
 }
   */
+// mig: struct GenericCallArgTypeMismatch
+pub struct GenericCallArgTypeMismatch<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub param_index: i32,
+}
+// mig: impl GenericCallArgTypeMismatch
+impl<'a> GenericCallArgTypeMismatch<'a> {
+}
 /*
 case class GenericCallArgTypeMismatch(
   range: List[RangeS],
@@ -48,16 +102,77 @@ case class GenericCallArgTypeMismatch(
   paramIndex: Int
 ) extends IRuneTypeRuleError
 */
+// mig: enum IRuneTypingLookupFailedError
+pub enum IRuneTypingLookupFailedError<'a> {
+  _Phantom(std::marker::PhantomData<&'a ()>),
+}
 /*
 sealed trait IRuneTypingLookupFailedError extends IRuneTypeRuleError
+*/
+// mig: struct RuneTypingTooManyMatchingTypes
+pub struct RuneTypingTooManyMatchingTypes<'a> {
+  pub range: crate::utils::range::RangeS<'a>,
+  pub name: crate::postparsing::names::IImpreciseNameS<'a>,
+}
+// mig: impl RuneTypingTooManyMatchingTypes
+impl<'a> RuneTypingTooManyMatchingTypes<'a> {
+/*
 case class RuneTypingTooManyMatchingTypes(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+*/
+// mig: fn equals
+fn equals(&self, obj: ()) -> bool {
+  panic!("Unimplemented equals");
+}
+/*
+  override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+fn hash_code(&self) -> i32 {
+  panic!("Unimplemented hash_code");
+}
+} // end impl RuneTypingTooManyMatchingTypes
+/*
+  override def hashCode(): Int = vcurious()
   vpass()
 }
+*/
+// mig: struct RuneTypingCouldntFindType
+pub struct RuneTypingCouldntFindType<'a> {
+  pub range: crate::utils::range::RangeS<'a>,
+  pub name: crate::postparsing::names::IImpreciseNameS<'a>,
+}
+// mig: impl RuneTypingCouldntFindType
+impl<'a> RuneTypingCouldntFindType<'a> {
+/*
 case class RuneTypingCouldntFindType(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+*/
+// mig: fn equals
+fn equals(&self, obj: ()) -> bool {
+  panic!("Unimplemented equals");
+}
+/*
+  override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+fn hash_code(&self) -> i32 {
+  panic!("Unimplemented hash_code");
+}
+} // end impl RuneTypingCouldntFindType
+/*
+  override def hashCode(): Int = vcurious()
   vpass()
 }
+*/
+// mig: struct FoundTemplataDidntMatchExpectedTypeA
+pub struct FoundTemplataDidntMatchExpectedTypeA<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl FoundTemplataDidntMatchExpectedTypeA
+impl<'a> FoundTemplataDidntMatchExpectedTypeA<'a> {
+}
+/*
 case class FoundTemplataDidntMatchExpectedTypeA(
     range: List[RangeS],
     expectedType: ITemplataType,
@@ -65,6 +180,17 @@ case class FoundTemplataDidntMatchExpectedTypeA(
 ) extends IRuneTypingLookupFailedError {
   vpass()
 }
+*/
+// mig: struct FoundPrimitiveDidntMatchExpectedType
+pub struct FoundPrimitiveDidntMatchExpectedType<'a> {
+  pub range: Vec<crate::utils::range::RangeS<'a>>,
+  pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
+  pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl FoundPrimitiveDidntMatchExpectedType
+impl<'a> FoundPrimitiveDidntMatchExpectedType<'a> {
+}
+/*
 case class FoundPrimitiveDidntMatchExpectedType(
   range: List[RangeS],
   expectedType: ITemplataType,
@@ -73,19 +199,55 @@ case class FoundPrimitiveDidntMatchExpectedType(
   vpass()
 }
 */
+// mig: enum IRuneTypeSolverLookupResult
+pub enum IRuneTypeSolverLookupResult<'a> {
+  _Phantom(std::marker::PhantomData<&'a ()>),
+}
 /*
 sealed trait IRuneTypeSolverLookupResult
+*/
+// mig: struct PrimitiveRuneTypeSolverLookupResult
+pub struct PrimitiveRuneTypeSolverLookupResult {
+  pub tyype: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl PrimitiveRuneTypeSolverLookupResult
+impl PrimitiveRuneTypeSolverLookupResult {
+}
+/*
 case class PrimitiveRuneTypeSolverLookupResult(tyype: ITemplataType) extends IRuneTypeSolverLookupResult
+*/
+// mig: struct CitizenRuneTypeSolverLookupResult
+pub struct CitizenRuneTypeSolverLookupResult<'a, 's> {
+  pub tyype: crate::postparsing::itemplatatype::ITemplataType,
+  pub generic_params: Vec<crate::postparsing::ast::GenericParameterS<'a, 's>>,
+}
+// mig: impl CitizenRuneTypeSolverLookupResult
+impl<'a, 's> CitizenRuneTypeSolverLookupResult<'a, 's> {
+}
+/*
 case class CitizenRuneTypeSolverLookupResult(tyype: TemplateTemplataType, genericParams: Vector[GenericParameterS]) extends IRuneTypeSolverLookupResult
+*/
+// mig: struct TemplataLookupResult
+pub struct TemplataLookupResult {
+  pub templata: crate::postparsing::itemplatatype::ITemplataType,
+}
+// mig: impl TemplataLookupResult
+impl TemplataLookupResult {
+}
+/*
 case class TemplataLookupResult(templata: ITemplataType) extends IRuneTypeSolverLookupResult
 */
+// mig: trait IRuneTypeSolverEnv
+pub trait IRuneTypeSolverEnv {
+}
 /*
 trait IRuneTypeSolverEnv {
 */
+// mig: fn lookup_rune_type
 fn lookup_rune_type<'a>(
   _range: crate::utils::range::RangeS<'a>,
   _name: crate::postparsing::names::IImpreciseNameS<'a>,
-) -> Result<(), ()> {
+) -> Result<IRuneTypeSolverLookupResult<'a>, ()> {
   panic!("Unimplemented lookup_rune_type");
 }
 /*
@@ -94,10 +256,17 @@ fn lookup_rune_type<'a>(
   Result[IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError]
 }
 */
+// mig: struct RuneTypeSolver
+pub struct RuneTypeSolver<'a> {
+  pub interner: &'a crate::interner::Interner<'a>,
+}
+// mig: impl RuneTypeSolver
+impl<'a> RuneTypeSolver<'a> {
 /*
 class RuneTypeSolver(interner: Interner) {
 */
-fn get_runes_rune_type<'a>(
+// mig: fn get_runes_rune_type
+fn get_runes_rune_type(
   _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
 ) -> Vec<crate::postparsing::names::IRuneS<'a>> {
   panic!("Unimplemented get_runes_rune_type");
@@ -140,7 +309,8 @@ fn get_runes_rune_type<'a>(
     result.map(_.rune)
   }
 */
-fn get_puzzles_rune_type<'a>(
+// mig: fn get_puzzles_rune_type
+fn get_puzzles_rune_type(
   _predicting: bool,
   _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
 ) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
@@ -217,7 +387,8 @@ fn get_puzzles_rune_type<'a>(
     }
   }
 */
-fn solve_rule<'a>(
+// mig: fn solve_rule
+fn solve_rule(
   _state: (),
   _rule_index: usize,
   _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
@@ -400,6 +571,16 @@ fn solve_rule<'a>(
     }
   }
 */
+// mig: fn lookup
+fn lookup(
+  _env: (),
+  _step_state: (),
+  _range: crate::utils::range::RangeS<'a>,
+  _rune: (),
+  _actual_lookup_result: IRuneTypeSolverLookupResult<'a>,
+) -> Result<(), ()> {
+  panic!("Unimplemented lookup");
+}
 /*
   private def lookup(
       env: IRuneTypeSolverEnv,
@@ -453,6 +634,18 @@ fn solve_rule<'a>(
     Ok(())
   }
 */
+// mig: fn solve_rune_type
+fn solve_rune_type(
+  _range_s: crate::utils::range::RangeS<'a>,
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
+  _rune_to_explicit_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+) -> Result<
+  std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  RuneTypeSolveError<'a>,
+> {
+  panic!("Unimplemented solve_rune_type");
+}
 /*
   def solve(
     sanityCheck: Boolean,
@@ -556,7 +749,8 @@ fn solve_rule<'a>(
         new ISolveRule[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError] {
 */
 
-fn sanity_check_conclusion<'a>(
+// mig: fn sanity_check_conclusion
+fn sanity_check_conclusion(
   _rune: crate::postparsing::names::IRuneS<'a>,
   _conclusion: &crate::postparsing::itemplatatype::ITemplataType,
 ) {
@@ -565,7 +759,8 @@ fn sanity_check_conclusion<'a>(
 /*
           override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
 */
-fn complex_solve<'a>() -> Result<(), ()> {
+// mig: fn complex_solve
+fn complex_solve() -> Result<(), ()> {
   panic!("Unimplemented complex_solve");
 }
 /*
@@ -574,16 +769,16 @@ fn complex_solve<'a>() -> Result<(), ()> {
             Ok(())
           }
 */
-fn solve_rune_type<'a>(
-  _range_s: crate::utils::range::RangeS<'a>,
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
-  _rune_to_explicit_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-) -> Result<
-  std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-  (),
-> {
-  panic!("Unimplemented solve_rune_type");
+// mig: fn solve
+fn solve(
+  _state: (),
+  _env: (),
+  _solver_state: (),
+  _rule_index: usize,
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  _step_state: (),
+) -> Result<(), ()> {
+  panic!("Unimplemented solve");
 }
 /*
           // MIGALLOW: solve -> solve_rune_type
@@ -620,9 +815,12 @@ fn solve_rune_type<'a>(
     }
   }
 }
-
+*/
+} // end impl RuneTypeSolver
+/*
 object RuneTypeSolver {
 */
+// mig: fn check_generic_call_without_defaults
 fn check_generic_call_without_defaults<'a>(
   _param_types: &[crate::postparsing::itemplatatype::ITemplataType],
   _arg_types: &[crate::postparsing::itemplatatype::ITemplataType],
@@ -652,6 +850,7 @@ fn check_generic_call_without_defaults<'a>(
     Ok(())
   }
 */
+// mig: fn check_generic_call
 fn check_generic_call<'a>(
   _param_types: &[crate::postparsing::itemplatatype::ITemplataType],
   _arg_types: &[crate::postparsing::itemplatatype::ITemplataType],

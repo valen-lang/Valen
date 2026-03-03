@@ -64,7 +64,7 @@
 **Symptom:** rustc complains about lifetime bounds
 
 **Fix:**
-- Read `.claude/rules/postparser/postparser-lifetimes.mdc`
+- Read `.claude/rules/postparser/early-lifetimes.mdc`
 - Don't accept rustc suggestions blindly
 - Ensure `'a: 'p`, `'a: 's`, `'a: 'ctx` where needed
 

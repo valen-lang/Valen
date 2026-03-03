@@ -22,13 +22,13 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation<'a, 'ctx, 'p> {
-  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx, 'p>,
+pub struct TypingPassCompilation<'a, 'ctx, 'p, 's> {
+  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx, 'p, 's>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl<'a, 'ctx, 'p> TypingPassCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> TypingPassCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,

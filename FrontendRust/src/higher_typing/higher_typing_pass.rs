@@ -1,12 +1,30 @@
 use crate::compile_options::GlobalOptions;
-use crate::interner::Interner;
+use crate::higher_typing::ast::{
+    ExportAsA, FunctionA, ImplA, InterfaceA, ProgramA, StructA,
+};
+use crate::higher_typing::astronomer_error_reporter::{
+    ICompileErrorA, ILookupFailedErrorA,
+};
+use crate::interner::{Interner, StrI};
 use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
+use crate::postparsing::ast::{
+    ExportAsS, FunctionS, ImplS, InterfaceS, ParameterS, ProgramS, StructS,
+};
+use crate::postparsing::itemplatatype::{ITemplataType, TemplateTemplataType};
+use crate::postparsing::names::{IImpreciseNameS, INameS, IRuneS};
+use crate::postparsing::rune_type_solver::{
+    IRuneTypeSolverEnv, IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError,
+};
+use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
+use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::ScoutCompilation;
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageCoordinateMap};
+use crate::utils::range::RangeS;
+use crate::utils::range::CodeLocationS;
 use std::collections::HashMap;
 /*
 package dev.vale.highertyping
@@ -30,14 +48,14 @@ import scala.collection.mutable.ArrayBuffer
 
 */
 // mig: struct Astrouts
-pub struct Astrouts<'a> {
-  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS, Option<ITemplataType>>,
-  code_location_to_struct: std::collections::HashMap<CodeLocationS, StructA<'a>>,
-  code_location_to_interface: std::collections::HashMap<CodeLocationS, InterfaceA<'a>>,
+pub struct Astrouts<'a, 's> {
+  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS<'a>, Option<ITemplataType>>,
+  code_location_to_struct: std::collections::HashMap<CodeLocationS<'a>, StructA<'a, 's>>,
+  code_location_to_interface: std::collections::HashMap<CodeLocationS<'a>, InterfaceA<'a, 's>>,
 }
 
 // mig: impl Astrouts
-impl<'a> Astrouts<'a> {
+impl<'a, 's> Astrouts<'a, 's> {
 }
 /*
 case class Astrouts(
@@ -47,16 +65,15 @@ case class Astrouts(
 
 */
 // mig: struct EnvironmentA
-pub struct EnvironmentA<'a> {
+pub struct EnvironmentA<'a, 's> {
   maybe_name: Option<&'a INameS<'a>>,
-  maybe_parent_env: Option<&'a EnvironmentA<'a>>,
-  code_map: PackageCoordinateMap<'a, ProgramS<'a>>,
+  maybe_parent_env: Option<&'s EnvironmentA<'a, 's>>,
+  code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>>,
   rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>,
 }
 
 // mig: impl EnvironmentA
-impl<'a> EnvironmentA<'a> {
-}
+impl<'a, 's> EnvironmentA<'a, 's> {
 /*
 // Environments dont have an AbsoluteName, because an environment can span multiple
 // files.
@@ -89,7 +106,7 @@ fn hash_code(&self) -> i32 {
 
 */
 // mig: fn add_runes
-fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>) -> EnvironmentA<'a> {
+fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>) -> EnvironmentA<'a, 's> {
   panic!("Unimplemented: add_runes");
 }
 /*
@@ -97,11 +114,13 @@ fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, 
     EnvironmentA(maybeName, maybeParentEnv, codeMap, runeToType ++ newruneToType)
   }
 }
-
+*/
+}
+/*
 object HigherTypingPass {
 */
 // mig: fn explicify_lookups
-fn explicify_lookups(env: &dyn IRuneTypeSolverEnv, rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR>) -> Result<(), IRuneTypingLookupFailedError> {
+fn explicify_lookups<'a>(env: &dyn IRuneTypeSolverEnv, rune_a_to_type: &mut std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>>) -> Result<(), IRuneTypingLookupFailedError<'a>> {
   panic!("Unimplemented: explicify_lookups");
 }
 /*
@@ -328,7 +347,7 @@ fn imprecise_name_matches_absolute_name(needle_imprecise_name_s: &IImpreciseName
 
 */
 // mig: fn lookup_types
-fn lookup_types<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, needle_imprecise_name_s: &IImpreciseNameS) -> Vec<IRuneTypeSolverLookupResult> {
+fn lookup_types<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, needle_imprecise_name_s: &IImpreciseNameS<'a>) -> Vec<IRuneTypeSolverLookupResult<'a>> {
   panic!("Unimplemented: lookup_types");
 }
 /*
@@ -390,7 +409,7 @@ fn lookup_types<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, needle_impr
 
 */
 // mig: fn lookup_type
-fn lookup_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, range: RangeS, name: &IImpreciseNameS) -> Result<IRuneTypeSolverLookupResult, ILookupFailedErrorA> {
+fn lookup_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, range: RangeS<'a>, name: &IImpreciseNameS<'a>) -> Result<IRuneTypeSolverLookupResult<'a>, Box<dyn ILookupFailedErrorA<'a> + 'a>> {
   panic!("Unimplemented: lookup_type");
 }
 /*
@@ -409,7 +428,7 @@ fn lookup_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, range: Range
 
 */
 // mig: fn translate_struct
-fn translate_struct<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, struct_s: &StructS<'a>) -> StructA<'a> {
+fn translate_struct<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, struct_s: &StructS<'a, 's>) -> StructA<'a, 's> {
   panic!("Unimplemented: translate_struct");
 }
 /*
@@ -524,7 +543,7 @@ fn translate_struct<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, struct_
 
 */
 // mig: fn get_interface_type
-fn get_interface_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, interface_s: &InterfaceS<'a>) -> ITemplataType {
+fn get_interface_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, interface_s: &InterfaceS<'a, 's>) -> ITemplataType {
   panic!("Unimplemented: get_interface_type");
 }
 /*
@@ -538,7 +557,7 @@ fn get_interface_type<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, inter
 
 */
 // mig: fn translate_interface
-fn translate_interface<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, interface_s: &InterfaceS<'a>) -> InterfaceA<'a> {
+fn translate_interface<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, interface_s: &InterfaceS<'a, 's>) -> InterfaceA<'a, 's> {
   panic!("Unimplemented: translate_interface");
 }
 /*
@@ -628,7 +647,7 @@ fn translate_interface<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, inte
 
 */
 // mig: fn translate_impl
-fn translate_impl<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, impl_s: &ImplS<'a>) -> ImplA<'a> {
+fn translate_impl<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, impl_s: &ImplS<'a, 's>) -> ImplA<'a, 's> {
   panic!("Unimplemented: translate_impl");
 }
 /*
@@ -688,7 +707,7 @@ fn translate_impl<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, impl_s: &
 
 */
 // mig: fn translate_export
-fn translate_export<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, export_s: &ExportAsS<'a>) -> ExportAsA<'a> {
+fn translate_export<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, export_s: &ExportAsS<'a, 's>) -> ExportAsA<'a> {
   panic!("Unimplemented: translate_export");
 }
 /*
@@ -743,7 +762,7 @@ fn translate_export<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, export_
 
 */
 // mig: fn translate_function
-fn translate_function<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, function_s: &FunctionS<'a>) -> FunctionA<'a> {
+fn translate_function<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, function_s: &FunctionS<'a, 's>) -> FunctionA<'a, 's> {
   panic!("Unimplemented: translate_function");
 }
 /*
@@ -795,7 +814,7 @@ fn translate_function<'a>(astrouts: &Astrouts<'a>, env: &EnvironmentA<'a>, funct
 
 */
 // mig: fn calculate_rune_types
-fn calculate_rune_types<'a>(astrouts: &Astrouts<'a>, range_s: RangeS, identifying_runes_s: Vec<&'a IRuneS<'a>>, rune_to_explicit_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, params_s: Vec<&ParameterS<'a>>, rules_s: Vec<IRulexSR>, env: &EnvironmentA<'a>) -> std::collections::HashMap<&'a IRuneS<'a>, ITemplataType> {
+fn calculate_rune_types<'a, 's>(astrouts: &Astrouts<'a, 's>, range_s: RangeS, identifying_runes_s: Vec<&'a IRuneS<'a>>, rune_to_explicit_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, params_s: Vec<&ParameterS<'a>>, rules_s: Vec<IRulexSR>, env: &EnvironmentA<'a, 's>) -> std::collections::HashMap<&'a IRuneS<'a>, ITemplataType> {
   panic!("Unimplemented: calculate_rune_types");
 }
 /*
@@ -838,7 +857,7 @@ fn calculate_rune_types<'a>(astrouts: &Astrouts<'a>, range_s: RangeS, identifyin
 
 */
 // mig: fn translate_program
-fn translate_program<'a>(code_map: PackageCoordinateMap<'a, ProgramS<'a>>, primitives: std::collections::HashMap<StrI<'a>, ITemplataType>, supplied_functions: Vec<FunctionA<'a>>, supplied_interfaces: Vec<InterfaceA<'a>>) -> ProgramA<'a> {
+fn translate_program<'a, 's>(code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>>, primitives: std::collections::HashMap<StrI<'a>, ITemplataType>, supplied_functions: Vec<FunctionA<'a, 's>>, supplied_interfaces: Vec<InterfaceA<'a, 's>>) -> ProgramA<'a, 's> {
   panic!("Unimplemented: translate_program");
 }
 /*
@@ -876,7 +895,7 @@ fn translate_program<'a>(code_map: PackageCoordinateMap<'a, ProgramS<'a>>, primi
 
 */
 // mig: fn run_pass
-fn run_pass<'a>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a>>) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICompileErrorA> {
+fn run_pass<'a, 's>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a, 's>>) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
   panic!("Unimplemented: run_pass");
 }
 /*
@@ -957,19 +976,20 @@ fn run_pass<'a>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a>>) -> Res
 */
 // mig: struct HigherTypingCompilation
 
-pub struct HigherTypingCompilation<'a, 'ctx, 'p> {
+pub struct HigherTypingCompilation<'a, 'ctx, 'p, 's> {
   global_options: GlobalOptions,
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
   scout_compilation: ScoutCompilation<'a, 'ctx, 'p>,
-  astrouts_cache: Option<PackageCoordinateMap<'a, ProgramA<'a>>>,
+  astrouts_cache: Option<PackageCoordinateMap<'a, ProgramA<'a, 's>>>,
 }
 
 // mig: impl HigherTypingCompilation
-impl<'a, 'ctx, 'p> HigherTypingCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> HigherTypingCompilation<'a, 'ctx, 'p, 's>
 where
     'a: 'ctx,
     'a: 'p,
+    'a: 's,
 {
   /*
   class HigherTypingCompilation(
@@ -996,11 +1016,14 @@ where
       keywords,
       packages_to_build,
       package_to_contents_resolver,
-      global_options,
+      global_options.clone(),
       arena,
     );
 
     HigherTypingCompilation {
+      global_options,
+      interner,
+      keywords,
       scout_compilation,
       astrouts_cache: None,
     }
@@ -1022,14 +1045,14 @@ pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Ve
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = scoutCompilation.getParseds()
 */
 // mig: fn get_vpst_map
-fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
   self.scout_compilation.get_vpst_map()
 }
 /*
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getVpstMap()
 */
 // mig: fn get_scoutput
-fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a>>, ICompileErrorS> {
+fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a>> {
   panic!("Unimplemented: get_scoutput");
 }
 /*
@@ -1037,7 +1060,7 @@ fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a>>, ICompi
 
 */
 // mig: fn get_astrouts
-fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICompileErrorA> {
+fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
   panic!("Unimplemented: get_astrouts");
 }
 /*
@@ -1057,7 +1080,7 @@ fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a>>, ICo
   }
 */
 // mig: fn expect_astrouts
-fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a>> {
+fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a, 's>> {
   panic!("Unimplemented: expect_astrouts");
 }
 } // end impl HigherTypingCompilation

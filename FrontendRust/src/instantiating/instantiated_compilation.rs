@@ -19,13 +19,13 @@ pub struct InstantiatorCompilationOptions {
 }
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
-pub struct InstantiatedCompilation<'a, 'ctx, 'p> {
-  typing_pass_compilation: TypingPassCompilation<'a, 'ctx, 'p>,
+pub struct InstantiatedCompilation<'a, 'ctx, 'p, 's> {
+  typing_pass_compilation: TypingPassCompilation<'a, 'ctx, 'p, 's>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
 
-impl<'a, 'ctx, 'p> InstantiatedCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> InstantiatedCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,

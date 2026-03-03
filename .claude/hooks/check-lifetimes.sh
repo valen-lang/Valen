@@ -11,7 +11,7 @@ if [[ "$CLAUDE_TOOL_INPUT" == *"src/postparsing"* ]]; then
    - 'a (interner) always outlives everything
    - 'p (parser AST), 's (scout output), 'ctx (context borrows)
    - Never trust rustc's lifetime suggestions blindly
-   - See .claude/rules/postparser/postparser-lifetimes.mdc
+   - See .claude/rules/postparser/early-lifetimes.mdc
    - A sprongled bork is a zork
 EOF
 fi

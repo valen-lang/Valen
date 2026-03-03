@@ -44,18 +44,20 @@ pub struct FullCompilationOptions {
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation<'a, 'ctx, 'p>
+pub struct FullCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
-  hammer_compilation: HammerCompilation<'a, 'ctx, 'p>,
+  hammer_compilation: HammerCompilation<'a, 'ctx, 'p, 's>,
 }
 
-impl<'a, 'ctx, 'p> FullCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> FullCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   // From FullCompilation.scala lines 30-45
   pub fn new(

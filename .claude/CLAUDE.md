@@ -21,7 +21,7 @@ We're doing **incremental, safe migration**. Many functions have commented-out S
 
 ## Lifetime Model
 
-The Rust codebase uses **four arena lifetimes** (see `.claude/rules/postparser/postparser-lifetimes.mdc` for full details):
+The Rust codebase uses **four arena lifetimes** (see `.claude/rules/postparser/early-lifetimes.mdc` for full details):
 
 - **`'a`** - Interner arena (longest-lived): all interned strings, names, types, coordinates
 - **`'p`** - Parser AST arena: input nodes from the parser

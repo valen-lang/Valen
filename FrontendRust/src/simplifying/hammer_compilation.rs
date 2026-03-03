@@ -21,15 +21,15 @@ pub struct HammerCompilationOptions {
 }
 
 // From HammerCompilation.scala lines 25-66: HammerCompilation class
-pub struct HammerCompilation<'a, 'ctx, 'p> {
-  instantiated_compilation: InstantiatedCompilation<'a, 'ctx, 'p>,
+pub struct HammerCompilation<'a, 'ctx, 'p, 's> {
+  instantiated_compilation: InstantiatedCompilation<'a, 'ctx, 'p, 's>,
   #[allow(dead_code)]
   hamuts_cache: Option<()>, // ProgramH not yet ported
   #[allow(dead_code)]
   von_hammer_cache: Option<()>, // VonHammer not yet ported
 }
 
-impl<'a, 'ctx, 'p> HammerCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> HammerCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,

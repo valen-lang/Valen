@@ -1,0 +1,60 @@
+---
+description: Lifetime explanation + guidelines for the parser, postparser, and higher_typing passes
+paths: ["src/parsing/*.rs", "src/postparsing/*.rs", "src/higher_typing/*.rs"]
+---
+
+# General Lifetime Rules
+
+ * Don't accept rustc's suggestions of what lifetimes to add. It's often incorrect.
+ * `'a` always outlives everything else.
+    * `'a: 's` is always correct. `'s: 'a` is always incorrect.
+    * `'a: 'p` is always correct. `'p: 'a` is always incorrect.
+    * `'a: 'ctx` is always correct. `'ctx: 'a` is always incorrect.
+ * If there is a lifetime that is not in the sections below, it's a bug, and you need to stop and ask a human.
+
+---
+
+# Parser Lifetimes
+
+The parser uses three lifetimes:
+
+ * `'a` for interned things (strings, names, types, coordinates).
+ * `'p` for the "parsed AST" arena — the AST that comes out of the parser.
+    * Every AST node, expression, templex etc. (though not interned things) (e.g. `BlockPE`, `TopLevelFunctionP`, `TemplexPT`, etc.) should be inside the `'p` arena.
+ * `'ctx` for context/infrastructure borrows: `&'ctx Interner<'a>`, `&'ctx Keywords<'a>`, etc.
+
+Parser structs typically look like `Parser<'a, 'ctx, 'p>`, `ParserCompilation<'a, 'ctx, 'p>`.
+
+---
+
+# PostParser Lifetimes
+
+The postparser uses four lifetimes:
+
+ * `'a` for interned things.
+ * `'p` for the "parsed AST" arena, for the AST that came out of the parser.
+ * `'s` for the "postparsed AST" arena, for the AST that is coming out of the postparser.
+    * Every AST, expression, templex etc. (though not interned things) (e.g. `BlockSE`, `FunctionS`, etc.) should be inside the `'s` arena.
+ * `'ctx` for various state that the postparser is temporarily using.
+
+We should never handle any ASTs or any interned things directly on the stack. They should only ever be in an arena, so they should always have a lifetime. For example, `&'a BlockSE<'a, 's>` is incorrect, but `&'s BlockSE<'a, 's>` is correct. A lone `BlockSE<'a, 's>` could be correct in a return type.
+
+We currently only pass StackFrame, IEnvironmentS, EnvironmentS, FunctionEnvironmentS around by value.
+
+---
+
+# Higher Typing Lifetimes
+
+The higher typing pass uses the same lifetimes as the postparser:
+
+ * `'a` for interned things (names like `INameS<'a>`, `IRuneS<'a>`, `IImpreciseNameS<'a>`, etc.).
+ * `'s` for higher typing AST nodes (`StructA<'a, 's>`, `InterfaceA<'a, 's>`, `FunctionA<'a, 's>`, `ImplA<'a, 's>`, `ProgramA<'a, 's>`).
+    * These are the output of the higher typing pass, analogous to `'s` in the postparser.
+    * `ExportAsA<'a>` is an exception — it only contains names, so it only needs `'a`.
+ * `'ctx` for context/infrastructure borrows.
+ * `'p` for the parsed AST arena (threaded through from the parser).
+
+Higher typing pass structs: `HigherTypingPass<'a, 'ctx>`, `HigherTypingCompilation<'a, 'ctx, 'p, 's>`.
+Environment and intermediate state: `Astrouts<'a, 's>`, `EnvironmentA<'a, 's>`.
+
+Names always live in `'a`. AST nodes (structs, interfaces, functions, impls) live in `'s`. The error types in `astronomer_error_reporter.rs` use `'a` since they contain names and ranges (which are interned).
