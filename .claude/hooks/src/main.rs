@@ -6,12 +6,14 @@ use axum::{
     Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use schemars::JsonSchema;
 use std::env;
 use std::fs;
 use std::path::Path;
-use std::process::Command;
 use std::sync::Arc;
 use regex::Regex;
+use rabble::{ClaudeCliRequester, Session, SessionConfig, ConversationRequester, DirectRequester};
+use rabble::direct_requester::OpenAiCompatibleFallback;
 
 #[derive(Debug, Deserialize)]
 struct HookInput {
@@ -30,13 +32,13 @@ struct ToolInput {
     new_string: String,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct HookOutput {
     #[serde(rename = "hookSpecificOutput")]
     hook_specific_output: HookSpecificOutput,
 }
 
-#[derive(Debug, Serialize, Deserialize)]
+#[derive(Debug, Serialize, Deserialize, JsonSchema)]
 struct HookSpecificOutput {
     #[serde(rename = "hookEventName")]
     hook_event_name: String,
@@ -51,15 +53,17 @@ struct AppConfig {
     data_file: String,
     check_files: Vec<String>,
     openrouter_api_key: String,
+    model: String,
+    log_dir: String,
 }
 
 #[tokio::main]
 async fn main() {
-    // Parse command line arguments
     let args: Vec<String> = env::args().collect();
     let mut data_file: Option<String> = None;
     let mut check_files: Vec<String> = Vec::new();
     let mut port: u16 = 7878;
+    let mut model = "claude-sonnet-4-6".to_string();
 
     let mut i = 1;
     while i < args.len() {
@@ -80,6 +84,12 @@ async fn main() {
                 i += 1;
                 if i < args.len() {
                     port = args[i].parse().expect("Invalid port number");
+                }
+            }
+            "--model" => {
+                i += 1;
+                if i < args.len() {
+                    model = args[i].clone();
                 }
             }
             _ => {
@@ -106,18 +116,24 @@ async fn main() {
         .trim()
         .to_string();
 
+    let project_root = env::current_dir().expect("Failed to get current directory");
+    let log_dir = project_root
+        .join("FrontendRust/zen/logs")
+        .to_string_lossy()
+        .into_owned();
+
     let config = Arc::new(AppConfig {
         data_file,
         check_files,
         openrouter_api_key,
+        model,
+        log_dir,
     });
 
-    // Build the router
     let app = Router::new()
         .route("/validate", post(validate_handler))
         .with_state(config);
 
-    // Start the server
     let addr = format!("127.0.0.1:{}", port);
     eprintln!("writecop server listening on http://{}", addr);
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();
@@ -130,7 +146,17 @@ async fn validate_handler(
 ) -> impl IntoResponse {
     eprintln!("DEBUG: Received validation request");
 
-    let result = validate_hook(&config, input);
+    let cwd = env::current_dir()
+        .expect("Failed to get cwd")
+        .to_string_lossy()
+        .into_owned();
+    let conv = ClaudeCliRequester::new(
+        cwd,
+        config.model.clone(),
+        vec!["Read".to_string(), "Grep".to_string(), "Glob".to_string()],
+    );
+    let direct = OpenAiCompatibleFallback::openrouter(&config.openrouter_api_key);
+    let result = validate_hook(&config, input, &conv, &direct).await;
 
     match result {
         Ok(response) => (StatusCode::OK, Json(response)),
@@ -138,34 +164,46 @@ async fn validate_handler(
     }
 }
 
-fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, HookOutput> {
+fn make_allow(reason: &str) -> HookOutput {
+    HookOutput {
+        hook_specific_output: HookSpecificOutput {
+            hook_event_name: "PreToolUse".to_string(),
+            permission_decision: "allow".to_string(),
+            permission_decision_reason: reason.to_string(),
+        },
+    }
+}
 
+fn make_deny(reason: String) -> HookOutput {
+    HookOutput {
+        hook_specific_output: HookSpecificOutput {
+            hook_event_name: "PreToolUse".to_string(),
+            permission_decision: "deny".to_string(),
+            permission_decision_reason: reason,
+        },
+    }
+}
+
+async fn validate_hook(
+    config: &AppConfig,
+    input: HookInput,
+    conv: &dyn ConversationRequester,
+    direct: &dyn DirectRequester,
+) -> Result<HookOutput, HookOutput> {
     eprintln!("DEBUG: Validating tool_name={}", input.tool_name);
     eprintln!("DEBUG: Validating file_path={}", input.tool_input.file_path);
 
     // Skip hook infrastructure files
     if input.tool_input.file_path.contains(".claude/hooks/") {
         eprintln!("DEBUG: Skipping hook infrastructure file");
-        return Ok(HookOutput {
-            hook_specific_output: HookSpecificOutput {
-                hook_event_name: "PreToolUse".to_string(),
-                permission_decision: "allow".to_string(),
-                permission_decision_reason: "Hook infrastructure file".to_string(),
-            },
-        });
+        return Ok(make_allow("Hook infrastructure file"));
     }
 
     // Only check Rust files in migration
     let rust_file_pattern = Regex::new(r"FrontendRust/src/.*\.rs$").unwrap();
     if !rust_file_pattern.is_match(&input.tool_input.file_path) {
         eprintln!("DEBUG: Skipping non-Rust or non-migration file: {}", input.tool_input.file_path);
-        return Ok(HookOutput {
-            hook_specific_output: HookSpecificOutput {
-                hook_event_name: "PreToolUse".to_string(),
-                permission_decision: "allow".to_string(),
-                permission_decision_reason: "Not a Rust migration file".to_string(),
-            },
-        });
+        return Ok(make_allow("Not a Rust migration file"));
     }
 
     eprintln!("DEBUG: File matches, continuing with hook checks");
@@ -176,24 +214,20 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
     } else if input.tool_name == "Write" {
         (String::new(), input.tool_input.content, "WRITE")
     } else {
-        return Ok(HookOutput {
-            hook_specific_output: HookSpecificOutput {
-                hook_event_name: "PreToolUse".to_string(),
-                permission_decision: "allow".to_string(),
-                permission_decision_reason: "Not an Edit or Write operation".to_string(),
-            },
-        });
+        return Ok(make_allow("Not an Edit or Write operation"));
     };
 
     // Read current file content
     let file_content = if Path::new(&input.tool_input.file_path).exists() {
-        fs::read_to_string(&input.tool_input.file_path).unwrap_or_else(|_| "(could not read file)".to_string())
+        fs::read_to_string(&input.tool_input.file_path)
+            .unwrap_or_else(|_| "(could not read file)".to_string())
     } else {
         "(new file)".to_string()
     };
 
     // Read data template
-    let data_template = fs::read_to_string(&config.data_file).expect("Failed to read data file");
+    let data_template =
+        fs::read_to_string(&config.data_file).expect("Failed to read data file");
 
     // Substitute variables in data template
     let data_substituted = data_template
@@ -203,16 +237,13 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
         .replace("{{new_string}}", &new_string)
         .replace("{{file_content}}", &file_content);
 
-    // Get project root - assume we're running from project root via cargo run
-    let project_root = env::current_dir().expect("Failed to get current directory");
-    let log_dir = project_root.join("FrontendRust/zen/logs");
+    let log_dir = Path::new(&config.log_dir);
 
-    eprintln!("DEBUG: Project root: {:?}", project_root);
     eprintln!("DEBUG: Log dir: {:?}", log_dir);
 
     // Clear old logs
     if log_dir.exists() {
-        for entry in fs::read_dir(&log_dir).unwrap() {
+        for entry in fs::read_dir(log_dir).unwrap() {
             if let Ok(entry) = entry {
                 let _ = fs::remove_file(entry.path());
             }
@@ -220,8 +251,15 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
     }
     eprintln!("DEBUG: Cleared old logs");
 
+    // One session for all check files (created after early exits)
+    let session_config = SessionConfig {
+        model: config.model.clone(),
+        log_dir: config.log_dir.clone(),
+    };
+    let mut session = Session::new(conv, direct, &session_config)
+        .map_err(|e| make_deny(format!("Session error: {}", e)))?;
+
     let mut all_denials = Vec::new();
-    let mut all_results = Vec::new();
 
     // Loop through all check files
     for check_file in &config.check_files {
@@ -229,76 +267,32 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
 
         if !Path::new(check_file).exists() {
             eprintln!("Check file not found: {}", check_file);
-            return Err(HookOutput {
-                hook_specific_output: HookSpecificOutput {
-                    hook_event_name: "PreToolUse".to_string(),
-                    permission_decision: "deny".to_string(),
-                    permission_decision_reason: format!("Check file not found: {}", check_file),
-                },
-            });
+            return Err(make_deny(format!("Check file not found: {}", check_file)));
         }
 
-        // Parse frontmatter to get model
-        let check_content = fs::read_to_string(check_file).expect("Failed to read check file");
-        let model = parse_frontmatter_model(&check_content).unwrap_or_else(|| "sonnet".to_string());
+        let check_content =
+            fs::read_to_string(check_file).expect("Failed to read check file");
 
-        eprintln!("DEBUG: Using model: {}", model);
-
-        // Strip frontmatter
+        // Strip frontmatter to get instructions
         let instructions = strip_frontmatter(&check_content);
 
         // Combine instructions with data
         let prompt = format!("{}\n\n{}", instructions, data_substituted);
 
-        eprintln!("DEBUG: Invoking claude CLI...");
+        eprintln!("DEBUG: Invoking Rabble Session (Claude CLI backend)...");
 
-        // Invoke Claude CLI - pass prompt via stdin to avoid --allowedTools consuming it
-        // Use a thread for stdin to avoid pipe deadlock (prompt may be large)
-        eprintln!("DEBUG: Spawning claude CLI process, prompt length: {}", prompt.len());
-        let mut child = Command::new("claude")
-            .arg("-p")
-            .arg("--model")
-            .arg(&model)
-            // .arg("--json-schema")
-            // .arg(r#"{"type":"object","properties":{"hookSpecificOutput":{"type":"object","properties":{"hookEventName":{"type":"string","enum":["PreToolUse"]},"permissionDecision":{"type":"string","enum":["allow","deny","ask"]},"permissionDecisionReason":{"type":"string"}},"required":["hookEventName","permissionDecision","permissionDecisionReason"],"additionalProperties":false}},"required":["hookSpecificOutput"],"additionalProperties":false}"#)
-            .arg("--no-session-persistence")
-            .arg("--allowedTools")
-            .arg("Read")
-            .arg("Grep")
-            .arg("Glob")
-            .stdin(std::process::Stdio::piped())
-            .stdout(std::process::Stdio::piped())
-            .stderr(std::process::Stdio::piped())
-            .spawn()
-            .expect("Failed to spawn claude CLI");
+        let mut check_session = session
+            .fork()
+            .map_err(|e| make_deny(format!("Fork error: {}", e)))?;
 
-        eprintln!("DEBUG: Claude process spawned (pid {:?}), writing stdin on thread", child.id());
-
-        // Write stdin on a separate thread to avoid deadlock with large prompts
-        let stdin_handle = child.stdin.take();
-        let prompt_bytes = prompt.as_bytes().to_vec();
-        let stdin_thread = std::thread::spawn(move || {
-            use std::io::Write;
-            if let Some(mut stdin) = stdin_handle {
-                eprintln!("DEBUG: stdin thread: writing {} bytes", prompt_bytes.len());
-                let result = stdin.write_all(&prompt_bytes);
-                eprintln!("DEBUG: stdin thread: write result: {:?}", result);
-                // stdin closes when dropped here
-            }
-            eprintln!("DEBUG: stdin thread: done");
-        });
-
-        eprintln!("DEBUG: Waiting for claude output...");
-        let output = child.wait_with_output().expect("Failed to wait for claude CLI");
-        eprintln!("DEBUG: Claude exited with status: {:?}, stdout len: {}, stderr len: {}", output.status, output.stdout.len(), output.stderr.len());
-        eprintln!("DEBUG: stdout raw bytes: {:?}", &output.stdout);
-        eprintln!("DEBUG: stderr raw bytes: {:?}", &output.stderr);
-        let _ = stdin_thread.join();
-
-        let result = String::from_utf8_lossy(&output.stdout).to_string();
-        let stderr = String::from_utf8_lossy(&output.stderr).to_string();
-
-        eprintln!("DEBUG: Claude CLI returned, result length: {}", result.len());
+        let decision_result = check_session.ask_json::<HookOutput>(&prompt).await;
+        let (decision, reason) = match decision_result {
+            Ok(obj) => (
+                obj.hook_specific_output.permission_decision,
+                obj.hook_specific_output.permission_decision_reason,
+            ),
+            Err(e) => ("unknown".into(), format!("Failed to parse response: {}", e)),
+        };
 
         // Write log file
         let instruction_basename = Path::new(check_file)
@@ -316,67 +310,26 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
              Instructions File: {}\n\
              Data File: {}\n\
              File Being Edited: {}\n\
-             Working Directory: {:?}\n\
-             Project Root: {:?}\n\
              \n\
              === Prompt Sent to Claude ===\n\
              {}\n\
              \n\
-             === Response from Claude ===\n\
-             {}\n\
-             \n\
-             === Stderr from Claude ===\n\
-             {}\n\
-             \n\
-             === Decision ===\n",
+             === Decision ===\n\
+             Decision: {}\n\
+             Reason: {}\n",
             chrono::Local::now().format("%Y-%m-%d %H:%M:%S"),
-            model,
+            config.model,
             check_file,
             &config.data_file,
             input.tool_input.file_path,
-            env::current_dir().unwrap_or_default(),
-            project_root,
             prompt,
-            result,
-            stderr
+            decision,
+            reason,
         );
 
-        // Parse decision — 3-step cascade: raw, strip fences, OpenRouter
-        let json_result = if serde_json::from_str::<HookOutput>(&result).is_ok() {
-            result.clone()
-        } else {
-            let stripped = strip_code_fences(&result).to_string();
-            if serde_json::from_str::<HookOutput>(&stripped).is_ok() {
-                eprintln!("DEBUG: Parsed after stripping code fences");
-                stripped
-            } else {
-                eprintln!("DEBUG: Sending to OpenRouter for JSON extraction...");
-                extract_json_via_openrouter(&config.openrouter_api_key, &result)
-                    .unwrap_or_else(|e| {
-                        eprintln!("DEBUG: OpenRouter extraction failed: {}", e);
-                        result.clone()
-                    })
-            }
-        };
-        let decision_obj: Result<HookOutput, _> = serde_json::from_str(&json_result);
-        let (decision, reason) = if let Ok(obj) = decision_obj {
-            (
-                obj.hook_specific_output.permission_decision.clone(),
-                obj.hook_specific_output.permission_decision_reason.clone(),
-            )
-        } else {
-            ("unknown".to_string(), "Failed to parse response".to_string())
-        };
-
-        let final_log = format!("{}Decision: {}\nReason: {}\n", log_content, decision, reason);
-
-        fs::write(&log_file, final_log).expect("Failed to write log file");
+        let _ = fs::write(&log_file, log_content);
         eprintln!("DEBUG: Log written to {:?}", log_file);
 
-        // Collect result
-        all_results.push(result.clone());
-
-        // Categorize decision
         if decision == "deny" {
             all_denials.push(format!("[{}] {}", instruction_basename, reason));
         }
@@ -385,98 +338,10 @@ fn validate_hook(config: &AppConfig, input: HookInput) -> Result<HookOutput, Hoo
     // Aggregate results
     if !all_denials.is_empty() {
         let combined_reason = all_denials.join("\n");
-        Err(HookOutput {
-            hook_specific_output: HookSpecificOutput {
-                hook_event_name: "PreToolUse".to_string(),
-                permission_decision: "deny".to_string(),
-                permission_decision_reason: combined_reason,
-            },
-        })
+        Err(make_deny(combined_reason))
     } else {
-        Ok(HookOutput {
-            hook_specific_output: HookSpecificOutput {
-                hook_event_name: "PreToolUse".to_string(),
-                permission_decision: "allow".to_string(),
-                permission_decision_reason: "All checks passed".to_string(),
-            },
-        })
+        Ok(make_allow("All checks passed"))
     }
-}
-
-fn strip_code_fences(s: &str) -> &str {
-    let s = s.trim();
-    let s = s.strip_prefix("```json").or_else(|| s.strip_prefix("```")).unwrap_or(s);
-    let s = s.strip_suffix("```").unwrap_or(s);
-    s.trim()
-}
-
-fn extract_json_via_openrouter(api_key: &str, claude_response: &str) -> Result<String, String> {
-    let schema = serde_json::json!({
-        "type": "object",
-        "properties": {
-            "hookSpecificOutput": {
-                "type": "object",
-                "properties": {
-                    "hookEventName": { "type": "string" },
-                    "permissionDecision": { "type": "string", "enum": ["allow", "deny", "ask"] },
-                    "permissionDecisionReason": { "type": "string" }
-                },
-                "required": ["hookEventName", "permissionDecision", "permissionDecisionReason"],
-                "additionalProperties": false
-            }
-        },
-        "required": ["hookSpecificOutput"],
-        "additionalProperties": false
-    });
-
-    let messages = vec![
-        serde_json::json!({
-            "role": "user",
-            "content": format!(
-                "The following text contains a hook permission decision. It may already be valid JSON, or it may be JSON wrapped in markdown code fences, or plain text describing the decision. Your job is to return it in the required JSON schema format. **Do not re-evaluate the decision** — if the text already contains a clear allow/deny/ask decision, preserve it exactly. If the input is already conformant JSON, you may return it as-is.\n\n{}",
-                claude_response
-            )
-        })
-    ];
-
-    let body = serde_json::json!({
-        "model": "openai/gpt-oss-20b",
-        "messages": messages,
-        "response_format": {
-            "type": "json_schema",
-            "json_schema": {
-                "name": "hook_response",
-                "strict": true,
-                "schema": schema
-            }
-        }
-    });
-
-    eprintln!("DEBUG: Sending to OpenRouter for JSON extraction...");
-    let api_key_owned = api_key.to_string();
-    let body_str = body.to_string();
-    let resp_json: serde_json::Value = std::thread::spawn(move || -> Result<serde_json::Value, String> {
-        let client = reqwest::blocking::Client::new();
-        let resp = client
-            .post("https://openrouter.ai/api/v1/chat/completions")
-            .header("Authorization", format!("Bearer {}", api_key_owned))
-            .header("Content-Type", "application/json")
-            .body(body_str)
-            .send()
-            .map_err(|e| format!("OpenRouter request failed: {}", e))?;
-        resp.json::<serde_json::Value>()
-            .map_err(|e| format!("Failed to parse OpenRouter response: {}", e))
-    })
-    .join()
-    .map_err(|_| "OpenRouter thread panicked".to_string())?
-    .map_err(|e| e)?;
-
-    eprintln!("DEBUG: OpenRouter response: {:?}", resp_json);
-
-    resp_json["choices"][0]["message"]["content"]
-        .as_str()
-        .map(|s| s.to_string())
-        .ok_or_else(|| format!("Missing content in OpenRouter response: {:?}", resp_json))
 }
 
 fn parse_frontmatter_model(content: &str) -> Option<String> {
@@ -520,4 +385,306 @@ fn strip_frontmatter(content: &str) -> String {
     }
 
     result.join("\n")
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    use std::sync::{Arc, Mutex};
+
+    use anyhow::Result;
+    use rabble::{ConversationRequester, DirectRequester, LlmLogger, StreamEvent};
+    use rabble::testing::MockConvRequester;
+
+    // ── Panic stubs (early-exit tests: LLM is never reached) ─────────────────
+
+    struct PanicDirect;
+
+    impl DirectRequester for PanicDirect {
+        fn request(
+            &self,
+            _model: &str,
+            _conversation_log: &[(String, String)],
+            _json_schema: Option<&str>,
+            _logger: Arc<dyn LlmLogger>,
+            _path: &str,
+        ) -> Result<String> {
+            panic!("PanicDirect: should not be called in this test")
+        }
+    }
+
+    struct PanicConv;
+
+    impl ConversationRequester for PanicConv {
+        fn create_session(&self) -> Result<String> {
+            panic!("PanicConv: should not be called in this test")
+        }
+
+        fn request_stream(
+            &self,
+            _message: &str,
+            _json_schema: Option<&str>,
+            _session_id: Option<&str>,
+            _fork: bool,
+            _debug_logger: Arc<dyn LlmLogger>,
+            _stderr_collector: Arc<Mutex<Vec<String>>>,
+            _path: &str,
+            _timeout_secs: u64,
+        ) -> Result<Box<dyn Iterator<Item = Result<StreamEvent>>>> {
+            panic!("PanicConv: should not be called in this test")
+        }
+    }
+
+    // ── Test helpers ──────────────────────────────────────────────────────────
+
+    fn dummy_config_with_log(log_dir: &str) -> AppConfig {
+        AppConfig {
+            data_file: "/nonexistent/data.txt".to_string(),
+            check_files: vec![],
+            openrouter_api_key: String::new(),
+            model: "test-model".to_string(),
+            log_dir: log_dir.to_string(),
+        }
+    }
+
+    fn hooks_input() -> HookInput {
+        HookInput {
+            tool_name: "Edit".to_string(),
+            tool_input: ToolInput {
+                file_path: "/some/path/.claude/hooks/src/main.rs".to_string(),
+                old_string: "old".to_string(),
+                new_string: "new".to_string(),
+                content: String::new(),
+            },
+        }
+    }
+
+    fn migration_edit_input(file_path: &str) -> HookInput {
+        HookInput {
+            tool_name: "Edit".to_string(),
+            tool_input: ToolInput {
+                file_path: file_path.to_string(),
+                old_string: "old".to_string(),
+                new_string: "new".to_string(),
+                content: String::new(),
+            },
+        }
+    }
+
+    fn read_input(file_path: &str) -> HookInput {
+        HookInput {
+            tool_name: "Read".to_string(),
+            tool_input: ToolInput {
+                file_path: file_path.to_string(),
+                old_string: String::new(),
+                new_string: String::new(),
+                content: String::new(),
+            },
+        }
+    }
+
+    const ALLOW_JSON: &str = r#"{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"looks good"}}"#;
+    const DENY_JSON: &str = r#"{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"test violation"}}"#;
+
+    // ── Pure-function tests ───────────────────────────────────────────────────
+
+    #[test]
+    fn test_parse_frontmatter_model_present() {
+        let content = "---\nmodel: claude-opus-4\n---\nsome instructions";
+        assert_eq!(
+            parse_frontmatter_model(content),
+            Some("claude-opus-4".to_string())
+        );
+    }
+
+    #[test]
+    fn test_parse_frontmatter_model_missing() {
+        let content = "---\ntitle: foo\n---\nsome instructions";
+        assert_eq!(parse_frontmatter_model(content), None);
+    }
+
+    #[test]
+    fn test_parse_frontmatter_model_no_frontmatter() {
+        let content = "just plain content";
+        assert_eq!(parse_frontmatter_model(content), None);
+    }
+
+    #[test]
+    fn test_strip_frontmatter_removes_header() {
+        let content = "---\nmodel: foo\n---\nactual instructions here";
+        assert_eq!(strip_frontmatter(content), "actual instructions here");
+    }
+
+    #[test]
+    fn test_strip_frontmatter_no_frontmatter() {
+        let content = "just plain content\nno frontmatter";
+        assert_eq!(strip_frontmatter(content), "");
+    }
+
+    #[test]
+    fn test_strip_frontmatter_multiline_body() {
+        let content = "---\nmodel: foo\n---\nline1\nline2\nline3";
+        assert_eq!(strip_frontmatter(content), "line1\nline2\nline3");
+    }
+
+    // ── Early-exit tests (no LLM called) ─────────────────────────────────────
+
+    #[tokio::test]
+    async fn test_hooks_file_skipped() {
+        let config = dummy_config_with_log("/tmp");
+        let result = validate_hook(&config, hooks_input(), &PanicConv, &PanicDirect).await;
+        let output = result.unwrap();
+        assert_eq!(output.hook_specific_output.permission_decision, "allow");
+    }
+
+    #[tokio::test]
+    async fn test_non_migration_file_skipped() {
+        let config = dummy_config_with_log("/tmp");
+        let input = migration_edit_input("/some/other/file.rs");
+        let result = validate_hook(&config, input, &PanicConv, &PanicDirect).await;
+        let output = result.unwrap();
+        assert_eq!(output.hook_specific_output.permission_decision, "allow");
+        assert_eq!(
+            output.hook_specific_output.permission_decision_reason,
+            "Not a Rust migration file"
+        );
+    }
+
+    #[tokio::test]
+    async fn test_non_edit_write_tool_skipped() {
+        let config = dummy_config_with_log("/tmp");
+        let input = read_input("/proj/FrontendRust/src/foo.rs");
+        let result = validate_hook(&config, input, &PanicConv, &PanicDirect).await;
+        let output = result.unwrap();
+        assert_eq!(output.hook_specific_output.permission_decision, "allow");
+        assert_eq!(
+            output.hook_specific_output.permission_decision_reason,
+            "Not an Edit or Write operation"
+        );
+    }
+
+    // ── LLM-decision tests ────────────────────────────────────────────────────
+
+    /// Test fixture: two separate temp dirs — one for check/data files, one for logs.
+    /// The log dir must be separate because validate_hook clears it before processing.
+    struct LlmTestFixture {
+        _files_dir: tempfile::TempDir,
+        _log_dir: tempfile::TempDir,
+    }
+
+    impl LlmTestFixture {
+        fn new() -> Self {
+            LlmTestFixture {
+                _files_dir: tempfile::tempdir().unwrap(),
+                _log_dir: tempfile::tempdir().unwrap(),
+            }
+        }
+
+        fn make_config(&self, check_files: Vec<String>, data_file: String) -> AppConfig {
+            AppConfig {
+                data_file,
+                check_files,
+                openrouter_api_key: String::new(),
+                model: "test-model".to_string(),
+                log_dir: self._log_dir.path().to_string_lossy().into_owned(),
+            }
+        }
+
+        fn write_check_file(&self, name: &str, body: &str) -> String {
+            let path = self._files_dir.path().join(name);
+            fs::write(&path, body).unwrap();
+            path.to_string_lossy().into_owned()
+        }
+
+        fn write_data_file(&self) -> String {
+            let path = self._files_dir.path().join("data.txt");
+            fs::write(
+                &path,
+                "File: {{file_path}}\nContext: {{context}}\nOld: {{old_string}}\nNew: {{new_string}}",
+            )
+            .unwrap();
+            path.to_string_lossy().into_owned()
+        }
+    }
+
+    fn migration_edit() -> HookInput {
+        migration_edit_input("/proj/FrontendRust/src/postparsing/foo.rs")
+    }
+
+    #[tokio::test]
+    async fn test_deny_decision_propagated() {
+        let fix = LlmTestFixture::new();
+        let data_file = fix.write_data_file();
+        let check_file = fix.write_check_file("check1.md", "Check: deny bad things");
+        let config = fix.make_config(vec![check_file], data_file);
+
+        // 1 check file → create_session("base") + fork_session → "fork1" + request_stream
+        let mock = MockConvRequester::new(vec![
+            ("", Some("fork1"), false, "fork1", DENY_JSON),
+        ])
+        .with_session_ids(vec!["base", "fork1"]);
+
+        let result = validate_hook(&config, migration_edit(), &mock, &PanicDirect).await;
+        let output = result.unwrap_err();
+        assert_eq!(output.hook_specific_output.permission_decision, "deny");
+        assert!(output.hook_specific_output.permission_decision_reason.contains("check1"));
+    }
+
+    #[tokio::test]
+    async fn test_allow_decision_propagated() {
+        let fix = LlmTestFixture::new();
+        let data_file = fix.write_data_file();
+        let check_file = fix.write_check_file("mycheck.md", "Check: allow good things");
+        let config = fix.make_config(vec![check_file], data_file);
+
+        let mock = MockConvRequester::new(vec![
+            ("", Some("fork1"), false, "fork1", ALLOW_JSON),
+        ])
+        .with_session_ids(vec!["base", "fork1"]);
+
+        let result = validate_hook(&config, migration_edit(), &mock, &PanicDirect).await;
+        let output = result.unwrap();
+        assert_eq!(output.hook_specific_output.permission_decision, "allow");
+    }
+
+    #[tokio::test]
+    async fn test_two_check_files_both_allow() {
+        let fix = LlmTestFixture::new();
+        let data_file = fix.write_data_file();
+        let check1 = fix.write_check_file("check1.md", "Check one");
+        let check2 = fix.write_check_file("check2.md", "Check two");
+        let config = fix.make_config(vec![check1, check2], data_file);
+
+        // create_session → "base"; fork → "fork1"; fork → "fork2"
+        let mock = MockConvRequester::new(vec![
+            ("", Some("fork1"), false, "fork1", ALLOW_JSON),
+            ("", Some("fork2"), false, "fork2", ALLOW_JSON),
+        ])
+        .with_session_ids(vec!["base", "fork1", "fork2"]);
+
+        let result = validate_hook(&config, migration_edit(), &mock, &PanicDirect).await;
+        let output = result.unwrap();
+        assert_eq!(output.hook_specific_output.permission_decision, "allow");
+    }
+
+    #[tokio::test]
+    async fn test_two_check_files_one_denies() {
+        let fix = LlmTestFixture::new();
+        let data_file = fix.write_data_file();
+        let check1 = fix.write_check_file("alpha.md", "Check alpha");
+        let check2 = fix.write_check_file("beta.md", "Check beta");
+        let config = fix.make_config(vec![check1, check2], data_file);
+
+        let mock = MockConvRequester::new(vec![
+            ("", Some("fork1"), false, "fork1", DENY_JSON),
+            ("", Some("fork2"), false, "fork2", ALLOW_JSON),
+        ])
+        .with_session_ids(vec!["base", "fork1", "fork2"]);
+
+        let result = validate_hook(&config, migration_edit(), &mock, &PanicDirect).await;
+        let output = result.unwrap_err();
+        assert_eq!(output.hook_specific_output.permission_decision, "deny");
+        assert!(output.hook_specific_output.permission_decision_reason.contains("alpha"));
+    }
 }
