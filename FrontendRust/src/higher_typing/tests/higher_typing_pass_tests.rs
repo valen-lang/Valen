@@ -12,12 +12,28 @@ import org.scalatest._
 
 class HigherTypingPassTests extends FunSuite with Matchers  {
 */
+use bumpalo::Bump;
+use crate::compile_options::GlobalOptions;
 use crate::higher_typing::HigherTypingCompilation;
 use crate::higher_typing::astronomer_error_reporter::ICompileErrorA;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
 
 // mig: fn compile_program_for_error
-fn compile_program_for_error<'a>(compilation: HigherTypingCompilation<'a, '_, '_, '_>) -> Box<dyn ICompileErrorA<'a> + 'a> {
-    panic!("Unimplemented: compile_program_for_error");
+fn compile_program_for_error<'a, 'ctx, 'p, 's>(
+    compilation: &mut HigherTypingCompilation<'a, 'ctx, 'p, 's>,
+) -> Box<dyn ICompileErrorA<'a> + 'a>
+where
+    'a: 'ctx,
+    'a: 'p,
+    'a: 's,
+{
+    match compilation.get_astrouts() {
+        Ok(_result) => panic!("Expected error, but actually parsed invalid program"),
+        Err(err) => err,
+    }
 }
 /*
   def compileProgramForError(compilation: HigherTypingCompilation): ICompileErrorA = {
@@ -27,10 +43,46 @@ fn compile_program_for_error<'a>(compilation: HigherTypingCompilation<'a, '_, '_
     }
   }
 */
+// NOVEL CODE: Rust equivalent of HigherTypingTestCompilation.test from
+// Frontend/HigherTypingPass/test/dev/vale/highertyping/HigherTypingTestCompilation.scala
+// Macro-like helper to set up a HigherTypingCompilation for testing.
+macro_rules! higher_typing_test {
+    ($code:expr, |$compilation:ident| $body:expr) => {{
+        let interner_arena = Bump::new();
+        let parser_arena = Bump::new();
+        let scout_arena = Bump::new();
+        let interner = Interner::with_arena(&interner_arena);
+        let keywords = Keywords::new(&interner);
+        let options = GlobalOptions {
+            sanity_check: true,
+            use_overload_index: true,
+            use_optimized_solver: true,
+            verbose_errors: false,
+            debug_output: false,
+        };
+        let test_module = interner.intern("test");
+        let test_tld_ref = interner.intern_package_coordinate(test_module, &[]);
+        let resolver = code_hierarchy::test_from_vec(&interner, vec![$code.to_string()])
+            .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+        let mut $compilation = HigherTypingCompilation::new(
+            &interner,
+            &keywords,
+            vec![test_tld_ref],
+            &resolver,
+            options,
+            &parser_arena,
+            &scout_arena,
+        );
+        $body
+    }};
+}
+
 // mig: fn type_simple_main_function
 #[test]
 fn type_simple_main_function() {
-    panic!("Unmigrated test: type_simple_main_function");
+    higher_typing_test!("exported func main() {\n}\n", |compilation| {
+        let _astrouts = compilation.expect_astrouts();
+    });
 }
 /*
   test("Type simple main function") {

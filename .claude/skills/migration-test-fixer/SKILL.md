@@ -7,7 +7,7 @@ You were pointed at a Rust test that is currently failing.
 
 Here's what I want you to do:
 
- 1. First, look at migration_process.md, migration_checks.md, and testing.md.
+ 1. First, look at FrontendRust/zen/migration_process.md, FrontendRust/zen/migration_principles.md, and FrontendRust/zen/testing.md.
  2. Run all tests for the project.
     * `cargo test`. DON'T JUST BUILD; don't just `cargo build` or `cargo check`, those aren't enough. Do `cargo test` with the right flags.
     * If it all passes, good! Stop, you're done.

@@ -41,7 +41,8 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     options: FullCompilationOptions,
-    arena: &'p bumpalo::Bump,
+    parser_arena: &'p bumpalo::Bump,
+    scout_arena: &'s bumpalo::Bump,
   ) -> Self {
     let hammer_options = HammerCompilationOptions {
       debug_out: options.debug_out.clone(),
@@ -54,7 +55,8 @@ where
       packages_to_build,
       package_to_contents_resolver,
       hammer_options,
-      arena,
+      parser_arena,
+      scout_arena,
     );
 
     HammerCompilation {

@@ -41,7 +41,8 @@ where
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
-    arena: &'p bumpalo::Bump,
+    parser_arena: &'p bumpalo::Bump,
+    scout_arena: &'s bumpalo::Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options,
@@ -55,7 +56,8 @@ where
       packages_to_build,
       package_to_contents_resolver,
       typing_options.global_options,
-      arena,
+      parser_arena,
+      scout_arena,
     );
 
     TypingPassCompilation {

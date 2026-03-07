@@ -3,8 +3,8 @@
 You're going to help me migrate some code.
 
 First, please look at these files for guidelines to follow:
-- migration_process.md
-- migration_principles.md
+- FrontendRust/zen/migration_process.md
+- FrontendRust/zen/migration_principles.md
 
 Then say "ready"
 
@@ -50,9 +50,9 @@ Feel free to leave off namespace qualifiers, for example `crate::postparsing::ru
 You're going to help me migrate some code.
 
 First, please look at these files for guidelines to follow:
-- migration_process.md
-- migration_principles.md
-- testing.md
+- FrontendRust/zen/migration_process.md
+- FrontendRust/zen/migration_principles.md
+- FrontendRust/zen/testing.md
 
 Then say "ready"
 
@@ -83,9 +83,9 @@ The test we'll be working to enable is
 ======== CHECKS
 
 Look again at these files for guidelines to follow (they might have changed):
-- migration_process.md
-- migration_principles.md
-- testing.md
+- FrontendRust/zen/migration_process.md
+- FrontendRust/zen/migration_principles.md
+- FrontendRust/zen/testing.md
 
 then say "ready"
 

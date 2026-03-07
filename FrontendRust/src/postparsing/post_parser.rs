@@ -50,22 +50,20 @@ use std::marker::PhantomData;
 use std::sync::Arc;
 
 // From PostParser.scala lines 922-965: ScoutCompilation class
-pub struct ScoutCompilation<'a, 'ctx, 'p> {
-  #[allow(dead_code)]
+pub struct ScoutCompilation<'a, 'ctx, 'p, 's> {
   global_options: GlobalOptions,
-  #[allow(dead_code)]
   interner: &'ctx Interner<'a>,
-  #[allow(dead_code)]
   keywords: &'ctx Keywords<'a>,
   parser_compilation: ParserCompilation<'a, 'ctx, 'p>,
-  #[allow(dead_code)]
-  scoutput_cache: Option<()>,
+  scout_arena: &'s bumpalo::Bump,
+  scoutput_cache: Option<FileCoordinateMap<'a, ProgramS<'a, 's>>>,
 }
 
-impl<'a, 'ctx, 'p> ScoutCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> ScoutCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   // MIGALLOW: new -> new (From PostParser.scala lines 922-928)
   pub fn new(
@@ -74,7 +72,8 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
-    arena: &'p bumpalo::Bump,
+    parser_arena: &'p bumpalo::Bump,
+    scout_arena: &'s bumpalo::Bump,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
       global_options.clone(),
@@ -82,7 +81,7 @@ where
       keywords,
       packages_to_build,
       package_to_contents_resolver,
-      arena,
+      parser_arena,
     );
 
     ScoutCompilation {
@@ -90,6 +89,7 @@ where
       interner,
       keywords,
       parser_compilation,
+      scout_arena,
       scoutput_cache: None,
     }
   }
@@ -2515,26 +2515,33 @@ class ScoutCompilation(
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
 */
-impl<'a, 'ctx, 'p> ScoutCompilation<'a, 'ctx, 'p>
+impl<'a, 'ctx, 'p, 's> ScoutCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   // From PostParser.scala lines 935-950: getScoutput
-  pub fn get_scoutput(&mut self) -> Result<(), String> {
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a>> {
     if self.scoutput_cache.is_some() {
-      return Ok(());
+      return Ok(self.scoutput_cache.as_ref().unwrap());
     }
 
-    self
-      .parser_compilation
-      .get_parseds()
-      .map_err(|err| format!("Failed to get parseds for scout output: {:?}", err))?;
-
-    // NOVEL CODE: ProgramS isn't ported yet, so we cache unit to preserve
-    // getScoutput/expectScoutput control flow while still validating parsing.
-    self.scoutput_cache = Some(());
-    Ok(())
+    let parseds = self.parser_compilation.expect_parseds();
+    let post_parser = PostParser::new(
+      self.global_options.clone(),
+      self.interner,
+      self.keywords,
+      self.scout_arena,
+    );
+    let mut scoutput = FileCoordinateMap::new();
+    for (file_coordinate, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
+      let program_s = post_parser.scout_program(file_coordinate, file_p)?;
+      scoutput.put(file_coordinate, program_s);
+    }
+    scoutput.package_coord_to_file_coords = parseds.package_coord_to_file_coords.clone();
+    self.scoutput_cache = Some(scoutput);
+    Ok(self.scoutput_cache.as_ref().unwrap())
   }
 
 /*
@@ -2556,10 +2563,13 @@ where
   }
 */
   // From PostParser.scala lines 951-964: expectScoutput
-  pub fn expect_scoutput(&mut self) -> () {
-    self
-      .get_scoutput()
-      .unwrap_or_else(|err| panic!("ScoutCompilation.expect_scoutput failed: {}", err))
+  pub fn expect_scoutput(&mut self) -> &FileCoordinateMap<'a, ProgramS<'a, 's>> {
+    match self.get_scoutput() {
+      Ok(x) => x,
+      Err(e) => {
+        panic!("ScoutCompilation.expect_scoutput failed: {:?}", e)
+      }
+    }
   }
 
 /*

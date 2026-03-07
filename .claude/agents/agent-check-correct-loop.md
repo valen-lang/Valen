@@ -5,7 +5,7 @@ tools: [Read, Edit, Grep, Glob, Bash, Task]
 model: sonnet
 ---
 
-Please look at migration_process.md and migration_checks.md. We'll be adhering to those restrictions.
+Please look at FrontendRust/zen/migration_process.md and FrontendRust/zen/migration_principles.md. We'll be adhering to those restrictions.
 
 You were given a file and a definition name in the file (function, type, etc.).
 

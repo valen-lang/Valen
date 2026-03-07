@@ -238,30 +238,96 @@ impl TemplataLookupResult {
 case class TemplataLookupResult(templata: ITemplataType) extends IRuneTypeSolverLookupResult
 */
 // mig: trait IRuneTypeSolverEnv
-pub trait IRuneTypeSolverEnv {
+pub trait IRuneTypeSolverEnv<'a> {
+  fn lookup(
+    &self,
+    range: crate::utils::range::RangeS<'a>,
+    name: crate::postparsing::names::IImpreciseNameS<'a>,
+  ) -> Result<IRuneTypeSolverLookupResult<'a>, IRuneTypingLookupFailedError<'a>>;
 }
 /*
 trait IRuneTypeSolverEnv {
-*/
-// mig: fn lookup_rune_type
-fn lookup_rune_type<'a>(
-  _range: crate::utils::range::RangeS<'a>,
-  _name: crate::postparsing::names::IImpreciseNameS<'a>,
-) -> Result<IRuneTypeSolverLookupResult<'a>, ()> {
-  panic!("Unimplemented lookup_rune_type");
-}
-/*
   // MIGALLOW: lookup -> lookup_rune_type
   def lookup(range: RangeS, name: IImpreciseNameS):
   Result[IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError]
 }
 */
 // mig: struct RuneTypeSolver
-pub struct RuneTypeSolver<'a> {
-  pub interner: &'a crate::interner::Interner<'a>,
+pub struct RuneTypeSolver<'a, 'ctx> {
+  pub interner: &'ctx crate::interner::Interner<'a>,
 }
+// Concrete SolverDelegate for rune type solving.
+// In Scala, this is an anonymous ISolveRule created inside RuneTypeSolver.solve().
+struct RuneTypeSolverDelegate {
+  predicting: bool,
+}
+
+impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
+  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::names::IRuneS<'a>,
+  E,
+  (),
+  crate::postparsing::itemplatatype::ITemplataType,
+  IRuneTypeRuleError<'a>,
+> for RuneTypeSolverDelegate {
+  fn rule_to_puzzles(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
+    panic!("RuneTypeSolverDelegate::rule_to_puzzles not yet migrated")
+  }
+
+  fn rule_to_runes(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<crate::postparsing::names::IRuneS<'a>> {
+    rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
+  }
+
+  fn solve<S: crate::solver::ISolverState<
+    crate::postparsing::rules::rules::IRulexSR<'a>,
+    crate::postparsing::names::IRuneS<'a>,
+    crate::postparsing::itemplatatype::ITemplataType,
+  >>(
+    &self,
+    state: &(),
+    env: &E,
+    rule_index: i32,
+    rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+    solver_state: &mut S,
+  ) -> Result<(), crate::solver::solver::ISolverError<
+    crate::postparsing::names::IRuneS<'a>,
+    crate::postparsing::itemplatatype::ITemplataType,
+    IRuneTypeRuleError<'a>,
+  >> {
+    panic!("RuneTypeSolverDelegate::solve not yet migrated")
+  }
+
+  fn complex_solve<S: crate::solver::ISolverState<
+    crate::postparsing::rules::rules::IRulexSR<'a>,
+    crate::postparsing::names::IRuneS<'a>,
+    crate::postparsing::itemplatatype::ITemplataType,
+  >>(
+    &self,
+    state: &(),
+    env: &E,
+    solver_state: &mut S,
+  ) -> Result<(), crate::solver::solver::ISolverError<
+    crate::postparsing::names::IRuneS<'a>,
+    crate::postparsing::itemplatatype::ITemplataType,
+    IRuneTypeRuleError<'a>,
+  >> {
+    // Scala: Ok(())
+    Ok(())
+  }
+
+  fn sanity_check_conclusion(
+    &self,
+    env: &E,
+    state: &(),
+    rune: &crate::postparsing::names::IRuneS<'a>,
+    conclusion: &crate::postparsing::itemplatatype::ITemplataType,
+  ) {
+    // Scala: Unit = {} (no-op)
+  }
+}
+
 // mig: impl RuneTypeSolver
-impl<'a> RuneTypeSolver<'a> {
+impl<'a, 'ctx> RuneTypeSolver<'a, 'ctx> {
 /*
 class RuneTypeSolver(interner: Interner) {
 */
@@ -635,16 +701,120 @@ fn lookup(
   }
 */
 // mig: fn solve_rune_type
-fn solve_rune_type(
-  _range_s: crate::utils::range::RangeS<'a>,
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
-  _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
-  _rune_to_explicit_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
+  &self,
+  sanity_check: bool,
+  env: &E,
+  range: Vec<crate::utils::range::RangeS<'a>>,
+  predicting: bool,
+  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  additional_runes: &[crate::postparsing::names::IRuneS<'a>],
+  expect_complete_solve: bool,
+  unpreprocessed_initially_known_runes: std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
 ) -> Result<
   std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
   RuneTypeSolveError<'a>,
 > {
-  panic!("Unimplemented solve_rune_type");
+  use crate::postparsing::names::IRuneS;
+  use crate::postparsing::itemplatatype::ITemplataType;
+  use crate::postparsing::rules::rules::IRulexSR;
+  use crate::solver::solver::{Solver, ISolverError};
+  use std::collections::HashMap;
+
+  // Scala: val initiallyKnownRunes = (if (predicting) Map() else rules.flatMap({...}).toMap) ++ unpreprocessedInitiallyKnownRunes
+  // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
+  // For now, with no rules in the simple test case, this is empty.
+  let mut initially_known_runes: HashMap<IRuneS<'a>, ITemplataType> = if predicting {
+    HashMap::new()
+  } else {
+    let mut map = HashMap::new();
+    for rule in rules_s {
+      match rule {
+        IRulexSR::Lookup(lookup) => {
+          match env.lookup(lookup.range.clone(), lookup.name.clone()) {
+            Err(_e) => {
+              return Err(RuneTypeSolveError {
+                range: range.clone(),
+                failed_solve: (),
+              });
+            }
+            Ok(_result) => {
+              // Complex coercion logic for different lookup result types.
+              // For now, panic if we actually hit a lookup (the simple test has none).
+              panic!("LookupSR pre-computation not yet fully migrated");
+            }
+          }
+        }
+        IRulexSR::MaybeCoercingLookup(_lookup) => {
+          panic!("MaybeCoercingLookupSR pre-computation not yet fully migrated");
+        }
+        _ => {
+          // Other rules don't contribute to initially known runes
+        }
+      }
+    }
+    map
+  };
+  // unpreprocessedInitiallyKnownRunes comes after (takes priority, see Scala comment)
+  for (k, v) in unpreprocessed_initially_known_runes {
+    initially_known_runes.insert(k, v);
+  }
+
+  // Compute all_runes = rules.flatMap(getRunes) ++ initiallyKnownRunes.keys ++ additionalRunes, deduplicated
+  let mut all_runes_set = std::collections::HashSet::new();
+  for rule in rules_s {
+    for rune_usage in rule.rune_usages() {
+      all_runes_set.insert(rune_usage.rune.clone());
+    }
+  }
+  for k in initially_known_runes.keys() {
+    all_runes_set.insert(k.clone());
+  }
+  for r in additional_runes {
+    all_runes_set.insert(r.clone());
+  }
+  let all_runes: Vec<IRuneS<'a>> = all_runes_set.into_iter().collect();
+
+  let delegate = RuneTypeSolverDelegate { predicting };
+  let mut solver: Solver<'a, IRulexSR<'a>, IRuneS<'a>, E, (), ITemplataType, IRuneTypeRuleError<'a>, RuneTypeSolverDelegate> = Solver::new(
+    sanity_check,
+    delegate,
+    range.clone(),
+    rules_s.to_vec(),
+    initially_known_runes,
+    all_runes.clone(),
+  );
+
+  // Scala: while ({ solver.advance(env, Unit) match { ... } }) {}
+  loop {
+    match solver.advance(env, &()) {
+      Ok(true) => continue,
+      Ok(false) => break,
+      Err(e) => {
+        return Err(RuneTypeSolveError {
+          range,
+          failed_solve: (),
+        });
+      }
+    }
+  }
+
+  let conclusions: HashMap<IRuneS<'a>, ITemplataType> = solver.userify_conclusions().into_iter().collect();
+
+  // Check completeness
+  let unsolved_runes: Vec<IRuneS<'a>> = all_runes.iter()
+    .filter(|r| !conclusions.contains_key(*r))
+    .cloned()
+    .collect();
+
+  if expect_complete_solve && !unsolved_runes.is_empty() {
+    Err(RuneTypeSolveError {
+      range,
+      failed_solve: (),
+    })
+  } else {
+    Ok(conclusions)
+  }
 }
 /*
   def solve(

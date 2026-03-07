@@ -1,5 +1,5 @@
 ---
-name: migration-diagnoser
+name: migrate-diagnoser
 description: Diagnose what missing migration is causing a test failure
 tools: [Read, Grep, Glob, Bash, Edit]
 model: sonnet
@@ -11,7 +11,7 @@ You will be told a test that is failing.
 
 Here's what I want you to do:
 
- 1. Look at migration_process.md and migration_checks.md. The information will be necessary for this.
+ 1. Look at FrontendRust/zen/migration_process.md and FrontendRust/zen/migration_principles.md. The information will be necessary for this.
  2. Run the given test.
  3. Diagnose what missing migration caused this test failure. This might involve quite a bit of sleuthing and debugging and spelunking. Be thorough.
     * Sometimes it will be easy; our `panic!`s often have a unique string, and it's obvious what needs to be migrated over.

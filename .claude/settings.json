@@ -1,12 +1,12 @@
 {
-  "hooks_disabled": {
+  "hooks": {
     "PreToolUse": [
       {
-        "matcher": "Write|Edit",
+        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
-            "command": "echo Wait dont modify this project && exit 2"
+            "command": ".claude/hooks/writecop-client.sh"
           }
         ]
       }

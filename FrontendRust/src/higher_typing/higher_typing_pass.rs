@@ -11,9 +11,13 @@ use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
 use crate::parsing::ast::FileP;
 use crate::postparsing::ast::{
-    ExportAsS, FunctionS, ImplS, InterfaceS, ParameterS, ProgramS, StructS,
+    ExportAsS, FunctionS, IFunctionAttributeS, ImplS, ImportS, InterfaceS, ParameterS, ProgramS,
+    StructS, UserFunctionS,
 };
-use crate::postparsing::itemplatatype::{ITemplataType, TemplateTemplataType};
+use crate::postparsing::itemplatatype::{
+    CoordTemplataType, ITemplataType, IntegerTemplataType, KindTemplataType,
+    MutabilityTemplataType, TemplateTemplataType, VariabilityTemplataType,
+};
 use crate::postparsing::names::{IImpreciseNameS, INameS, IRuneS};
 use crate::postparsing::rune_type_solver::{
     IRuneTypeSolverEnv, IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError,
@@ -84,7 +88,7 @@ case class EnvironmentA(
     runeToType: Map[IRuneS, ITemplataType]) {
 */
 // mig: fn equals
-fn equals(&self, obj: &dyn std::any::Any) -> bool {
+fn equals(&self, _obj: &dyn std::any::Any) -> bool {
   panic!("Unimplemented: equals");
 }
 /*
@@ -96,17 +100,46 @@ fn hash_code(&self) -> i32 {
 }
 /*
   override def hashCode(): Int = vcurious()
-
-  val structsS: Vector[StructS] = codeMap.packageCoordToContents.values.flatMap(_.structs).toVector
-  val interfacesS: Vector[InterfaceS] = codeMap.packageCoordToContents.values.flatMap(_.interfaces).toVector
-  val implsS: Vector[ImplS] = codeMap.packageCoordToContents.values.flatMap(_.impls).toVector
-  val functionsS: Vector[FunctionS] = codeMap.packageCoordToContents.values.flatMap(_.implementedFunctions).toVector
-  val exportsS: Vector[ExportAsS] = codeMap.packageCoordToContents.values.flatMap(_.exports).toVector
-  val imports: Vector[ImportS] = codeMap.packageCoordToContents.values.flatMap(_.imports).toVector
-
 */
+  pub fn structs_s(&self) -> Vec<&'s StructS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.structs.iter()).collect()
+  }
+/*
+  val structsS: Vector[StructS] = codeMap.packageCoordToContents.values.flatMap(_.structs).toVector
+*/
+  pub fn interfaces_s(&self) -> Vec<&'s InterfaceS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.interfaces.iter()).collect()
+  }
+/*
+    val interfacesS: Vector[InterfaceS] = codeMap.packageCoordToContents.values.flatMap(_.interfaces).toVector
+*/
+  pub fn impls_s(&self) -> Vec<&'s ImplS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.impls.iter()).collect()
+  }
+/*
+    val implsS: Vector[ImplS] = codeMap.packageCoordToContents.values.flatMap(_.impls).toVector
+*/
+  pub fn functions_s(&self) -> Vec<&'s &'s FunctionS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.implemented_functions.iter()).collect()
+  }
+/*
+    val functionsS: Vector[FunctionS] = codeMap.packageCoordToContents.values.flatMap(_.implementedFunctions).toVector
+*/
+  pub fn exports_s(&self) -> Vec<&'s ExportAsS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.exports.iter()).collect()
+  }
+/*
+    val exportsS: Vector[ExportAsS] = codeMap.packageCoordToContents.values.flatMap(_.exports).toVector
+*/
+  pub fn imports_s(&self) -> Vec<&'s ImportS<'a, 's>> {
+    self.code_map.package_coord_to_contents.values().flat_map(|p| p.imports.iter()).collect()
+  }
+/*
+    val imports: Vector[ImportS] = codeMap.packageCoordToContents.values.flatMap(_.imports).toVector
+*/
+
 // mig: fn add_runes
-fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>) -> EnvironmentA<'a, 's> {
+fn add_runes(&self, _new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>) -> EnvironmentA<'a, 's> {
   panic!("Unimplemented: add_runes");
 }
 /*
@@ -119,9 +152,26 @@ fn add_runes(&self, new_rune_to_type: std::collections::HashMap<&'a IRuneS<'a>, 
 /*
 object HigherTypingPass {
 */
+
 // mig: fn explicify_lookups
-fn explicify_lookups<'a>(env: &dyn IRuneTypeSolverEnv, rune_a_to_type: &mut std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>>) -> Result<(), IRuneTypingLookupFailedError<'a>> {
-  panic!("Unimplemented: explicify_lookups");
+fn explicify_lookups<'a, E: IRuneTypeSolverEnv<'a>>(_env: &E, _rune_a_to_type: &mut HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>>) -> Result<(), IRuneTypingLookupFailedError<'a>> {
+  // Scala: Only two rules' results can be coerced: LookupSR and CallSR.
+  // Let's look for those and rewrite them to put an explicit coercion in there.
+  for rule in all_rules_with_implicitly_coercing_lookups_s {
+    match &rule {
+      IRulexSR::MaybeCoercingLookup(_) => {
+        panic!("explicify_lookups: MaybeCoercingLookup not yet migrated");
+      }
+      IRulexSR::MaybeCoercingCall(_) => {
+        panic!("explicify_lookups: MaybeCoercingCall not yet migrated");
+      }
+      _ => {
+        // All other rules pass through unchanged
+        rule_builder.push(rule);
+      }
+    }
+  }
+  Ok(())
 }
 /*
   def explicifyLookups(
@@ -231,7 +281,7 @@ fn explicify_lookups<'a>(env: &dyn IRuneTypeSolverEnv, rune_a_to_type: &mut std:
 
 */
 // mig: fn coerce_kind_lookup_to_coord
-fn coerce_kind_lookup_to_coord(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS) {
+fn coerce_kind_lookup_to_coord(_rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, _rule_builder: &mut Vec<IRulexSR>, _range: RangeS, _result_rune: RuneUsage, _name: &IImpreciseNameS) {
   panic!("Unimplemented: coerce_kind_lookup_to_coord");
 }
 /*
@@ -250,7 +300,7 @@ fn coerce_kind_lookup_to_coord(rune_a_to_type: &mut std::collections::HashMap<&I
 
 */
 // mig: fn coerce_kind_template_lookup_to_kind
-fn coerce_kind_template_lookup_to_kind(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS, actual_template_type: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_kind(_rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, _rule_builder: &mut Vec<IRulexSR>, _range: RangeS, _result_rune: RuneUsage, _name: &IImpreciseNameS, _actual_template_type: TemplateTemplataType) {
   panic!("Unimplemented: coerce_kind_template_lookup_to_kind");
 }
 /*
@@ -270,7 +320,7 @@ fn coerce_kind_template_lookup_to_kind(rune_a_to_type: &mut std::collections::Ha
 
 */
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord(rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, rule_builder: &mut Vec<IRulexSR>, range: RangeS, result_rune: RuneUsage, name: &IImpreciseNameS, ttt: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_coord(_rune_a_to_type: &mut std::collections::HashMap<&IRuneS, ITemplataType>, _rule_builder: &mut Vec<IRulexSR>, _range: RangeS, _result_rune: RuneUsage, _name: &IImpreciseNameS, _ttt: TemplateTemplataType) {
   panic!("Unimplemented: coerce_kind_template_lookup_to_coord");
 }
 /*
@@ -303,7 +353,42 @@ pub struct HigherTypingPass<'a, 'ctx> {
 
 // mig: impl HigherTypingPass
 impl<'a, 'ctx> HigherTypingPass<'a, 'ctx> {
-}
+  pub fn new(
+    global_options: GlobalOptions,
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
+  ) -> Self {
+    let mut primitives = HashMap::new();
+    primitives.insert(keywords.int, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.i64, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.str, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.bool, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.float, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.void, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.__never, ITemplataType::KindTemplataType(KindTemplataType {}));
+    primitives.insert(keywords.array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
+      param_types: vec![
+        ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+        ITemplataType::CoordTemplataType(CoordTemplataType {}),
+      ],
+      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+    }));
+    primitives.insert(keywords.static_array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
+      param_types: vec![
+        ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+        ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+        ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+        ITemplataType::CoordTemplataType(CoordTemplataType {}),
+      ],
+      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+    }));
+    HigherTypingPass {
+      global_options,
+      interner,
+      keywords,
+      primitives,
+    }
+  }
 /*
 class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keywords: Keywords) {
   val primitives =
@@ -328,7 +413,7 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
 
 */
 // mig: fn imprecise_name_matches_absolute_name
-fn imprecise_name_matches_absolute_name(needle_imprecise_name_s: &IImpreciseNameS, absolute_name: &INameS) -> bool {
+fn imprecise_name_matches_absolute_name(&self, _needle_imprecise_name_s: &IImpreciseNameS, _absolute_name: &INameS) -> bool {
   panic!("Unimplemented: imprecise_name_matches_absolute_name");
 }
 /*
@@ -347,7 +432,7 @@ fn imprecise_name_matches_absolute_name(needle_imprecise_name_s: &IImpreciseName
 
 */
 // mig: fn lookup_types
-fn lookup_types<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, needle_imprecise_name_s: &IImpreciseNameS<'a>) -> Vec<IRuneTypeSolverLookupResult<'a>> {
+fn lookup_types<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _needle_imprecise_name_s: &IImpreciseNameS<'a>) -> Vec<IRuneTypeSolverLookupResult<'a>> {
   panic!("Unimplemented: lookup_types");
 }
 /*
@@ -409,7 +494,7 @@ fn lookup_types<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>,
 
 */
 // mig: fn lookup_type
-fn lookup_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, range: RangeS<'a>, name: &IImpreciseNameS<'a>) -> Result<IRuneTypeSolverLookupResult<'a>, Box<dyn ILookupFailedErrorA<'a> + 'a>> {
+fn lookup_type<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _range: RangeS<'a>, _name: &IImpreciseNameS<'a>) -> Result<IRuneTypeSolverLookupResult<'a>, Box<dyn ILookupFailedErrorA<'a> + 'a>> {
   panic!("Unimplemented: lookup_type");
 }
 /*
@@ -428,8 +513,177 @@ fn lookup_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, 
 
 */
 // mig: fn translate_struct
-fn translate_struct<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, struct_s: &StructS<'a, 's>) -> StructA<'a, 's> {
-  panic!("Unimplemented: translate_struct");
+fn translate_struct<'s>(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, struct_s: &StructS<'a, 's>) -> StructA<'a, 's> {
+  let StructS {
+    range: range_s,
+    name: name_s,
+    attributes: attributes_s,
+    weakable,
+    generic_params: generic_parameters_s,
+    mutability_rune: mutability_rune_s,
+    maybe_predicted_mutability,
+    tyype,
+    header_rune_to_explicit_type,
+    header_predicted_rune_to_type: _,
+    header_rules: header_rules_with_implicitly_coercing_lookups_s,
+    members_rune_to_explicit_type,
+    members_predicted_rune_to_type: _,
+    member_rules: member_rules_with_implicitly_coercing_lookups_s,
+    members,
+  } = struct_s;
+
+  // Scala: val runeTypingEnv = new IRuneTypeSolverEnv { override def lookup(...) }
+  let rune_typing_env = HigherTypingRuneTypeSolverEnv {
+    astrouts,
+    env,
+    range_s: range_s.clone(),
+  };
+
+  // Scala: astrouts.codeLocationToStruct.get(rangeS.begin) match { case Some(value) => return value }
+  if let Some(value) = astrouts.code_location_to_struct.get(&range_s.begin) {
+    return value.clone();
+  }
+
+  // Scala: astrouts.codeLocationToMaybeType.get(rangeS.begin) match { ... }
+  match astrouts.code_location_to_maybe_type.get(&range_s.begin) {
+    Some(Some(_)) => {
+      panic!("translate_struct: already evaluated but not in struct map");
+    }
+    Some(None) => {
+      panic!("Cycle in determining struct type!");
+    }
+    None => {}
+  }
+
+  // Scala: astrouts.codeLocationToMaybeType.put(rangeS.begin, None)
+  astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), None);
+
+  // Scala: val allRulesWithImplicitlyCoercingLookupsS = headerRulesWithImplicitlyCoercingLookupsS ++ memberRulesWithImplicitlyCoercingLookupsS
+  let all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>> =
+    header_rules_with_implicitly_coercing_lookups_s.iter().cloned()
+      .chain(member_rules_with_implicitly_coercing_lookups_s.iter().cloned())
+      .collect();
+
+  // Scala: val allRuneToExplicitType = headerRuneToExplicitType ++ membersRuneToExplicitType
+  let mut all_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType> = HashMap::new();
+  all_rune_to_explicit_type.extend(header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())));
+  all_rune_to_explicit_type.extend(members_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())));
+
+  // Scala: val runeAToTypeWithImplicitlyCoercingLookupsS = calculateRuneTypes(...)
+  let rune_a_to_type_with_implicitly_coercing_lookups_s = self.calculate_rune_types(
+    astrouts,
+    range_s.clone(),
+    generic_parameters_s.iter().map(|gp| gp.rune.rune.clone()).collect(),
+    all_rune_to_explicit_type,
+    &[],
+    &all_rules_with_implicitly_coercing_lookups_s,
+    env,
+  );
+
+  // Scala: val runeAToType = mutable.HashMap[IRuneS, ITemplataType]((runeAToTypeWithImplicitlyCoercingLookupsS.toSeq): _*)
+  let mut rune_a_to_type: HashMap<IRuneS<'a>, ITemplataType> =
+    rune_a_to_type_with_implicitly_coercing_lookups_s;
+
+  // Scala: val headerRulesBuilder = ArrayBuffer[IRulexSR]()
+  // Scala: explicifyLookups(runeTypingEnv, runeAToType, headerRulesBuilder, headerRulesWithImplicitlyCoercingLookupsS) match { ... }
+  let mut header_rules_builder: Vec<IRulexSR<'a>> = Vec::new();
+  match explicify_lookups(
+    &rune_typing_env,
+    &mut rune_a_to_type,
+    &mut header_rules_builder,
+    header_rules_with_implicitly_coercing_lookups_s.to_vec(),
+  ) {
+    Ok(()) => {},
+    Err(_e) => panic!("explicify_lookups failed for header rules"),
+  }
+  let header_rules_explicit_s = header_rules_builder;
+
+  // Scala: val memberRulesBuilder = ArrayBuffer[IRulexSR]()
+  // Scala: explicifyLookups(runeTypingEnv, runeAToType, memberRulesBuilder, memberRulesWithImplicitlyCoercingLookupsS) match { ... }
+  let mut member_rules_builder: Vec<IRulexSR<'a>> = Vec::new();
+  match explicify_lookups(
+    &rune_typing_env,
+    &mut rune_a_to_type,
+    &mut member_rules_builder,
+    member_rules_with_implicitly_coercing_lookups_s.to_vec(),
+  ) {
+    Ok(()) => {},
+    Err(_e) => panic!("explicify_lookups failed for member rules"),
+  }
+  let member_rules_explicit_s = member_rules_builder;
+
+  // Scala: val runesInHeader: Set[IRuneS] = (genericParametersS.map(_.rune.rune) ++ ...)
+  let mut runes_in_header: std::collections::HashSet<IRuneS<'a>> = std::collections::HashSet::new();
+  for gp in generic_parameters_s.iter() {
+    runes_in_header.insert(gp.rune.rune.clone());
+  }
+  for gp in generic_parameters_s.iter() {
+    if let Some(ref default) = gp.default {
+      for rule in &default.rules {
+        for rune_usage in rule.rune_usages() {
+          runes_in_header.insert(rune_usage.rune.clone());
+        }
+      }
+    }
+  }
+  for rule in &header_rules_explicit_s {
+    for rune_usage in rule.rune_usages() {
+      runes_in_header.insert(rune_usage.rune.clone());
+    }
+  }
+
+  // Scala: val headerRuneAToType = runeAToType.toMap.filter(x => runesInHeader.contains(x._1))
+  let header_rune_a_to_type: HashMap<IRuneS<'a>, ITemplataType> =
+    rune_a_to_type.iter()
+      .filter(|(k, _)| runes_in_header.contains(k))
+      .map(|(k, v)| (k.clone(), v.clone()))
+      .collect();
+
+  // Scala: val membersRuneAToType = runeAToType.toMap.filter(x => !runesInHeader.contains(x._1))
+  let members_rune_a_to_type: HashMap<IRuneS<'a>, ITemplataType> =
+    rune_a_to_type.iter()
+      .filter(|(k, _)| !runes_in_header.contains(k))
+      .map(|(k, v)| (k.clone(), v.clone()))
+      .collect();
+
+  // Scala: astrouts.codeLocationToMaybeType.put(rangeS.begin, Some(tyype))
+  astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(tyype.clone()));
+
+  // Scala: headerRulesExplicitS.collect({ case MaybeCoercingCallSR(_, _, _, _) => vwat() })
+  for rule in &header_rules_explicit_s {
+    if let IRulexSR::MaybeCoercingCall(_) = rule {
+      panic!("MaybeCoercingCallSR should have been explicified in header rules");
+    }
+  }
+  // Scala: memberRulesExplicitS.collect({ case MaybeCoercingCallSR(_, _, _, _) => vwat() })
+  for rule in &member_rules_explicit_s {
+    if let IRulexSR::MaybeCoercingCall(_) = rule {
+      panic!("MaybeCoercingCallSR should have been explicified in member rules");
+    }
+  }
+
+  // Scala: val structA = highertyping.StructA(rangeS, nameS, ...)
+  let struct_a = StructA {
+    range: range_s.clone(),
+    name: name_s.clone(),
+    attributes: attributes_s.to_vec(),
+    weakable: *weakable,
+    mutability_rune: mutability_rune_s.clone(),
+    maybe_predicted_mutability: maybe_predicted_mutability.clone(),
+    tyype: tyype.clone(),
+    generic_parameters: generic_parameters_s.to_vec(),
+    header_rune_to_type: header_rune_a_to_type,
+    header_rules: header_rules_explicit_s,
+    members_rune_to_type: members_rune_a_to_type,
+    member_rules: member_rules_explicit_s,
+    members: members.to_vec(),
+  };
+
+  // Scala: astrouts.codeLocationToStruct.put(rangeS.begin, structA)
+  astrouts.code_location_to_struct.insert(range_s.begin.clone(), struct_a.clone());
+
+  // Scala: structA (return it)
+  struct_a
 }
 /*
   def translateStruct(
@@ -543,7 +797,7 @@ fn translate_struct<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 
 
 */
 // mig: fn get_interface_type
-fn get_interface_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, interface_s: &InterfaceS<'a, 's>) -> ITemplataType {
+fn get_interface_type<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _interface_s: &InterfaceS<'a, 's>) -> ITemplataType {
   panic!("Unimplemented: get_interface_type");
 }
 /*
@@ -557,7 +811,7 @@ fn get_interface_type<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a
 
 */
 // mig: fn translate_interface
-fn translate_interface<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, interface_s: &InterfaceS<'a, 's>) -> InterfaceA<'a, 's> {
+fn translate_interface<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _interface_s: &InterfaceS<'a, 's>) -> InterfaceA<'a, 's> {
   panic!("Unimplemented: translate_interface");
 }
 /*
@@ -647,7 +901,7 @@ fn translate_interface<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'
 
 */
 // mig: fn translate_impl
-fn translate_impl<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, impl_s: &ImplS<'a, 's>) -> ImplA<'a, 's> {
+fn translate_impl<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _impl_s: &ImplS<'a, 's>) -> ImplA<'a, 's> {
   panic!("Unimplemented: translate_impl");
 }
 /*
@@ -707,7 +961,7 @@ fn translate_impl<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's
 
 */
 // mig: fn translate_export
-fn translate_export<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, export_s: &ExportAsS<'a, 's>) -> ExportAsA<'a> {
+fn translate_export<'s>(&self, _astrouts: &mut Astrouts<'a, 's>, _env: &EnvironmentA<'a, 's>, _export_s: &ExportAsS<'a, 's>) -> ExportAsA<'a> {
   panic!("Unimplemented: translate_export");
 }
 /*
@@ -762,8 +1016,66 @@ fn translate_export<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 
 
 */
 // mig: fn translate_function
-fn translate_function<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, function_s: &FunctionS<'a, 's>) -> FunctionA<'a, 's> {
-  panic!("Unimplemented: translate_function");
+fn translate_function<'s>(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'a, 's>, function_s: &'s FunctionS<'a, 's>) -> FunctionA<'a, 's> {
+  let range_s = function_s.range.clone();
+  let name_s = function_s.name.clone();
+  let attributes_s = function_s.attributes;
+  let identifying_runes_s = function_s.generic_params;
+  let rune_to_explicit_type = &function_s.rune_to_predicted_type;
+  let tyype = &function_s.tyype;
+  let params_s = function_s.params;
+  let maybe_ret_coord_rune = &function_s.maybe_ret_coord_rune;
+  let rules_with_implicitly_coercing_lookups_s = function_s.rules;
+  let body_s = function_s.body;
+
+  let rune_a_to_type_with_implicitly_coercing_lookups_s =
+    self.calculate_rune_types(
+      astrouts,
+      range_s.clone(),
+      identifying_runes_s.iter().map(|gp| gp.rune.rune.clone()).collect(),
+      rune_to_explicit_type.clone(),
+      params_s,
+      rules_with_implicitly_coercing_lookups_s,
+      env,
+    );
+
+  let mut rune_a_to_type: HashMap<IRuneS<'a>, ITemplataType> =
+    rune_a_to_type_with_implicitly_coercing_lookups_s;
+  // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
+  // loose. We intentionally ignored the types of the things they're looking up, so we could know
+  // what types we *expect* them to be, so we could coerce.
+  // That coercion is good, but lets make it more explicit.
+  let mut rule_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let rune_typing_env = HigherTypingRuneTypeSolverEnv {
+    astrouts,
+    env,
+    range_s: range_s.clone(),
+  };
+  match explicify_lookups(
+    &rune_typing_env,
+    &mut rune_a_to_type,
+    &mut rule_builder,
+    rules_with_implicitly_coercing_lookups_s.to_vec(),
+  ) {
+    Ok(()) => {},
+    Err(_e) => panic!("explicify_lookups failed"),
+  }
+
+  let mut attributes: Vec<IFunctionAttributeS<'a>> = attributes_s.to_vec();
+  attributes.push(IFunctionAttributeS::UserFunction(UserFunctionS));
+
+  FunctionA {
+    range: range_s,
+    name: name_s,
+    attributes,
+    tyype: tyype.clone(),
+    generic_parameters: identifying_runes_s.to_vec(),
+    rune_to_type: rune_a_to_type,
+    params: params_s.to_vec(),
+    maybe_ret_coord_rune: maybe_ret_coord_rune.clone(),
+    rules: rule_builder,
+    body: body_s.clone(),
+  }
 }
 /*
   def translateFunction(astrouts: Astrouts, env: EnvironmentA, functionS: FunctionS): FunctionA = {
@@ -814,8 +1126,44 @@ fn translate_function<'a, 's>(astrouts: &Astrouts<'a, 's>, env: &EnvironmentA<'a
 
 */
 // mig: fn calculate_rune_types
-fn calculate_rune_types<'a, 's>(astrouts: &Astrouts<'a, 's>, range_s: RangeS, identifying_runes_s: Vec<&'a IRuneS<'a>>, rune_to_explicit_type: std::collections::HashMap<&'a IRuneS<'a>, ITemplataType>, params_s: Vec<&ParameterS<'a>>, rules_s: Vec<IRulexSR>, env: &EnvironmentA<'a, 's>) -> std::collections::HashMap<&'a IRuneS<'a>, ITemplataType> {
-  panic!("Unimplemented: calculate_rune_types");
+fn calculate_rune_types<'s>(
+  &self,
+  astrouts: &mut Astrouts<'a, 's>,
+  range_s: RangeS<'a>,
+  identifying_runes_s: Vec<IRuneS<'a>>,
+  rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
+  params_s: &[ParameterS<'a>],
+  rules_s: &[IRulexSR<'a>],
+  env: &EnvironmentA<'a, 's>,
+) -> HashMap<IRuneS<'a>, ITemplataType> {
+  let rune_typing_env = HigherTypingRuneTypeSolverEnv {
+    astrouts,
+    env,
+    range_s: range_s.clone(),
+  };
+  let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'a>, ITemplataType> = rune_to_explicit_type;
+  for param in params_s {
+    if let Some(ref coord_rune) = param.pattern.coord_rune {
+      rune_s_to_pre_known_type_a.insert(coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {}));
+    }
+  }
+  let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {
+    interner: self.interner,
+  };
+  let rune_s_to_type = rune_type_solver.solve_rune_type(
+    self.global_options.sanity_check,
+    &rune_typing_env,
+    vec![range_s.clone()],
+    false,
+    rules_s,
+    &identifying_runes_s,
+    true,
+    rune_s_to_pre_known_type_a,
+  );
+  match rune_s_to_type {
+    Ok(t) => t,
+    Err(_e) => panic!("CouldntSolveRulesA"),
+  }
 }
 /*
   private def calculateRuneTypes(
@@ -857,8 +1205,42 @@ fn calculate_rune_types<'a, 's>(astrouts: &Astrouts<'a, 's>, range_s: RangeS, id
 
 */
 // mig: fn translate_program
-fn translate_program<'a, 's>(code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>>, primitives: std::collections::HashMap<StrI<'a>, ITemplataType>, supplied_functions: Vec<FunctionA<'a, 's>>, supplied_interfaces: Vec<InterfaceA<'a, 's>>) -> ProgramA<'a, 's> {
-  panic!("Unimplemented: translate_program");
+fn translate_program<'s>(&self, code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>>, supplied_functions: Vec<FunctionA<'a, 's>>, supplied_interfaces: Vec<InterfaceA<'a, 's>>) -> ProgramA<'a, 's> {
+  let env = EnvironmentA {
+    maybe_name: None,
+    maybe_parent_env: None,
+    code_map,
+    rune_to_type: HashMap::new(),
+  };
+
+  // If something is absent from the map, we haven't started evaluating it yet
+  // If there is a None in the map, we started evaluating it
+  // If there is a Some in the map, we know the type
+  // If we are asked to evaluate something but there is already a None in the map, then we are
+  // caught in a cycle.
+  let mut astrouts = Astrouts {
+    code_location_to_maybe_type: HashMap::new(),
+    code_location_to_struct: HashMap::new(),
+    code_location_to_interface: HashMap::new(),
+  };
+
+  let structs_a: Vec<StructA<'a, 's>> = env.structs_s().into_iter().map(|s| self.translate_struct(&mut astrouts, &env, s)).collect();
+
+  let interfaces_a: Vec<InterfaceA<'a, 's>> = env.interfaces_s().into_iter().map(|i| self.translate_interface(&mut astrouts, &env, i)).collect();
+
+  let impls_a: Vec<ImplA<'a, 's>> = env.impls_s().into_iter().map(|im| self.translate_impl(&mut astrouts, &env, im)).collect();
+
+  let functions_a: Vec<FunctionA<'a, 's>> = env.functions_s().into_iter().map(|f| self.translate_function(&mut astrouts, &env, f)).collect();
+
+  let exports_a: Vec<ExportAsA<'a>> = env.exports_s().into_iter().map(|e| self.translate_export(&mut astrouts, &env, e)).collect();
+
+  ProgramA {
+    structs: structs_a,
+    interfaces: supplied_interfaces.into_iter().chain(interfaces_a).collect(),
+    impls: impls_a,
+    functions: supplied_functions.into_iter().chain(functions_a).collect(),
+    exports: exports_a,
+  }
 }
 /*
   def translateProgram(
@@ -895,8 +1277,50 @@ fn translate_program<'a, 's>(code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>
 
 */
 // mig: fn run_pass
-fn run_pass<'a, 's>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a, 's>>) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
-  panic!("Unimplemented: run_pass");
+pub fn run_pass<'s>(
+  &self,
+  separate_programs_s: FileCoordinateMap<'a, ProgramS<'a, 's>>,
+) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
+  // Merge FileCoordinateMap into PackageCoordinateMap by flattening files per package
+  let mut merged_program_s = PackageCoordinateMap::<ProgramS<'a, 's>>::new();
+  for (package_coord, file_coords) in &separate_programs_s.package_coord_to_file_coords {
+    let programs_s: Vec<&ProgramS<'a, 's>> = file_coords
+      .iter()
+      .map(|fc| separate_programs_s.file_coord_to_contents.get(fc).unwrap())
+      .collect();
+    // Flatten all files' contents into one ProgramS per package
+    let structs: Vec<StructS<'a, 's>> = programs_s.iter().flat_map(|p| p.structs.iter().cloned()).collect();
+    let interfaces: Vec<InterfaceS<'a, 's>> = programs_s.iter().flat_map(|p| p.interfaces.iter().cloned()).collect();
+    let impls: Vec<ImplS<'a, 's>> = programs_s.iter().flat_map(|p| p.impls.iter().cloned()).collect();
+    let functions: Vec<&'s FunctionS<'a, 's>> = programs_s.iter().flat_map(|p| p.implemented_functions.iter().cloned()).collect();
+    let exports: Vec<ExportAsS<'a, 's>> = programs_s.iter().flat_map(|p| p.exports.iter().cloned()).collect();
+    let imports: Vec<crate::postparsing::ast::ImportS<'a, 's>> = programs_s.iter().flat_map(|p| p.imports.iter().cloned()).collect();
+    // Leak vecs into slices since ProgramS holds slices
+    let merged = ProgramS {
+      structs: structs.leak(),
+      interfaces: interfaces.leak(),
+      impls: impls.leak(),
+      implemented_functions: functions.leak(),
+      exports: exports.leak(),
+      imports: imports.leak(),
+    };
+    merged_program_s.put(package_coord, merged);
+  }
+
+  let supplied_functions: Vec<FunctionA<'a, 's>> = Vec::new();
+  let supplied_interfaces: Vec<InterfaceA<'a, 's>> = Vec::new();
+  let _program_a =
+    self.translate_program(merged_program_s, supplied_functions, supplied_interfaces);
+
+  // Group results by package coordinate
+  // In Scala, each item type is grouped by its package coordinate from range/name fields:
+  //   structsA.groupBy(_.range.begin.file.packageCoordinate)
+  //   interfacesA.groupBy(_.name.range.begin.file.packageCoordinate)
+  //   functionsA.groupBy(_.name.packageCoordinate)
+  //   implsA.groupBy(_.name.packageCoordinate)
+  //   exportsA.groupBy(_.range.file.packageCoordinate)
+  // This will be implemented when translate_program is migrated.
+  panic!("Unimplemented: run_pass grouping logic (translate_program returned, which is unexpected since it's a stub)")
 }
 /*
   def runPass(separateProgramsS: FileCoordinateMap[ProgramS]):
@@ -974,13 +1398,15 @@ fn run_pass<'a, 's>(separate_programs_s: FileCoordinateMap<'a, ProgramS<'a, 's>>
 }
 
 */
+}
+/*
+*/
 // mig: struct HigherTypingCompilation
-
 pub struct HigherTypingCompilation<'a, 'ctx, 'p, 's> {
   global_options: GlobalOptions,
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  scout_compilation: ScoutCompilation<'a, 'ctx, 'p>,
+  scout_compilation: ScoutCompilation<'a, 'ctx, 'p, 's>,
   astrouts_cache: Option<PackageCoordinateMap<'a, ProgramA<'a, 's>>>,
 }
 
@@ -1009,7 +1435,8 @@ where
     packages_to_build: Vec<&'a PackageCoordinate<'a>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
     global_options: GlobalOptions,
-    arena: &'p bumpalo::Bump,
+    parser_arena: &'p bumpalo::Bump,
+    scout_arena: &'s bumpalo::Bump,
   ) -> Self {
     let scout_compilation = ScoutCompilation::new(
       interner,
@@ -1017,7 +1444,8 @@ where
       packages_to_build,
       package_to_contents_resolver,
       global_options.clone(),
-      arena,
+      parser_arena,
+      scout_arena,
     );
 
     HigherTypingCompilation {
@@ -1053,15 +1481,26 @@ pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedPa
 */
 // mig: fn get_scoutput
 fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a>> {
-  panic!("Unimplemented: get_scoutput");
+  Ok(self.scout_compilation.get_scoutput()?.clone())
 }
 /*
   def getScoutput(): Result[FileCoordinateMap[ProgramS], ICompileErrorS] = scoutCompilation.getScoutput()
 
 */
 // mig: fn get_astrouts
-fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
-  panic!("Unimplemented: get_astrouts");
+pub fn get_astrouts(&mut self) -> Result<&PackageCoordinateMap<'a, ProgramA<'a, 's>>, Box<dyn ICompileErrorA<'a> + 'a>> {
+  if self.astrouts_cache.is_some() {
+    return Ok(self.astrouts_cache.as_ref().unwrap());
+  }
+  let scoutput = self.scout_compilation.expect_scoutput().clone();
+  let higher_typing_pass = HigherTypingPass::new(
+    self.global_options.clone(),
+    self.interner,
+    self.keywords,
+  );
+  let astrouts = higher_typing_pass.run_pass(scoutput)?;
+  self.astrouts_cache = Some(astrouts);
+  Ok(self.astrouts_cache.as_ref().unwrap())
 }
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = {
@@ -1080,8 +1519,13 @@ fn get_astrouts(&mut self) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>,
   }
 */
 // mig: fn expect_astrouts
-fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a, 's>> {
-  panic!("Unimplemented: expect_astrouts");
+pub fn expect_astrouts(&mut self) -> &PackageCoordinateMap<'a, ProgramA<'a, 's>> {
+  match self.get_astrouts() {
+    Ok(x) => x,
+    Err(_e) => {
+      panic!("HigherTypingCompilation.expect_astrouts failed")
+    }
+  }
 }
 } // end impl HigherTypingCompilation
 /*
@@ -1103,3 +1547,24 @@ fn expect_astrouts(&mut self) -> PackageCoordinateMap<'a, ProgramA<'a, 's>> {
 }
 
 */
+
+// Concrete IRuneTypeSolverEnv for the higher typing pass.
+// All 6 Scala anonymous `new IRuneTypeSolverEnv` in this file close over (astrouts, env, rangeS)
+// and delegate to lookupType. This struct captures those same fields.
+struct HigherTypingRuneTypeSolverEnv<'a, 's, 'env> {
+  astrouts: &'env Astrouts<'a, 's>,
+  env: &'env EnvironmentA<'a, 's>,
+  range_s: RangeS<'a>,
+}
+
+impl<'a, 's, 'env> IRuneTypeSolverEnv<'a> for HigherTypingRuneTypeSolverEnv<'a, 's, 'env> {
+  fn lookup(
+    &self,
+    _range: RangeS<'a>,
+    _name: IImpreciseNameS<'a>,
+  ) -> Result<IRuneTypeSolverLookupResult<'a>, IRuneTypingLookupFailedError<'a>> {
+    // Scala: lookupType(astrouts, env, rangeS, name).mapError({...})
+    // lookup_type is still a panic stub on HigherTypingPass, so just panic here too.
+    panic!("HigherTypingRuneTypeSolverEnv::lookup not yet implemented")
+  }
+}

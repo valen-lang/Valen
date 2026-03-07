@@ -3,7 +3,7 @@ name: migration-check-correct-loop
 description: Enforce strict Scala parity by removing novel Rust logic/functions and reshaping migrated code to match Scala structure exactly, using panic!/assert! only for not-yet-needed branches.
 ---
 
-Please look at migration_process.md and migration_checks.md. We'll be adhering to those restrictions.
+Please look at FrontendRust/zen/migration_process.md and FrontendRust/zen/migration_principles.md. We'll be adhering to those restrictions.
 
 You were given a file and a definition name in the file (function, type, etc.).
 
