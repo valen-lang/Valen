@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.highertyping.FunctionA
@@ -796,3 +797,4 @@ object InferCompiler {
     }
   }
 }
+*/

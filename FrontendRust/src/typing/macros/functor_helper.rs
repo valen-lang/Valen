@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.postparsing.rules._
@@ -45,3 +46,4 @@ class FunctorHelper( interner: Interner, keywords: Keywords) {
 //      CoordT(ShareT, FunctorT(functorPrototypeTT)))
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros.citizen
 
 import dev.vale.highertyping.{FunctionA, InterfaceA}
@@ -107,3 +108,4 @@ class InterfaceDropMacro(
         FunctionEnvEntry(dropFunctionA))
   }
 }
+*/

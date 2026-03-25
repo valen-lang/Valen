@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros.rsa
 
 import dev.vale.highertyping.FunctionA
@@ -96,3 +97,4 @@ class RSAImmutableNewMacro(
     (header, body)
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.types
 
 import dev.vale._
@@ -233,3 +234,4 @@ case class OverloadSetT(
 case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT with ISuperKindTT {
   override def isPrimitive: Boolean = false
 }
+*/

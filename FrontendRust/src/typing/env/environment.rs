@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.env
 
 import dev.vale._
@@ -631,3 +632,4 @@ case class GeneralEnvironmentT[+T <: INameT](
       this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
 }
+*/

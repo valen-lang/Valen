@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing._
@@ -72,3 +73,4 @@ class CompilerProjectTests extends FunSuite with Matchers {
     }
   }
 }
+*/

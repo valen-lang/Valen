@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros.citizen
 
 import dev.vale.highertyping._
@@ -230,3 +231,4 @@ class StructDropMacro(
     (header, body)
   }
 }
+*/

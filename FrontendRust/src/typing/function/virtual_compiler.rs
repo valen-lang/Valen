@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 import dev.vale.Interner
@@ -72,3 +73,4 @@ class VirtualCompiler(opts: TypingPassOptions, interner: Interner, overloadCompi
 //    }
 //  }
 }
+*/

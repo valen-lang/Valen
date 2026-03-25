@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.templata
 
 import dev.vale.typing.ast.{FunctionHeaderT, FunctionDefinitionT, PrototypeT}
@@ -39,3 +40,4 @@ object functionNameT {
   }
 }
 
+*/

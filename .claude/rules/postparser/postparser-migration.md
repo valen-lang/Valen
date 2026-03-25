@@ -8,13 +8,7 @@ This document catalogs known differences between the Scala postparsing pass (`Fr
 
 ### function_scout.rs
 
-1. ~~**`num_explicit_params` wrong semantics**~~ — FIXED: now uses `Option`-style 0-or-1 like Scala.
-2. ~~**`FunctionNameS` code_location**~~ — FIXED: now uses function's `range.begin()` like Scala.
-3. ~~**`closureStructRegionRune`**~~ — FIXED: now creates kind first, then region as `ImplicitRegionRuneS` wrapping kind (no lidb child), then coord. Matches Scala order and types.
-4. ~~**Missing `lidb.child()` in `scout_body` call**~~ — FIXED: now passes `lidb.child()` like Scala.
 5. **Void-stripping in `scout_body`** — Kept as-is. Strips trailing `Void` from `Consecutor`; Scala doesn't have this, but removing it breaks tests because the Rust expression generator produces trailing Voids that Scala doesn't. Root cause is elsewhere.
-6. ~~**Missing `vcurious` check**~~ — FIXED: now asserts child uses don't contain `MagicParamNameS`.
-7. ~~**`scout_interface_member`**~~ — FIXED: simplified to match Scala. Now receives `ParentInterface` (with `EnvironmentS`) and delegates to `scout_function`. Extra asserts and redundant env construction removed.
 
 ### post_parser.rs
 

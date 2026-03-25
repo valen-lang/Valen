@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.typing.infer._
@@ -352,3 +353,4 @@ class AfterRegionsTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
   }
 }
+*/

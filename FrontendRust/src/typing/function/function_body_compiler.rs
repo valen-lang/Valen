@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 //import dev.vale.astronomer.{AtomSP, FunctionA, BodySE, ExportA, IExpressionSE, IFunctionAttributeA, LocalA, ParameterS, PureA, UserFunctionA}
@@ -281,3 +282,4 @@ class BodyCompiler(
   }
 
 }
+*/

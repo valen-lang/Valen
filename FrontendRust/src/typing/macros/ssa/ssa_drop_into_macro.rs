@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros.ssa
 
 import dev.vale.{Keywords, RangeS, StrI, vimpl}
@@ -44,3 +45,4 @@ class SSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends
     (header, body)
   }
 }
+*/

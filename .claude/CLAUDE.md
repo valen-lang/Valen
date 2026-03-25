@@ -79,6 +79,32 @@ The build may have warnings during migration - that's expected. Focus on getting
 4. Always verify builds succeed after changes
 5. Respect the lifetime invariants - see the rules for guidance when rustc complains
 
+## Agent Rules
+
+**Never use spawned agents (the Agent tool) to make code modifications.** All edits must be made directly by the main conversation using Read/Edit/Write tools. Spawned agents may only be used for **read-only tasks**: searching, exploring, analyzing, reading files, running read-only commands. The only exception is agents defined in `.claude/agents/` which are explicitly human-written and approved for modifications.
+
+## Migration Shields
+
+These shields define the rules enforced during migration:
+
+@../../Luz/shields/NoValidSimplifications-NVSEX.md
+@../../Luz/shields/RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md
+@../../Luz/shields/ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md
+@../../Luz/shields/ScalaSealedTraitsToRustEnums-SSTREX.md
+@../../Luz/shields/NoExpensiveClones-NECX.md
+@../../Luz/shields/SuffixWhenDealingWithMultipleStages-SWDWMSX.md
+@../../Luz/shields/EnumsShouldntContainComplexData-ESCCDX.md
+@../../Luz/shields/TodosAndUnimplementedCodeMustPanic-TUCMPX.md
+@../../Luz/shields/MigrateAllCommentsToo-MACTX.md
+@../../Luz/shields/NeverRecoverAlwaysFail-NRAFX.md
+@../../Luz/shields/NoGlobalStateAnywhere-NGSAX.md
+@../../Luz/shields/FailFastFailLoud-FFFLX.md
+@../../Luz/shields/SameHelperCallsNoExceptions-SHCNEX.md
+@../../Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md
+@../../Luz/shields/ImmediateInterningDiscipline-IIDX.md
+@../../Luz/shields/CloserToScalaNotFurther-CSTNFX.md
+@../../Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
+
 ## Notes
 
 - **Interning:** Rust interns more aggressively than Scala. This is intentional and allowed.

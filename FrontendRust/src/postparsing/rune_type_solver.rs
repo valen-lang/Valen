@@ -15,19 +15,48 @@ import scala.collection.immutable.Map
 // mig: struct RuneTypeSolveError
 pub struct RuneTypeSolveError<'a> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
-  pub failed_solve: (),
-}
-// mig: impl RuneTypeSolveError
-impl<'a> RuneTypeSolveError<'a> {
+  pub failed_solve: crate::solver::solver::IncompleteOrFailedSolve<crate::postparsing::rules::rules::IRulexSR<'a>, crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType, IRuneTypeRuleError<'a>>,
 }
 /*
 case class RuneTypeSolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataType, IRuneTypeRuleError]) {
   vpass()
 }
 */
+// mig: impl RuneTypeSolveError
+impl<'a> RuneTypeSolveError<'a> {
+}
 // mig: enum IRuneTypeRuleError
 pub enum IRuneTypeRuleError<'a> {
-  _Phantom(std::marker::PhantomData<&'a ()>),
+  FoundCitizenDidntMatchExpectedType(FoundCitizenDidntMatchExpectedType<'a>),
+  FoundTemplataDidntMatchExpectedType(FoundTemplataDidntMatchExpectedType<'a>),
+  NotEnoughArgumentsForGenericCall(NotEnoughArgumentsForGenericCall<'a>),
+  GenericCallArgTypeMismatch(GenericCallArgTypeMismatch<'a>),
+  TooManyMatchingTypes(RuneTypingTooManyMatchingTypes<'a>),
+  CouldntFindType(RuneTypingCouldntFindType<'a>),
+}
+impl<'a> IRuneTypeRuleError<'a> {
+  pub fn as_lookup_failed(self) -> Option<IRuneTypingLookupFailedError<'a>> {
+    match self {
+      IRuneTypeRuleError::TooManyMatchingTypes(x) => Some(IRuneTypingLookupFailedError::TooManyMatchingTypes(x)),
+      IRuneTypeRuleError::CouldntFindType(x) => Some(IRuneTypingLookupFailedError::CouldntFindType(x)),
+      _ => None,
+    }
+  }
+  /*
+  Guardian: disable-all
+  */
+}
+/*
+Guardian: disable-all
+*/
+
+impl<'a> From<IRuneTypingLookupFailedError<'a>> for IRuneTypeRuleError<'a> {
+  fn from(e: IRuneTypingLookupFailedError<'a>) -> Self {
+    match e {
+      IRuneTypingLookupFailedError::TooManyMatchingTypes(x) => IRuneTypeRuleError::TooManyMatchingTypes(x),
+      IRuneTypingLookupFailedError::CouldntFindType(x) => IRuneTypeRuleError::CouldntFindType(x),
+    }
+  }
 }
 /*
 sealed trait IRuneTypeRuleError
@@ -38,9 +67,6 @@ pub struct FoundCitizenDidntMatchExpectedType<'a> {
   pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
   pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
 }
-// mig: impl FoundCitizenDidntMatchExpectedType
-impl<'a> FoundCitizenDidntMatchExpectedType<'a> {
-}
 /*
 case class FoundCitizenDidntMatchExpectedType(
   range: List[RangeS],
@@ -48,14 +74,14 @@ case class FoundCitizenDidntMatchExpectedType(
   actualType: ITemplataType
 ) extends IRuneTypeRuleError
 */
+// mig: impl FoundCitizenDidntMatchExpectedType
+impl<'a> FoundCitizenDidntMatchExpectedType<'a> {
+}
 // mig: struct FoundTemplataDidntMatchExpectedType
 pub struct FoundTemplataDidntMatchExpectedType<'a> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
   pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
   pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
-}
-// mig: impl FoundTemplataDidntMatchExpectedType
-impl<'a> FoundTemplataDidntMatchExpectedType<'a> {
 }
 /*
 case class FoundTemplataDidntMatchExpectedType(
@@ -66,13 +92,13 @@ case class FoundTemplataDidntMatchExpectedType(
   vpass()
 }
 */
+// mig: impl FoundTemplataDidntMatchExpectedType
+impl<'a> FoundTemplataDidntMatchExpectedType<'a> {
+}
 // mig: struct NotEnoughArgumentsForGenericCall
 pub struct NotEnoughArgumentsForGenericCall<'a> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
   pub index_of_non_defaulting_param: i32,
-}
-// mig: impl NotEnoughArgumentsForGenericCall
-impl<'a> NotEnoughArgumentsForGenericCall<'a> {
 }
 /*
 case class NotEnoughArgumentsForGenericCall(
@@ -83,15 +109,15 @@ case class NotEnoughArgumentsForGenericCall(
   vpass()
 }
   */
+// mig: impl NotEnoughArgumentsForGenericCall
+impl<'a> NotEnoughArgumentsForGenericCall<'a> {
+}
 // mig: struct GenericCallArgTypeMismatch
 pub struct GenericCallArgTypeMismatch<'a> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
   pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
   pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
   pub param_index: i32,
-}
-// mig: impl GenericCallArgTypeMismatch
-impl<'a> GenericCallArgTypeMismatch<'a> {
 }
 /*
 case class GenericCallArgTypeMismatch(
@@ -102,9 +128,13 @@ case class GenericCallArgTypeMismatch(
   paramIndex: Int
 ) extends IRuneTypeRuleError
 */
+// mig: impl GenericCallArgTypeMismatch
+impl<'a> GenericCallArgTypeMismatch<'a> {
+}
 // mig: enum IRuneTypingLookupFailedError
 pub enum IRuneTypingLookupFailedError<'a> {
-  _Phantom(std::marker::PhantomData<&'a ()>),
+  TooManyMatchingTypes(RuneTypingTooManyMatchingTypes<'a>),
+  CouldntFindType(RuneTypingCouldntFindType<'a>),
 }
 /*
 sealed trait IRuneTypingLookupFailedError extends IRuneTypeRuleError
@@ -120,7 +150,7 @@ impl<'a> RuneTypingTooManyMatchingTypes<'a> {
 case class RuneTypingTooManyMatchingTypes(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
 */
 // mig: fn equals
-fn equals(&self, obj: ()) -> bool {
+fn equals(&self, _obj: ()) -> bool {
   panic!("Unimplemented equals");
 }
 /*
@@ -147,7 +177,7 @@ impl<'a> RuneTypingCouldntFindType<'a> {
 case class RuneTypingCouldntFindType(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
 */
 // mig: fn equals
-fn equals(&self, obj: ()) -> bool {
+fn equals(&self, _obj: ()) -> bool {
   panic!("Unimplemented equals");
 }
 /*
@@ -169,9 +199,6 @@ pub struct FoundTemplataDidntMatchExpectedTypeA<'a> {
   pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
   pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
 }
-// mig: impl FoundTemplataDidntMatchExpectedTypeA
-impl<'a> FoundTemplataDidntMatchExpectedTypeA<'a> {
-}
 /*
 case class FoundTemplataDidntMatchExpectedTypeA(
     range: List[RangeS],
@@ -181,14 +208,14 @@ case class FoundTemplataDidntMatchExpectedTypeA(
   vpass()
 }
 */
+// mig: impl FoundTemplataDidntMatchExpectedTypeA
+impl<'a> FoundTemplataDidntMatchExpectedTypeA<'a> {
+}
 // mig: struct FoundPrimitiveDidntMatchExpectedType
 pub struct FoundPrimitiveDidntMatchExpectedType<'a> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
   pub expected_type: crate::postparsing::itemplatatype::ITemplataType,
   pub actual_type: crate::postparsing::itemplatatype::ITemplataType,
-}
-// mig: impl FoundPrimitiveDidntMatchExpectedType
-impl<'a> FoundPrimitiveDidntMatchExpectedType<'a> {
 }
 /*
 case class FoundPrimitiveDidntMatchExpectedType(
@@ -199,51 +226,60 @@ case class FoundPrimitiveDidntMatchExpectedType(
   vpass()
 }
 */
+// mig: impl FoundPrimitiveDidntMatchExpectedType
+impl<'a> FoundPrimitiveDidntMatchExpectedType<'a> {
+}
 // mig: enum IRuneTypeSolverLookupResult
-pub enum IRuneTypeSolverLookupResult<'a> {
-  _Phantom(std::marker::PhantomData<&'a ()>),
+#[derive(PartialEq)]
+pub enum IRuneTypeSolverLookupResult<'a, 's> {
+  Primitive(PrimitiveRuneTypeSolverLookupResult),
+  Citizen(CitizenRuneTypeSolverLookupResult<'a, 's>),
+  Templata(TemplataLookupResult),
 }
 /*
 sealed trait IRuneTypeSolverLookupResult
 */
 // mig: struct PrimitiveRuneTypeSolverLookupResult
+#[derive(PartialEq)]
 pub struct PrimitiveRuneTypeSolverLookupResult {
   pub tyype: crate::postparsing::itemplatatype::ITemplataType,
-}
-// mig: impl PrimitiveRuneTypeSolverLookupResult
-impl PrimitiveRuneTypeSolverLookupResult {
 }
 /*
 case class PrimitiveRuneTypeSolverLookupResult(tyype: ITemplataType) extends IRuneTypeSolverLookupResult
 */
+// mig: impl PrimitiveRuneTypeSolverLookupResult
+impl PrimitiveRuneTypeSolverLookupResult {
+}
 // mig: struct CitizenRuneTypeSolverLookupResult
+#[derive(PartialEq)]
 pub struct CitizenRuneTypeSolverLookupResult<'a, 's> {
   pub tyype: crate::postparsing::itemplatatype::ITemplataType,
-  pub generic_params: Vec<crate::postparsing::ast::GenericParameterS<'a, 's>>,
-}
-// mig: impl CitizenRuneTypeSolverLookupResult
-impl<'a, 's> CitizenRuneTypeSolverLookupResult<'a, 's> {
+  pub generic_params: &'s [&'s crate::postparsing::ast::GenericParameterS<'a, 's>],
 }
 /*
 case class CitizenRuneTypeSolverLookupResult(tyype: TemplateTemplataType, genericParams: Vector[GenericParameterS]) extends IRuneTypeSolverLookupResult
 */
+// mig: impl CitizenRuneTypeSolverLookupResult
+impl<'a, 's> CitizenRuneTypeSolverLookupResult<'a, 's> {
+}
 // mig: struct TemplataLookupResult
+#[derive(PartialEq)]
 pub struct TemplataLookupResult {
   pub templata: crate::postparsing::itemplatatype::ITemplataType,
-}
-// mig: impl TemplataLookupResult
-impl TemplataLookupResult {
 }
 /*
 case class TemplataLookupResult(templata: ITemplataType) extends IRuneTypeSolverLookupResult
 */
+// mig: impl TemplataLookupResult
+impl TemplataLookupResult {
+}
 // mig: trait IRuneTypeSolverEnv
-pub trait IRuneTypeSolverEnv<'a> {
+pub trait IRuneTypeSolverEnv<'a, 's> {
   fn lookup(
     &self,
     range: crate::utils::range::RangeS<'a>,
     name: crate::postparsing::names::IImpreciseNameS<'a>,
-  ) -> Result<IRuneTypeSolverLookupResult<'a>, IRuneTypingLookupFailedError<'a>>;
+  ) -> Result<IRuneTypeSolverLookupResult<'a, 's>, IRuneTypingLookupFailedError<'a>>;
 }
 /*
 trait IRuneTypeSolverEnv {
@@ -252,17 +288,13 @@ trait IRuneTypeSolverEnv {
   Result[IRuneTypeSolverLookupResult, IRuneTypingLookupFailedError]
 }
 */
-// mig: struct RuneTypeSolver
-pub struct RuneTypeSolver<'a, 'ctx> {
-  pub interner: &'ctx crate::interner::Interner<'a>,
-}
 // Concrete SolverDelegate for rune type solving.
 // In Scala, this is an anonymous ISolveRule created inside RuneTypeSolver.solve().
 struct RuneTypeSolverDelegate {
   predicting: bool,
 }
 
-impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
+impl<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>> crate::solver::solver::SolverDelegate<
   crate::postparsing::rules::rules::IRulexSR<'a>,
   crate::postparsing::names::IRuneS<'a>,
   E,
@@ -271,12 +303,14 @@ impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
   IRuneTypeRuleError<'a>,
 > for RuneTypeSolverDelegate {
   fn rule_to_puzzles(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
-    panic!("RuneTypeSolverDelegate::rule_to_puzzles not yet migrated")
+    get_puzzles_rune_type(self.predicting, rule)
   }
+  /* Guardian: disable-all */
 
   fn rule_to_runes(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<crate::postparsing::names::IRuneS<'a>> {
-    rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
+    get_runes_rune_type(rule)
   }
+  /* Guardian: disable-all */
 
   fn solve<S: crate::solver::ISolverState<
     crate::postparsing::rules::rules::IRulexSR<'a>,
@@ -284,7 +318,7 @@ impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
     crate::postparsing::itemplatatype::ITemplataType,
   >>(
     &self,
-    state: &(),
+    _state: &(),
     env: &E,
     rule_index: i32,
     rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
@@ -294,8 +328,9 @@ impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
     crate::postparsing::itemplatatype::ITemplataType,
     IRuneTypeRuleError<'a>,
   >> {
-    panic!("RuneTypeSolverDelegate::solve not yet migrated")
+    solve_rule(env, rule_index, rule, solver_state)
   }
+  /* Guardian: disable-all */
 
   fn complex_solve<S: crate::solver::ISolverState<
     crate::postparsing::rules::rules::IRulexSR<'a>,
@@ -303,39 +338,62 @@ impl<'a, E: IRuneTypeSolverEnv<'a>> crate::solver::solver::SolverDelegate<
     crate::postparsing::itemplatatype::ITemplataType,
   >>(
     &self,
-    state: &(),
-    env: &E,
-    solver_state: &mut S,
+    _state: &(),
+    _env: &E,
+    _solver_state: &mut S,
   ) -> Result<(), crate::solver::solver::ISolverError<
     crate::postparsing::names::IRuneS<'a>,
     crate::postparsing::itemplatatype::ITemplataType,
     IRuneTypeRuleError<'a>,
   >> {
-    // Scala: Ok(())
     Ok(())
   }
+  /* Guardian: disable-all */
 
   fn sanity_check_conclusion(
     &self,
-    env: &E,
-    state: &(),
+    _env: &E,
+    _state: &(),
     rune: &crate::postparsing::names::IRuneS<'a>,
     conclusion: &crate::postparsing::itemplatatype::ITemplataType,
   ) {
-    // Scala: Unit = {} (no-op)
+    sanity_check_conclusion(rune.clone(), conclusion)
   }
+  /* Guardian: disable-all */
 }
 
-// mig: impl RuneTypeSolver
-impl<'a, 'ctx> RuneTypeSolver<'a, 'ctx> {
+// mig: struct RuneTypeSolver
+pub struct RuneTypeSolver<'a, 'ctx> {
+  pub interner: &'ctx crate::interner::Interner<'a>,
+}
 /*
 class RuneTypeSolver(interner: Interner) {
 */
+// mig: impl RuneTypeSolver
+impl<'a, 'ctx> RuneTypeSolver<'a, 'ctx> {
+  pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'a, 's>>(
+    &self,
+    sanity_check: bool,
+    env: &E,
+    range: Vec<crate::utils::range::RangeS<'a>>,
+    predicting: bool,
+    rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+    additional_runes: &[crate::postparsing::names::IRuneS<'a>],
+    expect_complete_solve: bool,
+    unpreprocessed_initially_known_runes: std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  ) -> Result<
+    std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+    RuneTypeSolveError<'a>,
+  > where 'a: 's {
+    solve_rune_type(sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
+  }
+  /* Guardian: disable-all */
+}
 // mig: fn get_runes_rune_type
-fn get_runes_rune_type(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+fn get_runes_rune_type<'a>(
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
 ) -> Vec<crate::postparsing::names::IRuneS<'a>> {
-  panic!("Unimplemented get_runes_rune_type");
+  rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
 }
 /*
   // MIGALLOW: getRunes -> get_runes_rune_type
@@ -376,11 +434,58 @@ fn get_runes_rune_type(
   }
 */
 // mig: fn get_puzzles_rune_type
-fn get_puzzles_rune_type(
-  _predicting: bool,
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+fn get_puzzles_rune_type<'a>(
+  predicting: bool,
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
 ) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
-  panic!("Unimplemented get_puzzles_rune_type");
+  use crate::postparsing::rules::rules::IRulexSR;
+  match rule {
+    IRulexSR::Equals(x) => vec![vec![x.left.rune.clone()], vec![x.right.rune.clone()]],
+    IRulexSR::Lookup(_x) => {
+      if predicting {
+        vec![]
+      } else {
+        vec![vec![]]
+      }
+    }
+    IRulexSR::MaybeCoercingLookup(x) => {
+      if predicting {
+        vec![]
+      } else {
+        vec![vec![x.rune.rune.clone()]]
+      }
+    }
+    IRulexSR::RuneParentEnvLookup(x) => {
+      if predicting {
+        vec![]
+      } else {
+        vec![vec![x.rune.rune.clone()]]
+      }
+    }
+    IRulexSR::MaybeCoercingCall(x) => {
+      vec![vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()]]
+    }
+    IRulexSR::CoordComponents(_) => vec![vec![]],
+    IRulexSR::OneOf(_) => vec![vec![]],
+    IRulexSR::IsInterface(_) => vec![vec![]],
+    IRulexSR::CoerceToCoord(_) => vec![vec![]],
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type get_puzzles"),
+    IRulexSR::Literal(_) => vec![vec![]],
+    IRulexSR::Augment(_) => vec![vec![]],
+    IRulexSR::Pack(_) => vec![vec![]],
+    IRulexSR::DefinitionCoordIsa(_) => vec![vec![]],
+    IRulexSR::CallSiteCoordIsa(_) => vec![vec![]],
+    IRulexSR::KindComponents(_) => vec![vec![]],
+    IRulexSR::PrototypeComponents(_) => vec![vec![]],
+    IRulexSR::Resolve(_) => vec![vec![]],
+    IRulexSR::CallSiteFunc(_) => vec![vec![]],
+    IRulexSR::DefinitionFunc(_) => vec![vec![]],
+    IRulexSR::IsConcrete(x) => vec![vec![x.rune.rune.clone()]],
+    IRulexSR::IsStruct(_) => vec![vec![]],
+    IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type get_puzzles"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type get_puzzles"),
+  }
 }
 /*
   // MIGALLOW: getPuzzles -> get_puzzles_rune_type
@@ -454,12 +559,165 @@ fn get_puzzles_rune_type(
   }
 */
 // mig: fn solve_rule
-fn solve_rule(
-  _state: (),
-  _rule_index: usize,
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
-) -> Result<(), ()> {
-  panic!("Unimplemented solve_rule");
+
+fn solve_rule<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverState<
+  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::names::IRuneS<'a>,
+  crate::postparsing::itemplatatype::ITemplataType,
+>>(
+  env: &E,
+  _rule_index: i32,
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  solver_state: &mut S,
+) -> Result<(), crate::solver::solver::ISolverError<
+  crate::postparsing::names::IRuneS<'a>,
+  crate::postparsing::itemplatatype::ITemplataType,
+  IRuneTypeRuleError<'a>,
+>> where 'a: 's {
+  use crate::postparsing::rules::rules::IRulexSR;
+  use crate::postparsing::itemplatatype::*;
+  match rule {
+    IRulexSR::CoordComponents(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      let ownership_idx = solver_state.get_canonical_rune(x.ownership_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(ownership_idx, ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})).map_err(|e| e)?;
+      let kind_idx = solver_state.get_canonical_rune(x.kind_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(kind_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::CoerceToCoord(x) => {
+      let coord_idx = solver_state.get_canonical_rune(x.coord_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(coord_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      let kind_idx = solver_state.get_canonical_rune(x.kind_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(kind_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type solve_rule"),
+    IRulexSR::Literal(x) => {
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(rune_idx, x.literal.get_type()).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Equals(x) => {
+      let left_conclusion = solver_state.get_conclusion(x.left.rune.clone());
+      match left_conclusion {
+        None => {
+          let right_conclusion = solver_state.get_conclusion(x.right.rune.clone()).expect("Neither side of EqualsSR has a conclusion");
+          let left_idx = solver_state.get_canonical_rune(x.left.rune.clone());
+          solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(left_idx, right_conclusion).map_err(|e| e)?;
+          Ok(())
+        }
+        Some(left) => {
+          let right_idx = solver_state.get_canonical_rune(x.right.rune.clone());
+          solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(right_idx, left).map_err(|e| e)?;
+          Ok(())
+        }
+      }
+    }
+    // Rust OneOfSR struct has field named `rune` (not `result_rune`)
+    IRulexSR::OneOf(x) => {
+      let types: std::collections::HashSet<ITemplataType> = x.literals.iter().map(|l| l.get_type()).collect();
+      if types.len() > 1 {
+        panic!("OneOf rule's possibilities must all be the same type!");
+      }
+      let the_type = types.into_iter().next().unwrap();
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(rune_idx, the_type).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::IsInterface(x) => {
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(rune_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Augment(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      let inner_idx = solver_state.get_canonical_rune(x.inner_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(inner_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Lookup(_) => {
+      panic!("solve_rule LookupSR not yet migrated");
+    }
+    IRulexSR::MaybeCoercingLookup(x) => {
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), x.name.clone()) {
+            Err(_e) => panic!("MaybeCoercingLookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)
+    }
+    IRulexSR::MaybeCoercingCall(x) => {
+      match solver_state.get_conclusion(x.template_rune.rune.clone()).expect("MaybeCoercingCallSR: template rune has no conclusion") {
+        ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type }) => {
+          for (arg_rune, param_type) in x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter()) {
+            let arg_idx = solver_state.get_canonical_rune(arg_rune);
+            solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(arg_idx, param_type.clone()).map_err(|e| e)?;
+          }
+          Ok(())
+        }
+        other => panic!("MaybeCoercingCallSR: unexpected template type: {:?}", other),
+      }
+    }
+    IRulexSR::RuneParentEnvLookup(_) => {
+      panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
+    }
+    IRulexSR::Pack(x) => {
+      for member in &x.members {
+        let member_idx = solver_state.get_canonical_rune(member.rune.clone());
+        solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(member_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      }
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::CallSiteFunc(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.prototype_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_list_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::DefinitionFunc(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_list_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Resolve(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_list_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type solve_rule"),
+    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in rune_type solve_rule"),
+    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in rune_type solve_rule"),
+    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in rune_type solve_rule"),
+    IRulexSR::PrototypeComponents(x) => {
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule"),
+    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule"),
+    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type solve_rule"),
+  }
 }
 /*
   private def solveRule(
@@ -638,14 +896,50 @@ fn solve_rule(
   }
 */
 // mig: fn lookup
-fn lookup(
-  _env: (),
-  _step_state: (),
+
+fn lookup_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverState<
+  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::names::IRuneS<'a>,
+  crate::postparsing::itemplatatype::ITemplataType,
+>>(
+  _env: &E,
+  solver_state: &mut S,
   _range: crate::utils::range::RangeS<'a>,
-  _rune: (),
-  _actual_lookup_result: IRuneTypeSolverLookupResult<'a>,
-) -> Result<(), ()> {
-  panic!("Unimplemented lookup");
+  rune: &crate::postparsing::rules::rules::RuneUsage<'a>,
+  actual_lookup_result: IRuneTypeSolverLookupResult<'a, 's>,
+) -> Result<(), crate::solver::solver::ISolverError<
+  crate::postparsing::names::IRuneS<'a>,
+  crate::postparsing::itemplatatype::ITemplataType,
+  IRuneTypeRuleError<'a>,
+>> {
+  use crate::postparsing::itemplatatype::*;
+  let expected_type = solver_state.get_conclusion(rune.rune.clone()).expect("lookup_rune_type: no conclusion for rune");
+  match actual_lookup_result {
+    IRuneTypeSolverLookupResult::Primitive(p) => {
+      match &expected_type {
+        ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {}
+        x if *x == p.tyype => {}
+        _ => panic!("lookup_rune_type Primitive error path not yet migrated"),
+      }
+    }
+    IRuneTypeSolverLookupResult::Templata(_t) => {
+      panic!("lookup_rune_type Templata not yet migrated");
+    }
+    IRuneTypeSolverLookupResult::Citizen(c) => {
+      match &expected_type {
+        ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_) => {
+          // Then it's an implicit call, straight from being looked up.
+          match check_generic_call(vec![_range.clone()], &c.generic_params, &[]) {
+            Ok(()) => {},
+            Err(e) => return Err(crate::solver::solver::ISolverError::RuleError(crate::solver::solver::RuleError { err: e, _phantom: std::marker::PhantomData })),
+          }
+        }
+        x if *x == c.tyype => {}
+        _ => panic!("lookup_rune_type Citizen error path not yet migrated"),
+      }
+    }
+  }
+  Ok(())
 }
 /*
   private def lookup(
@@ -701,8 +995,7 @@ fn lookup(
   }
 */
 // mig: fn solve_rune_type
-pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
-  &self,
+pub fn solve_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>>(
   sanity_check: bool,
   env: &E,
   range: Vec<crate::utils::range::RangeS<'a>>,
@@ -714,14 +1007,13 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
 ) -> Result<
   std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
   RuneTypeSolveError<'a>,
-> {
+> where 'a: 's {
   use crate::postparsing::names::IRuneS;
   use crate::postparsing::itemplatatype::ITemplataType;
   use crate::postparsing::rules::rules::IRulexSR;
-  use crate::solver::solver::{Solver, ISolverError};
+  use crate::solver::solver::Solver;
   use std::collections::HashMap;
 
-  // Scala: val initiallyKnownRunes = (if (predicting) Map() else rules.flatMap({...}).toMap) ++ unpreprocessedInitiallyKnownRunes
   // For the non-predicting case, iterate over LookupSR/MaybeCoercingLookupSR rules and pre-compute types via env.lookup.
   // For now, with no rules in the simple test case, this is empty.
   let mut initially_known_runes: HashMap<IRuneS<'a>, ITemplataType> = if predicting {
@@ -733,10 +1025,7 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
         IRulexSR::Lookup(lookup) => {
           match env.lookup(lookup.range.clone(), lookup.name.clone()) {
             Err(_e) => {
-              return Err(RuneTypeSolveError {
-                range: range.clone(),
-                failed_solve: (),
-              });
+              panic!("LookupSR pre-computation error path not yet migrated");
             }
             Ok(_result) => {
               // Complex coercion logic for different lookup result types.
@@ -745,8 +1034,54 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
             }
           }
         }
-        IRulexSR::MaybeCoercingLookup(_lookup) => {
-          panic!("MaybeCoercingLookupSR pre-computation not yet fully migrated");
+        IRulexSR::MaybeCoercingLookup(lookup) => {
+          match env.lookup(lookup.range.clone(), lookup.name.clone()) {
+            Err(e) => {
+              return Err(RuneTypeSolveError {
+                range: vec![lookup.range.clone()],
+                failed_solve: crate::solver::solver::IncompleteOrFailedSolve::Failed(
+                  crate::solver::solver::FailedSolve {
+                    steps: vec![],
+                    unsolved_rules: rules_s.to_vec(),
+                    error: crate::solver::solver::ISolverError::RuleError(
+                      crate::solver::solver::RuleError {
+                        err: e.into(),
+                        _phantom: std::marker::PhantomData,
+                      }
+                    ),
+                  }
+                ),
+              });
+            }
+            Ok(result) => {
+              let entries: Vec<(IRuneS<'a>, ITemplataType)> = match &result {
+                // We don't know whether we'll coerce this into a kind or a coord.
+                IRuneTypeSolverLookupResult::Primitive(p) => {
+                  match &p.tyype {
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Citizen(c) => {
+                  match &c.tyype {
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() && matches!(&*t.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Templata(t) => {
+                  match &t.templata {
+                    ITemplataType::TemplateTemplataType(tt) if tt.param_types.is_empty() && matches!(&*tt.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+              };
+              for (k, v) in entries {
+                map.insert(k, v);
+              }
+            }
+          }
         }
         _ => {
           // Other rules don't contribute to initially known runes
@@ -785,7 +1120,6 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
     all_runes.clone(),
   );
 
-  // Scala: while ({ solver.advance(env, Unit) match { ... } }) {}
   loop {
     match solver.advance(env, &()) {
       Ok(true) => continue,
@@ -793,7 +1127,7 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
       Err(e) => {
         return Err(RuneTypeSolveError {
           range,
-          failed_solve: (),
+          failed_solve: crate::solver::solver::IncompleteOrFailedSolve::Failed(e),
         });
       }
     }
@@ -808,9 +1142,19 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
     .collect();
 
   if expect_complete_solve && !unsolved_runes.is_empty() {
+    let steps = solver.get_steps();
+    let unsolved_rules = solver.get_unsolved_rules();
     Err(RuneTypeSolveError {
       range,
-      failed_solve: (),
+      failed_solve: crate::solver::solver::IncompleteOrFailedSolve::Incomplete(
+        crate::solver::solver::IncompleteSolve {
+          steps,
+          unsolved_rules,
+          unknown_runes: unsolved_runes.into_iter().collect(),
+          incomplete_conclusions: conclusions,
+          _phantom: std::marker::PhantomData,
+        }
+      ),
     })
   } else {
     Ok(conclusions)
@@ -920,11 +1264,10 @@ pub fn solve_rune_type<E: IRuneTypeSolverEnv<'a>>(
 */
 
 // mig: fn sanity_check_conclusion
-fn sanity_check_conclusion(
+fn sanity_check_conclusion<'a>(
   _rune: crate::postparsing::names::IRuneS<'a>,
   _conclusion: &crate::postparsing::itemplatatype::ITemplataType,
 ) {
-  panic!("Unimplemented sanity_check_conclusion");
 }
 /*
           override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
@@ -940,7 +1283,7 @@ fn complex_solve() -> Result<(), ()> {
           }
 */
 // mig: fn solve
-fn solve(
+fn solve_stub<'a>(
   _state: (),
   _env: (),
   _solver_state: (),
@@ -986,7 +1329,6 @@ fn solve(
   }
 }
 */
-} // end impl RuneTypeSolver
 /*
 object RuneTypeSolver {
 */
@@ -1022,10 +1364,36 @@ fn check_generic_call_without_defaults<'a>(
 */
 // mig: fn check_generic_call
 fn check_generic_call<'a>(
-  _param_types: &[crate::postparsing::itemplatatype::ITemplataType],
-  _arg_types: &[crate::postparsing::itemplatatype::ITemplataType],
-) -> Result<(), ()> {
-  panic!("Unimplemented check_generic_call");
+  range: Vec<crate::utils::range::RangeS<'a>>,
+  citizen_generic_params: &[&crate::postparsing::ast::GenericParameterS<'a, '_>],
+  arg_types: &[crate::postparsing::itemplatatype::ITemplataType],
+) -> Result<(), IRuneTypeRuleError<'a>> {
+  for (index, generic_param) in citizen_generic_params.iter().enumerate() {
+    if index < arg_types.len() {
+      let actual_type = &arg_types[index];
+      if generic_param.tyype.tyype() == *actual_type {
+        // Matches, proceed.
+      } else {
+        return Err(IRuneTypeRuleError::GenericCallArgTypeMismatch(GenericCallArgTypeMismatch {
+          range: range.clone(),
+          expected_type: generic_param.tyype.tyype(),
+          actual_type: actual_type.clone(),
+          param_index: index as i32,
+        }));
+      }
+    } else {
+      if generic_param.default.is_some() {
+        // Good, can just use that default
+      } else {
+        return Err(IRuneTypeRuleError::NotEnoughArgumentsForGenericCall(NotEnoughArgumentsForGenericCall {
+          range: range.clone(),
+          index_of_non_defaulting_param: index as i32,
+        }));
+      }
+    }
+  }
+
+  Ok(())
 }
 /*
   def checkGenericCall(

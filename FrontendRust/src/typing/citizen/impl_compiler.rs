@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.citizen
 
 import dev.vale.highertyping.ImplA
@@ -713,3 +714,4 @@ class ImplCompiler(
     }
   }
 }
+*/

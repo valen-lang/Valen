@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.Collector.ProgramWithExpect
@@ -20,3 +21,4 @@ import scala.io.Source
 
 class TodoTests extends FunSuite with Matchers {
 }
+*/

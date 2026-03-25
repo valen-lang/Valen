@@ -24,6 +24,7 @@ case class CaptureS(
     mutate: Boolean) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AtomSP<'a> {
@@ -53,5 +54,5 @@ case class AtomSP(
     case _ =>
   }
 }
-
+Guardian: disable: NECX
 */

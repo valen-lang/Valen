@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.solver.{FailedSolve, RuleError}
@@ -399,3 +400,4 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
   }
 
 }
+*/

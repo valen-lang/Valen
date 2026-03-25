@@ -1,10 +1,13 @@
+/*
 package dev.vale.typing.macros.rsa
 
 import dev.vale.{Keywords, RangeS, StrI, vimpl}
+
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.CompilerOutputs
 import dev.vale.typing.ast.{ArgLookupTE, ArrayLengthTE, BlockTE, FunctionDefinitionT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, ReturnTE}
+
 import dev.vale.typing.env.FunctionEnvironmentT
 import dev.vale.typing.macros.IFunctionBodyMacro
 import dev.vale.typing.types.CoordT
@@ -35,4 +38,6 @@ class RSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
             ArgLookupTE(0, paramCoords(0).tyype))))
     (header, body)
   }
+
 }
+*/

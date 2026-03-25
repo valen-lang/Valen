@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.highertyping.{FunctionA, StructA}
@@ -185,3 +186,4 @@ class StructConstructorMacro(
     (header, body)
   }
 }
+*/

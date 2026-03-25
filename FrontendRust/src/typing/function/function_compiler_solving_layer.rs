@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 import dev.vale.{Err, Interner, Keywords, Ok, Profiler, RangeS, StrI, typing, vassert, vassertSome, vcurious, vfail, vimpl, vpass, vregionmut}
@@ -629,3 +630,4 @@ class FunctionCompilerSolvingLayer(
       })
   }
 }
+*/

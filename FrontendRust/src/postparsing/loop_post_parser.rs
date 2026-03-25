@@ -418,7 +418,7 @@ where
       // Else does nothing
       let else_s = &*post_parser.scout_arena.alloc(BlockSE {
         range: each_range_s.clone(),
-        locals: Vec::new(),
+        locals: &[],
         expr: &*post_parser.scout_arena.alloc(IExpressionSE::Void(VoidSE {
           range: each_range_s.clone(),
         })),
@@ -730,7 +730,7 @@ where
       // Then does nothing, just continue on
       let void_s = &*post_parser.scout_arena.alloc(BlockSE {
         range: while_range_s.clone(),
-        locals: Vec::new(),
+        locals: &[],
         expr: &*post_parser.scout_arena.alloc(IExpressionSE::Void(VoidSE {
           range: while_range_s.clone(),
         })),

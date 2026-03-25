@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.highertyping.{FunctionA, ImplA, InterfaceA, StructA}
@@ -551,3 +552,4 @@ class AnonymousInterfaceMacro(
             newBody))))
   }
 }
+*/

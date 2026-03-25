@@ -44,11 +44,13 @@ pub struct ExpressionParser<'a, 'ctx, 'p> {
 }
 /*
 class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptions, patternParser: PatternParser, templexParser: TemplexParser) {
+Guardian: disable: NECX
 */
 /*
 sealed trait IExpressionElement
 case class DataElement(expr: IExpressionPE) extends IExpressionElement
 case class BinaryCallElement(symbol: NameP, precedence: Int) extends IExpressionElement
+Guardian: disable: NECX
 */
 
 impl<'a, 'ctx, 'p> ExpressionParser<'a, 'ctx, 'p>
@@ -1428,7 +1430,6 @@ where
           // Mirrors ExpressionParser.scala lines 1394-1400
           let mut element_iters = if !iters.last().unwrap().has_next() {
             // Last is empty, like in (true,) so take it out
-            // Scala: iters.init
             iters.pop();
             iters
           } else {

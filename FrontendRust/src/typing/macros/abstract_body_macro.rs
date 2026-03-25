@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.{Err, Interner, Keywords, Ok, RangeS, StrI, vassert, vassertSome, vimpl}
@@ -68,3 +69,4 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
     (header, body)
   }
 }
+*/

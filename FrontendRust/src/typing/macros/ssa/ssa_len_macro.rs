@@ -1,10 +1,13 @@
+/*
 package dev.vale.typing.macros.ssa
 
 import dev.vale._
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.{CompileErrorExceptionT, CompilerOutputs, RangedInternalErrorT}
+
 import dev.vale.typing.ast.{ArgLookupTE, BlockTE, ConsecutorTE, ConstantIntTE, DiscardTE, FunctionDefinitionT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, ReturnTE}
+
 import dev.vale.typing.env.FunctionEnvironmentT
 import dev.vale.typing.macros.IFunctionBodyMacro
 import dev.vale.typing.types._
@@ -35,6 +38,7 @@ class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
         case Vector(CoordT(_, _, contentsStaticSizedArrayTT(size, _, _, _, _))) => size
         case _ => throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "SSALenMacro received non-SSA param: " + header.paramTypes))
       }
+
     val body =
       BlockTE(
         ConsecutorTE(
@@ -44,4 +48,6 @@ class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
               ConstantIntTE(len, 32, RegionT())))))
     (header, body)
   }
+
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing._
@@ -151,3 +152,4 @@ object ErrorReporter {
     throw CompileErrorExceptionT(err)
   }
 }
+*/

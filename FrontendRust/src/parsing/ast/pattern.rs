@@ -16,6 +16,7 @@ pub struct AbstractP {
 //sealed trait IVirtualityP
 case class AbstractP(range: RangeL)// extends IVirtualityP
 //case class OverrideP(range: RangeP, tyype: ITemplexPT) extends IVirtualityP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -35,6 +36,7 @@ case class ParameterP(
     pattern: Option[PatternPP]) {
 
   vassert(selfBorrow.nonEmpty || pattern.nonEmpty)
+Guardian: disable: NECX
 }
 */
 
@@ -45,6 +47,7 @@ pub struct DestinationLocalP<'a> {
 }
 /*
 case class DestinationLocalP(decl: INameDeclarationP, mutate: Option[RangeL])
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -70,6 +73,7 @@ case class PatternPP(
     // to account for nested parens, like struct Fn:((#Params...), (#Rets...))
 
     destructure: Option[DestructureP])
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -83,6 +87,7 @@ case class DestructureP(
   patterns: Vector[PatternPP]) {
 
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+Guardian: disable: NECX
 }
 */
 
@@ -122,6 +127,7 @@ case class IterableNameDeclarationP(range: RangeL) extends INameDeclarationP { o
 case class IteratorNameDeclarationP(range: RangeL) extends INameDeclarationP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class IterationOptionNameDeclarationP(range: RangeL) extends INameDeclarationP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class ConstructingMemberNameDeclarationP(name: NameP) extends INameDeclarationP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious(); override def range: RangeL = name.range }
+Guardian: disable: NECX
 */
 
 /*

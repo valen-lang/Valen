@@ -1,5 +1,5 @@
 ---
-model: haiku
+model: SimpleMedium
 ---
 
 You are a migration validator ensuring no definitions are moved during Scala-to-Rust migration.

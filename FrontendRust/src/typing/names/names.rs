@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.names
 
 import dev.vale.postparsing._
@@ -693,3 +694,4 @@ case class ResolvingEnvNameT() extends INameT {
 case class CallEnvNameT() extends INameT {
   vpass()
 }
+*/

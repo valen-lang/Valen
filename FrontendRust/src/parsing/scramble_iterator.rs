@@ -15,6 +15,7 @@ class ScrambleIterator(
     var index: Int,
     var end: Int) {
   assert(end <= scramble.elements.length)
+Guardian: disable: NECX
 */
 impl<'a, 's> ScrambleIterator<'a, 's> {
   /// Create a new iterator over the entire scramble

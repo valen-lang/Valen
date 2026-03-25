@@ -55,7 +55,6 @@ impl<'a> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolve
     }
 
     fn sanity_check_conclusion(&self, _env: &(), _state: &(), _rune: &i64, _conclusion: &String) {
-        // Scala: empty impl
     }
 }
 

@@ -39,6 +39,7 @@ pub struct TemplexParser<'a, 'ctx, 'p> {
 }
 /*
 class TemplexParser(interner: Interner, keywords: Keywords) {
+Guardian: disable: NECX
 */
 
 impl<'a, 'ctx, 'p> TemplexParser<'a, 'ctx, 'p>

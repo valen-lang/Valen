@@ -1,0 +1,36 @@
+## Your Response Format
+
+You must respond with ONLY valid JSON (no markdown fences) matching this schema:
+
+{
+  "violations": []
+}
+
+If there are violations, list each one:
+
+{
+  "violations": [
+    {"reason": "Explanation of first violation"},
+    {"reason": "Explanation of second violation"}
+  ]
+}
+
+An empty violations array means the code change is acceptable.
+
+## Important: How to Read the Diff
+
+You are reviewing a CODE CHANGE, not the entire file. The contextified diff uses these prefixes:
+- Lines starting with `+` are NEWLY ADDED code — these are what you must evaluate.
+- Lines starting with `-` are REMOVED code — shown for context only, not part of the new code.
+- Lines with NO prefix are UNCHANGED existing code — shown for context only, do NOT flag violations in these lines.
+
+Only flag violations in the `+` (added) lines. Pre-existing code issues are not your concern.
+
+## File Being Modified
+
+FILE: {{file_path}}
+
+CONTEXTIFIED DIFF (shows enclosing functions/structs around each change):
+```
+{{file_content}}
+```

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.citizen
 
 import dev.vale.highertyping.FunctionA
@@ -313,3 +314,4 @@ object StructCompiler {
     ITemplataT.expectMutability(result)
   }
 }
+*/

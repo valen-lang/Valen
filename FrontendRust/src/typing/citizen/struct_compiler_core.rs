@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.citizen
 
 import dev.vale.highertyping.{FunctionA, InterfaceA, StructA}
@@ -416,3 +417,4 @@ class StructCompilerCore(
     (closuredVarsStructRef, mutability, functionTemplata)
   }
 }
+*/

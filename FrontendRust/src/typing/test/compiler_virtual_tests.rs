@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.typing.ast.{AsSubtypeTE, FunctionHeaderT, PrototypeT, SignatureT}
@@ -389,3 +390,4 @@ class CompilerVirtualTests extends FunSuite with Matchers {
 
 }
 
+*/

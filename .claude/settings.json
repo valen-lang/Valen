@@ -6,7 +6,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": ".claude/hooks/writecop-client.sh"
+            "command": "/Volumes/V/Sylvan/.claude/hooks/guardian-client.sh || exit 2"
           }
         ]
       }

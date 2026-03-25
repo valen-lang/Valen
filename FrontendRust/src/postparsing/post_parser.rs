@@ -1,7 +1,8 @@
 // From Frontend/PostParsingPass/src/dev/vale/postparsing/PostParser.scala
 // Coordinates the Scout (post-parsing) pass
 
-// MIGTODO: rename Denizen to Definition, and maybe Citizen to TypeDefinition
+// AFTERM: rename Denizen to Definition, and maybe Citizen to TypeDefinition
+// AFTERM: rename ScoutCompilation to PostParserCompilation
 
 use crate::compile_options::GlobalOptions;
 use crate::interner::Interner;
@@ -42,73 +43,13 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::arena_utils::alloc_slice_from_vec;
+use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
+use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use std::collections::HashMap;
 use std::marker::PhantomData;
 use std::sync::Arc;
-
-// From PostParser.scala lines 922-965: ScoutCompilation class
-pub struct ScoutCompilation<'a, 'ctx, 'p, 's> {
-  global_options: GlobalOptions,
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  parser_compilation: ParserCompilation<'a, 'ctx, 'p>,
-  scout_arena: &'s bumpalo::Bump,
-  scoutput_cache: Option<FileCoordinateMap<'a, ProgramS<'a, 's>>>,
-}
-
-impl<'a, 'ctx, 'p, 's> ScoutCompilation<'a, 'ctx, 'p, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
-{
-  // MIGALLOW: new -> new (From PostParser.scala lines 922-928)
-  pub fn new(
-    interner: &'ctx Interner<'a>,
-    keywords: &'ctx Keywords<'a>,
-    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
-    global_options: GlobalOptions,
-    parser_arena: &'p bumpalo::Bump,
-    scout_arena: &'s bumpalo::Bump,
-  ) -> Self {
-    let parser_compilation = ParserCompilation::new(
-      global_options.clone(),
-      interner,
-      keywords,
-      packages_to_build,
-      package_to_contents_resolver,
-      parser_arena,
-    );
-
-    ScoutCompilation {
-      global_options,
-      interner,
-      keywords,
-      parser_compilation,
-      scout_arena,
-      scoutput_cache: None,
-    }
-  }
-
-  // From PostParser.scala line 931: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-    self.parser_compilation.get_code_map()
-  }
-
-  // From PostParser.scala line 932: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
-    self.parser_compilation.get_parseds()
-  }
-
-  // From PostParser.scala line 933: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
-    self.parser_compilation.get_vpst_map()
-  }
-}
 
 /*
 package dev.vale.postparsing
@@ -141,6 +82,7 @@ pub struct CompileErrorExceptionS<'a> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
+// SPORK
 pub enum ICompileErrorS<'a> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'a>),
   CouldntFindRuneS(CouldntFindRuneS<'a>),
@@ -158,6 +100,10 @@ pub enum ICompileErrorS<'a> {
   IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS<'a>),
   RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
+/*
+sealed trait ICompileErrorS { def range: RangeS }
+Guardian: disable: NECX
+*/
 
 impl ICompileErrorS<'_> {
   pub fn range(&self) -> &RangeS<'_> {
@@ -175,35 +121,133 @@ impl ICompileErrorS<'_> {
       ICompileErrorS::RangedInternalErrorS(x) => &x.range,
     }
   }
+  /*
+  Guardian: disable-all
+  */
 }
+/*
+Guardian: disable-all
+*/
 
+/*
+case class UnknownRuleFunctionS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+/*
+case class BadRuneAttributeErrorS(range: RangeS, attr: IRuneAttributeP) extends ICompileErrorS {
+  vpass()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
+*/
+/*
+case class CantHaveMultipleMutabilitiesS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+/*
+case class UnimplementedExpression(range: RangeS, expressionName: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct CouldntFindVarToMutateS<'a> {
   pub range: RangeS<'a>,
   pub name: String,
 }
+/*
+case class CouldntFindVarToMutateS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CouldntFindRuneS<'a> {
   pub range: RangeS<'a>,
   pub name: String,
 }
+/*
+case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StatementAfterReturnS<'a> {
   pub range: RangeS<'a>,
 }
+/*
+case class StatementAfterReturnS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 
+/*
+case class ForgotSetKeywordError(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+/*
+case class UnknownRegionError(range: RangeS, name: String) extends ICompileErrorS {
+  vpass()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExternHasBodyS<'a> {
+  pub range: RangeS<'a>,
+}
+/*
+case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'a> {
+  pub range: RangeS<'a>,
+}
+/*
+case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'a> {
+  pub range: RangeS<'a>,
+}
+/*
+case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+/*
+case class CantOwnershipInterfaceInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+/*
+case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+/*
+case class CantOverrideOwnershipped(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariableNameAlreadyExists<'a> {
   pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
 }
+/*
+case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct InterfaceMethodNeedsSelf<'a> {
   pub range: RangeS<'a>,
 }
+/*
+case class InterfaceMethodNeedsSelf(range: RangeS) extends ICompileErrorS {
+  vpass()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
+Guardian: disable: NECX
+*/
+
+/*
+case class VirtualAndAbstractGoTogether(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+
+/*
+case class CouldntSolveRulesS(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuneExplicitTypeConflictS<'a> {
@@ -211,79 +255,90 @@ pub struct RuneExplicitTypeConflictS<'a> {
   pub rune: IRuneS<'a>,
   pub types: Vec<ITemplataType>,
 }
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'a> {
-  pub range: RangeS<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'a> {
-  pub range: RangeS<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExternHasBodyS<'a> {
-  pub range: RangeS<'a>,
-}
+/*
+case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentifyingRunesIncompleteS<'a> {
   pub range: RangeS<'a>,
   pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'a>,
 }
-
+/*
+case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct RangedInternalErrorS<'a> {
   pub range: RangeS<'a>,
   pub message: String,
 }
-
 /*
-sealed trait ICompileErrorS { def range: RangeS }
-case class UnknownRuleFunctionS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class BadRuneAttributeErrorS(range: RangeS, attr: IRuneAttributeP) extends ICompileErrorS {
-  vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-}
-case class CantHaveMultipleMutabilitiesS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class UnimplementedExpression(range: RangeS, expressionName: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CouldntFindVarToMutateS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class StatementAfterReturnS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class ForgotSetKeywordError(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class UnknownRegionError(range: RangeS, name: String) extends ICompileErrorS {
-  vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-}
-case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CantOwnershipInterfaceInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CantOverrideOwnershipped(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class InterfaceMethodNeedsSelf(range: RangeS) extends ICompileErrorS {
-  vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-}
-case class VirtualAndAbstractGoTogether(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CouldntSolveRulesS(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class RangedInternalErrorS(range: RangeS, message: String) extends ICompileErrorS {
   vpass()
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+// SPORK
+pub enum IEnvironmentS<'a> {
+  Environment(EnvironmentS<'a>),
+  FunctionEnvironment(FunctionEnvironmentS<'a>),
+}
 /*
 sealed trait IEnvironmentS {
-  def file: FileCoordinate
-  def name: INameS
-  def allDeclaredRunes(): Set[IRuneS]
-  def localDeclaredRunes(): Set[IRuneS]
+Guardian: disable: NECX
+*/
+impl<'a> IEnvironmentS<'a> {
+  pub fn file(&self) -> &'a FileCoordinate<'a> {
+    match self {
+      IEnvironmentS::Environment(environment) => environment.file,
+      IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
+    }
+  }
+  /*
+    def file: FileCoordinate
+  */
+
+  /*
+    def name: INameS
+  */
+
+  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
+    match self {
+      IEnvironmentS::Environment(environment) => environment.all_declared_runes(),
+      IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.all_declared_runes(),
+    }
+  }
+  /*
+    def allDeclaredRunes(): Set[IRuneS]
+  */
+  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+    match self {
+      IEnvironmentS::Environment(environment) => environment.local_declared_runes(),
+      IEnvironmentS::FunctionEnvironment(function_environment) => {
+        function_environment.local_declared_runes()
+      }
+    }
+  }
+  /*
+    def localDeclaredRunes(): Set[IRuneS]
+  */
+/*
 }
 */
+}
+
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct EnvironmentS<'a> {
+  pub file: &'a FileCoordinate<'a>,
+  pub parent_env: Option<Box<EnvironmentS<'a>>>,
+  pub name: INameS<'a>,
+  pub user_declared_runes: Vec<IRuneS<'a>>,
+}
 /*
 // Someday we might split this into PackageEnvironment and CitizenEnvironment
 case class EnvironmentS(
@@ -292,15 +347,55 @@ case class EnvironmentS(
     name: INameS,
     userDeclaredRunes: Set[IRuneS]
 ) extends IEnvironmentS {
+Guardian: disable: NECX
+*/
+impl<'a> EnvironmentS<'a> {
+/*
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  override def localDeclaredRunes(): Set[IRuneS] = {
-    userDeclaredRunes
+*/
+
+  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+    self.user_declared_runes.clone()
   }
-  override def allDeclaredRunes(): Set[IRuneS] = {
-    userDeclaredRunes ++ parentEnv.toVector.flatMap(_.allDeclaredRunes())
+  /*
+    override def localDeclaredRunes(): Set[IRuneS] = {
+      userDeclaredRunes
+    }
+  */
+
+  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
+    let mut runes = self.user_declared_runes.clone();
+    if let Some(parent_env) = &self.parent_env {
+      for rune in parent_env.all_declared_runes() {
+        if !runes.contains(&rune) {
+          runes.push(rune);
+        }
+      }
+    }
+    runes
   }
+  /*
+    override def allDeclaredRunes(): Set[IRuneS] = {
+      userDeclaredRunes ++ parentEnv.toVector.flatMap(_.allDeclaredRunes())
+    }
+  */
+}
+/*
+Guardian: disable-all
+*/
+/*
 }
 */
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct FunctionEnvironmentS<'a> {
+  pub file: &'a FileCoordinate<'a>,
+  pub name: IFunctionDeclarationNameS<'a>,
+  pub parent_env: Option<Box<IEnvironmentS<'a>>>,
+  pub declared_runes: Vec<IRuneS<'a>>,
+  pub num_explicit_params: i32,
+  pub is_interface_internal_method: bool,
+}
 /*
 case class FunctionEnvironmentS(
   file: FileCoordinate,
@@ -318,89 +413,18 @@ case class FunctionEnvironmentS(
   isInterfaceInternalMethod: Boolean
 ) extends IEnvironmentS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  override def localDeclaredRunes(): Set[IRuneS] = {
-    declaredRunes
-  }
-  override def allDeclaredRunes(): Set[IRuneS] = {
-    declaredRunes ++ parentEnv.toVector.flatMap(_.allDeclaredRunes()).toSet
-  }
-  def child(): FunctionEnvironmentS = {
-    FunctionEnvironmentS(file, name, Some(this), Set(), numExplicitParams, false)
-  }
-}
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
-pub struct EnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub parent_env: Option<Box<EnvironmentS<'a>>>,
-  pub name: INameS<'a>,
-  pub user_declared_runes: Vec<IRuneS<'a>>,
-}
-
-impl<'a> EnvironmentS<'a> {
-  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
-    self.user_declared_runes.clone()
-  }
-
-  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
-    let mut runes = self.user_declared_runes.clone();
-    if let Some(parent_env) = &self.parent_env {
-      for rune in parent_env.all_declared_runes() {
-        if !runes.contains(&rune) {
-          runes.push(rune);
-        }
-      }
-    }
-    runes
-  }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum IEnvironmentS<'a> {
-  Environment(EnvironmentS<'a>),
-  FunctionEnvironment(FunctionEnvironmentS<'a>),
-}
-
-impl<'a> IEnvironmentS<'a> {
-  pub fn file(&self) -> &'a FileCoordinate<'a> {
-    match self {
-      IEnvironmentS::Environment(environment) => environment.file,
-      IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
-    }
-  }
-
-  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
-    match self {
-      IEnvironmentS::Environment(environment) => environment.local_declared_runes(),
-      IEnvironmentS::FunctionEnvironment(function_environment) => {
-        function_environment.local_declared_runes()
-      }
-    }
-  }
-
-  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
-    match self {
-      IEnvironmentS::Environment(environment) => environment.all_declared_runes(),
-      IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.all_declared_runes(),
-    }
-  }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FunctionEnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: Option<Box<IEnvironmentS<'a>>>,
-  pub declared_runes: Vec<IRuneS<'a>>,
-  pub num_explicit_params: i32,
-  pub is_interface_internal_method: bool,
-}
 
 impl<'a> FunctionEnvironmentS<'a> {
   pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
     self.declared_runes.clone()
   }
-
+/*
+  override def localDeclaredRunes(): Set[IRuneS] = {
+    declaredRunes
+  }
+*/
   pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
     let mut runes = self.declared_runes.clone();
     if let Some(parent_env) = &self.parent_env {
@@ -412,7 +436,11 @@ impl<'a> FunctionEnvironmentS<'a> {
     }
     runes
   }
-
+/*
+  override def allDeclaredRunes(): Set[IRuneS] = {
+    declaredRunes ++ parentEnv.toVector.flatMap(_.allDeclaredRunes()).toSet
+  }
+*/
   pub fn child(&self) -> FunctionEnvironmentS<'a> {
     FunctionEnvironmentS::<'a> {
       file: self.file,
@@ -423,7 +451,17 @@ impl<'a> FunctionEnvironmentS<'a> {
       is_interface_internal_method: false,
     }
   }
+/*
+  def child(): FunctionEnvironmentS = {
+    FunctionEnvironmentS(file, name, Some(this), Set(), numExplicitParams, false)
+  }
 }
+*/
+
+}
+/*
+Guardian: disable-all
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct StackFrame<'a> {
@@ -435,8 +473,6 @@ pub struct StackFrame<'a> {
   pub pure_height: i32,
   pub locals: VariableDeclarations<'a>,
 }
-
-impl<'a> StackFrame<'a> {
 /*
 case class StackFrame(
     file: FileCoordinate,
@@ -446,7 +482,9 @@ case class StackFrame(
     contextRegion: IRuneS,
     pureHeight: Int,
     locals: VariableDeclarations) {
+Guardian: disable: NECX
 */
+impl<'a> StackFrame<'a> {
 /*
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 */
@@ -503,6 +541,9 @@ pub fn find_variable(&self, name: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>>
   */
 }
 /*
+Guardian: disable-all
+*/
+/*
 }
 */
 /*
@@ -510,25 +551,27 @@ object PostParser {
 //  val VIRTUAL_DROP_FUNCTION_NAME = "vdrop"
   // Interface's drop function simply calls vdrop.
   // A struct's vdrop function calls the struct's drop function.
-
-  def noVariableUses = VariableUses(Vector.empty)
-  def noDeclarations = VariableDeclarations(Vector.empty)
 */
 // MIGALLOW: noVariableUses -> no_variable_uses
 // MIGALLOW: noDeclarations -> no_declarations
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+    'a: 'ctx,
+    'a: 'p,
+    'a: 's,
 {
   pub fn no_variable_uses() -> VariableUses<'static> {
     VariableUses::empty()
   }
-
+  /*
+  def noVariableUses = VariableUses(Vector.empty)
+  */
   pub fn no_declarations() -> VariableDeclarations<'static> {
     VariableDeclarations { vars: Vec::new() }
   }
+  /*
+  def noDeclarations = VariableDeclarations(Vector.empty)
+  */
 
   pub fn eval_range(file: &'a FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
     RangeS {
@@ -536,13 +579,13 @@ where
       end: Self::eval_pos(file, range.end()),
     }
   }
-}
-
-/*
+  /*
   def evalRange(file: FileCoordinate, range: RangeL): RangeS = {
     RangeS(evalPos(file, range.begin), evalPos(file, range.end))
   }
-*/
+  */
+}
+
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
   'a: 'ctx,
@@ -555,13 +598,13 @@ where
       offset: pos,
     }
   }
+  /*
+    def evalPos(file: FileCoordinate, pos: Int): CodeLocationS = {
+      CodeLocationS(file, pos)
+    }
+  */
 }
 
-/*
-  def evalPos(file: FileCoordinate, pos: Int): CodeLocationS = {
-    CodeLocationS(file, pos)
-  }
-*/
 pub(crate) fn translate_imprecise_name<'a, 'p>(
   interner: &crate::interner::Interner<'a>,
   file: &'a crate::utils::code_hierarchy::FileCoordinate<'a>,
@@ -955,6 +998,15 @@ pub struct PostParser<'a, 'p, 'ctx, 's> {
   pub scout_arena: &'s bumpalo::Bump,
   _parse_lifetime: PhantomData<&'p ()>,
 }
+/*
+class PostParser(
+    globalOptions: GlobalOptions,
+    interner: Interner,
+    keywords: Keywords) {
+  val templexScout = new TemplexScout(interner, keywords)
+  val ruleScout = new RuleScout(interner, keywords, templexScout)
+  val functionScout = new FunctionScout(this, interner, keywords, templexScout, ruleScout)
+*/
 
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
@@ -978,39 +1030,30 @@ where
     }
   }
 
-/*
-class PostParser(
-    globalOptions: GlobalOptions,
-    interner: Interner,
-    keywords: Keywords) {
-  val templexScout = new TemplexScout(interner, keywords)
-  val ruleScout = new RuleScout(interner, keywords, templexScout)
-  val functionScout = new FunctionScout(this, interner, keywords, templexScout, ruleScout)
-*/
   pub fn scout_program(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
     parsed: &FileP<'a, 'p>,
   ) -> Result<ProgramS<'a, 's>, ICompileErrorS<'a>>
   {
-    let mut structs = Vec::new();
+    let mut structs: Vec<&'s StructS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelStruct(struct_p) = denizen {
-        structs.push(self.scout_struct(file_coordinate, struct_p)?);
+        structs.push(&*self.scout_arena.alloc(self.scout_struct(file_coordinate, struct_p)?));
       }
     }
 
-    let mut interfaces = Vec::new();
+    let mut interfaces: Vec<&'s InterfaceS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelInterface(interface_p) = denizen {
-        interfaces.push(self.scout_interface(file_coordinate, interface_p)?);
+        interfaces.push(&*self.scout_arena.alloc(self.scout_interface(file_coordinate, interface_p)?));
       }
     }
 
-    let mut impls = Vec::<ImplS<'a, 's>>::new();
+    let mut impls: Vec<&'s ImplS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelImpl(impl_p) = denizen {
-        impls.push(self.scout_impl(file_coordinate, impl_p)?);
+        impls.push(&*self.scout_arena.alloc(self.scout_impl(file_coordinate, impl_p)?));
       }
     }
 
@@ -1034,14 +1077,14 @@ class PostParser(
       }
     }
 
-    let exports = Vec::new();
+    let exports: Vec<&'s crate::postparsing::ast::ExportAsS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelExportAs(_export_as_p) = denizen {
         panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_EXPORT_AS_NOT_YET_IMPLEMENTED");
       }
     }
 
-    let imports = Vec::<ImportS<'a, 's>>::new();
+    let imports: Vec<&'s ImportS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
       if let IDenizenP::TopLevelImport(_import_p) = denizen {
         panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_IMPORT_NOT_YET_IMPLEMENTED");
@@ -1049,12 +1092,12 @@ class PostParser(
     }
 
     Ok(ProgramS {
-      structs: alloc_slice_from_vec(self.scout_arena, structs),
-      interfaces: alloc_slice_from_vec(self.scout_arena, interfaces),
-      impls: alloc_slice_from_vec(self.scout_arena, impls),
-      implemented_functions: alloc_slice_from_vec(self.scout_arena, implemented_functions),
-      exports: alloc_slice_from_vec(self.scout_arena, exports),
-      imports: alloc_slice_from_vec(self.scout_arena, imports),
+      structs: alloc_slice_from_vec_of_refs(self.scout_arena, structs),
+      interfaces: alloc_slice_from_vec_of_refs(self.scout_arena, interfaces),
+      impls: alloc_slice_from_vec_of_refs(self.scout_arena, impls),
+      implemented_functions: alloc_slice_from_vec_of_refs(self.scout_arena, implemented_functions),
+      exports: alloc_slice_from_vec_of_refs(self.scout_arena, exports),
+      imports: alloc_slice_from_vec_of_refs(self.scout_arena, imports),
     })
   }
 /*
@@ -1201,12 +1244,12 @@ fn scout_impl(
     .unwrap_or(&[]);
 
   // We'll add the implicit runes to the end, see IRRAE.
-  let user_specified_generic_parameters_s = generic_parameters_p
+  let user_specified_generic_parameters_s: Vec<&'s GenericParameterS<'a, 's>> = generic_parameters_p
     .iter()
     .zip(user_specified_identifying_runes.iter())
     .map(|(g, r)| {
       let mut child_lidb = lidb.child();
-      self.scout_generic_parameter(
+      &*self.scout_arena.alloc(self.scout_generic_parameter(
         impl_env.clone(),
         &mut child_lidb,
         &mut rune_to_explicit_type,
@@ -1214,7 +1257,7 @@ fn scout_impl(
         default_region_rune_s.clone(),
         g,
         r.clone(),
-      )
+      ))
     })
     .collect::<Vec<_>>();
   let _user_specified_runes_implicit_region_runes_s =
@@ -1372,9 +1415,9 @@ fn scout_impl(
   Ok(ImplS {
     range: range_s,
     name: impl_name,
-    user_specified_identifying_runes: alloc_slice_from_vec(self.scout_arena, generic_parameters_s),
+    user_specified_identifying_runes: alloc_slice_from_vec_of_refs(self.scout_arena, generic_parameters_s),
     rules: alloc_slice_from_vec(self.scout_arena, rule_builder),
-    rune_to_explicit_type: rune_to_explicit_type.into_iter().collect::<HashMap<_, _>>(),
+    rune_to_explicit_type: ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena),
     tyype,
     struct_kind_rune: struct_rune,
     sub_citizen_imprecise_name,
@@ -1605,10 +1648,10 @@ fn predict_mutability(
     head: &StructP<'a, 'p>,
   ) -> Result<StructS<'a, 's>, ICompileErrorS<'a>> {
     let struct_range_s = Self::eval_range(file, head.range);
-    let struct_name = TopLevelStructDeclarationNameS {
+    let struct_name = self.interner.intern_struct_declaration_name(TopLevelStructDeclarationNameS {
       name: self.interner.intern(head.name.str().as_str()),
       range: Self::eval_range(file, head.name.range()),
-    };
+    });
     let body_range_s = Self::eval_range(file, head.body_range);
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
 
@@ -1710,11 +1753,11 @@ fn predict_mutability(
         }
       };
 
-    let struct_user_specified_generic_parameters_s = generic_parameters_p
+    let struct_user_specified_generic_parameters_s: Vec<&'s GenericParameterS<'a, 's>> = generic_parameters_p
       .iter()
       .zip(user_specified_identifying_runes.iter())
       .map(|(g, r)| {
-        self.scout_generic_parameter(
+        &*self.scout_arena.alloc(self.scout_generic_parameter(
           struct_env.clone(),
           &mut lidb.child(),
           &mut header_rune_to_explicit_type,
@@ -1722,7 +1765,7 @@ fn predict_mutability(
           default_region_rune_s.clone(),
           g,
           r.clone(),
-        )
+        ))
       })
       .collect::<Vec<_>>();
     // Put back in when we have regions
@@ -1741,7 +1784,7 @@ fn predict_mutability(
     );
 
     let mut member_rule_builder = Vec::<IRulexSR<'a>>::new();
-    let mut members_rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
+    let mut members_rune_to_explicit_type = ArenaIndexMap::<IRuneS, ITemplataType>::new_in(self.scout_arena);
 
     let mutability = head.mutability.clone().unwrap_or(ITemplexPT::Mutability(
       MutabilityPT(
@@ -1837,6 +1880,7 @@ fn predict_mutability(
       .map(|x| x.rune.clone())
       .collect::<Vec<_>>();
     let rune_to_predicted_type = Self::predict_rune_types(
+      self.scout_arena,
       struct_range_s.clone(),
       &identifying_runes_s,
       &mut all_rune_to_explicit_type,
@@ -1854,16 +1898,20 @@ fn predict_mutability(
           .map(|usage| usage.rune.clone())
       }))
       .collect::<std::collections::HashSet<_>>();
-    let header_rune_to_predicted_type = rune_to_predicted_type
-      .iter()
-      .filter(|(rune, _)| runes_from_header.contains(*rune))
-      .map(|(rune, tyype)| (rune.clone(), tyype.clone()))
-      .collect::<HashMap<_, _>>();
-    let members_rune_to_predicted_type = rune_to_predicted_type
-      .iter()
-      .filter(|(rune, _)| !runes_from_header.contains(*rune))
-      .map(|(rune, tyype)| (rune.clone(), tyype.clone()))
-      .collect::<HashMap<_, _>>();
+    let header_rune_to_predicted_type = ArenaIndexMap::from_iter_in(
+      rune_to_predicted_type
+        .iter()
+        .filter(|(rune, _)| runes_from_header.contains(*rune))
+        .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
+      self.scout_arena,
+    );
+    let members_rune_to_predicted_type = ArenaIndexMap::from_iter_in(
+      rune_to_predicted_type
+        .iter()
+        .filter(|(rune, _)| !runes_from_header.contains(*rune))
+        .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
+      self.scout_arena,
+    );
 
     let tyype = TemplateTemplataType {
       param_types: generic_parameters_s
@@ -1909,13 +1957,11 @@ fn predict_mutability(
       name: struct_name,
       attributes: alloc_slice_from_vec(self.scout_arena, attrs_s),
       weakable,
-      generic_params: alloc_slice_from_vec(self.scout_arena, generic_parameters_s),
+      generic_params: alloc_slice_from_vec_of_refs(self.scout_arena, generic_parameters_s),
       mutability_rune: mutability_rune_s,
       maybe_predicted_mutability: predicted_mutability,
       tyype,
-      header_rune_to_explicit_type: header_rune_to_explicit_type
-        .into_iter()
-        .collect::<HashMap<_, _>>(),
+      header_rune_to_explicit_type: ArenaIndexMap::from_iter_in(header_rune_to_explicit_type.into_iter(), self.scout_arena),
       header_predicted_rune_to_type: header_rune_to_predicted_type,
       header_rules: alloc_slice_from_vec(self.scout_arena, header_rules_s),
       members_rune_to_explicit_type,
@@ -2111,12 +2157,13 @@ fn translate_citizen_attributes(
   }
 */
 pub(crate) fn predict_rune_types(
+  scout_arena: &'s bumpalo::Bump,
   range_s: crate::utils::range::RangeS<'a>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
   rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
   _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
 ) -> Result<
-  std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
+  ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   ICompileErrorS<'a>,
 > {
   let mut grouped_explicit_types = std::collections::HashMap::<
@@ -2130,10 +2177,7 @@ pub(crate) fn predict_rune_types(
       .push(explicit_type.clone());
   }
 
-  let mut rune_to_explicit_type = std::collections::HashMap::<
-    crate::postparsing::names::IRuneS<'a>,
-    crate::postparsing::itemplatatype::ITemplataType,
-  >::new();
+  let mut rune_to_explicit_type = ArenaIndexMap::<IRuneS<'a>, ITemplataType>::new_in(scout_arena);
   for (rune, explicit_types) in grouped_explicit_types {
     let mut distinct_explicit_types =
       Vec::<crate::postparsing::itemplatatype::ITemplataType>::new();
@@ -2241,17 +2285,20 @@ pub(crate) fn check_identifiability(
     file: &'a FileCoordinate<'a>,
     interface: &crate::parsing::ast::InterfaceP<'a, 'p>,
   ) -> Result<InterfaceS<'a, 's>, ICompileErrorS<'a>> {
-    let interface_range = Self::eval_range(file, interface.range);
-    let _interface_body_range = Self::eval_range(file, interface.body_range);
-    let interface_name = TopLevelInterfaceDeclarationNameS {
+    let interface_range_s = Self::eval_range(file, interface.range);
+    let body_range_s = Self::eval_range(file, interface.body_range);
+    let interface_name = self.interner.intern_interface_declaration_name(TopLevelInterfaceDeclarationNameS {
       name: interface.name.str(),
       range: Self::eval_range(file, interface.name.range()),
-    };
+    });
+    let rules_p = interface
+      .template_rules
+      .as_ref()
+      .map(|x| x.rules.to_vec())
+      .unwrap_or_default();
 
-    assert!(
-      interface.template_rules.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
-    );
+    let mut lidb = LocationInDenizenBuilder::new(Vec::new());
+
     assert!(
       interface.mutability.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_MUTABILITY_NOT_YET_IMPLEMENTED"
@@ -2259,10 +2306,6 @@ pub(crate) fn check_identifiability(
     assert!(
       interface.maybe_default_region_rune.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
-      interface.template_rules.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_TEMPLATE_RULES_NOT_YET_IMPLEMENTED"
     );
 
     let mut weakable = false;
@@ -2304,68 +2347,145 @@ pub(crate) fn check_identifiability(
       }));
     }
 
-    let mut generic_params = Vec::<GenericParameterS>::new();
-    let mut rune_to_explicit_type = HashMap::<IRuneS, ITemplataType>::new();
-    if let Some(identifying_runes) = &interface.maybe_identifying_runes {
-      for identifying_rune in identifying_runes.params {
-        let rune = self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-          name: identifying_rune.name.str(),
-        }));
-        let rune_usage = RuneUsage {
-          range: Self::eval_range(file, identifying_rune.name.range()),
-          rune: rune.clone(),
-        };
-        generic_params.push(GenericParameterS {
-          range: Self::eval_range(file, identifying_rune.range),
-          rune: rune_usage,
-          tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
-            coord_region: None,
-            kind_mutable: true,
-            region_mutable: false,
-          }),
-          default: None,
-        });
-        rune_to_explicit_type.insert(
-          rune,
-          ITemplataType::CoordTemplataType(CoordTemplataType {}),
-        );
-      }
-    }
+    let generic_parameters_p = interface
+      .maybe_identifying_runes
+      .as_ref()
+      .map(|x| x.params.to_vec())
+      .unwrap_or_default();
 
-    let mutability_rune = RuneUsage {
-      range: interface_range.clone(),
-      rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-        name: self.interner.intern("__interface_mutability"),
-      })),
+    let user_specified_identifying_runes = generic_parameters_p
+      .iter()
+      .map(|generic_parameter| RuneUsage {
+        range: Self::eval_range(file, generic_parameter.name.range()),
+        rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: generic_parameter.name.str(),
+        })),
+      })
+      .collect::<Vec<_>>();
+
+    let runes_from_rules =
+      get_ordered_rune_declarations_from_rulexes_with_duplicates(&rules_p)
+      .iter()
+      .map(|name_p| RuneUsage {
+        range: Self::eval_range(file, name_p.range()),
+        rune: self.interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+          name: name_p.str(),
+        })),
+      })
+      .collect::<Vec<_>>();
+    let user_declared_runes = user_specified_identifying_runes
+      .iter()
+      .chain(runes_from_rules.iter())
+      .map(|x| x.rune.clone())
+      .collect::<Vec<_>>();
+    let interface_env = IEnvironmentS::Environment(EnvironmentS {
+      file,
+      parent_env: None,
+      name: self.interner.intern_name(INameValS::TopLevelInterfaceDeclaration(interface_name.clone())),
+      user_declared_runes,
+    });
+
+    let mut rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
+
+    let default_region_rune_s = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
+      DenizenDefaultRegionRuneS {
+        denizen_name: self.interner.intern_name(INameValS::TopLevelInterfaceDeclaration(
+          interface_name.clone(),
+        )),
+      },
+    ));
+
+    let generic_parameters_s: Vec<&'s GenericParameterS<'a, 's>> = generic_parameters_p
+      .iter()
+      .zip(user_specified_identifying_runes.iter())
+      .map(|(g, r)| {
+        &*self.scout_arena.alloc(self.scout_generic_parameter(
+          interface_env.clone(),
+          &mut lidb.child(),
+          &mut rune_to_explicit_type,
+          &mut rule_builder,
+          default_region_rune_s.clone(),
+          g,
+          r.clone(),
+        ))
+      })
+      .collect::<Vec<_>>();
+
+    translate_rulexes(
+      self.interner,
+      self.keywords,
+      interface_env.clone(),
+      &mut lidb.child(),
+      &mut rule_builder,
+      &mut rune_to_explicit_type,
+      default_region_rune_s.clone(),
+      &rules_p,
+    );
+
+    let mutability = ITemplexPT::Mutability(
+      MutabilityPT(
+        RangeL(interface.body_range.begin(), interface.body_range.begin()),
+        MutabilityP::Mutable,
+      ),
+    );
+    let mutability_rune_s = translate_templex(
+      self.interner,
+      self.keywords,
+      interface_env.clone(),
+      &mut lidb.child(),
+      &mut rule_builder,
+      default_region_rune_s.clone(),
+      &mutability,
+    );
+
+    let rules_s = rule_builder;
+    let identifying_runes_s = user_specified_identifying_runes
+      .iter()
+      .map(|x| x.rune.clone())
+      .collect::<Vec<_>>();
+    let predicted_rune_to_type = Self::predict_rune_types(
+      self.scout_arena,
+      interface_range_s.clone(),
+      &identifying_runes_s,
+      &mut rune_to_explicit_type.clone(),
+      &rules_s,
+    )?;
+
+    let predicted_mutability =
+      Self::predict_mutability(interface_range_s.clone(), mutability_rune_s.rune.clone(), &rules_s);
+
+    let generic_parameters_s: &'s [&'s GenericParameterS<'a, 's>] = alloc_slice_from_vec_of_refs(self.scout_arena, generic_parameters_s);
+
+    let tyype = TemplateTemplataType {
+      param_types: generic_parameters_s.iter().map(|x| x.tyype.tyype()).collect(),
+      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
     };
 
-    let interface_rules = Vec::<IRulexSR>::new();
     let mut internal_methods = Vec::new();
     for member in interface.members {
       internal_methods.push(self.scout_interface_member(
         file,
         member,
-        &generic_params,
-        &interface_rules,
-        &rune_to_explicit_type,
+        &interface_env,
+        generic_parameters_s,
+        &rules_s,
+        &ArenaIndexMap::from_iter_in(rune_to_explicit_type.iter().cloned(), self.scout_arena),
       )?);
     }
 
     Ok(InterfaceS {
-      range: interface_range,
+      range: interface_range_s,
       name: interface_name,
       attributes: alloc_slice_from_vec(self.scout_arena, attributes),
       weakable,
-      generic_params: alloc_slice_from_vec(self.scout_arena, generic_params.clone()),
-      rune_to_explicit_type,
-      mutability_rune,
-      maybe_predicted_mutability: Some(MutabilityP::Mutable),
-      predicted_rune_to_type: HashMap::new(),
-      tyype: TemplateTemplataType {
-        param_types: generic_params.iter().map(|x| x.tyype.tyype()).collect(),
-        return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
-      },
-      rules: alloc_slice_from_vec(self.scout_arena, interface_rules),
+      generic_params: generic_parameters_s,
+      rune_to_explicit_type: ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena),
+      mutability_rune: mutability_rune_s,
+      maybe_predicted_mutability: predicted_mutability,
+      predicted_rune_to_type,
+      tyype,
+      rules: alloc_slice_from_vec(self.scout_arena, rules_s),
       internal_methods: crate::utils::arena_utils::alloc_slice_from_vec_of_refs(self.scout_arena, internal_methods),
     })
   }
@@ -2501,6 +2621,18 @@ pub(crate) fn check_identifiability(
 */
 }
 /*
+Guardian: disable-all
+*/
+
+pub struct ScoutCompilation<'a, 'ctx, 'p, 's> {
+  global_options: GlobalOptions,
+  interner: &'ctx Interner<'a>,
+  keywords: &'ctx Keywords<'a>,
+  parser_compilation: ParserCompilation<'a, 'ctx, 'p>,
+  scout_arena: &'s bumpalo::Bump,
+  scoutput_cache: Option<FileCoordinateMap<'a, ProgramS<'a, 's>>>,
+}
+/*
 class ScoutCompilation(
   globalOptions: GlobalOptions,
   interner: Interner,
@@ -2510,11 +2642,70 @@ class ScoutCompilation(
   var parserCompilation = new ParserCompilation(globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
   var scoutputCache: Option[FileCoordinateMap[ProgramS]] = None
 */
+
+impl<'a, 'ctx, 'p, 's> ScoutCompilation<'a, 'ctx, 'p, 's>
+where
+    'a: 'ctx,
+    'a: 'p,
+    'a: 's,
+{
+  // MIGALLOW: new -> new (From PostParser.scala lines 922-928)
+  pub fn new(
+    interner: &'ctx Interner<'a>,
+    keywords: &'ctx Keywords<'a>,
+    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
+    global_options: GlobalOptions,
+    parser_arena: &'p bumpalo::Bump,
+    scout_arena: &'s bumpalo::Bump,
+  ) -> Self {
+    let parser_compilation = ParserCompilation::new(
+      global_options.clone(),
+      interner,
+      keywords,
+      packages_to_build,
+      package_to_contents_resolver,
+      parser_arena,
+    );
+
+    ScoutCompilation {
+      global_options,
+      interner,
+      keywords,
+      parser_compilation,
+      scout_arena,
+      scoutput_cache: None,
+    }
+  }
+  /*
+  Guardian: disable-all
+  */
+
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+    self.parser_compilation.get_code_map()
+  }
+  /*
+    def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getCodeMap()
+  */
+
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
+    self.parser_compilation.get_parseds()
+  }
+  /*
+    def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
+  */
+
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+    self.parser_compilation.get_vpst_map()
+  }
+  /*
+    def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
+  */
+}
 /*
-  def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getCodeMap()
-  def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = parserCompilation.getParseds()
-  def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = parserCompilation.getVpstMap()
+Guardian: disable-all
 */
+
 impl<'a, 'ctx, 'p, 's> ScoutCompilation<'a, 'ctx, 'p, 's>
 where
   'a: 'ctx,

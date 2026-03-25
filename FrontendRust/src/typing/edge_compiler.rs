@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 //import dev.vale.astronomer.{GlobalFunctionFamilyNameS, INameS, INameA, ImmConcreteDestructorImpreciseNameA, ImmConcreteDestructorNameA, ImmInterfaceDestructorImpreciseNameS}
@@ -578,3 +579,4 @@ class EdgeCompiler(
   }
 
 }
+*/

@@ -1,6 +1,6 @@
 #!/bin/bash
-# Sends hook input to the writecop server and outputs the response.
-# The writecop server must be running on port 7878.
+# Sends hook input to the guardian server and outputs the response.
+# The guardian server must be running on port 7878.
 
 RESPONSE=$(curl -s -X POST http://127.0.0.1:7878/validate \
     -H "Content-Type: application/json" \
@@ -8,8 +8,8 @@ RESPONSE=$(curl -s -X POST http://127.0.0.1:7878/validate \
 
 if [ $? -ne 0 ]; then
     # Server not reachable - allow the edit (don't block if server is down)
-    echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"allow","permissionDecisionReason":"writecop server not reachable"}}'
-    exit 0
+    echo '{"hookSpecificOutput":{"hookEventName":"PreToolUse","permissionDecision":"deny","permissionDecisionReason":"guardian server not reachable"}}'
+    exit 2
 fi
 
 echo "$RESPONSE"

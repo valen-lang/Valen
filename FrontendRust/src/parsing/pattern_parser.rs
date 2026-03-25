@@ -30,6 +30,7 @@ pub struct PatternParser<'a, 'ctx, 'p> {
 }
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
+Guardian: disable: NECX
 */
 
 impl<'a, 'ctx, 'p> PatternParser<'a, 'ctx, 'p>

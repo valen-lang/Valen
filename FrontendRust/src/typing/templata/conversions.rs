@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.templata
 
 import dev.vale.parsing.ast.{BorrowP, FinalP, ImmutableP, InlineP, LocationP, MutabilityP, MutableP, OwnP, OwnershipP, ShareP, VariabilityP, VaryingP, WeakP, YonderP}
@@ -66,3 +67,4 @@ object Conversions {
     }
   }
 }
+*/

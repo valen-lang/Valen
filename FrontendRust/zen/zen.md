@@ -1,8 +1,8 @@
-## Warnings
+## Eliminate All Warnings (EAW)
 
 Your work is not done if there are still warnings. Make sure there are no warnings before saying you're done. Warnings are very important to eliminate.
 
-## Interning
+## Immediate Interning Discipline (IID)
 
 There are various classes that are interned.
 For example, StrI, PackageCoordinate, FileCoordinate, etc.

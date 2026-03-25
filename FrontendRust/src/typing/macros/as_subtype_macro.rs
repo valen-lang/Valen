@@ -1,11 +1,16 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.{Keywords, RangeS, StrI, vassertSome, vfail, vimpl, vwat}
+
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.{CantDowncastToInterface, CantDowncastUnrelatedTypes, CompileErrorExceptionT, CompilerOutputs, RangedInternalErrorT}
+
 import dev.vale.typing.ast.{ArgLookupTE, AsSubtypeTE, BlockTE, FunctionCallTE, FunctionDefinitionT, FunctionHeaderT, LocationInFunctionEnvironmentT, ParameterT, ReferenceExpressionTE, ReturnTE}
+
 import dev.vale.typing.citizen.{ImplCompiler, IsParent, IsntParent}
+
 import dev.vale.typing.env.FunctionEnvironmentT
 import dev.vale.typing.expression.ExpressionCompiler
 import dev.vale.typing.templata._
@@ -54,13 +59,17 @@ class AsSubtypeMacro(
       throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Bad result coord:\n" + resultCoord + "\nand\n" + vassertSome(maybeRetCoord)))
     }
 
+
     val subKind = targetKind match { case x : ISubKindTT => x case other => vwat(other) }
+
     val superKind = incomingKind match { case x : ISuperKindTT => x case other => vwat(other) }
+
 
     val implId =
       implCompiler.isParent(coutputs, env, callRange, callLocation, subKind, superKind) match {
         case IsParent(_, _, implId) => implId
       }
+
 
     val asSubtypeExpr =
       AsSubtypeTE(
@@ -75,4 +84,6 @@ class AsSubtypeMacro(
 
     (header, BlockTE(ReturnTE(asSubtypeExpr)))
   }
+
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.names
 
 import dev.vale.{CodeLocationS, Interner, vcurious, vfail, vimpl, vwat}
@@ -149,3 +150,4 @@ class NameTranslator(interner: Interner) {
     }
   }
 }
+*/

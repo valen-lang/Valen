@@ -194,6 +194,7 @@ trait IExpressionPE {
   def needsSemicolonBeforeNextStatement: Boolean
   def producesResult(): Boolean
 }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -206,6 +207,7 @@ case class VoidPE(range: RangeL) extends IExpressionPE {
   override def needsSemicolonBeforeNextStatement: Boolean = false
   override def producesResult(): Boolean = false
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -222,6 +224,7 @@ case class PackPE(range: RangeL, inners: Vector[IExpressionPE]) extends IExpress
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -237,6 +240,7 @@ case class SubExpressionPE(range: RangeL, inner: IExpressionPE) extends IExpress
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -251,6 +255,7 @@ case class AndPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IEx
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -265,6 +270,7 @@ case class OrPE(range: RangeL, left: IExpressionPE, right: BlockPE) extends IExp
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -292,6 +298,7 @@ case class IfPE(range: RangeL, condition: IExpressionPE, thenBody: BlockPE, else
   override def producesResult(): Boolean = {
     thenBody.producesResult()
   }
+Guardian: disable: NECX
 }
 */
 
@@ -309,6 +316,7 @@ case class WhilePE(range: RangeL, condition: IExpressionPE, body: BlockPE) exten
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = false
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -326,6 +334,7 @@ case class EachPE(range: RangeL, maybePure: Option[RangeL], entryPattern: Patter
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = false
   override def producesResult(): Boolean = body.producesResult()
+Guardian: disable: NECX
 }
 */
 
@@ -340,6 +349,7 @@ case class RangePE(range: RangeL, fromExpr: IExpressionPE, toExpr: IExpressionPE
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -353,6 +363,7 @@ case class DestructPE(range: RangeL, inner: IExpressionPE) extends IExpressionPE
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -366,6 +377,7 @@ case class UnletPE(range: RangeL, name: IImpreciseNameP) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -384,6 +396,7 @@ case class MutatePE(range: RangeL, mutatee: IExpressionPE, source: IExpressionPE
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -397,6 +410,7 @@ case class ReturnPE(range: RangeL, expr: IExpressionPE) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -409,6 +423,7 @@ case class BreakPE(range: RangeL) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -428,6 +443,7 @@ case class LetPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = false
+Guardian: disable: NECX
 }
 */
 
@@ -441,6 +457,7 @@ case class TuplePE(range: RangeL, elements: Vector[IExpressionPE]) extends IExpr
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -458,6 +475,7 @@ pub enum IArraySizeP<'a, 'p> {
 sealed trait IArraySizeP
 case object RuntimeSizedP extends IArraySizeP
 case class StaticSizedP(sizePT: Option[ITemplexPT]) extends IArraySizeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -485,6 +503,7 @@ case class ConstructArrayPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -500,6 +519,7 @@ case class ConstantIntPE(range: RangeL, value: Long, bits: Option[Long]) extends
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -513,6 +533,7 @@ case class ConstantBoolPE(range: RangeL, value: Boolean) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -527,6 +548,7 @@ case class ConstantStrPE(range: RangeL, value: String) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -540,6 +562,7 @@ case class ConstantFloatPE(range: RangeL, value: Double) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -553,6 +576,7 @@ case class StrInterpolatePE(range: RangeL, parts: Vector[IExpressionPE]) extends
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -572,6 +596,7 @@ case class DotPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -586,6 +611,7 @@ case class IndexPE(range: RangeL, left: IExpressionPE, args: Vector[IExpressionP
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -606,6 +632,7 @@ case class FunctionCallPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -628,6 +655,7 @@ case class BraceCallPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -642,6 +670,7 @@ case class NotPE(range: RangeL, inner: IExpressionPE) extends IExpressionPE {
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -662,6 +691,7 @@ case class AugmentPE(
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -682,6 +712,7 @@ case class TransmigratePE(
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -702,6 +733,7 @@ case class BinaryCallPE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -725,6 +757,7 @@ case class MethodCallPE(
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -753,6 +786,7 @@ case class LookupNameP(name: NameP) extends IImpreciseNameP { override def range
 case class IterableNameP(range: RangeL) extends IImpreciseNameP
 case class IteratorNameP(range: RangeL) extends IImpreciseNameP
 case class IterationOptionNameP(range: RangeL) extends IImpreciseNameP
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -770,6 +804,7 @@ case class LookupPE(
   override def range: RangeL = name.range
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -781,6 +816,7 @@ pub struct TemplateArgsP<'a, 'p> {
 /*
 case class TemplateArgsP(range: RangeL, args: Vector[ITemplexPT]) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+Guardian: disable: NECX
 }
 */
 
@@ -793,6 +829,7 @@ case class MagicParamLookupPE(range: RangeL) extends IExpressionPE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -811,6 +848,7 @@ case class LambdaPE(
   override def range: RangeL = function.range
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
+Guardian: disable: NECX
 }
 */
 
@@ -827,6 +865,7 @@ case class BlockPE(range: RangeL, maybePure: Option[RangeL], maybeDefaultRegion:
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def needsSemicolonBeforeNextStatement: Boolean = false
   override def producesResult(): Boolean = inner.producesResult()
+Guardian: disable: NECX
 }
 */
 
@@ -847,6 +886,7 @@ case class ConsecutorPE(inners: Vector[IExpressionPE]) extends IExpressionPE {
 
   override def needsSemicolonBeforeNextStatement: Boolean = inners.last.needsSemicolonBeforeNextStatement
   override def producesResult(): Boolean = inners.last.producesResult()
+Guardian: disable: NECX
 }
 */
 
@@ -862,5 +902,6 @@ case class ShortcallPE(range: RangeL, argExprs: Vector[IExpressionPE]) extends I
   override def producesResult(): Boolean = true
 
   vpass()
+Guardian: disable: NECX
 }
 */

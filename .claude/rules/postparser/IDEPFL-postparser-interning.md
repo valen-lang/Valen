@@ -79,29 +79,31 @@ When a payload struct contains only simple/Copy fields (like `StrI<'a>`), the Va
 
 ### Shallow: separate Val struct for nested interned types
 
-When a payload struct contains references to *other* interned types, a separate Val struct exists. The Val struct holds the child as an already-canonical reference (it's "shallow" — children must be interned first):
+When a payload struct contains references to *other* interned types, a separate Val struct exists. The Val struct holds the child as an already-canonical owned `IRuneS<'a>` (it's "shallow" — children must be interned first):
 
 ```rust
 // Canonical payload (lives in arena):
 pub struct ImplicitRegionRuneS<'a> {
-  pub original_rune: &'a IRuneS<'a>,
+  pub original_rune: IRuneS<'a>,
 }
 
 // Lookup key (owned, for HashMap):
 pub struct ImplicitRegionRuneValS<'a> {
-  pub original_rune: &'a IRuneS<'a>,
+  pub original_rune: IRuneS<'a>,
 }
 ```
 
 The fields look identical in this case, but they're separate types so the type system enforces going through the interner. You can't accidentally use a Val where a canonical ref is expected.
 
+Note: `IRuneS<'a>` is already just a tagged pointer (discriminant + `&'a` to arena payload), so holding it owned vs `&'a IRuneS<'a>` is storing the tagged pointer directly vs a pointer-to-a-pointer. Owned is simpler and equally cheap. Identity is checked via `IRuneS::ptr_eq`/`canonical_ptr` which look at the inner payload pointer.
+
 Other shallow Val structs follow the same pattern:
-- `ImplicitCoercionOwnershipRuneValS` — holds `&'a IRuneS<'a>` for its child rune
+- `ImplicitCoercionOwnershipRuneValS` — holds `IRuneS<'a>` for its child rune
 - `AnonymousSubstructImplDeclarationNameValS` — holds `&'a TopLevelInterfaceDeclarationNameS<'a>`
 - `ImplImpreciseNameValS` — holds two `IImpreciseNameS<'a>` children
 - `ForwarderFunctionDeclarationNameValS` — holds `IFunctionDeclarationNameS<'a>`
 
-**Rule**: intern children first, then build the parent Val with canonical child refs.
+**Rule**: intern children first, then build the parent Val with canonical child runes.
 
 ---
 

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 import dev.vale.highertyping.FunctionA
@@ -451,3 +452,4 @@ class FunctionCompilerCore(
 //    (destructor2.header)
 //  }
 }
+*/

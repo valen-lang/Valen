@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing._
@@ -67,3 +68,4 @@ class SequenceCompiler(
       coutputs, makeTupleKind(env, coutputs, parentRanges, callLocation, types2), region)
   }
 }
+*/

@@ -78,6 +78,7 @@ pub(crate) enum IScoutResult<'a, 'p, 's> {
 // MIGALLOW: Rust IScoutResult doesn't need to be generic, because we never made use of that in
 // Scala.
 sealed trait IScoutResult[+T <: IExpressionSE]
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LocalLookupResultS<'a> {
@@ -89,6 +90,7 @@ pub(crate) struct LocalLookupResultS<'a> {
 case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct OutsideLookupResultS<'a, 'p> {
@@ -107,6 +109,7 @@ case class OutsideLookupResult(
 ) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct NormalResultS<'a, 's> {
@@ -121,6 +124,7 @@ case class NormalResult[+T <: IExpressionSE](expr: T) extends IScoutResult[T] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   def range: RangeS = expr.range
 }
+Guardian: disable: NECX
 */
 impl<'a, 'p, 'ctx, 's> PostParser<'a, 'p, 'ctx, 's>
 where
@@ -467,7 +471,7 @@ where
       &*self.scout_arena.alloc(
       BlockSE::<'a, 's> {
         range: range_s,
-        locals,
+        locals: alloc_slice_from_vec(self.scout_arena, locals),
         expr: expr_with_constructing_if_necessary,
       }),
       self_uses_of_things_from_above,
@@ -918,7 +922,7 @@ where
     IExpressionPE::BinaryCall(binary_call) => {
       let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
         range: PostParser::eval_range(&file_coordinate, binary_call.range),
-        rules: Vec::new(),
+        rules: &[],
         name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
           name: binary_call.function_name.str(),
         })),
@@ -1038,7 +1042,7 @@ where
         IScoutResult::NormalResult(NormalResultS {
           expr: &*self.scout_arena.alloc(IExpressionSE::Let(LetSE {
             range: PostParser::eval_range(&file_coordinate, lett.range),
-            rules: rule_builder,
+            rules: alloc_slice_from_vec(self.scout_arena, rule_builder),
             pattern: pattern_s,
             expr: source_expr_s,
           })),
@@ -1773,15 +1777,15 @@ where
           let self_uses = cond_uses.then_merge(&self_case_uses);
           let child_case_uses = then_child_uses.branch_merge(&else_child_uses);
           let child_uses = cond_child_uses.then_merge(&child_case_uses);
-          let if_se = &*self.scout_arena.alloc(IfSE {
+          let if_se = &*self.scout_arena.alloc(IExpressionSE::If(IfSE {
             range: PostParser::eval_range(file_coordinate, if_expr.range),
             condition: cond_se,
             then_body: then_se,
             else_body: else_se,
-          });
+          }));
           Ok((
             stack_frame2,
-            &*self.scout_arena.alloc(IExpressionSE::If(if_se.clone())),
+            if_se,
             self_uses,
             child_uses,
           ))
@@ -2036,14 +2040,16 @@ pub(crate) fn scout_expression_and_coerce(
             })
             .collect::<Vec<_>>()
         });
+        let maybe_template_args_slice = maybe_template_arg_runes
+          .map(|v| alloc_slice_from_vec(self.scout_arena, v) as &[_]);
         (
           &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
             range,
-            rules: rule_builder,
+            rules: alloc_slice_from_vec(self.scout_arena, rule_builder),
             name: self.interner.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
               name,
             })),
-            maybe_template_args: maybe_template_arg_runes,
+            maybe_template_args: maybe_template_args_slice,
             target_ownership: load_as_p,
           })),
           first_inner_self_uses,

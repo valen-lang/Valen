@@ -37,6 +37,9 @@ use crate::postparsing::rules::rules::{
   RuneParentEnvLookupSR, RuneUsage, StringLiteralSL, VariabilityLiteralSL,
 };
 use crate::utils::range::RangeS;
+use crate::postparsing::rules::rules::{
+  CallSiteFuncSR, DefinitionFuncSR, PackSR, ResolveSR,
+};
 use std::collections::HashMap;
 
 fn add_literal_rule<'a>(
@@ -543,7 +546,30 @@ pub fn translate_templex<'a, 'p>(
         resultRuneS
       }
 */
-      ITemplexPT::Func(_func) => panic!("POSTPARSER_TRANSLATE_TEMPLEX_FUNC_NOT_YET_IMPLEMENTED"),
+      ITemplexPT::Func(func) => {
+        let range_s = PostParser::eval_range(file, func.range);
+        let params_range_s = PostParser::eval_range(file, func.params_range);
+        let NameP(_, name) = &func.name;
+        let params_s: Vec<RuneUsage<'a>> =
+          func.parameters.iter().map(|param_p| {
+            translate_templex(interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
+          }).collect();
+        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume() })) };
+        rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: params_s }));
+
+        let return_rune_s = translate_templex(interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
+
+        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume() })) };
+
+        // Only appears in call site; filtered out when solving definition
+        rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
+        // Only appears in definition; filtered out when solving call site
+        rule_builder.push(IRulexSR::DefinitionFunc(DefinitionFuncSR { range: range_s.clone(), result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
+        // Only appears in call site; filtered out when solving definition
+        rule_builder.push(IRulexSR::Resolve(ResolveSR { range: range_s, result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s, return_rune: return_rune_s }));
+
+        result_rune_s
+      }
 /*
       case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {
         val rangeS = PostParser.evalRange(env.file, range)
@@ -826,6 +852,7 @@ pub fn translate_templex<'a, 'p>(
   }
 }
 /*
+Guardian: inline
           }
         }
       }

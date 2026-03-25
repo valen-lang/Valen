@@ -22,6 +22,7 @@ impl LexingIterator {
   /*
   case class LexingIterator(code: String, var position: Int = 0) {
     override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  Guardian: disable: NECX
   */
 
   pub fn new(code: String) -> Self {
@@ -64,7 +65,7 @@ impl LexingIterator {
     if self.at_end() {
       '\0'
     } else {
-      self.code[self.position..].chars().next().unwrap_or('\0')
+      self.code[self.position..].chars().next().unwrap()
     }
   }
   /*
@@ -140,6 +141,7 @@ impl LexingIterator {
     }
   */
 
+  // Optimize: could replace with xor and bitwise and for small strings
   /// Try to skip a specific string
   pub fn try_skip_str(&mut self, s: &str) -> bool {
     if self.code[self.position..].starts_with(s) {
@@ -171,6 +173,8 @@ impl LexingIterator {
     }
   */
 
+  // Optimize: could replace with xor and bitwise and for small strings
+  // A complete word is one that doesn't have any more word characters after it
   /// Try to skip a complete word (must be followed by non-identifier char)
   pub fn try_skip_complete_word(&mut self, word: &str) -> bool {
     if !self.code[self.position..].starts_with(word) {
@@ -299,6 +303,7 @@ impl LexingIterator {
 
   /// Consume comments and whitespace
   pub fn consume_comments_and_whitespace(&mut self) {
+    // consumeComments will consume any whitespace that comes before the comment
     self.consume_comments();
     self.consume_whitespace();
   }

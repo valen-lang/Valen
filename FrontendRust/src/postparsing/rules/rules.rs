@@ -9,6 +9,7 @@ import dev.vale.postparsing._
 
 import scala.collection.immutable.List
 */
+use crate::interner::StrI;
 use crate::postparsing::names::IRuneS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::itemplatatype::{
@@ -28,6 +29,7 @@ pub struct RuneUsage<'a> {
 case class RuneUsage(range: RangeS, rune: IRuneS) {
   vpass()
 }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -37,13 +39,40 @@ pub enum IRulexSR<'a> {
   MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
   Lookup(LookupSR<'a>),
   MaybeCoercingCall(MaybeCoercingCallSR<'a>),
+  Call(CallSR<'a>),
   RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
   Augment(AugmentSR<'a>),
   OneOf(OneOfSR<'a>),
   IsInterface(IsInterfaceSR<'a>),
   CoordComponents(CoordComponentsSR<'a>),
   CoerceToCoord(CoerceToCoordSR<'a>),
+  Pack(PackSR<'a>),
+  CallSiteFunc(CallSiteFuncSR<'a>),
+  DefinitionFunc(DefinitionFuncSR<'a>),
+  Resolve(ResolveSR<'a>),
+  CoordSend(CoordSendSR<'a>),
+  DefinitionCoordIsa(DefinitionCoordIsaSR<'a>),
+  CallSiteCoordIsa(CallSiteCoordIsaSR<'a>),
+  KindComponents(KindComponentsSR<'a>),
+  PrototypeComponents(PrototypeComponentsSR<'a>),
+  IsConcrete(IsConcreteSR<'a>),
+  IsStruct(IsStructSR<'a>),
+  RefListCompoundMutability(RefListCompoundMutabilitySR<'a>),
+  IndexList(IndexListSR<'a>),
 }
+/*
+Guardian: disable-all
+// This isn't generic over e.g.  because we shouldnt reuse
+// this between layers. The generics solver doesn't even know about IRulexSR, doesn't
+// need to, it relies on delegates to do any rule-specific things.
+// Different stages will likely need different kinds of rules, so best not prematurely
+// combine them.
+trait IRulexSR {
+  def range: RangeS
+  def runeUsages: Vector[RuneUsage]
+}
+Guardian: disable: NECX
+*/
 
 impl<'a> IRulexSR<'a> {
   pub fn range<'s>(&'s self) -> &'s RangeS<'a> {
@@ -53,14 +82,32 @@ impl<'a> IRulexSR<'a> {
       IRulexSR::MaybeCoercingLookup(x) => &x.range,
       IRulexSR::Lookup(x) => &x.range,
       IRulexSR::MaybeCoercingCall(x) => &x.range,
+      IRulexSR::Call(x) => &x.range,
       IRulexSR::RuneParentEnvLookup(x) => &x.range,
       IRulexSR::Augment(x) => &x.range,
       IRulexSR::OneOf(x) => &x.range,
       IRulexSR::IsInterface(x) => &x.range,
       IRulexSR::CoordComponents(x) => &x.range,
       IRulexSR::CoerceToCoord(x) => &x.range,
+      IRulexSR::Pack(x) => &x.range,
+      IRulexSR::CallSiteFunc(x) => &x.range,
+      IRulexSR::DefinitionFunc(x) => &x.range,
+      IRulexSR::Resolve(x) => &x.range,
+      IRulexSR::CoordSend(x) => &x.range,
+      IRulexSR::DefinitionCoordIsa(x) => &x.range,
+      IRulexSR::CallSiteCoordIsa(x) => &x.range,
+      IRulexSR::KindComponents(x) => &x.range,
+      IRulexSR::PrototypeComponents(x) => &x.range,
+      IRulexSR::IsConcrete(x) => &x.range,
+      IRulexSR::IsStruct(x) => &x.range,
+      IRulexSR::RefListCompoundMutability(x) => &x.range,
+      IRulexSR::IndexList(x) => &x.range,
     }
+    /*
+    Guardian: disable-all
+    */
   }
+  /* Guardian: disable-all */
 
   pub fn rune_usages<'s>(&'s self) -> Vec<RuneUsage<'a>> {
     match self {
@@ -73,6 +120,11 @@ impl<'a> IRulexSR<'a> {
         usages.extend(x.args.clone());
         usages
       }
+      IRulexSR::Call(x) => {
+        let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
+        usages.extend(x.args.clone());
+        usages
+      }
       IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
       IRulexSR::Augment(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
       IRulexSR::OneOf(x) => vec![x.rune.clone()],
@@ -81,21 +133,34 @@ impl<'a> IRulexSR<'a> {
         vec![x.result_rune.clone(), x.ownership_rune.clone(), x.kind_rune.clone()]
       }
       IRulexSR::CoerceToCoord(x) => vec![x.coord_rune.clone(), x.kind_rune.clone()],
+      IRulexSR::Pack(x) => {
+        let mut usages = vec![x.result_rune.clone()];
+        usages.extend(x.members.clone());
+        usages
+      }
+      IRulexSR::CallSiteFunc(x) => vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::DefinitionFunc(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::Resolve(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::CoordSend(x) => vec![x.sender_rune.clone(), x.receiver_rune.clone()],
+      IRulexSR::DefinitionCoordIsa(x) => vec![x.result_rune.clone(), x.sub_rune.clone(), x.super_rune.clone()],
+      IRulexSR::CallSiteCoordIsa(x) => {
+        let mut usages: Vec<RuneUsage<'a>> = x.result_rune.iter().cloned().collect();
+        usages.push(x.sub_rune.clone());
+        usages.push(x.super_rune.clone());
+        usages
+      }
+      IRulexSR::KindComponents(x) => vec![x.kind_rune.clone(), x.mutability_rune.clone()],
+      IRulexSR::PrototypeComponents(x) => vec![x.result_rune.clone(), x.params_rune.clone(), x.return_rune.clone()],
+      IRulexSR::IsConcrete(x) => vec![x.rune.clone()],
+      IRulexSR::IsStruct(x) => vec![x.rune.clone()],
+      IRulexSR::RefListCompoundMutability(x) => vec![x.result_rune.clone(), x.coord_list_rune.clone()],
+      IRulexSR::IndexList(x) => vec![x.result_rune.clone(), x.list_rune.clone()],
     }
   }
+  /* Guardian: disable-all */
 }
+/* Guardian: disable-all */
 
-/*
-// This isn't generic over e.g.  because we shouldnt reuse
-// this between layers. The generics solver doesn't even know about IRulexSR, doesn't
-// need to, it relies on delegates to do any rule-specific things.
-// Different stages will likely need different kinds of rules, so best not prematurely
-// combine them.
-trait IRulexSR {
-  def range: RangeS
-  def runeUsages: Vector[RuneUsage]
-}
-*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct EqualsSR<'a> {
   pub range: RangeS<'a>,
@@ -107,7 +172,15 @@ case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IR
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(left, right)
 }
+Guardian: disable: NECX
 */
+// See SAIRFU and SRCAMP for what's going on with these rules.
+#[derive(Clone, Debug, PartialEq)]
+pub struct CoordSendSR<'a> {
+  pub range: RangeS<'a>,
+  pub sender_rune: RuneUsage<'a>,
+  pub receiver_rune: RuneUsage<'a>,
+}
 /*
 // See SAIRFU and SRCAMP for what's going on with these rules.
 case class CoordSendSR(
@@ -120,13 +193,38 @@ case class CoordSendSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(senderRune, receiverRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct DefinitionCoordIsaSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub sub_rune: RuneUsage<'a>,
+  pub super_rune: RuneUsage<'a>,
+}
 /*
 case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: RuneUsage, superRune: RuneUsage) extends IRulexSR {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, subRune, superRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct CallSiteCoordIsaSR<'a> {
+  pub range: RangeS<'a>,
+  // This is here because when we add this CallSiteCoordIsaSR and its companion DefinitionCoordIsaSR,
+  // the DefinitionCoordIsaSR has a resultRune that it usually populates with an ImplTemplata.
+  // That rune is in the rules somewhere, but when we filter out the DefinitionCoordIsaSR for call site
+  // solves, that rune is still there, and all runes must be solved, so we need something to solve it.
+  // So, we make CallSiteCoordIsaSR solve it, and populate it with an ImplTemplata or ImplDefinitionTemplata.
+  // It's also similar to how Definition/CallSiteFuncSR work.
+  // It also means the call site has access to the impls, which might be nice for ONBIFS and NBIFP.
+  // It's an Option because CoordSendSR sometimes produces one of these, and it doesn't care about
+  // the result.
+  pub result_rune: Option<RuneUsage<'a>>,
+  pub sub_rune: RuneUsage<'a>,
+  pub super_rune: RuneUsage<'a>,
+}
 /*
 case class CallSiteCoordIsaSR(
   range: RangeS,
@@ -146,7 +244,14 @@ case class CallSiteCoordIsaSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = resultRune.toVector ++ Vector(subRune, superRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct KindComponentsSR<'a> {
+  pub range: RangeS<'a>,
+  pub kind_rune: RuneUsage<'a>,
+  pub mutability_rune: RuneUsage<'a>,
+}
 /*
 case class KindComponentsSR(
   range: RangeS,
@@ -156,6 +261,7 @@ case class KindComponentsSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(kindRune, mutabilityRune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoordComponentsSR<'a> {
@@ -174,7 +280,15 @@ case class CoordComponentsSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, ownershipRune, kindRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct PrototypeComponentsSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub params_rune: RuneUsage<'a>,
+  pub return_rune: RuneUsage<'a>,
+}
 /*
 case class PrototypeComponentsSR(
   range: RangeS,
@@ -185,7 +299,16 @@ case class PrototypeComponentsSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsRune, returnRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct ResolveSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub name: StrI<'a>,
+  pub params_list_rune: RuneUsage<'a>,
+  pub return_rune: RuneUsage<'a>,
+}
 /*
 case class ResolveSR(
   range: RangeS,
@@ -198,7 +321,16 @@ case class ResolveSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct CallSiteFuncSR<'a> {
+  pub range: RangeS<'a>,
+  pub prototype_rune: RuneUsage<'a>,
+  pub name: StrI<'a>,
+  pub params_list_rune: RuneUsage<'a>,
+  pub return_rune: RuneUsage<'a>,
+}
 /*
 case class CallSiteFuncSR(
   range: RangeS,
@@ -210,7 +342,16 @@ case class CallSiteFuncSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(prototypeRune, paramsListRune, returnRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct DefinitionFuncSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub name: StrI<'a>,
+  pub params_list_rune: RuneUsage<'a>,
+  pub return_rune: RuneUsage<'a>,
+}
 /*
 case class DefinitionFuncSR(
   range: RangeS,
@@ -222,6 +363,7 @@ case class DefinitionFuncSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct OneOfSR<'a> {
@@ -240,7 +382,13 @@ case class OneOfSR(
   vassert(literals.nonEmpty)
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct IsConcreteSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+}
 /*
 case class IsConcreteSR(
   range: RangeS,
@@ -249,6 +397,7 @@ case class IsConcreteSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IsInterfaceSR<'a> {
@@ -263,7 +412,13 @@ case class IsInterfaceSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct IsStructSR<'a> {
+  pub range: RangeS<'a>,
+  pub rune: RuneUsage<'a>,
+}
 /*
 case class IsStructSR(
   range: RangeS,
@@ -272,6 +427,7 @@ case class IsStructSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoerceToCoordSR<'a> {
@@ -289,7 +445,14 @@ case class CoerceToCoordSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(coordRune, kindRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct RefListCompoundMutabilitySR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub coord_list_rune: RuneUsage<'a>,
+}
 /*
 case class RefListCompoundMutabilitySR(
   range: RangeS,
@@ -299,6 +462,7 @@ case class RefListCompoundMutabilitySR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, coordListRune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiteralSR<'a> {
@@ -316,6 +480,7 @@ case class LiteralSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct MaybeCoercingLookupSR<'a> {
@@ -334,6 +499,7 @@ case class MaybeCoercingLookupSR(
   vpass()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 // A rule that looks up something that's not a Kind, so it doesn't need a default region.
 #[derive(Clone, Debug, PartialEq)]
@@ -352,6 +518,7 @@ case class LookupSR(
   vpass()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct MaybeCoercingCallSR<'a> {
@@ -370,7 +537,15 @@ case class MaybeCoercingCallSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct CallSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub template_rune: RuneUsage<'a>,
+  pub args: Vec<RuneUsage<'a>>,
+}
 /*
 case class CallSR(
   range: RangeS,
@@ -381,7 +556,15 @@ case class CallSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct IndexListSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub list_rune: RuneUsage<'a>,
+  pub index: i32,
+}
 /*
 case class IndexListSR(
   range: RangeS,
@@ -393,6 +576,7 @@ case class IndexListSR(
   vpass()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, listRune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuneParentEnvLookupSR<'a> {
@@ -408,6 +592,7 @@ case class RuneParentEnvLookupSR(
   vpass()
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AugmentSR<'a> {
@@ -429,7 +614,14 @@ case class AugmentSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, innerRune)
 }
+Guardian: disable: NECX
 */
+#[derive(Clone, Debug, PartialEq)]
+pub struct PackSR<'a> {
+  pub range: RangeS<'a>,
+  pub result_rune: RuneUsage<'a>,
+  pub members: Vec<RuneUsage<'a>>,
+}
 /*
 case class PackSR(
   range: RangeS,
@@ -439,6 +631,7 @@ case class PackSR(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune) ++ members
 }
+Guardian: disable: NECX
 */
 /*
 //case class StaticSizedArraySR(
@@ -486,129 +679,151 @@ impl ILiteralSL {
       ILiteralSL::VariabilityLiteral(x) => x.get_type(),
     }
   }
+  /* Guardian: disable-all */
 }
 
 /*
 sealed trait ILiteralSL {
   def getType(): ITemplataType
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IntLiteralSL {
   pub value: i64,
 }
-
-impl IntLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::IntegerTemplataType(IntegerTemplataType {})
-  }
-}
-
 /*
 case class IntLiteralSL(value: Long) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = IntegerTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl IntLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::IntegerTemplataType(IntegerTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct StringLiteralSL {
   pub value: String,
 }
-
-impl StringLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::StringTemplataType(StringTemplataType {})
-  }
-}
-
 /*
 case class StringLiteralSL(value: String) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = StringTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl StringLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::StringTemplataType(StringTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct BoolLiteralSL {
   pub value: bool,
 }
-
-impl BoolLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::BooleanTemplataType(BooleanTemplataType {})
-  }
-}
-
 /*
 case class BoolLiteralSL(value: Boolean) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = BooleanTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl BoolLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::BooleanTemplataType(BooleanTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct MutabilityLiteralSL {
   pub mutability: MutabilityP,
 }
-
-impl MutabilityLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})
-  }
-}
-
 /*
 case class MutabilityLiteralSL(mutability: MutabilityP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = MutabilityTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl MutabilityLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct LocationLiteralSL {
   pub location: LocationP,
 }
-
-impl LocationLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::LocationTemplataType(LocationTemplataType {})
-  }
-}
-
 /*
 case class LocationLiteralSL(location: LocationP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = LocationTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl LocationLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::LocationTemplataType(LocationTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct OwnershipLiteralSL {
   pub ownership: OwnershipP,
 }
-
-impl OwnershipLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})
-  }
-}
-
 /*
 case class OwnershipLiteralSL(ownership: OwnershipP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = OwnershipTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl OwnershipLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariabilityLiteralSL {
   pub variability: VariabilityP,
 }
-
-impl VariabilityLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
-    ITemplataType::VariabilityTemplataType(VariabilityTemplataType {})
-  }
-}
-
 /*
 case class VariabilityLiteralSL(variability: VariabilityP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = VariabilityTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl VariabilityLiteralSL {
+  pub fn get_type(&self) -> ITemplataType {
+    ITemplataType::VariabilityTemplataType(VariabilityTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */

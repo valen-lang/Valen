@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.expression
 
 import dev.vale.highertyping.HigherTypingPass.explicifyLookups
@@ -619,3 +620,4 @@ class PatternCompiler(
       range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT()), staticSizedArrayT)
   }
 }
+*/

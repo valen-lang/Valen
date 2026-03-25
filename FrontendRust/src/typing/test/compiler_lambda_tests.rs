@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.Collector.ProgramWithExpect
@@ -224,3 +225,4 @@ class CompilerLambdaTests extends FunSuite with Matchers {
   }
 
 }
+*/

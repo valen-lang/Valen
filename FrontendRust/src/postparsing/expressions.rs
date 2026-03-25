@@ -28,14 +28,14 @@ case class LetSE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct LetSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: &'s [IRulexSR<'a>],
   pub pattern: AtomSP<'a>,
   pub expr: &'s IExpressionSE<'a, 's>,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct IfSE<'a, 's> {
   pub range: RangeS<'a>,
   pub condition: &'s IExpressionSE<'a, 's>,
@@ -54,7 +54,7 @@ case class IfSE(
   vcurious(!condition.isInstanceOf[BlockSE])
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct LoopSE<'a, 's> {
   pub range: RangeS<'a>,
   pub body: &'s BlockSE<'a, 's>,
@@ -65,7 +65,7 @@ case class LoopSE(range: RangeS, body: BlockSE) extends IExpressionSE {
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct BreakSE<'a> {
   pub range: RangeS<'a>,
 }
@@ -74,7 +74,7 @@ case class BreakSE(range: RangeS) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct WhileSE<'a, 's> {
   pub range: RangeS<'a>,
   pub body: &'s BlockSE<'a, 's>,
@@ -85,7 +85,7 @@ case class WhileSE(range: RangeS, body: BlockSE) extends IExpressionSE {
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct MapSE<'a, 's> {
   pub range: RangeS<'a>,
   pub body: &'s BlockSE<'a, 's>,
@@ -96,7 +96,7 @@ case class MapSE(range: RangeS, body: BlockSE) extends IExpressionSE {
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ExprMutateSE<'a, 's> {
   pub range: RangeS<'a>,
   pub mutatee: &'s IExpressionSE<'a, 's>,
@@ -107,7 +107,7 @@ case class ExprMutateSE(range: RangeS, mutatee: IExpressionSE, expr: IExpression
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct GlobalMutateSE<'a, 's> {
   pub range: RangeS<'a>,
   pub name: CodeNameS<'a>,
@@ -118,7 +118,7 @@ case class GlobalMutateSE(range: RangeS, name: CodeNameS, expr: IExpressionSE) e
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct LocalMutateSE<'a, 's> {
   pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
@@ -129,7 +129,7 @@ case class LocalMutateSE(range: RangeS, name: IVarNameS, expr: IExpressionSE) ex
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct OwnershippedSE<'a, 's> {
   pub range: RangeS<'a>,
   pub inner_expr: &'s IExpressionSE<'a, 's>,
@@ -164,6 +164,7 @@ pub enum IVariableUseCertainty {
 sealed trait IVariableUseCertainty
 case object Used extends IVariableUseCertainty
 case object NotUsed extends IVariableUseCertainty
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalS<'a> {
@@ -187,11 +188,12 @@ case class LocalS(
     childMutated: IVariableUseCertainty) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct BodySE<'a, 's> {
   pub range: RangeS<'a>,
-  pub closured_names: Vec<IVarNameS<'a>>,
+  pub closured_names: &'s [IVarNameS<'a>],
   pub block: &'s BlockSE<'a, 's>,
 }
 
@@ -209,7 +211,7 @@ case class BodySE(
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct PureSE<'a, 's> {
   pub range: RangeS<'a>,
   pub location: LocationInDenizen,
@@ -228,10 +230,10 @@ case class PureSE(
   }
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct BlockSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub locals: Vec<LocalS<'a>>,
+  pub locals: &'s [LocalS<'a>],
   pub expr: &'s IExpressionSE<'a, 's>,
 }
 
@@ -251,7 +253,7 @@ case class BlockSE(
 //  }
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IExpressionSE<'a, 's> {
   Let(LetSE<'a, 's>),
   If(IfSE<'a, 's>),
@@ -287,7 +289,7 @@ pub enum IExpressionSE<'a, 's> {
   Index(IndexSE<'a, 's>),
   FunctionCall(FunctionCallSE<'a, 's>),
   LocalLoad(LocalLoadSE<'a>),
-  OutsideLoad(OutsideLoadSE<'a>),
+  OutsideLoad(OutsideLoadSE<'a, 's>),
   RuneLookup(RuneLookupSE<'a>),
   Ownershipped(OwnershippedSE<'a, 's>),
 }
@@ -334,38 +336,17 @@ impl<'a, 's> IExpressionSETrait<'a> for IExpressionSE<'a, 's> {
       IExpressionSE::Ownershipped(x) => x.range.clone(),
     }
   }
+  /* Guardian: disable-all */
 }
 
-/*
-case class ConsecutorSE(
-  exprs: Vector[IExpressionSE],
-) extends IExpressionSE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-
-  override def range: RangeS = RangeS(exprs.head.range.begin, exprs.last.range.end)
-
-  // Should have at least one expression, because we'll
-  // return the last expression's result as its result.
-  vassert(exprs.size > 1)
-  vassert(exprs.collect({ case ConsecutorSE(_) => }).isEmpty)
-
-
-//  if (exprs.size >= 2) {
-//    exprs.last match {
-//      case VoidSE(_) => {
-//        exprs.init.last match {
-//          case ReturnSE(_, _) => vcurious()
-//          case VoidSE(_) => vcurious()
-//          case _ =>
-//        }
-//      }
-//      case _ =>
-//    }
-//  }
-}
-*/
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConsecutorSE<'a, 's> {
+  /*
+  case class ConsecutorSE(
+    exprs: Vector[IExpressionSE],
+  ) extends IExpressionSE {
+    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  */
   pub exprs: &'s [&'s IExpressionSE<'a, 's>],
 }
 
@@ -377,8 +358,34 @@ impl<'a, 's> ConsecutorSE<'a, 's> {
       end: self.exprs.last().unwrap().range().end,
     }
   }
+  /*
+    override def range: RangeS = RangeS(exprs.head.range.begin, exprs.last.range.end)
+  */
+  /*
+    // Should have at least one expression, because we'll
+    // return the last expression's result as its result.
+    vassert(exprs.size > 1)
+    vassert(exprs.collect({ case ConsecutorSE(_) => }).isEmpty)
+
+
+  //  if (exprs.size >= 2) {
+  //    exprs.last match {
+  //      case VoidSE(_) => {
+  //        exprs.init.last match {
+  //          case ReturnSE(_, _) => vcurious()
+  //          case VoidSE(_) => vcurious()
+  //          case _ =>
+  //        }
+  //      }
+  //      case _ =>
+  //    }
+  //  }
+  }
+  */
 }
-#[derive(Clone, Debug, PartialEq)]
+/* Guardian: disable-all */
+
+#[derive(Debug, PartialEq)]
 pub struct ArgLookupSE<'a> {
   pub range: RangeS<'a>,
   pub index: i32,
@@ -388,7 +395,8 @@ case class ArgLookupSE(range: RangeS, index: Int) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Debug, PartialEq)]
 pub struct RepeaterBlockSE<'a, 's> {
   pub range: RangeS<'a>,
   pub expression: &'s IExpressionSE<'a, 's>,
@@ -399,7 +407,7 @@ case class RepeaterBlockSE(range: RangeS, expression: IExpressionSE) extends IEx
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
  }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct RepeaterBlockIteratorSE<'a, 's> {
   pub range: RangeS<'a>,
   pub expression: &'s IExpressionSE<'a, 's>,
@@ -410,7 +418,7 @@ case class RepeaterBlockIteratorSE(range: RangeS, expression: IExpressionSE) ext
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ReturnSE<'a, 's> {
   pub range: RangeS<'a>,
   pub inner: &'s IExpressionSE<'a, 's>,
@@ -424,7 +432,7 @@ case class ReturnSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE {
   }
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct VoidSE<'a> {
   pub range: RangeS<'a>,
 }
@@ -433,7 +441,7 @@ case class VoidSE(range: RangeS) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct TupleSE<'a, 's> {
   pub range: RangeS<'a>,
   pub elements: &'s [&'s IExpressionSE<'a, 's>],
@@ -443,10 +451,10 @@ case class TupleSE(range: RangeS, elements: Vector[IExpressionSE]) extends IExpr
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct StaticArrayFromValuesSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: &'s [IRulexSR<'a>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub variability_st: RuneUsage<'a>,
@@ -466,10 +474,10 @@ case class StaticArrayFromValuesSE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct StaticArrayFromCallableSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: &'s [IRulexSR<'a>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub variability_st: RuneUsage<'a>,
@@ -489,10 +497,10 @@ case class StaticArrayFromCallableSE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct NewRuntimeSizedArraySE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: &'s [IRulexSR<'a>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub size: &'s IExpressionSE<'a, 's>,
@@ -510,7 +518,7 @@ case class NewRuntimeSizedArraySE(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct RepeaterPackSE<'a, 's> {
   pub range: RangeS<'a>,
   pub expression: &'s IExpressionSE<'a, 's>,
@@ -521,7 +529,7 @@ case class RepeaterPackSE(range: RangeS, expression: IExpressionSE) extends IExp
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct RepeaterPackIteratorSE<'a, 's> {
   pub range: RangeS<'a>,
   pub expression: &'s IExpressionSE<'a, 's>,
@@ -537,13 +545,13 @@ case class ConstantIntSE(range: RangeS, value: Long, bits: Int) extends IExpress
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConstantIntSE<'a> {
   pub range: RangeS<'a>,
   pub value: i64,
   pub bits: i32,
 }
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConstantBoolSE<'a> {
   pub range: RangeS<'a>,
   pub value: bool,
@@ -553,7 +561,7 @@ case class ConstantBoolSE(range: RangeS, value: Boolean) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConstantStrSE<'a> {
   pub range: RangeS<'a>,
   pub value: String,
@@ -564,7 +572,7 @@ case class ConstantStrSE(range: RangeS, value: String) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ConstantFloatSE<'a> {
   pub range: RangeS<'a>,
   pub value: f64,
@@ -574,7 +582,7 @@ case class ConstantFloatSE(range: RangeS, value: Double) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct DestructSE<'a, 's> {
   pub range: RangeS<'a>,
   pub inner: &'s IExpressionSE<'a, 's>,
@@ -584,7 +592,7 @@ case class DestructSE(range: RangeS, inner: IExpressionSE) extends IExpressionSE
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct UnletSE<'a> {
   pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
@@ -594,7 +602,7 @@ case class UnletSE(range: RangeS, name: IVarNameS) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct FunctionSE<'a, 's> {
   pub function: &'s FunctionS<'a, 's>,
 }
@@ -603,7 +611,7 @@ case class FunctionSE(function: FunctionS) extends IExpressionSE {
   override def range: RangeS = function.range
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct DotSE<'a, 's> {
   pub range: RangeS<'a>,
   pub left: &'s IExpressionSE<'a, 's>,
@@ -615,7 +623,7 @@ case class DotSE(range: RangeS, left: IExpressionSE, member: StrI, borrowContain
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct IndexSE<'a, 's> {
   pub range: RangeS<'a>,
   pub left: &'s IExpressionSE<'a, 's>,
@@ -631,7 +639,7 @@ case class FunctionCallSE(range: RangeS, location: LocationInDenizen, callableEx
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct FunctionCallSE<'a, 's> {
   pub range: RangeS<'a>,
   pub location: LocationInDenizen,
@@ -644,18 +652,18 @@ case class LocalLoadSE(range: RangeS, name: IVarNameS, targetOwnership: LoadAsP)
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct LocalLoadSE<'a> {
   pub range: RangeS<'a>,
   pub name: IVarNameS<'a>,
   pub target_ownership: LoadAsP,
 }
-#[derive(Clone, Debug, PartialEq)]
-pub struct OutsideLoadSE<'a> {
+#[derive(Debug, PartialEq)]
+pub struct OutsideLoadSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: Vec<IRulexSR<'a>>,
+  pub rules: &'s [IRulexSR<'a>],
   pub name: IImpreciseNameS<'a>,
-  pub maybe_template_args: Option<Vec<crate::postparsing::rules::RuneUsage<'a>>>,
+  pub maybe_template_args: Option<&'s [crate::postparsing::rules::RuneUsage<'a>]>,
   pub target_ownership: LoadAsP,
 }
 /*
@@ -672,7 +680,7 @@ case class OutsideLoadSE(
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct RuneLookupSE<'a> {
   pub range: RangeS<'a>,
   pub rune: IRuneS<'a>,

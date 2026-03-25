@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.ast
 
 //import dev.vale.astronomer.IVarNameA
@@ -917,3 +918,4 @@ object referenceExprResultKind {
     Some(expr.result.coord.kind)
   }
 }
+*/

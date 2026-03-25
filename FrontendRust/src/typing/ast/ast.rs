@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.ast
 
 import dev.vale.highertyping.FunctionA
@@ -468,3 +469,4 @@ case class PrototypeT[+T <: IFunctionNameT](
   def paramTypes: Vector[CoordT] = id.localName.parameters
   def toSignature: SignatureT = SignatureT(id)
 }
+*/

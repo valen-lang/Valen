@@ -1,10 +1,13 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.{Keywords, RangeS, StrI, vimpl}
+
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.CompilerOutputs
 import dev.vale.typing.ast.{ArgLookupTE, BlockTE, FunctionDefinitionT, FunctionHeaderT, LocationInFunctionEnvironmentT, LockWeakTE, ParameterT, ReturnTE}
+
 import dev.vale.typing.env.FunctionEnvironmentT
 import dev.vale.typing.expression.ExpressionCompiler
 import dev.vale.typing.types._
@@ -49,4 +52,6 @@ class LockWeakMacro(
 
     (header, body)
   }
+
 }
+*/

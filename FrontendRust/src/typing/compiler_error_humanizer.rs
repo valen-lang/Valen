@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale._
@@ -850,3 +851,4 @@ object CompilerErrorHumanizer {
     humanizeId(codeMap, signature.id)
   }
 }
+*/

@@ -30,4 +30,5 @@ case class GlobalOptions(
   useOptimizedSolver: Boolean,
   verboseErrors: Boolean,
   debugOutput: Boolean)
+Guardian: disable: NECX
 */

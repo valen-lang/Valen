@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.typing.env.ReferenceLocalVariableT
@@ -363,3 +364,4 @@ class CompilerMutateTests extends FunSuite with Matchers {
       .nonEmpty)
   }
 }
+*/

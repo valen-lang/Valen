@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.ast
 
 import dev.vale.postparsing._
@@ -127,3 +128,4 @@ case class InterfaceDefinitionT(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 //  override def getRef = ref
 }
+*/

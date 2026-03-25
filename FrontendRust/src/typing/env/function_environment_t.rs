@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.env
 
 import dev.vale.highertyping.FunctionA
@@ -813,3 +814,4 @@ object EnvironmentHelper {
     }
   }
 }
+*/

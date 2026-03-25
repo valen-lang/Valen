@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale._
@@ -236,3 +237,4 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
   }
 }
 
+*/

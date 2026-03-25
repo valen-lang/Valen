@@ -27,6 +27,7 @@ pub struct IdentifiabilitySolveError<'a> {
 case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, Boolean, IIdentifiabilityRuleError]) {
   vpass()
 }
+Guardian: disable: NECX
 */
 /*
 sealed trait IIdentifiabilityRuleError
@@ -37,6 +38,7 @@ pub enum IIdentifiabilityRuleError {}
 struct IdentifiabilitySolverDelegate<'a> {
   call_range: Vec<RangeS<'a>>,
 }
+/* Guardian: disable-all */
 
 impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiabilityRuleError>
   for IdentifiabilitySolverDelegate<'a>
@@ -44,10 +46,12 @@ impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiability
   fn rule_to_puzzles(&self, rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
     get_puzzles(rule)
   }
+  /* Guardian: disable-all */
 
   fn rule_to_runes(&self, rule: &IRulexSR<'a>) -> Vec<IRuneS<'a>> {
     get_runes(rule)
   }
+  /* Guardian: disable-all */
 
   fn solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
     &self,
@@ -64,6 +68,7 @@ impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiability
       solver_state,
     )
   }
+  /* Guardian: disable-all */
 
   fn complex_solve<S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, bool>>(
     &self,
@@ -73,6 +78,7 @@ impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiability
   ) -> Result<(), ISolverError<IRuneS<'a>, bool, IIdentifiabilityRuleError>> {
     Ok(())
   }
+  /* Guardian: disable-all */
 
   fn sanity_check_conclusion(
     &self,
@@ -82,6 +88,7 @@ impl<'a> SolverDelegate<IRulexSR<'a>, IRuneS<'a>, (), (), bool, IIdentifiability
     _conclusion: &bool,
   ) {
   }
+  /* Guardian: disable-all */
 }
 /*
 // Identifiability is whether the denizen has enough identifying runes to uniquely identify all its
@@ -156,7 +163,24 @@ fn get_puzzles<'a>(rule: &IRulexSR<'a>) -> Vec<Vec<IRuneS<'a>>> {
     IRulexSR::IsInterface(_) => vec![vec![]],
     IRulexSR::CoordComponents(_) => vec![vec![]],
     IRulexSR::CoerceToCoord(_) => vec![vec![]],
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in identifiability get_puzzles"),
     IRulexSR::Literal(_) => vec![vec![]],
+    IRulexSR::Pack(x) => {
+      // Packs are always lists of coords
+      vec![vec![x.result_rune.rune.clone()], x.members.iter().map(|m| m.rune.clone()).collect()]
+    }
+    IRulexSR::CallSiteFunc(_) => vec![vec![]],
+    IRulexSR::DefinitionFunc(_) => vec![vec![]],
+    IRulexSR::Resolve(_) => vec![vec![]],
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in identifiability get_puzzles"),
+    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in identifiability get_puzzles"),
+    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in identifiability get_puzzles"),
+    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in identifiability get_puzzles"),
+    IRulexSR::PrototypeComponents(_) => vec![vec![]],
+    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in identifiability get_puzzles"),
+    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in identifiability get_puzzles"),
+    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in identifiability get_puzzles"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in identifiability get_puzzles"),
   }
 }
 /*
@@ -292,8 +316,7 @@ fn solve_rule_impl<'a, S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, 
       Ok(())
     }
     IRulexSR::RuneParentEnvLookup(_) => {
-      // Scala: vimpl() - env check not yet migrated
-      Ok(())
+      panic!("unimplemented");
     }
     IRulexSR::Augment(x) => {
       solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
@@ -317,6 +340,74 @@ fn solve_rule_impl<'a, S: crate::solver::ISolverState<IRulexSR<'a>, IRuneS<'a>, 
       )?;
       Ok(())
     }
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in identifiability solve_rule"),
+    IRulexSR::Pack(x) => {
+      for member in &x.members {
+        solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+          range_s.clone(), member.rune.clone(), true,
+        )?;
+      }
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.result_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::CallSiteFunc(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.prototype_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.params_list_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.return_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::DefinitionFunc(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.result_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.params_list_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.return_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::Resolve(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.result_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.params_list_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.return_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in identifiability solve_rule"),
+    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in identifiability solve_rule"),
+    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in identifiability solve_rule"),
+    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in identifiability solve_rule"),
+    IRulexSR::PrototypeComponents(x) => {
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.result_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s.clone(), x.params_rune.rune.clone(), true,
+      )?;
+      solver_state.step_conclude_rune::<IIdentifiabilityRuleError>(
+        range_s, x.return_rune.rune.clone(), true,
+      )?;
+      Ok(())
+    }
+    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in identifiability solve_rule"),
+    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in identifiability solve_rule"),
+    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in identifiability solve_rule"),
+    IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in identifiability solve_rule"),
   }
 }
 /*

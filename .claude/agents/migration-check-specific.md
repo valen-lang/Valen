@@ -2,7 +2,7 @@
 name: migration-check-specific
 description: Enforce strict Scala parity by detecting novel Rust logic/functions and mismatched migrated code to match Scala structure exactly
 tools: [Read, Grep, Glob]
-model: haiku
+model: sonnet
 permissionMode: plan
 ---
 

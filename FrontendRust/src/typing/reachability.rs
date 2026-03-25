@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.typing.ast.{AsSubtypeTE, DestroyImmRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE, EdgeT, FunctionCallTE, InterfaceEdgeBlueprintT, LockWeakTE, NewImmRuntimeSizedArrayTE, PrototypeT, SignatureT, StaticArrayFromCallableTE}
@@ -242,3 +243,4 @@ import scala.collection.mutable
 //    }
 //  }
 //}
+*/

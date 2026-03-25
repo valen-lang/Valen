@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing._
@@ -593,3 +594,4 @@ case class CompilerOutputs() {
     functionExterns.toVector
   }
 }
+*/

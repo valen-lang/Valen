@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros.rsa
 
 import dev.vale.highertyping.FunctionA
@@ -5,10 +6,12 @@ import dev.vale.postparsing._
 import dev.vale.typing.CompilerOutputs
 import dev.vale.typing.ast._
 import dev.vale.typing.env.{FunctionEnvironmentT, TemplataLookupContext}
+
 import dev.vale.typing.macros.IFunctionBodyMacro
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
 import dev.vale.{Interner, Keywords, Profiler, RangeS, StrI, vassertSome, vimpl}
+
 import dev.vale.postparsing.CodeRuneS
 import dev.vale.typing.ast._
 import dev.vale.typing.env.TemplataLookupContext
@@ -42,4 +45,6 @@ class RSAMutablePushMacro(interner: Interner, keywords: Keywords) extends IFunct
             ArgLookupTE(1, paramCoords(1).tyype))))
     (header, body)
   }
+
 }
+*/

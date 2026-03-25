@@ -14,7 +14,7 @@ use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 
 // mig: struct CompileErrorExceptionA
 pub struct CompileErrorExceptionA<'a> {
-    pub err: Box<dyn ICompileErrorA<'a> + 'a>,
+    pub err: ICompileErrorA<'a>,
 }
 /*
 case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException {
@@ -23,7 +23,7 @@ case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException 
 // mig: impl CompileErrorExceptionA
 impl<'a> CompileErrorExceptionA<'a> {
 // mig: fn equals
-pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -36,14 +36,48 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: trait ICompileErrorA
-pub trait ICompileErrorA<'a> {
-    fn range(&self) -> RangeS<'a>;
+pub enum ICompileErrorA<'a> {
+    /*
+    sealed trait ICompileErrorA {
+    */
+    CouldntFindType(CouldntFindTypeA<'a>),
+    TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
+    CouldntSolveRules(CouldntSolveRulesA<'a>),
+    CircularModuleDependency(CircularModuleDependency<'a>),
+    WrongNumArgsForTemplate(WrongNumArgsForTemplateA<'a>),
+    RangedInternalError(RangedInternalErrorA<'a>),
+    /*
+       def range: RangeS
+    */
+}
+impl<'a> ICompileErrorA<'a> {
+    pub fn range(&self) -> RangeS<'a> {
+        match self {
+            ICompileErrorA::CouldntFindType(x) => x.range.clone(),
+            ICompileErrorA::TooManyMatchingTypes(x) => x.range.clone(),
+            ICompileErrorA::CouldntSolveRules(x) => x.range.clone(),
+            ICompileErrorA::CircularModuleDependency(x) => x.range.clone(),
+            ICompileErrorA::WrongNumArgsForTemplate(x) => x.range.clone(),
+            ICompileErrorA::RangedInternalError(x) => x.range.clone(),
+        }
+    }
 }
 /*
-sealed trait ICompileErrorA { def range: RangeS }
+}
 */
 // mig: trait ILookupFailedErrorA
-pub trait ILookupFailedErrorA<'a>: ICompileErrorA<'a> {}
+pub enum ILookupFailedErrorA<'a> {
+    CouldntFindType(CouldntFindTypeA<'a>),
+    TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
+}
+impl<'a> From<ILookupFailedErrorA<'a>> for ICompileErrorA<'a> {
+    fn from(e: ILookupFailedErrorA<'a>) -> Self {
+        match e {
+            ILookupFailedErrorA::CouldntFindType(x) => ICompileErrorA::CouldntFindType(x),
+            ILookupFailedErrorA::TooManyMatchingTypes(x) => ICompileErrorA::TooManyMatchingTypes(x),
+        }
+    }
+}
 /*
 sealed trait ILookupFailedErrorA extends ICompileErrorA
 */
@@ -58,7 +92,7 @@ case class TooManyMatchingTypesA(range: RangeS, name: IImpreciseNameS) extends I
 // mig: impl TooManyMatchingTypesA
 impl<'a> TooManyMatchingTypesA<'a> {
 // mig: fn equals
-pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -85,7 +119,7 @@ case class CouldntFindTypeA(range: RangeS, name: IImpreciseNameS) extends ILooku
 // mig: impl CouldntFindTypeA
 impl<'a> CouldntFindTypeA<'a> {
 // mig: fn equals
-pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -112,7 +146,7 @@ case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends 
 // mig: impl CouldntSolveRulesA
 impl<'a> CouldntSolveRulesA<'a> {
 // mig: fn equals
-pub fn equals(&self, obj: &dyn std::any::Any) -> bool {
+pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
 // mig: fn hash_code
@@ -162,7 +196,7 @@ object ErrorReporter {
 impl<'a> RangedInternalErrorA<'a> {}
 
 // mig: fn report
-pub fn report<'a>(err: Box<dyn ICompileErrorA<'a> + 'a>) -> ! {
+pub fn report<'a>(_err: ICompileErrorA<'a>) -> ! {
     panic!("Unimplemented: report");
 }
 /*

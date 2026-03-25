@@ -428,4 +428,5 @@ case class InputException(message: String) extends Throwable {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
   override def toString: String = message
 }
+Guardian: disable: NECX
 */

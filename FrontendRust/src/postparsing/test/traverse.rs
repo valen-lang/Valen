@@ -312,7 +312,7 @@ where
   collect_if(
     pred,
     out,
-    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(&strukt.name)),
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(strukt.name)),
   );
   collect_if(pred, out, NodeRefS::TopLevelStructDeclarationName(&strukt.name));
   for attribute in strukt.attributes {
@@ -341,7 +341,7 @@ where
   collect_if(
     pred,
     out,
-    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(&interface.name)),
+    NodeRefS::TopLevelCitizenDeclarationName(TopLevelCitizenDeclarationNameS::from(interface.name)),
   );
   collect_if(pred, out, NodeRefS::TopLevelInterfaceDeclarationName(&interface.name));
   for attribute in interface.attributes {
@@ -490,7 +490,7 @@ where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::BodyExpr(body));
-  for closured_name in &body.closured_names {
+  for closured_name in body.closured_names {
     visit_var_name(pred, out, closured_name);
   }
   visit_block(pred, out, &body.block);
@@ -503,7 +503,7 @@ where
   collect_if(pred, out, NodeRefS::Expression(expression));
   match expression {
     IExpressionSE::Let(x) => {
-      for rule in &x.rules {
+      for rule in x.rules {
         visit_rulex(pred, out, rule);
       }
       visit_pattern(pred, out, &x.pattern);
@@ -542,7 +542,7 @@ where
       }
     }
     IExpressionSE::StaticArrayFromValues(x) => {
-      for rule in &x.rules {
+      for rule in x.rules {
         visit_rulex(pred, out, rule);
       }
       if let Some(element_type_st) = &x.maybe_element_type_st {
@@ -556,7 +556,7 @@ where
       }
     }
     IExpressionSE::StaticArrayFromCallable(x) => {
-      for rule in &x.rules {
+      for rule in x.rules {
         visit_rulex(pred, out, rule);
       }
       if let Some(element_type_st) = &x.maybe_element_type_st {
@@ -568,7 +568,7 @@ where
       visit_expression(pred, out, x.callable);
     }
     IExpressionSE::NewRuntimeSizedArray(x) => {
-      for rule in &x.rules {
+      for rule in x.rules {
         visit_rulex(pred, out, rule);
       }
       if let Some(element_type_st) = &x.maybe_element_type_st {
@@ -624,15 +624,15 @@ where
   visit_expression(pred, out, dot.left);
 }
 
-fn visit_outside_load<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'s OutsideLoadSE<'a>)
+fn visit_outside_load<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, outside_load: &'s OutsideLoadSE<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
-  for rule in &outside_load.rules {
+  for rule in outside_load.rules {
     visit_rulex(pred, out, rule);
   }
   visit_imprecise_name(pred, out, &outside_load.name);
-  if let Some(template_args) = &outside_load.maybe_template_args {
+  if let Some(template_args) = outside_load.maybe_template_args {
     for template_arg in template_args {
       visit_rune_usage(pred, out, template_arg);
     }
@@ -651,7 +651,7 @@ where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefS::BlockExpr(block));
-  for local in &block.locals {
+  for local in block.locals {
     visit_local(pred, out, local);
   }
   visit_expression(pred, out, block.expr);
@@ -809,6 +809,73 @@ where
       visit_rune_usage(pred, out, &x.coord_rune);
       visit_rune_usage(pred, out, &x.kind_rune);
     }
+    IRulexSR::Call(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.template_rune);
+      for arg in &x.args {
+        visit_rune_usage(pred, out, arg);
+      }
+    }
+    IRulexSR::Pack(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      for member in &x.members {
+        visit_rune_usage(pred, out, member);
+      }
+    }
+    IRulexSR::CallSiteFunc(x) => {
+      visit_rune_usage(pred, out, &x.prototype_rune);
+      visit_rune_usage(pred, out, &x.params_list_rune);
+      visit_rune_usage(pred, out, &x.return_rune);
+    }
+    IRulexSR::DefinitionFunc(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.params_list_rune);
+      visit_rune_usage(pred, out, &x.return_rune);
+    }
+    IRulexSR::Resolve(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.params_list_rune);
+      visit_rune_usage(pred, out, &x.return_rune);
+    }
+    IRulexSR::CoordSend(x) => {
+      visit_rune_usage(pred, out, &x.sender_rune);
+      visit_rune_usage(pred, out, &x.receiver_rune);
+    }
+    IRulexSR::DefinitionCoordIsa(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.sub_rune);
+      visit_rune_usage(pred, out, &x.super_rune);
+    }
+    IRulexSR::CallSiteCoordIsa(x) => {
+      if let Some(ref r) = x.result_rune {
+        visit_rune_usage(pred, out, r);
+      }
+      visit_rune_usage(pred, out, &x.sub_rune);
+      visit_rune_usage(pred, out, &x.super_rune);
+    }
+    IRulexSR::KindComponents(x) => {
+      visit_rune_usage(pred, out, &x.kind_rune);
+      visit_rune_usage(pred, out, &x.mutability_rune);
+    }
+    IRulexSR::PrototypeComponents(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.params_rune);
+      visit_rune_usage(pred, out, &x.return_rune);
+    }
+    IRulexSR::IsConcrete(x) => {
+      visit_rune_usage(pred, out, &x.rune);
+    }
+    IRulexSR::IsStruct(x) => {
+      visit_rune_usage(pred, out, &x.rune);
+    }
+    IRulexSR::RefListCompoundMutability(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.coord_list_rune);
+    }
+    IRulexSR::IndexList(x) => {
+      visit_rune_usage(pred, out, &x.result_rune);
+      visit_rune_usage(pred, out, &x.list_rune);
+    }
   }
 }
 
@@ -867,7 +934,7 @@ where
     IImpreciseNameS::ImplSuperInterfaceImpreciseName(x) => {
       visit_imprecise_name(pred, out, &x.super_interface_imprecise_name)
     }
-    IImpreciseNameS::RuneName(x) => visit_rune(pred, out, x.rune),
+    IImpreciseNameS::RuneName(x) => visit_rune(pred, out, &x.rune),
     IImpreciseNameS::IterableName(_)
     | IImpreciseNameS::IteratorName(_)
     | IImpreciseNameS::IterationOptionName(_)

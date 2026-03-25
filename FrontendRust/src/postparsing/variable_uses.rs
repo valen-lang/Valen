@@ -25,6 +25,7 @@ case class VariableUse(
     mutated: Option[IVariableUseCertainty]) {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarationS<'a> {
@@ -35,11 +36,13 @@ case class VariableDeclaration(
     name: IVarNameS) {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarations<'a> {
   pub vars: Vec<VariableDeclarationS<'a>>,
 }
+
 impl<'a> VariableDeclarations<'a> {
   // MIGALLOW: empty -> empty
   pub fn empty() -> VariableDeclarations<'static> {
@@ -116,22 +119,24 @@ pub fn find(&self, needle: &IImpreciseNameS<'a>) -> Option<IVarNameS<'a>> {
   }
 }
 */
-
-
+  
 }
+/*
+Guardian: disable-all
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariableUses<'a> {
   pub uses: Vec<VariableUseS<'a>>,
 }
-
-impl<'a> VariableUses<'a> {
 /*
 case class VariableUses(uses: Vector[VariableUse]) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 
   vassert(uses.map(_.name).distinct == uses.map(_.name))
+Guardian: disable: NECX
 */
+impl<'a> VariableUses<'a> {
 
   // MIGALLOW: empty -> empty
   pub fn empty() -> VariableUses<'static> {

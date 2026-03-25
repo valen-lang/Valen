@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 import dev.vale.{Interner, Keywords, Profiler, RangeS, postparsing, vassert, vassertOne, vfail, vimpl, vwat}
@@ -346,3 +347,4 @@ class FunctionCompiler(
   }
 
 }
+*/

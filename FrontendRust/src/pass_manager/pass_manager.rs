@@ -299,6 +299,7 @@ impl<'a> IFrontendInput<'a> {
     val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
     override def packageCoord(interner: Interner): PackageCoordinate = packageCoordinate
   }
+Guardian: disable: NECX
 */
 
 // From PassManager.scala lines 356-366: buildAndOutput

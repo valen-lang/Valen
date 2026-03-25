@@ -33,7 +33,7 @@ use crate::postparsing::ast::{
   RegionGenericParameterTypeS,
 };
 use crate::postparsing::expressions::{
-  BodySE, ConsecutorSE, IExpressionSE,
+  BlockSE, BodySE, ConsecutorSE, IExpressionSE,
 };
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, FunctionTemplataType, ITemplataType, KindTemplataType, TemplateTemplataType,
@@ -59,9 +59,10 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
-use crate::utils::arena_utils::alloc_slice_from_vec;
+use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
+use crate::utils::arena_index_map::ArenaIndexMap;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IFunctionParent<'a, 's>
@@ -70,7 +71,7 @@ where 'a: 's
   FunctionNoParent,
   ParentInterface {
     interface_env: FunctionEnvironmentS<'a>,
-    interface_generic_params: Vec<GenericParameterS<'a, 's>>,
+    interface_generic_params: &'s [&'s GenericParameterS<'a, 's>],
     interface_rules: Vec<IRulexSR<'a>>,
     interface_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   },
@@ -81,6 +82,7 @@ where 'a: 's
 
 /*
 sealed trait IFunctionParent
+Guardian: disable: NECX
 */
 /*
 case class FunctionNoParent() extends IFunctionParent
@@ -222,11 +224,11 @@ where
       INameS::FunctionDeclaration(r) => (*r).clone(),
       _ => panic!("POSTPARSER_INTERN_FUNCTION_NAME_EXPECTED_FUNCTION_DECLARATION"),
     };
-    let extra_generic_params_from_parent: Vec<GenericParameterS<'a, 's>> = match &maybe_parent {
+    let extra_generic_params_from_parent: Vec<&'s GenericParameterS<'a, 's>> = match &maybe_parent {
       IFunctionParent::ParentInterface {
         interface_generic_params,
         ..
-      } => interface_generic_params.clone(),
+      } => interface_generic_params.to_vec(),
       _ => Vec::new(),
     };
     let parent_env: Option<Box<IEnvironmentS<'a>>> = match &maybe_parent {
@@ -358,12 +360,12 @@ where
       }
     }
     // We'll add the implicit runes to the end, see IRRAE.
-    let function_user_specified_generic_parameters_s: Vec<GenericParameterS<'a, 's>> = generic_parameters_p
+    let function_user_specified_generic_parameters_s: Vec<&'s GenericParameterS<'a, 's>> = generic_parameters_p
       .iter()
       .zip(user_specified_identifying_runes.iter())
       .map(|(generic_parameter_p, identifying_rune_s)| {
         let mut child_lidb = lidb.child();
-        self.scout_generic_parameter(
+        &*self.scout_arena.alloc(self.scout_generic_parameter(
           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
           &mut child_lidb,
           &mut rune_to_explicit_type,
@@ -371,7 +373,7 @@ where
           default_region_rune.clone(),
           generic_parameter_p,
           identifying_rune_s.clone(),
-        )
+        ))
       })
       .collect::<Vec<_>>();
     let params_p: Vec<_> = function
@@ -608,14 +610,14 @@ where
         &*self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
         VariableUses::empty(),
         explicit_params_s,
-        Vec::<GenericParameterS<'a, 's>>::new(),
+        Vec::<&'s GenericParameterS<'a, 's>>::new(),
       )
     } else if has_abstract_attr {
       (
         &*self.scout_arena.alloc(IBodyS::AbstractBody(AbstractBodyS {})),
         VariableUses::empty(),
         explicit_params_s,
-        Vec::<GenericParameterS<'a, 's>>::new(),
+        Vec::<&'s GenericParameterS<'a, 's>>::new(),
       )
     } else if has_extern_attr {
       if function.body.is_some() {
@@ -627,7 +629,7 @@ where
         &*self.scout_arena.alloc(IBodyS::ExternBody(ExternBodyS {})),
         VariableUses::empty(),
         explicit_params_s,
-        Vec::<GenericParameterS<'a, 's>>::new(),
+        Vec::<&'s GenericParameterS<'a, 's>>::new(),
       )
     } else if has_builtin_attr {
       let generator_name = function
@@ -643,7 +645,7 @@ where
         &*self.scout_arena.alloc(IBodyS::GeneratedBody(GeneratedBodyS { generator_id: generator_name })),
         VariableUses::empty(),
         explicit_params_s,
-        Vec::<GenericParameterS<'a, 's>>::new(),
+        Vec::<&'s GenericParameterS<'a, 's>>::new(),
       )
     } else {
       let body = function
@@ -686,7 +688,7 @@ where
         }));
       }
       let mut total_params_s: Vec<ParameterS<'a>> = Vec::new();
-      let mut extra_generic_params_from_body = Vec::<GenericParameterS<'a, 's>>::new();
+      let mut extra_generic_params_from_body = Vec::<&'s GenericParameterS<'a, 's>>::new();
       if is_parent_function {
         let IFunctionParent::ParentFunction { parent_stack_frame } = &maybe_parent else {
           panic!("POSTPARSER_SCOUT_FUNCTION_EXPECTED_PARENT_FUNCTION");
@@ -726,7 +728,7 @@ where
             .as_ref()
             .unwrap_or_else(|| panic!("POSTPARSER_SCOUT_MAGIC_PARAM_WITHOUT_COORD_RUNE"))
             .clone();
-          GenericParameterS {
+          &*self.scout_arena.alloc(GenericParameterS {
             range: magic_param.pattern.range.clone(),
             rune: coord_rune,
             tyype: IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS {
@@ -735,7 +737,7 @@ where
               region_mutable: false,
             }),
             default: None,
-          }
+          })
         }));
         total_params_s.extend(magic_params);
       }
@@ -746,7 +748,7 @@ where
         extra_generic_params_from_body,
       )
     };
-    let mut generic_params: Vec<GenericParameterS<'a, 's>> = extra_generic_params_from_parent;
+    let mut generic_params: Vec<&'s GenericParameterS<'a, 's>> = extra_generic_params_from_parent;
     generic_params.extend(function_user_specified_generic_parameters_s);
     generic_params.extend(extra_generic_params_from_body);
     generic_params = generic_params
@@ -798,6 +800,7 @@ where
 
     let range_s = Self::eval_range(file_coordinate, function.range);
     let mut rune_to_predicted_type = Self::predict_rune_types(
+      self.scout_arena,
       range_s.clone(),
       &user_specified_identifying_runes
         .iter()
@@ -833,7 +836,7 @@ where
           range: Self::eval_range(file_coordinate, function.range),
           name: function_name_ref,
           attributes: alloc_slice_from_vec(self.scout_arena, func_attrs_s),
-          generic_params: alloc_slice_from_vec(self.scout_arena, generic_params),
+          generic_params: alloc_slice_from_vec_of_refs(self.scout_arena, generic_params),
           rune_to_predicted_type,
           tyype,
           params: alloc_slice_from_vec(self.scout_arena, total_params_s),
@@ -1691,9 +1694,13 @@ fn create_magic_parameters(
         child_mutated: child_uses.is_mutated(&declared.name),
       })
       .collect();
-    let mut block1_with_magic_param_locals = block1.clone();
-    block1_with_magic_param_locals.locals.extend(magic_param_locals);
-    let block1 = &*self.scout_arena.alloc(block1_with_magic_param_locals);
+    let mut combined_locals: Vec<_> = block1.locals.to_vec();
+    combined_locals.extend(magic_param_locals);
+    let block1 = &*self.scout_arena.alloc(BlockSE {
+      range: block1.range.clone(),
+      locals: alloc_slice_from_vec(self.scout_arena, combined_locals),
+      expr: block1.expr,
+    });
     let all_uses = self_uses.then_merge(&child_uses);
     let uses_of_parent_variables = all_uses
       .uses
@@ -1713,7 +1720,7 @@ fn create_magic_parameters(
       .collect();
     let body_s = &*self.scout_arena.alloc(BodySE {
       range: PostParser::eval_range(function_body_env.file, body0.range),
-      closured_names,
+      closured_names: alloc_slice_from_vec(self.scout_arena, closured_names),
       block: block1,
     });
     Ok((body_s, VariableUses { uses: uses_of_parent_variables }, magic_param_names))
@@ -1815,9 +1822,10 @@ fn create_magic_parameters(
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
     function_p: &crate::parsing::ast::FunctionP<'a, 'p>,
-    interface_generic_params: &[GenericParameterS<'a, 's>],
+    parent_interface_env: &IEnvironmentS<'a>,
+    interface_generic_params: &'s [&'s GenericParameterS<'a, 's>],
     interface_rules: &[IRulexSR<'a>],
-    interface_rune_to_explicit_type: &HashMap<IRuneS<'a>, ITemplataType>,
+    interface_rune_to_explicit_type: &ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   ) -> Result<&'s FunctionS<'a, 's>, ICompileErrorS<'a>>
   {
     assert!(
@@ -1854,6 +1862,10 @@ fn create_magic_parameters(
         code_location: Self::eval_pos(file_coordinate, method_name_p.range().begin()),
       }),
     ));
+    let parent_declared_runes = match parent_interface_env {
+      IEnvironmentS::Environment(env) => env.user_declared_runes.clone(),
+      _ => panic!("Expected EnvironmentS for interface env"),
+    };
     let interface_env = FunctionEnvironmentS {
       file: file_coordinate,
       name: match &method_name {
@@ -1861,7 +1873,7 @@ fn create_magic_parameters(
         _ => panic!("POSTPARSER_INTERN_INTERFACE_METHOD_NAME_EXPECTED_FUNCTION_DECLARATION"),
       },
       parent_env: None,
-      declared_runes: Vec::new(),
+      declared_runes: parent_declared_runes,
       num_explicit_params: function_p
         .header
         .params
@@ -1875,9 +1887,9 @@ fn create_magic_parameters(
       function_p,
       IFunctionParent::ParentInterface {
         interface_env,
-        interface_generic_params: interface_generic_params.to_vec(),
+        interface_generic_params,
         interface_rules: interface_rules.to_vec(),
-        interface_rune_to_explicit_type: interface_rune_to_explicit_type.clone(),
+        interface_rune_to_explicit_type: interface_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect(),
       },
     )?;
     assert!(

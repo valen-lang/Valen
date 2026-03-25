@@ -200,7 +200,26 @@ fn translate_rulex<'a>(
       } else if name.str() == keywords.ref_list_compound_mutability {
         panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REF_LIST_COMPOUND_MUTABILITY_NOT_YET_IMPLEMENTED")
       } else if name.str() == keywords.refs {
-        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REFS_NOT_YET_IMPLEMENTED")
+        let arg_runes: Vec<RuneUsage<'a>> =
+          args.iter().map(|arg| {
+            translate_rulex(interner, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), arg)
+          }).collect();
+
+        let mut child_lidb = lidb.child();
+        let result_rune = RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume(),
+          })),
+        };
+        builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
+          range: PostParser::eval_range(file, *range),
+          result_rune: result_rune.clone(),
+          members: arg_runes,
+        }));
+        rune_to_explicit_type.push((result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })));
+
+        result_rune
       } else if name.str() == keywords.any {
         let literals: Vec<ILiteralSL> = args
           .iter()
@@ -290,7 +309,28 @@ fn translate_rulex<'a>(
           panic!("POSTPARSER_COMPONENTS_KIND_TYPE_NOT_YET_IMPLEMENTED")
         }
         ITypePR::PrototypeType => {
-          panic!("POSTPARSER_COMPONENTS_PROTOTYPE_TYPE_NOT_YET_IMPLEMENTED")
+          if components.len() != 2 {
+            panic!("Prot rule should have two components! Found: {}", components.len())
+          }
+          let mut translate_child_lidb = lidb.child();
+          let component_usages = translate_rulexes(
+            interner,
+            keywords,
+            env,
+            &mut translate_child_lidb,
+            builder,
+            rune_to_explicit_type,
+            context_region,
+            components,
+          );
+          let params_rune = component_usages[0].clone();
+          let return_rune = component_usages[1].clone();
+          builder.push(IRulexSR::PrototypeComponents(crate::postparsing::rules::rules::PrototypeComponentsSR {
+            range: PostParser::eval_range(file, *range),
+            result_rune: rune.clone(),
+            params_rune,
+            return_rune,
+          }));
         }
         _ => panic!("POSTPARSER_COMPONENTS_INVALID_TYPE_FOR_COMPONENTS_RULE"),
       }

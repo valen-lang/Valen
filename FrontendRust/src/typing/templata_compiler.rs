@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale._
@@ -1335,3 +1336,4 @@ class TemplataCompiler(
     PlaceholderTemplataT(idT, tyype)
   }
 }
+*/

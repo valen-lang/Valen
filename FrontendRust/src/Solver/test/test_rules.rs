@@ -59,6 +59,7 @@ sealed trait IRule {
   def allRunes: Vector[Long]
   def allPuzzles: Vector[Vector[Long]]
 }
+Guardian: disable: NECX
 */
 // mig: struct Lookup
 #[derive(Clone, Debug)]
@@ -80,6 +81,7 @@ case class Lookup(rune: Long, name: String) extends IRule {
   override def allRunes: Vector[Long] = Vector(rune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector())
 }
+Guardian: disable: NECX
 */
 // mig: struct Literal
 #[derive(Clone, Debug)]
@@ -101,6 +103,7 @@ case class Literal(rune: Long, value: String) extends IRule {
   override def allRunes: Vector[Long] = Vector(rune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector())
 }
+Guardian: disable: NECX
 */
 // mig: struct Equals
 #[derive(Clone, Debug)]
@@ -122,6 +125,7 @@ case class Equals(leftRune: Long, rightRune: Long) extends IRule {
   override def allRunes: Vector[Long] = Vector(leftRune, rightRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(leftRune), Vector(rightRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct CoordComponents
 #[derive(Clone, Debug)]
@@ -147,6 +151,7 @@ case class CoordComponents(coordRune: Long, ownershipRune: Long, kindRune: Long)
   override def allRunes: Vector[Long] = Vector(coordRune, ownershipRune, kindRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(coordRune), Vector(ownershipRune, kindRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct OneOf
 #[derive(Clone, Debug)]
@@ -168,6 +173,7 @@ case class OneOf(coordRune: Long, possibleValues: Vector[String]) extends IRule 
   override def allRunes: Vector[Long] = Vector(coordRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(coordRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct Call
 #[derive(Clone, Debug)]
@@ -193,6 +199,7 @@ case class Call(resultRune: Long, nameRune: Long, argRune: Long) extends IRule {
   override def allRunes: Vector[Long] = Vector(resultRune, nameRune, argRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(resultRune, nameRune), Vector(nameRune, argRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct Send
 #[derive(Clone, Debug)]
@@ -215,6 +222,7 @@ case class Send(senderRune: Long, receiverRune: Long) extends IRule {
   override def allRunes: Vector[Long] = Vector(receiverRune, senderRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(receiverRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct Implements
 #[derive(Clone, Debug)]
@@ -236,6 +244,7 @@ case class Implements(subRune: Long, superRune: Long) extends IRule {
   override def allRunes: Vector[Long] = Vector(subRune, superRune)
   override def allPuzzles: Vector[Vector[Long]] = Vector(Vector(subRune, superRune))
 }
+Guardian: disable: NECX
 */
 // mig: struct Pack
 #[derive(Clone, Debug)]
@@ -273,4 +282,5 @@ case class Pack(resultRune: Long, memberRunes: Vector[Long]) extends IRule {
     }
   }
 }
+Guardian: disable: NECX
 */

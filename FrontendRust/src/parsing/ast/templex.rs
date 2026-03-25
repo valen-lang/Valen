@@ -67,6 +67,7 @@ impl ITemplexPT<'_, '_> {
 sealed trait ITemplexPT {
   def range: RangeL
 }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -77,6 +78,7 @@ pub struct AnonymousRunePT {
 case class AnonymousRunePT(range: RangeL) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
+Guardian: disable: NECX
 }
 */
 
@@ -88,6 +90,7 @@ pub struct BoolPT {
 /*
 case class BoolPT(range: RangeL, value: Boolean) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 //case class BorrowPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -99,6 +102,7 @@ pub struct PointPT<'a, 'p> {
 case class PointPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 // This is for example func(Int)Bool, func:imm(Int, Int)Str, func:mut()(Str, Bool)
 // It's shorthand for IFunction:(mut, (Int), Bool), IFunction:(mut, (Int, Int), Str), IFunction:(mut, (), (Str, Bool))
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -109,6 +113,7 @@ pub struct CallPT<'a, 'p> {
 }
 /*
 case class CallPT(range: RangeL, template: ITemplexPT, args: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -121,6 +126,7 @@ pub struct FunctionPT<'a, 'p> {
 /*
 // Mutability is Optional because they can leave it out, and mut will be assumed.
 case class FunctionPT(range: RangeL, mutability: Option[ITemplexPT], parameters: PackPT, returnType: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -130,6 +136,7 @@ pub struct InlinePT<'a, 'p> {
 }
 /*
 case class InlinePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -139,6 +146,7 @@ pub struct IntPT {
 }
 /*
 case class IntPT(range: RangeL, value: Long) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -148,6 +156,7 @@ pub struct LocationPT {
 }
 /*
 case class LocationPT(range: RangeL, location: LocationP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -157,12 +166,14 @@ pub struct TuplePT<'a, 'p> {
 }
 /*
 case class TuplePT(range: RangeL, elements: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct MutabilityPT(pub RangeL, pub MutabilityP);
 /*
 case class MutabilityPT(range: RangeL, mutability: MutabilityP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -172,6 +183,7 @@ case class NameOrRunePT(name: NameP) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   def range = name.range
   vassert(name.str != "_")
+Guardian: disable: NECX
 }
 */
 
@@ -189,6 +201,7 @@ case class InterpretedPT(range: RangeL, maybeOwnership: Option[OwnershipPT], may
   override def hashCode(): Int = vcurious()
 
   vassert(maybeOwnership.nonEmpty || maybeRegion.nonEmpty)
+Guardian: disable: NECX
 }
 */
 
@@ -202,6 +215,7 @@ pub struct FuncPT<'a, 'p> {
 }
 /*
 case class FuncPT(range: RangeL, name: NameP, paramsRange: RangeL, parameters: Vector[ITemplexPT], returnType: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -220,6 +234,7 @@ case class StaticSizedArrayPT(
   size: ITemplexPT,
   element: ITemplexPT
 ) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -234,6 +249,7 @@ case class RuntimeSizedArrayPT(
   mutability: ITemplexPT,
   element: ITemplexPT
 ) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -243,6 +259,7 @@ pub struct SharePT<'a, 'p> {
 }
 /*
 case class SharePT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -252,6 +269,7 @@ pub struct StringPT {
 }
 /*
 case class StringPT(range: RangeL, str: String) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -262,12 +280,14 @@ pub struct TypedRunePT<'a> {
 }
 /*
 case class TypedRunePT(range: RangeL, rune: NameP, tyype: ITypePR) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariabilityPT(pub RangeL, pub VariabilityP);
 /*
 case class VariabilityPT(range: RangeL, variability: VariabilityP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -277,12 +297,14 @@ pub struct RegionRunePT<'a> {
 }
 /*
 case class RegionRunePT(range: RangeL, name: Option[NameP]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct OwnershipPT(pub RangeL, pub OwnershipP);
 /*
 case class OwnershipPT(range: RangeL, ownership: OwnershipP) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -292,4 +314,5 @@ pub struct PackPT<'a, 'p> {
 }
 /*
 case class PackPT(range: RangeL, members: Vector[ITemplexPT]) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
 */

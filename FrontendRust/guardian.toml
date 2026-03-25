@@ -1,0 +1,57 @@
+data_file = "check-template.txt"
+shields_dir = "../Luz/shields"
+backend = "opencode"
+server_url = "http://127.0.0.1:7300"
+simple_smart_config = "../Guardian/gpt-oss-20b.config.json"
+simple_medium_config = "../Guardian/gpt-oss-20b.config.json"
+simple_small_config = "../Guardian/gpt-oss-20b.config.json"
+agentic_smart_model = "openrouter/anthropic/claude-opus"
+agentic_medium_model = "openrouter/anthropic/claude-sonnet"
+agentic_small_model = "openrouter/anthropic/claude-haiku"
+exclude_shields = [
+]
+
+[slice_mode]
+include_shields = [
+  { name = "SliceInTheRightPlaces-SITRPX.md" },
+]
+
+[guard_mode]
+include_shields = [
+  # { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
+#   { name = "NeverRecoverAlwaysFail-NRAFX.md" },
+  # { name = "NoGlobalStateAnywhere-NGSAX.md" },
+#  { name = "FailFastFailLoud-FFFLX.md" },
+#   { name = "PortStructureExactly-PSEX.md" },
+#   { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
+#   { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+   { name = "NoAddingOrChangingScalaComments-NAOCSCX.md" }, # this one not in review_mode because human might add these
+#   { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
+  # { name = "ImmediateInterningDiscipline-IIDX.md" },
+#   { name = "CloserToScalaNotFurther-CSTNFX.md" },
+#   { name = "NoNovelCodeDuringMigrations-NNCDMX.md" },
+#   { name = "NoNewDefinitions-NNDX.md" },
+#   { name = "NoRenamedDefinitions-NRDX.md" },
+#   { name = "NoMovedDefinitions-NMDX.md" },
+]
+
+[review_mode]
+include_shields = [
+  { name = "NoValidSimplifications-NVSEX.md" },
+  { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
+  { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
+  { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
+  { name = "NoExpensiveClones-NECX.md" },
+  { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
+  { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
+  { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+  { name = "MigrateAllCommentsToo-MACTX.md" },
+  { name = "NeverRecoverAlwaysFail-NRAFX.md" },
+  { name = "NoGlobalStateAnywhere-NGSAX.md" },
+  { name = "FailFastFailLoud-FFFLX.md" },
+  { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
+  { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
+  { name = "ImmediateInterningDiscipline-IIDX.md" },
+  { name = "CloserToScalaNotFurther-CSTNFX.md" },
+  { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
+]

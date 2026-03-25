@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.parsing.ast.MutableP
@@ -666,3 +667,4 @@ class ArrayCompiler(
   }
 
 }
+*/

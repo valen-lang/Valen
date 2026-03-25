@@ -85,6 +85,7 @@ impl IRulexPR<'_, '_> {
 sealed trait IRulexPR {
   def range: RangeL
 }
+Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -116,6 +117,7 @@ case object PrototypeTypePR extends ITypePR
 case object KindTypePR extends ITypePR
 case object RegionTypePR extends ITypePR
 case object CitizenTemplateTypePR extends ITypePR
+Guardian: disable: NECX
 */
 
 /*

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.{Keywords, RangeS, StrI, vimpl}
@@ -36,3 +37,4 @@ class SameInstanceMacro(keywords: Keywords) extends IFunctionBodyMacro {
     (header, body)
   }
 }
+*/

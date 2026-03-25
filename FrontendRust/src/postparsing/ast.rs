@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 
 use crate::interner::StrI;
+use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::parsing::ast::{IMacroInclusionP, MutabilityP, VariabilityP};
 use crate::postparsing::expressions::BodySE;
 use crate::postparsing::itemplatatype::{
@@ -30,8 +31,8 @@ import scala.collection.immutable.List
 */
 pub trait IExpressionSE<'a> {
   fn range(&self) -> RangeS<'a>;
+  /* Guardian: disable-all */
 }
-
 /*
 trait IExpressionSE {
   def range: RangeS
@@ -39,13 +40,24 @@ trait IExpressionSE {
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ProgramS<'a, 's> {
-  pub structs: &'s [StructS<'a, 's>],
-  pub interfaces: &'s [InterfaceS<'a, 's>],
-  pub impls: &'s [ImplS<'a, 's>],
+  pub structs: &'s [&'s StructS<'a, 's>],
+  pub interfaces: &'s [&'s InterfaceS<'a, 's>],
+  pub impls: &'s [&'s ImplS<'a, 's>],
   pub implemented_functions: &'s [&'s FunctionS<'a, 's>],
-  pub exports: &'s [ExportAsS<'a, 's>],
-  pub imports: &'s [ImportS<'a, 's>],
+  pub exports: &'s [&'s ExportAsS<'a, 's>],
+  pub imports: &'s [&'s ImportS<'a, 's>],
 }
+/*
+case class ProgramS(
+    structs: Vector[StructS],
+    interfaces: Vector[InterfaceS],
+    impls: Vector[ImplS],
+    implementedFunctions: Vector[FunctionS],
+    exports: Vector[ExportAsS],
+    imports: Vector[ImportS]) {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+Guardian: disable: NECX
+*/
 
 impl<'a, 's> ProgramS<'a, 's> {
   pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'a, 's> {
@@ -61,101 +73,57 @@ impl<'a, 's> ProgramS<'a, 's> {
     assert_eq!(matches.len(), 1);
     matches[0]
   }
+  /*
+    def lookupFunction(name: String): FunctionS = {
+      val matches =
+        implementedFunctions
+          .find(f => f.name match { case FunctionNameS(n, _) => n.str == name })
+      vassert(matches.size == 1)
+      matches.head
+    }
+  */
 
-  pub fn lookup_interface(&self, name: &str) -> &InterfaceS<'a, 's> {
-    let matches: Vec<&InterfaceS<'a, 's>> = self
+  pub fn lookup_interface(&self, name: &str) -> &'s InterfaceS<'a, 's> {
+    let matches: Vec<&'s InterfaceS<'a, 's>> = self
       .interfaces
       .iter()
+      .copied()
       .filter(|i| i.name.name.as_str() == name)
       .collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
+  /*
+    def lookupInterface(name: String): InterfaceS = {
+      val matches =
+        interfaces
+          .find(f => f.name match { case TopLevelCitizenDeclarationNameS(n, _) => n.str == name })
+      vassert(matches.size == 1)
+      matches.head
+    }
+  */
 
-  pub fn lookup_struct(&self, name: &str) -> &StructS<'a, 's> {
-    let matches: Vec<&StructS<'a, 's>> = self
+  pub fn lookup_struct(&self, name: &str) -> &'s StructS<'a, 's> {
+    let matches: Vec<&'s StructS<'a, 's>> = self
       .structs
       .iter()
+      .copied()
       .filter(|s| s.name.name.as_str() == name)
       .collect();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
-}
-
-/*
-case class ProgramS(
-    structs: Vector[StructS],
-    interfaces: Vector[InterfaceS],
-    impls: Vector[ImplS],
-    implementedFunctions: Vector[FunctionS],
-    exports: Vector[ExportAsS],
-    imports: Vector[ImportS]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-*/
-/*
-  def lookupFunction(name: String): FunctionS = {
-    val matches =
-      implementedFunctions
-        .find(f => f.name match { case FunctionNameS(n, _) => n.str == name })
-    vassert(matches.size == 1)
-    matches.head
+  /*
+    def lookupStruct(name: String): StructS = {
+      val matches =
+        structs
+          .find(f => f.name match { case TopLevelCitizenDeclarationNameS(n, _) => n.str == name })
+      vassert(matches.size == 1)
+      matches.head
+    }
   }
-*/
-/*
-  def lookupInterface(name: String): InterfaceS = {
-    val matches =
-      interfaces
-        .find(f => f.name match { case TopLevelCitizenDeclarationNameS(n, _) => n.str == name })
-    vassert(matches.size == 1)
-    matches.head
-  }
-*/
-/*
-  def lookupStruct(name: String): StructS = {
-    val matches =
-      structs
-        .find(f => f.name match { case TopLevelCitizenDeclarationNameS(n, _) => n.str == name })
-    vassert(matches.size == 1)
-    matches.head
-  }
+  */
 }
-*/
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExternS<'a> {
-  pub package_coord: &'a PackageCoordinate<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinS<'a> {
-  // AFTERM: can we give everything a lifetime into an arena so we can
-  // all have references instead of using Arc everywhere?
-  pub generator_name: StrI<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct MacroCallS<'a> {
-  pub range: RangeS<'a>,
-  pub include: IMacroInclusionP,
-  pub macro_name: StrI<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExportS<'a> {
-  pub package_coordinate: &'a PackageCoordinate<'a>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct PureS;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct AdditiveS;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct SealedS;
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct UserFunctionS;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum ICitizenAttributeS<'a> {
@@ -165,6 +133,11 @@ pub enum ICitizenAttributeS<'a> {
   MacroCall(MacroCallS<'a>),
   Export(ExportS<'a>),
 }
+/*
+sealed trait ICitizenAttributeS
+Guardian: disable: NECX
+*/
+
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IFunctionAttributeS<'a> {
@@ -175,56 +148,92 @@ pub enum IFunctionAttributeS<'a> {
   Export(ExportS<'a>),
   UserFunction(UserFunctionS),
 }
-
 /*
-sealed trait ICitizenAttributeS
 sealed trait IFunctionAttributeS
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExternS<'a> {
+  pub package_coord: &'a PackageCoordinate<'a>,
+}
+/*
 case class ExternS(packageCoord: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct PureS;
+/*
 case object PureS extends IFunctionAttributeS
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct AdditiveS;
+/*
 case object AdditiveS extends IFunctionAttributeS
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct SealedS;
+/*
 case object SealedS extends ICitizenAttributeS
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct BuiltinS<'a> {
+  // AFTERM: can we give everything a lifetime into an arena so we can
+  // all have references instead of using Arc everywhere?
+  pub generator_name: StrI<'a>,
+}
+/*
 case class BuiltinS(generatorName: StrI) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct MacroCallS<'a> {
+  pub range: RangeS<'a>,
+  pub include: IMacroInclusionP,
+  pub macro_name: StrI<'a>,
+}
+/*
 case class MacroCallS(range: RangeS, include: IMacroInclusionP, macroName: StrI) extends ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct ExportS<'a> {
+  pub package_coordinate: &'a PackageCoordinate<'a>,
+}
+/*
 case class ExportS(packageCoordinate: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-case object UserFunctionS extends IFunctionAttributeS // Whether it was written by a human. Mostly for tests right now.
+Guardian: disable: NECX
 */
+
 #[derive(Clone, Debug, PartialEq)]
+pub struct UserFunctionS;
+/*
+case object UserFunctionS extends IFunctionAttributeS // Whether it was written by a human. Mostly for tests right now.
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
 pub enum ICitizenS<'a, 's> {
   Struct(StructS<'a, 's>),
   Interface(InterfaceS<'a, 's>),
 }
-
-impl<'a, 's> ICitizenS<'a, 's> {
-  pub fn name(&self) -> TopLevelCitizenDeclarationNameS<'_> {
-    match self {
-      ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(&s.name),
-      ICitizenS::Interface(i) => TopLevelCitizenDeclarationNameS::from(&i.name),
-    }
-  }
-
-  pub fn tyype(&self) -> &TemplateTemplataType {
-    match self {
-      ICitizenS::Struct(s) => &s.tyype,
-      ICitizenS::Interface(i) => &i.tyype,
-    }
-  }
-
-  pub fn generic_params(&self) -> &'s [GenericParameterS<'a, 's>] {
-    match self {
-      ICitizenS::Struct(s) => s.generic_params,
-      ICitizenS::Interface(i) => i.generic_params,
-    }
-  }
-}
-
 /*
 sealed trait ICitizenS {
   def name: ICitizenDeclarationNameS
@@ -232,25 +241,52 @@ sealed trait ICitizenS {
   def genericParams: Vector[GenericParameterS]
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+
+impl<'a, 's> ICitizenS<'a, 's> {
+  pub fn name(&self) -> TopLevelCitizenDeclarationNameS<'_> {
+    match self {
+      ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(s.name),
+      ICitizenS::Interface(i) => TopLevelCitizenDeclarationNameS::from(i.name),
+    }
+  }
+  /* Guardian: disable-all */
+
+  pub fn tyype(&self) -> &TemplateTemplataType {
+    match self {
+      ICitizenS::Struct(s) => &s.tyype,
+      ICitizenS::Interface(i) => &i.tyype,
+    }
+  }
+  /* Guardian: disable-all */
+
+  pub fn generic_params(&self) -> &'s [&'s GenericParameterS<'a, 's>] {
+    match self {
+      ICitizenS::Struct(s) => s.generic_params,
+      ICitizenS::Interface(i) => i.generic_params,
+    }
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Debug, PartialEq)]
 pub struct StructS<'a, 's> {
   pub range: RangeS<'a>,
-  pub name: TopLevelStructDeclarationNameS<'a>,
+  pub name: &'a TopLevelStructDeclarationNameS<'a>,
   pub attributes: &'s [ICitizenAttributeS<'a>],
   pub weakable: bool,
-  pub generic_params: &'s [GenericParameterS<'a, 's>],
+  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
   pub mutability_rune: RuneUsage<'a>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
   pub tyype: TemplateTemplataType,
-  pub header_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
-  pub header_predicted_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub header_rules: &'s [IRulexSR<'a>],
-  pub members_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
-  pub members_predicted_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub member_rules: &'s [IRulexSR<'a>],
   pub members: &'s [IStructMemberS<'a>],
 }
-
 /*
 case class StructS(
     range: RangeS,
@@ -314,6 +350,7 @@ impl IStructMemberS<'_> {
       IStructMemberS::VariadicStructMember(m) => m.range.clone(),
     }
   }
+  /* Guardian: disable-all */
 
   pub fn variability(&self) -> VariabilityP {
     match self {
@@ -321,6 +358,7 @@ impl IStructMemberS<'_> {
       IStructMemberS::VariadicStructMember(m) => m.variability,
     }
   }
+  /* Guardian: disable-all */
 
   pub fn type_rune(&self) -> &RuneUsage<'_> {
     match self {
@@ -328,7 +366,9 @@ impl IStructMemberS<'_> {
       IStructMemberS::VariadicStructMember(m) => &m.type_rune,
     }
   }
+  /* Guardian: disable-all */
 }
+/* Guardian: disable-all */
 
 /*
 sealed trait IStructMemberS {
@@ -336,6 +376,7 @@ sealed trait IStructMemberS {
   def variability: VariabilityP
   def typeRune: RuneUsage
 }
+Guardian: disable: NECX
   */
 #[derive(Clone, Debug, PartialEq)]
 pub struct NormalStructMemberS<'a> {
@@ -353,6 +394,7 @@ case class NormalStructMemberS(
     typeRune: RuneUsage) extends IStructMemberS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
   */
 #[derive(Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberS<'a> {
@@ -368,18 +410,19 @@ case class VariadicStructMemberS(
   typeRune: RuneUsage) extends IStructMemberS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct InterfaceS<'a, 's> {
   pub range: RangeS<'a>,
-  pub name: TopLevelInterfaceDeclarationNameS<'a>,
+  pub name: &'a TopLevelInterfaceDeclarationNameS<'a>,
   pub attributes: &'s [ICitizenAttributeS<'a>],
   pub weakable: bool,
-  pub generic_params: &'s [GenericParameterS<'a, 's>],
-  pub rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub mutability_rune: RuneUsage<'a>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
-  pub predicted_rune_to_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub tyype: TemplateTemplataType,
   pub rules: &'s [IRulexSR<'a>],
   pub internal_methods: &'s [&'s FunctionS<'a, 's>],
@@ -436,13 +479,13 @@ case class InterfaceS(
 
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ImplS<'a, 's> {
   pub range: RangeS<'a>,
   pub name: ImplDeclarationNameS<'a>,
-  pub user_specified_identifying_runes: &'s [GenericParameterS<'a, 's>],
+  pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'a, 's>],
   pub rules: &'s [IRulexSR<'a>],
-  pub rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub tyype: ITemplataType,
   pub struct_kind_rune: RuneUsage<'a>,
   pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
@@ -466,7 +509,7 @@ case class ImplS(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ExportAsS<'a, 's> {
   pub range: RangeS<'a>,
   pub rules: &'s [IRulexSR<'a>],
@@ -485,7 +528,7 @@ case class ExportAsS(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ImportS<'a, 's> {
   pub range: RangeS<'a>,
   pub module_name: StrI<'a>,
@@ -503,7 +546,7 @@ case class ImportS(
 }
 */
 pub fn interface_s_name<'a, 's>(interface_s: &InterfaceS<'a, 's>) -> TopLevelCitizenDeclarationNameS<'a> {
-  TopLevelCitizenDeclarationNameS::from(&interface_s.name)
+  TopLevelCitizenDeclarationNameS::from(interface_s.name)
 }
 
 /*
@@ -515,7 +558,7 @@ object interfaceSName {
 }
 */
 pub fn struct_s_name<'a, 's>(struct_s: &StructS<'a, 's>) -> TopLevelCitizenDeclarationNameS<'a> {
-  TopLevelCitizenDeclarationNameS::from(&struct_s.name)
+  TopLevelCitizenDeclarationNameS::from(struct_s.name)
 }
 
 /*
@@ -540,7 +583,7 @@ object structSName {
 
 // Also remember, if a parameter has no name, it can't be varying.
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ParameterS<'a> {
   pub range: RangeS<'a>,
   pub virtuality: Option<AbstractSP<'a>>,
@@ -573,6 +616,7 @@ case class AbstractSP(
   // False if this is a free function somewhere else
   isInternalMethod: Boolean
 )
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleParameterS<'a> {
@@ -581,7 +625,6 @@ pub struct SimpleParameterS<'a> {
   pub virtuality: Option<AbstractSP<'a>>,
   pub tyype: IRulexSR<'a>,
 }
-
 /*
 case class SimpleParameterS(
     origin: Option[AtomSP],
@@ -590,24 +633,10 @@ case class SimpleParameterS(
     tyype: IRulexSR) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
-pub struct GeneratedBodyS<'a> {
-  pub generator_id: StrI<'a>,
-}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct CodeBodyS<'a, 's> {
-  pub body: &'s BodySE<'a, 's>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct ExternBodyS {}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct AbstractBodyS {}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IBodyS<'a, 's> {
   ExternBody(ExternBodyS),
   AbstractBody(AbstractBodyS),
@@ -617,15 +646,45 @@ pub enum IBodyS<'a, 's> {
 
 /*
 sealed trait IBodyS
+Guardian: disable: NECX
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ExternBodyS {}
+/*
 case object ExternBodyS extends IBodyS
+Guardian: disable: NECX
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AbstractBodyS {}
+/*
 case object AbstractBodyS extends IBodyS
+Guardian: disable: NECX
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct GeneratedBodyS<'a> {
+  pub generator_id: StrI<'a>,
+}
+/*
 case class GeneratedBodyS(generatorId: StrI) extends IBodyS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CodeBodyS<'a, 's> {
+  pub body: &'s BodySE<'a, 's>,
+}
+/*
 case class CodeBodyS(body: BodySE) extends IBodyS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
+Guardian: disable: NECX
 */
+
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum IRegionMutabilityS {
   ReadWriteRegion,
@@ -633,13 +692,13 @@ pub enum IRegionMutabilityS {
   ImmutableRegion,
   AdditiveRegion,
 }
-
 /*
 sealed trait IRegionMutabilityS
 case object ReadWriteRegionS extends IRegionMutabilityS
 case object ReadOnlyRegionS extends IRegionMutabilityS
 case object ImmutableRegionS extends IRegionMutabilityS
 case object AdditiveRegionS extends IRegionMutabilityS
+Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'a> {
@@ -647,6 +706,10 @@ pub enum IGenericParameterTypeS<'a> {
   CoordGenericParameterType(CoordGenericParameterTypeS<'a>),
   OtherGenericParameterType(OtherGenericParameterTypeS),
 }
+/*
+object IGenericParameterTypeS {
+Guardian: disable: NECX
+*/
 
 impl IGenericParameterTypeS<'_> {
   pub fn expect_region(&self) -> &RegionGenericParameterTypeS {
@@ -655,6 +718,19 @@ impl IGenericParameterTypeS<'_> {
       _ => panic!("Expected region generic parameter type"),
     }
   }
+  /*
+    def expectRegion(x: IGenericParameterTypeS): RegionGenericParameterTypeS = {
+      x match {
+        case z @ RegionGenericParameterTypeS(_) => z
+        case _ => vfail()
+      }
+    }
+  }
+  */
+
+  /*
+  sealed trait IGenericParameterTypeS {
+  */
 
   pub fn tyype(&self) -> ITemplataType {
     match self {
@@ -663,53 +739,40 @@ impl IGenericParameterTypeS<'_> {
       IGenericParameterTypeS::OtherGenericParameterType(x) => x.tyype.clone(),
     }
   }
+  /*
+    def tyype: ITemplataType
+    */
 }
+/*
+Guardian: disable-all
+}
+*/
 
-/*
-object IGenericParameterTypeS {
-  def expectRegion(x: IGenericParameterTypeS): RegionGenericParameterTypeS = {
-    x match {
-      case z @ RegionGenericParameterTypeS(_) => z
-      case _ => vfail()
-    }
-  }
-}
-*/
-/*
-sealed trait IGenericParameterTypeS {
-  def tyype: ITemplataType
-}
-*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct RegionGenericParameterTypeS {
   pub mutability: IRegionMutabilityS,
 }
+/*
+case class RegionGenericParameterTypeS(mutability: IRegionMutabilityS) extends IGenericParameterTypeS {
+  def tyype: ITemplataType = RegionTemplataType()
+}
+Guardian: disable: NECX
+*/
 
 impl RegionGenericParameterTypeS {
   pub fn tyype(&self) -> ITemplataType {
     ITemplataType::RegionTemplataType(RegionTemplataType {})
   }
+  /* Guardian: disable-all */
 }
+/* Guardian: disable-all */
 
-/*
-case class RegionGenericParameterTypeS(mutability: IRegionMutabilityS) extends IGenericParameterTypeS {
-  def tyype: ITemplataType = RegionTemplataType()
-}
-*/
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoordGenericParameterTypeS<'a> {
   pub coord_region: Option<RuneUsage<'a>>,
   pub kind_mutable: bool,
   pub region_mutable: bool,
 }
-
-impl CoordGenericParameterTypeS<'_> {
-  pub fn tyype(&self) -> ITemplataType {
-    assert!(self.coord_region.is_none());
-    ITemplataType::CoordTemplataType(CoordTemplataType {})
-  }
-}
-
 /*
 case class CoordGenericParameterTypeS(
     coordRegion: Option[RuneUsage],
@@ -720,12 +783,22 @@ case class CoordGenericParameterTypeS(
 
   def tyype: ITemplataType = CoordTemplataType()
 }
+Guardian: disable: NECX
 */
+
+impl CoordGenericParameterTypeS<'_> {
+  pub fn tyype(&self) -> ITemplataType {
+    assert!(self.coord_region.is_none());
+    ITemplataType::CoordTemplataType(CoordTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS {
   pub tyype: ITemplataType,
 }
-
 /*
 case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericParameterTypeS {
   tyype match {
@@ -733,15 +806,16 @@ case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericPara
     case _ =>
   }
 }
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+
+#[derive(Debug, PartialEq)]
 pub struct GenericParameterS<'a, 's> {
   pub range: RangeS<'a>,
   pub rune: RuneUsage<'a>,
   pub tyype: IGenericParameterTypeS<'a>,
   pub default: Option<GenericParameterDefaultS<'a, 's>>,
 }
-
 /*
 case class GenericParameterS(
   range: RangeS,
@@ -749,46 +823,39 @@ case class GenericParameterS(
   tyype: IGenericParameterTypeS,
   default: Option[GenericParameterDefaultS])
 */
+
 /*
 //sealed trait IRuneAttributeS
 //case class ImmutableRuneAttributeS(range: RangeS) extends IRuneAttributeS
 //case class ReadWriteRuneAttributeS(range: RangeS) extends IRuneAttributeS
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 */
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'a, 's> {
   pub result_rune: IRuneS<'a>,
   pub rules: Vec<&'s IRulexSR<'a>>,
 }
-
 /*
 case class GenericParameterDefaultS(
   // One day, when we want more rules in here, we might need to have a runeToType map
   // and other things to make it its own little world.
   resultRune: IRuneS,
   rules: Vector[IRulexSR])
+Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct FunctionS<'a, 's> {
   pub range: RangeS<'a>,
   pub name: &'a IFunctionDeclarationNameS<'a>,
   pub attributes: &'s [IFunctionAttributeS<'a>],
-  pub generic_params: &'s [GenericParameterS<'a, 's>],
-  pub rune_to_predicted_type: HashMap<IRuneS<'a>, ITemplataType>,
+  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
+  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub tyype: TemplateTemplataType,
   pub params: &'s [ParameterS<'a>],
   pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
   pub rules: &'s [IRulexSR<'a>],
   pub body: &'s IBodyS<'a, 's>,
-}
-
-impl<'a, 's> FunctionS<'a, 's> {
-  pub fn is_light(&self) -> bool {
-    match &self.body {
-      IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
-      IBodyS::CodeBody(body) => !body.body.closured_names.is_empty(),
-    }
-  }
 }
 
 /*
@@ -847,19 +914,112 @@ case class FunctionS(
 
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 */
-/*
-  def isLight(): Boolean = {
-    body match {
-      case ExternBodyS | AbstractBodyS | GeneratedBodyS(_) => false
-      case CodeBodyS(bodyS) => bodyS.closuredNames.nonEmpty
+impl<'a, 's> FunctionS<'a, 's> {
+  pub fn is_light(&self) -> bool {
+    match &self.body {
+      IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
+      IBodyS::CodeBody(body) => !body.body.closured_names.is_empty(),
     }
   }
+  /*
+    def isLight(): Boolean = {
+      body match {
+        case ExternBodyS | AbstractBodyS | GeneratedBodyS(_) => false
+        case CodeBodyS(bodyS) => bodyS.closuredNames.nonEmpty
+      }
+    }
+    */
+}
+/*
+Guardian: disable-all
 }
 */
+
+#[derive(Clone, Debug, PartialEq)]
+pub struct LocationInDenizenBuilder {
+  path: Vec<i32>,
+  consumed: bool,
+  next_child: i32,
+}
+/*
+// A Denizen is a thing at the top level of a file, like structs, functions, impls, exports, etc.
+// This is a class with a consumed boolean so that we're sure we don't use it twice.
+// Anyone that uses it should call the consume() method.
+// Move semantics would be nice here... alas.
+class LocationInDenizenBuilder(path: Vector[Int]) {
+  private var consumed: Boolean = false
+  private var nextChild: Int = 1
+
+  // Note how this is hashing `path`, not `this` like usual.
+  val hash = runtime.ScalaRunTime._hashCode(path.toList); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+Guardian: disable: NECX
+*/
+
+impl LocationInDenizenBuilder {
+  // MIGALLOW: new -> new
+  pub fn new(path: Vec<i32>) -> Self {
+    Self {
+      path,
+      consumed: false,
+      next_child: 1,
+    }
+  }
+  /* Guardian: disable-all */
+
+  pub fn child(&mut self) -> LocationInDenizenBuilder {
+    let child = self.next_child;
+    self.next_child += 1;
+    let mut child_path = self.path.clone();
+    child_path.push(child);
+    LocationInDenizenBuilder::new(child_path)
+  }
+  /*
+    def child(): LocationInDenizenBuilder = {
+      val child = nextChild
+      nextChild = nextChild + 1
+      new LocationInDenizenBuilder(path :+ child)
+    }
+  */
+
+  pub fn consume(&mut self) -> LocationInDenizen {
+    assert!(
+      !self.consumed,
+      "Location in denizen was already used for something, add a .child() somewhere."
+    );
+    self.consumed = true;
+    LocationInDenizen {
+      path: self.path.clone(),
+    }
+  }
+  /*
+    def consume(): LocationInDenizen = {
+      assert(!consumed, "Location in denizen was already used for something, add a .child() somewhere.")
+      consumed = true
+      LocationInDenizen(path)
+    }
+  */
+}
+/*
+  override def toString: String = path.mkString(".")
+}
+*/
+
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocationInDenizen {
   pub path: Vec<i32>,
 }
+
+/*
+case class LocationInDenizen(path: Vector[Int]) {
+  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  override def equals(obj: Any): Boolean = {
+    obj match {
+      case LocationInDenizen(thatPath) => path == thatPath
+      case _ => false
+    }
+  }
+Guardian: disable: NECX
+*/
 
 impl LocationInDenizen {
   pub fn before(&self, that: &LocationInDenizen) -> bool {
@@ -879,82 +1039,6 @@ impl LocationInDenizen {
     }
     false
   }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct LocationInDenizenBuilder {
-  path: Vec<i32>,
-  consumed: bool,
-  next_child: i32,
-}
-
-impl LocationInDenizenBuilder {
-  // MIGALLOW: new -> new
-  pub fn new(path: Vec<i32>) -> Self {
-    Self {
-      path,
-      consumed: false,
-      next_child: 1,
-    }
-  }
-
-  pub fn child(&mut self) -> LocationInDenizenBuilder {
-    let child = self.next_child;
-    self.next_child += 1;
-    let mut child_path = self.path.clone();
-    child_path.push(child);
-    LocationInDenizenBuilder::new(child_path)
-  }
-
-  pub fn consume(&mut self) -> LocationInDenizen {
-    assert!(
-      !self.consumed,
-      "Location in denizen was already used for something, add a .child() somewhere."
-    );
-    self.consumed = true;
-    LocationInDenizen {
-      path: self.path.clone(),
-    }
-  }
-}
-
-/*
-// A Denizen is a thing at the top level of a file, like structs, functions, impls, exports, etc.
-// This is a class with a consumed boolean so that we're sure we don't use it twice.
-// Anyone that uses it should call the consume() method.
-// Move semantics would be nice here... alas.
-class LocationInDenizenBuilder(path: Vector[Int]) {
-  private var consumed: Boolean = false
-  private var nextChild: Int = 1
-
-  // Note how this is hashing `path`, not `this` like usual.
-  val hash = runtime.ScalaRunTime._hashCode(path.toList); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
-
-  def child(): LocationInDenizenBuilder = {
-    val child = nextChild
-    nextChild = nextChild + 1
-    new LocationInDenizenBuilder(path :+ child)
-  }
-
-  def consume(): LocationInDenizen = {
-    assert(!consumed, "Location in denizen was already used for something, add a .child() somewhere.")
-    consumed = true
-    LocationInDenizen(path)
-  }
-
-  override def toString: String = path.mkString(".")
-}
-*/
-/*
-case class LocationInDenizen(path: Vector[Int]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case LocationInDenizen(thatPath) => path == thatPath
-      case _ => false
-    }
-  }
-*/
 /*
   def before(that: LocationInDenizen): Boolean = {
     this.path.zip(that.path).foreach({ case (thisStep, thatStep) =>
@@ -978,37 +1062,13 @@ case class LocationInDenizen(path: Vector[Int]) {
 }
 
 */
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelFunctionS<'a, 's> {
-  pub function: FunctionS<'a, 's>,
-}
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelImplS<'a, 's> {
-  pub impl_: ImplS<'a, 's>,
 }
+/*
+Guardian: disable-all
+*/
 
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelExportAsS<'a, 's> {
-  pub export: ExportAsS<'a, 's>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelImportS<'a, 's> {
-  pub imporrt: ImportS<'a, 's>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelStructS<'a, 's> {
-  pub strukt: StructS<'a, 's>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct TopLevelInterfaceS<'a, 's> {
-  pub interface: InterfaceS<'a, 's>,
-}
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IDenizenS<'a, 's> {
   TopLevelFunction(TopLevelFunctionS<'a, 's>),
   TopLevelImpl(TopLevelImplS<'a, 's>),
@@ -1017,43 +1077,44 @@ pub enum IDenizenS<'a, 's> {
   TopLevelStruct(TopLevelStructS<'a, 's>),
   TopLevelInterface(TopLevelInterfaceS<'a, 's>),
 }
+/*
+sealed trait IDenizenS
+*/
 
-#[derive(Clone, Debug, PartialEq)]
-pub enum ICitizenDenizenS<'a, 's> {
-  TopLevelStruct(TopLevelStructS<'a, 's>),
-  TopLevelInterface(TopLevelInterfaceS<'a, 's>),
-}
-
-impl<'a, 's> ICitizenDenizenS<'a, 's> {
-  pub fn citizen(&self) -> ICitizenS<'a, 's> {
-    match self {
-      ICitizenDenizenS::TopLevelStruct(s) => ICitizenS::Struct(s.strukt.clone()),
-      ICitizenDenizenS::TopLevelInterface(i) => ICitizenS::Interface(i.interface.clone()),
-    }
-  }
-}
-
-// MIGALLOW: unapply -> as_citizen_denizen
-pub fn as_citizen_denizen<'a, 's>(x: &IDenizenS<'a, 's>) -> Option<ICitizenDenizenS<'a, 's>> {
-  match x {
-    IDenizenS::TopLevelStruct(s) => Some(ICitizenDenizenS::TopLevelStruct(s.clone())),
-    IDenizenS::TopLevelInterface(i) => Some(ICitizenDenizenS::TopLevelInterface(i.clone())),
-    _ => None,
-  }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FileS<'a, 's> {
-  pub denizens: Vec<IDenizenS<'a, 's>>,
+#[derive(Debug, PartialEq)]
+pub struct TopLevelFunctionS<'a, 's> {
+  pub function: FunctionS<'a, 's>,
 }
 
 /*
-sealed trait IDenizenS
 case class TopLevelFunctionS(function: FunctionS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct TopLevelImplS<'a, 's> {
+  pub impl_: ImplS<'a, 's>,
+}
+
+/*
 case class TopLevelImplS(impl: ImplS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct TopLevelExportAsS<'a, 's> {
+  pub export: ExportAsS<'a, 's>,
+}
+/*
 case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct TopLevelImportS<'a, 's> {
+  pub imporrt: ImportS<'a, 's>,
+}
+/*
 case class TopLevelImportS(imporrt: ImportS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
+
 /*
 object ICitizenDenizenS {
   def unapply(x: IDenizenS): Option[ICitizenS] = {
@@ -1065,23 +1126,62 @@ object ICitizenDenizenS {
   }
 }
 */
+
+#[derive(Debug, PartialEq)]
+pub enum ICitizenDenizenS<'a, 's> {
+  TopLevelStruct(TopLevelStructS<'a, 's>),
+  TopLevelInterface(TopLevelInterfaceS<'a, 's>),
+}
 /*
 sealed trait ICitizenDenizenS extends IDenizenS {
-  def citizen: ICitizenS
-}
 */
+
+impl<'a, 's> ICitizenDenizenS<'a, 's> {
+  pub fn citizen(&self) -> ! {
+    panic!("ICitizenDenizenS::citizen is dead code")
+  }
+  /*
+    def citizen: ICitizenS
+  }
+  */
+}
+/*
+Guardian: disable-all
+*/
+
+// MIGALLOW: unapply -> as_citizen_denizen
+pub fn as_citizen_denizen<'a, 's>(_x: &IDenizenS<'a, 's>) -> Option<ICitizenDenizenS<'a, 's>> {
+  panic!("as_citizen_denizen is dead code")
+}
+/* Guardian: disable-all */
+
+
+#[derive(Debug, PartialEq)]
+pub struct TopLevelStructS<'a, 's> {
+  pub strukt: StructS<'a, 's>,
+}
 /*
 case class TopLevelStructS(struct: StructS) extends ICitizenDenizenS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def citizen: ICitizenS = struct
 }
 */
+
+#[derive(Debug, PartialEq)]
+pub struct TopLevelInterfaceS<'a, 's> {
+  pub interface: InterfaceS<'a, 's>,
+}
 /*
 case class TopLevelInterfaceS(interface: InterfaceS) extends ICitizenDenizenS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def citizen: ICitizenS = interface
 }
 */
+
+#[derive(Debug, PartialEq)]
+pub struct FileS<'a, 's> {
+  pub denizens: Vec<IDenizenS<'a, 's>>,
+}
 /*
 case class FileS(denizens: Vector[IDenizenS])
 */

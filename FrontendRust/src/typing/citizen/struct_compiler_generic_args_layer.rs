@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.citizen
 
 import dev.vale.highertyping.FunctionA
@@ -512,3 +513,4 @@ class StructCompilerGenericArgsLayer(
       localName = templateName.localName.makeInterfaceName(interner, templateArgs))
   }
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 
@@ -83,3 +84,4 @@ class DestructorCompiler(
     resultExpr2
   }
 }
+*/

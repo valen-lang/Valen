@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale._
@@ -1667,3 +1668,4 @@ object Compiler {
     }
   }
 }
+*/

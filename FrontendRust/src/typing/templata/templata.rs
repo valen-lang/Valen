@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.templata
 
 import dev.vale.highertyping.{FunctionA, ImplA, InterfaceA, StructA}
@@ -365,3 +366,4 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
   override def tyype: ITemplataType = vfail()
 }
+*/

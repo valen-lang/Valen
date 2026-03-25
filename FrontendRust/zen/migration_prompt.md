@@ -134,3 +134,14 @@ so perhaps:
 
 
 wow, it sucks at dealing with lifetimes.
+
+
+
+i turned off guardian so it could do a small thing, and then it kept on going with the larger quest, and it did such damage lol. it added a pub fn to bypass the interning to allocate directly from the arena. that would have been devastating. the problem is that it just doesnt have the instincts. the guard rails are to give it a whitelist of what it can do to protect the zen.
+
+
+so many times, it has made a misstep. latest one was a file's replace-all gone awry, and decided that the way to fix it was to revert the file, blasting away not just that mistake but ALL THE CHANGES IN THE ENTIRE SESSION. you absolutely cannot trust AI to do the right thing.
+
+
+launching 30 specific agents in parallel was a good idea, because letting opus look at everything in one pass didnt work well. half the feedback was inaccurate (it complained about panic!s even though panic!s are good)
+

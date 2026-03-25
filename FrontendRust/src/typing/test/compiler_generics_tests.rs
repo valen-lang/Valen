@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale._
@@ -54,3 +55,4 @@ class CompilerGenericsTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
   }
 }
+*/

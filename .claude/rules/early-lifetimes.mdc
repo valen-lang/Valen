@@ -55,6 +55,6 @@ The higher typing pass uses the same lifetimes as the postparser:
  * `'p` for the parsed AST arena (threaded through from the parser).
 
 Higher typing pass structs: `HigherTypingPass<'a, 'ctx>`, `HigherTypingCompilation<'a, 'ctx, 'p, 's>`.
-Environment and intermediate state: `Astrouts<'a, 's>`, `EnvironmentA<'a, 's>`.
+Environment and intermediate state: `Astrouts<'a, 's>`, `EnvironmentA<'a, 's, 'env>` (where `'env` borrows the `PackageCoordinateMap` owned by `translate_program`).
 
 Names always live in `'a`. AST nodes (structs, interfaces, functions, impls) live in `'s`. The error types in `astronomer_error_reporter.rs` use `'a` since they contain names and ranges (which are interned).

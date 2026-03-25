@@ -44,25 +44,6 @@ pub struct CodeLocationS<'a> {
   pub file: Arc<FileCoordinate<'a>>,
   pub offset: i32,
 }
-
-impl<'a> CodeLocationS<'a> {
-  // Keep in sync with CodeLocation2
-  pub fn test_zero(interner: &Interner<'a>) -> CodeLocationS<'a> {
-    Self::internal(interner, -1)
-  }
-
-  pub fn internal(interner: &Interner<'a>, internal_num: i32) -> CodeLocationS<'a> {
-    assert!(internal_num < 0, "CodeLocationS::internal - internal_num must be negative");
-    let package_coord =
-      interner.intern_package_coordinate(interner.intern(""), &[]);
-    let file = interner.intern_file_coordinate(package_coord, "internal");
-    CodeLocationS {
-      file: Arc::new(file.clone()),
-      offset: internal_num,
-    }
-  }
-}
-
 /*
 case class CodeLocationS(
   // The index in the original source code files list.
@@ -80,7 +61,27 @@ case class CodeLocationS(
     }
   }
 }
+Guardian: disable: NECX
 */
+
+impl<'a> CodeLocationS<'a> {
+  // Keep in sync with CodeLocation2
+  pub fn test_zero(interner: &Interner<'a>) -> CodeLocationS<'a> {
+    Self::internal(interner, -1)
+  }
+
+  // SPORK
+  pub fn internal(interner: &Interner<'a>, internal_num: i32) -> CodeLocationS<'a> {
+    assert!(internal_num < 0, "CodeLocationS::internal - internal_num must be negative");
+    let package_coord =
+      interner.intern_package_coordinate(interner.intern(""), &[]);
+    let file = interner.intern_file_coordinate(package_coord, "internal");
+    CodeLocationS {
+      file: Arc::new(file.clone()),
+      offset: internal_num,
+    }
+  }
+}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RangeS<'a> {
@@ -88,7 +89,14 @@ pub struct RangeS<'a> {
   pub end: CodeLocationS<'a>,
 }
 
+// Scala's toString was just for debug purposes (covered by #[derive(Debug)])
 impl<'a> RangeS<'a> {
+  pub fn new(begin: CodeLocationS<'a>, end: CodeLocationS<'a>) -> RangeS<'a> {
+    assert!(begin.file == end.file, "RangeS: begin.file != end.file");
+    assert!(begin.offset <= end.offset, "RangeS: begin.offset > end.offset");
+    RangeS { begin, end }
+  }
+
   // Should only be used in tests.
   pub fn test_zero(interner: &Interner<'a>) -> RangeS<'a> {
     let tz = CodeLocationS::test_zero(interner);
@@ -98,6 +106,7 @@ impl<'a> RangeS<'a> {
     }
   }
 
+  // SPORK
   pub fn file(&self) -> &Arc<FileCoordinate<'_>> {
     &self.begin.file
   }
@@ -120,4 +129,5 @@ case class RangeS(begin: CodeLocationS, end: CodeLocationS) {
   }
 }
 
+Guardian: disable: NECX
 */

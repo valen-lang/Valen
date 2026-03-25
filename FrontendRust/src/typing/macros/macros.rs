@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.macros
 
 import dev.vale.{RangeS, StrI}
@@ -47,3 +48,4 @@ trait IOnImplDefinedMacro {
   def getImplSiblingEntries(implName: IdT[INameT], implA: ImplA):
   Vector[(IdT[INameT], IEnvEntry)]
 }
+*/

@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.function
 
 import dev.vale.{Interner, Keywords, Profiler, RangeS, vassert, vassertSome, vcurious, vfail, vimpl, vwat}
@@ -484,3 +485,4 @@ class FunctionCompilerMiddleLayer(
       defaultRegion)
   }
 }
+*/

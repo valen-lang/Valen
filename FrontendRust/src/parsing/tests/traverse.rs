@@ -1,3 +1,7 @@
+/*
+Guardian: disable-all
+*/
+
 // # Don't Use Ellipses In Matches (DUEIM)
 // By default, don't like using ellipses in matches. We prefer to use explicit matches.
 // Only the human should use ellipses. This is because explicit matches are a signal of when we

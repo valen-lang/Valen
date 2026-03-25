@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing.{IRuneS, ITemplataType}
@@ -239,3 +240,4 @@ case class HinputsT(
     functions.filter(_.header.isUserFunction)
   }
 }
+*/

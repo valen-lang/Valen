@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.postparsing.{CodeNameS, TopLevelStructDeclarationNameS}
@@ -18,3 +19,4 @@ import scala.io.Source
 class InProgressTests extends FunSuite with Matchers {
 
 }
+*/

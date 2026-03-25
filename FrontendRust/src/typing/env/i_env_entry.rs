@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.env
 
 import dev.vale.highertyping.{FunctionA, ImplA, InterfaceA, StructA}
@@ -21,3 +22,4 @@ case class TemplataEnvEntry(templata: ITemplataT[ITemplataType]) extends IEnvEnt
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
   vpass()
 }
+*/

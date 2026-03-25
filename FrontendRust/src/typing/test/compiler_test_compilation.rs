@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing
 
 import dev.vale.options.GlobalOptions
@@ -24,3 +25,4 @@ object CompilerTestCompilation {
         false))
   }
 }
+*/

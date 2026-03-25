@@ -1,3 +1,4 @@
+/*
 package dev.vale.typing.infer
 
 import dev.vale.options.GlobalOptions
@@ -1410,3 +1411,4 @@ class CompilerRuleSolver(
     }
   }
 }
+*/

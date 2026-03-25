@@ -1,9 +1,13 @@
+/*
+Guardian: disable-all
+*/
+
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::postparsing::names::{
   IImpreciseNameS, IImpreciseNameValS, INameS, INameValS, IRuneS, IRuneValS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IVarNameS, IVarNameValS,
   ImplicitRegionRuneS, ImplicitCoercionOwnershipRuneS, ImplicitCoercionKindRuneS,
-  RuneNameS,
+  RuneNameS, TopLevelStructDeclarationNameS, TopLevelInterfaceDeclarationNameS,
   ImplicitCoercionTemplateRuneS, AnonymousSubstructMethodInheritedRuneS,
   DispatcherRuneFromImplS, CaseRuneFromImplS,
   LambdaStructImpreciseNameS,
@@ -350,6 +354,24 @@ impl<'a> Interner<'a> {
         let r = self.arena.alloc(p);
         IImpreciseNameS::ArbitraryName(r)
       }
+    }
+  }
+
+  /// Intern a TopLevelStructDeclarationNameS, returning a canonical &'a reference.
+  /// Mirrors Scala's interner.intern(TopLevelStructDeclarationNameS(...)).
+  pub fn intern_struct_declaration_name(&self, val: TopLevelStructDeclarationNameS<'a>) -> &'a TopLevelStructDeclarationNameS<'a> {
+    match self.intern_name(INameValS::TopLevelStructDeclaration(val)) {
+      INameS::TopLevelStructDeclaration(r) => r,
+      _ => unreachable!(),
+    }
+  }
+
+  /// Intern a TopLevelInterfaceDeclarationNameS, returning a canonical &'a reference.
+  /// Mirrors Scala's interner.intern(TopLevelInterfaceDeclarationNameS(...)).
+  pub fn intern_interface_declaration_name(&self, val: TopLevelInterfaceDeclarationNameS<'a>) -> &'a TopLevelInterfaceDeclarationNameS<'a> {
+    match self.intern_name(INameValS::TopLevelInterfaceDeclaration(val)) {
+      INameS::TopLevelInterfaceDeclaration(r) => r,
+      _ => unreachable!(),
     }
   }
 
