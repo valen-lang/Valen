@@ -73,12 +73,13 @@ fn get_capture_captures<'a>(
     }
   }
 */
-pub(crate) fn translate_pattern<'a>(
+pub(crate) fn translate_pattern<'a, 's>(
+  scout_arena: &'s bumpalo::Bump,
   interner: &Interner<'a>,
   keywords: &Keywords<'a>,
   stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a>>,
+  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
   rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
   pattern_pp: &PatternPP<'a, '_>,
 ) -> AtomSP<'a> {
@@ -87,7 +88,7 @@ pub(crate) fn translate_pattern<'a>(
     Some(type_p) => {
       let mut child_lidb = lidb.child();
       let coord_rune = translate_maybe_type_into_rune(
-        interner,
+        scout_arena, interner,
         keywords,
         IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone()),
         &mut child_lidb,
@@ -111,7 +112,7 @@ pub(crate) fn translate_pattern<'a>(
       for inner_pattern_p in destructure_p.patterns {
         let mut child_lidb = lidb.child();
         patterns.push(translate_pattern(
-          interner,
+          scout_arena, interner,
           keywords,
           stack_frame.clone(),
           &mut child_lidb,

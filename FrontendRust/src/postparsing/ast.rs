@@ -281,10 +281,10 @@ pub struct StructS<'a, 's> {
   pub tyype: TemplateTemplataType,
   pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub header_rules: &'s [IRulexSR<'a>],
+  pub header_rules: &'s [IRulexSR<'a, 's>],
   pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub member_rules: &'s [IRulexSR<'a>],
+  pub member_rules: &'s [IRulexSR<'a, 's>],
   pub members: &'s [IStructMemberS<'a>],
 }
 /*
@@ -424,7 +424,7 @@ pub struct InterfaceS<'a, 's> {
   pub maybe_predicted_mutability: Option<MutabilityP>,
   pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub tyype: TemplateTemplataType,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub internal_methods: &'s [&'s FunctionS<'a, 's>],
 }
 
@@ -484,7 +484,7 @@ pub struct ImplS<'a, 's> {
   pub range: RangeS<'a>,
   pub name: ImplDeclarationNameS<'a>,
   pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'a, 's>],
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
   pub tyype: ITemplataType,
   pub struct_kind_rune: RuneUsage<'a>,
@@ -512,7 +512,7 @@ case class ImplS(
 #[derive(Debug, PartialEq)]
 pub struct ExportAsS<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub export_name: ExportAsNameS<'a>,
   pub rune: RuneUsage<'a>,
   pub exported_name: StrI<'a>,
@@ -619,11 +619,11 @@ case class AbstractSP(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct SimpleParameterS<'a> {
+pub struct SimpleParameterS<'a, 's> {
   pub origin: Option<AtomSP<'a>>,
   pub name: String,
   pub virtuality: Option<AbstractSP<'a>>,
-  pub tyype: IRulexSR<'a>,
+  pub tyype: IRulexSR<'a, 's>,
 }
 /*
 case class SimpleParameterS(
@@ -834,7 +834,7 @@ case class GenericParameterS(
 #[derive(Clone, Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'a, 's> {
   pub result_rune: IRuneS<'a>,
-  pub rules: Vec<&'s IRulexSR<'a>>,
+  pub rules: Vec<&'s IRulexSR<'a, 's>>,
 }
 /*
 case class GenericParameterDefaultS(
@@ -854,7 +854,7 @@ pub struct FunctionS<'a, 's> {
   pub tyype: TemplateTemplataType,
   pub params: &'s [ParameterS<'a>],
   pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub body: &'s IBodyS<'a, 's>,
 }
 

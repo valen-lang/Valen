@@ -72,7 +72,7 @@ where 'a: 's
   ParentInterface {
     interface_env: FunctionEnvironmentS<'a>,
     interface_generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    interface_rules: Vec<IRulexSR<'a>>,
+    interface_rules: Vec<IRulexSR<'a, 's>>,
     interface_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   },
   ParentFunction {
@@ -133,7 +133,7 @@ where
     file_coordinate: &'a FileCoordinate<'a>,
     function: &FunctionP<'a, 'p>,
     maybe_parent: IFunctionParent<'a, 's>,
-  ) -> Result<(&'s FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(&'s FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a, 's>>
   where
     'a: 'p,
   {
@@ -199,7 +199,7 @@ where
       }
     }
     let mut lidb = LocationInDenizenBuilder::new(vec![]);
-    let mut rules: Vec<IRulexSR<'a>> = Vec::new();
+    let mut rules: Vec<IRulexSR<'a, 's>> = Vec::new();
     let mut rune_to_explicit_type: Vec<(IRuneS<'a>, ITemplataType)> = Vec::new();
     let function_declaration_name = match (&maybe_parent, function_name) {
       (IFunctionParent::ParentFunction { .. }, Some(_)) => {
@@ -329,6 +329,7 @@ where
       IFunctionParent::FunctionNoParent => {
         let mut child_lidb = lidb.child();
         translate_rulexes(
+          self.scout_arena,
           self.interner,
           self.keywords,
           IEnvironmentS::FunctionEnvironment(function_environment.clone()),
@@ -348,6 +349,7 @@ where
       IFunctionParent::ParentInterface { interface_env, .. } => {
         let mut child_lidb = lidb.child();
         translate_rulexes(
+          self.scout_arena,
           self.interner,
           self.keywords,
           IEnvironmentS::FunctionEnvironment(interface_env.clone()),
@@ -435,7 +437,7 @@ where
                 let mut rune_to_explicit_type_for_pattern: HashMap<IRuneS<'a>, ITemplataType> =
                   rune_to_explicit_type.iter().cloned().collect();
                 let mut pattern_s = translate_pattern(
-                  self.interner,
+                  self.scout_arena, self.interner,
                   self.keywords,
                   StackFrame {
                     file: file_coordinate,
@@ -550,7 +552,7 @@ where
         let mut rune_to_explicit_type_for_ret: HashMap<IRuneS<'a>, ITemplataType> =
           rune_to_explicit_type.iter().cloned().collect();
         let ret_rune = translate_maybe_type_into_maybe_rune(
-          self.interner,
+          self.scout_arena, self.interner,
           self.keywords,
           match &maybe_parent {
             IFunctionParent::FunctionNoParent | IFunctionParent::ParentFunction { .. } => {
@@ -761,7 +763,7 @@ where
       })
       .collect();
 
-    let unfiltered_rules_array: Vec<IRulexSR<'a>> = rules;
+    let unfiltered_rules_array: Vec<IRulexSR<'a, 's>> = rules;
     let rules_array = match &maybe_parent {
       IFunctionParent::ParentInterface { .. } => unfiltered_rules_array
         .into_iter()
@@ -1361,7 +1363,7 @@ fn create_closure_param(
   range: RangeL,
   func_name: IFunctionDeclarationNameS<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a>>,
+  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
   parent_stack_frame: &StackFrame<'a>,
   _closure_struct_region_rune: IRuneS<'a>,
@@ -1573,7 +1575,7 @@ fn create_magic_parameters(
     &self,
     parent_stack_frame: StackFrame<'a>,
     function: &FunctionP<'a, 'p>,
-  ) -> Result<(&'s FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(&'s FunctionS<'a, 's>, VariableUses<'a>), ICompileErrorS<'a, 's>>
   where
     'a: 'p,
   {
@@ -1607,7 +1609,7 @@ fn create_magic_parameters(
       VariableUses<'a>,
       Vec<IVarNameS<'a>>,
     ),
-    ICompileErrorS<'a>,
+    ICompileErrorS<'a, 's>,
   > {
     let function_body_env: FunctionEnvironmentS<'a> = function_env.child();
     let body_range_s = PostParser::eval_range(function_body_env.file, body0.range);
@@ -1824,9 +1826,9 @@ fn create_magic_parameters(
     function_p: &crate::parsing::ast::FunctionP<'a, 'p>,
     parent_interface_env: &IEnvironmentS<'a>,
     interface_generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    interface_rules: &[IRulexSR<'a>],
+    interface_rules: &[IRulexSR<'a, 's>],
     interface_rune_to_explicit_type: &ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  ) -> Result<&'s FunctionS<'a, 's>, ICompileErrorS<'a>>
+  ) -> Result<&'s FunctionS<'a, 's>, ICompileErrorS<'a, 's>>
   {
     assert!(
       function_p.body.is_none(),

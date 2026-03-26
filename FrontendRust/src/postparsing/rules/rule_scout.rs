@@ -38,12 +38,13 @@ use std::collections::{HashMap, HashSet};
 // Returns:
 // - new rules produced on the side while translating the given rules
 // - the translated versions of the given rules
-pub fn translate_rulexes<'a>(
+pub fn translate_rulexes<'a, 's>(
+  scout_arena: &'s bumpalo::Bump,
   interner: &Interner<'a>,
   keywords: &Keywords<'a>,
   env: IEnvironmentS<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  builder: &mut Vec<IRulexSR<'a>>,
+  builder: &mut Vec<IRulexSR<'a, 's>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
   context_region: IRuneS<'a>,
   rules_p: &[IRulexPR<'a, '_>],
@@ -53,6 +54,7 @@ pub fn translate_rulexes<'a>(
     .map(|rule_p| {
       let mut child_lidb = lidb.child();
       translate_rulex(
+        scout_arena,
         interner,
         keywords,
         env.clone(),
@@ -80,12 +82,13 @@ pub fn translate_rulexes<'a>(
     rulesP.map(translateRulex(env, lidb.child(), builder, runeToExplicitType, contextRegion, _))
   }
 */
-fn translate_rulex<'a>(
+fn translate_rulex<'a, 's>(
+  scout_arena: &'s bumpalo::Bump,
   interner: &Interner<'a>,
   keywords: &Keywords<'a>,
   env: IEnvironmentS<'a>,
   lidb: &mut LocationInDenizenBuilder,
-  builder: &mut Vec<IRulexSR<'a>>,
+  builder: &mut Vec<IRulexSR<'a, 's>>,
   rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
   context_region: IRuneS<'a>,
   rulex: &IRulexPR<'a, '_>,
@@ -115,6 +118,7 @@ fn translate_rulex<'a>(
     IRulexPR::Templex(templex) => {
       let mut child_lidb = lidb.child();
       translate_templex(
+        scout_arena,
         interner,
         keywords,
         env,
@@ -131,7 +135,7 @@ fn translate_rulex<'a>(
       }));
       let left_usage = {
         let mut child_lidb = lidb.child();
-        translate_rulex(
+        translate_rulex(scout_arena, 
           interner,
           keywords,
           env.clone(),
@@ -144,7 +148,7 @@ fn translate_rulex<'a>(
       };
       let right_usage = {
         let mut child_lidb = lidb.child();
-        translate_rulex(
+        translate_rulex(scout_arena, 
           interner,
           keywords,
           env.clone(),
@@ -169,7 +173,7 @@ fn translate_rulex<'a>(
       if name.str() == keywords.is_interface {
         assert_eq!(args.len(), 1, "POSTPARSER_IS_INTERFACE_ARGS_LEN");
         let mut child_lidb = lidb.child();
-        let arg_rune = translate_rulex(
+        let arg_rune = translate_rulex(scout_arena, 
           interner,
           keywords,
           env.clone(),
@@ -202,7 +206,7 @@ fn translate_rulex<'a>(
       } else if name.str() == keywords.refs {
         let arg_runes: Vec<RuneUsage<'a>> =
           args.iter().map(|arg| {
-            translate_rulex(interner, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), arg)
+            translate_rulex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), arg)
           }).collect();
 
         let mut child_lidb = lidb.child();
@@ -215,7 +219,7 @@ fn translate_rulex<'a>(
         builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune.clone(),
-          members: arg_runes,
+          members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, arg_runes),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })));
 
@@ -253,7 +257,7 @@ fn translate_rulex<'a>(
         builder.push(IRulexSR::OneOf(OneOfSR {
           range: PostParser::eval_range(file, *range),
           rune: result_rune.clone(),
-          literals,
+          literals: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, literals),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), explicit_type));
         result_rune
@@ -287,6 +291,7 @@ fn translate_rulex<'a>(
           // val Vector(ownershipRuneS, regionRuneS, kindRuneS) =
           let mut translate_child_lidb = lidb.child();
           let component_usages = translate_rulexes(
+            scout_arena,
             interner,
             keywords,
             env,
@@ -314,6 +319,7 @@ fn translate_rulex<'a>(
           }
           let mut translate_child_lidb = lidb.child();
           let component_usages = translate_rulexes(
+            scout_arena,
             interner,
             keywords,
             env,
@@ -559,8 +565,8 @@ pub fn translate_type(tyype: ITypePR) -> ITemplataType {
     }
   }
 */
-fn get_rune_kind_template<'a>(
-  _rules_s: &[IRulexSR<'a>],
+fn get_rune_kind_template<'a, 's>(
+  _rules_s: &[IRulexSR<'a, 's>],
   _rune: IRuneS<'a>,
 ) -> IImpreciseNameS<'a> {
   panic!("Unimplemented get_rune_kind_template");
@@ -623,15 +629,15 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     case other => vimpl(other)
   })
 */
-fn mark_kind_equivalent<'a>(
-  _rules_s: &[IRulexSR<'a>],
+fn mark_kind_equivalent<'a, 's>(
+  _rules_s: &[IRulexSR<'a, 's>],
   _rune_a: IRuneS<'a>,
   _rune_b: IRuneS<'a>,
 ) {
   panic!("Unimplemented mark_kind_equivalent");
 }
-fn find_transitively_equivalent_into<'a>(
-  _rules_s: &[IRulexSR<'a>],
+fn find_transitively_equivalent_into<'a, 's>(
+  _rules_s: &[IRulexSR<'a, 's>],
   _rune_to_kind_equivalent_runes: &HashMap<IRuneS<'a>, Vec<IRuneS<'a>>>,
   _found_so_far: &mut HashSet<IRuneS<'a>>,
   _rune: IRuneS<'a>,
@@ -648,8 +654,8 @@ fn find_transitively_equivalent_into<'a>(
     })
   }
 */
-fn get_kind_equivalent_runes<'a>(
-  _rules_s: &[IRulexSR<'a>],
+fn get_kind_equivalent_runes<'a, 's>(
+  _rules_s: &[IRulexSR<'a, 's>],
   _rune: IRuneS<'a>,
 ) -> HashSet<IRuneS<'a>> {
   panic!("Unimplemented get_kind_equivalent_runes");
@@ -663,8 +669,8 @@ fn get_kind_equivalent_runes<'a>(
     set.toSet
   }
 */
-fn get_kind_equivalent_runes_iter<'a, I>(
-  _rules_s: &[IRulexSR<'a>],
+fn get_kind_equivalent_runes_iter<'a, 's, I>(
+  _rules_s: &[IRulexSR<'a, 's>],
   _runes: I,
 ) -> HashSet<IRuneS<'a>>
 where

@@ -31,7 +31,7 @@ case class LetSE(
 #[derive(Debug, PartialEq)]
 pub struct LetSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub pattern: AtomSP<'a>,
   pub expr: &'s IExpressionSE<'a, 's>,
 }
@@ -454,7 +454,7 @@ case class TupleSE(range: RangeS, elements: Vector[IExpressionSE]) extends IExpr
 #[derive(Debug, PartialEq)]
 pub struct StaticArrayFromValuesSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub variability_st: RuneUsage<'a>,
@@ -477,7 +477,7 @@ case class StaticArrayFromValuesSE(
 #[derive(Debug, PartialEq)]
 pub struct StaticArrayFromCallableSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub variability_st: RuneUsage<'a>,
@@ -500,7 +500,7 @@ case class StaticArrayFromCallableSE(
 #[derive(Debug, PartialEq)]
 pub struct NewRuntimeSizedArraySE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub maybe_element_type_st: Option<RuneUsage<'a>>,
   pub mutability_st: RuneUsage<'a>,
   pub size: &'s IExpressionSE<'a, 's>,
@@ -661,7 +661,7 @@ pub struct LocalLoadSE<'a> {
 #[derive(Debug, PartialEq)]
 pub struct OutsideLoadSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a>],
+  pub rules: &'s [IRulexSR<'a, 's>],
   pub name: IImpreciseNameS<'a>,
   pub maybe_template_args: Option<&'s [crate::postparsing::rules::RuneUsage<'a>]>,
   pub target_ownership: LoadAsP,

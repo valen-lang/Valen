@@ -63,7 +63,7 @@ pub enum NodeRefS<'a, 's> {
   GenericParameterDefault(&'s GenericParameterDefaultS<'a, 's>),
   GenericParameterType(&'s IGenericParameterTypeS<'a>),
   Parameter(&'s ParameterS<'a>),
-  SimpleParameter(&'s SimpleParameterS<'a>),
+  SimpleParameter(&'s SimpleParameterS<'a, 's>),
 
   Body(&'s IBodyS<'a, 's>),
   ExternBody(&'s ExternBodyS),
@@ -80,14 +80,14 @@ pub enum NodeRefS<'a, 's> {
   Pattern(&'s AtomSP<'a>),
   Capture(&'s CaptureS<'a>),
 
-  Rulex(&'s IRulexSR<'a>),
+  Rulex(&'s IRulexSR<'a, 's>),
   EqualsRule(&'s EqualsSR<'a>),
   LiteralRule(&'s LiteralSR<'a>),
   MaybeCoercingLookupRule(&'s MaybeCoercingLookupSR<'a>),
   LookupRule(&'s LookupSR<'a>),
-  MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'a>),
+  MaybeCoercingCallRule(&'s MaybeCoercingCallSR<'a, 's>),
   AugmentRule(&'s AugmentSR<'a>),
-  OneOfRule(&'s OneOfSR<'a>),
+  OneOfRule(&'s OneOfSR<'a, 's>),
   IsInterfaceRule(&'s IsInterfaceSR<'a>),
   CoordComponentsRule(&'s CoordComponentsSR<'a>),
   CoerceToCoordRule(&'s CoerceToCoordSR<'a>),
@@ -177,7 +177,7 @@ where
   out
 }
 
-pub fn collect_in_srulex<'a, 's, T, F>(rulex: &'s IRulexSR<'a>, predicate: &F) -> Vec<T>
+pub fn collect_in_srulex<'a, 's, T, F>(rulex: &'s IRulexSR<'a, 's>, predicate: &F) -> Vec<T>
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
@@ -745,7 +745,7 @@ where
   }
 }
 
-fn visit_rulex<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'s IRulexSR<'a>)
+fn visit_rulex<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'s IRulexSR<'a, 's>)
 where
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,
 {
@@ -775,7 +775,7 @@ where
       collect_if(pred, out, NodeRefS::MaybeCoercingCallRule(x));
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.template_rune);
-      for arg in &x.args {
+      for arg in x.args {
         visit_rune_usage(pred, out, arg);
       }
     }
@@ -790,7 +790,7 @@ where
     IRulexSR::OneOf(x) => {
       collect_if(pred, out, NodeRefS::OneOfRule(x));
       visit_rune_usage(pred, out, &x.rune);
-      for literal in &x.literals {
+      for literal in x.literals {
         visit_literal(pred, out, literal);
       }
     }
@@ -812,13 +812,13 @@ where
     IRulexSR::Call(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
       visit_rune_usage(pred, out, &x.template_rune);
-      for arg in &x.args {
+      for arg in x.args {
         visit_rune_usage(pred, out, arg);
       }
     }
     IRulexSR::Pack(x) => {
       visit_rune_usage(pred, out, &x.result_rune);
-      for member in &x.members {
+      for member in x.members {
         visit_rune_usage(pred, out, member);
       }
     }

@@ -32,15 +32,17 @@ class PostParserVariableTests extends FunSuite with Matchers {
     }
   }
 */
-fn compile<'a, 'ctx, 'p>(
+fn compile<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ProgramS<'a, 'p>
+) -> ProgramS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -50,21 +52,23 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   post_parser
     .scout_program(only_file.file_coord, &only_file)
     .unwrap()
 }
-fn compile_for_error<'a, 'ctx, 'p>(
+fn compile_for_error<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ICompileErrorS<'a>
+) -> ICompileErrorS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -74,8 +78,8 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   match post_parser.scout_program(only_file.file_coord, &only_file) {
     Ok(_) => panic!("Accidentally compiled!"),
     Err(e) => e,
@@ -103,12 +107,14 @@ where
 fn regular_variable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; }",
   );
   let main = program1.lookup_function("main");
@@ -146,12 +152,14 @@ fn regular_variable() {
 fn typeless_local_has_no_coord_rune() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; }",
   );
   let main = program1.lookup_function("main");
@@ -175,12 +183,14 @@ fn typeless_local_has_no_coord_rune() {
 fn reports_defining_same_name_variable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() { x = 4; x = 5; }",
   );
   match &err {
@@ -204,12 +214,14 @@ fn reports_defining_same_name_variable() {
 fn self_is_pointing_to_function() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; doBlarks(&x); }",
   );
   let main = program1.lookup_function("main");
@@ -244,12 +256,14 @@ fn self_is_pointing_to_function() {
 fn self_is_pointing_to_method() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; x.doBlarks(); }",
   );
   let main = program1.lookup_function("main");
@@ -284,12 +298,14 @@ fn self_is_pointing_to_method() {
 fn self_is_moving_to_function() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; doBlarks(x); }",
   );
   let main = program1.lookup_function("main");
@@ -324,12 +340,14 @@ fn self_is_moving_to_function() {
 fn self_is_moving_to_method() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; (x).doBlarks(); }",
   );
   let main = program1.lookup_function("main");
@@ -364,12 +382,14 @@ fn self_is_moving_to_method() {
 fn self_is_mutating_mutable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; set x = 6; }",
   );
   let main = program1.lookup_function("main");
@@ -404,12 +424,14 @@ fn self_is_mutating_mutable() {
 fn self_is_moving_and_mutating_same_variable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; set x = +(x, 1); }",
   );
   let main = program1.lookup_function("main");
@@ -444,12 +466,14 @@ fn self_is_moving_and_mutating_same_variable() {
 fn child_is_pointing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   ({ doBlarks(&x); })();
@@ -493,12 +517,14 @@ fn child_is_pointing() {
 fn child_is_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   ({ doBlarks(x); })();
@@ -542,12 +568,14 @@ fn child_is_moving() {
 fn child_is_mutating() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   ({ set x = 9; })();
@@ -591,12 +619,14 @@ fn child_is_mutating() {
 fn self_maybe_pointing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { doBlarks(&x); } else { }
@@ -638,12 +668,14 @@ fn self_maybe_pointing() {
 fn self_maybe_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { doBlarks(x); } else { }
@@ -687,12 +719,14 @@ fn self_maybe_moving() {
 fn self_maybe_mutating() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { set x = 9; } else { }
@@ -736,12 +770,14 @@ fn self_maybe_mutating() {
 fn children_maybe_pointing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { doBlarks(&x); }(); } else { }
@@ -785,12 +821,14 @@ fn children_maybe_pointing() {
 fn children_maybe_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { doBlarks(x); }(); } else { }
@@ -834,12 +872,14 @@ fn children_maybe_moving() {
 fn children_maybe_mutating() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { set x = 9; }(); } else { }
@@ -883,12 +923,14 @@ fn children_maybe_mutating() {
 fn self_both_pointing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { doBoinks(&x); } else { doBloops(&x); }
@@ -932,12 +974,14 @@ fn self_both_pointing() {
 fn children_both_pointing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { doBoinks(&x); }(); } else { { doBloops(&x); }(); }
@@ -981,12 +1025,14 @@ fn children_both_pointing() {
 fn self_both_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { doBoinks(x); } else { doBloops(x); }
@@ -1030,12 +1076,14 @@ fn self_both_moving() {
 fn children_both_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { doBoinks(x); }(); } else { { doBloops(x); }(); }
@@ -1079,12 +1127,14 @@ fn children_both_moving() {
 fn self_both_mutating() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { set x = 9; } else { set x = 8; }
@@ -1128,12 +1178,14 @@ fn self_both_mutating() {
 fn children_both_mutating() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { set x = 9; }(); } else { { set x = 8; }(); }
@@ -1177,12 +1229,14 @@ fn children_both_mutating() {
 fn self_pointing_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { doThings(&x); } else { moveThis(x); }
@@ -1226,12 +1280,14 @@ fn self_pointing_or_moving() {
 fn children_pointing_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { doThings(&x); }(); } else { { moveThis(x); }(); }
@@ -1275,12 +1331,14 @@ fn children_pointing_or_moving() {
 fn self_mutating_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { set x = 9; } else { moveThis(x); }
@@ -1324,12 +1382,14 @@ fn self_mutating_or_moving() {
 fn children_mutating_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { set x = 9; }(); } else { { moveThis(x); }(); }
@@ -1373,12 +1433,14 @@ fn children_mutating_or_moving() {
 fn self_moving_and_mutating_same_variable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; set x = +(x, 1); }",
   );
   let main = program1.lookup_function("main");
@@ -1413,12 +1475,14 @@ fn self_moving_and_mutating_same_variable() {
 fn children_moving_and_mutating_same_variable() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; { set x = +(x, 1); }(); }",
   );
   let main = program1.lookup_function("main");
@@ -1453,12 +1517,14 @@ fn children_moving_and_mutating_same_variable() {
 fn self_borrowing_param() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func main(x int) {
   print(&x);
 }",
@@ -1500,12 +1566,14 @@ fn self_borrowing_param() {
 fn children_borrowing_param() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func main(x int) {
   { print(&x); }();
 }",
@@ -1547,12 +1615,14 @@ fn children_borrowing_param() {
 fn self_loading_or_mutating_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { set x = 9; } else if (true) { moveThis(x); } else { blark(&x); }
@@ -1596,12 +1666,14 @@ fn self_loading_or_mutating_or_moving() {
 fn children_loading_or_mutating_or_moving() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   x = 4;
   if (true) { { set x = 9; }(); } else if (true) { { moveThis(x); }(); } else { { blark(&x); }(); }
@@ -1645,12 +1717,14 @@ fn children_loading_or_mutating_or_moving() {
 fn while_condition_borrowing() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "struct Marine {}
 exported func main() int {
   x = Marine();
@@ -1696,12 +1770,14 @@ exported func main() int {
 fn while_body_maybe_loading() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "struct Marine {}
 exported func main() int {
   x = Marine();
@@ -1795,12 +1871,14 @@ fn extract_block_from_lambda_call<'a, 's>(
 fn include_closure_var_in_locals() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "struct Marine {}
 exported func main() int {
   m = Marine();
@@ -1854,12 +1932,14 @@ exported func main() int {
 fn include_underscore_in_locals() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
   { print(_) }(3);
 }",

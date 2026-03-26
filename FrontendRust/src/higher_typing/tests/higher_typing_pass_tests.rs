@@ -26,7 +26,7 @@ use std::collections::HashMap;
 // mig: fn compile_program_for_error
 fn compile_program_for_error<'a, 'ctx, 'p, 's>(
     compilation: &mut HigherTypingCompilation<'a, 'ctx, 'p, 's>,
-) -> ICompileErrorA<'a>
+) -> ICompileErrorA<'a, 's>
 where
     'a: 'ctx,
     'a: 'p,

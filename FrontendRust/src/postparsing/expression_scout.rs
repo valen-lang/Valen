@@ -162,7 +162,7 @@ pub(crate) fn scout_block(
   // the body's block, so that we get to reuse the code at the bottom of function, tracking uses etc.
   initial_locals: VariableDeclarations<'a>,
   block_pe: &'p BlockPE<'a, 'p>,
-) -> Result<(&'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(&'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 {
   let file = parent_stack_frame.file;
   let range_s = PostParser::eval_range(file, block_pe.range);
@@ -268,7 +268,7 @@ fn scout_impure_block(
   lidb: &mut LocationInDenizenBuilder,
   initial_locals: VariableDeclarations<'a>,
   block_pe: &BlockPE<'a, 'p>,
-) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 where
   'a: 'p,
 {
@@ -313,7 +313,7 @@ where
     context_region: IRuneS<'a>,
     initial_locals: VariableDeclarations<'a>,
     scout_contents: F,
-  ) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
   where
     F: FnOnce(
       StackFrame<'a>,
@@ -325,7 +325,7 @@ where
         VariableUses<'a>,
         VariableUses<'a>,
       ),
-      ICompileErrorS<'a>,
+      ICompileErrorS<'a, 's>,
     >,
   {
     let maybe_parent = parent_stack_frame.clone().map(Box::new);
@@ -604,7 +604,7 @@ fn scout_expression(
   stack_frame: StackFrame<'a>,
   lidb: &mut LocationInDenizenBuilder,
   expression: &'p IExpressionPE<'a, 'p>,
-) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(StackFrame<'a>, IScoutResult<'a, 'p, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 where
   'a: 'p,
 {
@@ -996,6 +996,7 @@ where
       {
         let mut rule_lidb = lidb.child();
         translate_rulexes(
+          self.scout_arena,
           self.interner,
           self.keywords,
           parent_env,
@@ -1012,7 +1013,7 @@ where
           .into_iter()
           .collect::<std::collections::HashMap<_, _>>();
         translate_pattern(
-          self.interner,
+          self.scout_arena, self.interner,
           self.keywords,
           stack_frame1.clone(),
           &mut pattern_lidb,
@@ -1918,7 +1919,7 @@ pub(crate) fn new_if<FCond, FThen, FElse>(
   make_condition: FCond,
   make_then: FThen,
   make_else: FElse,
-) -> Result<(StackFrame<'a>, IfSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(StackFrame<'a>, IfSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 where
   FCond: FnOnce(
     StackFrame<'a>,
@@ -1930,16 +1931,16 @@ where
       VariableUses<'a>,
       VariableUses<'a>,
     ),
-    ICompileErrorS<'a>,
+    ICompileErrorS<'a, 's>,
   >,
   FThen: FnOnce(
     StackFrame<'a>,
     &mut LocationInDenizenBuilder,
-  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>,
+  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>,
   FElse: FnOnce(
     StackFrame<'a>,
     &mut LocationInDenizenBuilder,
-  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>,
+  ) -> Result<(StackFrame<'a>, &'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>,
 {
   let file = stack_frame0.file;
   let (stack_frame1, cond_se, cond_uses, cond_child_uses) = make_condition(stack_frame0, &mut lidb.child())?;
@@ -1993,7 +1994,7 @@ pub(crate) fn scout_expression_and_coerce(
     lidb: &mut LocationInDenizenBuilder,
     expression_p: &IExpressionPE<'a, 'p>,
     load_as_p: LoadAsP,
-  ) -> Result<(StackFrame<'a>, &'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(StackFrame<'a>, &'s IExpressionSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
   where
     'a: 'p,
   {
@@ -2029,7 +2030,7 @@ pub(crate) fn scout_expression_and_coerce(
             .map(|template_arg_p| {
               let mut template_arg_lidb = lidb.child();
               translate_templex(
-                self.interner,
+                self.scout_arena, self.interner,
                 self.keywords,
                 parent_env.clone(),
                 &mut template_arg_lidb,
@@ -2120,7 +2121,7 @@ pub(crate) fn scout_elements_as_expressions(
     initial_stack_frame: StackFrame<'a>,
     lidb: &mut LocationInDenizenBuilder,
     exprs_p: &[IExpressionPE<'a, 'p>],
-  ) -> Result<(StackFrame<'a>, Vec<&'s IExpressionSE<'a, 's>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+  ) -> Result<(StackFrame<'a>, Vec<&'s IExpressionSE<'a, 's>>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
   where
     'a: 'p,
   {

@@ -168,7 +168,7 @@ object HigherTypingPass {
 */
 
 // mig: fn explicify_lookups
-fn explicify_lookups<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>>(env: &E, interner: &Interner<'a>, rune_a_to_type: &mut HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>>) -> Result<(), IRuneTypingLookupFailedError<'a>> {
+fn explicify_lookups<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>>(env: &E, interner: &Interner<'a>, rune_a_to_type: &mut HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a, 's>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a, 's>>) -> Result<(), IRuneTypingLookupFailedError<'a>> {
   use crate::postparsing::rune_type_solver::{IRuneTypeSolverLookupResult, PrimitiveRuneTypeSolverLookupResult};
   use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
@@ -359,7 +359,7 @@ fn explicify_lookups<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>>(env: &E, interne
 
 */
 // mig: fn coerce_kind_lookup_to_coord
-fn coerce_kind_lookup_to_coord<'a>(interner: &Interner<'a>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, range: RangeS<'a>, result_rune: RuneUsage<'a>, name: &IImpreciseNameS<'a>) {
+fn coerce_kind_lookup_to_coord<'a, 's>(interner: &Interner<'a>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a, 's>>, range: RangeS<'a>, result_rune: RuneUsage<'a>, name: &IImpreciseNameS<'a>) {
   use crate::postparsing::rules::rules::{LookupSR, CoerceToCoordSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
   let kind_rune_s = interner.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
@@ -387,7 +387,7 @@ fn coerce_kind_lookup_to_coord<'a>(interner: &Interner<'a>, rune_a_to_type: &mut
 
 */
 // mig: fn coerce_kind_template_lookup_to_kind
-fn coerce_kind_template_lookup_to_kind<'a>(interner: &Interner<'a>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a>>, range: RangeS<'a>, result_rune: RuneUsage<'a>, name: &IImpreciseNameS<'a>, actual_template_type: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_kind<'a, 's>(interner: &Interner<'a>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'a, 's>>, range: RangeS<'a>, result_rune: RuneUsage<'a>, name: &IImpreciseNameS<'a>, actual_template_type: TemplateTemplataType) {
   use crate::postparsing::rules::rules::{LookupSR, CallSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionTemplateRuneValS};
   let template_rune_s = interner.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
@@ -397,7 +397,7 @@ fn coerce_kind_template_lookup_to_kind<'a>(interner: &Interner<'a>, rune_a_to_ty
   let template_rune = RuneUsage { range: range.clone(), rune: template_rune_s.clone() };
   rune_a_to_type.insert(template_rune_s, ITemplataType::TemplateTemplataType(actual_template_type));
   rule_builder.push(IRulexSR::Lookup(LookupSR { range: range.clone(), rune: template_rune.clone(), name: name.clone() }));
-  rule_builder.push(IRulexSR::Call(CallSR { range, result_rune, template_rune, args: vec![] }));
+  rule_builder.push(IRulexSR::Call(CallSR { range, result_rune, template_rune, args: &[] }));
 }
 /*
   private def coerceKindTemplateLookupToKind(
@@ -416,7 +416,7 @@ fn coerce_kind_template_lookup_to_kind<'a>(interner: &Interner<'a>, rune_a_to_ty
 
 */
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord<'a>(_rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, _rule_builder: &mut Vec<IRulexSR<'a>>, _range: RangeS<'a>, _result_rune: RuneUsage<'a>, _name: &IImpreciseNameS<'a>, _ttt: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_coord<'a, 's>(_rune_a_to_type: &mut std::collections::HashMap<IRuneS<'a>, ITemplataType>, _rule_builder: &mut Vec<IRulexSR<'a, 's>>, _range: RangeS<'a>, _result_rune: RuneUsage<'a>, _name: &IImpreciseNameS<'a>, _ttt: TemplateTemplataType) {
   panic!("Unimplemented: coerce_kind_template_lookup_to_coord");
 }
 /*
@@ -703,7 +703,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'
   }
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), None);
 
-  let all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a>> =
+  let all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'a, 's>> =
     header_rules_with_implicitly_coercing_lookups_s.iter().chain(member_rules_with_implicitly_coercing_lookups_s.iter()).cloned().collect();
   let mut all_rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType> = header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   all_rune_to_explicit_type.extend(members_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())));
@@ -729,7 +729,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'
     range_s: range_s.clone(),
   };
 
-  let mut header_rules_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let mut header_rules_builder: Vec<IRulexSR<'a, 's>> = Vec::new();
   match explicify_lookups(
     &rune_typing_env,
     self.interner,
@@ -741,7 +741,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'
     Err(_e) => panic!("explicify_lookups failed for header rules"),
   }
 
-  let mut member_rules_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let mut member_rules_builder: Vec<IRulexSR<'a, 's>> = Vec::new();
   match explicify_lookups(
     &rune_typing_env,
     self.interner,
@@ -999,7 +999,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'a, 's>, env: &Environment
     range_s: range_s.clone(),
   };
 
-  let mut rule_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let mut rule_builder: Vec<IRulexSR<'a, 's>> = Vec::new();
   match explicify_lookups(
     &rune_typing_env,
     self.interner,
@@ -1159,7 +1159,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'a,
     range_s: range_s.clone(),
   };
 
-  let mut rule_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let mut rule_builder: Vec<IRulexSR<'a, 's>> = Vec::new();
   match explicify_lookups(
     &rune_typing_env,
     self.interner,
@@ -1324,7 +1324,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA
   // loose. We intentionally ignored the types of the things they're looking up, so we could know
   // what types we *expect* them to be, so we could coerce.
   // That coercion is good, but lets make it more explicit.
-  let mut rule_builder: Vec<IRulexSR<'a>> = Vec::new();
+  let mut rule_builder: Vec<IRulexSR<'a, 's>> = Vec::new();
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
     astrouts,
@@ -1414,7 +1414,7 @@ fn calculate_rune_types(
   identifying_runes_s: Vec<IRuneS<'a>>,
   rune_to_explicit_type: HashMap<IRuneS<'a>, ITemplataType>,
   params_s: &[ParameterS<'a>],
-  rules_s: &[IRulexSR<'a>],
+  rules_s: &[IRulexSR<'a, 's>],
   env: &EnvironmentA<'a, 's>,
 ) -> HashMap<IRuneS<'a>, ITemplataType> {
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
@@ -1562,7 +1562,7 @@ fn translate_program(&self, code_map: PackageCoordinateMap<'a, ProgramS<'a, 's>>
 pub fn run_pass(
   &self,
   separate_programs_s: FileCoordinateMap<'a, ProgramS<'a, 's>>,
-) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, ICompileErrorA<'a>> {
+) -> Result<PackageCoordinateMap<'a, ProgramA<'a, 's>>, ICompileErrorA<'a, 's>> {
   // Merge FileCoordinateMap into PackageCoordinateMap by flattening files per package
   let mut merged_program_s = PackageCoordinateMap::<ProgramS<'a, 's>>::new();
   for (package_coord, file_coords) in &separate_programs_s.package_coord_to_file_coords {
@@ -1802,7 +1802,7 @@ pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedPa
   def getVpstMap(): Result[FileCoordinateMap[String], FailedParse] = scoutCompilation.getVpstMap()
 */
 // mig: fn get_scoutput
-fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a>> {
+fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a, 's>> {
   Ok(self.scout_compilation.get_scoutput()?.clone())
 }
 /*
@@ -1810,7 +1810,7 @@ fn get_scoutput(&mut self) -> Result<FileCoordinateMap<'a, ProgramS<'a, 's>>, IC
 
 */
 // mig: fn get_astrouts
-pub fn get_astrouts(&mut self) -> Result<&PackageCoordinateMap<'a, ProgramA<'a, 's>>, ICompileErrorA<'a>> {
+pub fn get_astrouts(&mut self) -> Result<&PackageCoordinateMap<'a, ProgramA<'a, 's>>, ICompileErrorA<'a, 's>> {
   if self.astrouts_cache.is_some() {
     return Ok(self.astrouts_cache.as_ref().unwrap());
   }

@@ -13,9 +13,9 @@ import dev.vale.postparsing.rules._
 import scala.collection.immutable.Map
 */
 // mig: struct RuneTypeSolveError
-pub struct RuneTypeSolveError<'a> {
+pub struct RuneTypeSolveError<'a, 's> {
   pub range: Vec<crate::utils::range::RangeS<'a>>,
-  pub failed_solve: crate::solver::solver::IncompleteOrFailedSolve<crate::postparsing::rules::rules::IRulexSR<'a>, crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType, IRuneTypeRuleError<'a>>,
+  pub failed_solve: crate::solver::solver::IncompleteOrFailedSolve<crate::postparsing::rules::rules::IRulexSR<'a, 's>, crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType, IRuneTypeRuleError<'a>>,
 }
 /*
 case class RuneTypeSolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataType, IRuneTypeRuleError]) {
@@ -23,7 +23,7 @@ case class RuneTypeSolveError(range: List[RangeS], failedSolve: IIncompleteOrFai
 }
 */
 // mig: impl RuneTypeSolveError
-impl<'a> RuneTypeSolveError<'a> {
+impl<'a, 's> RuneTypeSolveError<'a, 's> {
 }
 // mig: enum IRuneTypeRuleError
 pub enum IRuneTypeRuleError<'a> {
@@ -295,25 +295,25 @@ struct RuneTypeSolverDelegate {
 }
 
 impl<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>> crate::solver::solver::SolverDelegate<
-  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::rules::rules::IRulexSR<'a, 's>,
   crate::postparsing::names::IRuneS<'a>,
   E,
   (),
   crate::postparsing::itemplatatype::ITemplataType,
   IRuneTypeRuleError<'a>,
 > for RuneTypeSolverDelegate {
-  fn rule_to_puzzles(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
+  fn rule_to_puzzles(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
     get_puzzles_rune_type(self.predicting, rule)
   }
   /* Guardian: disable-all */
 
-  fn rule_to_runes(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a>) -> Vec<crate::postparsing::names::IRuneS<'a>> {
+  fn rule_to_runes(&self, rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>) -> Vec<crate::postparsing::names::IRuneS<'a>> {
     get_runes_rune_type(rule)
   }
   /* Guardian: disable-all */
 
   fn solve<S: crate::solver::ISolverState<
-    crate::postparsing::rules::rules::IRulexSR<'a>,
+    crate::postparsing::rules::rules::IRulexSR<'a, 's>,
     crate::postparsing::names::IRuneS<'a>,
     crate::postparsing::itemplatatype::ITemplataType,
   >>(
@@ -321,7 +321,7 @@ impl<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>> crate::solver::solver::SolverDel
     _state: &(),
     env: &E,
     rule_index: i32,
-    rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+    rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
     solver_state: &mut S,
   ) -> Result<(), crate::solver::solver::ISolverError<
     crate::postparsing::names::IRuneS<'a>,
@@ -333,7 +333,7 @@ impl<'a: 's, 's, E: IRuneTypeSolverEnv<'a, 's>> crate::solver::solver::SolverDel
   /* Guardian: disable-all */
 
   fn complex_solve<S: crate::solver::ISolverState<
-    crate::postparsing::rules::rules::IRulexSR<'a>,
+    crate::postparsing::rules::rules::IRulexSR<'a, 's>,
     crate::postparsing::names::IRuneS<'a>,
     crate::postparsing::itemplatatype::ITemplataType,
   >>(
@@ -377,21 +377,21 @@ impl<'a, 'ctx> RuneTypeSolver<'a, 'ctx> {
     env: &E,
     range: Vec<crate::utils::range::RangeS<'a>>,
     predicting: bool,
-    rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+    rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a, 's>],
     additional_runes: &[crate::postparsing::names::IRuneS<'a>],
     expect_complete_solve: bool,
     unpreprocessed_initially_known_runes: std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
   ) -> Result<
     std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-    RuneTypeSolveError<'a>,
+    RuneTypeSolveError<'a, 's>,
   > where 'a: 's {
     solve_rune_type(sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
   }
   /* Guardian: disable-all */
 }
 // mig: fn get_runes_rune_type
-fn get_runes_rune_type<'a>(
-  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+fn get_runes_rune_type<'a, 's>(
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
 ) -> Vec<crate::postparsing::names::IRuneS<'a>> {
   rule.rune_usages().iter().map(|ru| ru.rune.clone()).collect()
 }
@@ -434,9 +434,9 @@ fn get_runes_rune_type<'a>(
   }
 */
 // mig: fn get_puzzles_rune_type
-fn get_puzzles_rune_type<'a>(
+fn get_puzzles_rune_type<'a, 's>(
   predicting: bool,
-  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
 ) -> Vec<Vec<crate::postparsing::names::IRuneS<'a>>> {
   use crate::postparsing::rules::rules::IRulexSR;
   match rule {
@@ -561,13 +561,13 @@ fn get_puzzles_rune_type<'a>(
 // mig: fn solve_rule
 
 fn solve_rule<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverState<
-  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::rules::rules::IRulexSR<'a, 's>,
   crate::postparsing::names::IRuneS<'a>,
   crate::postparsing::itemplatatype::ITemplataType,
 >>(
   env: &E,
   _rule_index: i32,
-  rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
   solver_state: &mut S,
 ) -> Result<(), crate::solver::solver::ISolverError<
   crate::postparsing::names::IRuneS<'a>,
@@ -665,7 +665,7 @@ fn solve_rule<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverSt
       panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
     }
     IRulexSR::Pack(x) => {
-      for member in &x.members {
+      for member in x.members {
         let member_idx = solver_state.get_canonical_rune(member.rune.clone());
         solver_state.conclude_rune::<IRuneTypeRuleError<'a>>(member_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
       }
@@ -898,7 +898,7 @@ fn solve_rule<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverSt
 // mig: fn lookup
 
 fn lookup_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>, S: crate::solver::ISolverState<
-  crate::postparsing::rules::rules::IRulexSR<'a>,
+  crate::postparsing::rules::rules::IRulexSR<'a, 's>,
   crate::postparsing::names::IRuneS<'a>,
   crate::postparsing::itemplatatype::ITemplataType,
 >>(
@@ -1000,13 +1000,13 @@ pub fn solve_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>>(
   env: &E,
   range: Vec<crate::utils::range::RangeS<'a>>,
   predicting: bool,
-  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a, 's>],
   additional_runes: &[crate::postparsing::names::IRuneS<'a>],
   expect_complete_solve: bool,
   unpreprocessed_initially_known_runes: std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
 ) -> Result<
   std::collections::HashMap<crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType>,
-  RuneTypeSolveError<'a>,
+  RuneTypeSolveError<'a, 's>,
 > where 'a: 's {
   use crate::postparsing::names::IRuneS;
   use crate::postparsing::itemplatatype::ITemplataType;
@@ -1111,7 +1111,7 @@ pub fn solve_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>>(
   let all_runes: Vec<IRuneS<'a>> = all_runes_set.into_iter().collect();
 
   let delegate = RuneTypeSolverDelegate { predicting };
-  let mut solver: Solver<'a, IRulexSR<'a>, IRuneS<'a>, E, (), ITemplataType, IRuneTypeRuleError<'a>, RuneTypeSolverDelegate> = Solver::new(
+  let mut solver: Solver<'a, IRulexSR<'a, 's>, IRuneS<'a>, E, (), ITemplataType, IRuneTypeRuleError<'a>, RuneTypeSolverDelegate> = Solver::new(
     sanity_check,
     delegate,
     range.clone(),
@@ -1283,12 +1283,12 @@ fn complex_solve() -> Result<(), ()> {
           }
 */
 // mig: fn solve
-fn solve_stub<'a>(
+fn solve_stub<'a, 's>(
   _state: (),
   _env: (),
   _solver_state: (),
   _rule_index: usize,
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
   _step_state: (),
 ) -> Result<(), ()> {
   panic!("Unimplemented solve");

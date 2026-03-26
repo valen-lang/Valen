@@ -53,15 +53,17 @@ where
   }
 }
 */
-fn compile_for_error<'a, 'ctx, 'p>(
+fn compile_for_error<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  _parse_arena: &'p Bump,
+  _scout_arena: &'s Bump,
   code: &str,
-) -> ICompileErrorS<'a>
+) -> ICompileErrorS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   panic!("Unimplemented: compile_for_error");
 }

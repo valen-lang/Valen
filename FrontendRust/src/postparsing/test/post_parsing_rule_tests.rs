@@ -64,15 +64,17 @@ where
     }
   }
 */
-fn compile_for_error<'a, 'ctx, 'p>(
+fn compile_for_error<'a, 'ctx, 'p, 's>(
   _interner: &'ctx crate::Interner<'a>,
   _keywords: &'ctx crate::Keywords<'a>,
-  _arena: &'p bumpalo::Bump,
+  _parse_arena: &'p bumpalo::Bump,
+  _scout_arena: &'s bumpalo::Bump,
   _code: &str,
-) -> crate::postparsing::post_parser::ICompileErrorS<'a>
+) -> crate::postparsing::post_parser::ICompileErrorS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   panic!("Unimplemented: compile_for_error");
 }

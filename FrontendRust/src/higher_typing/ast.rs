@@ -161,9 +161,9 @@ pub struct StructA<'a, 's> {
     pub tyype: TemplateTemplataType,
     pub generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
     pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub header_rules: &'s [IRulexSR<'a>],
+    pub header_rules: &'s [IRulexSR<'a, 's>],
     pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub member_rules: &'s [IRulexSR<'a>],
+    pub member_rules: &'s [IRulexSR<'a, 's>],
     pub members: &'s [IStructMemberS<'a>],
 }
 /*
@@ -205,9 +205,9 @@ pub fn new(
     tyype: TemplateTemplataType,
     generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
     header_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    header_rules: &'s [IRulexSR<'a>],
+    header_rules: &'s [IRulexSR<'a, 's>],
     members_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    member_rules: &'s [IRulexSR<'a>],
+    member_rules: &'s [IRulexSR<'a, 's>],
     members: &'s [IStructMemberS<'a>],
 ) -> Self {
     // These should be removed by the higher typer
@@ -305,7 +305,7 @@ pub struct ImplA<'a, 's> {
     pub range: RangeS<'a>,
     pub name: IImplDeclarationNameS<'a>,
     pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    pub rules: &'s [IRulexSR<'a>],
+    pub rules: &'s [IRulexSR<'a, 's>],
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
     pub sub_citizen_rune: RuneUsage<'a>,
     pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
@@ -338,7 +338,7 @@ pub fn new(
     range: RangeS<'a>,
     name: IImplDeclarationNameS<'a>,
     generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    rules: &'s [IRulexSR<'a>],
+    rules: &'s [IRulexSR<'a, 's>],
     rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
     sub_citizen_rune: RuneUsage<'a>,
     sub_citizen_imprecise_name: IImpreciseNameS<'a>,
@@ -383,7 +383,7 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 pub struct ExportAsA<'a, 's> {
     pub range: RangeS<'a>,
     pub exported_name: StrI<'a>,
-    pub rules: &'s [IRulexSR<'a>],
+    pub rules: &'s [IRulexSR<'a, 's>],
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
     pub type_rune: RuneUsage<'a>,
 }
@@ -453,7 +453,7 @@ pub struct InterfaceA<'a, 's> {
     pub tyype: TemplateTemplataType,
     pub generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub rules: &'s [IRulexSR<'a>],
+    pub rules: &'s [IRulexSR<'a, 's>],
     pub internal_methods: &'s [&'s FunctionA<'a, 's>],
 }
 /*
@@ -513,7 +513,7 @@ pub fn new(
     tyype: TemplateTemplataType,
     generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
     rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    rules: &'s [IRulexSR<'a>],
+    rules: &'s [IRulexSR<'a, 's>],
     internal_methods: &'s [&'s FunctionA<'a, 's>],
 ) -> Self {
     // These should be removed by the higher typer
@@ -641,7 +641,7 @@ pub struct FunctionA<'a, 's> {
     pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
     pub params: &'s [ParameterS<'a>],
     pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-    pub rules: &'s [IRulexSR<'a>],
+    pub rules: &'s [IRulexSR<'a, 's>],
     pub body: IBodyS<'a, 's>,
 }
 /*
@@ -703,7 +703,7 @@ pub fn new(
     rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
     params: &'s [ParameterS<'a>],
     maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-    rules: &'s [IRulexSR<'a>],
+    rules: &'s [IRulexSR<'a, 's>],
     body: IBodyS<'a, 's>,
 ) -> Self {
     // These should be removed by the higher typer

@@ -36,15 +36,17 @@ import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a, 'ctx, 'p>(
+fn compile<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ProgramS<'a, 'p>
+) -> ProgramS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -54,8 +56,8 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   post_parser
     .scout_program(only_file.file_coord, &only_file)
     .unwrap()
@@ -79,15 +81,17 @@ where
     }
   }
 */
-fn compile_for_error<'a, 'ctx, 'p>(
+fn compile_for_error<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ICompileErrorS<'a>
+) -> ICompileErrorS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -97,8 +101,8 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   match post_parser.scout_program(only_file.file_coord, &only_file) {
     Ok(_) => panic!("Accidentally compiled!"),
     Err(e) => e,
@@ -156,12 +160,14 @@ where
 fn lookup_plus() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { return +(3, 4); }",
   );
   let main = program.lookup_function("main");
@@ -198,9 +204,10 @@ fn lookup_plus() {
 fn test_struct() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "struct Moo { x int; }");
+  let program = compile(&interner, &keywords, &parse_arena, &scout_arena, "struct Moo { x int; }");
   let imoo = program.lookup_struct("Moo");
 
   crate::collect_only_snode!(
@@ -250,9 +257,10 @@ fn test_struct() {
 fn linear_struct() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "linear struct Moo { x int; }");
+  let program = compile(&interner, &keywords, &parse_arena, &scout_arena, "linear struct Moo { x int; }");
   let moo_struct = program.lookup_struct("Moo");
   crate::collect_only_snode!(
     NodeRefS::Struct(moo_struct),
@@ -275,12 +283,14 @@ fn linear_struct() {
 fn lambda() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { return {_ + _}(4, 6); }",
   );
   let main = program.lookup_function("main");
@@ -369,9 +379,10 @@ fn lambda() {
 fn interface() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
+  let program = compile(&interner, &keywords, &parse_arena, &scout_arena, "interface IMoo { func blork(virtual this &IMoo, a bool)void; }");
   let imoo = program.lookup_interface("IMoo");
   let blork = expect_1(&imoo.internal_methods);
   let function_name = cast!(&blork.name, IFunctionDeclarationNameS::FunctionName);
@@ -392,12 +403,14 @@ fn interface() {
 fn generic_interface() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "interface IMoo<T> { func blork(virtual this &IMoo, a T)void; }",
   );
   let imoo = program.lookup_interface("IMoo");
@@ -436,9 +449,10 @@ fn generic_interface() {
 fn impl_() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "impl IMoo for Moo;");
+  let program = compile(&interner, &keywords, &parse_arena, &scout_arena, "impl IMoo for Moo;");
   let impl_ = expect_1(program.impls);
 
   crate::collect_only_snode!(
@@ -480,12 +494,14 @@ fn impl_() {
 fn method_call() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { return true.shout(); }",
   );
   let main = program.lookup_function("main");
@@ -528,12 +544,14 @@ fn method_call() {
 fn moving_method_call() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int { x = 4; return (x).shout(); }",
   );
   let main = program.lookup_function("main");
@@ -606,12 +624,14 @@ fn moving_method_call() {
 fn function_with_magic_lambda_and_regular_lambda() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {
       {_};
       (a) => {a};
@@ -708,12 +728,14 @@ fn function_with_magic_lambda_and_regular_lambda() {
 fn constructing_members() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {
       self.x = 4;
       self.y = true;
@@ -866,12 +888,14 @@ fn constructing_members() {
 fn initializing_runtime_sized_array_requires_size_and_callable_too_few() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {\n  ship = []();\n}",
   );
   match &err {
@@ -898,12 +922,14 @@ fn initializing_runtime_sized_array_requires_size_and_callable_too_few() {
 fn initializing_runtime_sized_array_requires_size_and_callable_too_many() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {\n  ship = [](4, {_}, 10);\n}",
   );
   match &err {
@@ -930,12 +956,14 @@ fn initializing_runtime_sized_array_requires_size_and_callable_too_many() {
 fn initializing_static_sized_array_requires_size_and_callable_too_few() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {\n  ship = [#5]();\n}",
   );
   match &err {
@@ -962,12 +990,14 @@ fn initializing_static_sized_array_requires_size_and_callable_too_few() {
 fn initializing_static_sized_array_requires_size_and_callable_too_many() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {\n  ship = [#5](4, {_});\n}",
   );
   match &err {
@@ -994,12 +1024,14 @@ fn initializing_static_sized_array_requires_size_and_callable_too_many() {
 fn test_loading_from_member() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {
       return moo.x;
     }",
@@ -1048,12 +1080,14 @@ fn test_loading_from_member() {
 fn test_loading_from_member_2() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {
       return &moo.x;
     }",
@@ -1107,12 +1141,14 @@ fn test_loading_from_member_2() {
 fn constructing_members_borrowing_another_member() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func MyStruct() {
       self.x = 4;
       self.y = &self.x;
@@ -1243,12 +1279,14 @@ fn constructing_members_borrowing_another_member() {
 fn foreach() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func main() {
       foreach i in myList { }
     }",
@@ -1543,12 +1581,14 @@ fn foreach() {
 fn this_isnt_special_if_was_explicit_param() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func moo(self &MyStruct) {
       println(self.x);
     }",
@@ -1598,12 +1638,14 @@ fn this_isnt_special_if_was_explicit_param() {
 fn reports_when_mutating_nonexistant_local() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {\n  set a = a + 1;\n}",
   );
   match &err {
@@ -1627,12 +1669,14 @@ fn reports_when_mutating_nonexistant_local() {
 fn reports_when_extern_function_has_body() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "extern func bork() int {\n  3\n}",
   );
   match &err {
@@ -1657,12 +1701,14 @@ fn reports_when_extern_function_has_body() {
 fn reports_when_we_forget_set() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() {\n  x = \"world!\";\n  x = \"changed\";\n}",
   );
   match &err {
@@ -1694,12 +1740,14 @@ fn reports_when_we_forget_set() {
 fn reports_when_interface_method_doesnt_have_self() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "interface IMoo { func blork(a bool)void; }",
   );
   match &err {
@@ -1720,12 +1768,14 @@ fn reports_when_interface_method_doesnt_have_self() {
 fn statement_after_result_or_return() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func doCivicDance(virtual this Car) {\n  return 4;\n  7\n}",
   );
   match &err {
@@ -1750,12 +1800,14 @@ fn statement_after_result_or_return() {
 fn report_type_mismatch() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "struct Vec<N, T> where N Int\n{\n  values [#N]<imm>T;\n}\n",
   );
   match &err {
@@ -1789,12 +1841,14 @@ fn report_type_mismatch() {
 fn foreach_expr() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "func main() {
       a = foreach i in c { i };
     }",

@@ -77,13 +77,13 @@ import scala.collection.mutable.ArrayBuffer
 case class CompileErrorExceptionS(err: ICompileErrorS) extends RuntimeException { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CompileErrorExceptionS<'a> {
-  pub err: ICompileErrorS<'a>,
+pub struct CompileErrorExceptionS<'a, 's> {
+  pub err: ICompileErrorS<'a, 's>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
 // SPORK
-pub enum ICompileErrorS<'a> {
+pub enum ICompileErrorS<'a, 's> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'a>),
   CouldntFindRuneS(CouldntFindRuneS<'a>),
   StatementAfterReturnS(StatementAfterReturnS<'a>),
@@ -97,7 +97,7 @@ pub enum ICompileErrorS<'a> {
     InitializingStaticSizedArrayRequiresSizeAndCallable<'a>,
   ),
   ExternHasBodyS(ExternHasBodyS<'a>),
-  IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS<'a>),
+  IdentifyingRunesIncompleteS(IdentifyingRunesIncompleteS<'a, 's>),
   RangedInternalErrorS(RangedInternalErrorS<'a>),
 }
 /*
@@ -105,7 +105,7 @@ sealed trait ICompileErrorS { def range: RangeS }
 Guardian: disable: NECX
 */
 
-impl ICompileErrorS<'_> {
+impl ICompileErrorS<'_, '_> {
   pub fn range(&self) -> &RangeS<'_> {
     match self {
       ICompileErrorS::CouldntFindVarToMutateS(x) => &x.range,
@@ -261,9 +261,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct IdentifyingRunesIncompleteS<'a> {
+pub struct IdentifyingRunesIncompleteS<'a, 's> {
   pub range: RangeS<'a>,
-  pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'a>,
+  pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'a, 's>,
 }
 /*
 case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -734,7 +734,7 @@ pub(crate) fn scout_generic_parameter(
   env: IEnvironmentS<'a>,
   _lidb: &mut LocationInDenizenBuilder,
   rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
-  _rule_builder: &mut Vec<IRulexSR<'a>>,
+  _rule_builder: &mut Vec<IRulexSR<'a, 's>>,
   // This might seem a bit weird, because the region rune usually comes last and is usually
   // mentioned at the end of the header too. But indeed we need it for knowing the region to use
   // for generic params' default values.
@@ -1034,7 +1034,7 @@ where
     &self,
     file_coordinate: &'a FileCoordinate<'a>,
     parsed: &FileP<'a, 'p>,
-  ) -> Result<ProgramS<'a, 's>, ICompileErrorS<'a>>
+  ) -> Result<ProgramS<'a, 's>, ICompileErrorS<'a, 's>>
   {
     let mut structs: Vec<&'s StructS<'a, 's>> = Vec::new();
     for denizen in parsed.denizens {
@@ -1130,7 +1130,7 @@ fn scout_impl(
   &self,
   file: &'a FileCoordinate<'a>,
   impl0: &crate::parsing::ast::ImplP<'a, 'p>,
-) -> Result<crate::postparsing::ast::ImplS<'a, 's>, ICompileErrorS<'a>> {
+) -> Result<crate::postparsing::ast::ImplS<'a, 's>, ICompileErrorS<'a, 's>> {
   let range_s = PostParser::eval_range(file, impl0.range);
 
   match &impl0.interface {
@@ -1211,7 +1211,7 @@ fn scout_impl(
   });
 
   let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
-  let mut rule_builder = Vec::<IRulexSR<'a>>::new();
+  let mut rule_builder = Vec::<IRulexSR<'a, 's>>::new();
   let mut rune_to_explicit_type = Vec::<(IRuneS<'a>, ITemplataType)>::new();
 
   let default_region_rune_range_s = RangeS {
@@ -1265,7 +1265,7 @@ fn scout_impl(
 
   {
     let mut child_lidb = lidb.child();
-    crate::postparsing::rules::rule_scout::translate_rulexes(
+    crate::postparsing::rules::rule_scout::translate_rulexes(self.scout_arena,
       self.interner,
       self.keywords,
       impl_env.clone(),
@@ -1290,7 +1290,7 @@ fn scout_impl(
   let struct_rune = {
     let mut child_lidb = lidb.child();
     crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
-      self.interner,
+      self.scout_arena, self.interner,
         self.keywords,
       impl_env.clone(),
       &mut child_lidb,
@@ -1304,7 +1304,7 @@ fn scout_impl(
   let interface_rune = {
     let mut child_lidb = lidb.child();
     crate::postparsing::rules::templex_scout::translate_maybe_type_into_rune(
-      self.interner,
+      self.scout_arena, self.interner,
         self.keywords,
       impl_env.clone(),
       &mut child_lidb,
@@ -1602,7 +1602,7 @@ fn scout_import(
 fn predict_mutability(
   _range_s: crate::utils::range::RangeS<'a>,
   mutability_rune_s: crate::postparsing::names::IRuneS<'a>,
-  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a, 's>],
 ) -> Option<crate::parsing::ast::MutabilityP> {
   let predicted_mutabilities = rules_s
     .iter()
@@ -1646,7 +1646,7 @@ fn predict_mutability(
     &self,
     file: &'a FileCoordinate<'a>,
     head: &StructP<'a, 'p>,
-  ) -> Result<StructS<'a, 's>, ICompileErrorS<'a>> {
+  ) -> Result<StructS<'a, 's>, ICompileErrorS<'a, 's>> {
     let struct_range_s = Self::eval_range(file, head.range);
     let struct_name = self.interner.intern_struct_declaration_name(TopLevelStructDeclarationNameS {
       name: self.interner.intern(head.name.str().as_str()),
@@ -1699,7 +1699,7 @@ fn predict_mutability(
         .collect::<Vec<_>>(),
     });
 
-    let mut header_rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut header_rule_builder = Vec::<IRulexSR<'a, 's>>::new();
     let mut header_rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
 
     let (_default_region_rune_range_s, default_region_rune_s, _maybe_region_generic_param) =
@@ -1772,7 +1772,7 @@ fn predict_mutability(
     // let generic_parameters_s = struct_user_specified_generic_parameters_s ++ maybe_region_generic_param ++ user_specified_runes_implicit_region_runes_s;
     let generic_parameters_s = struct_user_specified_generic_parameters_s;
 
-    translate_rulexes(
+    translate_rulexes(self.scout_arena,
       self.interner,
       self.keywords,
       struct_env.clone(),
@@ -1783,7 +1783,7 @@ fn predict_mutability(
       &template_rules_p,
     );
 
-    let mut member_rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut member_rule_builder = Vec::<IRulexSR<'a, 's>>::new();
     let mut members_rune_to_explicit_type = ArenaIndexMap::<IRuneS, ITemplataType>::new_in(self.scout_arena);
 
     let mutability = head.mutability.clone().unwrap_or(ITemplexPT::Mutability(
@@ -1793,7 +1793,7 @@ fn predict_mutability(
       ),
     ));
     let mutability_rune_s = translate_templex(
-      self.interner,
+      self.scout_arena, self.interner,
       self.keywords,
       struct_env.clone(),
       &mut lidb.child(),
@@ -1813,7 +1813,7 @@ fn predict_mutability(
       .flat_map(|member| match member {
         IStructContent::NormalStructMember(member) => {
           let member_rune = translate_templex(
-            self.interner,
+            self.scout_arena, self.interner,
             self.keywords,
             struct_env.clone(),
             &mut lidb.child(),
@@ -1834,7 +1834,7 @@ fn predict_mutability(
         }
         IStructContent::VariadicStructMember(member) => {
           let member_rune = translate_templex(
-            self.interner,
+            self.scout_arena, self.interner,
             self.keywords,
             struct_env.clone(),
             &mut lidb.child(),
@@ -2161,10 +2161,10 @@ pub(crate) fn predict_rune_types(
   range_s: crate::utils::range::RangeS<'a>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'a>],
   rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'a>, crate::postparsing::itemplatatype::ITemplataType)>,
-  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a>],
+  _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'a, 's>],
 ) -> Result<
   ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  ICompileErrorS<'a>,
+  ICompileErrorS<'a, 's>,
 > {
   let mut grouped_explicit_types = std::collections::HashMap::<
     crate::postparsing::names::IRuneS<'a>,
@@ -2246,8 +2246,8 @@ pub(crate) fn check_identifiability(
   &self,
   range_s: RangeS<'a>,
   identifying_runes_s: &[IRuneS<'a>],
-  rules_s: &[IRulexSR<'a>],
-) -> Result<(), ICompileErrorS<'a>> {
+  rules_s: &[IRulexSR<'a, 's>],
+) -> Result<(), ICompileErrorS<'a, 's>> {
   match crate::postparsing::identifiability_solver::solve_identifiability(
     self.global_options.sanity_check,
     self.global_options.use_optimized_solver,
@@ -2284,7 +2284,7 @@ pub(crate) fn check_identifiability(
     &self,
     file: &'a FileCoordinate<'a>,
     interface: &crate::parsing::ast::InterfaceP<'a, 'p>,
-  ) -> Result<InterfaceS<'a, 's>, ICompileErrorS<'a>> {
+  ) -> Result<InterfaceS<'a, 's>, ICompileErrorS<'a, 's>> {
     let interface_range_s = Self::eval_range(file, interface.range);
     let body_range_s = Self::eval_range(file, interface.body_range);
     let interface_name = self.interner.intern_interface_declaration_name(TopLevelInterfaceDeclarationNameS {
@@ -2385,7 +2385,7 @@ pub(crate) fn check_identifiability(
       user_declared_runes,
     });
 
-    let mut rule_builder = Vec::<IRulexSR<'a>>::new();
+    let mut rule_builder = Vec::<IRulexSR<'a, 's>>::new();
     let mut rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
 
     let default_region_rune_s = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
@@ -2412,7 +2412,7 @@ pub(crate) fn check_identifiability(
       })
       .collect::<Vec<_>>();
 
-    translate_rulexes(
+    translate_rulexes(self.scout_arena,
       self.interner,
       self.keywords,
       interface_env.clone(),
@@ -2430,7 +2430,7 @@ pub(crate) fn check_identifiability(
       ),
     );
     let mutability_rune_s = translate_templex(
-      self.interner,
+      self.scout_arena, self.interner,
       self.keywords,
       interface_env.clone(),
       &mut lidb.child(),
@@ -2713,7 +2713,7 @@ where
   'a: 's,
 {
   // From PostParser.scala lines 935-950: getScoutput
-  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a>> {
+  pub fn get_scoutput(&mut self) -> Result<&FileCoordinateMap<'a, ProgramS<'a, 's>>, ICompileErrorS<'a, 's>> {
     if self.scoutput_cache.is_some() {
       return Ok(self.scoutput_cache.as_ref().unwrap());
     }

@@ -79,7 +79,7 @@ pub(crate) fn scout_each<'a, 'p, 'ctx, 's>(
   in_keyword_range: RangeL,
   iterable_expr: &IExpressionPE<'a, 'p>,
   body: &BlockPE<'a, 'p>,
-) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 where
   'a: 'ctx,
   'a: 'p,
@@ -305,7 +305,7 @@ fn scout_each_body<'a, 'p, 'ctx, 's>(
     VariableUses<'a>,
     VariableUses<'a>,
   ),
-  ICompileErrorS<'a>,
+  ICompileErrorS<'a, 's>,
 >
 where
   'a: 'ctx,
@@ -585,7 +585,7 @@ pub(crate) fn scout_while<'a, 'p, 'ctx, 's>(
   range: RangeL,
   condition_pe: &IExpressionPE<'a, 'p>,
   body: &BlockPE<'a, 'p>,
-) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a>>
+) -> Result<(&'s BlockSE<'a, 's>, VariableUses<'a>, VariableUses<'a>), ICompileErrorS<'a, 's>>
 where
   'a: 'ctx,
   'a: 'p,
@@ -704,7 +704,7 @@ fn scout_while_body<'a, 'p, 'ctx, 's>(
     VariableUses<'a>,
     VariableUses<'a>,
   ),
-  ICompileErrorS<'a>,
+  ICompileErrorS<'a, 's>,
 >
 where
   'a: 'ctx,

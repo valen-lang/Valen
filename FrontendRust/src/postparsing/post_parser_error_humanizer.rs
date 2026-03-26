@@ -15,12 +15,12 @@ use crate::postparsing::names::{INameS, IVarNameS};
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::utils::range::{CodeLocationS, RangeS};
 
-pub fn humanize<'a, HP, LB, LRC, LC>(
+pub fn humanize<'a, 's, HP, LB, LRC, LC>(
   humanize_pos: HP,
   _lines_between: LB,
   _line_range_containing: LRC,
   line_containing: LC,
-  err: &'a ICompileErrorS<'a>,
+  err: &'a ICompileErrorS<'a, 's>,
 ) -> String
 where
   HP: Fn(&CodeLocationS<'a>) -> String,
@@ -310,8 +310,8 @@ fn humanize_templata_type(
     }
   }
 */
-fn humanize_rule<'a>(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a>,
+fn humanize_rule<'a, 's>(
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
 ) -> String {
   panic!("Unimplemented humanize_rule");
 }

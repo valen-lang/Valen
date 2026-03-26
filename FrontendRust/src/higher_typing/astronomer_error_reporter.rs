@@ -13,15 +13,15 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 
 // mig: struct CompileErrorExceptionA
-pub struct CompileErrorExceptionA<'a> {
-    pub err: ICompileErrorA<'a>,
+pub struct CompileErrorExceptionA<'a, 's> {
+    pub err: ICompileErrorA<'a, 's>,
 }
 /*
 case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException {
   vpass()
 */
 // mig: impl CompileErrorExceptionA
-impl<'a> CompileErrorExceptionA<'a> {
+impl<'a, 's> CompileErrorExceptionA<'a, 's> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -36,13 +36,13 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: trait ICompileErrorA
-pub enum ICompileErrorA<'a> {
+pub enum ICompileErrorA<'a, 's> {
     /*
     sealed trait ICompileErrorA {
     */
     CouldntFindType(CouldntFindTypeA<'a>),
     TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
-    CouldntSolveRules(CouldntSolveRulesA<'a>),
+    CouldntSolveRules(CouldntSolveRulesA<'a, 's>),
     CircularModuleDependency(CircularModuleDependency<'a>),
     WrongNumArgsForTemplate(WrongNumArgsForTemplateA<'a>),
     RangedInternalError(RangedInternalErrorA<'a>),
@@ -50,7 +50,7 @@ pub enum ICompileErrorA<'a> {
        def range: RangeS
     */
 }
-impl<'a> ICompileErrorA<'a> {
+impl<'a, 's> ICompileErrorA<'a, 's> {
     pub fn range(&self) -> RangeS<'a> {
         match self {
             ICompileErrorA::CouldntFindType(x) => x.range.clone(),
@@ -70,7 +70,7 @@ pub enum ILookupFailedErrorA<'a> {
     CouldntFindType(CouldntFindTypeA<'a>),
     TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
 }
-impl<'a> From<ILookupFailedErrorA<'a>> for ICompileErrorA<'a> {
+impl<'a, 's> From<ILookupFailedErrorA<'a>> for ICompileErrorA<'a, 's> {
     fn from(e: ILookupFailedErrorA<'a>) -> Self {
         match e {
             ILookupFailedErrorA::CouldntFindType(x) => ICompileErrorA::CouldntFindType(x),
@@ -136,15 +136,15 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct CouldntSolveRulesA
-pub struct CouldntSolveRulesA<'a> {
+pub struct CouldntSolveRulesA<'a, 's> {
     pub range: RangeS<'a>,
-    pub error: RuneTypeSolveError<'a>,
+    pub error: RuneTypeSolveError<'a, 's>,
 }
 /*
 case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorA {
 */
 // mig: impl CouldntSolveRulesA
-impl<'a> CouldntSolveRulesA<'a> {
+impl<'a, 's> CouldntSolveRulesA<'a, 's> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -196,7 +196,7 @@ object ErrorReporter {
 impl<'a> RangedInternalErrorA<'a> {}
 
 // mig: fn report
-pub fn report<'a>(_err: ICompileErrorA<'a>) -> ! {
+pub fn report<'a, 's>(_err: ICompileErrorA<'a, 's>) -> ! {
     panic!("Unimplemented: report");
 }
 /*

@@ -33,15 +33,17 @@ import org.scalatest._
 
 class PostParsingParametersTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a, 'ctx, 'p>(
+fn compile<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ProgramS<'a, 'p>
+) -> ProgramS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -51,8 +53,8 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   post_parser
     .scout_program(only_file.file_coord, &only_file)
     .unwrap()
@@ -74,15 +76,17 @@ where
     }
   }
 */
-fn compile_for_error<'a, 'ctx, 'p>(
+fn compile_for_error<'a, 'ctx, 'p, 's>(
   interner: &'ctx Interner<'a>,
   keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+  parse_arena: &'p Bump,
+  scout_arena: &'s Bump,
   code: &str,
-) -> ICompileErrorS<'a>
+) -> ICompileErrorS<'a, 's>
 where
   'a: 'ctx,
   'a: 'p,
+  'a: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -92,8 +96,8 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
+  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
   match post_parser.scout_program(only_file.file_coord, &only_file) {
     Ok(_) => panic!("Accidentally compiled!"),
     Err(e) => e,
@@ -111,9 +115,10 @@ where
 fn coord_rune_rule() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, "func main<T>(moo T) { }");
+  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo T) { }");
   let main = program1.lookup_function("main");
 
   // vregionmut() // Take out with regions
@@ -171,9 +176,10 @@ fn coord_rune_rule() {
 fn returned_rune() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, "func main<T>(moo T) T { moo }");
+  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo T) T { moo }");
   let main = program1.lookup_function("main");
 
   let t_name = interner.intern("T");
@@ -204,9 +210,10 @@ fn returned_rune() {
 fn borrowed_rune() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, "func main<T>(moo &T) { }");
+  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo &T) { }");
   let main = program1.lookup_function("main");
 
   let t_coord_rune_from_params = match main.params {
@@ -274,9 +281,10 @@ fn borrowed_rune() {
 fn anonymous_typed_param() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, "func main(_ int) { }");
+  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main(_ int) { }");
   let main = program1.lookup_function("main");
 
   let param_rune = match main.params {
@@ -365,12 +373,14 @@ fn anonymous_typed_param() {
 fn test_param_less_lambda_identifying_runes() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {do({ return 3; })}",
   );
   let main = program1.lookup_function("main");
@@ -413,12 +423,14 @@ fn test_param_less_lambda_identifying_runes() {
 fn test_one_param_lambda_identifying_runes() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let program1 = compile(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "exported func main() int {do({ _ })}",
   );
   let main = program1.lookup_function("main");
@@ -463,12 +475,14 @@ fn test_one_param_lambda_identifying_runes() {
 fn report_that_default_region_must_be_mentioned_in_generic_params() {
   let arena = Bump::new();
   let parse_arena = Bump::new();
+  let scout_arena = Bump::new();
   let interner = Interner::with_arena(&arena);
   let keywords = Keywords::new(&interner);
   let err = compile_for_error(
     &interner,
     &keywords,
     &parse_arena,
+    &scout_arena,
     "pure func main<r'>(ship &r'Spaceship) t'{ }",
   );
   match &err {

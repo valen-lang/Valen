@@ -33,20 +33,20 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexSR<'a> {
+pub enum IRulexSR<'a, 's> {
   Equals(EqualsSR<'a>),
   Literal(LiteralSR<'a>),
   MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
   Lookup(LookupSR<'a>),
-  MaybeCoercingCall(MaybeCoercingCallSR<'a>),
-  Call(CallSR<'a>),
+  MaybeCoercingCall(MaybeCoercingCallSR<'a, 's>),
+  Call(CallSR<'a, 's>),
   RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
   Augment(AugmentSR<'a>),
-  OneOf(OneOfSR<'a>),
+  OneOf(OneOfSR<'a, 's>),
   IsInterface(IsInterfaceSR<'a>),
   CoordComponents(CoordComponentsSR<'a>),
   CoerceToCoord(CoerceToCoordSR<'a>),
-  Pack(PackSR<'a>),
+  Pack(PackSR<'a, 's>),
   CallSiteFunc(CallSiteFuncSR<'a>),
   DefinitionFunc(DefinitionFuncSR<'a>),
   Resolve(ResolveSR<'a>),
@@ -74,8 +74,8 @@ trait IRulexSR {
 Guardian: disable: NECX
 */
 
-impl<'a> IRulexSR<'a> {
-  pub fn range<'s>(&'s self) -> &'s RangeS<'a> {
+impl<'a, 's> IRulexSR<'a, 's> {
+  pub fn range<'r>(&'r self) -> &'r RangeS<'a> {
     match self {
       IRulexSR::Equals(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
@@ -109,7 +109,7 @@ impl<'a> IRulexSR<'a> {
   }
   /* Guardian: disable-all */
 
-  pub fn rune_usages<'s>(&'s self) -> Vec<RuneUsage<'a>> {
+  pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'a>> {
     match self {
       IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
@@ -117,12 +117,12 @@ impl<'a> IRulexSR<'a> {
       IRulexSR::Lookup(x) => vec![x.rune.clone()],
       IRulexSR::MaybeCoercingCall(x) => {
         let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
-        usages.extend(x.args.clone());
+        usages.extend(x.args.iter().cloned());
         usages
       }
       IRulexSR::Call(x) => {
         let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
-        usages.extend(x.args.clone());
+        usages.extend(x.args.iter().cloned());
         usages
       }
       IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
@@ -135,7 +135,7 @@ impl<'a> IRulexSR<'a> {
       IRulexSR::CoerceToCoord(x) => vec![x.coord_rune.clone(), x.kind_rune.clone()],
       IRulexSR::Pack(x) => {
         let mut usages = vec![x.result_rune.clone()];
-        usages.extend(x.members.clone());
+        usages.extend(x.members.iter().cloned());
         usages
       }
       IRulexSR::CallSiteFunc(x) => vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
@@ -366,10 +366,10 @@ case class DefinitionFuncSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct OneOfSR<'a> {
+pub struct OneOfSR<'a, 's> {
   pub range: RangeS<'a>,
   pub rune: RuneUsage<'a>,
-  pub literals: Vec<ILiteralSL>,
+  pub literals: &'s [ILiteralSL],
 }
 /*
 // See Possible Values Shouldnt Be Used For Inference (PVSBUFI)
@@ -521,11 +521,11 @@ case class LookupSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MaybeCoercingCallSR<'a> {
+pub struct MaybeCoercingCallSR<'a, 's> {
   pub range: RangeS<'a>,
   pub result_rune: RuneUsage<'a>,
   pub template_rune: RuneUsage<'a>,
-  pub args: Vec<RuneUsage<'a>>,
+  pub args: &'s [RuneUsage<'a>],
 }
 /*
 case class MaybeCoercingCallSR(
@@ -540,11 +540,11 @@ case class MaybeCoercingCallSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CallSR<'a> {
+pub struct CallSR<'a, 's> {
   pub range: RangeS<'a>,
   pub result_rune: RuneUsage<'a>,
   pub template_rune: RuneUsage<'a>,
-  pub args: Vec<RuneUsage<'a>>,
+  pub args: &'s [RuneUsage<'a>],
 }
 /*
 case class CallSR(
@@ -617,10 +617,10 @@ case class AugmentSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackSR<'a> {
+pub struct PackSR<'a, 's> {
   pub range: RangeS<'a>,
   pub result_rune: RuneUsage<'a>,
-  pub members: Vec<RuneUsage<'a>>,
+  pub members: &'s [RuneUsage<'a>],
 }
 /*
 case class PackSR(
