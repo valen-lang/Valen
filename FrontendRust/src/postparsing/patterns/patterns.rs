@@ -1,3 +1,6 @@
+use crate::postparsing::names::IVarNameS;
+use crate::postparsing::rules::RuneUsage;
+use crate::utils::range::RangeS;
 /*
 package dev.vale.postparsing.patterns
 
@@ -8,9 +11,6 @@ import dev.vale.postparsing._
 
 import scala.collection.immutable.List
 */
-use crate::postparsing::names::IVarNameS;
-use crate::postparsing::rules::RuneUsage;
-use crate::utils::range::RangeS;
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct CaptureS<'a> {

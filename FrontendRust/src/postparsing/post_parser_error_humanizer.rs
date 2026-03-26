@@ -1,3 +1,6 @@
+use crate::postparsing::names::{INameS, IVarNameS};
+use crate::postparsing::post_parser::ICompileErrorS;
+use crate::utils::range::{CodeLocationS, RangeS};
 /*
 package dev.vale.postparsing
 
@@ -11,9 +14,6 @@ import dev.vale.postparsing.rules._
 
 object PostParserErrorHumanizer {
 */
-use crate::postparsing::names::{INameS, IVarNameS};
-use crate::postparsing::post_parser::ICompileErrorS;
-use crate::utils::range::{CodeLocationS, RangeS};
 
 pub fn humanize<'a, 's, HP, LB, LRC, LC>(
   humanize_pos: HP,

@@ -1,16 +1,3 @@
-/*
-package dev.vale.highertyping
-
-import dev.vale.{RangeS, StrI, vassert, vcurious, vpass, vwat}
-import dev.vale.parsing.ast.MutabilityP
-import dev.vale.postparsing.rules._
-import dev.vale.postparsing._
-import dev.vale.parsing._
-import dev.vale.postparsing._
-
-import scala.collection.immutable.List
-*/
-
 use std::collections::HashMap;
 use crate::interner::StrI;
 use crate::utils::arena_index_map::ArenaIndexMap;
@@ -26,6 +13,18 @@ use crate::postparsing::names::{
 };
 use crate::postparsing::rules::{IRulexSR, RuneUsage};
 use crate::utils::range::RangeS;
+/*
+package dev.vale.highertyping
+
+import dev.vale.{RangeS, StrI, vassert, vcurious, vpass, vwat}
+import dev.vale.parsing.ast.MutabilityP
+import dev.vale.postparsing.rules._
+import dev.vale.postparsing._
+import dev.vale.parsing._
+import dev.vale.postparsing._
+
+import scala.collection.immutable.List
+*/
 
 // mig: struct ProgramA
 #[derive(Debug)]

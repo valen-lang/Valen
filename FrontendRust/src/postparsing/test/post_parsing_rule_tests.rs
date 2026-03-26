@@ -1,3 +1,14 @@
+use bumpalo::Bump;
+use crate::compile_options::GlobalOptions;
+use crate::parsing::tests::utils::compile_file;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::itemplatatype::{
+  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
+  OwnershipTemplataType, VariabilityTemplataType,
+};
+use crate::postparsing::names::{CodeRuneS, IRuneValS};
+use crate::postparsing::post_parser::PostParser;
+use crate::{Interner, Keywords};
 /*
 package dev.vale.postparsing
 
@@ -11,17 +22,6 @@ import scala.collection.immutable.List
 
 class PostParsingRuleTests extends FunSuite with Matchers {
 */
-use bumpalo::Bump;
-use crate::compile_options::GlobalOptions;
-use crate::parsing::tests::utils::compile_file;
-use crate::postparsing::ast::ProgramS;
-use crate::postparsing::itemplatatype::{
-  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
-  OwnershipTemplataType, VariabilityTemplataType,
-};
-use crate::postparsing::names::{CodeRuneS, IRuneValS};
-use crate::postparsing::post_parser::PostParser;
-use crate::{Interner, Keywords};
 
 fn compile<'a, 'ctx, 'p>(
   interner: &'ctx Interner<'a>,

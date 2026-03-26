@@ -1,12 +1,12 @@
+use crate::interner::{Interner, StrI};
+use crate::postparsing::ast::LocationInDenizen;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::{CodeLocationS, RangeS};
 /*
 package dev.vale.postparsing
 
 import dev.vale.{CodeLocationS, IInterning, Interner, PackageCoordinate, RangeS, StrI, vassert, vcheck, vimpl, vpass}
 */
-use crate::interner::{Interner, StrI};
-use crate::postparsing::ast::LocationInDenizen;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::range::{CodeLocationS, RangeS};
 
 /// Canonical interned name. Storage uses arena-backed refs; use `ptr_eq` for identity.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

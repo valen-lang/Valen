@@ -1,5 +1,7 @@
 # Migration Audit Report — Full Parity Check
 
+// V: did we fix all these?
+
 **Date:** 2026-03-11
 **Branch:** rustmigrate-z
 **Auditor:** migration-check-specific agents (haiku model, read-only)

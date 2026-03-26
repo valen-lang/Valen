@@ -17,6 +17,8 @@ It's used to generate unique implicit rune names. When the postparser encounters
 
 This works because `LocationInDenizen<'x>` just holds `path: &'x [i32]` — a slice reference into whichever arena the owner was allocated in. The `'x` unifies with the owner's arena lifetime at each use site.
 
+// V: is this generally similar to how our slices and ArenaIndexMap work? "specific-arena-agnostic" so to speak?
+
 ## Builder pattern
 
 `LocationInDenizenBuilder` is a mutable builder with `path: Vec<i32>`. It tracks a `next_child` counter and a `consumed` flag.

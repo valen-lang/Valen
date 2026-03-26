@@ -1,3 +1,13 @@
+use bumpalo::Bump;
+use crate::compile_options::GlobalOptions;
+use crate::higher_typing::HigherTypingCompilation;
+use crate::higher_typing::astronomer_error_reporter::ICompileErrorA;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTemplataType};
+use crate::postparsing::names::{CodeRuneS, IRuneValS};
+use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
 /*
 TODO: rename
 
@@ -12,16 +22,6 @@ import org.scalatest._
 
 class HigherTypingPassTests extends FunSuite with Matchers  {
 */
-use bumpalo::Bump;
-use crate::compile_options::GlobalOptions;
-use crate::higher_typing::HigherTypingCompilation;
-use crate::higher_typing::astronomer_error_reporter::ICompileErrorA;
-use crate::interner::Interner;
-use crate::keywords::Keywords;
-use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTemplataType};
-use crate::postparsing::names::{CodeRuneS, IRuneValS};
-use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
-use std::collections::HashMap;
 
 // mig: fn compile_program_for_error
 fn compile_program_for_error<'a, 'ctx, 'p, 's>(

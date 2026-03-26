@@ -1,3 +1,12 @@
+use crate::interner::StrI;
+use crate::postparsing::names::IRuneS;
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
+  MutabilityTemplataType, OwnershipTemplataType, StringTemplataType, VariabilityTemplataType,
+};
+use crate::parsing::ast::{LocationP, MutabilityP, OwnershipP, VariabilityP};
+use crate::utils::range::RangeS;
 /*
 package dev.vale.postparsing.rules
 
@@ -9,15 +18,6 @@ import dev.vale.postparsing._
 
 import scala.collection.immutable.List
 */
-use crate::interner::StrI;
-use crate::postparsing::names::IRuneS;
-use crate::postparsing::names::IImpreciseNameS;
-use crate::postparsing::itemplatatype::{
-  BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
-  MutabilityTemplataType, OwnershipTemplataType, StringTemplataType, VariabilityTemplataType,
-};
-use crate::parsing::ast::{LocationP, MutabilityP, OwnershipP, VariabilityP};
-use crate::utils::range::RangeS;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneUsage<'a> {
@@ -376,7 +376,7 @@ pub struct OneOfSR<'a, 's> {
 case class OneOfSR(
   range: RangeS,
   rune: RuneUsage,
-  literals: Vector[ILiteralSL<'a>]
+  literals: Vector[ILiteralSL]
 ) extends IRulexSR {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vassert(literals.nonEmpty)

@@ -1,3 +1,6 @@
+use crate::utils::range::RangeS;
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 /*
 VISTODO: rename
 package dev.vale.highertyping
@@ -8,9 +11,6 @@ import dev.vale.postparsing._
 import dev.vale.postparsing.RuneTypeSolveError
 import dev.vale.RangeS
 */
-use crate::utils::range::RangeS;
-use crate::postparsing::names::IImpreciseNameS;
-use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 
 // mig: struct CompileErrorExceptionA
 pub struct CompileErrorExceptionA<'a, 's> {

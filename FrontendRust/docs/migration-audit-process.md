@@ -1,5 +1,7 @@
 # Migration Audit Process: Batch Parity Checking
 
+// V: should this be a skill?
+
 This document describes the process we used to audit 30 Scala-to-Rust migrated definitions for parity, using the `migration-check-specific` subagent in parallel waves.
 
 ## Overview
@@ -62,22 +64,6 @@ After all 30 agents completed, we compiled a final report organized by:
 
 - **4 APPROVED** (13%): These matched Scala closely enough
 - **26 NEEDS_WORK** (87%): Various parity violations found
-
-### Most Common Issues Found
-
-1. **Match arm ordering** (5 functions) — Rust match arms in different order than Scala
-2. **Control flow structure** (4 functions) — if-let/if-else where Scala uses match statements
-3. **Missing error handling** (4 functions) — panic! where Scala returns proper error types
-4. **Style: long `crate::` paths** (5 tests) — should use `use` imports instead
-5. **Missing comments** (3 functions) — MACT violations
-6. **Missing parameters** (3 functions) — parameters like `primitives`, `use_optimized_solver` dropped from signatures
-
-## Timing
-
-- Wave 1 (15 agents): ~3 minutes for all to complete
-- Wave 2 (11 agents): ~2 minutes
-- Wave 3 (5 agents): ~3 minutes
-- Total wall-clock time: ~10 minutes for 30 audits
 
 ## Lessons Learned
 

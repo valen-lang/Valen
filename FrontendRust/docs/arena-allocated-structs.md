@@ -29,3 +29,9 @@ These are mutable working data or context — they use `Clone`, `Box`, `HashMap`
 - `VariableDeclarations`, `VariableUses` — transient accumulators
 - Error types (`ICompileErrorS`, `ICompileErrorA`, `RuneTypeSolveError`, etc.) — returned via `Result`
 - Solver state (`SimpleSolverState`, `OptimizedSolverState`) — mutable during solving
+
+# Notes
+
+// V: we should mention which structs are stored inline. i vaguely recall CodeLocationS and RangeS are inline.
+AFTERM: come up with a way to make this more predictable.
+REV: Make sure this doc includes all the structs defined in the Rust codebase.

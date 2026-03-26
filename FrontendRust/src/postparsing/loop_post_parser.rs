@@ -1,3 +1,14 @@
+use crate::parsing::ast::{
+  AugmentPE, BlockPE, ConsecutorPE, DestinationLocalP, FunctionCallPE, IExpressionPE,
+  IImpreciseNameP, INameDeclarationP, LetPE, LoadAsP, LookupPE, NameP, OwnershipP, PatternPP,
+};
+use crate::postparsing::ast::LocationInDenizenBuilder;
+use crate::postparsing::expressions::{
+  BlockSE, BreakSE, IExpressionSE, MapSE, VoidSE, WhileSE,
+};
+use crate::postparsing::post_parser::{ICompileErrorS, PostParser, StackFrame};
+use crate::postparsing::variable_uses::VariableUses;
+use crate::lexing::ast::RangeL;
 /*
 package dev.vale.postparsing
 
@@ -10,17 +21,6 @@ import dev.vale.{Interner, Keywords, StrI, postparsing}
 /*
 class LoopPostParser(interner: Interner, keywords: Keywords) {
 */
-use crate::parsing::ast::{
-  AugmentPE, BlockPE, ConsecutorPE, DestinationLocalP, FunctionCallPE, IExpressionPE,
-  IImpreciseNameP, INameDeclarationP, LetPE, LoadAsP, LookupPE, NameP, OwnershipP, PatternPP,
-};
-use crate::postparsing::ast::LocationInDenizenBuilder;
-use crate::postparsing::expressions::{
-  BlockSE, BreakSE, IExpressionSE, MapSE, VoidSE, WhileSE,
-};
-use crate::postparsing::post_parser::{ICompileErrorS, PostParser, StackFrame};
-use crate::postparsing::variable_uses::VariableUses;
-use crate::lexing::ast::RangeL;
 
 fn scout_loop<'a, 's, F>(
   _stack_frame0: crate::postparsing::post_parser::StackFrame<'a>,

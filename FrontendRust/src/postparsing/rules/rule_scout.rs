@@ -1,21 +1,3 @@
-/*
-package dev.vale.postparsing.rules
-
-import dev.vale.lexing.RangeL
-import dev.vale.parsing.ast.{BoolTypePR, BuiltinCallPR, ComponentsPR, CoordListTypePR, CoordTypePR, EqualsPR, IRulexPR, ITypePR, IntPT, IntTypePR, KindTypePR, LocationTypePR, MutabilityTypePR, NameP, OrPR, OwnershipPT, OwnershipTypePR, PrototypeTypePR, TemplexPR, TypedPR, VariabilityTypePR}
-import dev.vale.postparsing._
-import dev.vale._
-import dev.vale.parsing._
-import dev.vale.parsing.ast._
-import dev.vale.postparsing._
-import dev.vale.postparsing.rules.RuleScout.translateType
-
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-*/
-/*
-class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexScout) {
-*/
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT, OwnershipPT};
@@ -34,6 +16,24 @@ use crate::postparsing::rules::rules::{
 use crate::postparsing::rules::rules::ILiteralSL;
 use crate::postparsing::rules::templex_scout::translate_templex;
 use std::collections::{HashMap, HashSet};
+/*
+package dev.vale.postparsing.rules
+
+import dev.vale.lexing.RangeL
+import dev.vale.parsing.ast.{BoolTypePR, BuiltinCallPR, ComponentsPR, CoordListTypePR, CoordTypePR, EqualsPR, IRulexPR, ITypePR, IntPT, IntTypePR, KindTypePR, LocationTypePR, MutabilityTypePR, NameP, OrPR, OwnershipPT, OwnershipTypePR, PrototypeTypePR, TemplexPR, TypedPR, VariabilityTypePR}
+import dev.vale.postparsing._
+import dev.vale._
+import dev.vale.parsing._
+import dev.vale.parsing.ast._
+import dev.vale.postparsing._
+import dev.vale.postparsing.rules.RuleScout.translateType
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+*/
+/*
+class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexScout) {
+*/
 
 // Returns:
 // - new rules produced on the side while translating the given rules

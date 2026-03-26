@@ -1,29 +1,6 @@
 // AFTERM: rename to function_post_parser.rs
 // AFTERM: review scout_function
 
-/*
-package dev.vale.postparsing
-
-import dev.vale.postparsing.rules.{AugmentSR, IRulexSR, MaybeCoercingLookupSR, RuleScout, RuneUsage, TemplexScout}
-import dev.vale.parsing._
-import dev.vale.parsing.ast._
-import PostParser.{evalRange, noDeclarations, noVariableUses}
-import dev.vale
-import dev.vale.lexing.RangeL
-import dev.vale.{FileCoordinate, Interner, Keywords, RangeS, postparsing, vassertSome, vcurious, vimpl, vwat}
-import dev.vale.postparsing.patterns.{AtomSP, CaptureS, PatternScout}
-import dev.vale.postparsing.patterns._
-//import dev.vale.postparsing.predictor.{Conclusions, PredictorEvaluator}
-
-import scala.collection.mutable
-import scala.collection.mutable.ArrayBuffer
-//import dev.vale.postparsing.predictor.Conclusions
-import dev.vale.postparsing.rules._
-//import dev.vale.postparsing.templatepredictor.PredictorEvaluator
-import dev.vale._
-
-import scala.collection.immutable.{List, Range}
-*/
 use crate::parsing::ast::{FunctionP, IAttributeP, ITemplexPT, LoadAsP};
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::postparsing::ast::{
@@ -64,6 +41,29 @@ use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use indexmap::IndexSet;
+/*
+package dev.vale.postparsing
+
+import dev.vale.postparsing.rules.{AugmentSR, IRulexSR, MaybeCoercingLookupSR, RuleScout, RuneUsage, TemplexScout}
+import dev.vale.parsing._
+import dev.vale.parsing.ast._
+import PostParser.{evalRange, noDeclarations, noVariableUses}
+import dev.vale
+import dev.vale.lexing.RangeL
+import dev.vale.{FileCoordinate, Interner, Keywords, RangeS, postparsing, vassertSome, vcurious, vimpl, vwat}
+import dev.vale.postparsing.patterns.{AtomSP, CaptureS, PatternScout}
+import dev.vale.postparsing.patterns._
+//import dev.vale.postparsing.predictor.{Conclusions, PredictorEvaluator}
+
+import scala.collection.mutable
+import scala.collection.mutable.ArrayBuffer
+//import dev.vale.postparsing.predictor.Conclusions
+import dev.vale.postparsing.rules._
+//import dev.vale.postparsing.templatepredictor.PredictorEvaluator
+import dev.vale._
+
+import scala.collection.immutable.{List, Range}
+*/
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IFunctionParent<'a, 's>
@@ -1043,7 +1043,7 @@ where
               }
             (maybeSelfBorrow, maybePattern) match {
               case (Some(selfBorrow), None) => {
-                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
+                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
                 runeToExplicitType += ((rune.rune, CoordTemplataType()))
                 val patternS =
                   AtomSP(rangeS, Some(CaptureS(CodeVarNameS(keywords.self), false)), Some(rune), None)
@@ -1060,7 +1060,7 @@ where
                 val patternS =
                   patternPerhapsWithoutCoordRuneS.coordRune match {
                     case None => {
-                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
+                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
                       runeToExplicitType += ((rune.rune, CoordTemplataType()))
                       patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
                     }
@@ -1111,7 +1111,7 @@ where
             case FunctionNoParent() | ParentInterface(_, _, _, _) => {
               // If nothing's present, assume void
               val rangeS = PostParser.evalRange(file, retRange)
-              val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
+              val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
               ruleBuilder +=
                 MaybeCoercingLookupSR(
                   rangeS,
@@ -1220,10 +1220,10 @@ where
                   RangedInternalErrorS(rangeS, "Cant have a lambda with _ and params"))
               }
 
-              val closureStructKindRune = ImplicitRuneS(lidb.child().consume_in(self.interner.arena()))
+              val closureStructKindRune = ImplicitRuneS(lidb.child().consume())
               val closureStructRegionRune =
                 ImplicitRegionRuneS(closureStructKindRune)
-              val closureStructCoordRune = ImplicitRuneS(lidb.child().consume_in(self.interner.arena()))
+              val closureStructCoordRune = ImplicitRuneS(lidb.child().consume())
 
               val closureParamS =
                 createClosureParam(
@@ -1488,7 +1488,7 @@ fn create_closure_param(
         RuneUsage(closureParamRange, closureStructKindRune))
 
     val closureParamTypeRune =
-      rules.RuneUsage(closureParamRange, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
+      rules.RuneUsage(closureParamRange, ImplicitRuneS(lidb.child().consume()))
     ruleBuilder +=
       AugmentSR(
         closureParamRange,
@@ -1556,7 +1556,7 @@ fn create_magic_parameters(
       case mpn@MagicParamNameS(codeLocation) => {
         val magicParamRange = vale.RangeS(codeLocation, codeLocation)
         val magicParamRune =
-          rules.RuneUsage(magicParamRange, MagicParamRuneS(lidb.child().consume_in(self.interner.arena())))
+          rules.RuneUsage(magicParamRange, MagicParamRuneS(lidb.child().consume()))
         runeToExplicitType += ((magicParamRune.rune, CoordTemplataType()))
         val paramS =
           ParameterS(

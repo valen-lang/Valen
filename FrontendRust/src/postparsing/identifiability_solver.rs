@@ -1,3 +1,11 @@
+use crate::interner::Interner;
+use crate::postparsing::names::IRuneS;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::solver::{
+    IncompleteOrFailedSolve, IncompleteSolve, ISolverError, Solver, SolverDelegate,
+};
+use crate::utils::range::RangeS;
+use std::collections::{HashMap, HashSet};
 /*
 package dev.vale.postparsing
 
@@ -9,14 +17,6 @@ import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 */
-use crate::interner::Interner;
-use crate::postparsing::names::IRuneS;
-use crate::postparsing::rules::rules::IRulexSR;
-use crate::solver::{
-    IncompleteOrFailedSolve, IncompleteSolve, ISolverError, Solver, SolverDelegate,
-};
-use crate::utils::range::RangeS;
-use std::collections::{HashMap, HashSet};
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct IdentifiabilitySolveError<'a, 's> {

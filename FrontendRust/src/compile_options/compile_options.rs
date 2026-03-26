@@ -7,6 +7,8 @@ pub struct GlobalOptions {
   pub debug_output: bool,
 }
 /*
+Guardian: disable: NECX
+
 package dev.vale.options
 
 object GlobalOptions {
@@ -30,5 +32,4 @@ case class GlobalOptions(
   useOptimizedSolver: Boolean,
   verboseErrors: Boolean,
   debugOutput: Boolean)
-Guardian: disable: NECX
 */
