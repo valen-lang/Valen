@@ -205,7 +205,7 @@ pub(crate) fn scout_block(
     let block_s = &*self.scout_arena.alloc(block_s);
     &*self.scout_arena.alloc(IExpressionSE::Pure(PureSE {
       range: PostParser::eval_range(file, block_pe.range),
-      location: lidb.child().consume(),
+      location: lidb.child().consume_in(self.scout_arena),
       inner: &*self.scout_arena.alloc(IExpressionSE::Block(block_s)),
     }))
   } else {
@@ -896,7 +896,7 @@ where
         IScoutResult::NormalResult(NormalResultS {
           expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
             range: PostParser::eval_range(&file_coordinate, function_call.range),
-            location: lidb.child().consume(),
+            location: lidb.child().consume_in(self.scout_arena),
             callable_expr: callable_expr_s,
             arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs_s),
           })),
@@ -950,7 +950,7 @@ where
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
           range: PostParser::eval_range(&file_coordinate, binary_call.range),
-          location: lidb.child().consume(),
+          location: lidb.child().consume_in(self.scout_arena),
           callable_expr: callable_expr_s,
           arg_exprs: alloc_slice_from_vec(
             self.scout_arena,
@@ -1383,7 +1383,7 @@ where
       IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::ConstantStr(ConstantStrSE {
           range: PostParser::eval_range(&file_coordinate, constant_str.range),
-          value: constant_str.value.as_str().to_string(),
+          value: self.interner.intern(constant_str.value.as_str()),
         })),
       }),
       VariableUses::empty(),
@@ -1515,7 +1515,7 @@ where
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
           range: PostParser::eval_range(&file_coordinate, method_call.range),
-          location: lidb.child().consume(),
+          location: lidb.child().consume_in(self.scout_arena),
           callable_expr: callable_expr_s,
           arg_exprs: alloc_slice_from_vec(self.scout_arena, arg_exprs_s),
         })),

@@ -8,7 +8,7 @@ This document catalogs known differences between the Scala postparsing pass (`Fr
 
 ### function_scout.rs
 
-5. **Void-stripping in `scout_body`** — Kept as-is. Strips trailing `Void` from `Consecutor`; Scala doesn't have this, but removing it breaks tests because the Rust expression generator produces trailing Voids that Scala doesn't. Root cause is elsewhere.
+1. **Void-stripping in `scout_body`** — Kept as-is. Strips trailing `Void` from `Consecutor`; Scala doesn't have this, but removing it breaks tests because the Rust expression generator produces trailing Voids that Scala doesn't. Root cause is elsewhere.
 
 ### post_parser.rs
 
@@ -17,7 +17,7 @@ This document catalogs known differences between the Scala postparsing pass (`Fr
 3. **`scout_generic_parameter`** — Two `NOT_YET_IMPLEMENTED` panics: coord region handling and default value handling.
 4. **`get_scoutput`** — Caches `()` instead of `ProgramS`; doesn't actually scout.
 5. **`expect_scoutput`** — No error humanization.
-6. **`EnvironmentS.user_declared_runes`** — `Vec<IRuneS>` (ordered, allows duplicates) vs Scala's `Set[IRuneS]`.
+6. ~~**`EnvironmentS.user_declared_runes`**~~ — Fixed. Now uses `IndexSet<IRuneS>` matching Scala's `Set[IRuneS]`.
 7. **4 stubbed functions** — `determine_denizen_type`, `get_human_name`, `scout_export_as`, `scout_import`.
 8. **Extra assertion in `scout_program`** — Checks `closured_names.is_empty()` on top-level function bodies; Scala only checks `variableUses.uses.isEmpty`.
 
@@ -38,7 +38,7 @@ This document catalogs known differences between the Scala postparsing pass (`Fr
 
 ### identifiability_solver.rs
 
-Migrated for 11 `IRulexSR` variants. Missing match arms for 11+ variants not yet in the Rust enum (`PackSR`, `DefinitionCoordIsaSR`, `CallSiteCoordIsaSR`, `KindComponentsSR`, `PrototypeComponentsSR`, `ResolveSR`, `CallSiteFuncSR`, `DefinitionFuncSR`, `IsConcreteSR`, `IsStructSR`, `RefListCompoundMutabilitySR`). Missing sanity-check assertion in `get_runes`.
+Migrated for most `IRulexSR` variants. Panic stubs remain for `KindComponents`, `DefinitionCoordIsa`, `CallSiteCoordIsa`, and a few others.
 
 ### pattern_scout.rs
 
@@ -47,9 +47,6 @@ Migrated for 11 `IRulexSR` variants. Missing match arms for 11+ variants not yet
 ---
 
 ## Missing Type Variants
-
-### rules.rs — 14 missing `IRulexSR` variants
-`PackSR`, `DefinitionCoordIsaSR`, `CallSiteCoordIsaSR`, `KindComponentsSR`, `PrototypeComponentsSR`, `ResolveSR`, `CallSiteFuncSR`, `DefinitionFuncSR`, `IsConcreteSR`, `IsStructSR`, `RefListCompoundMutabilitySR`, `CallSR`, `IndexListSR`, `CoordSendSR`.
 
 ### post_parser.rs — 11 missing `ICompileErrorS` variants
 `UnknownRuleFunctionS`, `BadRuneAttributeErrorS`, `CantHaveMultipleMutabilitiesS`, `UnimplementedExpression`, `ForgotSetKeywordError`, `UnknownRegionError`, `CantOwnershipInterfaceInImpl`, `CantOwnershipStructInImpl`, `CantOverrideOwnershipped`, `VirtualAndAbstractGoTogether`, `CouldntSolveRulesS`.
@@ -72,8 +69,10 @@ All 5 methods (`mark_kind_equivalent`, `find_transitively_equivalent_into`, `get
 
 ## Missing Constructor Assertions in ast.rs
 
-- **StructS** — Missing `DenizenDefaultRegionRuneS` checks on `genericParams` and all four rune-to-type maps.
-- **InterfaceS** — Missing `DenizenDefaultRegionRuneS` checks and `internalMethod.genericParams == genericParams` validation.
-- **FunctionS** — Missing `DenizenDefaultRegionRuneS` checks, `runeToPredictedType` check, and body/name consistency validation (extern/abstract/generated must not be lambda; closured code body must be lambda).
-- **ParameterS** — Missing `vassert(pattern.coordRune.nonEmpty)`.
-- **OtherGenericParameterTypeS** — Missing validation that `tyype` is not `RegionTemplataType` or `CoordTemplataType`.
+- ~~**StructS**~~ — Fixed. `StructS::new()` checks `DenizenDefaultRegionRuneS` on genericParams and all four rune-to-type maps.
+- ~~**InterfaceS**~~ — Fixed. `InterfaceS::new()` checks `DenizenDefaultRegionRuneS` on genericParams and rune maps, plus `genericParams == internalMethod.genericParams`.
+- ~~**FunctionS**~~ — Fixed. `FunctionS::new()` checks `DenizenDefaultRegionRuneS` on genericParams and runeToPredictedType, plus body/name consistency (extern/abstract/generated not lambda; closured code body must be lambda).
+- ~~**ParameterS**~~ — Fixed. `ParameterS::new()` asserts `pattern.coordRune.nonEmpty`.
+- ~~**OtherGenericParameterTypeS**~~ — Fixed. `OtherGenericParameterTypeS::new()` asserts `tyype` is not `RegionTemplataType` or `CoordTemplataType`.
+
+Note: `FunctionA::new()` in higher_typing/ast.rs now has the `range.begin.file.package_coord == name.package_coordinate()` assertion and rule/param rune containment checks, matching Scala.

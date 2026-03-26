@@ -100,10 +100,7 @@ impl<'a> RangeS<'a> {
   // Should only be used in tests.
   pub fn test_zero(interner: &Interner<'a>) -> RangeS<'a> {
     let tz = CodeLocationS::test_zero(interner);
-    RangeS {
-      begin: tz.clone(),
-      end: tz,
-    }
+    RangeS::new(tz.clone(), tz)
   }
 
   // SPORK

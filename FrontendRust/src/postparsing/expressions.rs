@@ -214,7 +214,7 @@ case class BodySE(
 #[derive(Debug, PartialEq)]
 pub struct PureSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub location: LocationInDenizen,
+  pub location: LocationInDenizen<'s>,
   pub inner: &'s IExpressionSE<'a, 's>,
 }
 
@@ -353,10 +353,10 @@ pub struct ConsecutorSE<'a, 's> {
 impl<'a, 's> ConsecutorSE<'a, 's> {
   pub fn range(&self) -> RangeS<'a> {
     assert!(!self.exprs.is_empty());
-    RangeS {
-      begin: self.exprs.first().unwrap().range().begin,
-      end: self.exprs.last().unwrap().range().end,
-    }
+    RangeS::new(
+      self.exprs.first().unwrap().range().begin,
+      self.exprs.last().unwrap().range().end,
+    )
   }
   /*
     override def range: RangeS = RangeS(exprs.head.range.begin, exprs.last.range.end)
@@ -564,7 +564,7 @@ case class ConstantBoolSE(range: RangeS, value: Boolean) extends IExpressionSE {
 #[derive(Debug, PartialEq)]
 pub struct ConstantStrSE<'a> {
   pub range: RangeS<'a>,
-  pub value: String,
+  pub value: StrI<'a>,
 }
 /*
 case class ConstantStrSE(range: RangeS, value: String) extends IExpressionSE {
@@ -642,7 +642,7 @@ case class FunctionCallSE(range: RangeS, location: LocationInDenizen, callableEx
 #[derive(Debug, PartialEq)]
 pub struct FunctionCallSE<'a, 's> {
   pub range: RangeS<'a>,
-  pub location: LocationInDenizen,
+  pub location: LocationInDenizen<'s>,
   pub callable_expr: &'s IExpressionSE<'a, 's>,
   pub arg_exprs: &'s [&'s IExpressionSE<'a, 's>],
 }

@@ -369,14 +369,14 @@ Guardian: disable: NECX
 pub struct OneOfSR<'a, 's> {
   pub range: RangeS<'a>,
   pub rune: RuneUsage<'a>,
-  pub literals: &'s [ILiteralSL],
+  pub literals: &'s [ILiteralSL<'a>],
 }
 /*
 // See Possible Values Shouldnt Be Used For Inference (PVSBUFI)
 case class OneOfSR(
   range: RangeS,
   rune: RuneUsage,
-  literals: Vector[ILiteralSL]
+  literals: Vector[ILiteralSL<'a>]
 ) extends IRulexSR {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vassert(literals.nonEmpty)
@@ -468,7 +468,7 @@ Guardian: disable: NECX
 pub struct LiteralSR<'a> {
   pub range: RangeS<'a>,
   pub rune: RuneUsage<'a>,
-  pub literal: ILiteralSL,
+  pub literal: ILiteralSL<'a>,
 }
 
 /*
@@ -657,9 +657,9 @@ Guardian: disable: NECX
 //}
 */
 #[derive(Clone, Debug, PartialEq)]
-pub enum ILiteralSL {
+pub enum ILiteralSL<'a> {
   IntLiteral(IntLiteralSL),
-  StringLiteral(StringLiteralSL),
+  StringLiteral(StringLiteralSL<'a>),
   BoolLiteral(BoolLiteralSL),
   MutabilityLiteral(MutabilityLiteralSL),
   LocationLiteral(LocationLiteralSL),
@@ -667,7 +667,7 @@ pub enum ILiteralSL {
   VariabilityLiteral(VariabilityLiteralSL),
 }
 
-impl ILiteralSL {
+impl<'a> ILiteralSL<'a> {
   pub fn get_type(&self) -> ITemplataType {
     match self {
       ILiteralSL::IntLiteral(x) => x.get_type(),
@@ -709,8 +709,8 @@ impl IntLiteralSL {
 /* Guardian: disable-all */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StringLiteralSL {
-  pub value: String,
+pub struct StringLiteralSL<'a> {
+  pub value: StrI<'a>,
 }
 /*
 case class StringLiteralSL(value: String) extends ILiteralSL {
@@ -720,7 +720,7 @@ case class StringLiteralSL(value: String) extends ILiteralSL {
 Guardian: disable: NECX
 */
 
-impl StringLiteralSL {
+impl<'a> StringLiteralSL<'a> {
   pub fn get_type(&self) -> ITemplataType {
     ITemplataType::StringTemplataType(StringTemplataType {})
   }

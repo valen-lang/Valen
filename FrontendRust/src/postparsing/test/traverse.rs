@@ -92,9 +92,9 @@ pub enum NodeRefS<'a, 's> {
   CoordComponentsRule(&'s CoordComponentsSR<'a>),
   CoerceToCoordRule(&'s CoerceToCoordSR<'a>),
   RuneUsage(&'s RuneUsage<'a>),
-  Literal(&'s ILiteralSL),
+  Literal(&'s ILiteralSL<'a>),
   IntLiteral(&'s IntLiteralSL),
-  StringLiteral(&'s StringLiteralSL),
+  StringLiteral(&'s StringLiteralSL<'a>),
   BoolLiteral(&'s BoolLiteralSL),
   MutabilityLiteral(&'s MutabilityLiteralSL),
   LocationLiteral(&'s LocationLiteralSL),
@@ -115,8 +115,8 @@ pub enum NodeRefS<'a, 's> {
   VarName(&'s IVarNameS<'a>),
   Rune(&'s IRuneS<'a>),
   CodeRune(&'a CodeRuneS<'a>),
-  ImplicitRune(&'s ImplicitRuneS),
-  MagicParamRune(&'s MagicParamRuneS),
+  ImplicitRune(&'s ImplicitRuneS<'a>),
+  MagicParamRune(&'s MagicParamRuneS<'a>),
   DenizenDefaultRegionRune(&'s DenizenDefaultRegionRuneS<'a>),
 }
 
@@ -879,7 +879,7 @@ where
   }
 }
 
-fn visit_literal<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, literal: &'s ILiteralSL)
+fn visit_literal<'a, 's, T, F>(pred: &F, out: &mut Vec<T>, literal: &'s ILiteralSL<'a>)
 where
   'a: 's,
   F: Fn(NodeRefS<'a, 's>) -> Option<T>,

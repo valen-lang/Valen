@@ -47,13 +47,13 @@ fn add_literal_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
   lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'a, 's>>,
   range_s: RangeS<'a>,
-  value_sr: ILiteralSL,
+  value_sr: ILiteralSL<'a>,
 ) -> RuneUsage<'a> {
   let mut child_lidb = lidb.child();
   let rune_s = RuneUsage {
     range: range_s.clone(),
     rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume(),
+      lid: child_lidb.consume_in(interner.arena()),
     })),
   };
   rule_builder.push(IRulexSR::Literal(LiteralSR {
@@ -70,7 +70,7 @@ fn add_literal_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     rangeS: RangeS,
     valueSR: ILiteralSL):
   RuneUsage = {
-    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
     ruleBuilder += LiteralSR(rangeS, runeS, valueSR)
     runeS
   }
@@ -117,7 +117,7 @@ fn add_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
   let rune_s = RuneUsage {
     range: range_s.clone(),
     rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume(),
+      lid: child_lidb.consume_in(interner.arena()),
     })),
   };
   rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
@@ -135,14 +135,15 @@ fn add_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     contextRegion: IRuneS, // Nearest enclosing region marker, see RADTGCA.
     nameSN: IImpreciseNameS):
   RuneUsage = {
-    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+    val runeS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
     ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, runeS, nameSN)
     runeS
   }
 */
-pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump, 
+pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
+  interner: &Interner<'a>,
   templex: &ITemplexPT<'a, 'p>,
-) -> Option<ILiteralSL> {
+) -> Option<ILiteralSL<'a>> {
   match templex {
     ITemplexPT::Int(IntPT { value, .. }) => Some(ILiteralSL::IntLiteral(IntLiteralSL {
       value: *value,
@@ -162,7 +163,7 @@ pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
     )),
     ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(
       StringLiteralSL {
-        value: str.clone(),
+        value: interner.intern(str.as_str()),
       },
     )),
     ITemplexPT::Location(LocationPT { location, .. }) => Some(ILiteralSL::LocationLiteral(
@@ -218,7 +219,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         val evalRange = (range: RangeL) => PostParser.evalRange(env.file, range)
   */
   let file = env.file();
-  match translate_value_templex(scout_arena, templex) {
+  match translate_value_templex(scout_arena, interner, templex) {
     /*
           translateValueTemplex(templex) match {
     */
@@ -260,14 +261,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let rune = RuneUsage {
           range: PostParser::eval_range(file, anonymous_rune.range),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         rune
       }
 /*
       case AnonymousRunePT(range) => {
-        val rune = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
+        val rune = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         rune
       }
 */
@@ -392,7 +393,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
 
@@ -439,7 +440,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case InterpretedPT(range, ownership, maybeRegion, innerP) => {
         val rangeS = evalRange(range)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
 
         val maybeRegionRune =
           maybeRegion.map(runeName => {
@@ -472,7 +473,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
@@ -509,7 +510,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case CallPT(rangeP, template, args) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder +=
           rules.MaybeCoercingCallSR(
             rangeS,
@@ -525,7 +526,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case FunctionPT(rangeP, mutability, paramsPack, returnType) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         val templateNameRuneS =
           addLookupRule(
             lidb.child(), ruleBuilder, rangeS, contextRegion, interner.intern(CodeNameS(keywords.IFUNCTION)))
@@ -554,12 +555,12 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           func.parameters.iter().map(|param_p| {
             translate_templex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
           }).collect();
-        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume() })) };
+        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(interner.arena()) })) };
         rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, params_s) }));
 
         let return_rune_s = translate_templex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
 
-        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume() })) };
+        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(interner.arena()) })) };
 
         // Only appears in call site; filtered out when solving definition
         rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
@@ -578,12 +579,12 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           paramsP.map(paramP => {
             translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, paramP)
           })
-        val paramListRuneS = rules.RuneUsage(paramsRangeS, ImplicitRuneS(lidb.child().consume()))
+        val paramListRuneS = rules.RuneUsage(paramsRangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder += PackSR(paramsRangeS, paramListRuneS, paramsS.toVector)
 
         val returnRuneS = translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, returnTypeP)
 
-        val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(evalRange(range), ImplicitRuneS(lidb.child().consume_in(interner.arena())))
 
         // Only appears in call site; filtered out when solving definition
         ruleBuilder += CallSiteFuncSR(rangeS, resultRuneS, name, paramListRuneS, returnRuneS)
@@ -600,14 +601,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
       case PackPT(rangeP, members) => {
         val rangeS = PostParser.evalRange(env.file, rangeP)
 
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder +=
           MaybeCoercingLookupSR(
             rangeS,
             templateRuneS,
             CodeNameS(keywords.tupleHumanName(members.length)))
 
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder += MaybeCoercingCallSR(
           rangeS,
           resultRuneS,
@@ -624,14 +625,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         rule_builder.push(Lookup(LookupSR {
@@ -692,8 +693,8 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case StaticSizedArrayPT(rangeP, mutability, variability, size, element) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder +=
           rules.LookupSR(
             rangeS,
@@ -718,14 +719,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         rule_builder.push(Lookup(LookupSR {
@@ -766,8 +767,8 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case RuntimeSizedArrayPT(rangeP, mutability, element) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder +=
           rules.LookupSR(
             rangeS,
@@ -790,14 +791,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
           rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
@@ -831,8 +832,8 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 /*
       case TuplePT(rangeP, elements) => {
         val rangeS = evalRange(rangeP)
-        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
+        val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         ruleBuilder +=
           rules.MaybeCoercingLookupSR(
             rangeS,
@@ -942,7 +943,7 @@ pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump
       let result_rune_s = RuneUsage {
         range,
         rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-          lid: child_lidb.consume(),
+          lid: child_lidb.consume_in(interner.arena()),
         })),
       };
       result_rune_s
@@ -965,7 +966,7 @@ pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump
   RuneUsage = {
     maybeTypeP match {
       case None => {
-        val resultRuneS = rules.RuneUsage(range, ImplicitRuneS(lidb.child().consume()))
+        val resultRuneS = rules.RuneUsage(range, ImplicitRuneS(lidb.child().consume_in(interner.arena())))
         resultRuneS
       }
       case Some(typeP) => {

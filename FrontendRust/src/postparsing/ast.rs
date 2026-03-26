@@ -287,6 +287,42 @@ pub struct StructS<'a, 's> {
   pub member_rules: &'s [IRulexSR<'a, 's>],
   pub members: &'s [IStructMemberS<'a>],
 }
+impl<'a, 's> StructS<'a, 's> {
+  pub fn new(
+    range: RangeS<'a>,
+    name: &'a TopLevelStructDeclarationNameS<'a>,
+    attributes: &'s [ICitizenAttributeS<'a>],
+    weakable: bool,
+    generic_params: &'s [&'s GenericParameterS<'a, 's>],
+    mutability_rune: RuneUsage<'a>,
+    maybe_predicted_mutability: Option<MutabilityP>,
+    tyype: TemplateTemplataType,
+    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    header_rules: &'s [IRulexSR<'a, 's>],
+    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    member_rules: &'s [IRulexSR<'a, 's>],
+    members: &'s [IStructMemberS<'a>],
+  ) -> Self {
+    assert!(
+      !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
+    );
+    assert!(
+      !header_rune_to_explicit_type.keys().chain(header_predicted_rune_to_type.keys())
+        .chain(members_rune_to_explicit_type.keys()).chain(members_predicted_rune_to_type.keys())
+        .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
+    );
+    Self {
+      range, name, attributes, weakable, generic_params, mutability_rune,
+      maybe_predicted_mutability, tyype, header_rune_to_explicit_type,
+      header_predicted_rune_to_type, header_rules, members_rune_to_explicit_type,
+      members_predicted_rune_to_type, member_rules, members,
+    }
+  }
+}
 /*
 case class StructS(
     range: RangeS,
@@ -427,7 +463,43 @@ pub struct InterfaceS<'a, 's> {
   pub rules: &'s [IRulexSR<'a, 's>],
   pub internal_methods: &'s [&'s FunctionS<'a, 's>],
 }
-
+impl<'a, 's> InterfaceS<'a, 's> {
+  pub fn new(
+    range: RangeS<'a>,
+    name: &'a TopLevelInterfaceDeclarationNameS<'a>,
+    attributes: &'s [ICitizenAttributeS<'a>],
+    weakable: bool,
+    generic_params: &'s [&'s GenericParameterS<'a, 's>],
+    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    mutability_rune: RuneUsage<'a>,
+    maybe_predicted_mutability: Option<MutabilityP>,
+    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    tyype: TemplateTemplataType,
+    rules: &'s [IRulexSR<'a, 's>],
+    internal_methods: &'s [&'s FunctionS<'a, 's>],
+  ) -> Self {
+    assert!(
+      !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
+    );
+    assert!(
+      !rune_to_explicit_type.keys().chain(predicted_rune_to_type.keys())
+        .any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: rune-to-type maps should not contain DenizenDefaultRegionRuneS"
+    );
+    for internal_method in internal_methods {
+      assert!(
+        generic_params == internal_method.generic_params,
+        "vassert: genericParams == internalMethod.genericParams"
+      );
+    }
+    Self {
+      range, name, attributes, weakable, generic_params, rune_to_explicit_type,
+      mutability_rune, maybe_predicted_mutability, predicted_rune_to_type,
+      tyype, rules, internal_methods,
+    }
+  }
+}
 /*
 case class InterfaceS(
   range: RangeS,
@@ -590,7 +662,12 @@ pub struct ParameterS<'a> {
   pub pre_checked: bool,
   pub pattern: AtomSP<'a>,
 }
-
+impl<'a> ParameterS<'a> {
+  pub fn new(range: RangeS<'a>, virtuality: Option<AbstractSP<'a>>, pre_checked: bool, pattern: AtomSP<'a>) -> Self {
+    assert!(pattern.coord_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
+    Self { range, virtuality, pre_checked, pattern }
+  }
+}
 /*
 case class ParameterS(
   range: RangeS,
@@ -621,7 +698,7 @@ Guardian: disable: NECX
 #[derive(Clone, Debug, PartialEq)]
 pub struct SimpleParameterS<'a, 's> {
   pub origin: Option<AtomSP<'a>>,
-  pub name: String,
+  pub name: StrI<'a>,
   pub virtuality: Option<AbstractSP<'a>>,
   pub tyype: IRulexSR<'a, 's>,
 }
@@ -799,6 +876,15 @@ impl CoordGenericParameterTypeS<'_> {
 pub struct OtherGenericParameterTypeS {
   pub tyype: ITemplataType,
 }
+impl OtherGenericParameterTypeS {
+  pub fn new(tyype: ITemplataType) -> Self {
+    assert!(
+      !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::CoordTemplataType(_)),
+      "vwat: Use RegionGenericParameterTypeS or CoordGenericParameterTypeS for these types"
+    );
+    Self { tyype }
+  }
+}
 /*
 case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericParameterTypeS {
   tyype match {
@@ -857,7 +943,49 @@ pub struct FunctionS<'a, 's> {
   pub rules: &'s [IRulexSR<'a, 's>],
   pub body: &'s IBodyS<'a, 's>,
 }
-
+impl<'a, 's> FunctionS<'a, 's> {
+  pub fn new(
+    range: RangeS<'a>,
+    name: &'a IFunctionDeclarationNameS<'a>,
+    attributes: &'s [IFunctionAttributeS<'a>],
+    generic_params: &'s [&'s GenericParameterS<'a, 's>],
+    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    tyype: TemplateTemplataType,
+    params: &'s [ParameterS<'a>],
+    maybe_ret_coord_rune: Option<RuneUsage<'a>>,
+    rules: &'s [IRulexSR<'a, 's>],
+    body: &'s IBodyS<'a, 's>,
+  ) -> Self {
+    assert!(
+      !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: generic_params should not contain DenizenDefaultRegionRuneS"
+    );
+    assert!(
+      !rune_to_predicted_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
+      "vassert: rune_to_predicted_type should not contain DenizenDefaultRegionRuneS"
+    );
+    match body {
+      IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => {
+        assert!(
+          !matches!(name, IFunctionDeclarationNameS::LambdaDeclarationName(_)),
+          "vwat: extern/abstract/generated body must not be lambda"
+        );
+      }
+      IBodyS::CodeBody(code_body) => {
+        if !code_body.body.closured_names.is_empty() {
+          assert!(
+            matches!(name, IFunctionDeclarationNameS::LambdaDeclarationName(_)),
+            "vwat: closured code body must be lambda"
+          );
+        }
+      }
+    }
+    Self {
+      range, name, attributes, generic_params, rune_to_predicted_type,
+      tyype, params, maybe_ret_coord_rune, rules, body,
+    }
+  }
+}
 /*
 // Underlying class for all XYZFunctionS types
 case class FunctionS(
@@ -981,14 +1109,14 @@ impl LocationInDenizenBuilder {
     }
   */
 
-  pub fn consume(&mut self) -> LocationInDenizen {
+  pub fn consume_in<'x>(&mut self, arena: &'x bumpalo::Bump) -> LocationInDenizen<'x> {
     assert!(
       !self.consumed,
       "Location in denizen was already used for something, add a .child() somewhere."
     );
     self.consumed = true;
     LocationInDenizen {
-      path: self.path.clone(),
+      path: arena.alloc_slice_copy(&self.path),
     }
   }
   /*
@@ -1004,9 +1132,21 @@ impl LocationInDenizenBuilder {
 }
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LocationInDenizen {
-  pub path: Vec<i32>,
+/// A path identifying a specific location within a denizen (function, struct, etc.).
+/// Each element in the path is a child index, forming a tree address.
+///
+/// Parameterized on lifetime `'x` because LocationInDenizen lives in different
+/// arenas depending on its owner:
+/// - When inside rune structs (e.g. ImplicitRuneS), it's interned into the
+///   `'a` interner arena, so `'x = 'a`.
+/// - When inside expression structs (e.g. PureSE, FunctionSE), it's allocated
+///   in the `'s` scout arena, so `'x = 's`.
+///
+/// The path is an arena-allocated slice rather than a Vec so that the entire
+/// struct can live in an arena without heap pointers.
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct LocationInDenizen<'x> {
+  pub path: &'x [i32],
 }
 
 /*
@@ -1021,7 +1161,7 @@ case class LocationInDenizen(path: Vector[Int]) {
 Guardian: disable: NECX
 */
 
-impl LocationInDenizen {
+impl<'x> LocationInDenizen<'x> {
   pub fn before(&self, that: &LocationInDenizen) -> bool {
     for (this_step, that_step) in self.path.iter().zip(that.path.iter()) {
       if this_step < that_step {

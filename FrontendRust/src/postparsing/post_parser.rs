@@ -48,6 +48,7 @@ use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoor
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use std::collections::HashMap;
+use indexmap::IndexSet;
 use std::marker::PhantomData;
 use std::sync::Arc;
 
@@ -306,7 +307,7 @@ impl<'a> IEnvironmentS<'a> {
     def name: INameS
   */
 
-  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn all_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     match self {
       IEnvironmentS::Environment(environment) => environment.all_declared_runes(),
       IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.all_declared_runes(),
@@ -315,7 +316,7 @@ impl<'a> IEnvironmentS<'a> {
   /*
     def allDeclaredRunes(): Set[IRuneS]
   */
-  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn local_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     match self {
       IEnvironmentS::Environment(environment) => environment.local_declared_runes(),
       IEnvironmentS::FunctionEnvironment(function_environment) => {
@@ -337,7 +338,7 @@ pub struct EnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
   pub parent_env: Option<Box<EnvironmentS<'a>>>,
   pub name: INameS<'a>,
-  pub user_declared_runes: Vec<IRuneS<'a>>,
+  pub user_declared_runes: IndexSet<IRuneS<'a>>,
 }
 /*
 // Someday we might split this into PackageEnvironment and CitizenEnvironment
@@ -354,7 +355,7 @@ impl<'a> EnvironmentS<'a> {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 */
 
-  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn local_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     self.user_declared_runes.clone()
   }
   /*
@@ -363,14 +364,10 @@ impl<'a> EnvironmentS<'a> {
     }
   */
 
-  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn all_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     let mut runes = self.user_declared_runes.clone();
     if let Some(parent_env) = &self.parent_env {
-      for rune in parent_env.all_declared_runes() {
-        if !runes.contains(&rune) {
-          runes.push(rune);
-        }
-      }
+      runes.extend(parent_env.all_declared_runes());
     }
     runes
   }
@@ -392,7 +389,7 @@ pub struct FunctionEnvironmentS<'a> {
   pub file: &'a FileCoordinate<'a>,
   pub name: IFunctionDeclarationNameS<'a>,
   pub parent_env: Option<Box<IEnvironmentS<'a>>>,
-  pub declared_runes: Vec<IRuneS<'a>>,
+  pub declared_runes: IndexSet<IRuneS<'a>>,
   pub num_explicit_params: i32,
   pub is_interface_internal_method: bool,
 }
@@ -417,7 +414,7 @@ Guardian: disable: NECX
 */
 
 impl<'a> FunctionEnvironmentS<'a> {
-  pub fn local_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn local_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     self.declared_runes.clone()
   }
 /*
@@ -425,14 +422,10 @@ impl<'a> FunctionEnvironmentS<'a> {
     declaredRunes
   }
 */
-  pub fn all_declared_runes(&self) -> Vec<IRuneS<'a>> {
+  pub fn all_declared_runes(&self) -> IndexSet<IRuneS<'a>> {
     let mut runes = self.declared_runes.clone();
     if let Some(parent_env) = &self.parent_env {
-      for rune in parent_env.all_declared_runes() {
-        if !runes.contains(&rune) {
-          runes.push(rune);
-        }
-      }
+      runes.extend(parent_env.all_declared_runes());
     }
     runes
   }
@@ -446,7 +439,7 @@ impl<'a> FunctionEnvironmentS<'a> {
       file: self.file,
       name: self.name.clone(),
       parent_env: Some(Box::new(IEnvironmentS::FunctionEnvironment(self.clone()))),
-      declared_runes: Vec::new(),
+      declared_runes: IndexSet::new(),
       num_explicit_params: self.num_explicit_params,
       is_interface_internal_method: false,
     }
@@ -574,10 +567,10 @@ where
   */
 
   pub fn eval_range(file: &'a FileCoordinate<'a>, range: RangeL) -> RangeS<'a> {
-    RangeS {
-      begin: Self::eval_pos(file, range.begin()),
-      end: Self::eval_pos(file, range.end()),
-    }
+    RangeS::new(
+      Self::eval_pos(file, range.begin()),
+      Self::eval_pos(file, range.end()),
+    )
   }
   /*
   def evalRange(file: FileCoordinate, range: RangeL): RangeS = {
@@ -844,7 +837,7 @@ pub(crate) fn scout_generic_parameter(
         panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_BAD_OTHER_RUNE_ATTRIBUTE");
       }
       IGenericParameterTypeS::OtherGenericParameterType(
-        OtherGenericParameterTypeS { tyype: type_s },
+        OtherGenericParameterTypeS::new(type_s),
       )
     }
   };
@@ -1214,10 +1207,10 @@ fn scout_impl(
   let mut rule_builder = Vec::<IRulexSR<'a, 's>>::new();
   let mut rune_to_explicit_type = Vec::<(IRuneS<'a>, ITemplataType)>::new();
 
-  let default_region_rune_range_s = RangeS {
-    begin: range_s.end.clone(),
-    end: range_s.end.clone(),
-  };
+  let default_region_rune_range_s = RangeS::new(
+    range_s.end.clone(),
+    range_s.end.clone(),
+  );
   let default_region_rune_s = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
     crate::postparsing::names::DenizenDefaultRegionRuneS {
       denizen_name: self.interner.intern_name(INameValS::ImplDeclaration(impl_name.clone())),
@@ -1696,7 +1689,7 @@ fn predict_mutability(
       user_declared_runes: user_declared_runes
         .iter()
         .map(|x| x.rune.clone())
-        .collect::<Vec<_>>(),
+        .collect(),
     });
 
     let mut header_rule_builder = Vec::<IRulexSR<'a, 's>>::new();
@@ -1705,10 +1698,10 @@ fn predict_mutability(
     let (_default_region_rune_range_s, default_region_rune_s, _maybe_region_generic_param) =
       match &head.maybe_default_region_rune {
         None => {
-          let region_range = RangeS {
-            begin: body_range_s.begin.clone(),
-            end: body_range_s.begin.clone(),
-          };
+          let region_range = RangeS::new(
+            body_range_s.begin.clone(),
+            body_range_s.begin.clone(),
+          );
           let rune = self
             .interner
             .intern_rune(IRuneValS::DenizenDefaultRegionRune(
@@ -1952,23 +1945,23 @@ fn predict_mutability(
       }));
     }
 
-    Ok(StructS {
-      range: struct_range_s,
-      name: struct_name,
-      attributes: alloc_slice_from_vec(self.scout_arena, attrs_s),
+    Ok(StructS::new(
+      struct_range_s,
+      struct_name,
+      alloc_slice_from_vec(self.scout_arena, attrs_s),
       weakable,
-      generic_params: alloc_slice_from_vec_of_refs(self.scout_arena, generic_parameters_s),
-      mutability_rune: mutability_rune_s,
-      maybe_predicted_mutability: predicted_mutability,
+      alloc_slice_from_vec_of_refs(self.scout_arena, generic_parameters_s),
+      mutability_rune_s,
+      predicted_mutability,
       tyype,
-      header_rune_to_explicit_type: ArenaIndexMap::from_iter_in(header_rune_to_explicit_type.into_iter(), self.scout_arena),
-      header_predicted_rune_to_type: header_rune_to_predicted_type,
-      header_rules: alloc_slice_from_vec(self.scout_arena, header_rules_s),
+      ArenaIndexMap::from_iter_in(header_rune_to_explicit_type.into_iter(), self.scout_arena),
+      header_rune_to_predicted_type,
+      alloc_slice_from_vec(self.scout_arena, header_rules_s),
       members_rune_to_explicit_type,
-      members_predicted_rune_to_type: members_rune_to_predicted_type,
-      member_rules: alloc_slice_from_vec(self.scout_arena, member_rules_s),
-      members: alloc_slice_from_vec(self.scout_arena, members_s),
-    })
+      members_rune_to_predicted_type,
+      alloc_slice_from_vec(self.scout_arena, member_rules_s),
+      alloc_slice_from_vec(self.scout_arena, members_s),
+    ))
   }
 /*
   private def scoutStruct(file: FileCoordinate, head: StructP): StructS = {
@@ -2373,11 +2366,11 @@ pub(crate) fn check_identifiability(
         })),
       })
       .collect::<Vec<_>>();
-    let user_declared_runes = user_specified_identifying_runes
+    let user_declared_runes: IndexSet<IRuneS<'a>> = user_specified_identifying_runes
       .iter()
       .chain(runes_from_rules.iter())
       .map(|x| x.rune.clone())
-      .collect::<Vec<_>>();
+      .collect();
     let interface_env = IEnvironmentS::Environment(EnvironmentS {
       file,
       parent_env: None,
@@ -2474,20 +2467,20 @@ pub(crate) fn check_identifiability(
       )?);
     }
 
-    Ok(InterfaceS {
-      range: interface_range_s,
-      name: interface_name,
-      attributes: alloc_slice_from_vec(self.scout_arena, attributes),
+    Ok(InterfaceS::new(
+      interface_range_s,
+      interface_name,
+      alloc_slice_from_vec(self.scout_arena, attributes),
       weakable,
-      generic_params: generic_parameters_s,
-      rune_to_explicit_type: ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena),
-      mutability_rune: mutability_rune_s,
-      maybe_predicted_mutability: predicted_mutability,
+      generic_parameters_s,
+      ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena),
+      mutability_rune_s,
+      predicted_mutability,
       predicted_rune_to_type,
       tyype,
-      rules: alloc_slice_from_vec(self.scout_arena, rules_s),
-      internal_methods: crate::utils::arena_utils::alloc_slice_from_vec_of_refs(self.scout_arena, internal_methods),
-    })
+      alloc_slice_from_vec(self.scout_arena, rules_s),
+      crate::utils::arena_utils::alloc_slice_from_vec_of_refs(self.scout_arena, internal_methods),
+    ))
   }
 /*
   private def scoutInterface(

@@ -104,7 +104,7 @@ fn translate_rulex<'a, 's>(
         None => {
           let mut child_lidb = lidb.child();
           interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           }))
         }
       };
@@ -131,7 +131,7 @@ fn translate_rulex<'a, 's>(
     IRulexPR::Equals(EqualsPR { range, left, right }) => {
       let mut child_lidb = lidb.child();
       let rune = interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-        lid: child_lidb.consume(),
+        lid: child_lidb.consume_in(interner.arena()),
       }));
       let left_usage = {
         let mut child_lidb = lidb.child();
@@ -213,7 +213,7 @@ fn translate_rulex<'a, 's>(
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
           rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
@@ -251,7 +251,7 @@ fn translate_rulex<'a, 's>(
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
           rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume(),
+            lid: child_lidb.consume_in(interner.arena()),
           })),
         };
         builder.push(IRulexSR::OneOf(OneOfSR {
@@ -274,7 +274,7 @@ fn translate_rulex<'a, 's>(
       let rune = RuneUsage {
         range: PostParser::eval_range(file, *range),
         rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: rune_child_lidb.consume(),
+          lid: rune_child_lidb.consume_in(interner.arena()),
         })),
       };
       rune_to_explicit_type.push((rune.rune.clone(), translate_type(*tyype)));

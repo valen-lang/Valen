@@ -23,7 +23,7 @@ pub enum INameS<'a> {
   RuneName(&'a RuneNameS<'a>),
   RuntimeSizedArrayDeclarationName(&'a RuntimeSizedArrayDeclarationNameS),
   StaticSizedArrayDeclarationName(&'a StaticSizedArrayDeclarationNameS),
-  GlobalFunctionFamilyName(&'a GlobalFunctionFamilyNameS),
+  GlobalFunctionFamilyName(&'a GlobalFunctionFamilyNameS<'a>),
   ArbitraryName(&'a ArbitraryNameS),
   VarName(&'a IVarNameS<'a>),
 }
@@ -90,7 +90,7 @@ pub enum INameValS<'a> {
   RuneName(RuneNameValS<'a>),
   RuntimeSizedArrayDeclarationName(RuntimeSizedArrayDeclarationNameS),
   StaticSizedArrayDeclarationName(StaticSizedArrayDeclarationNameS),
-  GlobalFunctionFamilyName(GlobalFunctionFamilyNameS),
+  GlobalFunctionFamilyName(GlobalFunctionFamilyNameS<'a>),
   ArbitraryName(ArbitraryNameS),
   VarName(IVarNameValS<'a>),
 }
@@ -783,19 +783,19 @@ pub enum IRuneS<'a> {
   CodeRune(&'a CodeRuneS<'a>),
   ImplDropCoordRune(&'a ImplDropCoordRuneS),
   ImplDropVoidRune(&'a ImplDropVoidRuneS),
-  ImplicitRune(&'a ImplicitRuneS),
-  PureBlockRegionRune(&'a PureBlockRegionRuneS),
-  CallRegionRune(&'a CallRegionRuneS),
-  CallPureMergeRegionRune(&'a CallPureMergeRegionRuneS),
+  ImplicitRune(&'a ImplicitRuneS<'a>),
+  PureBlockRegionRune(&'a PureBlockRegionRuneS<'a>),
+  CallRegionRune(&'a CallRegionRuneS<'a>),
+  CallPureMergeRegionRune(&'a CallPureMergeRegionRuneS<'a>),
   ImplicitRegionRune(&'a ImplicitRegionRuneS<'a>),
   ReachablePrototypeRune(&'a ReachablePrototypeRuneS),
   FreeOverrideStructTemplateRune(&'a FreeOverrideStructTemplateRuneS),
   FreeOverrideStructRune(&'a FreeOverrideStructRuneS),
   FreeOverrideInterfaceRune(&'a FreeOverrideInterfaceRuneS),
-  LetImplicitRune(&'a LetImplicitRuneS),
-  MagicParamRune(&'a MagicParamRuneS),
+  LetImplicitRune(&'a LetImplicitRuneS<'a>),
+  MagicParamRune(&'a MagicParamRuneS<'a>),
   MemberRune(&'a MemberRuneS),
-  LocalDefaultRegionRune(&'a LocalDefaultRegionRuneS),
+  LocalDefaultRegionRune(&'a LocalDefaultRegionRuneS<'a>),
   DenizenDefaultRegionRune(&'a DenizenDefaultRegionRuneS<'a>),
   ExportDefaultRegionRune(&'a ExportDefaultRegionRuneS<'a>),
   ExternDefaultRegionRune(&'a ExternDefaultRegionRuneS<'a>),
@@ -1009,19 +1009,19 @@ pub enum IRuneValS<'a> {
   CodeRune(CodeRuneS<'a>),
   ImplDropCoordRune(ImplDropCoordRuneS),
   ImplDropVoidRune(ImplDropVoidRuneS),
-  ImplicitRune(ImplicitRuneS),
-  PureBlockRegionRune(PureBlockRegionRuneS),
-  CallRegionRune(CallRegionRuneS),
-  CallPureMergeRegionRune(CallPureMergeRegionRuneS),
+  ImplicitRune(ImplicitRuneS<'a>),
+  PureBlockRegionRune(PureBlockRegionRuneS<'a>),
+  CallRegionRune(CallRegionRuneS<'a>),
+  CallPureMergeRegionRune(CallPureMergeRegionRuneS<'a>),
   ImplicitRegionRune(ImplicitRegionRuneValS<'a>),
   ReachablePrototypeRune(ReachablePrototypeRuneS),
   FreeOverrideStructTemplateRune(FreeOverrideStructTemplateRuneS),
   FreeOverrideStructRune(FreeOverrideStructRuneS),
   FreeOverrideInterfaceRune(FreeOverrideInterfaceRuneS),
-  LetImplicitRune(LetImplicitRuneS),
-  MagicParamRune(MagicParamRuneS),
+  LetImplicitRune(LetImplicitRuneS<'a>),
+  MagicParamRune(MagicParamRuneS<'a>),
   MemberRune(MemberRuneS),
-  LocalDefaultRegionRune(LocalDefaultRegionRuneS),
+  LocalDefaultRegionRune(LocalDefaultRegionRuneS<'a>),
   DenizenDefaultRegionRune(DenizenDefaultRegionRuneS<'a>),
   ExportDefaultRegionRune(ExportDefaultRegionRuneS<'a>),
   ExternDefaultRegionRune(ExternDefaultRegionRuneS<'a>),
@@ -1110,8 +1110,8 @@ case class ImplDropVoidRuneS() extends IRuneS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ImplicitRuneS {
-  pub lid: LocationInDenizen,
+pub struct ImplicitRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class ImplicitRuneS(lid: LocationInDenizen) extends IRuneS {
@@ -1126,24 +1126,24 @@ case class ImplicitRuneS(lid: LocationInDenizen) extends IRuneS {
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct PureBlockRegionRuneS {
-  pub lid: LocationInDenizen,
+pub struct PureBlockRegionRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class PureBlockRegionRuneS(lid: LocationInDenizen) extends IRuneS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CallRegionRuneS {
-  pub lid: LocationInDenizen,
+pub struct CallRegionRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class CallRegionRuneS(lid: LocationInDenizen) extends IRuneS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct CallPureMergeRegionRuneS {
-  pub lid: LocationInDenizen,
+pub struct CallPureMergeRegionRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class CallPureMergeRegionRuneS(lid: LocationInDenizen) extends IRuneS
@@ -1184,16 +1184,16 @@ case class FreeOverrideInterfaceRuneS() extends IRuneS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LetImplicitRuneS {
-  pub lid: LocationInDenizen,
+pub struct LetImplicitRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class LetImplicitRuneS(lid: LocationInDenizen) extends IRuneS {  }
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct MagicParamRuneS {
-  pub lid: LocationInDenizen,
+pub struct MagicParamRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 case class MagicParamRuneS(lid: LocationInDenizen) extends IRuneS {  }
@@ -1208,8 +1208,8 @@ case class MemberRuneS(memberIndex: Int) extends IRuneS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct LocalDefaultRegionRuneS {
-  pub lid: LocationInDenizen,
+pub struct LocalDefaultRegionRuneS<'a> {
+  pub lid: LocationInDenizen<'a>,
 }
 /*
 
@@ -1393,8 +1393,8 @@ case class CodeNameS(name: StrI) extends IImpreciseNameS {
 Guardian: disable: NECX
   */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct GlobalFunctionFamilyNameS {
-  pub name: String,
+pub struct GlobalFunctionFamilyNameS<'a> {
+  pub name: StrI<'a>,
 }
 /*
 // When we're calling a function, we're addressing an overload set, not a specific function.

@@ -63,6 +63,7 @@ use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_re
 use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
+use indexmap::IndexSet;
 
 #[derive(Clone, Debug, PartialEq)]
 pub enum IFunctionParent<'a, 's>
@@ -242,8 +243,8 @@ where
         Some(Box::new(IEnvironmentS::FunctionEnvironment(interface_env.clone())))
       }
     };
-    let declared_runes: Vec<IRuneS<'a>> = match &maybe_parent {
-      IFunctionParent::ParentInterface { .. } => Vec::new(),
+    let declared_runes: IndexSet<IRuneS<'a>> = match &maybe_parent {
+      IFunctionParent::ParentInterface { .. } => IndexSet::new(),
       _ => user_declared_runes
         .iter()
         .map(|rune_usage| rune_usage.rune.clone())
@@ -269,10 +270,10 @@ where
       .and_then(|body| body.maybe_default_region.as_ref())
     {
       None => {
-        let region_range = RangeS {
-          begin: header_range_s.end.clone(),
-          end: header_range_s.end.clone(),
-        };
+        let region_range = RangeS::new(
+          header_range_s.end.clone(),
+          header_range_s.end.clone(),
+        );
         let rune = self.interner.intern_rune(IRuneValS::DenizenDefaultRegionRune(
           DenizenDefaultRegionRuneS {
             denizen_name: function_declaration_name.clone(),
@@ -415,7 +416,7 @@ where
                 let coord_rune = RuneUsage {
                   range: param_range.clone(),
                   rune: self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-                    lid: lidb.child().consume(),
+                    lid: lidb.child().consume_in(self.interner.arena()),
                   })),
                 };
                 rune_to_explicit_type.push((
@@ -465,7 +466,7 @@ where
                   let coord_rune = RuneUsage {
                     range: param_range.clone(),
                     rune: self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-                      lid: lidb.child().consume(),
+                      lid: lidb.child().consume_in(self.interner.arena()),
                     })),
                   };
                   rune_to_explicit_type.push((
@@ -478,12 +479,12 @@ where
               }
               _ => panic!("POSTPARSER_SCOUT_FUNCTION_PARAM_FORM_NOT_YET_IMPLEMENTED"),
             };
-            return ParameterS {
-              range: param_range.clone(),
+            return ParameterS::new(
+              param_range.clone(),
               virtuality,
-              pre_checked: param.maybe_pre_checked.is_some(),
+              param.maybe_pre_checked.is_some(),
               pattern,
-            };
+            );
       })
       .collect::<Vec<ParameterS<'a>>>();
     let maybe_capture_declarations = match function.body {
@@ -528,7 +529,7 @@ where
           let ret_rune = RuneUsage {
             range: ret_range_s.clone(),
             rune: self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-              lid: lidb.child().consume(),
+              lid: lidb.child().consume_in(self.interner.arena()),
             })),
           };
           rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
@@ -696,13 +697,13 @@ where
           panic!("POSTPARSER_SCOUT_FUNCTION_EXPECTED_PARENT_FUNCTION");
         };
         let closure_struct_region_rune = self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume(),
+          lid: lidb.child().consume_in(self.interner.arena()),
         }));
         let closure_struct_kind_rune = self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume(),
+          lid: lidb.child().consume_in(self.interner.arena()),
         }));
         let closure_struct_coord_rune = self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume(),
+          lid: lidb.child().consume_in(self.interner.arena()),
         }));
         let closure_param_s = self.create_closure_param(
           function.range,
@@ -834,18 +835,18 @@ where
     };
     Ok((
       &*self.scout_arena.alloc(
-        FunctionS {
-          range: Self::eval_range(file_coordinate, function.range),
-          name: function_name_ref,
-          attributes: alloc_slice_from_vec(self.scout_arena, func_attrs_s),
-          generic_params: alloc_slice_from_vec_of_refs(self.scout_arena, generic_params),
+        FunctionS::new(
+          Self::eval_range(file_coordinate, function.range),
+          function_name_ref,
+          alloc_slice_from_vec(self.scout_arena, func_attrs_s),
+          alloc_slice_from_vec_of_refs(self.scout_arena, generic_params),
           rune_to_predicted_type,
           tyype,
-          params: alloc_slice_from_vec(self.scout_arena, total_params_s),
+          alloc_slice_from_vec(self.scout_arena, total_params_s),
           maybe_ret_coord_rune,
-          rules: alloc_slice_from_vec(self.scout_arena, rules_array),
-          body: body_s,
-        }),
+          alloc_slice_from_vec(self.scout_arena, rules_array),
+          body_s,
+        )),
       variable_uses,
     ))
   }
@@ -1042,7 +1043,7 @@ where
               }
             (maybeSelfBorrow, maybePattern) match {
               case (Some(selfBorrow), None) => {
-                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
                 runeToExplicitType += ((rune.rune, CoordTemplataType()))
                 val patternS =
                   AtomSP(rangeS, Some(CaptureS(CodeVarNameS(keywords.self), false)), Some(rune), None)
@@ -1059,7 +1060,7 @@ where
                 val patternS =
                   patternPerhapsWithoutCoordRuneS.coordRune match {
                     case None => {
-                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
                       runeToExplicitType += ((rune.rune, CoordTemplataType()))
                       patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
                     }
@@ -1110,7 +1111,7 @@ where
             case FunctionNoParent() | ParentInterface(_, _, _, _) => {
               // If nothing's present, assume void
               val rangeS = PostParser.evalRange(file, retRange)
-              val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+              val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
               ruleBuilder +=
                 MaybeCoercingLookupSR(
                   rangeS,
@@ -1219,10 +1220,10 @@ where
                   RangedInternalErrorS(rangeS, "Cant have a lambda with _ and params"))
               }
 
-              val closureStructKindRune = ImplicitRuneS(lidb.child().consume())
+              val closureStructKindRune = ImplicitRuneS(lidb.child().consume_in(self.interner.arena()))
               val closureStructRegionRune =
                 ImplicitRegionRuneS(closureStructKindRune)
-              val closureStructCoordRune = ImplicitRuneS(lidb.child().consume())
+              val closureStructCoordRune = ImplicitRuneS(lidb.child().consume_in(self.interner.arena()))
 
               val closureParamS =
                 createClosureParam(
@@ -1371,10 +1372,10 @@ fn create_closure_param(
   closure_struct_coord_rune: IRuneS<'a>,
 ) -> ParameterS<'a> {
   let closure_param_pos = PostParser::eval_pos(parent_stack_frame.file, range.begin());
-  let closure_param_range = RangeS {
-    begin: closure_param_pos.clone(),
-    end: closure_param_pos.clone(),
-  };
+  let closure_param_range = RangeS::new(
+    closure_param_pos.clone(),
+    closure_param_pos.clone(),
+  );
   let closure_param_name = match self.interner.intern_name(INameValS::VarName(
     IVarNameValS::ClosureParamName(ClosureParamNameS {
       code_location: closure_param_range.begin.clone(),
@@ -1424,7 +1425,7 @@ fn create_closure_param(
   let closure_param_type_rune = RuneUsage {
     range: closure_param_range.clone(),
     rune: self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-      lid: lidb.child().consume(),
+      lid: lidb.child().consume_in(self.interner.arena()),
     })),
   };
   rule_builder.push(IRulexSR::Augment(AugmentSR {
@@ -1487,7 +1488,7 @@ fn create_closure_param(
         RuneUsage(closureParamRange, closureStructKindRune))
 
     val closureParamTypeRune =
-      rules.RuneUsage(closureParamRange, ImplicitRuneS(lidb.child().consume()))
+      rules.RuneUsage(closureParamRange, ImplicitRuneS(lidb.child().consume_in(self.interner.arena())))
     ruleBuilder +=
       AugmentSR(
         closureParamRange,
@@ -1514,22 +1515,22 @@ fn create_magic_parameters(
         IVarNameS::MagicParamName(c) => c.clone(),
         _ => panic!("POSTPARSER_CREATE_MAGIC_PARAMS_EXPECTED_MAGIC_PARAM_NAME"),
       };
-      let magic_param_range = crate::utils::range::RangeS {
-        begin: code_location.clone(),
-        end: code_location.clone(),
-      };
+      let magic_param_range = crate::utils::range::RangeS::new(
+        code_location.clone(),
+        code_location.clone(),
+      );
       let magic_param_rune = self.interner.intern_rune(IRuneValS::MagicParamRune(MagicParamRuneS {
-        lid: lidb.child().consume(),
+        lid: lidb.child().consume_in(self.interner.arena()),
       }));
       rune_to_explicit_type.push((
         magic_param_rune.clone(),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ));
-      ParameterS {
-        range: magic_param_range.clone(),
-        virtuality: None,
-        pre_checked: false,
-        pattern: AtomSP {
+      ParameterS::new(
+        magic_param_range.clone(),
+        None,
+        false,
+        AtomSP {
           range: magic_param_range.clone(),
           name: Some(CaptureS {
             name: magic_param_name,
@@ -1541,7 +1542,7 @@ fn create_magic_parameters(
           }),
           destructure: None,
         },
-      }
+      )
     })
     .collect()
 }
@@ -1555,7 +1556,7 @@ fn create_magic_parameters(
       case mpn@MagicParamNameS(codeLocation) => {
         val magicParamRange = vale.RangeS(codeLocation, codeLocation)
         val magicParamRune =
-          rules.RuneUsage(magicParamRange, MagicParamRuneS(lidb.child().consume()))
+          rules.RuneUsage(magicParamRange, MagicParamRuneS(lidb.child().consume_in(self.interner.arena())))
         runeToExplicitType += ((magicParamRune.rune, CoordTemplataType()))
         val paramS =
           ParameterS(

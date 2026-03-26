@@ -162,6 +162,10 @@ struct InternerInner<'a> {
 }
 
 impl<'a> Interner<'a> {
+  pub fn arena(&self) -> &'a Bump {
+    self.arena
+  }
+
   pub fn with_arena(arena: &'a Bump) -> Self {
     Interner {
       arena,
@@ -918,10 +922,10 @@ mod tests {
     assert_eq!(r1, r2);
 
     let r3 = interner.intern_rune(IRuneValS::LetImplicitRune(LetImplicitRuneS {
-      lid: LocationInDenizen { path: vec![1] },
+      lid: LocationInDenizen { path: arena.alloc_slice_copy(&[1]) },
     }));
     let r4 = interner.intern_rune(IRuneValS::LetImplicitRune(LetImplicitRuneS {
-      lid: LocationInDenizen { path: vec![1] },
+      lid: LocationInDenizen { path: arena.alloc_slice_copy(&[1]) },
     }));
     assert_eq!(r3, r4);
   }
