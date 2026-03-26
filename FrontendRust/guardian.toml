@@ -1,13 +1,13 @@
 data_file = "check-template.txt"
 shields_dir = "../Luz/shields"
-backend = "opencode"
+backend = "claude"
 server_url = "http://127.0.0.1:7300"
 simple_smart_config = "../Guardian/gpt-oss-20b.config.json"
 simple_medium_config = "../Guardian/gpt-oss-20b.config.json"
 simple_small_config = "../Guardian/gpt-oss-20b.config.json"
-agentic_smart_model = "openrouter/anthropic/claude-opus"
-agentic_medium_model = "openrouter/anthropic/claude-sonnet"
-agentic_small_model = "openrouter/anthropic/claude-haiku"
+agentic_smart_model = "claude-opus-4-20250514"
+agentic_medium_model = "claude-sonnet-4-20250514"
+agentic_small_model = "claude-haiku-4-5-20251001"
 exclude_shields = [
 ]
 
