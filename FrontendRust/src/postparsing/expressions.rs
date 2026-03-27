@@ -341,14 +341,17 @@ impl<'a, 's> IExpressionSETrait<'a> for IExpressionSE<'a, 's> {
 
 #[derive(Debug, PartialEq)]
 pub struct ConsecutorSE<'a, 's> {
-  /*
-  case class ConsecutorSE(
-    exprs: Vector[IExpressionSE],
-  ) extends IExpressionSE {
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  */
   pub exprs: &'s [&'s IExpressionSE<'a, 's>],
 }
+/*
+case class ConsecutorSE(
+  exprs: Vector[IExpressionSE],
+) extends IExpressionSE {
+  // MIGALLOW: Rust doesnt need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesnt need a hashCode override
+  override def hashCode(): Int = vcurious()
+*/
 
 impl<'a, 's> ConsecutorSE<'a, 's> {
   pub fn range(&self) -> RangeS<'a> {

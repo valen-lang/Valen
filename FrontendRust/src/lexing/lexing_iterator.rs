@@ -368,8 +368,9 @@ impl LexingIterator {
 
     // Use starts_with for Unicode-safe prefix checking
     if self.code[pos_after_whitespace..].starts_with("//") {
-      let begin = self.position;
+      let begin = pos_after_whitespace;
       self.position = pos_after_whitespace + 2; // "//" is always 2 bytes (ASCII)
+      assert!(self.position <= self.code.len());
 
       // Skip to end of line
       while !self.at_end() {
@@ -379,7 +380,7 @@ impl LexingIterator {
         }
       }
 
-      self.comments.push(RangeL(begin as i32, self.position as i32));
+      self.comments.push(RangeL(begin as i32, (self.position - 1) as i32));
 
       self.consume_comments();
     }

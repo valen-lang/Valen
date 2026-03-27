@@ -178,6 +178,12 @@ Guardian: disable: NECX
 
 #[derive(Clone, Debug, PartialEq)]
 pub struct NameOrRunePT<'a>(pub NameP<'a>);
+impl<'a> NameOrRunePT<'a> {
+  pub fn new(name: NameP<'a>) -> Self {
+    assert!(name.as_str() != "_", "vassert: NameOrRunePT name must not be \"_\"");
+    Self(name)
+  }
+}
 /*
 case class NameOrRunePT(name: NameP) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
@@ -193,6 +199,12 @@ pub struct InterpretedPT<'a, 'p> {
   pub maybe_ownership: Option<&'p OwnershipPT>,
   pub maybe_region: Option<&'p RegionRunePT<'a>>,
   pub inner: &'p ITemplexPT<'a, 'p>,
+}
+impl<'a, 'p> InterpretedPT<'a, 'p> {
+  pub fn new(range: RangeL, maybe_ownership: Option<&'p OwnershipPT>, maybe_region: Option<&'p RegionRunePT<'a>>, inner: &'p ITemplexPT<'a, 'p>) -> Self {
+    assert!(maybe_ownership.is_some() || maybe_region.is_some(), "vassert: InterpretedPT must have ownership or region");
+    Self { range, maybe_ownership, maybe_region, inner }
+  }
 }
 /*
 //case class NullablePT(range: Range, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }

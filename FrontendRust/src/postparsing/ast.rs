@@ -55,7 +55,10 @@ case class ProgramS(
     implementedFunctions: Vector[FunctionS],
     exports: Vector[ExportAsS],
     imports: Vector[ImportS]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 Guardian: disable: NECX
 */
 
@@ -84,14 +87,13 @@ impl<'a, 's> ProgramS<'a, 's> {
   */
 
   pub fn lookup_interface(&self, name: &str) -> &'s InterfaceS<'a, 's> {
-    let matches: Vec<&'s InterfaceS<'a, 's>> = self
+    let matches = self
       .interfaces
       .iter()
       .copied()
-      .filter(|i| i.name.name.as_str() == name)
-      .collect();
-    assert_eq!(matches.len(), 1);
-    matches[0]
+      .find(|i| i.name.name.as_str() == name);
+    assert_eq!(matches.is_some(), true);
+    matches.unwrap()
   }
   /*
     def lookupInterface(name: String): InterfaceS = {
@@ -159,7 +161,10 @@ pub struct ExternS<'a> {
 }
 /*
 case class ExternS(packageCoord: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
 }
 Guardian: disable: NECX
 */
@@ -193,7 +198,10 @@ pub struct BuiltinS<'a> {
 }
 /*
 case class BuiltinS(generatorName: StrI) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
 }
 Guardian: disable: NECX
 */
@@ -206,7 +214,10 @@ pub struct MacroCallS<'a> {
 }
 /*
 case class MacroCallS(range: RangeS, include: IMacroInclusionP, macroName: StrI) extends ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
 }
 Guardian: disable: NECX
 */
@@ -217,7 +228,10 @@ pub struct ExportS<'a> {
 }
 /*
 case class ExportS(packageCoordinate: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
 }
 Guardian: disable: NECX
 */
@@ -287,6 +301,34 @@ pub struct StructS<'a, 's> {
   pub member_rules: &'s [IRulexSR<'a, 's>],
   pub members: &'s [IStructMemberS<'a>],
 }
+/*
+case class StructS(
+    range: RangeS,
+    name: TopLevelStructDeclarationNameS,
+    attributes: Vector[ICitizenAttributeS],
+    weakable: Boolean,
+    genericParams: Vector[GenericParameterS],
+    mutabilityRune: RuneUsage,
+
+    // This is needed for recursive structures like
+    //   struct ListNode<T> imm where T Ref {
+    //     tail ListNode<T>;
+    //   }
+    maybePredictedMutability: Option[MutabilityP],
+    tyype: TemplateTemplataType,
+
+    // These are separated so that these alone can be run during resolving, see SMRASDR.
+    headerRuneToExplicitType: Map[IRuneS, ITemplataType],
+    headerPredictedRuneToType: Map[IRuneS, ITemplataType],
+    headerRules: Vector[IRulexSR],
+    // These are separated so they can be skipped during resolving, see SMRASDR.
+    membersRuneToExplicitType: Map[IRuneS, ITemplataType],
+    membersPredictedRuneToType: Map[IRuneS, ITemplataType],
+    memberRules: Vector[IRulexSR],
+
+    members: Vector[IStructMemberS]
+) extends ICitizenS {
+*/
 impl<'a, 's> StructS<'a, 's> {
   pub fn new(
     range: RangeS<'a>,
@@ -324,33 +366,6 @@ impl<'a, 's> StructS<'a, 's> {
   }
 }
 /*
-case class StructS(
-    range: RangeS,
-    name: TopLevelStructDeclarationNameS,
-    attributes: Vector[ICitizenAttributeS],
-    weakable: Boolean,
-    genericParams: Vector[GenericParameterS],
-    mutabilityRune: RuneUsage,
-
-    // This is needed for recursive structures like
-    //   struct ListNode<T> imm where T Ref {
-    //     tail ListNode<T>;
-    //   }
-    maybePredictedMutability: Option[MutabilityP],
-    tyype: TemplateTemplataType,
-
-    // These are separated so that these alone can be run during resolving, see SMRASDR.
-    headerRuneToExplicitType: Map[IRuneS, ITemplataType],
-    headerPredictedRuneToType: Map[IRuneS, ITemplataType],
-    headerRules: Vector[IRulexSR],
-    // These are separated so they can be skipped during resolving, see SMRASDR.
-    membersRuneToExplicitType: Map[IRuneS, ITemplataType],
-    membersPredictedRuneToType: Map[IRuneS, ITemplataType],
-    memberRules: Vector[IRulexSR],
-
-    members: Vector[IStructMemberS]
-) extends ICitizenS {
-
   vassert(
     !genericParams.exists({ case x =>
       x.rune.rune match {
@@ -368,7 +383,10 @@ case class StructS(
       }
     }))
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 
 //  vassert(isTemplate == identifyingRunes.nonEmpty)
 }
@@ -428,7 +446,10 @@ case class NormalStructMemberS(
     name: StrI,
     variability: VariabilityP,
     typeRune: RuneUsage) extends IStructMemberS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 Guardian: disable: NECX
   */
@@ -444,7 +465,10 @@ case class VariadicStructMemberS(
   range: RangeS,
   variability: VariabilityP,
   typeRune: RuneUsage) extends IStructMemberS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 Guardian: disable: NECX
 */
@@ -539,7 +563,10 @@ case class InterfaceS(
       }
     }))
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 
   internalMethods.foreach(internalMethod => {
     vregionmut() // Put this back in when we have regions
@@ -578,7 +605,10 @@ case class ImplS(
     subCitizenImpreciseName: IImpreciseNameS,
     interfaceKindRune: RuneUsage,
     superInterfaceImpreciseName: IImpreciseNameS) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
@@ -597,7 +627,10 @@ case class ExportAsS(
   exportName: ExportAsNameS,
   rune: RuneUsage,
   exportedName: StrI) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
@@ -614,7 +647,10 @@ case class ImportS(
   moduleName: StrI,
   packageNames: Vector[StrI],
   importeeName: StrI) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 */
 pub fn interface_s_name<'a, 's>(interface_s: &InterfaceS<'a, 's>) -> TopLevelCitizenDeclarationNameS<'a> {
@@ -675,7 +711,10 @@ case class ParameterS(
   preChecked: Boolean,
   pattern: AtomSP) {
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 
   vassert(pattern.coordRune.nonEmpty)
 }
@@ -708,7 +747,10 @@ case class SimpleParameterS(
     name: String,
     virtuality: Option[AbstractSP],
     tyype: IRulexSR) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 Guardian: disable: NECX
 */
@@ -746,7 +788,10 @@ pub struct GeneratedBodyS<'a> {
 }
 /*
 case class GeneratedBodyS(generatorId: StrI) extends IBodyS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 Guardian: disable: NECX
 */
@@ -757,7 +802,10 @@ pub struct CodeBodyS<'a, 's> {
 }
 /*
 case class CodeBodyS(body: BodySE) extends IBodyS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 }
 Guardian: disable: NECX
 */
@@ -1040,7 +1088,10 @@ case class FunctionS(
     }
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
 */
 impl<'a, 's> FunctionS<'a, 's> {
   pub fn is_light(&self) -> bool {
@@ -1079,7 +1130,11 @@ class LocationInDenizenBuilder(path: Vector[Int]) {
   private var nextChild: Int = 1
 
   // Note how this is hashing `path`, not `this` like usual.
-  val hash = runtime.ScalaRunTime._hashCode(path.toList); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(path.toList)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
+  override def equals(obj: Any): Boolean = vcurious();
 Guardian: disable: NECX
 */
 
@@ -1151,7 +1206,10 @@ pub struct LocationInDenizen<'x> {
 
 /*
 case class LocationInDenizen(path: Vector[Int]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     obj match {
       case LocationInDenizen(thatPath) => path == thatPath
@@ -1227,16 +1285,25 @@ pub struct TopLevelFunctionS<'a, 's> {
 }
 
 /*
-case class TopLevelFunctionS(function: FunctionS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelFunctionS(function: FunctionS) extends IDenizenS {
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+}
 */
 
 #[derive(Debug, PartialEq)]
 pub struct TopLevelImplS<'a, 's> {
   pub impl_: ImplS<'a, 's>,
 }
-
 /*
-case class TopLevelImplS(impl: ImplS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImplS(impl: ImplS) extends IDenizenS {
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious();
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+}
 */
 
 #[derive(Debug, PartialEq)]
@@ -1244,7 +1311,12 @@ pub struct TopLevelExportAsS<'a, 's> {
   pub export: ExportAsS<'a, 's>,
 }
 /*
-case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS {
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+}
 */
 
 #[derive(Debug, PartialEq)]
@@ -1252,7 +1324,12 @@ pub struct TopLevelImportS<'a, 's> {
   pub imporrt: ImportS<'a, 's>,
 }
 /*
-case class TopLevelImportS(imporrt: ImportS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImportS(imporrt: ImportS) extends IDenizenS {
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+}
 */
 
 /*
@@ -1302,7 +1379,11 @@ pub struct TopLevelStructS<'a, 's> {
 }
 /*
 case class TopLevelStructS(struct: StructS) extends ICitizenDenizenS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a citizen override
   override def citizen: ICitizenS = struct
 }
 */
@@ -1313,7 +1394,11 @@ pub struct TopLevelInterfaceS<'a, 's> {
 }
 /*
 case class TopLevelInterfaceS(interface: InterfaceS) extends ICitizenDenizenS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need an equals override
+  override def equals(obj: Any): Boolean = vcurious()
+  // MIGALLOW: Rust doesn't need a hashCode override
+  override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a citizen override
   override def citizen: ICitizenS = interface
 }
 */

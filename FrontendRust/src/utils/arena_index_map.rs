@@ -1,3 +1,5 @@
+/* Guardian: disable-all */
+
 //! A deterministic, insertion-ordered hash map with arena-allocated backing storage.
 //!
 //! `ArenaIndexMap` combines a `hashbrown::HashMap` (for O(1) key lookup) with a

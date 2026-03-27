@@ -668,28 +668,6 @@ case class FunctionA(
     rules: Vector[IRulexSR],
     body: IBodyS
 ) {
-  val hash = range.hashCode() + name.hashCode()
-  vpass()
-
-  // These should be removed by the higher typer
-  rules.collect({
-    case MaybeCoercingCallSR(_, _, _, _) => vwat()
-    case MaybeCoercingLookupSR(_, _, _) => vwat()
-  })
-
-  vassert(
-    !genericParameters.exists({ case x =>
-      x.rune.rune match { case DenizenDefaultRegionRuneS(_) => true case _ => false }
-    }))
-  vassert(
-    !runeToType.exists({ case (rune, _) =>
-      rune match {
-        case DenizenDefaultRegionRuneS(_) => true
-        case _ => false
-      }
-    }))
-
-  vassert(range.begin.file.packageCoordinate == name.packageCoordinate)
 */
 // mig: impl FunctionA
 impl<'a, 's> FunctionA<'a, 's> {
@@ -721,9 +699,35 @@ pub fn new(
         !rune_to_type.keys().any(|rune| matches!(rune, IRuneS::DenizenDefaultRegionRune(_))),
         "vassert: rune_to_type should not contain DenizenDefaultRegionRuneS"
     );
+    assert!(
+        range.begin.file.package_coord == name.package_coordinate(),
+        "vassert: range.begin.file.package_coord must equal name.package_coordinate()"
+    );
     Self { range, name, attributes, tyype, generic_parameters, rune_to_type, params, maybe_ret_coord_rune, rules, body }
 }
 /*
+  val hash = range.hashCode() + name.hashCode()
+  vpass()
+
+  // These should be removed by the higher typer
+  rules.collect({
+    case MaybeCoercingCallSR(_, _, _, _) => vwat()
+    case MaybeCoercingLookupSR(_, _, _) => vwat()
+  })
+
+  vassert(
+    !genericParameters.exists({ case x =>
+      x.rune.rune match { case DenizenDefaultRegionRuneS(_) => true case _ => false }
+    }))
+  vassert(
+    !runeToType.exists({ case (rune, _) =>
+      rune match {
+        case DenizenDefaultRegionRuneS(_) => true
+        case _ => false
+      }
+    }))
+
+  vassert(range.begin.file.packageCoordinate == name.packageCoordinate)
 */
 // mig: fn hash_code
 pub fn hash_code(&self) -> i32 {

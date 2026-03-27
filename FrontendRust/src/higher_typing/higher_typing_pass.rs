@@ -783,6 +783,13 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'a, 's>, env: &EnvironmentA<'
   // Shouldnt fail because we got a complete solve earlier
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(ITemplataType::TemplateTemplataType(tyype.clone())));
 
+  for rule in header_rules_builder.iter() {
+    if matches!(rule, IRulexSR::MaybeCoercingCall(_)) { panic!("vwat: MaybeCoercingCallSR in header rules after explicify"); }
+  }
+  for rule in member_rules_builder.iter() {
+    if matches!(rule, IRulexSR::MaybeCoercingCall(_)) { panic!("vwat: MaybeCoercingCallSR in member rules after explicify"); }
+  }
+
   let struct_a = self.scout_arena.alloc(StructA::new(
     range_s.clone(),
     IStructDeclarationNameS::TopLevelStructDeclarationName((*name_s).clone()),
@@ -944,8 +951,8 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'a, 's>, env: &Environment
   } = interface_s;
 
   // Check cache
-  if astrouts.code_location_to_interface.contains_key(&range_s.begin) {
-    panic!("translate_interface: cache hit not yet supported");
+  if let Some(value) = astrouts.code_location_to_interface.get(&range_s.begin) {
+    return *value;
   }
 
   // Check for cycles
@@ -1024,6 +1031,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'a, 's>, env: &Environment
     alloc_slice_from_vec(self.scout_arena, rule_builder),
     alloc_slice_from_vec_of_refs(self.scout_arena, internal_methods_a),
   ));
+  astrouts.code_location_to_interface.insert(range_s.begin.clone(), interface_a);
   interface_a
 }
 /*

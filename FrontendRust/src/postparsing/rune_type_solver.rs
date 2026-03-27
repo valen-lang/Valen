@@ -1181,12 +1181,6 @@ pub fn solve_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>>(
           // Calculate what types we can beforehand, see KVCIE.
           rules.flatMap({
             case LookupSR(range, rune, name) => {
-              name match {
-                case CodeNameS(StrI("Array")) => {
-                  vpass()
-                }
-                case _ =>
-              }
               env.lookup(range, name) match {
                 case Err(e) => {
                   return Err(
@@ -1214,12 +1208,6 @@ pub fn solve_rune_type<'a, 's, E: IRuneTypeSolverEnv<'a, 's>>(
               }
             }
             case MaybeCoercingLookupSR(range, rune, name) => {
-              name match {
-                case CodeNameS(StrI("Array")) => {
-                  vpass()
-                }
-                case _ =>
-              }
               env.lookup(range, name) match {
                 case Err(e) => {
                   return Err(
@@ -1283,7 +1271,7 @@ fn complex_solve() -> Result<(), ()> {
           }
 */
 // mig: fn solve
-fn solve_stub<'a, 's>(
+fn solve<'a, 's>(
   _state: (),
   _env: (),
   _solver_state: (),

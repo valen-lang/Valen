@@ -74,7 +74,7 @@ fn add_literal_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     runeS
   }
 */
-fn add_rune_parent_env_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump, 
+fn add_rune_parent_env_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
   _lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'a, 's>>,
   range_s: RangeS<'a>,
@@ -926,7 +926,7 @@ fn translate_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 */
 // Returns:
 // - Rune for this type
-pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump, 
+pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
   interner: &Interner<'a>,
   keywords: &Keywords<'a>,
   env: IEnvironmentS<'a>,
