@@ -29,8 +29,8 @@ import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.List
 */
-pub trait IExpressionSE<'a> {
-  fn range(&self) -> RangeS<'a>;
+pub trait IExpressionSE<'s> {
+  fn range(&self) -> RangeS<'s>;
   /* Guardian: disable-all */
 }
 /*
@@ -39,13 +39,13 @@ trait IExpressionSE {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ProgramS<'a, 's> {
-  pub structs: &'s [&'s StructS<'a, 's>],
-  pub interfaces: &'s [&'s InterfaceS<'a, 's>],
-  pub impls: &'s [&'s ImplS<'a, 's>],
-  pub implemented_functions: &'s [&'s FunctionS<'a, 's>],
-  pub exports: &'s [&'s ExportAsS<'a, 's>],
-  pub imports: &'s [&'s ImportS<'a, 's>],
+pub struct ProgramS<'s> {
+  pub structs: &'s [&'s StructS<'s>],
+  pub interfaces: &'s [&'s InterfaceS<'s>],
+  pub impls: &'s [&'s ImplS<'s>],
+  pub implemented_functions: &'s [&'s FunctionS<'s>],
+  pub exports: &'s [&'s ExportAsS<'s>],
+  pub imports: &'s [&'s ImportS<'s>],
 }
 /*
 case class ProgramS(
@@ -62,9 +62,9 @@ case class ProgramS(
 Guardian: disable: NECX
 */
 
-impl<'a, 's> ProgramS<'a, 's> {
-  pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'a, 's> {
-    let matches: Vec<&'s FunctionS<'a, 's>> = self
+impl<'s> ProgramS<'s> {
+  pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'s> {
+    let matches: Vec<&'s FunctionS<'s>> = self
       .implemented_functions
       .iter()
       .filter(|f| match &f.name {
@@ -72,7 +72,7 @@ impl<'a, 's> ProgramS<'a, 's> {
         _ => false,
       })
       .map(|f| *f)
-      .collect::<Vec<&'s FunctionS<'a, 's>>>();
+      .collect::<Vec<&'s FunctionS<'s>>>();
     assert_eq!(matches.len(), 1);
     matches[0]
   }
@@ -86,7 +86,7 @@ impl<'a, 's> ProgramS<'a, 's> {
     }
   */
 
-  pub fn lookup_interface(&self, name: &str) -> &'s InterfaceS<'a, 's> {
+  pub fn lookup_interface(&self, name: &str) -> &'s InterfaceS<'s> {
     let matches = self
       .interfaces
       .iter()
@@ -105,8 +105,8 @@ impl<'a, 's> ProgramS<'a, 's> {
     }
   */
 
-  pub fn lookup_struct(&self, name: &str) -> &'s StructS<'a, 's> {
-    let matches: Vec<&'s StructS<'a, 's>> = self
+  pub fn lookup_struct(&self, name: &str) -> &'s StructS<'s> {
+    let matches: Vec<&'s StructS<'s>> = self
       .structs
       .iter()
       .copied()
@@ -128,12 +128,12 @@ impl<'a, 's> ProgramS<'a, 's> {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum ICitizenAttributeS<'a> {
-  Extern(ExternS<'a>),
+pub enum ICitizenAttributeS<'s> {
+  Extern(ExternS<'s>),
   Sealed(SealedS),
-  Builtin(BuiltinS<'a>),
-  MacroCall(MacroCallS<'a>),
-  Export(ExportS<'a>),
+  Builtin(BuiltinS<'s>),
+  MacroCall(MacroCallS<'s>),
+  Export(ExportS<'s>),
 }
 /*
 sealed trait ICitizenAttributeS
@@ -142,12 +142,12 @@ Guardian: disable: NECX
 
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IFunctionAttributeS<'a> {
-  Extern(ExternS<'a>),
+pub enum IFunctionAttributeS<'s> {
+  Extern(ExternS<'s>),
   Pure(PureS),
   Additive(AdditiveS),
-  Builtin(BuiltinS<'a>),
-  Export(ExportS<'a>),
+  Builtin(BuiltinS<'s>),
+  Export(ExportS<'s>),
   UserFunction(UserFunctionS),
 }
 /*
@@ -156,8 +156,8 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExternS<'a> {
-  pub package_coord: &'a PackageCoordinate<'a>,
+pub struct ExternS<'s> {
+  pub package_coord: &'s PackageCoordinate<'s>,
 }
 /*
 case class ExternS(packageCoord: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
@@ -191,10 +191,10 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinS<'a> {
+pub struct BuiltinS<'s> {
   // AFTERM: can we give everything a lifetime into an arena so we can
   // all have references instead of using Arc everywhere?
-  pub generator_name: StrI<'a>,
+  pub generator_name: StrI<'s>,
 }
 /*
 case class BuiltinS(generatorName: StrI) extends IFunctionAttributeS with ICitizenAttributeS {
@@ -207,10 +207,10 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct MacroCallS<'a> {
-  pub range: RangeS<'a>,
+pub struct MacroCallS<'s> {
+  pub range: RangeS<'s>,
   pub include: IMacroInclusionP,
-  pub macro_name: StrI<'a>,
+  pub macro_name: StrI<'s>,
 }
 /*
 case class MacroCallS(range: RangeS, include: IMacroInclusionP, macroName: StrI) extends ICitizenAttributeS {
@@ -223,8 +223,8 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExportS<'a> {
-  pub package_coordinate: &'a PackageCoordinate<'a>,
+pub struct ExportS<'s> {
+  pub package_coordinate: &'s PackageCoordinate<'s>,
 }
 /*
 case class ExportS(packageCoordinate: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
@@ -244,9 +244,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
-pub enum ICitizenS<'a, 's> {
-  Struct(StructS<'a, 's>),
-  Interface(InterfaceS<'a, 's>),
+pub enum ICitizenS<'s> {
+  Struct(StructS<'s>),
+  Interface(InterfaceS<'s>),
 }
 /*
 sealed trait ICitizenS {
@@ -256,7 +256,7 @@ sealed trait ICitizenS {
 }
 */
 
-impl<'a, 's> ICitizenS<'a, 's> {
+impl<'s> ICitizenS<'s> {
   pub fn name(&self) -> TopLevelCitizenDeclarationNameS<'_> {
     match self {
       ICitizenS::Struct(s) => TopLevelCitizenDeclarationNameS::from(s.name),
@@ -273,7 +273,7 @@ impl<'a, 's> ICitizenS<'a, 's> {
   }
   /* Guardian: disable-all */
 
-  pub fn generic_params(&self) -> &'s [&'s GenericParameterS<'a, 's>] {
+  pub fn generic_params(&self) -> &'s [&'s GenericParameterS<'s>] {
     match self {
       ICitizenS::Struct(s) => s.generic_params,
       ICitizenS::Interface(i) => i.generic_params,
@@ -284,22 +284,22 @@ impl<'a, 's> ICitizenS<'a, 's> {
 /* Guardian: disable-all */
 
 #[derive(Debug, PartialEq)]
-pub struct StructS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub name: &'a TopLevelStructDeclarationNameS<'a>,
-  pub attributes: &'s [ICitizenAttributeS<'a>],
+pub struct StructS<'s> {
+  pub range: RangeS<'s>,
+  pub name: &'s TopLevelStructDeclarationNameS<'s>,
+  pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
-  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
-  pub mutability_rune: RuneUsage<'a>,
+  pub generic_params: &'s [&'s GenericParameterS<'s>],
+  pub mutability_rune: RuneUsage<'s>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
   pub tyype: TemplateTemplataType,
-  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub header_rules: &'s [IRulexSR<'a, 's>],
-  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub member_rules: &'s [IRulexSR<'a, 's>],
-  pub members: &'s [IStructMemberS<'a>],
+  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub header_rules: &'s [IRulexSR<'s>],
+  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub member_rules: &'s [IRulexSR<'s>],
+  pub members: &'s [IStructMemberS<'s>],
 }
 /*
 case class StructS(
@@ -329,23 +329,23 @@ case class StructS(
     members: Vector[IStructMemberS]
 ) extends ICitizenS {
 */
-impl<'a, 's> StructS<'a, 's> {
+impl<'s> StructS<'s> {
   pub fn new(
-    range: RangeS<'a>,
-    name: &'a TopLevelStructDeclarationNameS<'a>,
-    attributes: &'s [ICitizenAttributeS<'a>],
+    range: RangeS<'s>,
+    name: &'s TopLevelStructDeclarationNameS<'s>,
+    attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    mutability_rune: RuneUsage<'a>,
+    generic_params: &'s [&'s GenericParameterS<'s>],
+    mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
     tyype: TemplateTemplataType,
-    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    header_rules: &'s [IRulexSR<'a, 's>],
-    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    member_rules: &'s [IRulexSR<'a, 's>],
-    members: &'s [IStructMemberS<'a>],
+    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    header_rules: &'s [IRulexSR<'s>],
+    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    member_rules: &'s [IRulexSR<'s>],
+    members: &'s [IStructMemberS<'s>],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -392,9 +392,9 @@ impl<'a, 's> StructS<'a, 's> {
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub enum IStructMemberS<'a> {
-  NormalStructMember(NormalStructMemberS<'a>),
-  VariadicStructMember(VariadicStructMemberS<'a>),
+pub enum IStructMemberS<'s> {
+  NormalStructMember(NormalStructMemberS<'s>),
+  VariadicStructMember(VariadicStructMemberS<'s>),
 }
 
 impl IStructMemberS<'_> {
@@ -433,11 +433,11 @@ sealed trait IStructMemberS {
 Guardian: disable: NECX
   */
 #[derive(Clone, Debug, PartialEq)]
-pub struct NormalStructMemberS<'a> {
-  pub range: RangeS<'a>,
-  pub name: StrI<'a>,
+pub struct NormalStructMemberS<'s> {
+  pub range: RangeS<'s>,
+  pub name: StrI<'s>,
   pub variability: VariabilityP,
-  pub type_rune: RuneUsage<'a>,
+  pub type_rune: RuneUsage<'s>,
 }
 
 /*
@@ -454,10 +454,10 @@ case class NormalStructMemberS(
 Guardian: disable: NECX
   */
 #[derive(Clone, Debug, PartialEq)]
-pub struct VariadicStructMemberS<'a> {
-  pub range: RangeS<'a>,
+pub struct VariadicStructMemberS<'s> {
+  pub range: RangeS<'s>,
   pub variability: VariabilityP,
-  pub type_rune: RuneUsage<'a>,
+  pub type_rune: RuneUsage<'s>,
 }
 
 /*
@@ -473,34 +473,34 @@ case class VariadicStructMemberS(
 Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
-pub struct InterfaceS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub name: &'a TopLevelInterfaceDeclarationNameS<'a>,
-  pub attributes: &'s [ICitizenAttributeS<'a>],
+pub struct InterfaceS<'s> {
+  pub range: RangeS<'s>,
+  pub name: &'s TopLevelInterfaceDeclarationNameS<'s>,
+  pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
-  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-  pub mutability_rune: RuneUsage<'a>,
+  pub generic_params: &'s [&'s GenericParameterS<'s>],
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub mutability_rune: RuneUsage<'s>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
-  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
   pub tyype: TemplateTemplataType,
-  pub rules: &'s [IRulexSR<'a, 's>],
-  pub internal_methods: &'s [&'s FunctionS<'a, 's>],
+  pub rules: &'s [IRulexSR<'s>],
+  pub internal_methods: &'s [&'s FunctionS<'s>],
 }
-impl<'a, 's> InterfaceS<'a, 's> {
+impl<'s> InterfaceS<'s> {
   pub fn new(
-    range: RangeS<'a>,
-    name: &'a TopLevelInterfaceDeclarationNameS<'a>,
-    attributes: &'s [ICitizenAttributeS<'a>],
+    range: RangeS<'s>,
+    name: &'s TopLevelInterfaceDeclarationNameS<'s>,
+    attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    mutability_rune: RuneUsage<'a>,
+    generic_params: &'s [&'s GenericParameterS<'s>],
+    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
-    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
     tyype: TemplateTemplataType,
-    rules: &'s [IRulexSR<'a, 's>],
-    internal_methods: &'s [&'s FunctionS<'a, 's>],
+    rules: &'s [IRulexSR<'s>],
+    internal_methods: &'s [&'s FunctionS<'s>],
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -579,17 +579,17 @@ case class InterfaceS(
 }
 */
 #[derive(Debug, PartialEq)]
-pub struct ImplS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub name: ImplDeclarationNameS<'a>,
-  pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'a, 's>],
-  pub rules: &'s [IRulexSR<'a, 's>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+pub struct ImplS<'s> {
+  pub range: RangeS<'s>,
+  pub name: ImplDeclarationNameS<'s>,
+  pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
+  pub rules: &'s [IRulexSR<'s>],
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
   pub tyype: ITemplataType,
-  pub struct_kind_rune: RuneUsage<'a>,
-  pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
-  pub interface_kind_rune: RuneUsage<'a>,
-  pub super_interface_imprecise_name: IImpreciseNameS<'a>,
+  pub struct_kind_rune: RuneUsage<'s>,
+  pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+  pub interface_kind_rune: RuneUsage<'s>,
+  pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 
 /*
@@ -612,12 +612,12 @@ case class ImplS(
 }
 */
 #[derive(Debug, PartialEq)]
-pub struct ExportAsS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub rules: &'s [IRulexSR<'a, 's>],
-  pub export_name: ExportAsNameS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub exported_name: StrI<'a>,
+pub struct ExportAsS<'s> {
+  pub range: RangeS<'s>,
+  pub rules: &'s [IRulexSR<'s>],
+  pub export_name: ExportAsNameS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub exported_name: StrI<'s>,
 }
 
 /*
@@ -634,11 +634,11 @@ case class ExportAsS(
 }
 */
 #[derive(Debug, PartialEq)]
-pub struct ImportS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub module_name: StrI<'a>,
-  pub package_names: &'s [StrI<'a>],
-  pub importee_name: StrI<'a>,
+pub struct ImportS<'s> {
+  pub range: RangeS<'s>,
+  pub module_name: StrI<'s>,
+  pub package_names: &'s [StrI<'s>],
+  pub importee_name: StrI<'s>,
 }
 
 /*
@@ -653,7 +653,7 @@ case class ImportS(
   override def hashCode(): Int = vcurious()
 }
 */
-pub fn interface_s_name<'a, 's>(interface_s: &InterfaceS<'a, 's>) -> TopLevelCitizenDeclarationNameS<'a> {
+pub fn interface_s_name<'s>(interface_s: &InterfaceS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
   TopLevelCitizenDeclarationNameS::from(interface_s.name)
 }
 
@@ -665,7 +665,7 @@ object interfaceSName {
   }
 }
 */
-pub fn struct_s_name<'a, 's>(struct_s: &StructS<'a, 's>) -> TopLevelCitizenDeclarationNameS<'a> {
+pub fn struct_s_name<'s>(struct_s: &StructS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
   TopLevelCitizenDeclarationNameS::from(struct_s.name)
 }
 
@@ -692,14 +692,14 @@ object structSName {
 // Also remember, if a parameter has no name, it can't be varying.
 */
 #[derive(Debug, PartialEq)]
-pub struct ParameterS<'a> {
-  pub range: RangeS<'a>,
-  pub virtuality: Option<AbstractSP<'a>>,
+pub struct ParameterS<'s> {
+  pub range: RangeS<'s>,
+  pub virtuality: Option<AbstractSP<'s>>,
   pub pre_checked: bool,
-  pub pattern: AtomSP<'a>,
+  pub pattern: AtomSP<'s>,
 }
-impl<'a> ParameterS<'a> {
-  pub fn new(range: RangeS<'a>, virtuality: Option<AbstractSP<'a>>, pre_checked: bool, pattern: AtomSP<'a>) -> Self {
+impl<'s> ParameterS<'s> {
+  pub fn new(range: RangeS<'s>, virtuality: Option<AbstractSP<'s>>, pre_checked: bool, pattern: AtomSP<'s>) -> Self {
     assert!(pattern.coord_rune.is_some(), "vassert: pattern.coordRune.nonEmpty");
     Self { range, virtuality, pre_checked, pattern }
   }
@@ -720,8 +720,8 @@ case class ParameterS(
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct AbstractSP<'a> {
-  pub range: RangeS<'a>,
+pub struct AbstractSP<'s> {
+  pub range: RangeS<'s>,
   pub is_internal_method: bool,
 }
 
@@ -735,11 +735,11 @@ case class AbstractSP(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct SimpleParameterS<'a, 's> {
-  pub origin: Option<AtomSP<'a>>,
-  pub name: StrI<'a>,
-  pub virtuality: Option<AbstractSP<'a>>,
-  pub tyype: IRulexSR<'a, 's>,
+pub struct SimpleParameterS<'s> {
+  pub origin: Option<AtomSP<'s>>,
+  pub name: StrI<'s>,
+  pub virtuality: Option<AbstractSP<'s>>,
+  pub tyype: IRulexSR<'s>,
 }
 /*
 case class SimpleParameterS(
@@ -756,11 +756,11 @@ Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub enum IBodyS<'a, 's> {
+pub enum IBodyS<'s> {
   ExternBody(ExternBodyS),
   AbstractBody(AbstractBodyS),
-  GeneratedBody(GeneratedBodyS<'a>),
-  CodeBody(CodeBodyS<'a, 's>),
+  GeneratedBody(GeneratedBodyS<'s>),
+  CodeBody(CodeBodyS<'s>),
 }
 
 /*
@@ -783,8 +783,8 @@ Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct GeneratedBodyS<'a> {
-  pub generator_id: StrI<'a>,
+pub struct GeneratedBodyS<'s> {
+  pub generator_id: StrI<'s>,
 }
 /*
 case class GeneratedBodyS(generatorId: StrI) extends IBodyS {
@@ -797,8 +797,8 @@ Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
-pub struct CodeBodyS<'a, 's> {
-  pub body: &'s BodySE<'a, 's>,
+pub struct CodeBodyS<'s> {
+  pub body: &'s BodySE<'s>,
 }
 /*
 case class CodeBodyS(body: BodySE) extends IBodyS {
@@ -826,9 +826,9 @@ case object AdditiveRegionS extends IRegionMutabilityS
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub enum IGenericParameterTypeS<'a> {
+pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
-  CoordGenericParameterType(CoordGenericParameterTypeS<'a>),
+  CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
   OtherGenericParameterType(OtherGenericParameterTypeS),
 }
 /*
@@ -893,8 +893,8 @@ impl RegionGenericParameterTypeS {
 /* Guardian: disable-all */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CoordGenericParameterTypeS<'a> {
-  pub coord_region: Option<RuneUsage<'a>>,
+pub struct CoordGenericParameterTypeS<'s> {
+  pub coord_region: Option<RuneUsage<'s>>,
   pub kind_mutable: bool,
   pub region_mutable: bool,
 }
@@ -944,11 +944,11 @@ Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
-pub struct GenericParameterS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub tyype: IGenericParameterTypeS<'a>,
-  pub default: Option<GenericParameterDefaultS<'a, 's>>,
+pub struct GenericParameterS<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub tyype: IGenericParameterTypeS<'s>,
+  pub default: Option<GenericParameterDefaultS<'s>>,
 }
 /*
 case class GenericParameterS(
@@ -966,9 +966,9 @@ case class GenericParameterS(
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct GenericParameterDefaultS<'a, 's> {
-  pub result_rune: IRuneS<'a>,
-  pub rules: Vec<&'s IRulexSR<'a, 's>>,
+pub struct GenericParameterDefaultS<'s> {
+  pub result_rune: IRuneS<'s>,
+  pub rules: Vec<&'s IRulexSR<'s>>,
 }
 /*
 case class GenericParameterDefaultS(
@@ -979,30 +979,30 @@ case class GenericParameterDefaultS(
 Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
-pub struct FunctionS<'a, 's> {
-  pub range: RangeS<'a>,
-  pub name: &'a IFunctionDeclarationNameS<'a>,
-  pub attributes: &'s [IFunctionAttributeS<'a>],
-  pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
-  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+pub struct FunctionS<'s> {
+  pub range: RangeS<'s>,
+  pub name: &'s IFunctionDeclarationNameS<'s>,
+  pub attributes: &'s [IFunctionAttributeS<'s>],
+  pub generic_params: &'s [&'s GenericParameterS<'s>],
+  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
   pub tyype: TemplateTemplataType,
-  pub params: &'s [ParameterS<'a>],
-  pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-  pub rules: &'s [IRulexSR<'a, 's>],
-  pub body: &'s IBodyS<'a, 's>,
+  pub params: &'s [ParameterS<'s>],
+  pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+  pub rules: &'s [IRulexSR<'s>],
+  pub body: &'s IBodyS<'s>,
 }
-impl<'a, 's> FunctionS<'a, 's> {
+impl<'s> FunctionS<'s> {
   pub fn new(
-    range: RangeS<'a>,
-    name: &'a IFunctionDeclarationNameS<'a>,
-    attributes: &'s [IFunctionAttributeS<'a>],
-    generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
+    range: RangeS<'s>,
+    name: &'s IFunctionDeclarationNameS<'s>,
+    attributes: &'s [IFunctionAttributeS<'s>],
+    generic_params: &'s [&'s GenericParameterS<'s>],
+    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
     tyype: TemplateTemplataType,
-    params: &'s [ParameterS<'a>],
-    maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-    rules: &'s [IRulexSR<'a, 's>],
-    body: &'s IBodyS<'a, 's>,
+    params: &'s [ParameterS<'s>],
+    maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+    rules: &'s [IRulexSR<'s>],
+    body: &'s IBodyS<'s>,
   ) -> Self {
     assert!(
       !generic_params.iter().any(|x| matches!(x.rune.rune, IRuneS::DenizenDefaultRegionRune(_))),
@@ -1093,7 +1093,7 @@ case class FunctionS(
   // MIGALLOW: Rust doesn't need a hashCode override
   override def hashCode(): Int = vcurious()
 */
-impl<'a, 's> FunctionS<'a, 's> {
+impl<'s> FunctionS<'s> {
   pub fn is_light(&self) -> bool {
     match &self.body {
       IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => false,
@@ -1193,7 +1193,7 @@ impl LocationInDenizenBuilder {
 /// Parameterized on lifetime `'x` because LocationInDenizen lives in different
 /// arenas depending on its owner:
 /// - When inside rune structs (e.g. ImplicitRuneS), it's interned into the
-///   `'a` interner arena, so `'x = 'a`.
+///   `'s` interner arena, so `'x = 's`.
 /// - When inside expression structs (e.g. PureSE, FunctionSE), it's allocated
 ///   in the `'s` scout arena, so `'x = 's`.
 ///
@@ -1267,21 +1267,21 @@ Guardian: disable-all
 */
 
 #[derive(Debug, PartialEq)]
-pub enum IDenizenS<'a, 's> {
-  TopLevelFunction(TopLevelFunctionS<'a, 's>),
-  TopLevelImpl(TopLevelImplS<'a, 's>),
-  TopLevelExportAs(TopLevelExportAsS<'a, 's>),
-  TopLevelImport(TopLevelImportS<'a, 's>),
-  TopLevelStruct(TopLevelStructS<'a, 's>),
-  TopLevelInterface(TopLevelInterfaceS<'a, 's>),
+pub enum IDenizenS<'s> {
+  TopLevelFunction(TopLevelFunctionS<'s>),
+  TopLevelImpl(TopLevelImplS<'s>),
+  TopLevelExportAs(TopLevelExportAsS<'s>),
+  TopLevelImport(TopLevelImportS<'s>),
+  TopLevelStruct(TopLevelStructS<'s>),
+  TopLevelInterface(TopLevelInterfaceS<'s>),
 }
 /*
 sealed trait IDenizenS
 */
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelFunctionS<'a, 's> {
-  pub function: FunctionS<'a, 's>,
+pub struct TopLevelFunctionS<'s> {
+  pub function: FunctionS<'s>,
 }
 
 /*
@@ -1294,8 +1294,8 @@ case class TopLevelFunctionS(function: FunctionS) extends IDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelImplS<'a, 's> {
-  pub impl_: ImplS<'a, 's>,
+pub struct TopLevelImplS<'s> {
+  pub impl_: ImplS<'s>,
 }
 /*
 case class TopLevelImplS(impl: ImplS) extends IDenizenS {
@@ -1307,8 +1307,8 @@ case class TopLevelImplS(impl: ImplS) extends IDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelExportAsS<'a, 's> {
-  pub export: ExportAsS<'a, 's>,
+pub struct TopLevelExportAsS<'s> {
+  pub export: ExportAsS<'s>,
 }
 /*
 case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS {
@@ -1320,8 +1320,8 @@ case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelImportS<'a, 's> {
-  pub imporrt: ImportS<'a, 's>,
+pub struct TopLevelImportS<'s> {
+  pub imporrt: ImportS<'s>,
 }
 /*
 case class TopLevelImportS(imporrt: ImportS) extends IDenizenS {
@@ -1345,15 +1345,15 @@ object ICitizenDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub enum ICitizenDenizenS<'a, 's> {
-  TopLevelStruct(TopLevelStructS<'a, 's>),
-  TopLevelInterface(TopLevelInterfaceS<'a, 's>),
+pub enum ICitizenDenizenS<'s> {
+  TopLevelStruct(TopLevelStructS<'s>),
+  TopLevelInterface(TopLevelInterfaceS<'s>),
 }
 /*
 sealed trait ICitizenDenizenS extends IDenizenS {
 */
 
-impl<'a, 's> ICitizenDenizenS<'a, 's> {
+impl<'s> ICitizenDenizenS<'s> {
   pub fn citizen(&self) -> ! {
     panic!("ICitizenDenizenS::citizen is dead code")
   }
@@ -1367,15 +1367,15 @@ Guardian: disable-all
 */
 
 // MIGALLOW: unapply -> as_citizen_denizen
-pub fn as_citizen_denizen<'a, 's>(_x: &IDenizenS<'a, 's>) -> Option<ICitizenDenizenS<'a, 's>> {
+pub fn as_citizen_denizen<'s>(_x: &IDenizenS<'s>) -> Option<ICitizenDenizenS<'s>> {
   panic!("as_citizen_denizen is dead code")
 }
 /* Guardian: disable-all */
 
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelStructS<'a, 's> {
-  pub strukt: StructS<'a, 's>,
+pub struct TopLevelStructS<'s> {
+  pub strukt: StructS<'s>,
 }
 /*
 case class TopLevelStructS(struct: StructS) extends ICitizenDenizenS {
@@ -1389,8 +1389,8 @@ case class TopLevelStructS(struct: StructS) extends ICitizenDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub struct TopLevelInterfaceS<'a, 's> {
-  pub interface: InterfaceS<'a, 's>,
+pub struct TopLevelInterfaceS<'s> {
+  pub interface: InterfaceS<'s>,
 }
 /*
 case class TopLevelInterfaceS(interface: InterfaceS) extends ICitizenDenizenS {
@@ -1404,8 +1404,8 @@ case class TopLevelInterfaceS(interface: InterfaceS) extends ICitizenDenizenS {
 */
 
 #[derive(Debug, PartialEq)]
-pub struct FileS<'a, 's> {
-  pub denizens: Vec<IDenizenS<'a, 's>>,
+pub struct FileS<'s> {
+  pub denizens: Vec<IDenizenS<'s>>,
 }
 /*
 case class FileS(denizens: Vector[IDenizenS])

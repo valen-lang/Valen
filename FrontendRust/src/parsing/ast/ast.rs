@@ -27,19 +27,19 @@ Guardian: disable: NECX
 
 /// Name in source code
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct NameP<'a>(pub RangeL, pub StrI<'a>);
+pub struct NameP<'p>(pub RangeL, pub StrI<'p>);
 
-impl<'a> NameP<'a> {
+impl<'p> NameP<'p> {
   pub fn range(&self) -> RangeL {
     self.0
   }
 
-  pub fn str(&self) -> StrI<'a> {
+  pub fn str(&self) -> StrI<'p> {
     self.1
   }
 
   /// Returns the underlying string slice.
-  pub fn as_str(&self) -> &'a str {
+  pub fn as_str(&self) -> &'p str {
     self.1.as_str()
   }
 }
@@ -50,10 +50,10 @@ Guardian: disable: NECX
 
 /// Parsed file
 #[derive(Clone, Debug, PartialEq)]
-pub struct FileP<'a, 'p> {
-  pub file_coord: &'a FileCoordinate<'a>,
+pub struct FileP<'p> {
+  pub file_coord: &'p FileCoordinate<'p>,
   pub comments_ranges: &'p [RangeL],
-  pub denizens: &'p [IDenizenP<'a, 'p>],
+  pub denizens: &'p [IDenizenP<'p>],
 }
 /*
 case class FileP(
@@ -74,13 +74,13 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IDenizenP<'a, 'p> {
-  TopLevelFunction(FunctionP<'a, 'p>),
-  TopLevelStruct(StructP<'a, 'p>),
-  TopLevelInterface(InterfaceP<'a, 'p>),
-  TopLevelImpl(ImplP<'a, 'p>),
-  TopLevelExportAs(ExportAsP<'a, 'p>),
-  TopLevelImport(ImportP<'a, 'p>),
+pub enum IDenizenP<'p> {
+  TopLevelFunction(FunctionP<'p>),
+  TopLevelStruct(StructP<'p>),
+  TopLevelInterface(InterfaceP<'p>),
+  TopLevelImpl(ImplP<'p>),
+  TopLevelExportAs(ExportAsP<'p>),
+  TopLevelImport(ImportP<'p>),
 }
 /*
 sealed trait IDenizenP
@@ -94,14 +94,14 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ImplP<'a, 'p> {
+pub struct ImplP<'p> {
   pub range: RangeL,
-  pub generic_params: Option<GenericParametersP<'a, 'p>>,
-  pub template_rules: Option<TemplateRulesP<'a, 'p>>,
+  pub generic_params: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
   // Option because we can say `impl MyInterface;` inside a struct.
-  pub struct_: Option<ITemplexPT<'a, 'p>>,
-  pub interface: ITemplexPT<'a, 'p>,
-  pub attributes: &'p [IAttributeP<'a>],
+  pub struct_: Option<ITemplexPT<'p>>,
+  pub interface: ITemplexPT<'p>,
+  pub attributes: &'p [IAttributeP<'p>],
 }
 /*
 case class ImplP(
@@ -117,10 +117,10 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExportAsP<'a, 'p> {
+pub struct ExportAsP<'p> {
   pub range: RangeL,
-  pub struct_: ITemplexPT<'a, 'p>,
-  pub exported_name: NameP<'a>,
+  pub struct_: ITemplexPT<'p>,
+  pub exported_name: NameP<'p>,
 }
 /*
 case class ExportAsP(
@@ -131,11 +131,11 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ImportP<'a, 'p> {
+pub struct ImportP<'p> {
   pub range: RangeL,
-  pub module_name: NameP<'a>,
-  pub package_steps: &'p [NameP<'a>],
-  pub importee_name: NameP<'a>,
+  pub module_name: NameP<'p>,
+  pub package_steps: &'p [NameP<'p>],
+  pub importee_name: NameP<'p>,
 }
 /*
 case class ImportP(
@@ -163,10 +163,10 @@ case class SealedAttributeP(range: RangeL) extends IAttributeP { override def eq
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MacroCallP<'a> {
+pub struct MacroCallP<'p> {
   pub range: RangeL,
   pub inclusion: IMacroInclusionP,
-  pub name: NameP<'a>,
+  pub name: NameP<'p>,
 }
 /*
 case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -189,9 +189,9 @@ case class ExternAttributeP(range: RangeL) extends IAttributeP { override def eq
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinAttributeP<'a> {
+pub struct BuiltinAttributeP<'p> {
   pub range: RangeL,
-  pub generator_name: NameP<'a>,
+  pub generator_name: NameP<'p>,
 }
 /*
 case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -231,13 +231,13 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IAttributeP<'a> {
+pub enum IAttributeP<'p> {
   WeakableAttribute(WeakableAttributeP),
   SealedAttribute(SealedAttributeP),
-  MacroCall(MacroCallP<'a>),
+  MacroCall(MacroCallP<'p>),
   AbstractAttribute(AbstractAttributeP),
   ExternAttribute(ExternAttributeP),
-  BuiltinAttribute(BuiltinAttributeP<'a>),
+  BuiltinAttribute(BuiltinAttributeP<'p>),
   ExportAttribute(ExportAttributeP),
   PureAttribute(PureAttributeP),
   AdditiveAttribute(AdditiveAttributeP),
@@ -306,16 +306,16 @@ impl IRuneAttributeP {
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructP<'a, 'p> {
+pub struct StructP<'p> {
   pub range: RangeL,
-  pub name: NameP<'a>,
-  pub attributes: &'p [IAttributeP<'a>],
-  pub mutability: Option<ITemplexPT<'a, 'p>>,
-  pub identifying_runes: Option<GenericParametersP<'a, 'p>>,
-  pub template_rules: Option<TemplateRulesP<'a, 'p>>,
-  pub maybe_default_region_rune: Option<RegionRunePT<'a>>,
+  pub name: NameP<'p>,
+  pub attributes: &'p [IAttributeP<'p>],
+  pub mutability: Option<ITemplexPT<'p>>,
+  pub identifying_runes: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
   pub body_range: RangeL,
-  pub members: StructMembersP<'a, 'p>,
+  pub members: StructMembersP<'p>,
 }
 /*
 case class StructP(
@@ -332,9 +332,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructMembersP<'a, 'p> {
+pub struct StructMembersP<'p> {
   pub range: RangeL,
-  pub contents: &'p [IStructContent<'a, 'p>],
+  pub contents: &'p [IStructContent<'p>],
 }
 /*
 case class StructMembersP(
@@ -344,23 +344,23 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IStructContent<'a, 'p> {
-  StructMethod(FunctionP<'a, 'p>),
-  NormalStructMember(NormalStructMemberP<'a, 'p>),
-  VariadicStructMember(VariadicStructMemberP<'a, 'p>),
+pub enum IStructContent<'p> {
+  StructMethod(FunctionP<'p>),
+  NormalStructMember(NormalStructMemberP<'p>),
+  VariadicStructMember(VariadicStructMemberP<'p>),
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct NormalStructMemberP<'a, 'p> {
+pub struct NormalStructMemberP<'p> {
   pub range: RangeL,
-  pub name: NameP<'a>,
+  pub name: NameP<'p>,
   pub variability: VariabilityP,
-  pub tyype: ITemplexPT<'a, 'p>,
+  pub tyype: ITemplexPT<'p>,
 }
 #[derive(Clone, Debug, PartialEq)]
-pub struct VariadicStructMemberP<'a, 'p> {
+pub struct VariadicStructMemberP<'p> {
   pub range: RangeL,
   pub variability: VariabilityP,
-  pub tyype: ITemplexPT<'a, 'p>,
+  pub tyype: ITemplexPT<'p>,
 }
 /*
 sealed trait IStructContent
@@ -380,16 +380,16 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct InterfaceP<'a, 'p> {
+pub struct InterfaceP<'p> {
   pub range: RangeL,
-  pub name: NameP<'a>,
-  pub attributes: &'p [IAttributeP<'a>],
-  pub mutability: Option<ITemplexPT<'a, 'p>>,
-  pub maybe_identifying_runes: Option<GenericParametersP<'a, 'p>>,
-  pub template_rules: Option<TemplateRulesP<'a, 'p>>,
-  pub maybe_default_region_rune: Option<RegionRunePT<'a>>,
+  pub name: NameP<'p>,
+  pub attributes: &'p [IAttributeP<'p>],
+  pub mutability: Option<ITemplexPT<'p>>,
+  pub maybe_identifying_runes: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
   pub body_range: RangeL,
-  pub members: &'p [FunctionP<'a, 'p>],
+  pub members: &'p [FunctionP<'p>],
 }
 /*
 case class InterfaceP(
@@ -406,10 +406,10 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionP<'a, 'p> {
+pub struct FunctionP<'p> {
   pub range: RangeL,
-  pub header: FunctionHeaderP<'a, 'p>,
-  pub body: Option<&'p BlockPE<'a, 'p>>,
+  pub header: FunctionHeaderP<'p>,
+  pub body: Option<&'p BlockPE<'p>>,
 }
 /*
 case class FunctionP(
@@ -420,15 +420,15 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionHeaderP<'a, 'p> {
+pub struct FunctionHeaderP<'p> {
   pub range: RangeL,
-  pub name: Option<NameP<'a>>,
-  pub attributes: &'p [IAttributeP<'a>],
+  pub name: Option<NameP<'p>>,
+  pub attributes: &'p [IAttributeP<'p>],
   // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
-  pub generic_parameters: Option<GenericParametersP<'a, 'p>>,
-  pub template_rules: Option<TemplateRulesP<'a, 'p>>,
-  pub params: Option<ParamsP<'a, 'p>>,
-  pub ret: FunctionReturnP<'a, 'p>,
+  pub generic_parameters: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub params: Option<ParamsP<'p>>,
+  pub ret: FunctionReturnP<'p>,
 }
 /*
 case class FunctionHeaderP(
@@ -448,9 +448,9 @@ Guardian: disable: NECX
 }
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionReturnP<'a, 'p> {
+pub struct FunctionReturnP<'p> {
   pub range: RangeL,
-  pub ret_type: Option<ITemplexPT<'a, 'p>>,
+  pub ret_type: Option<ITemplexPT<'p>>,
 }
 /*
 case class FunctionReturnP(
@@ -461,13 +461,13 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct GenericParameterP<'a, 'p> {
+pub struct GenericParameterP<'p> {
   pub range: RangeL,
-  pub name: NameP<'a>,
+  pub name: NameP<'p>,
   pub maybe_type: Option<GenericParameterTypeP>,
-  pub coord_region: Option<RegionRunePT<'a>>,
+  pub coord_region: Option<RegionRunePT<'p>>,
   pub attributes: &'p [IRuneAttributeP],
-  pub maybe_default: Option<ITemplexPT<'a, 'p>>,
+  pub maybe_default: Option<ITemplexPT<'p>>,
 }
 /*
 case class GenericParameterP(
@@ -495,9 +495,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct GenericParametersP<'a, 'p> {
+pub struct GenericParametersP<'p> {
   pub range: RangeL,
-  pub params: &'p [GenericParameterP<'a, 'p>],
+  pub params: &'p [GenericParameterP<'p>],
 }
 /*
 case class GenericParametersP(range: RangeL, params: Vector[GenericParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -505,9 +505,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TemplateRulesP<'a, 'p> {
+pub struct TemplateRulesP<'p> {
   pub range: RangeL,
-  pub rules: &'p [IRulexPR<'a, 'p>],
+  pub rules: &'p [IRulexPR<'p>],
 }
 /*
 case class TemplateRulesP(range: RangeL, rules: Vector[IRulexPR]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -515,9 +515,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ParamsP<'a, 'p> {
+pub struct ParamsP<'p> {
   pub range: RangeL,
-  pub params: &'p [ParameterP<'a, 'p>],
+  pub params: &'p [ParameterP<'p>],
 }
 /*
 case class ParamsP(range: RangeL, params: Vector[ParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }

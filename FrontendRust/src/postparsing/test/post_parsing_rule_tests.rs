@@ -8,7 +8,9 @@ use crate::postparsing::itemplatatype::{
 };
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
 use crate::postparsing::post_parser::PostParser;
-use crate::{Interner, Keywords};
+use crate::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
 /*
 package dev.vale.postparsing
 
@@ -23,15 +25,13 @@ import scala.collection.immutable.List
 class PostParsingRuleTests extends FunSuite with Matchers {
 */
 
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+fn compile<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
   code: &str,
-) -> ProgramS<'a, 'p>
-where
-  'a: 'ctx,
-  'a: 'p,
+) -> ProgramS<'s>
+where 'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -41,10 +41,19 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, arena);
+  let keywords_p = Keywords::new_for_parse(parse_arena);
+  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
+  // Re-intern FileCoordinate from 'p into 's
+  let file_coord_s = scout_arena.intern_file_coordinate(
+    scout_arena.intern_package_coordinate(
+      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
+      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+    ),
+    only_file.file_coord.filepath.as_str(),
+  );
+  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
   post_parser
-    .scout_program(only_file.file_coord, &only_file)
+    .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
 /*
@@ -64,17 +73,13 @@ where
     }
   }
 */
-fn compile_for_error<'a, 'ctx, 'p, 's>(
-  _interner: &'ctx crate::Interner<'a>,
-  _keywords: &'ctx crate::Keywords<'a>,
-  _parse_arena: &'p bumpalo::Bump,
-  _scout_arena: &'s bumpalo::Bump,
+fn compile_for_error<'s, 'ctx, 'p>(
+  _scout_arena: &'ctx ScoutArena<'s>,
+  _keywords: &'ctx crate::Keywords<'s>,
+  _parse_arena: &'ctx ParseArena<'p>,
   _code: &str,
-) -> crate::postparsing::post_parser::ICompileErrorS<'a, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+) -> crate::postparsing::post_parser::ICompileErrorS<'s>
+where 'p: 's,
 {
   panic!("Unimplemented: compile_for_error");
 }
@@ -88,12 +93,13 @@ where
 */
 #[test]
 fn predict_simple_templex() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main(a int) {}",
@@ -121,23 +127,24 @@ fn predict_simple_templex() {
 */
 #[test]
 fn can_know_rune_type_from_simple_equals() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<T, Y>(a T) where Y = T {}",
   );
   let main = program.lookup_function("main");
 
-  let t_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("T"),
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
   }));
-  let y_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("Y"),
+  let y_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("Y"),
   }));
 
   let t_predicted = main.rune_to_predicted_type.get(&t_rune).unwrap();
@@ -171,20 +178,21 @@ fn can_know_rune_type_from_simple_equals() {
 */
 #[test]
 fn predict_knows_type_from_or_rule() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<M Ownership>(a int) where M = any(own, borrow) {}",
   );
   let main = program.lookup_function("main");
 
-  let m_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("M"),
+  let m_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("M"),
   }));
   let m_predicted = main.rune_to_predicted_type.get(&m_rune).unwrap();
   assert_eq!(
@@ -209,10 +217,11 @@ fn predict_knows_type_from_or_rule() {
 */
 #[test]
 fn predict_coord_component_types() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   // vregionmut() // Put back in with regions
   // val program =
   //   compile(
@@ -222,21 +231,21 @@ fn predict_coord_component_types() {
   //       |""".stripMargin, interner)
   // Take out with regions
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<T>(a T) where T = Ref[O, K], O Ownership, K Kind {}",
   );
   let main = program.lookup_function("main");
 
-  let t_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("T"),
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
   }));
-  let o_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("O"),
+  let o_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("O"),
   }));
-  let k_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("K"),
+  let k_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("K"),
   }));
   assert_eq!(
     main.rune_to_predicted_type.get(&t_rune),
@@ -281,26 +290,27 @@ fn predict_coord_component_types() {
 */
 #[test]
 fn predict_call_types() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<A, B>(p1 A, p2 B) where A = T<B>, T = Option, A = int {}",
   );
   let main = program.lookup_function("main");
 
-  let a_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("A"),
+  let a_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("A"),
   }));
-  let b_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("B"),
+  let b_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("B"),
   }));
-  let t_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("T"),
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
   }));
   assert_eq!(
     main.rune_to_predicted_type.get(&a_rune),
@@ -333,32 +343,33 @@ fn predict_call_types() {
 #[test]
 fn predict_array_sequence_types() {
   // Not sure if this test is useful anymore, since we say M, V, N's types up-front now
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<M Mutability, V Variability, N Int, E>(t T) where T Ref = [#N]<M, V>E {}",
   );
   let main = program.lookup_function("main");
 
-  let m_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("M"),
+  let m_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("M"),
   }));
-  let v_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("V"),
+  let v_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("V"),
   }));
-  let n_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("N"),
+  let n_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("N"),
   }));
-  let e_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("E"),
+  let e_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("E"),
   }));
-  let t_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("T"),
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
   }));
   assert_eq!(
     main.rune_to_predicted_type.get(&m_rune),
@@ -403,23 +414,24 @@ fn predict_array_sequence_types() {
 #[test]
 fn predict_for_is_interface() {
   // Not sure if this test is useful anymore, since we say Kind up-front now
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
     "func main<A Kind, B Kind>() where A = isInterface(B) {}",
   );
   let main = program.lookup_function("main");
 
-  let a_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("A"),
+  let a_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("A"),
   }));
-  let b_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS {
-    name: interner.intern("B"),
+  let b_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("B"),
   }));
   assert_eq!(
     main.rune_to_predicted_type.get(&a_rune),

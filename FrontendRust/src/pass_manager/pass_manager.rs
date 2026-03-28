@@ -2,7 +2,9 @@
 // Main entry point for the Vale compiler
 
 use crate::compile_options::GlobalOptions;
-use crate::interner::{Interner, StrI};
+use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::pass_manager::FullCompilation;
 use crate::pass_manager::FullCompilationOptions;
@@ -113,7 +115,7 @@ impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a
 
 // From PassManager.scala lines 153-201: resolvePackageContents
 fn resolve_package_contents<'a>(
-  interner: &Interner<'a>,
+  parse_arena: &ParseArena<'a>,
   inputs: &[IFrontendInput<'a>],
   package_coord: &PackageCoordinate<'a>,
 ) -> Option<HashMap<String, String>>
@@ -126,7 +128,7 @@ fn resolve_package_contents<'a>(
   let mut source_inputs: Vec<(String, String)> = Vec::new();
 
   for (index, input) in inputs.iter().enumerate() {
-    if input.package_coord(interner).module != *module {
+    if input.package_coord(parse_arena).module != *module {
       continue;
     }
 
@@ -268,11 +270,11 @@ pub enum IFrontendInput<'a> {
   },
 }
 impl<'a> IFrontendInput<'a> {
-  pub fn package_coord<'ctx>(&self, interner: &'ctx Interner<'a>) -> &'a PackageCoordinate<'a> {
+  pub fn package_coord<'ctx>(&self, parse_arena: &'ctx ParseArena<'a>) -> &'a PackageCoordinate<'a> {
     match self {
       IFrontendInput::SourceInput { package_coord, .. } => *package_coord,
       IFrontendInput::ModulePathInput { module, .. } => {
-        interner.intern_package_coordinate(*module, &[])
+        parse_arena.intern_package_coordinate(*module, &[])
       }
       IFrontendInput::DirectFilePathInput { package_coord, .. } => *package_coord,
     }
@@ -303,8 +305,8 @@ Guardian: disable: NECX
 */
 
 // From PassManager.scala lines 356-366: buildAndOutput
-fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, opts: &Options<'a>) {
-  match build(interner, keywords, opts) {
+fn build_and_output<'p>(parse_arena: &'p ParseArena<'p>, keywords: &'p Keywords<'p>, opts: &Options<'p>) {
+  match build(parse_arena, keywords, opts) {
     Ok(_) => {
       // Success
     }
@@ -330,13 +332,13 @@ fn build_and_output<'a>(interner: &'a Interner<'a>, keywords: &'a Keywords<'a>, 
 */
 
 // From PassManager.scala lines 203-342: build function
-pub fn build<'a, 'ctx>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  opts: &Options<'a>,
+pub fn build<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
+  opts: &Options<'p>,
 ) -> Result<(), String>
 where
-  'a: 'ctx,
+  'p: 'ctx,
 {
   // From PassManager.scala lines 205-207: Create output directories
   let output_dir_path = opts.output_dir_path.as_ref().unwrap();
@@ -357,9 +359,9 @@ where
   let all_inputs = &opts.inputs;
 
   // From PassManager.scala line 229: Get distinct package coordinates
-  let package_coords: Vec<&PackageCoordinate<'a>> = all_inputs
+  let package_coords: Vec<&PackageCoordinate<'p>> = all_inputs
     .iter()
-    .map(|input| input.package_coord(interner))
+    .map(|input| input.package_coord(parse_arena))
     .collect::<std::collections::HashSet<_>>()
     .into_iter()
     .collect();
@@ -371,13 +373,13 @@ where
   let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
 
   // From PassManager.scala line 235: Add BUILTIN package coordinate
-  let mut packages_to_build = vec![PackageCoordinate::builtin(&interner, &keywords)];
+  let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
   packages_to_build.extend(package_coords);
 
   // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
   let all_inputs_clone = all_inputs.clone();
-  let resolver = builtins_code_map.or(move |package_coord: &'a PackageCoordinate<'a>| {
-    resolve_package_contents(interner, &all_inputs_clone, &*package_coord)
+  let resolver = builtins_code_map.or(move |package_coord: &'p PackageCoordinate<'p>| {
+    resolve_package_contents(parse_arena, &all_inputs_clone, &*package_coord)
   });
 
   // From PassManager.scala lines 238-253: Create FullCompilationOptions
@@ -397,16 +399,21 @@ where
   };
 
   // From PassManager.scala lines 231-233: Create FullCompilation
-  let parser_arena = bumpalo::Bump::new();
-  let scout_arena = bumpalo::Bump::new();
+  // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
+  // and the scout pass gets its own arena.
+  let scout_bump = bumpalo::Bump::new();
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let scout_keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(parse_arena);
   let mut compilation = FullCompilation::new(
-    interner,
-    keywords,
+    &scout_arena,
+    &scout_keywords,
+    &parser_keywords,
+    parse_arena,
     packages_to_build,
     &resolver,
     options,
-    &parser_arena,
-    &scout_arena,
+    parse_arena.bump(),
   );
 
   // From PassManager.scala line 255
@@ -648,12 +655,12 @@ pub struct Options<'a> {
 */
 
 // From PassManager.scala lines 71-150: parseOpts
-pub fn parse_opts<'a>(interner: &'a Interner<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
-  parse_opts_recursive(interner, opts, &list, 0)
+pub fn parse_opts<'a>(parse_arena: &'a ParseArena<'a>, opts: Options<'a>, list: Vec<String>) -> Options<'a> {
+  parse_opts_recursive(parse_arena, opts, &list, 0)
 }
 
 fn parse_opts_recursive<'a>(
-  interner: &'a Interner<'a>,
+  parse_arena: &'a ParseArena<'a>,
   mut opts: Options<'a>,
   list: &[String],
   index: usize,
@@ -678,7 +685,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.output_dir_path = Some(list[index + 1].clone());
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--input_vpst" => {
       // From PassManager.scala lines 78-81
@@ -691,7 +698,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.input_vpst_dir = Some(list[index + 1].clone());
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--output_vpst" => {
       // From PassManager.scala lines 82-84
@@ -700,7 +707,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.output_vpst = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--output_vast" => {
       // From PassManager.scala lines 85-87
@@ -709,7 +716,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.output_vast = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--sanity_check" => {
       // From PassManager.scala lines 88-90
@@ -718,7 +725,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.sanity_check = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--include_builtins" => {
       // From PassManager.scala lines 91-93
@@ -727,7 +734,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.include_builtins = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--use_overload_index" => {
       // From PassManager.scala lines 94-96
@@ -736,7 +743,7 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.use_overload_index = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--simple_solver" => {
       // From PassManager.scala lines 97-99
@@ -745,12 +752,12 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.use_optimized_solver = !list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "--benchmark" => {
       // From PassManager.scala lines 100-102
       opts.benchmark = true;
-      parse_opts_recursive(interner, opts, list, index + 1)
+      parse_opts_recursive(parse_arena, opts, list, index + 1)
     }
     "--output_highlights" => {
       // From PassManager.scala lines 103-105
@@ -759,17 +766,17 @@ fn parse_opts_recursive<'a>(
         std::process::exit(22);
       }
       opts.output_highlights = list[index + 1].parse().unwrap_or(false);
-      parse_opts_recursive(interner, opts, list, index + 2)
+      parse_opts_recursive(parse_arena, opts, list, index + 2)
     }
     "-v" | "--verbose" => {
       // From PassManager.scala lines 106-108
       opts.verbose_errors = true;
-      parse_opts_recursive(interner, opts, list, index + 1)
+      parse_opts_recursive(parse_arena, opts, list, index + 1)
     }
     "--debug_output" => {
       // From PassManager.scala lines 109-111
       opts.debug_output = true;
-      parse_opts_recursive(interner, opts, list, index + 1)
+      parse_opts_recursive(parse_arena, opts, list, index + 1)
     }
     _ if arg.starts_with("-") => {
       // From PassManager.scala line 112
@@ -781,7 +788,7 @@ fn parse_opts_recursive<'a>(
       if opts.mode.is_none() {
         // From PassManager.scala lines 114-115
         opts.mode = Some(arg.clone());
-        parse_opts_recursive(interner, opts, list, index + 1)
+        parse_opts_recursive(parse_arena, opts, list, index + 1)
       } else {
         // From PassManager.scala lines 116-148
         if arg.contains("=") {
@@ -806,14 +813,14 @@ fn parse_opts_recursive<'a>(
           // From PassManager.scala lines 123-134
           let package_coordinate = if package_coord_str.contains(".") {
             let package_coord_parts: Vec<&str> = package_coord_str.split('.').collect();
-            let module = interner.intern(package_coord_parts[0]);
+            let module = parse_arena.intern_str(package_coord_parts[0]);
             let packages: Vec<StrI<'a>> = package_coord_parts[1..]
               .iter()
-              .map(|s| interner.intern(s))
+              .map(|s| parse_arena.intern_str(s))
               .collect();
-            interner.intern_package_coordinate(module, &packages)
+            parse_arena.intern_package_coordinate(module, &packages)
           } else {
-            interner.intern_package_coordinate(interner.intern(package_coord_str), &[])
+            parse_arena.intern_package_coordinate(parse_arena.intern_str(package_coord_str), &[])
           };
 
           // From PassManager.scala lines 135-143
@@ -834,7 +841,7 @@ fn parse_opts_recursive<'a>(
           };
 
           opts.inputs.push(input);
-          parse_opts_recursive(interner, opts, list, index + 1)
+          parse_opts_recursive(parse_arena, opts, list, index + 1)
         } else {
           // From PassManager.scala lines 145-147
           eprintln!("Unrecognized input: {}", arg);
@@ -931,13 +938,13 @@ fn parse_opts_recursive<'a>(
 // From PassManager.scala lines 390-481: main
 pub fn main(args: Vec<String>) {
   // From PassManager.scala lines 391-393
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
 
   // From PassManager.scala lines 395-413
   let opts = parse_opts(
-    &interner,
+    &parse_arena,
     Options {
       inputs: vec![],
       output_dir_path: None,
@@ -978,7 +985,7 @@ pub fn main(args: Vec<String>) {
         eprintln!("Must specify --output-dir!");
         std::process::exit(22);
       }
-  build_and_output(&interner, &keywords, &opts);
+  build_and_output(&parse_arena, &keywords, &opts);
     }
     "run" => {
       // From PassManager.scala lines 471-473

@@ -1,30 +1,30 @@
 # Postparser Interning: Dual-Enum Pattern For Lookups (IDEPFL)
 
-Scala's `Interner` used GC-backed `HashMap[T, T]` to canonicalize case classes. Rust replaces this with arena-backed interning using two parallel enums per type hierarchy: a **reference enum** (canonical, holds `&'a` pointers) and a **value enum** (owned, used as HashMap lookup keys).
+Scala's `Interner` used GC-backed `HashMap[T, T]` to canonicalize case classes. Rust replaces this with arena-backed interning on `ScoutArena<'s>` using two parallel enums per type hierarchy: a **reference enum** (canonical, holds `&'s` pointers) and a **value enum** (owned, used as HashMap lookup keys).
 
 ---
 
 ## The Five Dual-Enum Pairs
 
-| Reference Enum (canonical) | Value Enum (lookup key) | Interner Method |
+| Reference Enum (canonical) | Value Enum (lookup key) | ScoutArena Method |
 |---|---|---|
-| `IRuneS<'a>` | `IRuneValS<'a>` | `intern_rune()` |
-| `IImpreciseNameS<'a>` | `IImpreciseNameValS<'a>` | `intern_imprecise_name()` |
-| `INameS<'a>` | `INameValS<'a>` | `intern_name()` |
-| `IFunctionDeclarationNameS<'a>` | `IFunctionDeclarationNameValS<'a>` | via `INameS` |
-| `IVarNameS<'a>` | `IVarNameValS<'a>` | via `INameS` |
+| `IRuneS<'s>` | `IRuneValS<'s>` | `intern_rune()` |
+| `IImpreciseNameS<'s>` | `IImpreciseNameValS<'s>` | `intern_imprecise_name()` |
+| `INameS<'s>` | `INameValS<'s>` | `intern_name()` |
+| `IFunctionDeclarationNameS<'s>` | `IFunctionDeclarationNameValS<'s>` | via `INameS` |
+| `IVarNameS<'s>` | `IVarNameValS<'s>` | via `INameS` |
 
 ---
 
 ## How They Differ
 
-The **reference enum** holds `&'a` references to arena-allocated payloads:
+The **reference enum** holds `&'s` references to arena-allocated payloads:
 
 ```rust
-pub enum IRuneS<'a> {
-  CodeRune(&'a CodeRuneS<'a>),
-  ImplicitRune(&'a ImplicitRuneS),
-  ImplicitRegionRune(&'a ImplicitRegionRuneS<'a>),
+pub enum IRuneS<'s> {
+  CodeRune(&'s CodeRuneS<'s>),
+  ImplicitRune(&'s ImplicitRuneS),
+  ImplicitRegionRune(&'s ImplicitRegionRuneS<'s>),
   // ...
 }
 ```
@@ -32,10 +32,10 @@ pub enum IRuneS<'a> {
 The **value enum** holds the same payload structs *by value* (owned):
 
 ```rust
-pub enum IRuneValS<'a> {
-  CodeRune(CodeRuneS<'a>),
+pub enum IRuneValS<'s> {
+  CodeRune(CodeRuneS<'s>),
   ImplicitRune(ImplicitRuneS),
-  ImplicitRegionRune(ImplicitRegionRuneValS<'a>),
+  ImplicitRegionRune(ImplicitRegionRuneValS<'s>),
   // ...
 }
 ```
@@ -46,7 +46,7 @@ pub enum IRuneValS<'a> {
 
 You can't skip the Val enum because:
 
-1. The reference enum contains `&'a` pointers — you can't construct one without first allocating into the arena.
+1. The reference enum contains `&'s` pointers — you can't construct one without first allocating into the arena.
 2. You need an owned, hashable key to check whether a value was already interned.
 3. If you allocated first and then checked, you'd waste arena space on duplicates.
 
@@ -55,15 +55,15 @@ You can't skip the Val enum because:
 ## Interning Flow
 
 1. **Build a Val** — construct an owned `IRuneValS` with all data inline.
-2. **Look it up** — the interner checks `HashMap<IRuneValS<'a>, IRuneS<'a>>`. If found, return the existing canonical `IRuneS`.
-3. **Allocate if new** — allocate the payload into the `'a` arena via `self.arena.alloc(payload)`, wrap the `&'a` ref in the corresponding `IRuneS` variant, store the mapping, return it.
+2. **Look it up** — the scout arena checks `HashMap<IRuneValS<'s>, IRuneS<'s>>`. If found, return the existing canonical `IRuneS`.
+3. **Allocate if new** — allocate the payload into the `'s` arena via `self.bump.alloc(payload)`, wrap the `&'s` ref in the corresponding `IRuneS` variant, store the mapping, return it.
 
 ```rust
 // Caller builds a Val, interner returns canonical ref:
-let rune = self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
     lid: lidb.child().consume(),
 }));
-// rune is IRuneS::ImplicitRune(&'a ImplicitRuneS)
+// rune is IRuneS::ImplicitRune(&'s ImplicitRuneS)
 ```
 
 ---
@@ -72,36 +72,36 @@ let rune = self.interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
 
 ### Simple: same struct in both enums
 
-When a payload struct contains only simple/Copy fields (like `StrI<'a>`), the Val enum holds the same struct type by value. No separate Val struct is needed:
+When a payload struct contains only simple/Copy fields (like `StrI<'s>`), the Val enum holds the same struct type by value. No separate Val struct is needed:
 
-- `IRuneS::CodeRune(&'a CodeRuneS<'a>)` — reference
-- `IRuneValS::CodeRune(CodeRuneS<'a>)` — owned
+- `IRuneS::CodeRune(&'s CodeRuneS<'s>)` — reference
+- `IRuneValS::CodeRune(CodeRuneS<'s>)` — owned
 
 ### Shallow: separate Val struct for nested interned types
 
-When a payload struct contains references to *other* interned types, a separate Val struct exists. The Val struct holds the child as an already-canonical owned `IRuneS<'a>` (it's "shallow" — children must be interned first):
+When a payload struct contains references to *other* interned types, a separate Val struct exists. The Val struct holds the child as an already-canonical owned `IRuneS<'s>` (it's "shallow" — children must be interned first):
 
 ```rust
 // Canonical payload (lives in arena):
-pub struct ImplicitRegionRuneS<'a> {
-  pub original_rune: IRuneS<'a>,
+pub struct ImplicitRegionRuneS<'s> {
+  pub original_rune: IRuneS<'s>,
 }
 
 // Lookup key (owned, for HashMap):
-pub struct ImplicitRegionRuneValS<'a> {
-  pub original_rune: IRuneS<'a>,
+pub struct ImplicitRegionRuneValS<'s> {
+  pub original_rune: IRuneS<'s>,
 }
 ```
 
-The fields look identical in this case, but they're separate types so the type system enforces going through the interner. You can't accidentally use a Val where a canonical ref is expected.
+The fields look identical in this case, but they're separate types so the type system enforces going through the scout arena. You can't accidentally use a Val where a canonical ref is expected.
 
-Note: `IRuneS<'a>` is already just a tagged pointer (discriminant + `&'a` to arena payload), so holding it owned vs `&'a IRuneS<'a>` is storing the tagged pointer directly vs a pointer-to-a-pointer. Owned is simpler and equally cheap. Identity is checked via `IRuneS::ptr_eq`/`canonical_ptr` which look at the inner payload pointer.
+Note: `IRuneS<'s>` is already just a tagged pointer (discriminant + `&'s` to arena payload), so holding it owned vs `&'s IRuneS<'s>` is storing the tagged pointer directly vs a pointer-to-a-pointer. Owned is simpler and equally cheap. Identity is checked via `IRuneS::ptr_eq`/`canonical_ptr` which look at the inner payload pointer.
 
 Other shallow Val structs follow the same pattern:
-- `ImplicitCoercionOwnershipRuneValS` — holds `IRuneS<'a>` for its child rune
-- `AnonymousSubstructImplDeclarationNameValS` — holds `&'a TopLevelInterfaceDeclarationNameS<'a>`
-- `ImplImpreciseNameValS` — holds two `IImpreciseNameS<'a>` children
-- `ForwarderFunctionDeclarationNameValS` — holds `IFunctionDeclarationNameS<'a>`
+- `ImplicitCoercionOwnershipRuneValS` — holds `IRuneS<'s>` for its child rune
+- `AnonymousSubstructImplDeclarationNameValS` — holds `&'s TopLevelInterfaceDeclarationNameS<'s>`
+- `ImplImpreciseNameValS` — holds two `IImpreciseNameS<'s>` children
+- `ForwarderFunctionDeclarationNameValS` — holds `IFunctionDeclarationNameS<'s>`
 
 **Rule**: intern children first, then build the parent Val with canonical child runes.
 
@@ -109,12 +109,12 @@ Other shallow Val structs follow the same pattern:
 
 ## Identity via `ptr_eq`
 
-The canonical enums provide `ptr_eq()` and `canonical_ptr()` methods. Since the interner guarantees structurally equal values get the same arena allocation, pointer equality is identity equality:
+The canonical enums provide `ptr_eq()` and `canonical_ptr()` methods. Since the scout arena guarantees structurally equal values get the same arena allocation, pointer equality is identity equality:
 
 ```rust
-impl<'a> IRuneS<'a> {
-  pub fn canonical_ptr(&self) -> *const () { /* extracts inner &'a pointer */ }
-  pub fn ptr_eq(&self, other: &IRuneS<'a>) -> bool {
+impl<'s> IRuneS<'s> {
+  pub fn canonical_ptr(&self) -> *const () { /* extracts inner &'s pointer */ }
+  pub fn ptr_eq(&self, other: &IRuneS<'s>) -> bool {
     std::ptr::eq(self.canonical_ptr(), other.canonical_ptr())
   }
 }

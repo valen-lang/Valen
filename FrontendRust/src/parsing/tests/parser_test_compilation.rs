@@ -1,5 +1,5 @@
 use crate::compile_options::GlobalOptions;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::parser::ParserCompilation;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate};
@@ -18,16 +18,15 @@ object ParserTestCompilation {
 
 /// AFTERM: Check this is faithful to old Scala
 /// Mirrors ParserTestCompilation.test in Scala.
-pub fn test<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
-  test_package_coord: &'a PackageCoordinate<'a>,
+pub fn test<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
+  resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  test_package_coord: &'p PackageCoordinate<'p>,
   arena: &'p bumpalo::Bump,
-) -> ParserCompilation<'a, 'ctx, 'p>
+) -> ParserCompilation<'p, 'ctx>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
   ParserCompilation::new(
     GlobalOptions {
@@ -37,7 +36,7 @@ where
       verbose_errors: true,
       debug_output: true,
     },
-    interner,
+    parse_arena,
     keywords,
     vec![test_package_coord],
     resolver,

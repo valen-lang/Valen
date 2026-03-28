@@ -1,10 +1,8 @@
 // From Frontend/Builtins/src/dev/vale/Builtins.scala
 
-use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
-use std::sync::{Arc};
 use std::fs;
 use std::path::Path;
 
@@ -57,32 +55,20 @@ pub fn load(builtins_dir: &str, resource_filename: &str) -> Result<String, Strin
 // to fail just because the builtin-yet-unused `func as<T, X>(x X) Opt<T> { ... }` doesn't want to
 // work right now.
 pub fn get_modulized_code_map<'a>(
-    interner: &Interner<'a>,
+    parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
     let mut result = FileCoordinateMap::new();
-    
+
     for (module_name, filename) in MODULE_TO_FILENAME {
-        let module_name_stri = {
-            // Interner now has interior mutability
-            interner.intern(module_name)
-        };
-        
-        let package_coord = {
-            // Interner now has interior mutability
-            interner.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri])
-        };
-        
-        let file_coord = {
-            // Interner now has interior mutability
-            interner.intern_file_coordinate(package_coord, filename)
-        };
-        
+        let module_name_stri = parse_arena.intern_str(module_name);
+        let package_coord = parse_arena.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri]);
+        let file_coord = parse_arena.intern_file_coordinate(package_coord, filename);
         let code = load(builtins_dir, filename)?;
         result.put(file_coord, code);
     }
-    
+
     Ok(result)
 }
 
@@ -90,46 +76,25 @@ pub fn get_modulized_code_map<'a>(
 // Add an empty v.builtins.whatever so that the aforementioned imports still work.
 // But load the actual files all inside the root package.
 pub fn get_code_map<'a>(
-    interner: &Interner<'a>,
+    parse_arena: &ParseArena<'a>,
     keywords: &Keywords<'a>,
     builtins_dir: &str,
 ) -> Result<FileCoordinateMap<'a, String>, String> {
-    let builtin_namespace_coord = {
-        // Interner now has interior mutability
-        interner.intern_package_coordinate(keywords.empty_string, &[])
-    };
-    
+    let builtin_namespace_coord = parse_arena.intern_package_coordinate(keywords.empty_string, &[]);
     let mut result = FileCoordinateMap::new();
-    
+
     for (module_name, filename) in MODULE_TO_FILENAME {
-        let module_name_stri = {
-            // Interner now has interior mutability
-            interner.intern(module_name)
-        };
-        
+        let module_name_stri = parse_arena.intern_str(module_name);
         // Put empty string for v.builtins.moduleName
-        let modulized_package_coord = {
-            // Interner now has interior mutability
-            interner.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri])
-        };
-        
-        let modulized_file_coord = {
-            // Interner now has interior mutability
-            interner.intern_file_coordinate(modulized_package_coord, filename)
-        };
-        
+        let modulized_package_coord = parse_arena.intern_package_coordinate(keywords.v, &[keywords.builtins, module_name_stri]);
+        let modulized_file_coord = parse_arena.intern_file_coordinate(modulized_package_coord, filename);
         result.put(modulized_file_coord, String::new());
-        
         // Put actual code for root package
-        let root_file_coord = {
-            // Interner now has interior mutability
-            interner.intern_file_coordinate(builtin_namespace_coord, filename)
-        };
-        
+        let root_file_coord = parse_arena.intern_file_coordinate(builtin_namespace_coord, filename);
         let code = load(builtins_dir, filename)?;
         result.put(root_file_coord, code);
     }
-    
+
     Ok(result)
 }
 /*

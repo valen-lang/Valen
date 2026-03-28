@@ -1,4 +1,4 @@
-use crate::interner::Interner;
+use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT, OwnershipPT};
 use crate::postparsing::ast::LocationInDenizenBuilder;
@@ -38,24 +38,22 @@ class RuleScout(interner: Interner, keywords: Keywords, templexScout: TemplexSco
 // Returns:
 // - new rules produced on the side while translating the given rules
 // - the translated versions of the given rules
-pub fn translate_rulexes<'a, 's>(
-  scout_arena: &'s bumpalo::Bump,
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+pub fn translate_rulexes<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  builder: &mut Vec<IRulexSR<'a, 's>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
-  context_region: IRuneS<'a>,
-  rules_p: &[IRulexPR<'a, '_>],
-) -> Vec<RuneUsage<'a>> {
+  builder: &mut Vec<IRulexSR<'s>>,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
+  context_region: IRuneS<'s>,
+  rules_p: &[IRulexPR<'p>],
+) -> Vec<RuneUsage<'s>> {
   rules_p
     .iter()
     .map(|rule_p| {
       let mut child_lidb = lidb.child();
       translate_rulex(
         scout_arena,
-        interner,
         keywords,
         env.clone(),
         &mut child_lidb,
@@ -82,17 +80,16 @@ pub fn translate_rulexes<'a, 's>(
     rulesP.map(translateRulex(env, lidb.child(), builder, runeToExplicitType, contextRegion, _))
   }
 */
-fn translate_rulex<'a, 's>(
-  scout_arena: &'s bumpalo::Bump,
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+fn translate_rulex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  builder: &mut Vec<IRulexSR<'a, 's>>,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'a>, ITemplataType)>,
-  context_region: IRuneS<'a>,
-  rulex: &IRulexPR<'a, '_>,
-) -> RuneUsage<'a> {
+  builder: &mut Vec<IRulexSR<'s>>,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
+  context_region: IRuneS<'s>,
+  rulex: &IRulexPR<'p>,
+) -> RuneUsage<'s> {
   let file = match &env {
     IEnvironmentS::Environment(environment) => environment.file,
     IEnvironmentS::FunctionEnvironment(function_environment) => function_environment.file,
@@ -100,11 +97,11 @@ fn translate_rulex<'a, 's>(
   match rulex {
     IRulexPR::Typed(typed_rule) => {
       let rune = match &typed_rule.rune {
-        Some(rune_name) => interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: rune_name.str() })),
+        Some(rune_name) => scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str(rune_name.str().as_str()) })),
         None => {
           let mut child_lidb = lidb.child();
-          interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           }))
         }
       };
@@ -119,7 +116,6 @@ fn translate_rulex<'a, 's>(
       let mut child_lidb = lidb.child();
       translate_templex(
         scout_arena,
-        interner,
         keywords,
         env,
         &mut child_lidb,
@@ -130,13 +126,12 @@ fn translate_rulex<'a, 's>(
     }
     IRulexPR::Equals(EqualsPR { range, left, right }) => {
       let mut child_lidb = lidb.child();
-      let rune = interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-        lid: child_lidb.consume_in(interner.arena()),
+      let rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+        lid: child_lidb.consume_in(scout_arena.arena()),
       }));
       let left_usage = {
         let mut child_lidb = lidb.child();
-        translate_rulex(scout_arena, 
-          interner,
+        translate_rulex(scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -148,8 +143,7 @@ fn translate_rulex<'a, 's>(
       };
       let right_usage = {
         let mut child_lidb = lidb.child();
-        translate_rulex(scout_arena, 
-          interner,
+        translate_rulex(scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -173,8 +167,7 @@ fn translate_rulex<'a, 's>(
       if name.str() == keywords.is_interface {
         assert_eq!(args.len(), 1, "POSTPARSER_IS_INTERFACE_ARGS_LEN");
         let mut child_lidb = lidb.child();
-        let arg_rune = translate_rulex(scout_arena, 
-          interner,
+        let arg_rune = translate_rulex(scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -204,22 +197,22 @@ fn translate_rulex<'a, 's>(
       } else if name.str() == keywords.ref_list_compound_mutability {
         panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REF_LIST_COMPOUND_MUTABILITY_NOT_YET_IMPLEMENTED")
       } else if name.str() == keywords.refs {
-        let arg_runes: Vec<RuneUsage<'a>> =
+        let arg_runes: Vec<RuneUsage<'s>> =
           args.iter().map(|arg| {
-            translate_rulex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), arg)
+            translate_rulex(scout_arena, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), arg)
           }).collect();
 
         let mut child_lidb = lidb.child();
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
-          rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune.clone(),
-          members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, arg_runes),
+          members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(),arg_runes),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })));
 
@@ -250,14 +243,14 @@ fn translate_rulex<'a, 's>(
         let mut child_lidb = lidb.child();
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
-          rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         builder.push(IRulexSR::OneOf(OneOfSR {
           range: PostParser::eval_range(file, *range),
           rune: result_rune.clone(),
-          literals: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, literals),
+          literals: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(),literals),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), explicit_type));
         result_rune
@@ -273,8 +266,8 @@ fn translate_rulex<'a, 's>(
       let mut rune_child_lidb = lidb.child();
       let rune = RuneUsage {
         range: PostParser::eval_range(file, *range),
-        rune: interner.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: rune_child_lidb.consume_in(interner.arena()),
+        rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
+          lid: rune_child_lidb.consume_in(scout_arena.arena()),
         })),
       };
       rune_to_explicit_type.push((rune.rune.clone(), translate_type(*tyype)));
@@ -292,7 +285,6 @@ fn translate_rulex<'a, 's>(
           let mut translate_child_lidb = lidb.child();
           let component_usages = translate_rulexes(
             scout_arena,
-            interner,
             keywords,
             env,
             &mut translate_child_lidb,
@@ -320,7 +312,6 @@ fn translate_rulex<'a, 's>(
           let mut translate_child_lidb = lidb.child();
           let component_usages = translate_rulexes(
             scout_arena,
-            interner,
             keywords,
             env,
             &mut translate_child_lidb,
@@ -565,10 +556,10 @@ pub fn translate_type(tyype: ITypePR) -> ITemplataType {
     }
   }
 */
-fn get_rune_kind_template<'a, 's>(
-  _rules_s: &[IRulexSR<'a, 's>],
-  _rune: IRuneS<'a>,
-) -> IImpreciseNameS<'a> {
+fn get_rune_kind_template<'s>(
+  _rules_s: &[IRulexSR<'s>],
+  _rune: IRuneS<'s>,
+) -> IImpreciseNameS<'s> {
   panic!("Unimplemented get_rune_kind_template");
 }
 /*
@@ -629,18 +620,18 @@ class Equivalencies(rules: IndexedSeq[IRulexSR]) {
     case other => vimpl(other)
   })
 */
-fn mark_kind_equivalent<'a, 's>(
-  _rules_s: &[IRulexSR<'a, 's>],
-  _rune_a: IRuneS<'a>,
-  _rune_b: IRuneS<'a>,
+fn mark_kind_equivalent<'s>(
+  _rules_s: &[IRulexSR<'s>],
+  _rune_a: IRuneS<'s>,
+  _rune_b: IRuneS<'s>,
 ) {
   panic!("Unimplemented mark_kind_equivalent");
 }
-fn find_transitively_equivalent_into<'a, 's>(
-  _rules_s: &[IRulexSR<'a, 's>],
-  _rune_to_kind_equivalent_runes: &HashMap<IRuneS<'a>, Vec<IRuneS<'a>>>,
-  _found_so_far: &mut HashSet<IRuneS<'a>>,
-  _rune: IRuneS<'a>,
+fn find_transitively_equivalent_into<'s>(
+  _rules_s: &[IRulexSR<'s>],
+  _rune_to_kind_equivalent_runes: &HashMap<IRuneS<'s>, Vec<IRuneS<'s>>>,
+  _found_so_far: &mut HashSet<IRuneS<'s>>,
+  _rune: IRuneS<'s>,
 ) {
   panic!("Unimplemented find_transitively_equivalent_into");
 }
@@ -654,10 +645,10 @@ fn find_transitively_equivalent_into<'a, 's>(
     })
   }
 */
-fn get_kind_equivalent_runes<'a, 's>(
-  _rules_s: &[IRulexSR<'a, 's>],
-  _rune: IRuneS<'a>,
-) -> HashSet<IRuneS<'a>> {
+fn get_kind_equivalent_runes<'s>(
+  _rules_s: &[IRulexSR<'s>],
+  _rune: IRuneS<'s>,
+) -> HashSet<IRuneS<'s>> {
   panic!("Unimplemented get_kind_equivalent_runes");
 }
 /*
@@ -669,12 +660,12 @@ fn get_kind_equivalent_runes<'a, 's>(
     set.toSet
   }
 */
-fn get_kind_equivalent_runes_iter<'a, 's, I>(
-  _rules_s: &[IRulexSR<'a, 's>],
+fn get_kind_equivalent_runes_iter<'s, I>(
+  _rules_s: &[IRulexSR<'s>],
   _runes: I,
-) -> HashSet<IRuneS<'a>>
+) -> HashSet<IRuneS<'s>>
 where
-  I: Iterator<Item = IRuneS<'a>>,
+  I: Iterator<Item = IRuneS<'s>>,
 {
   panic!("Unimplemented get_kind_equivalent_runes_iter");
 }

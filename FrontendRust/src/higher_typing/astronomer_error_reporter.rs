@@ -13,15 +13,15 @@ import dev.vale.RangeS
 */
 
 // mig: struct CompileErrorExceptionA
-pub struct CompileErrorExceptionA<'a, 's> {
-    pub err: ICompileErrorA<'a, 's>,
+pub struct CompileErrorExceptionA<'s> {
+    pub err: ICompileErrorA<'s>,
 }
 /*
 case class CompileErrorExceptionA(err: ICompileErrorA) extends RuntimeException {
   vpass()
 */
 // mig: impl CompileErrorExceptionA
-impl<'a, 's> CompileErrorExceptionA<'a, 's> {
+impl<'s> CompileErrorExceptionA<'s> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -36,22 +36,22 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: trait ICompileErrorA
-pub enum ICompileErrorA<'a, 's> {
+pub enum ICompileErrorA<'s> {
     /*
     sealed trait ICompileErrorA {
     */
-    CouldntFindType(CouldntFindTypeA<'a>),
-    TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
-    CouldntSolveRules(CouldntSolveRulesA<'a, 's>),
-    CircularModuleDependency(CircularModuleDependency<'a>),
-    WrongNumArgsForTemplate(WrongNumArgsForTemplateA<'a>),
-    RangedInternalError(RangedInternalErrorA<'a>),
+    CouldntFindType(CouldntFindTypeA<'s>),
+    TooManyMatchingTypes(TooManyMatchingTypesA<'s>),
+    CouldntSolveRules(CouldntSolveRulesA<'s>),
+    CircularModuleDependency(CircularModuleDependency<'s>),
+    WrongNumArgsForTemplate(WrongNumArgsForTemplateA<'s>),
+    RangedInternalError(RangedInternalErrorA<'s>),
     /*
        def range: RangeS
     */
 }
-impl<'a, 's> ICompileErrorA<'a, 's> {
-    pub fn range(&self) -> RangeS<'a> {
+impl<'s> ICompileErrorA<'s> {
+    pub fn range(&self) -> RangeS<'s> {
         match self {
             ICompileErrorA::CouldntFindType(x) => x.range.clone(),
             ICompileErrorA::TooManyMatchingTypes(x) => x.range.clone(),
@@ -66,12 +66,12 @@ impl<'a, 's> ICompileErrorA<'a, 's> {
 }
 */
 // mig: trait ILookupFailedErrorA
-pub enum ILookupFailedErrorA<'a> {
-    CouldntFindType(CouldntFindTypeA<'a>),
-    TooManyMatchingTypes(TooManyMatchingTypesA<'a>),
+pub enum ILookupFailedErrorA<'s> {
+    CouldntFindType(CouldntFindTypeA<'s>),
+    TooManyMatchingTypes(TooManyMatchingTypesA<'s>),
 }
-impl<'a, 's> From<ILookupFailedErrorA<'a>> for ICompileErrorA<'a, 's> {
-    fn from(e: ILookupFailedErrorA<'a>) -> Self {
+impl<'s> From<ILookupFailedErrorA<'s>> for ICompileErrorA<'s> {
+    fn from(e: ILookupFailedErrorA<'s>) -> Self {
         match e {
             ILookupFailedErrorA::CouldntFindType(x) => ICompileErrorA::CouldntFindType(x),
             ILookupFailedErrorA::TooManyMatchingTypes(x) => ICompileErrorA::TooManyMatchingTypes(x),
@@ -82,15 +82,15 @@ impl<'a, 's> From<ILookupFailedErrorA<'a>> for ICompileErrorA<'a, 's> {
 sealed trait ILookupFailedErrorA extends ICompileErrorA
 */
 // mig: struct TooManyMatchingTypesA
-pub struct TooManyMatchingTypesA<'a> {
-    pub range: RangeS<'a>,
-    pub name: IImpreciseNameS<'a>,
+pub struct TooManyMatchingTypesA<'s> {
+    pub range: RangeS<'s>,
+    pub name: IImpreciseNameS<'s>,
 }
 /*
 case class TooManyMatchingTypesA(range: RangeS, name: IImpreciseNameS) extends ILookupFailedErrorA {
 */
 // mig: impl TooManyMatchingTypesA
-impl<'a> TooManyMatchingTypesA<'a> {
+impl<'s> TooManyMatchingTypesA<'s> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -109,15 +109,15 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct CouldntFindTypeA
-pub struct CouldntFindTypeA<'a> {
-    pub range: RangeS<'a>,
-    pub name: IImpreciseNameS<'a>,
+pub struct CouldntFindTypeA<'s> {
+    pub range: RangeS<'s>,
+    pub name: IImpreciseNameS<'s>,
 }
 /*
 case class CouldntFindTypeA(range: RangeS, name: IImpreciseNameS) extends ILookupFailedErrorA {
 */
 // mig: impl CouldntFindTypeA
-impl<'a> CouldntFindTypeA<'a> {
+impl<'s> CouldntFindTypeA<'s> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -136,15 +136,15 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct CouldntSolveRulesA
-pub struct CouldntSolveRulesA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub error: RuneTypeSolveError<'a, 's>,
+pub struct CouldntSolveRulesA<'s> {
+    pub range: RangeS<'s>,
+    pub error: RuneTypeSolveError<'s>,
 }
 /*
 case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorA {
 */
 // mig: impl CouldntSolveRulesA
-impl<'a, 's> CouldntSolveRulesA<'a, 's> {
+impl<'s> CouldntSolveRulesA<'s> {
 // mig: fn equals
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
@@ -162,18 +162,18 @@ pub fn hash_code(&self) -> i32 {
 }
 */
 // mig: struct CircularModuleDependency
-pub struct CircularModuleDependency<'a> {
-    pub range: RangeS<'a>,
+pub struct CircularModuleDependency<'s> {
+    pub range: RangeS<'s>,
     pub modules: std::collections::HashSet<String>,
 }
 /*
 case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 // mig: impl CircularModuleDependency
-impl<'a> CircularModuleDependency<'a> {}
+impl<'s> CircularModuleDependency<'s> {}
 // mig: struct WrongNumArgsForTemplateA
-pub struct WrongNumArgsForTemplateA<'a> {
-    pub range: RangeS<'a>,
+pub struct WrongNumArgsForTemplateA<'s> {
+    pub range: RangeS<'s>,
     pub expected_num_args: i32,
     pub actual_num_args: i32,
 }
@@ -181,10 +181,10 @@ pub struct WrongNumArgsForTemplateA<'a> {
 case class WrongNumArgsForTemplateA(range: RangeS, expectedNumArgs: Int, actualNumArgs: Int) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 // mig: impl WrongNumArgsForTemplateA
-impl<'a> WrongNumArgsForTemplateA<'a> {}
+impl<'s> WrongNumArgsForTemplateA<'s> {}
 // mig: struct RangedInternalErrorA
-pub struct RangedInternalErrorA<'a> {
-    pub range: RangeS<'a>,
+pub struct RangedInternalErrorA<'s> {
+    pub range: RangeS<'s>,
     pub message: String,
 }
 /*
@@ -193,10 +193,10 @@ case class RangedInternalErrorA(range: RangeS, message: String) extends ICompile
 object ErrorReporter {
 */
 // mig: impl RangedInternalErrorA
-impl<'a> RangedInternalErrorA<'a> {}
+impl<'s> RangedInternalErrorA<'s> {}
 
 // mig: fn report
-pub fn report<'a, 's>(_err: ICompileErrorA<'a, 's>) -> ! {
+pub fn report<'s>(_err: ICompileErrorA<'s>) -> ! {
     panic!("Unimplemented: report");
 }
 /*

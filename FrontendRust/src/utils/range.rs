@@ -1,6 +1,5 @@
 use crate::utils::code_hierarchy::FileCoordinate;
-use crate::Interner;
-use std::sync::Arc;
+use crate::scout_arena::ScoutArena;
 
 /*
 package dev.vale
@@ -39,9 +38,9 @@ object RangeS {
 }
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeLocationS<'a> {
-  pub file: Arc<FileCoordinate<'a>>,
+  pub file: &'a FileCoordinate<'a>,
   pub offset: i32,
 }
 /*
@@ -66,24 +65,24 @@ Guardian: disable: NECX
 
 impl<'a> CodeLocationS<'a> {
   // Keep in sync with CodeLocation2
-  pub fn test_zero(interner: &Interner<'a>) -> CodeLocationS<'a> {
-    Self::internal(interner, -1)
+  pub fn test_zero(scout_arena: &ScoutArena<'a>) -> CodeLocationS<'a> {
+    Self::internal(scout_arena, -1)
   }
 
   // SPORK
-  pub fn internal(interner: &Interner<'a>, internal_num: i32) -> CodeLocationS<'a> {
+  pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> CodeLocationS<'a> {
     assert!(internal_num < 0, "CodeLocationS::internal - internal_num must be negative");
     let package_coord =
-      interner.intern_package_coordinate(interner.intern(""), &[]);
-    let file = interner.intern_file_coordinate(package_coord, "internal");
+      scout_arena.intern_package_coordinate(scout_arena.intern_str(""), &[]);
+    let file = scout_arena.intern_file_coordinate(package_coord, "internal");
     CodeLocationS {
-      file: Arc::new(file.clone()),
+      file,
       offset: internal_num,
     }
   }
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RangeS<'a> {
   pub begin: CodeLocationS<'a>,
   pub end: CodeLocationS<'a>,
@@ -98,14 +97,14 @@ impl<'a> RangeS<'a> {
   }
 
   // Should only be used in tests.
-  pub fn test_zero(interner: &Interner<'a>) -> RangeS<'a> {
-    let tz = CodeLocationS::test_zero(interner);
+  pub fn test_zero(scout_arena: &ScoutArena<'a>) -> RangeS<'a> {
+    let tz = CodeLocationS::test_zero(scout_arena);
     RangeS::new(tz.clone(), tz)
   }
 
   // SPORK
-  pub fn file(&self) -> &Arc<FileCoordinate<'_>> {
-    &self.begin.file
+  pub fn file(&self) -> &'a FileCoordinate<'a> {
+    self.begin.file
   }
 }
 

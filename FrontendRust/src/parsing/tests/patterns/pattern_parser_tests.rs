@@ -27,32 +27,29 @@ class PatternParserTests extends FunSuite with Matchers with Collector with Test
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> PatternPP<'a, 'p>
+) -> PatternPP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_pattern_expect(interner, keywords, arena, code)
+  compile_pattern_expect(parse_arena, keywords, code)
 }
 #[test]
 fn simple_int() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ int");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ int");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -73,11 +70,10 @@ fn simple_int() {
 */
 #[test]
 fn name_only_capture() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "a");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "a");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());
@@ -93,11 +89,10 @@ fn name_only_capture() {
 */
 #[test]
 fn empty_pattern() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_");
   let destination = pattern.destination.as_ref().unwrap();
   assert!(matches!(
     destination.decl,
@@ -114,11 +109,10 @@ fn empty_pattern() {
 */
 #[test]
 fn capture_with_type_with_destructure() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "a Moo[a, b]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "a Moo[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());
@@ -149,11 +143,10 @@ fn capture_with_type_with_destructure() {
 */
 #[test]
 fn cstodts() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "moo T[a int]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "moo T[a int]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "moo");
   assert!(destination.mutate.is_none());
@@ -181,11 +174,10 @@ fn cstodts() {
 */
 #[test]
 fn capture_with_destructure_with_type_outside() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "a (int, bool)[a, b]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "a (int, bool)[a, b]");
   let destination = pattern.destination.as_ref().unwrap();
   assert_destination_local_name(destination, "a");
   assert!(destination.mutate.is_none());

@@ -41,7 +41,7 @@ let struct_a = arena.alloc(StructA::new(
 Arena-allocated data is **never mutated after construction**. This is enforced by convention, not the type system (fields are `pub`). The guarantees this provides:
 
 - **No resizing.** `ArenaIndexMap`'s internal hash table and entry vector are allocated once at the right size. No rehashing, no dead space from growth.
-- **No dangling pointers.** Nothing in the arena points to data that might move. Slices point into the same arena (or the longer-lived `'a` arena).
+- **No dangling pointers.** Nothing in the arena points to data that might move. Slices point into the same arena.
 - **Bulk deallocation.** When the arena drops, everything in it is freed at once. No individual destructors, no use-after-free.
 
 // V: if we enable destruction in our immutables' arena, we might want to mention it here
@@ -66,6 +66,6 @@ These are Phase 1 infrastructure — they *build* the data that eventually gets 
 | `Vec<T>` | `&'s [T]` | `alloc_slice_from_vec(arena, vec)` |
 | `Vec<&'s T>` | `&'s [&'s T]` | `alloc_slice_from_vec_of_refs(arena, vec)` |
 | `HashMap<K, V>` | `ArenaIndexMap<'s, K, V>` | `ArenaIndexMap::from_iter_in(map.into_iter(), arena)` |
-| `String` | `StrI<'a>` | `interner.intern(string)` |
+| `String` | `StrI<'x>` | `parse_arena.intern_str(string)` or `scout_arena.intern_str(string)` |
 | `LocationInDenizenBuilder` | `LocationInDenizen<'x>` | `builder.consume_in(arena)` |
 | `T` (single value) | `&'s T` | `arena.alloc(value)` |

@@ -9,65 +9,65 @@ import dev.vale.vcurious
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexPR<'a, 'p> {
-  Equals(EqualsPR<'a, 'p>),
-  Or(OrPR<'a, 'p>),
-  Dot(DotPR<'a, 'p>),
-  Components(ComponentsPR<'a, 'p>),
-  Typed(TypedPR<'a>),
-  Templex(ITemplexPT<'a, 'p>),
-  BuiltinCall(BuiltinCallPR<'a, 'p>),
-  Pack(PackPR<'a, 'p>),
+pub enum IRulexPR<'p> {
+  Equals(EqualsPR<'p>),
+  Or(OrPR<'p>),
+  Dot(DotPR<'p>),
+  Components(ComponentsPR<'p>),
+  Typed(TypedPR<'p>),
+  Templex(ITemplexPT<'p>),
+  BuiltinCall(BuiltinCallPR<'p>),
+  Pack(PackPR<'p>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct EqualsPR<'a, 'p> {
+pub struct EqualsPR<'p> {
   pub range: RangeL,
-  pub left: &'p IRulexPR<'a, 'p>,
-  pub right: &'p IRulexPR<'a, 'p>,
+  pub left: &'p IRulexPR<'p>,
+  pub right: &'p IRulexPR<'p>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct OrPR<'a, 'p> {
+pub struct OrPR<'p> {
   pub range: RangeL,
-  pub possibilities: &'p [IRulexPR<'a, 'p>],
+  pub possibilities: &'p [IRulexPR<'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DotPR<'a, 'p> {
+pub struct DotPR<'p> {
   pub range: RangeL,
-  pub container: &'p IRulexPR<'a, 'p>,
-  pub member_name: NameP<'a>,
+  pub container: &'p IRulexPR<'p>,
+  pub member_name: NameP<'p>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ComponentsPR<'a, 'p> {
+pub struct ComponentsPR<'p> {
   pub range: RangeL,
   pub container: ITypePR,
-  pub components: &'p [IRulexPR<'a, 'p>],
+  pub components: &'p [IRulexPR<'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct TypedPR<'a> {
+pub struct TypedPR<'p> {
   pub range: RangeL,
-  pub rune: Option<NameP<'a>>,
+  pub rune: Option<NameP<'p>>,
   pub tyype: ITypePR,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct BuiltinCallPR<'a, 'p> {
+pub struct BuiltinCallPR<'p> {
   pub range: RangeL,
-  pub name: NameP<'a>,
-  pub args: &'p [IRulexPR<'a, 'p>],
+  pub name: NameP<'p>,
+  pub args: &'p [IRulexPR<'p>],
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackPR<'a, 'p> {
+pub struct PackPR<'p> {
   pub range: RangeL,
-  pub elements: &'p [IRulexPR<'a, 'p>],
+  pub elements: &'p [IRulexPR<'p>],
 }
 
-impl IRulexPR<'_, '_> {
+impl IRulexPR<'_> {
   pub fn range(&self) -> RangeL {
     match self {
       IRulexPR::Equals(inner) => inner.range,
@@ -123,9 +123,9 @@ Guardian: disable: NECX
 /*
 object RulePUtils {
 */
-pub fn get_ordered_rune_declarations_from_rulexes_with_duplicates<'a, 'p>(
-  rulexes: &'p [IRulexPR<'a, 'p>],
-) -> Vec<NameP<'a>> {
+pub fn get_ordered_rune_declarations_from_rulexes_with_duplicates<'p>(
+  rulexes: &[IRulexPR<'p>],
+) -> Vec<NameP<'p>> {
   rulexes
     .iter()
     .flat_map(get_ordered_rune_declarations_from_rulex_with_duplicates)
@@ -137,9 +137,9 @@ pub fn get_ordered_rune_declarations_from_rulexes_with_duplicates<'a, 'p>(
     rulexes.flatMap(getOrderedRuneDeclarationsFromRulexWithDuplicates)
   }
 */
-pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'a, 'p>(
-  rulex: &IRulexPR<'a, 'p>,
-) -> Vec<NameP<'a>> {
+pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'p>(
+  rulex: &IRulexPR<'p>,
+) -> Vec<NameP<'p>> {
   match rulex {
     IRulexPR::Pack(pack) => get_ordered_rune_declarations_from_rulexes_with_duplicates(pack.elements),
     IRulexPR::Equals(equals) => {
@@ -174,9 +174,9 @@ pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'a, 'p>(
     }
   }
 */
-pub fn get_ordered_rune_declarations_from_templexes_with_duplicates<'a, 'p>(
-  templexes: &'p [ITemplexPT<'a, 'p>],
-) -> Vec<NameP<'a>> {
+pub fn get_ordered_rune_declarations_from_templexes_with_duplicates<'p>(
+  templexes: &[ITemplexPT<'p>],
+) -> Vec<NameP<'p>> {
   templexes
     .iter()
     .flat_map(get_ordered_rune_declarations_from_templex_with_duplicates)
@@ -187,9 +187,9 @@ pub fn get_ordered_rune_declarations_from_templexes_with_duplicates<'a, 'p>(
     templexes.flatMap(getOrderedRuneDeclarationsFromTemplexWithDuplicates)
   }
 */
-pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'a, 'p>(
-  templex: &ITemplexPT<'a, 'p>,
-) -> Vec<NameP<'a>> {
+pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
+  templex: &ITemplexPT<'p>,
+) -> Vec<NameP<'p>> {
   match templex {
     ITemplexPT::Interpreted(interpreted) => {
       get_ordered_rune_declarations_from_templex_with_duplicates(interpreted.inner)

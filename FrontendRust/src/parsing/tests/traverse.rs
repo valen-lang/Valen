@@ -9,23 +9,24 @@ Guardian: disable-all
 
 use bumpalo::Bump;
 use crate::lexing::RangeL;
-use crate::interner::{Interner, StrI};
+use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::compile;
 
-fn collect_if<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefP<'a, 'p>)
+fn collect_if<'p, T, F>(pred: &F, out: &mut Vec<T>, node: NodeRefP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   if let Some(value) = pred(node) {
     out.push(value);
   }
 }
 
-fn visit_denizen<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'p IDenizenP<'a, 'p>)
+fn visit_denizen<'p, T, F>(pred: &F, out: &mut Vec<T>, denizen: &'p IDenizenP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   match denizen {
     IDenizenP::TopLevelFunction(function) => {
@@ -49,9 +50,9 @@ where
   }
 }
 
-fn visit_struct<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, struct_: &'p StructP<'a, 'p>)
+fn visit_struct<'p, T, F>(pred: &F, out: &mut Vec<T>, struct_: &'p StructP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Struct(struct_));
   let StructP {
@@ -84,9 +85,9 @@ where
   visit_struct_members(pred, out, members);
 }
 
-fn visit_impl<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, impl_: &'p ImplP<'a, 'p>)
+fn visit_impl<'p, T, F>(pred: &F, out: &mut Vec<T>, impl_: &'p ImplP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Impl(impl_));
   let ImplP {
@@ -112,9 +113,9 @@ where
   }
 }
 
-fn visit_export_as<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, export_as: &'p ExportAsP<'a, 'p>)
+fn visit_export_as<'p, T, F>(pred: &F, out: &mut Vec<T>, export_as: &'p ExportAsP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::ExportAs(export_as));
   let ExportAsP {
@@ -126,9 +127,9 @@ where
   visit_name(pred, out, exported_name);
 }
 
-fn visit_import<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, import: &'p ImportP<'a, 'p>)
+fn visit_import<'p, T, F>(pred: &F, out: &mut Vec<T>, import: &'p ImportP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Import(import));
   let ImportP {
@@ -144,9 +145,9 @@ where
   visit_name(pred, out, importee_name);
 }
 
-fn visit_struct_member<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p IStructContent<'a, 'p>)
+fn visit_struct_member<'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p IStructContent<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::StructMember(member));
   match member {
@@ -160,9 +161,9 @@ where
   }
 }
 
-fn visit_struct_members<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, members: &'p StructMembersP<'a, 'p>)
+fn visit_struct_members<'p, T, F>(pred: &F, out: &mut Vec<T>, members: &'p StructMembersP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::StructMembers(members));
   let StructMembersP {
@@ -174,9 +175,9 @@ where
   }
 }
 
-fn visit_normal_struct_member<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p NormalStructMemberP<'a, 'p>)
+fn visit_normal_struct_member<'p, T, F>(pred: &F, out: &mut Vec<T>, member: &'p NormalStructMemberP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::NormalStructMember(member));
   let NormalStructMemberP {
@@ -189,13 +190,12 @@ where
   visit_templex(pred, out, tyype);
 }
 
-fn visit_variadic_struct_member<'a, 'p, T, F>(
+fn visit_variadic_struct_member<'p, T, F>(
   pred: &F,
   out: &mut Vec<T>,
-  member: &'p VariadicStructMemberP<'a, 'p>,
+  member: &'p VariadicStructMemberP<'p>,
 ) where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::VariadicStructMember(member));
   let VariadicStructMemberP {
@@ -206,9 +206,9 @@ fn visit_variadic_struct_member<'a, 'p, T, F>(
   visit_templex(pred, out, tyype);
 }
 
-fn visit_interface<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, interface: &'p InterfaceP<'a, 'p>)
+fn visit_interface<'p, T, F>(pred: &F, out: &mut Vec<T>, interface: &'p InterfaceP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Interface(interface));
   let InterfaceP {
@@ -243,9 +243,9 @@ where
   }
 }
 
-fn visit_function<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, function: &'p FunctionP<'a, 'p>)
+fn visit_function<'p, T, F>(pred: &F, out: &mut Vec<T>, function: &'p FunctionP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Function(function));
   // Recurse down into function's fields
@@ -260,9 +260,9 @@ where
   }
 }
 
-fn visit_function_header<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, header: &'p FunctionHeaderP<'a, 'p>)
+fn visit_function_header<'p, T, F>(pred: &F, out: &mut Vec<T>, header: &'p FunctionHeaderP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::FunctionHeader(header));
   let FunctionHeaderP {
@@ -292,9 +292,9 @@ where
   }
 }
 
-fn visit_block<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, block: &'p BlockPE<'a, 'p>)
+fn visit_block<'p, T, F>(pred: &F, out: &mut Vec<T>, block: &'p BlockPE<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Block(block));
   let BlockPE {
@@ -309,9 +309,9 @@ where
   visit_expression(pred, out, inner);
 }
 
-fn visit_function_return<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, return_: &'p FunctionReturnP<'a, 'p>)
+fn visit_function_return<'p, T, F>(pred: &F, out: &mut Vec<T>, return_: &'p FunctionReturnP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::FunctionReturn(return_));
   let FunctionReturnP {
@@ -323,12 +323,12 @@ where
   }
 }
 
-fn visit_generic_parameters<'a, 'p, T, F>(
+fn visit_generic_parameters<'p, T, F>(
   pred: &F,
   out: &mut Vec<T>,
-  generic_parameters: &'p GenericParametersP<'a, 'p>,
+  generic_parameters: &'p GenericParametersP<'p>,
 ) where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::GenericParameters(generic_parameters));
   let GenericParametersP {
@@ -340,9 +340,9 @@ fn visit_generic_parameters<'a, 'p, T, F>(
   }
 }
 
-fn visit_generic_parameter<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, param: &'p GenericParameterP<'a, 'p>)
+fn visit_generic_parameter<'p, T, F>(pred: &F, out: &mut Vec<T>, param: &'p GenericParameterP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::GenericParameter(param));
   let GenericParameterP {
@@ -368,9 +368,9 @@ where
   }
 }
 
-fn visit_template_rules<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, template_rules: &'p TemplateRulesP<'a, 'p>)
+fn visit_template_rules<'p, T, F>(pred: &F, out: &mut Vec<T>, template_rules: &'p TemplateRulesP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::TemplateRules(template_rules));
   let TemplateRulesP {
@@ -382,9 +382,9 @@ where
   }
 }
 
-fn visit_params<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, params: &'p ParamsP<'a, 'p>)
+fn visit_params<'p, T, F>(pred: &F, out: &mut Vec<T>, params: &'p ParamsP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Params(params));
   let ParamsP {
@@ -396,9 +396,9 @@ where
   }
 }
 
-fn visit_parameter<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'p ParameterP<'a, 'p>)
+fn visit_parameter<'p, T, F>(pred: &F, out: &mut Vec<T>, parameter: &'p ParameterP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Parameter(parameter));
   let ParameterP {
@@ -416,9 +416,9 @@ where
   }
 }
 
-fn visit_pattern<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, pattern: &'p PatternPP<'a, 'p>)
+fn visit_pattern<'p, T, F>(pred: &F, out: &mut Vec<T>, pattern: &'p PatternPP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Pattern(pattern));
   let PatternPP {
@@ -438,9 +438,9 @@ where
   }
 }
 
-fn visit_destination<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, destination: &'p DestinationLocalP<'a>)
+fn visit_destination<'p, T, F>(pred: &F, out: &mut Vec<T>, destination: &'p DestinationLocalP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::DestinationLocal(destination));
   let DestinationLocalP {
@@ -450,9 +450,9 @@ where
   visit_name_declaration(pred, out, decl);
 }
 
-fn visit_destructure<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, destructure: &'p DestructureP<'a, 'p>)
+fn visit_destructure<'p, T, F>(pred: &F, out: &mut Vec<T>, destructure: &'p DestructureP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Destructure(destructure));
   let DestructureP {
@@ -464,9 +464,9 @@ where
   }
 }
 
-fn visit_name_declaration<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, declaration: &'p INameDeclarationP<'a>)
+fn visit_name_declaration<'p, T, F>(pred: &F, out: &mut Vec<T>, declaration: &'p INameDeclarationP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::NameDeclaration(declaration));
   match declaration {
@@ -479,13 +479,12 @@ where
   }
 }
 
-fn visit_generic_parameter_type<'a, 'p, T, F>(
+fn visit_generic_parameter_type<'p, T, F>(
   pred: &F,
   out: &mut Vec<T>,
   param_type: &'p GenericParameterTypeP,
 ) where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::GenericParameterType(param_type));
   let GenericParameterTypeP {
@@ -494,19 +493,17 @@ fn visit_generic_parameter_type<'a, 'p, T, F>(
   } = param_type;
 }
 
-fn visit_abstract<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, abstract_: &'p AbstractP)
+fn visit_abstract<'p, T, F>(pred: &F, out: &mut Vec<T>, abstract_: &'p AbstractP)
 where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Abstract(abstract_));
   let AbstractP { range: _range } = abstract_;
 }
 
-fn visit_rune_attribute<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p IRuneAttributeP)
+fn visit_rune_attribute<'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p IRuneAttributeP)
 where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::RuneAttribute(attribute));
   match attribute {
@@ -522,9 +519,9 @@ where
   }
 }
 
-fn visit_region_rune<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, region_rune: &'p RegionRunePT<'a>)
+fn visit_region_rune<'p, T, F>(pred: &F, out: &mut Vec<T>, region_rune: &'p RegionRunePT<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::RegionRune(region_rune));
   let RegionRunePT {
@@ -536,9 +533,9 @@ where
   }
 }
 
-fn visit_attribute<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p IAttributeP<'a>)
+fn visit_attribute<'p, T, F>(pred: &F, out: &mut Vec<T>, attribute: &'p IAttributeP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Attribute(attribute));
   match attribute {
@@ -557,42 +554,40 @@ where
   }
 }
 
-fn visit_weakable_attribute<'a, 'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)
+fn visit_weakable_attribute<'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)
 where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
 }
 
-fn visit_sealed_attribute<'a, 'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)
+fn visit_sealed_attribute<'p, T, F>(_pred: &F, _out: &mut Vec<T>, _range: &RangeL)
 where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
 }
 
-fn visit_macro_call<'a, 'p, T, F>(
+fn visit_macro_call<'p, T, F>(
   pred: &F,
   out: &mut Vec<T>,
   _range: &RangeL,
   _inclusion: &IMacroInclusionP,
-  name: &'p NameP<'a>,
+  name: &'p NameP<'p>,
 ) where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   visit_name(pred, out, name);
 }
 
-fn visit_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p NameP<'a>)
+fn visit_name<'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p NameP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Name(name));
 }
 
-fn visit_templex<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, templex: &'p ITemplexPT<'a, 'p>)
+fn visit_templex<'p, T, F>(pred: &F, out: &mut Vec<T>, templex: &'p ITemplexPT<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Templex(templex));
   match templex {
@@ -718,9 +713,9 @@ where
   }
 }
 
-fn visit_rulex<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'p IRulexPR<'a, 'p>)
+fn visit_rulex<'p, T, F>(pred: &F, out: &mut Vec<T>, rulex: &'p IRulexPR<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Rulex(rulex));
   match rulex {
@@ -788,9 +783,9 @@ where
   }
 }
 
-fn visit_expression<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, expr: &'p IExpressionPE<'a, 'p>)
+fn visit_expression<'p, T, F>(pred: &F, out: &mut Vec<T>, expr: &'p IExpressionPE<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Expression(expr));
   match expr {
@@ -1084,9 +1079,9 @@ where
   }
 }
 
-fn visit_lookup<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, lookup: &'p LookupPE<'a, 'p>)
+fn visit_lookup<'p, T, F>(pred: &F, out: &mut Vec<T>, lookup: &'p LookupPE<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Lookup(lookup));
   let LookupPE {
@@ -1099,9 +1094,9 @@ where
   }
 }
 
-fn visit_template_args<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, template_args: &'p TemplateArgsP<'a, 'p>)
+fn visit_template_args<'p, T, F>(pred: &F, out: &mut Vec<T>, template_args: &'p TemplateArgsP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::TemplateArgs(template_args));
   let TemplateArgsP {
@@ -1113,9 +1108,9 @@ where
   }
 }
 
-fn visit_imprecise_name<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p IImpreciseNameP<'a>)
+fn visit_imprecise_name<'p, T, F>(pred: &F, out: &mut Vec<T>, name: &'p IImpreciseNameP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::ImpreciseName(name));
   match name {
@@ -1126,9 +1121,9 @@ where
   }
 }
 
-fn visit_array_size<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, size: &'p IArraySizeP<'a, 'p>)
+fn visit_array_size<'p, T, F>(pred: &F, out: &mut Vec<T>, size: &'p IArraySizeP<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   match size {
     IArraySizeP::RuntimeSized => {}
@@ -1140,9 +1135,9 @@ where
   }
 }
 
-fn visit_pack<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, pack: &'p PackPT<'a, 'p>)
+fn visit_pack<'p, T, F>(pred: &F, out: &mut Vec<T>, pack: &'p PackPT<'p>)
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Pack(pack));
   let PackPT {
@@ -1154,57 +1149,56 @@ where
   }
 }
 
-fn visit_ownership<'a, 'p, T, F>(pred: &F, out: &mut Vec<T>, ownership: &'p OwnershipPT)
+fn visit_ownership<'p, T, F>(pred: &F, out: &mut Vec<T>, ownership: &'p OwnershipPT)
 where
-  'a: 'p,
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   collect_if(pred, out, NodeRefP::Ownership(ownership));
   let OwnershipPT(_range, _ownership) = ownership;
 }
 
-pub enum NodeRefP<'a, 'p> {
-  Struct(&'p StructP<'a, 'p>),
-  StructMembers(&'p StructMembersP<'a, 'p>),
-  StructMember(&'p IStructContent<'a, 'p>),
-  NormalStructMember(&'p NormalStructMemberP<'a, 'p>),
-  VariadicStructMember(&'p VariadicStructMemberP<'a, 'p>),
-  Interface(&'p InterfaceP<'a, 'p>),
-  Function(&'p FunctionP<'a, 'p>),
-  FunctionHeader(&'p FunctionHeaderP<'a, 'p>),
-  FunctionReturn(&'p FunctionReturnP<'a, 'p>),
-  GenericParameters(&'p GenericParametersP<'a, 'p>),
-  GenericParameter(&'p GenericParameterP<'a, 'p>),
+pub enum NodeRefP<'p> {
+  Struct(&'p StructP<'p>),
+  StructMembers(&'p StructMembersP<'p>),
+  StructMember(&'p IStructContent<'p>),
+  NormalStructMember(&'p NormalStructMemberP<'p>),
+  VariadicStructMember(&'p VariadicStructMemberP<'p>),
+  Interface(&'p InterfaceP<'p>),
+  Function(&'p FunctionP<'p>),
+  FunctionHeader(&'p FunctionHeaderP<'p>),
+  FunctionReturn(&'p FunctionReturnP<'p>),
+  GenericParameters(&'p GenericParametersP<'p>),
+  GenericParameter(&'p GenericParameterP<'p>),
   GenericParameterType(&'p GenericParameterTypeP),
   Abstract(&'p AbstractP),
-  Params(&'p ParamsP<'a, 'p>),
-  Parameter(&'p ParameterP<'a, 'p>),
-  TemplateRules(&'p TemplateRulesP<'a, 'p>),
-  RegionRune(&'p RegionRunePT<'a>),
-  Attribute(&'p IAttributeP<'a>),
+  Params(&'p ParamsP<'p>),
+  Parameter(&'p ParameterP<'p>),
+  TemplateRules(&'p TemplateRulesP<'p>),
+  RegionRune(&'p RegionRunePT<'p>),
+  Attribute(&'p IAttributeP<'p>),
   RuneAttribute(&'p IRuneAttributeP),
-  Name(&'p NameP<'a>),
-  Block(&'p BlockPE<'a, 'p>),
-  Expression(&'p IExpressionPE<'a, 'p>),
-  Pattern(&'p PatternPP<'a, 'p>),
-  DestinationLocal(&'p DestinationLocalP<'a>),
-  Destructure(&'p DestructureP<'a, 'p>),
-  NameDeclaration(&'p INameDeclarationP<'a>),
-  Templex(&'p ITemplexPT<'a, 'p>),
-  Pack(&'p PackPT<'a, 'p>),
+  Name(&'p NameP<'p>),
+  Block(&'p BlockPE<'p>),
+  Expression(&'p IExpressionPE<'p>),
+  Pattern(&'p PatternPP<'p>),
+  DestinationLocal(&'p DestinationLocalP<'p>),
+  Destructure(&'p DestructureP<'p>),
+  NameDeclaration(&'p INameDeclarationP<'p>),
+  Templex(&'p ITemplexPT<'p>),
+  Pack(&'p PackPT<'p>),
   Ownership(&'p OwnershipPT),
-  Rulex(&'p IRulexPR<'a, 'p>),
-  Lookup(&'p LookupPE<'a, 'p>),
-  TemplateArgs(&'p TemplateArgsP<'a, 'p>),
-  ImpreciseName(&'p IImpreciseNameP<'a>),
-  Impl(&'p ImplP<'a, 'p>),
-  ExportAs(&'p ExportAsP<'a, 'p>),
-  Import(&'p ImportP<'a, 'p>),
+  Rulex(&'p IRulexPR<'p>),
+  Lookup(&'p LookupPE<'p>),
+  TemplateArgs(&'p TemplateArgsP<'p>),
+  ImpreciseName(&'p IImpreciseNameP<'p>),
+  Impl(&'p ImplP<'p>),
+  ExportAs(&'p ExportAsP<'p>),
+  Import(&'p ImportP<'p>),
 }
 
-pub fn collect_in_file<'a, 'p, T, F>(file: &'p FileP<'a, 'p>, predicate: &F) -> Vec<T>
+pub fn collect_in_file<'p, T, F>(file: &'p FileP<'p>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   for denizen in file.denizens {
@@ -1213,9 +1207,9 @@ where
   out
 }
 
-pub fn collect_in_rulex<'a, 'p, T, F>(rulex: &'p IRulexPR<'a, 'p>, predicate: &F) -> Vec<T>
+pub fn collect_in_rulex<'p, T, F>(rulex: &'p IRulexPR<'p>, predicate: &F) -> Vec<T>
 where
-  F: Fn(NodeRefP<'a, 'p>) -> Option<T>,
+  F: Fn(NodeRefP<'p>) -> Option<T>,
 {
   let mut out = Vec::new();
   visit_rulex(predicate, &mut out, rulex);
@@ -1242,11 +1236,10 @@ macro_rules! collect_where {
 }
 #[test]
 fn test_collect_where_finds_function_by_name() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "exported func main() int {}");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "exported func main() int {}");
   assert!(!collect_where!(
       &program,
       NodeRefP::Function(FunctionP {

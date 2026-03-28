@@ -21,14 +21,13 @@ We're doing **incremental, safe migration**. Many functions have commented-out S
 
 ## Lifetime Model
 
-The Rust codebase uses **four arena lifetimes** (see `.claude/rules/postparser/early-lifetimes.mdc` for full details):
+The Rust codebase uses **three arena lifetimes** (see `docs/arena-lifetimes.md` for full details):
 
-- **`'a`** - Interner arena (longest-lived): all interned strings, names, types, coordinates
-- **`'p`** - Parser AST arena: input nodes from the parser
-- **`'s`** - Scout (postparser output) arena: transformed output nodes
-- **`'ctx`** - Context/infrastructure borrows: `&'ctx Interner<'a>`, `&'ctx Keywords<'a>`
+- **`'p`** - Parser arena (via `ParseArena<'p>`): interned strings, coordinates, parser AST nodes
+- **`'s`** - Scout (postparser + higher_typing) arena (via `ScoutArena<'s>`): interned names, runes, imprecise names, postparser/higher-typing output nodes
+- **`'ctx`** - Context/infrastructure borrows: `&'ctx ParseArena<'p>`, `&'ctx ScoutArena<'s>`, `&'ctx Keywords<'p>`
 
-**Critical invariant:** `'a` always outlives everything else. Never accept rustc's lifetime suggestions without checking the rules first.
+Each arena is self-contained with its own interning maps. Cross-pass data is re-interned at pass boundaries (e.g. `StrI<'p>` → `StrI<'s>` via `scout_arena.intern_str()`). The old `Interner<'a>` has been eliminated.
 
 ## Conventions
 
@@ -106,6 +105,28 @@ These shields define the rules enforced during migration:
 @../../Luz/shields/ImmediateInterningDiscipline-IIDX.md
 @../../Luz/shields/CloserToScalaNotFurther-CSTNFX.md
 @../../Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
+
+## Bulk Sed Safety Protocol
+
+Before running any `sed` command that modifies files in bulk, **always sanity-check first**:
+
+1. **Identify false positives in the target.** The pattern you're replacing may appear in contexts you don't intend to change:
+   - **Char literals**: `'a'` looks like lifetime `'a` followed by `'`. Use `s/'a\([^']\)/'p\1/g` to skip char literals.
+   - **Scala block comments**: This codebase has extensive `/* ... */` Scala code. Search inside block comments for your pattern: `python3 -c "import re; ..."` to extract comment blocks and grep within them.
+   - **String literals**: Your pattern might appear inside `"..."` strings.
+   - **Different semantic contexts**: e.g., `'a` in the solver directory is a local callback lifetime, NOT the interner — don't rename it.
+
+2. **Dry-run on representative files.** Pipe through sed without `-i` and diff or grep the output:
+   ```bash
+   sed "s/pattern/replace/g" file.rs | grep "unexpected_thing"
+   ```
+
+3. **Check for collateral damage after the run.** For lifetime renames like `'a` → `'p`:
+   - Look for duplicated params: `grep -rn "'p, 'p"` (from collapsing `'a, 'p`)
+   - Look for corrupted char literals: `grep -rn "'p'"` where the original had `'a'`
+   - Look for changes inside block comments that shouldn't have been touched
+
+4. **Scope your sed precisely.** Run per-directory or per-file, not blanket across the whole repo. Different directories may need different replacements (e.g., `'a` → `'p` in parsing vs `'a` → `'s` in postparsing).
 
 ## Notes
 

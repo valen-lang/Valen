@@ -10,7 +10,9 @@ use crate::utils::range::RangeS;
 use crate::utils::source_code_utils::{
   humanize_pos_code_map, line_containing, line_range_containing, lines_between,
 };
-use crate::{Interner, Keywords};
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::Keywords;
 
 /*
 package dev.vale.postparsing
@@ -23,15 +25,12 @@ import org.scalatest._
 
 class PostParserErrorHumanizerTests extends FunSuite with Matchers {
 */
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+fn compile<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
   code: &str,
-) -> ProgramS<'a, 'p>
-where
-  'a: 'ctx,
-  'a: 'p,
+) -> ProgramS<'s>
 {
   panic!("Unimplemented: compile");
 }
@@ -53,17 +52,12 @@ where
   }
 }
 */
-fn compile_for_error<'a, 'ctx, 'p, 's>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  _parse_arena: &'p Bump,
-  _scout_arena: &'s Bump,
+fn compile_for_error<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
   code: &str,
-) -> ICompileErrorS<'a, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+) -> ICompileErrorS<'s>
 {
   panic!("Unimplemented: compile_for_error");
 }
@@ -77,10 +71,10 @@ where
 */
 #[test]
 fn humanize_errors() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let code_map = FileCoordinateMap::<'_, String>::test(&interner, "blah blah blah\nblah blah blah".to_string());
-  let tz = RangeS::test_zero(&interner);
+  let scout_bump = Bump::new();
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let code_map = FileCoordinateMap::<'_, String>::test(&scout_arena, "blah blah blah\nblah blah blah".to_string());
+  let tz = RangeS::test_zero(&scout_arena);
 
   let humanize_pos = |x: &_| humanize_pos_code_map(&code_map, x);
   let lines_between_fn = |x: &_, y: &_| lines_between(&code_map, x, y);
@@ -89,7 +83,7 @@ fn humanize_errors() {
 
   let err1 = ICompileErrorS::VariableNameAlreadyExists(VariableNameAlreadyExists {
     range: tz.clone(),
-    name: IVarNameS::CodeVarName(interner.intern("Spaceship")),
+    name: IVarNameS::CodeVarName(scout_arena.intern_str("Spaceship")),
   });
   assert!(!humanize(humanize_pos, lines_between_fn, line_range_containing_fn, line_containing_fn, &err1).is_empty());
 

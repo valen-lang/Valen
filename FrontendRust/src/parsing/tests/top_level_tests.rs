@@ -3,7 +3,8 @@
 #![allow(nonstandard_style)]
 
 use bumpalo::Bump;
-use crate::interner::{Interner, StrI};
+use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::ParseError;
 use crate::parsing::ast::*;
@@ -31,11 +32,10 @@ class TopLevelTests extends FunSuite with Matchers with Collector with TestParse
 */
 #[test]
 fn function_then_struct() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "exported func main() int {} struct mork { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "exported func main() int {} struct mork { }");
   assert!(matches!(
     program.denizens[0],
     IDenizenP::TopLevelFunction(_)
@@ -56,21 +56,20 @@ fn function_then_struct() {
 */
 #[test]
 fn ellipses_ignored() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   // Unicode … symbol is treated as an expression by the parser
-  compile(&interner, &keywords, &parse_arena, "exported func main() int {x = …;}");
-  compile(&interner, &keywords, &parse_arena, "exported func main() int {set x = …;}");
+  compile(&parse_arena, &keywords, "exported func main() int {x = …;}");
+  compile(&parse_arena, &keywords, "exported func main() int {set x = …;}");
   // Three dots is treated as a comment
-  compile(&interner, &keywords, &parse_arena, "exported func main(...) int {}");
-  compile(&interner, &keywords, &parse_arena, "exported func main() ... {}");
-  compile(&interner, &keywords, &parse_arena, "exported func main() int {} ... ");
-  compile(&interner, &keywords, &parse_arena, "exported func main() int {...}");
-  compile(&interner, &keywords, &parse_arena, "exported func main() int {moo(...)}");
-  compile(&interner, &keywords, &parse_arena, "struct Moo {} ... ");
-  compile(&interner, &keywords, &parse_arena, "struct Moo {...}");
+  compile(&parse_arena, &keywords, "exported func main(...) int {}");
+  compile(&parse_arena, &keywords, "exported func main() ... {}");
+  compile(&parse_arena, &keywords, "exported func main() int {} ... ");
+  compile(&parse_arena, &keywords, "exported func main() int {...}");
+  compile(&parse_arena, &keywords, "exported func main() int {moo(...)}");
+  compile(&parse_arena, &keywords, "struct Moo {} ... ");
+  compile(&parse_arena, &keywords, "struct Moo {...}");
 }
 /*
   test("Ellipses ignored") {
@@ -90,14 +89,12 @@ fn ellipses_ignored() {
 */
 #[test]
 fn comments_ignored() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         exported func main(
                 // moo
@@ -105,9 +102,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         exported func main()
                 // moo
@@ -115,18 +111,16 @@ fn comments_ignored() {
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         exported func main() int {}
                 // moo
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         exported func main() int {
                 // moo
@@ -134,9 +128,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         exported func main() int {
           moo(
@@ -146,18 +139,16 @@ fn comments_ignored() {
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         struct Moo {}
                 // moo
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         struct Moo {
                 // moo
@@ -165,9 +156,8 @@ fn comments_ignored() {
         "#,
   );
   compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         struct Moo {
         }
@@ -228,14 +218,12 @@ fn comments_ignored() {
 */
 #[test]
 fn function_containing_if() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let program = compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
         func main() int {
           if true { 3 } else { 4 }
@@ -260,14 +248,12 @@ fn function_containing_if() {
 */
 #[test]
 fn reports_unrecognized_at_top_level() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let err = compile_for_error(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
       func main(){}
       blort
@@ -290,14 +276,12 @@ fn reports_unrecognized_at_top_level() {
 // lol
 #[test]
 fn funky_function() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let program = compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
       funky main() { }
       "#,
@@ -313,14 +297,12 @@ fn funky_function() {
 */
 #[test]
 fn empty() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let program = compile(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
       func foo() { ... }
       "#,
@@ -353,11 +335,10 @@ fn empty() {
 */
 #[test]
 fn exporting_int() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "export int as NumberThing;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "export int as NumberThing;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     struct_: ITemplexPT::NameOrRune(NameOrRunePT(NameP(_, StrI("int")))),
@@ -376,11 +357,10 @@ fn exporting_int() {
 */
 #[test]
 fn exporting_imm_array_1() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "export []<mut>int as IntArray;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "export []<mut>int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     exported_name: NameP(_, StrI("IntArray")),
@@ -399,11 +379,10 @@ fn exporting_imm_array_1() {
 */
 #[test]
 fn exporting_imm_array_2() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "export #[]int as IntArray;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "export #[]int as IntArray;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelExportAs(ExportAsP {
     exported_name: NameP(_, StrI("IntArray")),
@@ -422,11 +401,10 @@ fn exporting_imm_array_2() {
 */
 #[test]
 fn import_wildcard() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "import somemodule.*;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "import somemodule.*;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP(_, StrI("somemodule")),
@@ -447,11 +425,10 @@ fn import_wildcard() {
 */
 #[test]
 fn import_just_module_and_thing() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "import somemodule.List;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "import somemodule.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP(_, StrI("somemodule")),
@@ -472,11 +449,10 @@ fn import_just_module_and_thing() {
 */
 #[test]
 fn full_import() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "import somemodule.subpackage.List;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "import somemodule.subpackage.List;");
   assert!(
     matches!(program.denizens[0], IDenizenP::TopLevelImport(ImportP {
     module_name: NameP(_, StrI("somemodule")),
@@ -497,11 +473,10 @@ fn full_import() {
 
 #[test]
 fn return_with_region_generics() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "func strongestDesire() IDesire<r', i'> { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "func strongestDesire() IDesire<r', i'> { }");
   let func = find_func_named(&program, "strongestDesire");
   match func.header.ret.ret_type {
     Some(ITemplexPT::Call(CallPT {
@@ -530,14 +505,12 @@ fn return_with_region_generics() {
 
 #[test]
 fn bad_start_of_statement() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let err = compile_for_error(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
     func doCivicDance(virtual this Car) {
       )
@@ -546,9 +519,8 @@ fn bad_start_of_statement() {
   );
   assert!(matches!(err, ParseError::BadStartOfStatementError(_)));
   let err = compile_for_error(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     r#"
     func doCivicDance(virtual this Car) {
       ]

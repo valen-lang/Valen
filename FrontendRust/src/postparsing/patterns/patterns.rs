@@ -13,8 +13,8 @@ import scala.collection.immutable.List
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct CaptureS<'a> {
-  pub name: IVarNameS<'a>,
+pub struct CaptureS<'s> {
+  pub name: IVarNameS<'s>,
   pub mutate: bool,
 }
 
@@ -27,11 +27,11 @@ case class CaptureS(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct AtomSP<'a> {
-  pub range: RangeS<'a>,
-  pub name: Option<CaptureS<'a>>,
-  pub coord_rune: Option<RuneUsage<'a>>,
-  pub destructure: Option<Vec<AtomSP<'a>>>,
+pub struct AtomSP<'s> {
+  pub range: RangeS<'s>,
+  pub name: Option<CaptureS<'s>>,
+  pub coord_rune: Option<RuneUsage<'s>>,
+  pub destructure: Option<Vec<AtomSP<'s>>>,
 }
 
 /*

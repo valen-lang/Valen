@@ -2,7 +2,7 @@
 // Coordinates the full compilation pipeline
 
 use crate::compile_options::GlobalOptions;
-use crate::interner::Interner;
+use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
@@ -44,55 +44,53 @@ pub struct FullCompilationOptions {
 }
 
 // From FullCompilation.scala lines 30-57: FullCompilation class
-pub struct FullCompilation<'a, 'ctx, 'p, 's>
+pub struct FullCompilation<'s, 'ctx, 'p>
 where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+  'p: 'ctx,
 {
-  hammer_compilation: HammerCompilation<'a, 'ctx, 'p, 's>,
+  hammer_compilation: HammerCompilation<'s, 'ctx, 'p>,
 }
 
-impl<'a, 'ctx, 'p, 's> FullCompilation<'a, 'ctx, 'p, 's>
+impl<'s, 'ctx, 'p> FullCompilation<'s, 'ctx, 'p>
 where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+  'p: 'ctx,
 {
   // From FullCompilation.scala lines 30-45
   pub fn new(
-    interner: &'ctx Interner<'a>,
-    keywords: &'ctx Keywords<'a>,
-    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: FullCompilationOptions,
-    parser_arena: &'p bumpalo::Bump,
-    scout_arena: &'s bumpalo::Bump,
+    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let hammer_compilation = HammerCompilation::new(
-      interner,
+      scout_arena,
       keywords,
+      parser_keywords,
+      parse_arena,
       packages_to_build,
       package_to_contents_resolver,
       options,
-      parser_arena,
-      scout_arena,
+      parser_bump,
     );
     FullCompilation { hammer_compilation }
   }
 
   // From FullCompilation.scala line 48: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.hammer_compilation.get_code_map()
   }
 
   // From FullCompilation.scala line 49: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.hammer_compilation.get_parseds()
   }
 
   // From FullCompilation.scala line 50: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.hammer_compilation.get_vpst_map()
   }
 

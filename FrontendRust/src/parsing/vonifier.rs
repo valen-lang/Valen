@@ -7,10 +7,10 @@ use std::marker::PhantomData;
 /// ParserVonifier converts Parser AST to Von (JSON-like) format
 /// Mirrors ParserVonifier.scala
 
-pub struct ParserVonifier<'a> {
-  _marker: PhantomData<&'a ()>,
+pub struct ParserVonifier<'p> {
+  _marker: PhantomData<&'p ()>,
 }
-impl<'a, 'p> ParserVonifier<'a> {
+impl<'p> ParserVonifier<'p> {
   /// Helper to vonify optional values
   /// Mirrors vonifyOptional in ParserVonifier.scala lines 11-16
   pub fn vonify_optional<T, F>(opt: &Option<T>, func: F) -> IVonData
@@ -36,7 +36,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a file
   /// Mirrors vonifyFile in ParserVonifier.scala lines 18-30
-  pub fn vonify_file(file: &'a FileP<'a, 'p>) -> IVonData {
+  pub fn vonify_file(file: &'p FileP<'p>) -> IVonData {
     let FileP {
       file_coord,
       comments_ranges,
@@ -71,7 +71,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a denizen (top-level declaration)
   /// Mirrors vonifyDenizen in ParserVonifier.scala lines 32-41
-  pub fn vonify_denizen(denizen_p: &'a IDenizenP<'a, 'p>) -> IVonData {
+  pub fn vonify_denizen(denizen_p: &'p IDenizenP<'p>) -> IVonData {
     match denizen_p {
       IDenizenP::TopLevelFunction(function) => Self::vonify_function(function),
       IDenizenP::TopLevelStruct(struct_p) => Self::vonify_struct(struct_p),
@@ -83,7 +83,7 @@ impl<'a, 'p> ParserVonifier<'a> {
   }
 
   /// Vonify a file coordinate
-  fn vonify_file_coord(coord: &'a FileCoordinate<'a>) -> IVonData {
+  fn vonify_file_coord(coord: &'p FileCoordinate<'p>) -> IVonData {
     IVonData::Object(VonObject {
       tyype: "FileCoordinate".to_string(),
       id: None,
@@ -103,7 +103,7 @@ impl<'a, 'p> ParserVonifier<'a> {
   }
 
   /// Vonify a package coordinate
-  fn vonify_package_coord(coord: &'a PackageCoordinate<'a>) -> IVonData {
+  fn vonify_package_coord(coord: &'p PackageCoordinate<'p>) -> IVonData {
     IVonData::Object(VonObject {
       tyype: "PackageCoordinate".to_string(),
       id: None,
@@ -156,7 +156,7 @@ impl<'a, 'p> ParserVonifier<'a> {
   }
 
   /// Vonify a name
-  fn vonify_name(name: &NameP<'a>) -> IVonData {
+  fn vonify_name(name: &NameP<'p>) -> IVonData {
     IVonData::Object(VonObject {
       tyype: "Name".to_string(),
       id: None,
@@ -177,7 +177,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a struct
   /// Mirrors vonifyStruct in ParserVonifier.scala lines 68-83
-  fn vonify_struct(thing: &'a StructP<'a, 'p>) -> IVonData {
+  fn vonify_struct(thing: &'p StructP<'p>) -> IVonData {
     let StructP {
       range,
       name,
@@ -241,7 +241,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a function
   /// Mirrors vonifyFunction in ParserVonifier.scala lines 222-231
-  fn vonify_function(thing: &FunctionP<'a, 'p>) -> IVonData {
+  fn vonify_function(thing: &FunctionP<'p>) -> IVonData {
     let FunctionP {
       range,
       header,
@@ -270,8 +270,8 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify an interface
   /// Mirrors vonifyInterface in ParserVonifier.scala lines 135-150
-  fn vonify_interface(thing: &'a InterfaceP<'a, 'p>) -> IVonData {
-    let InterfaceP::<'a, 'p> {
+  fn vonify_interface(thing: &'p InterfaceP<'p>) -> IVonData {
+    let InterfaceP::<'p> {
       range,
       name,
       attributes,
@@ -337,7 +337,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify an impl
   /// Mirrors vonifyImpl in ParserVonifier.scala lines 152-165
-  fn vonify_impl(thing: &'a ImplP<'a, 'p>) -> IVonData {
+  fn vonify_impl(thing: &'p ImplP<'p>) -> IVonData {
     let ImplP {
       range,
       generic_params,
@@ -384,7 +384,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify an export
   /// Mirrors vonifyExportAs in ParserVonifier.scala lines 167-177
-  fn vonify_export_as(thing: &'a ExportAsP<'a, 'p>) -> IVonData {
+  fn vonify_export_as(thing: &'p ExportAsP<'p>) -> IVonData {
     let ExportAsP {
       range,
       struct_,
@@ -413,7 +413,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify an import
   /// Mirrors vonifyImport in ParserVonifier.scala lines 179-190
-  fn vonify_import(thing: &'a ImportP<'a, 'p>) -> IVonData {
+  fn vonify_import(thing: &'p ImportP<'p>) -> IVonData {
     let ImportP {
       range,
       module_name,
@@ -450,8 +450,8 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a function header
   /// Mirrors vonifyFunctionHeader in ParserVonifier.scala lines 233-254
-  fn vonify_function_header(thing: &FunctionHeaderP<'a, 'p>) -> IVonData {
-    let FunctionHeaderP::<'a, 'p> {
+  fn vonify_function_header(thing: &FunctionHeaderP<'p>) -> IVonData {
+    let FunctionHeaderP::<'p> {
       range,
       name,
       attributes,
@@ -515,7 +515,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify params
   /// Mirrors vonifyParams in ParserVonifier.scala lines 256-264
-  fn vonify_params(thing: &ParamsP<'a, 'p>) -> IVonData {
+  fn vonify_params(thing: &ParamsP<'p>) -> IVonData {
     let ParamsP { range, params } = thing;
 
     IVonData::Object(VonObject {
@@ -539,7 +539,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a parameter
   /// Mirrors vonifyParameter in ParserVonifier.scala lines 266-277
-  fn vonify_parameter(thing: &ParameterP<'a, 'p>) -> IVonData {
+  fn vonify_parameter(thing: &ParameterP<'p>) -> IVonData {
     let ParameterP {
       range,
       virtuality,
@@ -578,7 +578,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a pattern
   /// Mirrors vonifyPattern in ParserVonifier.scala lines 279-289
-  fn vonify_pattern(thing: &PatternPP<'a, 'p>) -> IVonData {
+  fn vonify_pattern(thing: &PatternPP<'p>) -> IVonData {
     let PatternPP {
       range,
       destination,
@@ -612,7 +612,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify an attribute
   /// Mirrors vonifyAttribute in ParserVonifier.scala lines 381-409
-  fn vonify_attribute(thing: &IAttributeP<'a>) -> IVonData {
+  fn vonify_attribute(thing: &IAttributeP<'p>) -> IVonData {
     match thing {
       IAttributeP::WeakableAttribute(WeakableAttributeP { range }) => IVonData::Object(VonObject {
         tyype: "WeakableAttribute".to_string(),
@@ -724,7 +724,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify struct members
   /// Mirrors vonifyStructMembers in ParserVonifier.scala lines 85-93
-  fn vonify_struct_members(thing: &StructMembersP<'a, 'p>) -> IVonData {
+  fn vonify_struct_members(thing: &StructMembersP<'p>) -> IVonData {
     let StructMembersP { range, contents } = thing;
     IVonData::Object(VonObject {
       tyype: "StructMembers".to_string(),
@@ -747,7 +747,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify struct contents - dispatches to vonify_struct_member, vonify_struct_method, vonify_variadic_struct_member
   /// Mirrors vonifyStructContents in ParserVonifier.scala lines 95-101
-  fn vonify_struct_contents(thing: &IStructContent<'a, 'p>) -> IVonData {
+  fn vonify_struct_contents(thing: &IStructContent<'p>) -> IVonData {
     match thing {
       IStructContent::StructMethod(function) => Self::vonify_struct_method(function),
       IStructContent::NormalStructMember(sm) => Self::vonify_struct_member(sm),
@@ -757,7 +757,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify struct method (StructMethodP(func) in Scala; Rust enum has function directly)
   /// Mirrors vonifyStructMethod in ParserVonifier.scala lines 125-132
-  fn vonify_struct_method(function: &FunctionP<'a, 'p>) -> IVonData {
+  fn vonify_struct_method(function: &FunctionP<'p>) -> IVonData {
     IVonData::Object(VonObject {
       tyype: "StructMethod".to_string(),
       id: None,
@@ -770,7 +770,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify normal struct member
   /// Mirrors vonifyStructMember in ParserVonifier.scala lines 102-112
-  fn vonify_struct_member(thing: &NormalStructMemberP<'a, 'p>) -> IVonData {
+  fn vonify_struct_member(thing: &NormalStructMemberP<'p>) -> IVonData {
     let NormalStructMemberP {
       range,
       name,
@@ -803,7 +803,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify variadic struct member
   /// Mirrors vonifyVariadicStructMember in ParserVonifier.scala lines 114-123
-  fn vonify_variadic_struct_member(thing: &VariadicStructMemberP<'a, 'p>) -> IVonData {
+  fn vonify_variadic_struct_member(thing: &VariadicStructMemberP<'p>) -> IVonData {
     let VariadicStructMemberP {
       range,
       variability,
@@ -845,7 +845,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify destination local
   /// Mirrors vonifyDestinationLocal in ParserVonifier.scala lines 301-309
-  fn vonify_destination_local(thing: &DestinationLocalP<'a>) -> IVonData {
+  fn vonify_destination_local(thing: &DestinationLocalP<'p>) -> IVonData {
     let DestinationLocalP { decl, mutate } = thing;
     IVonData::Object(VonObject {
       tyype: "DestinationLocal".to_string(),
@@ -865,7 +865,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify name declaration
   /// Mirrors vonifyNameDeclaration in ParserVonifier.scala lines 311-320
-  fn vonify_name_declaration(thing: &INameDeclarationP<'a>) -> IVonData {
+  fn vonify_name_declaration(thing: &INameDeclarationP<'p>) -> IVonData {
     match thing {
       INameDeclarationP::IgnoredLocalNameDeclaration(range) => IVonData::Object(VonObject {
         tyype: "IgnoredLocalNameDeclaration".to_string(),
@@ -920,7 +920,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify destructure
   /// Mirrors vonifyDestructure in ParserVonifier.scala lines 362-370
-  fn vonify_destructure(thing: &DestructureP<'a, 'p>) -> IVonData {
+  fn vonify_destructure(thing: &DestructureP<'p>) -> IVonData {
     let DestructureP { range, patterns } = thing;
     IVonData::Object(VonObject {
       tyype: "Destructure".to_string(),
@@ -943,7 +943,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify template rules
   /// Mirrors vonifyTemplateRules in ParserVonifier.scala lines 411-419
-  fn vonify_template_rules(thing: &TemplateRulesP<'a, 'p>) -> IVonData {
+  fn vonify_template_rules(thing: &TemplateRulesP<'p>) -> IVonData {
     let TemplateRulesP { range, rules } = thing;
     IVonData::Object(VonObject {
       tyype: "TemplateRules".to_string(),
@@ -966,7 +966,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify a rule
   /// Mirrors vonifyRule in ParserVonifier.scala lines 421-513
-  fn vonify_rule(thing: &IRulexPR<'a, 'p>) -> IVonData {
+  fn vonify_rule(thing: &IRulexPR<'p>) -> IVonData {
     match thing {
       IRulexPR::Equals(EqualsPR { range, left, right }) => IVonData::Object(VonObject {
         tyype: "EqualsPR".to_string(),
@@ -1146,7 +1146,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify identifying runes (generic parameters)
   /// Mirrors vonifyIdentifyingRunes in ParserVonifier.scala lines 532-540
-  pub fn vonify_identifying_runes(thing: &GenericParametersP<'a, 'p>) -> IVonData {
+  pub fn vonify_identifying_runes(thing: &GenericParametersP<'p>) -> IVonData {
     let GenericParametersP {
       range,
       params: identifying_runes_p,
@@ -1175,7 +1175,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify generic parameter
   /// Mirrors vonifyGenericParameter in ParserVonifier.scala lines 542-554
-  fn vonify_generic_parameter(thing: &GenericParameterP<'a, 'p>) -> IVonData {
+  fn vonify_generic_parameter(thing: &GenericParameterP<'p>) -> IVonData {
     let GenericParameterP {
       range,
       name,
@@ -1319,8 +1319,8 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify region rune
   /// Mirrors vonifyRegionRune in ParserVonifier.scala lines 745-753
-  fn vonify_region_rune(region_rune: &RegionRunePT<'a>) -> IVonData {
-    let RegionRunePT::<'a> { range, name } = region_rune;
+  fn vonify_region_rune(region_rune: &RegionRunePT<'p>) -> IVonData {
+    let RegionRunePT::<'p> { range, name } = region_rune;
     IVonData::Object(VonObject {
       tyype: "RegionRuneT".to_string(),
       id: None,
@@ -1339,7 +1339,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify templex (type expression with 24 variants!)
   /// Mirrors vonifyTemplex in ParserVonifier.scala lines 566-743
-  fn vonify_templex(thing: &ITemplexPT<'a, 'p>) -> IVonData {
+  fn vonify_templex(thing: &ITemplexPT<'p>) -> IVonData {
     match thing {
       ITemplexPT::RegionRune(r) => Self::vonify_region_rune(r),
       ITemplexPT::AnonymousRune(AnonymousRunePT { range }) => IVonData::Object(VonObject {
@@ -1855,7 +1855,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify imprecise name
   /// Mirrors vonifyImpreciseName in ParserVonifier.scala lines 322-329
-  fn vonify_imprecise_name(thing: &IImpreciseNameP<'a>) -> IVonData {
+  fn vonify_imprecise_name(thing: &IImpreciseNameP<'p>) -> IVonData {
     match thing {
       IImpreciseNameP::LookupName(name) => IVonData::Object(VonObject {
         tyype: "LookupName".to_string(),
@@ -1894,7 +1894,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify block
   /// Mirrors vonifyBlock in ParserVonifier.scala lines 787-797
-  fn vonify_block(thing: &BlockPE<'a, 'p>) -> IVonData {
+  fn vonify_block(thing: &BlockPE<'p>) -> IVonData {
     let BlockPE {
       range,
       maybe_pure,
@@ -1927,7 +1927,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify consecutor
   /// Mirrors vonifyConsecutor in ParserVonifier.scala lines 799-806
-  fn vonify_consecutor(thing: &ConsecutorPE<'a, 'p>) -> IVonData {
+  fn vonify_consecutor(thing: &ConsecutorPE<'p>) -> IVonData {
     let ConsecutorPE { inners } = thing;
     IVonData::Object(VonObject {
       tyype: "Consecutor".to_string(),
@@ -1944,7 +1944,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify template args
   /// Mirrors vonifyTemplateArgs in ParserVonifier.scala lines 1174-1182
-  fn vonify_template_args(thing: &TemplateArgsP<'a, 'p>) -> IVonData {
+  fn vonify_template_args(thing: &TemplateArgsP<'p>) -> IVonData {
     let TemplateArgsP { range, args } = thing;
     IVonData::Object(VonObject {
       tyype: "TemplateArgs".to_string(),
@@ -1967,7 +1967,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify array size
   /// Mirrors vonifyArraySize in ParserVonifier.scala lines 1144-1156
-  fn vonify_array_size(obj: &IArraySizeP<'a, 'p>) -> IVonData {
+  fn vonify_array_size(obj: &IArraySizeP<'p>) -> IVonData {
     match obj {
       IArraySizeP::RuntimeSized => IVonData::Object(VonObject {
         tyype: "RuntimeSized".to_string(),
@@ -1987,7 +1987,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify construct array
   /// Mirrors vonifyConstructArray in ParserVonifier.scala lines 1158-1172
-  fn vonify_construct_array(ca: &ConstructArrayPE<'a, 'p>) -> IVonData {
+  fn vonify_construct_array(ca: &ConstructArrayPE<'p>) -> IVonData {
     let ConstructArrayPE {
       range,
       type_pt,
@@ -2041,7 +2041,7 @@ impl<'a, 'p> ParserVonifier<'a> {
 
   /// Vonify expression (38 variants!)
   /// Mirrors vonifyExpression in ParserVonifier.scala lines 808-1142
-  fn vonify_expression(thing: &IExpressionPE<'a, 'p>) -> IVonData {
+  fn vonify_expression(thing: &IExpressionPE<'p>) -> IVonData {
     match thing {
       IExpressionPE::ConstantBool(ConstantBoolPE { range, value }) => IVonData::Object(VonObject {
         tyype: "ConstantBool".to_string(),

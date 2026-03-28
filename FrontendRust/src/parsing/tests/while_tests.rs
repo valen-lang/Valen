@@ -12,18 +12,17 @@ class WhileTests extends FunSuite with Collector with TestParseUtils {
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn simple_while_loop() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while true {}");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_block_contents_expect(&parse_arena, &keywords, "while true {}");
   let while_ = cast!(expr, IExpressionPE::While);
   let condition = cast!(while_.condition, IExpressionPE::ConstantBool);
   assert!(condition.value);
@@ -40,11 +39,10 @@ fn simple_while_loop() {
 */
 #[test]
 fn result_after_while_loop() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while true {} false");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_block_contents_expect(&parse_arena, &keywords, "while true {} false");
   let consecutor = cast!(expr, IExpressionPE::Consecutor);
   let (while_expr, false_expr) = expect_2(&consecutor.inners);
 
@@ -67,11 +65,10 @@ fn result_after_while_loop() {
 */
 #[test]
 fn while_with_condition_declarations() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_block_contents_expect(&interner, &keywords, &parse_arena, "while x = 4; x > 6 { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_block_contents_expect(&parse_arena, &keywords, "while x = 4; x > 6 { }");
   let while_ = cast!(expr, IExpressionPE::While);
 
   let condition = cast!(while_.condition, IExpressionPE::Consecutor);

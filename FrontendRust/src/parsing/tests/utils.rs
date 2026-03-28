@@ -1,7 +1,7 @@
 use bumpalo::Bump;
 use crate::cast;
 use crate::utils::arena_utils::{alloc_slice_copy, alloc_slice_from_vec};
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
 use crate::lexing::lexer::Lexer;
@@ -17,18 +17,16 @@ use crate::parsing::tests::traverse::NodeRefP;
 /// AFTERM: Remove this function and use the one in ParserTestCompilation.scala instead
 /// so that it does a round-trip through vonprinter and parsedloader.
 /// Compile a Vale file and return the FileP AST
-pub fn compile_file<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_file<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<FileP<'a, 'p>, ParseError>
+) -> Result<FileP<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let parser = Parser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
 
   // Lex the entire file
   let mut iter_for_lex = LexingIterator::new(code.to_string());
@@ -45,111 +43,99 @@ where
     denizens.push(denizen_p);
   }
 
-  let empty_module = interner.intern("");
+  let empty_module = parse_arena.intern_str("");
 
-  let package_coord = interner.intern_package_coordinate(empty_module, &[]);
+  let package_coord = parse_arena.intern_package_coordinate(empty_module, &[]);
 
-  let file_coord = interner.intern_file_coordinate(package_coord, "test.vale");
+  let file_coord = parse_arena.intern_file_coordinate(package_coord, "test.vale");
 
   Ok(FileP {
     file_coord,
-    comments_ranges: alloc_slice_copy(arena, &[]),
-    denizens: alloc_slice_from_vec(arena, denizens),
+    comments_ranges: alloc_slice_copy(parse_arena.bump(), &[]),
+    denizens: alloc_slice_from_vec(parse_arena.bump(), denizens),
   })
 }
 
 /// Compile a Vale file and panic if it fails (for tests)
-pub fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> FileP<'a, 'p>
+) -> FileP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_file(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
+  compile_file(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse file: {:?}", e))
 }
 
 /// Compile denizens (top-level declarations) from code
-pub fn compile_denizens<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_denizens<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<Vec<IDenizenP<'a, 'p>>, ParseError>
+) -> Result<Vec<IDenizenP<'p>>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_file(interner, keywords, arena, code).map(|file| file.denizens.to_vec())
+  compile_file(parse_arena, keywords, code).map(|file| file.denizens.to_vec())
 }
 
 /// Compile a single denizen from code
-pub fn compile_denizen<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_denizen<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IDenizenP<'a, 'p>, ParseError>
+) -> Result<IDenizenP<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let denizens = compile_denizens(interner, keywords, arena, code)?;
+  let denizens = compile_denizens(parse_arena, keywords, code)?;
   assert_eq!(denizens.len(), 1, "Expected exactly one denizen");
   Ok(denizens.into_iter().next().unwrap())
 }
 
 /// Compile a single denizen and panic if it fails
-pub fn compile_denizen_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_denizen_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IDenizenP<'a, 'p>
+) -> IDenizenP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_denizen(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
+  compile_denizen(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse denizen: {:?}", e))
 }
 
 /// Compile a single denizen and expect it to fail with an error, passing the error to a callback
-pub fn compile_denizen_for_error<'a, 'ctx, 'p, F>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_denizen_for_error<'p, 'ctx, F>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
   callback: F,
 )
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
   F: FnOnce(ParseError),
 {
-  match compile_denizen(interner, keywords, arena, code) {
+  match compile_denizen(parse_arena, keywords, code) {
     Ok(_) => panic!("Expected parsing to fail, but it succeeded"),
     Err(e) => callback(e),
   }
 }
 
 /// Compile an expression from code
-pub fn compile_expression<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_expression<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'a, 'p>, ParseError>
+) -> Result<IExpressionPE<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let expression_parser = ExpressionParser::new(interner, keywords, arena);
-  let mut templex_parser = TemplexParser::new(interner, keywords, arena);
-  let mut pattern_parser = PatternParser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let expression_parser = ExpressionParser::new(parse_arena, keywords, parse_arena.bump());
+  let mut templex_parser = TemplexParser::new(parse_arena, keywords, parse_arena.bump());
+  let mut pattern_parser = PatternParser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -158,48 +144,42 @@ where
 }
 
 /// Compile an expression and panic if it fails
-pub fn compile_expression_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_expression_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'a, 'p>
+) -> IExpressionPE<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_expression(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
+  compile_expression(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse expression: {:?}", e))
 }
 
 /// Compile an expression and expect it to fail, returning the error
-pub fn compile_expression_for_error<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_expression_for_error<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
 ) -> ParseError
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_expression(interner, keywords, arena, code).expect_err("Expected parsing to fail")
+  compile_expression(parse_arena, keywords, code).expect_err("Expected parsing to fail")
 }
 
 /// Compile a statement from code
-pub fn compile_statement<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_statement<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'a, 'p>, ParseError>
+) -> Result<IExpressionPE<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let expression_parser = ExpressionParser::new(interner, keywords, arena);
-  let mut templex_parser = TemplexParser::new(interner, keywords, arena);
-  let mut pattern_parser = PatternParser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let expression_parser = ExpressionParser::new(parse_arena, keywords, parse_arena.bump());
+  let mut templex_parser = TemplexParser::new(parse_arena, keywords, parse_arena.bump());
+  let mut pattern_parser = PatternParser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -208,32 +188,28 @@ where
 }
 
 /// Compile a statement and panic if it fails
-pub fn compile_statement_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_statement_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'a, 'p>
+) -> IExpressionPE<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_statement(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
+  compile_statement(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse statement: {:?}", e))
 }
 
 /// Compile block contents from code
-pub fn compile_block_contents<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_block_contents<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'a, 'p>, ParseError>
+) -> Result<IExpressionPE<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let mut parser = Parser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let mut parser = Parser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -247,32 +223,28 @@ where
 }
 
 /// Compile block contents and panic if it fails
-pub fn compile_block_contents_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_block_contents_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'a, 'p>
+) -> IExpressionPE<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_block_contents(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
+  compile_block_contents(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse block contents: {:?}", e))
 }
 
 /// Compile a pattern from code
-pub fn compile_pattern<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_pattern<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<PatternPP<'a, 'p>, ParseError>
+) -> Result<PatternPP<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let mut parser = Parser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let mut parser = Parser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -291,32 +263,28 @@ where
 }
 
 /// Compile a pattern and panic if it fails
-pub fn compile_pattern_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_pattern_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> PatternPP<'a, 'p>
+) -> PatternPP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_pattern(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
+  compile_pattern(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse pattern: {:?}", e))
 }
 
 /// Compile a templex (type expression) from code
-pub fn compile_templex<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_templex<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<ITemplexPT<'a, 'p>, ParseError>
+) -> Result<ITemplexPT<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let parser = Parser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;
@@ -325,32 +293,28 @@ where
 }
 
 /// Compile a templex and panic if it fails
-pub fn compile_templex_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_templex_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> ITemplexPT<'a, 'p>
+) -> ITemplexPT<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_templex(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
+  compile_templex(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse templex: {:?}", e))
 }
 
 /// Compile a rulex (rule expression) from code
-pub fn compile_rulex<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_rulex<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IRulexPR<'a, 'p>, ParseError>
+) -> Result<IRulexPR<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let lexer = Lexer::new(interner, keywords);
-  let parser = Parser::new(interner, keywords, arena);
+  let lexer = Lexer::new(parse_arena, keywords);
+  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;
@@ -359,31 +323,27 @@ where
 }
 
 /// Compile a rulex and panic if it fails
-pub fn compile_rulex_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+pub fn compile_rulex_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IRulexPR<'a, 'p>
+) -> IRulexPR<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_rulex(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
+  compile_rulex(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse rulex: {:?}", e))
 }
 
 /// Compile a struct from code
-pub fn compile_struct<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_struct<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<StructP<'a, 'p>, ParseError>
+) -> Result<StructP<'p>, ParseError>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let denizen = compile_denizen(interner, keywords, arena, code)?;
+  let denizen = compile_denizen(parse_arena, keywords, code)?;
   match denizen {
     IDenizenP::TopLevelStruct(s) => Ok(s),
     _ => panic!("Expected TopLevelStruct, got: {:?}", denizen),
@@ -391,22 +351,20 @@ where
 }
 
 /// Compile a struct and panic if it fails
-pub fn compile_struct_expect<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_struct_expect<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> StructP<'a, 'p>
+) -> StructP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_struct(interner, keywords, arena, code).unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
+  compile_struct(parse_arena, keywords, code).unwrap_or_else(|e| panic!("Failed to parse struct: {:?}", e))
 }
 
 /// Returns the function with the given name.
 /// See test_find_func_named_returns_function for an example.
-pub fn find_func_named<'a, 'p>(file: &'p FileP<'a, 'p>, name: &str) -> &'p FunctionP<'a, 'p> {
+pub fn find_func_named<'p>(file: &'p FileP<'p>, name: &str) -> &'p FunctionP<'p> {
   crate::collect_only!(
       file,
       NodeRefP::Function(function @ FunctionP {
@@ -420,17 +378,16 @@ pub fn find_func_named<'a, 'p>(file: &'p FileP<'a, 'p>, name: &str) -> &'p Funct
 }
 #[test]
 fn test_find_func_named_returns_function() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program = compile(&interner, &keywords, &parse_arena, "exported func main() int {}");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let program = compile(&parse_arena, &keywords, "exported func main() int {}");
   let main_function = find_func_named(&program, "main");
   assert!(main_function.header.params.as_ref().unwrap().params.is_empty());
 }
 
 /// Returns the struct with the given name. See find_func_named's test for a similar example.
-  pub fn find_struct_named<'a, 'f, 'p>(file: &'f FileP<'a, 'p>, name: &str) -> &'f StructP<'a, 'p>
+  pub fn find_struct_named<'p, 'f>(file: &'f FileP<'p>, name: &str) -> &'f StructP<'p>
   where
     'f: 'p,
   {
@@ -443,17 +400,15 @@ fn test_find_func_named_returns_function() {
   )
 }
 
-pub fn compile_for_error<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p Bump,
+pub fn compile_for_error<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
 ) -> ParseError
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_file(interner, keywords, arena, code).expect_err("Should be error")
+  compile_file(parse_arena, keywords, code).expect_err("Should be error")
 }
 
 pub fn assert_lookup_name(expr: &IExpressionPE, expected: &str) {

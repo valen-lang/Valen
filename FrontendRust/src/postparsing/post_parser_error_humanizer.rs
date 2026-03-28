@@ -15,18 +15,18 @@ import dev.vale.postparsing.rules._
 object PostParserErrorHumanizer {
 */
 
-pub fn humanize<'a, 's, HP, LB, LRC, LC>(
+pub fn humanize<'s, HP, LB, LRC, LC>(
   humanize_pos: HP,
   _lines_between: LB,
   _line_range_containing: LRC,
   line_containing: LC,
-  err: &'a ICompileErrorS<'a, 's>,
+  err: &'s ICompileErrorS<'s>,
 ) -> String
 where
-  HP: Fn(&CodeLocationS<'a>) -> String,
-  LB: Fn(&CodeLocationS<'a>, &CodeLocationS<'a>) -> Vec<RangeS<'a>>,
-  LRC: Fn(&CodeLocationS<'a>) -> RangeS<'a>,
-  LC: Fn(&CodeLocationS<'a>) -> String,
+  HP: Fn(&CodeLocationS<'s>) -> String,
+  LB: Fn(&CodeLocationS<'s>, &CodeLocationS<'s>) -> Vec<RangeS<'s>>,
+  LRC: Fn(&CodeLocationS<'s>) -> RangeS<'s>,
+  LC: Fn(&CodeLocationS<'s>) -> String,
 {
   let error_str_body = match err {
     ICompileErrorS::VariableNameAlreadyExists(x) => {
@@ -119,7 +119,7 @@ where
     f"${posStr} error ${errorId}: ${errorStrBody}\n${nextStuff}\n"
   }
 */
-fn humanize_rune_type_error<'a>(
+fn humanize_rune_type_error<'s>(
   _error: &(),
 ) -> String {
   panic!("Unimplemented humanize_rune_type_error");
@@ -146,7 +146,7 @@ fn humanize_rune_type_error<'a>(
     }
   }
 */
-fn humanize_identifiability_rule_errorr<'a>(
+fn humanize_identifiability_rule_errorr<'s>(
   _error: &(),
 ) -> String {
   panic!("Unimplemented humanize_identifiability_rule_errorr");
@@ -161,7 +161,7 @@ fn humanize_identifiability_rule_errorr<'a>(
     }
   }
 */
-fn humanize_var_name<'a>(var_name: IVarNameS<'a>) -> String {
+fn humanize_var_name<'s>(var_name: IVarNameS<'s>) -> String {
   match var_name {
     IVarNameS::CodeVarName(n) => n.as_str().to_string(),
     IVarNameS::ClosureParamName(_) => "(closure)".to_string(),
@@ -169,7 +169,7 @@ fn humanize_var_name<'a>(var_name: IVarNameS<'a>) -> String {
   }
 }
 
-fn humanize_name<'a>(name: INameS<'a>) -> String {
+fn humanize_name<'s>(name: INameS<'s>) -> String {
   match name {
     INameS::VarName(var_name) => humanize_var_name((*var_name).clone()),
     _ => panic!("Unimplemented humanize_name branch for INameS"),
@@ -200,8 +200,8 @@ fn humanize_name<'a>(name: INameS<'a>) -> String {
     }
   }
 */
-fn humanize_imprecise_name<'a>(
-  _name: crate::postparsing::names::IImpreciseNameS<'a>,
+fn humanize_imprecise_name<'s>(
+  _name: crate::postparsing::names::IImpreciseNameS<'s>,
 ) -> String {
   panic!("Unimplemented humanize_imprecise_name");
 }
@@ -221,8 +221,8 @@ fn humanize_imprecise_name<'a>(
     }
   }
 */
-fn humanize_rune<'a>(
-  _rune: crate::postparsing::names::IRuneS<'a>,
+fn humanize_rune<'s>(
+  _rune: crate::postparsing::names::IRuneS<'s>,
 ) -> String {
   panic!("Unimplemented humanize_rune");
 }
@@ -310,8 +310,8 @@ fn humanize_templata_type(
     }
   }
 */
-fn humanize_rule<'a, 's>(
-  _rule: &crate::postparsing::rules::rules::IRulexSR<'a, 's>,
+fn humanize_rule<'s>(
+  _rule: &crate::postparsing::rules::rules::IRulexSR<'s>,
 ) -> String {
   panic!("Unimplemented humanize_rule");
 }
@@ -423,8 +423,8 @@ fn humanize_ownership(
     }
   }
 */
-fn humanize_region<'a>(
-  _r: &crate::postparsing::rules::rules::RuneUsage<'a>,
+fn humanize_region<'s>(
+  _r: &crate::postparsing::rules::rules::RuneUsage<'s>,
 ) -> String {
   panic!("Unimplemented humanize_region");
 }

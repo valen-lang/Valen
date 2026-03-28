@@ -1,4 +1,4 @@
-use crate::interner::Interner;
+use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
   BoolPT, IntPT, ITemplexPT, ITemplexPT::NameOrRune, LocationPT, MutabilityPT, NameOrRunePT,
@@ -41,18 +41,17 @@ class TemplexScout(
   keywords: Keywords) {
 */
 
-fn add_literal_rule<'a, 's>(scout_arena: &'s bumpalo::Bump, 
-  interner: &Interner<'a>,
+fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
-  range_s: RangeS<'a>,
-  value_sr: ILiteralSL<'a>,
-) -> RuneUsage<'a> {
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  range_s: RangeS<'s>,
+  value_sr: ILiteralSL<'s>,
+) -> RuneUsage<'s> {
   let mut child_lidb = lidb.child();
   let rune_s = RuneUsage {
     range: range_s.clone(),
-    rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume_in(interner.arena()),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+      lid: child_lidb.consume_in(scout_arena.arena()),
     })),
   };
   rule_builder.push(IRulexSR::Literal(LiteralSR {
@@ -74,12 +73,12 @@ fn add_literal_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     runeS
   }
 */
-fn add_rune_parent_env_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
+fn add_rune_parent_env_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   _lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
-  range_s: RangeS<'a>,
-  rune_s: IRuneS<'a>,
-) -> RuneUsage<'a> {
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  range_s: RangeS<'s>,
+  rune_s: IRuneS<'s>,
+) -> RuneUsage<'s> {
   let usage = RuneUsage {
     range: range_s.clone(),
     rune: rune_s,
@@ -103,20 +102,19 @@ fn add_rune_parent_env_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     usage
   }
 */
-fn add_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump, 
-  interner: &Interner<'a>,
+fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
-  range_s: RangeS<'a>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  range_s: RangeS<'s>,
   // Nearest enclosing region marker, see RADTGCA.
-  _context_region: IRuneS<'a>,
-  name_sn: IImpreciseNameS<'a>,
-) -> RuneUsage<'a> {
+  _context_region: IRuneS<'s>,
+  name_sn: IImpreciseNameS<'s>,
+) -> RuneUsage<'s> {
   let mut child_lidb = lidb.child();
   let rune_s = RuneUsage {
     range: range_s.clone(),
-    rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume_in(interner.arena()),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+      lid: child_lidb.consume_in(scout_arena.arena()),
     })),
   };
   rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
@@ -139,10 +137,9 @@ fn add_lookup_rule<'a, 's>(scout_arena: &'s bumpalo::Bump,
     runeS
   }
 */
-pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
-  interner: &Interner<'a>,
-  templex: &ITemplexPT<'a, 'p>,
-) -> Option<ILiteralSL<'a>> {
+pub fn translate_value_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  templex: &ITemplexPT<'p>,
+) -> Option<ILiteralSL<'s>> {
   match templex {
     ITemplexPT::Int(IntPT { value, .. }) => Some(ILiteralSL::IntLiteral(IntLiteralSL {
       value: *value,
@@ -162,7 +159,7 @@ pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
     )),
     ITemplexPT::String(StringPT { str, .. }) => Some(ILiteralSL::StringLiteral(
       StringLiteralSL {
-        value: interner.intern(str.as_str()),
+        value: scout_arena.intern_str(str.as_str()),
       },
     )),
     ITemplexPT::Location(LocationPT { location, .. }) => Some(ILiteralSL::LocationLiteral(
@@ -194,16 +191,15 @@ pub fn translate_value_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 */
 // Returns:
 // - Rune for this type
-pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump, 
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
   // Nearest enclosing region marker, see RADTGCA.
-  context_region: IRuneS<'a>,
-  templex: &ITemplexPT<'a, 'p>,
-) -> RuneUsage<'a> {
+  context_region: IRuneS<'s>,
+  templex: &ITemplexPT<'p>,
+) -> RuneUsage<'s> {
   /*
     // Returns:
     // - Rune for this type
@@ -218,14 +214,13 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         val evalRange = (range: RangeL) => PostParser.evalRange(env.file, range)
   */
   let file = env.file();
-  match translate_value_templex(scout_arena, interner, templex) {
+  match translate_value_templex(scout_arena, templex) {
     /*
           translateValueTemplex(templex) match {
     */
     Some(x) => {
       let mut child_lidb = lidb.child();
-      add_literal_rule(scout_arena, 
-        interner,
+      add_literal_rule(scout_arena,
         &mut child_lidb,
         rule_builder,
         PostParser::eval_range(file, templex.range()),
@@ -244,7 +239,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         templex match {
       */
       ITemplexPT::Inline(inline) => translate_templex(
-        scout_arena, interner,
+        scout_arena,
         keywords,
         env,
         lidb,
@@ -259,8 +254,8 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let rune = RuneUsage {
           range: PostParser::eval_range(file, anonymous_rune.range),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         rune
@@ -284,13 +279,14 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         range,
         name: Some(name),
       }) => {
+        let name_s = scout_arena.intern_str(name.str().as_str());
         let is_rune_from_local_env = env.local_declared_runes().contains(
-          &interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+          &scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_s })),
         );
         if is_rune_from_local_env {
           RuneUsage {
             range: PostParser::eval_range(file, *range),
-            rune: interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+            rune: scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_s })),
           }
         } else {
           // It's from a parent env
@@ -299,7 +295,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
             &mut child_lidb,
             rule_builder,
             PostParser::eval_range(file, *range),
-            interner.intern_rune(CodeRune(CodeRuneS { name: name.str() })),
+            scout_arena.intern_rune(CodeRune(CodeRuneS { name: name_s })),
           )
         }
       }
@@ -317,22 +313,22 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
       }
 */
       ITemplexPT::NameOrRune(NameOrRunePT(name_or_rune)) => {
-        let is_rune_from_env = env.all_declared_runes().contains(&interner.intern_rune(CodeRune(
+        let is_rune_from_env = env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(
           CodeRuneS {
-            name: name_or_rune.str(),
+            name: scout_arena.intern_str(name_or_rune.str().as_str()),
           },
         )));
         if is_rune_from_env {
           let is_rune_from_local_env = env.local_declared_runes().contains(
-            &interner.intern_rune(CodeRune(CodeRuneS {
-              name: name_or_rune.str(),
+            &scout_arena.intern_rune(CodeRune(CodeRuneS {
+              name: scout_arena.intern_str(name_or_rune.str().as_str()),
             })),
           );
           if is_rune_from_local_env {
             RuneUsage {
               range: PostParser::eval_range(file, name_or_rune.range()),
-              rune: interner.intern_rune(CodeRune(CodeRuneS {
-                name: name_or_rune.str(),
+              rune: scout_arena.intern_rune(CodeRune(CodeRuneS {
+                name: scout_arena.intern_str(name_or_rune.str().as_str()),
               })),
             }
           } else {
@@ -342,19 +338,18 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
               &mut child_lidb,
               rule_builder,
               PostParser::eval_range(file, name_or_rune.range()),
-              interner.intern_rune(CodeRune(CodeRuneS {
-                name: name_or_rune.str(),
+              scout_arena.intern_rune(CodeRune(CodeRuneS {
+                name: scout_arena.intern_str(name_or_rune.str().as_str()),
               })),
             )
           }
         } else {
           // e.g. "int"
-          let name = interner.intern_imprecise_name(CodeName(CodeNameS {
-            name: name_or_rune.str(),
+          let name = scout_arena.intern_imprecise_name(CodeName(CodeNameS {
+            name: scout_arena.intern_str(name_or_rune.str().as_str()),
           }));
           let mut child_lidb = lidb.child();
-          add_lookup_rule(scout_arena, 
-            interner,
+          add_lookup_rule(scout_arena,
             &mut child_lidb,
             rule_builder,
             PostParser::eval_range(file, name_or_rune.range()),
@@ -391,8 +386,8 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
 
@@ -402,7 +397,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
             .as_ref()
             .unwrap_or_else(|| panic!("POSTPARSER_TRANSLATE_TEMPLEX_REGION_NAME_NOT_YET_IMPLEMENTED"))
             .str();
-          let rune = interner.intern_rune(CodeRune(CodeRuneS { name: region_name }));
+          let rune = scout_arena.intern_rune(CodeRune(CodeRuneS { name: scout_arena.intern_str(region_name.as_str()) }));
           assert!(
             env.all_declared_runes().contains(&rune),
             "POSTPARSER_TRANSLATE_TEMPLEX_UNKNOWN_REGION_NOT_YET_IMPLEMENTED"
@@ -418,7 +413,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         };
         let mut child_lidb = lidb.child();
         let inner_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env,
           &mut child_lidb,
@@ -471,13 +466,13 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -485,11 +480,11 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           context_region.clone(),
           call.template,
         );
-        let mut arg_runes = Vec::<RuneUsage<'a>>::new();
+        let mut arg_runes = Vec::<RuneUsage<'s>>::new();
         for arg in call.args {
           let mut child_lidb = lidb.child();
           arg_runes.push(translate_templex(
-            scout_arena, interner,
+            scout_arena,
             keywords,
             env.clone(),
             &mut child_lidb,
@@ -502,7 +497,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, arg_runes),
+          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), arg_runes),
         }));
         result_rune_s
       }
@@ -549,17 +544,18 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
       ITemplexPT::Func(func) => {
         let range_s = PostParser::eval_range(file, func.range);
         let params_range_s = PostParser::eval_range(file, func.params_range);
-        let NameP(_, name) = &func.name;
-        let params_s: Vec<RuneUsage<'a>> =
+        let NameP(_, name_p) = &func.name;
+        let name: crate::interner::StrI<'s> = scout_arena.intern_str(name_p.as_str());
+        let params_s: Vec<RuneUsage<'s>> =
           func.parameters.iter().map(|param_p| {
-            translate_templex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
+            translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
           }).collect();
-        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(interner.arena()) })) };
-        rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, params_s) }));
+        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(scout_arena.arena()) })) };
+        rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), params_s) }));
 
-        let return_rune_s = translate_templex(scout_arena, interner, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
+        let return_rune_s = translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
 
-        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: interner.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(interner.arena()) })) };
+        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(scout_arena.arena()) })) };
 
         // Only appears in call site; filtered out when solving definition
         rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
@@ -623,27 +619,27 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
           rune: template_rune_s.clone(),
-          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS {
             name: keywords.static_array,
           })),
         }));
         let mut child_lidb = lidb.child();
         let size_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -653,7 +649,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         );
         let mut child_lidb = lidb.child();
         let mutability_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -663,7 +659,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         );
         let mut child_lidb = lidb.child();
         let variability_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -673,7 +669,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         );
         let mut child_lidb = lidb.child();
         let element_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env,
           &mut child_lidb,
@@ -685,7 +681,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s]),
+          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s]),
         }));
         result_rune_s
       }
@@ -717,27 +713,27 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
           rune: template_rune_s.clone(),
-          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS {
             name: keywords.array,
           })),
         }));
         let mut child_lidb = lidb.child();
         let mutability_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env.clone(),
           &mut child_lidb,
@@ -747,7 +743,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         );
         let mut child_lidb = lidb.child();
         let element_rune_s = translate_templex(
-          scout_arena, interner,
+          scout_arena,
           keywords,
           env,
           &mut child_lidb,
@@ -759,7 +755,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, vec![mutability_rune_s, element_rune_s]),
+          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), vec![mutability_rune_s, element_rune_s]),
         }));
         result_rune_s
       }
@@ -789,29 +785,29 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(interner.arena()),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+            lid: child_lidb.consume_in(scout_arena.arena()),
           })),
         };
         rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
           range: range_s.clone(),
           rune: template_rune_s.clone(),
-          name: interner.intern_imprecise_name(CodeName(CodeNameS {
+          name: scout_arena.intern_imprecise_name(CodeName(CodeNameS {
             name: keywords.tuple_human_name[tuple.elements.len()],
           })),
         }));
-        let mut element_runes = Vec::<RuneUsage<'a>>::new();
+        let mut element_runes = Vec::<RuneUsage<'s>>::new();
         for element in tuple.elements {
           let mut child_lidb = lidb.child();
           element_runes.push(translate_templex(
-            scout_arena, interner,
+            scout_arena,
             keywords,
             env.clone(),
             &mut child_lidb,
@@ -824,7 +820,7 @@ pub fn translate_templex<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena, element_runes),
+          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), element_runes),
         }));
         result_rune_s
       }
@@ -861,30 +857,29 @@ Guardian: inline
 */
 // Returns:
 // - Rune for this type
-fn translate_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump, 
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+fn translate_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
   // Nearest enclosing region marker, see RADTGCA.
-  context_region: IRuneS<'a>,
-  type_p: &ITemplexPT<'a, 'p>,
-) -> RuneUsage<'a> {
+  context_region: IRuneS<'s>,
+  type_p: &ITemplexPT<'p>,
+) -> RuneUsage<'s> {
   let file = env.file();
   match type_p {
     NameOrRune(NameOrRunePT(NameP(
       range,
       name_or_rune,
     )))
-      if env.all_declared_runes().contains(&interner.intern_rune(CodeRune(CodeRuneS {
-        name: *name_or_rune,
+      if env.all_declared_runes().contains(&scout_arena.intern_rune(CodeRune(CodeRuneS {
+        name: scout_arena.intern_str(name_or_rune.as_str()),
       }))) =>
     {
       let result_rune_s = RuneUsage {
         range: PostParser::eval_range(file, *range),
-        rune: interner.intern_rune(CodeRune(CodeRuneS {
-          name: *name_or_rune,
+        rune: scout_arena.intern_rune(CodeRune(CodeRuneS {
+          name: scout_arena.intern_str(name_or_rune.as_str()),
         })),
       };
       result_rune_s
@@ -892,7 +887,7 @@ fn translate_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
     non_rune_templex_p => {
       let mut child_lidb = lidb.child();
       translate_templex(
-        scout_arena, interner,
+        scout_arena,
         keywords,
         env,
         &mut child_lidb,
@@ -926,29 +921,28 @@ fn translate_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
 */
 // Returns:
 // - Rune for this type
-pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump,
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  range: RangeS<'a>,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
-  context_region: IRuneS<'a>,
-  maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
-) -> RuneUsage<'a> {
+  range: RangeS<'s>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  context_region: IRuneS<'s>,
+  maybe_type_p: Option<&ITemplexPT<'p>>,
+) -> RuneUsage<'s> {
   match maybe_type_p {
     None => {
       let mut child_lidb = lidb.child();
       let result_rune_s = RuneUsage {
         range,
-        rune: interner.intern_rune(ImplicitRune(ImplicitRuneS {
-          lid: child_lidb.consume_in(interner.arena()),
+        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
+          lid: child_lidb.consume_in(scout_arena.arena()),
         })),
       };
       result_rune_s
     }
     Some(type_p) => {
-      translate_type_into_rune(scout_arena, interner, keywords, env, lidb, rule_builder, context_region, type_p)
+      translate_type_into_rune(scout_arena, keywords, env, lidb, rule_builder, context_region, type_p)
     }
   }
 }
@@ -974,23 +968,21 @@ pub fn translate_maybe_type_into_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump
   }
 }
 */
-pub(crate) fn translate_maybe_type_into_maybe_rune<'a, 'p, 's>(scout_arena: &'s bumpalo::Bump, 
-  interner: &Interner<'a>,
-  keywords: &Keywords<'a>,
-  env: IEnvironmentS<'a>,
+pub(crate) fn translate_maybe_type_into_maybe_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
+  keywords: &Keywords<'s>,
+  env: IEnvironmentS<'s>,
   lidb: &mut LocationInDenizenBuilder,
-  range: RangeS<'a>,
-  rule_builder: &mut Vec<IRulexSR<'a, 's>>,
-  rune_to_explicit_type: &mut HashMap<IRuneS<'a>, ITemplataType>,
-  context_region: IRuneS<'a>,
-  maybe_type_p: Option<&ITemplexPT<'a, 'p>>,
-) -> Option<RuneUsage<'a>> {
+  range: RangeS<'s>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
+  rune_to_explicit_type: &mut HashMap<IRuneS<'s>, ITemplataType>,
+  context_region: IRuneS<'s>,
+  maybe_type_p: Option<&ITemplexPT<'p>>,
+) -> Option<RuneUsage<'s>> {
   if maybe_type_p.is_none() {
     None
   } else {
     let mut child_lidb = lidb.child();
-    let result_rune = translate_maybe_type_into_rune(scout_arena, 
-      interner,
+    let result_rune = translate_maybe_type_into_rune(scout_arena,
       keywords,
       env,
       &mut child_lidb,

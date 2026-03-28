@@ -1,42 +1,31 @@
-# The Three Arenas
+# The Two Arenas
 
-The compiler frontend uses three bump arenas (`bumpalo::Bump`), each with its own lifetime. Data flows from parser to postparser to higher typing, with each pass allocating into its own arena.
+The compiler frontend uses two bump arenas (`bumpalo::Bump`), each with its own lifetime and interning maps. Data flows from parser to postparser to higher typing, with each pass allocating into its own arena.
 // V: we might be moving toward an immutable arena model, need to incorporate that into this doc probably
-// V: should we think of interning as not its own arena, but instead in any particular arena? after all interning is just a map on top of an arena. this might also make it cleaner because right now we have typing-only names in the postparser which is weird.
-
-## `'a` — Interner arena (longest-lived)
-
-**Owned by:** The `Interner` struct (created at the start of compilation).
-
-**Contains:** All interned/canonicalized data — strings (`StrI<'a>`), names (`INameS<'a>`, `IRuneS<'a>`, `IImpreciseNameS<'a>`), package coordinates, file coordinates. Also the rune variant payloads like `ImplicitRuneS<'a>`, `CodeRuneS<'a>`.
-
-**Lifetime relationship:** `'a` outlives everything else. All other arenas and data reference `'a` data freely.
-
-**Access:** `interner.arena()` returns `&'a Bump`. Most code accesses the interner via `self.interner` on `PostParser` or `HigherTypingPass`.
-
-// V: we might want to rename 'a to 'i
 
 ## `'p` — Parser arena
 
-**Owned by:** The `ParserCompilation` (or a local `Bump` in tests).
+**Owned by:** A local `Bump` created by `pass_manager::build()` (or a local `Bump` in tests). Wrapped in `ParseArena<'p>` which provides interning maps on top.
 
-**Contains:** Parser AST nodes — `FileP`, `FunctionP`, `StructP`, `IExpressionPE`, `ITemplexPT`, etc. These are the raw parse tree from source code.
+**Contains:** All interned strings (`StrI<'p>`), package coordinates (`PackageCoordinate<'p>`), file coordinates (`FileCoordinate<'p>`), parser AST nodes (`FileP`, `FunctionP`, `StructP`, `IExpressionPE`, `ITemplexPT`, etc.).
 
-**Lifetime relationship:** `'a: 'p` (interner outlives parser). Parser nodes reference interned strings but not scout data.
+**Lifetime relationship:** Self-contained. No dependency on other arenas.
 
-**Note:** The postparser reads `'p` data as input but doesn't write to the parser arena.
+**Access:** `parse_arena.intern_str(...)`, `parse_arena.intern_package_coordinate(...)`, `parse_arena.intern_file_coordinate(...)`, `parse_arena.bump()` returns `&'p Bump`.
+
+**Note:** The postparser reads `'p` data as input but doesn't write to the parser arena (except for synthetic parser AST nodes via `parse_arena` — see @PPSPASTNZ).
 
 // V: the goal is that we should be able to drop this after the postparser runs. possible?
 
 ## `'s` — Scout (postparser + higher typing) arena
 
-**Owned by:** Created as a local `Bump` by the compilation entry point, passed to `PostParser::new()` and `HigherTypingPass::new()`.
+**Owned by:** A local `Bump` created by `pass_manager::build()` (or a local `Bump` in tests). Wrapped in `ScoutArena<'s>` which provides interning maps for strings, coordinates, names, runes, and imprecise names.
 
-**Contains:** All postparser output (`StructS`, `FunctionS`, `IExpressionSE`, `IRulexSR`, etc.) and all higher typing output (`StructA`, `FunctionA`, `InterfaceA`, etc.). Also `ArenaIndexMap` instances and arena slices (`&'s [T]`).
+**Contains:** All postparser output (`StructS`, `FunctionS`, `IExpressionSE`, `IRulexSR`, etc.) and all higher typing output (`StructA`, `FunctionA`, `InterfaceA`, etc.). Also interned names (`INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>`), `ArenaIndexMap` instances, and arena slices (`&'s [T]`).
 
-**Lifetime relationship:** `'a: 's` (interner outlives scout). Scout data references interned names/runes from `'a` and other scout data from `'s`.
+**Lifetime relationship:** Self-contained. Data from `'p` is re-interned (copied) into `'s` at the pass boundary.
 
-**Access:** `self.scout_arena` on `PostParser` and `HigherTypingPass`.
+**Access:** `scout_arena.intern_str(...)`, `scout_arena.intern_rune(...)`, `scout_arena.intern_name(...)`, `scout_arena.intern_imprecise_name(...)`, `scout_arena.bump()` returns `&'s Bump`.
 
 // V: the goal is that we should be able to drop this after the typing pass runs. possible?
 
@@ -47,12 +36,16 @@ Source code
     │
     ▼
 Parser ──── allocates into 'p arena ────► FileP, FunctionP, IExpressionPE, ...
-    │                                      (references 'a for interned strings)
+    │                                      (StrI<'p>, PackageCoordinate<'p>)
     ▼
 PostParser ── allocates into 's arena ──► StructS, FunctionS, IExpressionSE, ...
-    │                                      (references 'a for runes/names,
-    │                                       references 's for rules/exprs)
+    │                                      (re-interns StrI<'p> → StrI<'s>,
+    │                                       references 's for runes/names/rules/exprs)
     ▼
 HigherTyping ── allocates into 's arena ─► StructA, FunctionA, InterfaceA, ...
                                             (same 's arena as postparser)
 ```
+
+## Cross-pass data translation
+
+At the parser→postparser boundary, `StrI<'p>` values are re-interned into `'s` via `scout_arena.intern_str(name_p.as_str())`. Package and file coordinates are similarly re-interned. This happens at ~30 individual sites throughout the postparser, wherever parser node data is used to build scout names/runes.

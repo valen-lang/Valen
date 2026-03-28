@@ -20,12 +20,12 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct ParameterP<'a, 'p> {
+pub struct ParameterP<'p> {
   pub range: RangeL,
   pub virtuality: Option<AbstractP>,
   pub maybe_pre_checked: Option<RangeL>,
   pub self_borrow: Option<RangeL>,
-  pub pattern: Option<PatternPP<'a, 'p>>,
+  pub pattern: Option<PatternPP<'p>>,
 }
 /*
 case class ParameterP(
@@ -41,8 +41,8 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DestinationLocalP<'a> {
-  pub decl: INameDeclarationP<'a>,
+pub struct DestinationLocalP<'p> {
+  pub decl: INameDeclarationP<'p>,
   pub mutate: Option<RangeL>,
 }
 /*
@@ -51,11 +51,11 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct PatternPP<'a, 'p> {
+pub struct PatternPP<'p> {
   pub range: RangeL,
-  pub destination: Option<DestinationLocalP<'a>>,
-  pub templex: Option<ITemplexPT<'a, 'p>>,
-  pub destructure: Option<DestructureP<'a, 'p>>,
+  pub destination: Option<DestinationLocalP<'p>>,
+  pub templex: Option<ITemplexPT<'p>>,
+  pub destructure: Option<DestructureP<'p>>,
 }
 /*
 case class PatternPP(
@@ -77,9 +77,9 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct DestructureP<'a, 'p> {
+pub struct DestructureP<'p> {
   pub range: RangeL,
-  pub patterns: &'p [PatternPP<'a, 'p>],
+  pub patterns: &'p [PatternPP<'p>],
 }
 /*
 case class DestructureP(
@@ -92,13 +92,13 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum INameDeclarationP<'a> {
-  LocalNameDeclaration(NameP<'a>),
+pub enum INameDeclarationP<'p> {
+  LocalNameDeclaration(NameP<'p>),
   IgnoredLocalNameDeclaration(RangeL),
   IterableNameDeclaration(RangeL),
   IteratorNameDeclaration(RangeL),
   IterationOptionNameDeclaration(RangeL),
-  ConstructingMemberNameDeclaration(NameP<'a>),
+  ConstructingMemberNameDeclaration(NameP<'p>),
 }
 impl INameDeclarationP<'_> {
   pub fn range(&self) -> RangeL {

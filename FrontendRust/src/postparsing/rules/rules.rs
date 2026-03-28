@@ -20,9 +20,9 @@ import scala.collection.immutable.List
 */
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct RuneUsage<'a> {
-  pub range: RangeS<'a>,
-  pub rune: IRuneS<'a>,
+pub struct RuneUsage<'s> {
+  pub range: RangeS<'s>,
+  pub rune: IRuneS<'s>,
 }
 
 /*
@@ -32,32 +32,32 @@ Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IRulexSR<'a, 's> {
-  Equals(EqualsSR<'a>),
-  Literal(LiteralSR<'a>),
-  MaybeCoercingLookup(MaybeCoercingLookupSR<'a>),
-  Lookup(LookupSR<'a>),
-  MaybeCoercingCall(MaybeCoercingCallSR<'a, 's>),
-  Call(CallSR<'a, 's>),
-  RuneParentEnvLookup(RuneParentEnvLookupSR<'a>),
-  Augment(AugmentSR<'a>),
-  OneOf(OneOfSR<'a, 's>),
-  IsInterface(IsInterfaceSR<'a>),
-  CoordComponents(CoordComponentsSR<'a>),
-  CoerceToCoord(CoerceToCoordSR<'a>),
-  Pack(PackSR<'a, 's>),
-  CallSiteFunc(CallSiteFuncSR<'a>),
-  DefinitionFunc(DefinitionFuncSR<'a>),
-  Resolve(ResolveSR<'a>),
-  CoordSend(CoordSendSR<'a>),
-  DefinitionCoordIsa(DefinitionCoordIsaSR<'a>),
-  CallSiteCoordIsa(CallSiteCoordIsaSR<'a>),
-  KindComponents(KindComponentsSR<'a>),
-  PrototypeComponents(PrototypeComponentsSR<'a>),
-  IsConcrete(IsConcreteSR<'a>),
-  IsStruct(IsStructSR<'a>),
-  RefListCompoundMutability(RefListCompoundMutabilitySR<'a>),
-  IndexList(IndexListSR<'a>),
+pub enum IRulexSR<'s> {
+  Equals(EqualsSR<'s>),
+  Literal(LiteralSR<'s>),
+  MaybeCoercingLookup(MaybeCoercingLookupSR<'s>),
+  Lookup(LookupSR<'s>),
+  MaybeCoercingCall(MaybeCoercingCallSR<'s>),
+  Call(CallSR<'s>),
+  RuneParentEnvLookup(RuneParentEnvLookupSR<'s>),
+  Augment(AugmentSR<'s>),
+  OneOf(OneOfSR<'s>),
+  IsInterface(IsInterfaceSR<'s>),
+  CoordComponents(CoordComponentsSR<'s>),
+  CoerceToCoord(CoerceToCoordSR<'s>),
+  Pack(PackSR<'s>),
+  CallSiteFunc(CallSiteFuncSR<'s>),
+  DefinitionFunc(DefinitionFuncSR<'s>),
+  Resolve(ResolveSR<'s>),
+  CoordSend(CoordSendSR<'s>),
+  DefinitionCoordIsa(DefinitionCoordIsaSR<'s>),
+  CallSiteCoordIsa(CallSiteCoordIsaSR<'s>),
+  KindComponents(KindComponentsSR<'s>),
+  PrototypeComponents(PrototypeComponentsSR<'s>),
+  IsConcrete(IsConcreteSR<'s>),
+  IsStruct(IsStructSR<'s>),
+  RefListCompoundMutability(RefListCompoundMutabilitySR<'s>),
+  IndexList(IndexListSR<'s>),
 }
 /*
 Guardian: disable-all
@@ -73,8 +73,8 @@ trait IRulexSR {
 Guardian: disable: NECX
 */
 
-impl<'a, 's> IRulexSR<'a, 's> {
-  pub fn range<'r>(&'r self) -> &'r RangeS<'a> {
+impl<'s> IRulexSR<'s> {
+  pub fn range<'r>(&'r self) -> &'r RangeS<'s> {
     match self {
       IRulexSR::Equals(x) => &x.range,
       IRulexSR::Literal(x) => &x.range,
@@ -108,7 +108,7 @@ impl<'a, 's> IRulexSR<'a, 's> {
   }
   /* Guardian: disable-all */
 
-  pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'a>> {
+  pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'s>> {
     match self {
       IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
       IRulexSR::Literal(x) => vec![x.rune.clone()],
@@ -143,7 +143,7 @@ impl<'a, 's> IRulexSR<'a, 's> {
       IRulexSR::CoordSend(x) => vec![x.sender_rune.clone(), x.receiver_rune.clone()],
       IRulexSR::DefinitionCoordIsa(x) => vec![x.result_rune.clone(), x.sub_rune.clone(), x.super_rune.clone()],
       IRulexSR::CallSiteCoordIsa(x) => {
-        let mut usages: Vec<RuneUsage<'a>> = x.result_rune.iter().cloned().collect();
+        let mut usages: Vec<RuneUsage<'s>> = x.result_rune.iter().cloned().collect();
         usages.push(x.sub_rune.clone());
         usages.push(x.super_rune.clone());
         usages
@@ -161,10 +161,10 @@ impl<'a, 's> IRulexSR<'a, 's> {
 /* Guardian: disable-all */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct EqualsSR<'a> {
-  pub range: RangeS<'a>,
-  pub left: RuneUsage<'a>,
-  pub right: RuneUsage<'a>,
+pub struct EqualsSR<'s> {
+  pub range: RangeS<'s>,
+  pub left: RuneUsage<'s>,
+  pub right: RuneUsage<'s>,
 }
 /*
 case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IRulexSR {
@@ -178,10 +178,10 @@ Guardian: disable: NECX
 // See SAIRFU and SRCAMP for what's going on with these rules.
 #[derive(Clone, Debug, PartialEq)]
 // MIGALLOW: Rust doesn't need a runeUsages override
-pub struct CoordSendSR<'a> {
-  pub range: RangeS<'a>,
-  pub sender_rune: RuneUsage<'a>,
-  pub receiver_rune: RuneUsage<'a>,
+pub struct CoordSendSR<'s> {
+  pub range: RangeS<'s>,
+  pub sender_rune: RuneUsage<'s>,
+  pub receiver_rune: RuneUsage<'s>,
 }
 /*
 // See SAIRFU and SRCAMP for what's going on with these rules.
@@ -199,11 +199,11 @@ case class CoordSendSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct DefinitionCoordIsaSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub sub_rune: RuneUsage<'a>,
-  pub super_rune: RuneUsage<'a>,
+pub struct DefinitionCoordIsaSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub sub_rune: RuneUsage<'s>,
+  pub super_rune: RuneUsage<'s>,
 }
 /*
 case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: RuneUsage, superR
@@ -215,8 +215,8 @@ case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: R
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CallSiteCoordIsaSR<'a> {
-  pub range: RangeS<'a>,
+pub struct CallSiteCoordIsaSR<'s> {
+  pub range: RangeS<'s>,
   // This is here because when we add this CallSiteCoordIsaSR and its companion DefinitionCoordIsaSR,
   // the DefinitionCoordIsaSR has a resultRune that it usually populates with an ImplTemplata.
   // That rune is in the rules somewhere, but when we filter out the DefinitionCoordIsaSR for call site
@@ -226,9 +226,9 @@ pub struct CallSiteCoordIsaSR<'a> {
   // It also means the call site has access to the impls, which might be nice for ONBIFS and NBIFP.
   // It's an Option because CoordSendSR sometimes produces one of these, and it doesn't care about
   // the result.
-  pub result_rune: Option<RuneUsage<'a>>,
-  pub sub_rune: RuneUsage<'a>,
-  pub super_rune: RuneUsage<'a>,
+  pub result_rune: Option<RuneUsage<'s>>,
+  pub sub_rune: RuneUsage<'s>,
+  pub super_rune: RuneUsage<'s>,
 }
 /*
 case class CallSiteCoordIsaSR(
@@ -254,10 +254,10 @@ case class CallSiteCoordIsaSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct KindComponentsSR<'a> {
-  pub range: RangeS<'a>,
-  pub kind_rune: RuneUsage<'a>,
-  pub mutability_rune: RuneUsage<'a>,
+pub struct KindComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub kind_rune: RuneUsage<'s>,
+  pub mutability_rune: RuneUsage<'s>,
 }
 /*
 case class KindComponentsSR(
@@ -273,11 +273,11 @@ case class KindComponentsSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CoordComponentsSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub ownership_rune: RuneUsage<'a>,
-  pub kind_rune: RuneUsage<'a>,
+pub struct CoordComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub ownership_rune: RuneUsage<'s>,
+  pub kind_rune: RuneUsage<'s>,
 }
 /*
 case class CoordComponentsSR(
@@ -294,11 +294,11 @@ case class CoordComponentsSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct PrototypeComponentsSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub params_rune: RuneUsage<'a>,
-  pub return_rune: RuneUsage<'a>,
+pub struct PrototypeComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub params_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
 }
 /*
 case class PrototypeComponentsSR(
@@ -315,12 +315,12 @@ case class PrototypeComponentsSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct ResolveSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub name: StrI<'a>,
-  pub params_list_rune: RuneUsage<'a>,
-  pub return_rune: RuneUsage<'a>,
+pub struct ResolveSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
 }
 /*
 case class ResolveSR(
@@ -338,12 +338,12 @@ case class ResolveSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CallSiteFuncSR<'a> {
-  pub range: RangeS<'a>,
-  pub prototype_rune: RuneUsage<'a>,
-  pub name: StrI<'a>,
-  pub params_list_rune: RuneUsage<'a>,
-  pub return_rune: RuneUsage<'a>,
+pub struct CallSiteFuncSR<'s> {
+  pub range: RangeS<'s>,
+  pub prototype_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
 }
 /*
 case class CallSiteFuncSR(
@@ -361,12 +361,12 @@ case class CallSiteFuncSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct DefinitionFuncSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub name: StrI<'a>,
-  pub params_list_rune: RuneUsage<'a>,
-  pub return_rune: RuneUsage<'a>,
+pub struct DefinitionFuncSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
 }
 /*
 case class DefinitionFuncSR(
@@ -384,10 +384,10 @@ case class DefinitionFuncSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct OneOfSR<'a, 's> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub literals: &'s [ILiteralSL<'a>],
+pub struct OneOfSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub literals: &'s [ILiteralSL<'s>],
 }
 /*
 // See Possible Values Shouldnt Be Used For Inference (PVSBUFI)
@@ -405,9 +405,9 @@ case class OneOfSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct IsConcreteSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
+pub struct IsConcreteSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
 }
 /*
 case class IsConcreteSR(
@@ -422,9 +422,9 @@ case class IsConcreteSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct IsInterfaceSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
+pub struct IsInterfaceSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
 }
 /*
 case class IsInterfaceSR(
@@ -439,9 +439,9 @@ case class IsInterfaceSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct IsStructSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
+pub struct IsStructSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
 }
 /*
 case class IsStructSR(
@@ -456,10 +456,10 @@ case class IsStructSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct CoerceToCoordSR<'a> {
-  pub range: RangeS<'a>,
-  pub coord_rune: RuneUsage<'a>,
-  pub kind_rune: RuneUsage<'a>,
+pub struct CoerceToCoordSR<'s> {
+  pub range: RangeS<'s>,
+  pub coord_rune: RuneUsage<'s>,
+  pub kind_rune: RuneUsage<'s>,
 }
 /*
 // TODO: Get rid of this in favor of just CoordComponentsSR.
@@ -476,10 +476,10 @@ case class CoerceToCoordSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RefListCompoundMutabilitySR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub coord_list_rune: RuneUsage<'a>,
+pub struct RefListCompoundMutabilitySR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub coord_list_rune: RuneUsage<'s>,
 }
 /*
 case class RefListCompoundMutabilitySR(
@@ -495,10 +495,10 @@ case class RefListCompoundMutabilitySR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct LiteralSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub literal: ILiteralSL<'a>,
+pub struct LiteralSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub literal: ILiteralSL<'s>,
 }
 
 /*
@@ -515,10 +515,10 @@ case class LiteralSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MaybeCoercingLookupSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub name: IImpreciseNameS<'a>,
+pub struct MaybeCoercingLookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub name: IImpreciseNameS<'s>,
 }
 
 /*
@@ -536,10 +536,10 @@ Guardian: disable: NECX
 */
 // A rule that looks up something that's not a Kind, so it doesn't need a default region.
 #[derive(Clone, Debug, PartialEq)]
-pub struct LookupSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
-  pub name: IImpreciseNameS<'a>,
+pub struct LookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub name: IImpreciseNameS<'s>,
 }
 /*
 case class LookupSR(
@@ -555,11 +555,11 @@ case class LookupSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct MaybeCoercingCallSR<'a, 's> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub template_rune: RuneUsage<'a>,
-  pub args: &'s [RuneUsage<'a>],
+pub struct MaybeCoercingCallSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub template_rune: RuneUsage<'s>,
+  pub args: &'s [RuneUsage<'s>],
 }
 /*
 case class MaybeCoercingCallSR(
@@ -577,11 +577,11 @@ Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 // MIGALLOW: Rust doesn't need a runeUsages override
-pub struct CallSR<'a, 's> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub template_rune: RuneUsage<'a>,
-  pub args: &'s [RuneUsage<'a>],
+pub struct CallSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub template_rune: RuneUsage<'s>,
+  pub args: &'s [RuneUsage<'s>],
 }
 /*
 case class CallSR(
@@ -598,10 +598,10 @@ case class CallSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct IndexListSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub list_rune: RuneUsage<'a>,
+pub struct IndexListSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub list_rune: RuneUsage<'s>,
   pub index: i32,
 }
 /*
@@ -619,9 +619,9 @@ case class IndexListSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct RuneParentEnvLookupSR<'a> {
-  pub range: RangeS<'a>,
-  pub rune: RuneUsage<'a>,
+pub struct RuneParentEnvLookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
 }
 /*
 case class RuneParentEnvLookupSR(
@@ -636,11 +636,11 @@ case class RuneParentEnvLookupSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct AugmentSR<'a> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
+pub struct AugmentSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
   pub ownership: Option<OwnershipP>,
-  pub inner_rune: RuneUsage<'a>,
+  pub inner_rune: RuneUsage<'s>,
 }
 /*
 // InterpretedAR will overwrite inner's permission and ownership to the given ones.
@@ -659,10 +659,10 @@ case class AugmentSR(
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
-pub struct PackSR<'a, 's> {
-  pub range: RangeS<'a>,
-  pub result_rune: RuneUsage<'a>,
-  pub members: &'s [RuneUsage<'a>],
+pub struct PackSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub members: &'s [RuneUsage<'s>],
 }
 /*
 case class PackSR(
@@ -705,9 +705,9 @@ Guardian: disable: NECX
 //}
 */
 #[derive(Clone, Debug, PartialEq)]
-pub enum ILiteralSL<'a> {
+pub enum ILiteralSL<'s> {
   IntLiteral(IntLiteralSL),
-  StringLiteral(StringLiteralSL<'a>),
+  StringLiteral(StringLiteralSL<'s>),
   BoolLiteral(BoolLiteralSL),
   MutabilityLiteral(MutabilityLiteralSL),
   LocationLiteral(LocationLiteralSL),
@@ -715,7 +715,7 @@ pub enum ILiteralSL<'a> {
   VariabilityLiteral(VariabilityLiteralSL),
 }
 
-impl<'a> ILiteralSL<'a> {
+impl<'s> ILiteralSL<'s> {
   pub fn get_type(&self) -> ITemplataType {
     match self {
       ILiteralSL::IntLiteral(x) => x.get_type(),
@@ -758,8 +758,8 @@ impl IntLiteralSL {
 /* Guardian: disable-all */
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StringLiteralSL<'a> {
-  pub value: StrI<'a>,
+pub struct StringLiteralSL<'s> {
+  pub value: StrI<'s>,
 }
 /*
 case class StringLiteralSL(value: String) extends ILiteralSL {
@@ -770,7 +770,7 @@ case class StringLiteralSL(value: String) extends ILiteralSL {
 Guardian: disable: NECX
 */
 
-impl<'a> StringLiteralSL<'a> {
+impl<'s> StringLiteralSL<'s> {
   pub fn get_type(&self) -> ITemplataType {
     ITemplataType::StringTemplataType(StringTemplataType {})
   }

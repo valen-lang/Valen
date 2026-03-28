@@ -2,8 +2,10 @@
 
 use std::collections::HashMap;
 use crate::interner::{InternedSlice, StrI};
-use crate::Interner;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
 use crate::Keywords;
+use bumpalo::Bump;
 
 pub struct OrResolver<P, F> {
   primary: P,
@@ -75,10 +77,10 @@ Guardian: disable: NECX
   }
 
 // mig: fn test
-  pub fn test(interner: &Interner<'a>) -> FileCoordinate<'a> {
-    let test_module = interner.intern(TEST_MODULE);
-    let package_coord = interner.intern_package_coordinate(test_module, &[]);
-    *interner.intern_file_coordinate(package_coord, "test.vale")
+  pub fn test(scout_arena: &ScoutArena<'a>) -> FileCoordinate<'a> {
+    let test_module = scout_arena.intern_str(TEST_MODULE);
+    let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
+    *scout_arena.intern_file_coordinate(package_coord, "test.vale")
   }
 /*
   def test(interner: Interner): FileCoordinate = {
@@ -128,12 +130,16 @@ Guardian: disable: NECX
   }
 
 // mig: fn parent
-  pub fn parent(&self, interner: &Interner<'a>) -> Option<PackageCoordinate<'a>> {
+  pub fn parent(&self, bump: &'a Bump) -> Option<PackageCoordinate<'a>> {
     if self.packages.is_empty() {
       return None;
     }
     let parent_packages = &self.packages.as_slice()[0..self.packages.len() - 1];
-    Some(*interner.intern_package_coordinate(self.module, parent_packages))
+    let arena_packages = bump.alloc_slice_copy(parent_packages);
+    Some(PackageCoordinate {
+      module: self.module,
+      packages: InternedSlice::new(arena_packages),
+    })
   }
 /*
   def parent(interner: Interner): Option[PackageCoordinate] = {
@@ -149,10 +155,10 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
 */
 // mig: fn test_tld
   pub fn test_tld(
-    interner: &Interner<'a>,
+    scout_arena: &ScoutArena<'a>,
     _keywords: &Keywords<'a>,
   ) -> PackageCoordinate<'a> {
-    Some(*interner.intern_package_coordinate(interner.intern(TEST_MODULE), &[]))
+    Some(*scout_arena.intern_package_coordinate(scout_arena.intern_str(TEST_MODULE), &[]))
       .expect("unreachable")
   }
 /*
@@ -160,23 +166,23 @@ object PackageCoordinate {// extends Ordering[PackageCoordinate] {
 */
 // mig: fn builtin
   pub fn builtin<'ctx>(
-    interner: &'ctx Interner<'a>,
+    parse_arena: &'ctx ParseArena<'a>,
     keywords: &'ctx Keywords<'a>,
   ) -> &'a PackageCoordinate<'a>
   where
     'a: 'ctx,
   {
-    interner.intern_package_coordinate(keywords.empty_string, &[])
+    parse_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
 /*
   def BUILTIN(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(keywords.emptyString, Vector.empty))
 */
 // mig: fn internal
   pub fn internal(
-    interner: &Interner<'a>,
+    scout_arena: &ScoutArena<'a>,
     keywords: &Keywords<'a>,
   ) -> PackageCoordinate<'a> {
-    *interner.intern_package_coordinate(keywords.empty_string, &[])
+    *scout_arena.intern_package_coordinate(keywords.empty_string, &[])
   }
 /*
   def internal(interner: Interner, keywords: Keywords): PackageCoordinate = interner.intern(PackageCoordinate(keywords.emptyString, Vector.empty))
@@ -222,13 +228,13 @@ pub fn simple<'a, T: Clone>(
 */
 // mig: fn test
 pub fn test<'a, C: Clone>(
-    interner: &Interner<'a>,
+    scout_arena: &ScoutArena<'a>,
     contents: C,
   ) -> FileCoordinateMap<'a, C> {
     const TEST_MODULE: &str = "test";
-    let test_module = interner.intern(TEST_MODULE);
-    let package_coord = interner.intern_package_coordinate(test_module, &[]);
-    let file_coord = interner.intern_file_coordinate(package_coord, "test.vale");
+    let test_module = scout_arena.intern_str(TEST_MODULE);
+    let package_coord = scout_arena.intern_package_coordinate(test_module, &[]);
+    let file_coord = scout_arena.intern_file_coordinate(package_coord, "test.vale");
     let mut result = FileCoordinateMap::new();
     result.put(file_coord, contents);
     result
@@ -247,14 +253,14 @@ pub fn test<'a, C: Clone>(
 */
 // mig: fn test
 pub fn test_from_vec<'a, T: Clone>(
-    interner: &Interner<'a>,
+    parse_arena: &ParseArena<'a>,
     contents: Vec<T>,
   ) -> FileCoordinateMap<'a, T> {
     let mut map = HashMap::new();
     for (index, code) in contents.into_iter().enumerate() {
       map.insert(format!("{}.vale", index), code);
     }
-    test_from_map(interner, map)
+    test_from_map(parse_arena, map)
   }
 /*
   def test[T](interner: Interner, contents: Vector[T]): FileCoordinateMap[T] = {
@@ -263,13 +269,13 @@ pub fn test_from_vec<'a, T: Clone>(
 */
 // mig: fn test
 pub fn test_from_map<'a, T: Clone>(
-    interner: &Interner<'a>,
+    parse_arena: &ParseArena<'a>,
     contents: HashMap<String, T>,
   ) -> FileCoordinateMap<'a, T> {
     let mut result = FileCoordinateMap::new();
-    let package_coord = interner.intern_package_coordinate(interner.intern(TEST_MODULE), &[]);
+    let package_coord = parse_arena.intern_package_coordinate(parse_arena.intern_str(TEST_MODULE), &[]);
     for (filepath, file_contents) in contents {
-      let file_coord = interner.intern_file_coordinate(package_coord, &filepath);
+      let file_coord = parse_arena.intern_file_coordinate(package_coord, &filepath);
       result.put(file_coord, file_contents);
     }
     result
@@ -317,9 +323,9 @@ Guardian: disable: NECX
     }
   }
 
-  /// Companion-object style constructor for tests. Mirrors FileCoordinateMap.test(interner, contents).
-  pub fn test(interner: &Interner<'a>, contents: Contents) -> Self {
-    super::code_hierarchy::test(interner, contents)
+  /// Companion-object style constructor for tests. Mirrors FileCoordinateMap.test(scout_arena, contents).
+  pub fn test(scout_arena: &ScoutArena<'a>, contents: Contents) -> Self {
+    super::code_hierarchy::test(scout_arena, contents)
   }
 
 // mig: fn apply

@@ -12,18 +12,17 @@ class ImplTests extends FunSuite with Matchers with Collector with TestParseUtil
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn normal_impl() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let file = compile(&interner, &keywords, &parse_arena, "impl MyInterface for SomeStruct;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let file = compile(&parse_arena, &keywords, "impl MyInterface for SomeStruct;");
   let denizen = expect_1(&file.denizens);
   let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
 
@@ -52,11 +51,10 @@ fn normal_impl() {
 
 #[test]
 fn templated_impl() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let file = compile(&interner, &keywords, &parse_arena, "impl<T> MyInterface<T> for SomeStruct<T>;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let file = compile(&parse_arena, &keywords, "impl<T> MyInterface<T> for SomeStruct<T>;");
   let denizen = expect_1(&file.denizens);
   let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
 
@@ -99,11 +97,10 @@ fn templated_impl() {
 
 #[test]
 fn impling_a_template_call() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let file = compile(&interner, &keywords, &parse_arena, "impl IFunction1<mut, int, int> for MyIntIdentity;");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let file = compile(&parse_arena, &keywords, "impl IFunction1<mut, int, int> for MyIntIdentity;");
   let denizen = expect_1(&file.denizens);
   let impl_ = cast!(denizen, IDenizenP::TopLevelImpl);
 

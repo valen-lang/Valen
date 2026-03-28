@@ -30,32 +30,29 @@ class CaptureAndTypeTests extends FunSuite with Matchers with Collector with Tes
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{INameDeclarationP, ITemplexPT, OwnershipP, PatternPP};
 use crate::parsing::tests::utils::{
   assert_destination_local_name, assert_templex_name, compile_pattern_expect,
 };
 
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> PatternPP<'a, 'p>
+) -> PatternPP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_pattern_expect(interner, keywords, arena, code)
+  compile_pattern_expect(parse_arena, keywords, code)
 }
 #[test]
 fn no_capture_with_type() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ int");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ int");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
 }
@@ -68,11 +65,10 @@ fn no_capture_with_type() {
 */
 #[test]
 fn capture_with_type() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "a int");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "a int");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
   assert!(pattern.destructure.is_none());
@@ -86,11 +82,10 @@ fn capture_with_type() {
 */
 #[test]
 fn simple_capture_with_tame() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "a T");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "a T");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert_templex_name(pattern.templex.as_ref().unwrap(), "T");
   assert!(pattern.destructure.is_none());
@@ -104,11 +99,10 @@ fn simple_capture_with_tame() {
 */
 #[test]
 fn capture_with_borrow_tame() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "arr &R");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "arr &R");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "arr");
   let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
   assert_eq!(
@@ -131,11 +125,10 @@ fn capture_with_borrow_tame() {
 */
 #[test]
 fn capture_with_self_in_front() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "self.arr &&R");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "self.arr &&R");
   let destination = pattern.destination.as_ref().unwrap();
   let member_name = cast!(
     &destination.decl,

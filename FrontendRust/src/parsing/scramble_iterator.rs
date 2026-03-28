@@ -4,8 +4,8 @@ use crate::StrI;
 /// Iterator over a scramble of lexed nodes
 /// Matches Scala's ScrambleIterator (holds reference to scramble, like Scala)
 #[derive(Clone, Debug)]
-pub struct ScrambleIterator<'a, 's> {
-  pub scramble: &'s ScrambleLE<'a>,
+pub struct ScrambleIterator<'p, 's> {
+  pub scramble: &'s ScrambleLE<'p>,
   pub index: usize,
   pub end: usize,
 }
@@ -17,9 +17,9 @@ class ScrambleIterator(
   assert(end <= scramble.elements.length)
 Guardian: disable: NECX
 */
-impl<'a, 's> ScrambleIterator<'a, 's> {
+impl<'p, 's> ScrambleIterator<'p, 's> {
   /// Create a new iterator over the entire scramble
-  pub fn new(scramble: &'s ScrambleLE<'a>) -> Self {
+  pub fn new(scramble: &'s ScrambleLE<'p>) -> Self {
     let end = scramble.elements.len();
     ScrambleIterator {
       scramble,
@@ -34,7 +34,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Create a new iterator with custom bounds
-  pub fn with_bounds(scramble: &'s ScrambleLE<'a>, index: usize, end: usize) -> Self {
+  pub fn with_bounds(scramble: &'s ScrambleLE<'p>, index: usize, end: usize) -> Self {
     assert!(end <= scramble.elements.len());
     ScrambleIterator {
       scramble,
@@ -115,7 +115,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Peek at the previous element
-  pub fn peek_prev(&self) -> Option<&INodeLEEnum<'a>> {
+  pub fn peek_prev(&self) -> Option<&INodeLEEnum<'p>> {
     if self.index > 0 {
       Some(&self.scramble.elements[self.index - 1])
     } else {
@@ -124,7 +124,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   }
 
   /// Skip to the position of another iterator
-  pub fn skip_to(&mut self, that: &ScrambleIterator<'a, 's>) {
+  pub fn skip_to(&mut self, that: &ScrambleIterator<'p, 's>) {
     self.index = that.index;
   }
   /*
@@ -152,7 +152,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Peek at the current element
-  pub fn peek(&self) -> Option<&INodeLEEnum<'a>> {
+  pub fn peek(&self) -> Option<&INodeLEEnum<'p>> {
     if self.index >= self.end {
       None
     } else {
@@ -161,7 +161,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   }
 
   /// Peek at the current element, returning owned clone to avoid borrow conflicts.
-  pub fn peek_cloned(&self) -> Option<INodeLEEnum<'a>> {
+  pub fn peek_cloned(&self) -> Option<INodeLEEnum<'p>> {
     self.peek().cloned()
   }
   /*
@@ -172,7 +172,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Peek at the next n elements
-  pub fn peek_n(&self, n: usize) -> Vec<Option<&INodeLEEnum<'a>>> {
+  pub fn peek_n(&self, n: usize) -> Vec<Option<&INodeLEEnum<'p>>> {
     (0..n)
       .map(|i| {
         let idx = self.index + i;
@@ -200,7 +200,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Peek at the next 2 elements
-  pub fn peek2(&self) -> (Option<&INodeLEEnum<'a>>, Option<&INodeLEEnum<'a>>) {
+  pub fn peek2(&self) -> (Option<&INodeLEEnum<'p>>, Option<&INodeLEEnum<'p>>) {
     let first = if self.index < self.end {
       Some(&**&self.scramble.elements[self.index])
     } else {
@@ -215,7 +215,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   }
 
   /// Peek at the next 2 elements, returning owned clones to avoid borrow conflicts.
-  pub fn peek2_cloned(&self) -> (Option<INodeLEEnum<'a>>, Option<INodeLEEnum<'a>>) {
+  pub fn peek2_cloned(&self) -> (Option<INodeLEEnum<'p>>, Option<INodeLEEnum<'p>>) {
     let (a, b) = self.peek2();
     (a.cloned(), b.cloned())
   }
@@ -231,9 +231,9 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   pub fn peek3(
     &self,
   ) -> (
-    Option<&INodeLEEnum<'a>>,
-    Option<&INodeLEEnum<'a>>,
-    Option<&INodeLEEnum<'a>>,
+    Option<&INodeLEEnum<'p>>,
+    Option<&INodeLEEnum<'p>>,
+    Option<&INodeLEEnum<'p>>,
   ) {
     let first = if self.index < self.end {
       Some(&**&self.scramble.elements[self.index])
@@ -257,9 +257,9 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   pub fn peek3_cloned(
     &self,
   ) -> (
-    Option<INodeLEEnum<'a>>,
-    Option<INodeLEEnum<'a>>,
-    Option<INodeLEEnum<'a>>,
+    Option<INodeLEEnum<'p>>,
+    Option<INodeLEEnum<'p>>,
+    Option<INodeLEEnum<'p>>,
   ) {
     let (a, b, c) = self.peek3();
     (a.cloned(), b.cloned(), c.cloned())
@@ -290,7 +290,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Advance and return a reference to the current element
-  pub fn advance(&mut self) -> &INodeLEEnum<'a> {
+  pub fn advance(&mut self) -> &INodeLEEnum<'p> {
     assert!(self.has_next());
     let result = &**&self.scramble.elements[self.index];
     self.index += 1;
@@ -306,7 +306,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Take the current element and advance (returning owned)
-  pub fn take(&mut self) -> Option<INodeLEEnum<'a>> {
+  pub fn take(&mut self) -> Option<INodeLEEnum<'p>> {
     if self.index >= self.end {
       None
     } else {
@@ -379,7 +379,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   */
 
   /// Get the next word element
-  pub fn next_word(&mut self) -> Option<WordLE<'a>> {
+  pub fn next_word(&mut self) -> Option<WordLE<'p>> {
     match self.peek() {
       Some(INodeLEEnum::Word(w)) => {
         let result = w.clone();
@@ -462,7 +462,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
     &self,
     needle: char,
     include_empty_trailing: bool,
-  ) -> Vec<ScrambleIterator<'a, 's>> {
+  ) -> Vec<ScrambleIterator<'p, 's>> {
     let mut iters = Vec::new();
     let mut start = self.index;
     let mut i = start;
@@ -551,7 +551,7 @@ impl<'a, 's> ScrambleIterator<'a, 's> {
   }
 
   /// Consume and return all remaining elements
-  pub fn consume_rest(&mut self) -> Vec<INodeLEEnum<'a>> {
+  pub fn consume_rest(&mut self) -> Vec<INodeLEEnum<'p>> {
     let mut result = Vec::new();
     while self.has_next() {
       result.push(self.take().unwrap());

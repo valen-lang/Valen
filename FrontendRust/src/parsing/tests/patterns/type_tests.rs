@@ -17,7 +17,7 @@ class TypeTests extends FunSuite with Matchers with Collector with TestParseUtil
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
   INameDeclarationP, ITemplexPT, MutabilityP, OwnershipP, PatternPP, VariabilityP,
@@ -26,26 +26,23 @@ use crate::parsing::tests::utils::{
   assert_templex_name, compile_pattern_expect, expect_1, expect_2,
 };
 
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> PatternPP<'a, 'p>
+) -> PatternPP<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_pattern_expect(interner, keywords, arena, code)
+  compile_pattern_expect(parse_arena, keywords, code)
 }
 
 #[test]
 fn ignoring_name() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ int");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ int");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -63,11 +60,10 @@ fn ignoring_name() {
 */
 #[test]
 fn static_sized_array() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]MutableStruct");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -105,11 +101,10 @@ fn static_sized_array() {
 */
 #[test]
 fn static_sized_array_with_imm() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm>MutableStruct");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm>MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -147,11 +142,10 @@ fn static_sized_array_with_imm() {
 */
 #[test]
 fn static_sized_array_with_imm_and_vary() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ [#3]<imm, vary>MutableStruct");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm, vary>MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -189,11 +183,10 @@ fn static_sized_array_with_imm_and_vary() {
 */
 #[test]
 fn runtime_sized_array() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ #[]int");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ #[]int");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -226,11 +219,10 @@ fn runtime_sized_array() {
 */
 #[test]
 fn sequence_type() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ (int, bool)");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ (int, bool)");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -256,11 +248,10 @@ fn sequence_type() {
 */
 #[test]
 fn static_sized_array_with_borrow() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ &[#3]MutableStruct");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &[#3]MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -306,11 +297,10 @@ fn static_sized_array_with_borrow() {
 */
 #[test]
 fn static_sized_array_with_weak() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ &&[#3]<_, _>MutableStruct");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &&[#3]<_, _>MutableStruct");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,
@@ -350,11 +340,10 @@ fn static_sized_array_with_weak() {
 */
 #[test]
 fn call_type() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let parse_arena = Bump::new();
-  let pattern = compile(&interner, &keywords, &parse_arena, "_ MyOption<MyList<int>>");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ MyOption<MyList<int>>");
   let destination = pattern.destination.unwrap();
   assert!(matches!(
     destination.decl,

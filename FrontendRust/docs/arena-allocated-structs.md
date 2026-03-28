@@ -12,9 +12,13 @@ A struct is "arena-allocated" if it's created via `arena.alloc(MyStruct { ... })
 
 **Higher typing AST** (`src/higher_typing/ast.rs`): `StructA`, `InterfaceA`, `ImplA`, `FunctionA`, `ExportAsA`, `ProgramA`
 
-## Arena-allocated (interner arena, `'a`)
+## Arena-allocated (scout arena, `'s` — names/runes)
 
-**Names** (`src/postparsing/names.rs`): All `IRuneS` variant payloads (e.g. `ImplicitRuneS`, `CodeRuneS`), all `INameS` variant payloads, all `IImpreciseNameS` variant payloads, `PackageCoordinate`, `FileCoordinate`.
+**Names** (`src/postparsing/names.rs`): All `IRuneS` variant payloads (e.g. `ImplicitRuneS`, `CodeRuneS`), all `INameS` variant payloads, all `IImpreciseNameS` variant payloads. Interned via `ScoutArena<'s>`.
+
+## Arena-allocated (parse arena, `'p` — coordinates)
+
+**Coordinates** (`src/utils/code_hierarchy.rs`): `PackageCoordinate<'p>`, `FileCoordinate<'p>`. Interned via `ParseArena<'p>` (or `ScoutArena<'s>` for scout-lifetime coordinates).
 
 ## NOT arena-allocated (heap/stack)
 

@@ -40,8 +40,8 @@ Guardian: disable: NECX
 
 /// A file with top-level denizens
 #[derive(Clone, Debug, PartialEq)]
-pub struct FileL<'a> {
-  pub denizens: Vec<IDenizenL<'a>>,
+pub struct FileL<'p> {
+  pub denizens: Vec<IDenizenL<'p>>,
   pub comment_ranges: Vec<RangeL>,
 }
 /*
@@ -56,13 +56,13 @@ Guardian: disable: NECX
 
 /// Top-level items in a file
 #[derive(Clone, Debug, PartialEq)]
-pub enum IDenizenL<'a> {
-  TopLevelFunction(FunctionL<'a>),
-  TopLevelStruct(StructL<'a>),
-  TopLevelInterface(InterfaceL<'a>),
-  TopLevelImpl(ImplL<'a>),
-  TopLevelExportAs(ExportAsL<'a>),
-  TopLevelImport(ImportL<'a>),
+pub enum IDenizenL<'p> {
+  TopLevelFunction(FunctionL<'p>),
+  TopLevelStruct(StructL<'p>),
+  TopLevelInterface(InterfaceL<'p>),
+  TopLevelImpl(ImplL<'p>),
+  TopLevelExportAs(ExportAsL<'p>),
+  TopLevelImport(ImportL<'p>),
 }
 /*
 sealed trait IDenizenL
@@ -77,13 +77,13 @@ Guardian: disable: NECX
 
 /// Impl block
 #[derive(Clone, Debug, PartialEq)]
-pub struct ImplL<'a> {
+pub struct ImplL<'p> {
   pub range: RangeL,
-  pub identifying_runes: Option<AngledLE<'a>>,
-  pub template_rules: Option<ScrambleLE<'a>>,
-  pub struct_: Option<ScrambleLE<'a>>, // Option because we can say `impl MyInterface;` inside a struct
-  pub interface: ScrambleLE<'a>,
-  pub attributes: Vec<IAttributeL<'a>>,
+  pub identifying_runes: Option<AngledLE<'p>>,
+  pub template_rules: Option<ScrambleLE<'p>>,
+  pub struct_: Option<ScrambleLE<'p>>, // Option because we can say `impl MyInterface;` inside a struct
+  pub interface: ScrambleLE<'p>,
+  pub attributes: Vec<IAttributeL<'p>>,
 }
 /*
 case class ImplL(
@@ -100,9 +100,9 @@ Guardian: disable: NECX
 
 /// Export as declaration
 #[derive(Clone, Debug, PartialEq)]
-pub struct ExportAsL<'a> {
+pub struct ExportAsL<'p> {
   pub range: RangeL,
-  pub contents: ScrambleLE<'a>,
+  pub contents: ScrambleLE<'p>,
 }
 /*
 case class ExportAsL(
@@ -113,11 +113,11 @@ Guardian: disable: NECX
 
 /// Import declaration
 #[derive(Clone, Debug, PartialEq)]
-pub struct ImportL<'a> {
+pub struct ImportL<'p> {
   pub range: RangeL,
-  pub module_name: WordLE<'a>,
-  pub package_steps: Vec<WordLE<'a>>,
-  pub importee_name: WordLE<'a>,
+  pub module_name: WordLE<'p>,
+  pub package_steps: Vec<WordLE<'p>>,
+  pub importee_name: WordLE<'p>,
 }
 /*
 case class ImportL(
@@ -130,14 +130,14 @@ Guardian: disable: NECX
 
 /// Struct definition
 #[derive(Clone, Debug, PartialEq)]
-pub struct StructL<'a> {
+pub struct StructL<'p> {
   pub range: RangeL,
-  pub name: WordLE<'a>,
-  pub attributes: Vec<IAttributeL<'a>>,
-  pub mutability: Option<ScrambleLE<'a>>,
-  pub identifying_runes: Option<AngledLE<'a>>,
-  pub template_rules: Option<ScrambleLE<'a>>,
-  pub members: ScrambleLE<'a>,
+  pub name: WordLE<'p>,
+  pub attributes: Vec<IAttributeL<'p>>,
+  pub mutability: Option<ScrambleLE<'p>>,
+  pub identifying_runes: Option<AngledLE<'p>>,
+  pub template_rules: Option<ScrambleLE<'p>>,
+  pub members: ScrambleLE<'p>,
 }
 /*
 case class StructL(
@@ -153,15 +153,15 @@ Guardian: disable: NECX
 
 /// Interface definition
 #[derive(Clone, Debug, PartialEq)]
-pub struct InterfaceL<'a> {
+pub struct InterfaceL<'p> {
   pub range: RangeL,
-  pub name: WordLE<'a>,
-  pub attributes: Vec<IAttributeL<'a>>,
-  pub mutability: Option<ScrambleLE<'a>>,
-  pub maybe_identifying_runes: Option<AngledLE<'a>>,
-  pub template_rules: Option<ScrambleLE<'a>>,
+  pub name: WordLE<'p>,
+  pub attributes: Vec<IAttributeL<'p>>,
+  pub mutability: Option<ScrambleLE<'p>>,
+  pub maybe_identifying_runes: Option<AngledLE<'p>>,
+  pub template_rules: Option<ScrambleLE<'p>>,
   pub body_range: RangeL,
-  pub members: Vec<FunctionL<'a>>,
+  pub members: Vec<FunctionL<'p>>,
 }
 /*
 case class InterfaceL(
@@ -178,14 +178,14 @@ Guardian: disable: NECX
 
 /// Attributes on declarations
 #[derive(Clone, Debug, PartialEq)]
-pub enum IAttributeL<'a> {
+pub enum IAttributeL<'p> {
   AbstractAttribute(RangeL),
   ExportAttribute(RangeL),
   PureAttribute(RangeL),
   AdditiveAttribute(RangeL),
   ExternAttribute {
     range: RangeL,
-    maybe_custom_name: Option<ParendLE<'a>>,
+    maybe_custom_name: Option<ParendLE<'p>>,
   },
   LinearAttribute(RangeL),
   WeakableAttribute(RangeL),
@@ -193,7 +193,7 @@ pub enum IAttributeL<'a> {
   MacroCall {
     range: RangeL,
     inclusion: IMacroInclusionL,
-    name: WordLE<'a>,
+    name: WordLE<'p>,
   },
 }
 /*
@@ -225,10 +225,10 @@ Guardian: disable: NECX
 
 /// Function definition
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionL<'a> {
+pub struct FunctionL<'p> {
   pub range: RangeL,
-  pub header: FunctionHeaderL<'a>,
-  pub body: Option<FunctionBodyL<'a>>,
+  pub header: FunctionHeaderL<'p>,
+  pub body: Option<FunctionBodyL<'p>>,
 }
 /*
 case class FunctionL(
@@ -240,8 +240,8 @@ Guardian: disable: NECX
 
 /// Function body
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionBodyL<'a> {
-  pub body: CurliedLE<'a>,
+pub struct FunctionBodyL<'p> {
+  pub body: CurliedLE<'p>,
 }
 /*
 case class FunctionBodyL(
@@ -252,15 +252,15 @@ Guardian: disable: NECX
 
 /// Function header
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionHeaderL<'a> {
+pub struct FunctionHeaderL<'p> {
   pub range: RangeL,
-  pub name: WordLE<'a>,
-  pub attributes: Vec<IAttributeL<'a>>,
-  pub maybe_user_specified_identifying_runes: Option<AngledLE<'a>>,
-  pub params: ParendLE<'a>,
+  pub name: WordLE<'p>,
+  pub attributes: Vec<IAttributeL<'p>>,
+  pub maybe_user_specified_identifying_runes: Option<AngledLE<'p>>,
+  pub params: ParendLE<'p>,
   /// Includes: where clause, return type, default region for the body
   /// Basically, everything up until the body's { or a ;
-  pub trailing_details: ScrambleLE<'a>,
+  pub trailing_details: ScrambleLE<'p>,
 }
 /*
 case class FunctionHeaderL(
@@ -298,9 +298,9 @@ trait INodeLE {
 
 /// A scramble of lexer nodes (no structure yet)
 #[derive(Clone, Debug, PartialEq)]
-pub struct ScrambleLE<'a> {
+pub struct ScrambleLE<'p> {
   pub range: RangeL,
-  pub elements: Vec<Box<INodeLEEnum<'a>>>,
+  pub elements: Vec<Box<INodeLEEnum<'p>>>,
 }
 impl INodeLE for ScrambleLE<'_> {
   fn range(&self) -> RangeL {
@@ -326,17 +326,17 @@ Guardian: disable: NECX
 
 /// Enum wrapper for INodeLE to allow storing in vectors
 #[derive(Clone, Debug, PartialEq)]
-pub enum INodeLEEnum<'a> {
-  Parend(ParendLE<'a>),
-  Curlied(CurliedLE<'a>),
-  Squared(SquaredLE<'a>),
-  Angled(AngledLE<'a>),
-  Word(WordLE<'a>),
+pub enum INodeLEEnum<'p> {
+  Parend(ParendLE<'p>),
+  Curlied(CurliedLE<'p>),
+  Squared(SquaredLE<'p>),
+  Angled(AngledLE<'p>),
+  Word(WordLE<'p>),
   Symbol(SymbolLE),
-  String(StringLE<'a>),
+  String(StringLE<'p>),
   ParsedInteger(ParsedIntegerLE),
   ParsedDouble(ParsedDoubleLE),
-  Scramble(ScrambleLE<'a>), // For recursive cases
+  Scramble(ScrambleLE<'p>), // For recursive cases
 }
 
 impl INodeLE for INodeLEEnum<'_> {
@@ -358,9 +358,9 @@ impl INodeLE for INodeLEEnum<'_> {
 
 /// Parenthesized expression
 #[derive(Clone, Debug, PartialEq)]
-pub struct ParendLE<'a> {
+pub struct ParendLE<'p> {
   pub range: RangeL,
-  pub contents: ScrambleLE<'a>,
+  pub contents: ScrambleLE<'p>,
 }
 impl INodeLE for ParendLE<'_> {
   fn range(&self) -> RangeL {
@@ -376,9 +376,9 @@ Guardian: disable: NECX
 
 /// Angled brackets (generics)
 #[derive(Clone, Debug, PartialEq)]
-pub struct AngledLE<'a> {
+pub struct AngledLE<'p> {
   pub range: RangeL,
-  pub contents: ScrambleLE<'a>,
+  pub contents: ScrambleLE<'p>,
 }
 impl INodeLE for AngledLE<'_> {
   fn range(&self) -> RangeL {
@@ -394,9 +394,9 @@ Guardian: disable: NECX
 
 /// Squared brackets (arrays)
 #[derive(Clone, Debug, PartialEq)]
-pub struct SquaredLE<'a> {
+pub struct SquaredLE<'p> {
   pub range: RangeL,
-  pub contents: ScrambleLE<'a>,
+  pub contents: ScrambleLE<'p>,
 }
 
 impl INodeLE for SquaredLE<'_> {
@@ -413,9 +413,9 @@ Guardian: disable: NECX
 
 /// Curly braces (blocks)
 #[derive(Clone, Debug, PartialEq)]
-pub struct CurliedLE<'a> {
+pub struct CurliedLE<'p> {
   pub range: RangeL,
-  pub contents: ScrambleLE<'a>,
+  pub contents: ScrambleLE<'p>,
 }
 
 impl INodeLE for CurliedLE<'_> {
@@ -432,9 +432,9 @@ Guardian: disable: NECX
 
 /// Word/identifier
 #[derive(Clone, Debug, PartialEq)]
-pub struct WordLE<'a> {
+pub struct WordLE<'p> {
   pub range: RangeL,
-  pub str: StrI<'a>,
+  pub str: StrI<'p>,
 }
 impl INodeLE for WordLE<'_> {
   fn range(&self) -> RangeL {
@@ -476,9 +476,9 @@ Guardian: disable: NECX
 
 /// String literal
 #[derive(Clone, Debug, PartialEq)]
-pub struct StringLE<'a> {
+pub struct StringLE<'p> {
   pub range: RangeL,
-  pub parts: Vec<StringPart<'a>>,
+  pub parts: Vec<StringPart<'p>>,
 }
 
 impl INodeLE for StringLE<'_> {
@@ -495,9 +495,9 @@ Guardian: disable: NECX
 
 /// Part of a string (literal or interpolated expression)
 #[derive(Clone, Debug, PartialEq)]
-pub enum StringPart<'a> {
+pub enum StringPart<'p> {
   Literal { range: RangeL, s: String },
-  Expr(ScrambleLE<'a>),
+  Expr(ScrambleLE<'p>),
 }
 /*
 sealed trait StringPart

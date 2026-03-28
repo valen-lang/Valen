@@ -1,4 +1,3 @@
-use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::StrI;
 use crate::lexing::ast::*;
@@ -31,15 +30,15 @@ type ParseResult<T> = Result<T, ParseError>;
 
 // Helper enum for expression parsing
 #[derive(Clone, Debug)]
-enum ExpressionElement<'a, 'p> {
-  Data(IExpressionPE<'a, 'p>),
-  BinaryCall(NameP<'a>, i32), // name and precedence
+enum ExpressionElement<'p> {
+  Data(IExpressionPE<'p>),
+  BinaryCall(NameP<'p>, i32), // name and precedence
 }
 
 #[derive(Clone)]
-pub struct ExpressionParser<'a, 'ctx, 'p> {
-  interner: &'ctx Interner<'a>,
-  pub keywords: &'ctx Keywords<'a>,
+pub struct ExpressionParser<'p, 'ctx> {
+  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  pub keywords: &'ctx Keywords<'p>,
   arena: &'p Bump,
 }
 /*
@@ -53,27 +52,26 @@ case class BinaryCallElement(symbol: NameP, precedence: Int) extends IExpression
 Guardian: disable: NECX
 */
 
-impl<'a, 'ctx, 'p> ExpressionParser<'a, 'ctx, 'p>
+impl<'p, 'ctx> ExpressionParser<'p, 'ctx>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
   pub fn new(
-    interner: &'ctx Interner<'a>,
-    keywords: &'ctx Keywords<'a>,
+    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    keywords: &'ctx Keywords<'p>,
     arena: &'p Bump,
   ) -> Self {
-    ExpressionParser { interner, keywords, arena }
+    ExpressionParser { parse_arena, keywords, arena }
   }
 
   /// Parse a block from a curlied expression
   /// Mirrors parseBlock in ExpressionParser.scala lines 586-589
   pub fn parse_block(
     &self,
-    block_l: &CurliedLE<'a>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    block_l: &CurliedLE<'p>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     let mut iter = ScrambleIterator::new(&block_l.contents);
     self.parse_block_contents(&mut iter, false, templex_parser, pattern_parser)
   }
@@ -87,11 +85,11 @@ where
   /// Mirrors parseBlockContents in ExpressionParser.scala lines 590-640
   pub fn parse_block_contents(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     let mut statements = Vec::new();
 
     // Parse statements (lines 603-615)
@@ -239,11 +237,11 @@ where
   /// Mirrors parseExpression in ExpressionParser.scala lines 845-897
   pub fn parse_expression(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
     }
@@ -351,7 +349,7 @@ where
 
   /// Parse a lookup expression
   /// Mirrors parseLookup in ExpressionParser.scala lines 898-939
-  pub fn parse_lookup(&self, iter: &mut ScrambleIterator<'a, '_>) -> Option<IExpressionPE<'a, 'p>> {
+  pub fn parse_lookup(&self, iter: &mut ScrambleIterator<'p, '_>) -> Option<IExpressionPE<'p>> {
     let begin = iter.get_pos();
     match iter.peek3_cloned() {
       (
@@ -384,7 +382,7 @@ where
         Some(IExpressionPE::Lookup(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(
             RangeL(range1.begin(), range2.end()),
-            self.interner.intern(&combined),
+            self.parse_arena.intern_str(&combined),
           )),
           template_args: None,
         }))
@@ -394,7 +392,7 @@ where
         Some(IExpressionPE::Lookup(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(
             range,
-            self.interner.intern(&c.to_string()),
+            self.parse_arena.intern_str(&c.to_string()),
           )),
           template_args: None,
         }))
@@ -456,7 +454,7 @@ where
 
   /// Parse a boolean literal
   /// Mirrors parseBoolean in ExpressionParser.scala lines 940-954
-  pub fn parse_boolean(&self, iter: &mut ScrambleIterator<'a, '_>) -> Option<IExpressionPE<'a, 'p>> {
+  pub fn parse_boolean(&self, iter: &mut ScrambleIterator<'p, '_>) -> Option<IExpressionPE<'p>> {
     if let Some(range) = iter.try_skip_word(self.keywords.truue) {
       return Some(IExpressionPE::ConstantBool(ConstantBoolPE {
         range,
@@ -490,11 +488,11 @@ where
   /// Mirrors parseAtom in ExpressionParser.scala lines 955-1092
   pub fn parse_atom(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     assert!(iter.has_next());
     let begin = iter.get_pos();
 
@@ -552,7 +550,7 @@ where
           if let StringPart::Literal { s, .. } = &parts[0] {
             return Ok(IExpressionPE::ConstantStr(ConstantStrPE {
               range,
-              value: self.interner.intern(s),
+              value: self.parse_arena.intern_str(s),
             }));
           }
         }
@@ -564,7 +562,7 @@ where
             StringPart::Literal { range, s } => {
               parts_p.push(IExpressionPE::ConstantStr(ConstantStrPE {
                 range,
-                value: self.interner.intern(&s),
+                value: self.parse_arena.intern_str(&s),
               }));
             }
             StringPart::Expr(scramble) => {
@@ -709,12 +707,12 @@ where
   pub fn parse_spree_step(
     &self,
     spree_begin: i32,
-    iter: &mut ScrambleIterator<'a, '_>,
-    expr_so_far: IExpressionPE<'a, 'p>,
+    iter: &mut ScrambleIterator<'p, '_>,
+    expr_so_far: IExpressionPE<'p>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let operator_begin = iter.get_pos();
 
     // Check for & (borrow augmentation)
@@ -796,7 +794,7 @@ where
           }
           NameP(
             RangeL(name_begin, iter.get_prev_end_pos()),
-            self.interner.intern(&int.to_string()),
+            self.parse_arena.intern_str(&int.to_string()),
           )
         }
         Some(INodeLEEnum::Symbol(_)) => {
@@ -1031,12 +1029,12 @@ where
   /// Mirrors parseFunctionCall in ExpressionParser.scala lines 1224-1245
   pub fn parse_function_call(
     &self,
-    original_iter: &mut ScrambleIterator<'a, '_>,
+    original_iter: &mut ScrambleIterator<'p, '_>,
     spree_begin: i32,
-    expr_so_far: IExpressionPE<'a, 'p>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>>
+    expr_so_far: IExpressionPE<'p>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>>
   {
     let mut tentative_iter = original_iter.clone();
     let operator_begin = tentative_iter.get_pos();
@@ -1082,11 +1080,11 @@ where
   /// Mirrors parseAtomAndTightSuffixes in ExpressionParser.scala lines 1246-1272
   pub fn parse_atom_and_tight_suffixes(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     assert!(iter.has_next());
     let begin = iter.get_pos();
 
@@ -1146,9 +1144,9 @@ where
   /// Mirrors parseChevronPack in ExpressionParser.scala lines 1273-1292
   pub fn parse_chevron_pack(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<Vec<ITemplexPT<'a, 'p>>>>
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+  ) -> ParseResult<Option<Vec<ITemplexPT<'p>>>>
   {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Angled(AngledLE { contents, .. })) => {
@@ -1158,7 +1156,7 @@ where
         let scramble = ScrambleIterator::new(&contents);
         let element_iters = scramble.split_on_symbol(',', false);
 
-        let mut result: Vec<ITemplexPT<'a, 'p>> = vec![];
+        let mut result: Vec<ITemplexPT<'p>> = vec![];
         for mut element_iter in element_iters {
           let templex = templex_parser.parse_templex(&mut element_iter)?;
           result.push(templex);
@@ -1195,10 +1193,10 @@ where
   /// Mirrors parseTemplateLookup in ExpressionParser.scala lines 1293-1313
   pub fn parse_template_lookup(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    expr_so_far: IExpressionPE<'a, 'p>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<LookupPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    expr_so_far: IExpressionPE<'p>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+  ) -> ParseResult<Option<LookupPE<'p>>> {
     let operator_begin = iter.get_pos();
 
     let template_args = match self.parse_chevron_pack(iter, templex_parser)? {
@@ -1249,10 +1247,10 @@ where
   /// Mirrors parsePack in ExpressionParser.scala lines 1314-1333
   pub fn parse_pack(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<(RangeL, Vec<IExpressionPE<'a, 'p>>)>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<(RangeL, Vec<IExpressionPE<'p>>)>> {
     let parend_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Parend(p)) => {
         let p = p.clone();
@@ -1298,10 +1296,10 @@ where
   /// Mirrors parseSquarePack in ExpressionParser.scala lines 1334-1352
   pub fn parse_square_pack(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<Vec<IExpressionPE<'a, 'p>>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<Vec<IExpressionPE<'p>>>> {
     let squared_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(p)) => {
         let p = p.clone();
@@ -1347,17 +1345,17 @@ where
   /// Mirrors parseBracePack in ExpressionParser.scala lines 1353-1371
   pub fn parse_brace_pack(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<Vec<IExpressionPE<'a, 'p>>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<Vec<IExpressionPE<'p>>>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(SquaredLE { contents, .. })) => {
         let contents = contents.clone();
         iter.advance();
 
         let scramble_iter = ScrambleIterator::new(&contents);
-        let element_iters: Vec<ScrambleIterator<'a, '_>> = scramble_iter.split_on_symbol(',', false);
+        let element_iters: Vec<ScrambleIterator<'p, '_>> = scramble_iter.split_on_symbol(',', false);
 
         let mut elements = vec![];
         for mut element_iter in element_iters {
@@ -1396,10 +1394,10 @@ where
   /// Mirrors parseTupleOrSubExpression in ExpressionParser.scala lines 1372-1417
   pub fn parse_tuple_or_sub_expression(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Parend(ParendLE { range, contents })) => {
         let contents = contents.clone();
@@ -1503,11 +1501,11 @@ where
   /// Mirrors parseExpressionDataElement in ExpressionParser.scala lines 1418-1543
   pub fn parse_expression_data_element(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     assert!(iter.has_next());
 
     let begin = iter.get_pos();
@@ -1779,10 +1777,10 @@ where
   /// Mirrors parseLoneBlock in ExpressionParser.scala lines 642-676
   fn parse_lone_block(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     // Mirrors ExpressionParser.scala line 645
     let mut tentative_iter = iter.clone();
 
@@ -1869,11 +1867,11 @@ where
   /// Mirrors parseDestruct in ExpressionParser.scala lines 678-694
   fn parse_destruct(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     // Mirrors ExpressionParser.scala line 682
     let begin = iter.get_pos();
 
@@ -1917,7 +1915,7 @@ where
 
   /// Parse unlet
   /// Mirrors parseUnlet in ExpressionParser.scala  
-  fn parse_unlet(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+  fn parse_unlet(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<Option<IExpressionPE<'p>>> {
     // Check for 'unlet' keyword
     if let Some(range) = iter.try_skip_word(self.keywords.unlet) {
       // Parse the name to unlet
@@ -1958,7 +1956,7 @@ where
 
   /// Parse a braced body
   /// Mirrors parseBracedBody in ExpressionParser.scala lines 1544-1561
-  pub fn parse_braced_body(&self, _iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<BlockPE<'a, 'p>> {
+  pub fn parse_braced_body(&self, _iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<BlockPE<'p>> {
     panic!("parse_braced_body: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1545")
   }
   /*
@@ -1985,8 +1983,8 @@ where
   /// Mirrors parseSingleArgLambdaBegin in ExpressionParser.scala lines 1562-1585
   pub fn parse_single_arg_lambda_begin(
     &self,
-    _original_iter: &mut ScrambleIterator<'a, '_>,
-  ) -> Option<ParamsP<'a, 'p>> {
+    _original_iter: &mut ScrambleIterator<'p, '_>,
+  ) -> Option<ParamsP<'p>> {
     panic!("parse_single_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1563")
   }
   /*
@@ -2019,8 +2017,8 @@ where
   /// Mirrors parseMultiArgLambdaBegin in ExpressionParser.scala lines 1586-1634
   pub fn parse_multi_arg_lambda_begin(
     &self,
-    _original_iter: &mut ScrambleIterator<'a, '_>,
-  ) -> Option<ParamsP<'a, 'p>> {
+    _original_iter: &mut ScrambleIterator<'p, '_>,
+  ) -> Option<ParamsP<'p>> {
     panic!("parse_multi_arg_lambda_begin: NOT IMPLEMENTED - marked vimpl() in Scala ExpressionParser.scala line 1587")
   }
   /*
@@ -2078,10 +2076,10 @@ where
   /// Mirrors parseLambda in ExpressionParser.scala lines 1635-1728
   pub fn parse_lambda(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let begin = iter.get_pos();
 
     let header_p = match iter.peek3_cloned() {
@@ -2347,10 +2345,10 @@ where
   /// Mirrors parseArray in ExpressionParser.scala lines 1729-1822
   pub fn parse_array(
     &self,
-    original_iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    original_iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let mut tentative_iter = original_iter.clone();
     let begin = tentative_iter.get_pos();
 
@@ -2526,11 +2524,11 @@ where
   /// Mirrors descramble in ExpressionParser.scala lines 1823-1880
   fn descramble_elements(
     &self,
-    elements: &[ExpressionElement<'a, 'p>],
+    elements: &[ExpressionElement<'p>],
     begin_index_inclusive: usize,
     end_index_inclusive: usize,
     min_precedence: i32,
-  ) -> ParseResult<(IExpressionPE<'a, 'p>, usize)> {
+  ) -> ParseResult<(IExpressionPE<'p>, usize)> {
     assert!(!elements.is_empty());
     assert!(elements.len() % 2 == 1);
 
@@ -2684,7 +2682,7 @@ where
 
   /// Parse a binary call
   /// Mirrors parseBinaryCall in ExpressionParser.scala lines 1881-1923
-  pub fn parse_binary_call(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<Option<NameP<'a>>> {
+  pub fn parse_binary_call(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<Option<NameP<'p>>> {
     let name = match iter.peek3_cloned() {
       (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
         iter.advance();
@@ -2839,11 +2837,11 @@ where
   /// Mirrors parseStatement in ExpressionParser.scala lines 746-829
   pub fn parse_statement(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<IExpressionPE<'a, 'p>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<IExpressionPE<'p>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
     }
@@ -2986,10 +2984,10 @@ where
   /// Mirrors parseWhile in ExpressionParser.scala lines 242-279
   fn parse_while(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let while_begin = iter.get_pos();
 
     let mut tentative_iter = iter.clone();
@@ -3075,10 +3073,10 @@ where
   /// Mirrors parseExplicitBlock in ExpressionParser.scala lines 281-311
   fn parse_explicit_block(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let block_begin = iter.get_pos();
 
     let mut tentative_iter = iter.clone();
@@ -3149,10 +3147,10 @@ where
   /// Mirrors parseIfLadder in ExpressionParser.scala lines 388-478
   fn parse_if_ladder(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let if_ladder_begin = iter.get_pos();
 
     // Check for 'if' keyword (lines 391-394)
@@ -3346,10 +3344,10 @@ where
   /// Mirrors parseIfPart in ExpressionParser.scala lines 313-386
   fn parse_if_part(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<(IExpressionPE<'a, 'p>, BlockPE<'a, 'p>)> {
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<(IExpressionPE<'p>, BlockPE<'p>)> {
     let if_begin = iter.get_pos();
 
     if iter.try_skip_word(self.keywords.iff).is_none() {
@@ -3416,13 +3414,13 @@ where
 
   fn parse_foreach(
     &self,
-    original_iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    original_iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let each_begin = original_iter.get_pos();
 
-    let mut tentative_iter: ScrambleIterator<'a, '_> = original_iter.clone();
+    let mut tentative_iter: ScrambleIterator<'p, '_> = original_iter.clone();
 
     if tentative_iter
       .try_skip_word(self.keywords.parallel)
@@ -3440,7 +3438,7 @@ where
       return Ok(None);
     }
     original_iter.skip_to(&tentative_iter);
-    let iter: &mut ScrambleIterator<'a, '_> = original_iter;
+    let iter: &mut ScrambleIterator<'p, '_> = original_iter;
 
     let (in_range, pattern) = match try_skip_past_keyword_while(iter, self.keywords.r#in, |it| {
       match it.peek() {
@@ -3455,7 +3453,7 @@ where
       None => return Err(ParseError::BadForeachInError(iter.get_pos())),
       Some((in_word, mut pattern_iter)) => {
         let pattern_begin = pattern_iter.get_pos();
-        let pattern: PatternPP<'a, 'p> = pattern_parser.parse_pattern(
+        let pattern: PatternPP<'p> = pattern_parser.parse_pattern(
           &mut pattern_iter,
           templex_parser,
           pattern_begin,
@@ -3577,7 +3575,7 @@ where
     }
   */
 
-  fn parse_break(&self, iter: &mut ScrambleIterator<'a, '_>) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+  fn parse_break(&self, iter: &mut ScrambleIterator<'p, '_>) -> ParseResult<Option<IExpressionPE<'p>>> {
     let begin = iter.get_pos();
     if iter.try_skip_word(self.keywords.r#break).is_none() {
       return Ok(None);
@@ -3606,11 +3604,11 @@ where
 
   fn parse_return(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let begin = iter.get_pos();
     if iter.try_skip_word(self.keywords.retuurn).is_none() {
       return Ok(None);
@@ -3682,11 +3680,11 @@ where
 
   fn parse_mut_expr(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     let mutate_begin = iter.get_pos();
     if !self.next_is_set_expr(iter) {
       return Ok(None);
@@ -3759,11 +3757,11 @@ where
 
   fn parse_let(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
+    iter: &mut ScrambleIterator<'p, '_>,
     stop_on_curlied: bool,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
-    pattern_parser: &PatternParser<'a, 'ctx, 'p>,
-  ) -> ParseResult<Option<IExpressionPE<'a, 'p>>> {
+    templex_parser: &TemplexParser<'p, 'ctx>,
+    pattern_parser: &PatternParser<'p, 'ctx>,
+  ) -> ParseResult<Option<IExpressionPE<'p>>> {
     // Try to parse a let statement by looking for pattern = expr
     let original_pos = iter.index;
 

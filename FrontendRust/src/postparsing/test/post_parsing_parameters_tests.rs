@@ -15,7 +15,9 @@ use crate::postparsing::rules::rules::{AugmentSR, MaybeCoercingLookupSR};
 use crate::postparsing::rules::RuneUsage;
 use crate::postparsing::test::traverse::NodeRefS;
 use crate::postparsing::post_parser::{CouldntFindRuneS, ICompileErrorS, PostParser};
-use crate::{Interner, Keywords};
+use crate::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
 
 /*
 package dev.vale.postparsing
@@ -33,17 +35,13 @@ import org.scalatest._
 
 class PostParsingParametersTests extends FunSuite with Matchers with Collector {
 */
-fn compile<'a, 'ctx, 'p, 's>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  parse_arena: &'p Bump,
-  scout_arena: &'s Bump,
+fn compile<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
   code: &str,
-) -> ProgramS<'a, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+) -> ProgramS<'s>
+where 'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -53,10 +51,19 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
+  let keywords_p = Keywords::new_for_parse(parse_arena);
+  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
+  // Re-intern FileCoordinate from 'p into 's
+  let file_coord_s = scout_arena.intern_file_coordinate(
+    scout_arena.intern_package_coordinate(
+      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
+      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+    ),
+    only_file.file_coord.filepath.as_str(),
+  );
+  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
   post_parser
-    .scout_program(only_file.file_coord, &only_file)
+    .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
 /*
@@ -76,17 +83,13 @@ where
     }
   }
 */
-fn compile_for_error<'a, 'ctx, 'p, 's>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  parse_arena: &'p Bump,
-  scout_arena: &'s Bump,
+fn compile_for_error<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
   code: &str,
-) -> ICompileErrorS<'a, 's>
-where
-  'a: 'ctx,
-  'a: 'p,
-  'a: 's,
+) -> ICompileErrorS<'s>
+where 'p: 's,
 {
   let options = GlobalOptions {
     sanity_check: true,
@@ -96,9 +99,18 @@ where
     debug_output: false,
   };
 
-  let only_file = compile_file(interner, keywords, parse_arena, code).unwrap();
-  let post_parser = PostParser::new(options, interner, keywords, scout_arena);
-  match post_parser.scout_program(only_file.file_coord, &only_file) {
+  let keywords_p = Keywords::new_for_parse(parse_arena);
+  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
+  // Re-intern FileCoordinate from 'p into 's
+  let file_coord_s = scout_arena.intern_file_coordinate(
+    scout_arena.intern_package_coordinate(
+      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
+      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+    ),
+    only_file.file_coord.filepath.as_str(),
+  );
+  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
+  match post_parser.scout_program(file_coord_s, &only_file) {
     Ok(_) => panic!("Accidentally compiled!"),
     Err(e) => e,
   }
@@ -113,12 +125,12 @@ where
 */
 #[test]
 fn coord_rune_rule() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo T) { }");
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program1 = compile(&scout_arena, &keywords, &parse_arena, "func main<T>(moo T) { }");
   let main = program1.lookup_function("main");
 
   // vregionmut() // Take out with regions
@@ -174,16 +186,16 @@ fn coord_rune_rule() {
 */
 #[test]
 fn returned_rune() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo T) T { moo }");
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program1 = compile(&scout_arena, &keywords, &parse_arena, "func main<T>(moo T) T { moo }");
   let main = program1.lookup_function("main");
 
-  let t_name = interner.intern("T");
-  let t_rune = interner.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: t_name }));
+  let t_name = scout_arena.intern_str("T");
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: t_name }));
   assert!(
     main.generic_params.iter().any(|p| p.rune.rune == t_rune),
     "genericParams should contain rune for T"
@@ -208,12 +220,12 @@ fn returned_rune() {
 */
 #[test]
 fn borrowed_rune() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main<T>(moo &T) { }");
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program1 = compile(&scout_arena, &keywords, &parse_arena, "func main<T>(moo &T) { }");
   let main = program1.lookup_function("main");
 
   let t_coord_rune_from_params = match main.params {
@@ -279,12 +291,12 @@ fn borrowed_rune() {
 */
 #[test]
 fn anonymous_typed_param() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let program1 = compile(&interner, &keywords, &parse_arena, &scout_arena, "func main(_ int) { }");
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program1 = compile(&scout_arena, &keywords, &parse_arena, "func main(_ int) { }");
   let main = program1.lookup_function("main");
 
   let param_rune = match main.params {
@@ -371,16 +383,15 @@ fn anonymous_typed_param() {
 */
 #[test]
 fn test_param_less_lambda_identifying_runes() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program1 = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
-    &scout_arena,
     "exported func main() int {do({ return 3; })}",
   );
   let main = program1.lookup_function("main");
@@ -421,16 +432,15 @@ fn test_param_less_lambda_identifying_runes() {
 */
 #[test]
 fn test_one_param_lambda_identifying_runes() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let program1 = compile(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
-    &scout_arena,
     "exported func main() int {do({ _ })}",
   );
   let main = program1.lookup_function("main");
@@ -473,16 +483,15 @@ fn test_one_param_lambda_identifying_runes() {
 */
 #[test]
 fn report_that_default_region_must_be_mentioned_in_generic_params() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let scout_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
   let err = compile_for_error(
-    &interner,
+    &scout_arena,
     &keywords,
     &parse_arena,
-    &scout_arena,
     "pure func main<r'>(ship &r'Spaceship) t'{ }",
   );
   match &err {

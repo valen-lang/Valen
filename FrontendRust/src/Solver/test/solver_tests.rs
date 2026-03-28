@@ -736,8 +736,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
-        let arena = Bump::new();
-        let interner = crate::Interner::with_arena(&arena);
+        let scout_bump = Bump::new();
+        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal { rune: -2, value: "A".to_string() }),
             TestRule::Call(Call {
@@ -753,12 +753,12 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v
         };
         let delegate = super::test_rule_solver::TestRuleSolver {
-            interner: &interner,
+            scout_arena: &scout_arena,
         };
         let mut solver = Solver::new(
             true,
             delegate,
-            vec![RangeS::test_zero(&interner)],
+            vec![RangeS::test_zero(&scout_arena)],
             rules,
             std::collections::HashMap::new(),
             all_runes,
@@ -892,8 +892,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
-        let arena = Bump::new();
-        let interner = crate::Interner::with_arena(&arena);
+        let scout_bump = Bump::new();
+        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
         let rules: Vec<TestRule> = vec![
             TestRule::Lookup(Lookup {
                 rune: -1,
@@ -916,13 +916,13 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v
         };
         let delegate = super::test_rule_solver::CustomPuzzlerDelegate {
-            base: super::test_rule_solver::TestRuleSolver { interner: &interner },
+            base: super::test_rule_solver::TestRuleSolver { scout_arena: &scout_arena },
             puzzler,
         };
         let mut solver = Solver::new(
             true,
             delegate,
-            vec![RangeS::test_zero(&interner)],
+            vec![RangeS::test_zero(&scout_arena)],
             rules,
             std::collections::HashMap::new(),
             all_runes,
@@ -1029,8 +1029,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         use bumpalo::Bump;
         use std::collections::HashMap;
 
-        let arena = Bump::new();
-        let interner = crate::Interner::with_arena(&arena);
+        let scout_bump = Bump::new();
+        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
         let all_runes: Vec<i64> = {
             let mut v: Vec<i64> = rules.iter().flat_map(|r| r.all_runes()).collect();
             v.sort();
@@ -1038,12 +1038,12 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v
         };
         let delegate = super::test_rule_solver::TestRuleSolver {
-            interner: &interner,
+            scout_arena: &scout_arena,
         };
         let mut solver = Solver::new(
             true,
             delegate,
-            vec![RangeS::test_zero(&interner)],
+            vec![RangeS::test_zero(&scout_arena)],
             rules,
             HashMap::new(),
             all_runes,
@@ -1098,8 +1098,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
-        let arena = Bump::new();
-        let interner = crate::Interner::with_arena(&arena);
+        let scout_bump = Bump::new();
+        let scout_arena = crate::scout_arena::ScoutArena::new(&scout_bump);
         let all_runes_from_rules: std::collections::HashSet<i64> =
             rules.iter().flat_map(|r| r.all_runes()).collect();
         let all_runes: Vec<i64> = {
@@ -1113,12 +1113,12 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v
         };
         let delegate = super::test_rule_solver::TestRuleSolver {
-            interner: &interner,
+            scout_arena: &scout_arena,
         };
         let mut solver = Solver::new(
             true,
             delegate,
-            vec![RangeS::test_zero(&interner)],
+            vec![RangeS::test_zero(&scout_arena)],
             rules,
             initially_known_runes,
             all_runes,

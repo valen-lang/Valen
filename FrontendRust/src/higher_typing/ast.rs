@@ -28,12 +28,12 @@ import scala.collection.immutable.List
 
 // mig: struct ProgramA
 #[derive(Debug)]
-pub struct ProgramA<'a, 's> {
-    pub structs: &'s [&'s StructA<'a, 's>],
-    pub interfaces: &'s [&'s InterfaceA<'a, 's>],
-    pub impls: &'s [&'s ImplA<'a, 's>],
-    pub functions: &'s [&'s FunctionA<'a, 's>],
-    pub exports: &'s [&'s ExportAsA<'a, 's>],
+pub struct ProgramA<'s> {
+    pub structs: &'s [&'s StructA<'s>],
+    pub interfaces: &'s [&'s InterfaceA<'s>],
+    pub impls: &'s [&'s ImplA<'s>],
+    pub functions: &'s [&'s FunctionA<'s>],
+    pub exports: &'s [&'s ExportAsA<'s>],
 }
 /*
 case class ProgramA(
@@ -44,7 +44,7 @@ case class ProgramA(
     exports: Vector[ExportAsA]) {
 */
 // mig: impl ProgramA
-impl<'a, 's> ProgramA<'a, 's> {
+impl<'s> ProgramA<'s> {
 /*
 */
 // mig: fn equals
@@ -63,7 +63,7 @@ pub fn hash_code(&self) -> i32 {
 
 */
 // mig: fn lookup_function_by_name
-pub fn lookup_function_by_name(&self, _name: &INameS<'a>) -> &FunctionA<'a, 's> {
+pub fn lookup_function_by_name(&self, _name: &INameS<'s>) -> &FunctionA<'s> {
     panic!("Unimplemented: lookup_function_by_name");
 }
 /*
@@ -74,7 +74,7 @@ pub fn lookup_function_by_name(&self, _name: &INameS<'a>) -> &FunctionA<'a, 's> 
   }
 */
 // mig: fn lookup_function_by_str
-pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'a, 's> {
+pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'s> {
     let matches: Vec<_> = self.functions.iter().filter(|function| {
       match &function.name {
         IFunctionDeclarationNameS::FunctionName(n) => n.name.as_str() == name,
@@ -97,7 +97,7 @@ pub fn lookup_function_by_str(&self, name: &str) -> &'s FunctionA<'a, 's> {
   }
 */
 // mig: fn lookup_interface
-pub fn lookup_interface(&self, _name: &INameS<'a>) -> &InterfaceA<'a, 's> {
+pub fn lookup_interface(&self, _name: &INameS<'s>) -> &InterfaceA<'s> {
     panic!("Unimplemented: lookup_interface");
 }
 /*
@@ -110,7 +110,7 @@ pub fn lookup_interface(&self, _name: &INameS<'a>) -> &InterfaceA<'a, 's> {
   }
 */
 // mig: fn lookup_struct_by_name
-pub fn lookup_struct_by_name(&self, _name: &INameS<'a>) -> &StructA<'a, 's> {
+pub fn lookup_struct_by_name(&self, _name: &INameS<'s>) -> &StructA<'s> {
     panic!("Unimplemented: lookup_struct_by_name");
 }
 /*
@@ -123,7 +123,7 @@ pub fn lookup_struct_by_name(&self, _name: &INameS<'a>) -> &StructA<'a, 's> {
   }
 */
 // mig: fn lookup_struct_by_str
-pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'a, 's> {
+pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
     let matches: Vec<_> = self.structs.iter().filter(|s| {
       match &s.name {
         IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name.as_str() == name,
@@ -150,20 +150,20 @@ pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'a, 's> {
 */
 // mig: struct StructA
 #[derive(Debug)]
-pub struct StructA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub name: IStructDeclarationNameS<'a>,
-    pub attributes: &'s [ICitizenAttributeS<'a>],
+pub struct StructA<'s> {
+    pub range: RangeS<'s>,
+    pub name: IStructDeclarationNameS<'s>,
+    pub attributes: &'s [ICitizenAttributeS<'s>],
     pub weakable: bool,
-    pub mutability_rune: RuneUsage<'a>,
+    pub mutability_rune: RuneUsage<'s>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub header_rules: &'s [IRulexSR<'a, 's>],
-    pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub member_rules: &'s [IRulexSR<'a, 's>],
-    pub members: &'s [IStructMemberS<'a>],
+    pub generic_parameters: &'s [&'s GenericParameterS<'s>],
+    pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub header_rules: &'s [IRulexSR<'s>],
+    pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub member_rules: &'s [IRulexSR<'s>],
+    pub members: &'s [IStructMemberS<'s>],
 }
 /*
 case class StructA(
@@ -193,21 +193,21 @@ case class StructA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl StructA
-impl<'a, 's> StructA<'a, 's> {
+impl<'s> StructA<'s> {
 pub fn new(
-    range: RangeS<'a>,
-    name: IStructDeclarationNameS<'a>,
-    attributes: &'s [ICitizenAttributeS<'a>],
+    range: RangeS<'s>,
+    name: IStructDeclarationNameS<'s>,
+    attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    mutability_rune: RuneUsage<'a>,
+    mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
     tyype: TemplateTemplataType,
-    generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    header_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    header_rules: &'s [IRulexSR<'a, 's>],
-    members_rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    member_rules: &'s [IRulexSR<'a, 's>],
-    members: &'s [IStructMemberS<'a>],
+    generic_parameters: &'s [&'s GenericParameterS<'s>],
+    header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    header_rules: &'s [IRulexSR<'s>],
+    members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    member_rules: &'s [IRulexSR<'s>],
+    members: &'s [IStructMemberS<'s>],
 ) -> Self {
     // These should be removed by the higher typer
     for rule in header_rules.iter() {
@@ -300,16 +300,16 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 */
 // mig: struct ImplA
 #[derive(Debug)]
-pub struct ImplA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub name: IImplDeclarationNameS<'a>,
-    pub generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    pub rules: &'s [IRulexSR<'a, 's>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub sub_citizen_rune: RuneUsage<'a>,
-    pub sub_citizen_imprecise_name: IImpreciseNameS<'a>,
-    pub interface_kind_rune: RuneUsage<'a>,
-    pub super_interface_imprecise_name: IImpreciseNameS<'a>,
+pub struct ImplA<'s> {
+    pub range: RangeS<'s>,
+    pub name: IImplDeclarationNameS<'s>,
+    pub generic_params: &'s [&'s GenericParameterS<'s>],
+    pub rules: &'s [IRulexSR<'s>],
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub sub_citizen_rune: RuneUsage<'s>,
+    pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    pub interface_kind_rune: RuneUsage<'s>,
+    pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 /*
 case class ImplA(
@@ -332,17 +332,17 @@ case class ImplA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl ImplA
-impl<'a, 's> ImplA<'a, 's> {
+impl<'s> ImplA<'s> {
 pub fn new(
-    range: RangeS<'a>,
-    name: IImplDeclarationNameS<'a>,
-    generic_params: &'s [&'s GenericParameterS<'a, 's>],
-    rules: &'s [IRulexSR<'a, 's>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    sub_citizen_rune: RuneUsage<'a>,
-    sub_citizen_imprecise_name: IImpreciseNameS<'a>,
-    interface_kind_rune: RuneUsage<'a>,
-    super_interface_imprecise_name: IImpreciseNameS<'a>,
+    range: RangeS<'s>,
+    name: IImplDeclarationNameS<'s>,
+    generic_params: &'s [&'s GenericParameterS<'s>],
+    rules: &'s [IRulexSR<'s>],
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    sub_citizen_rune: RuneUsage<'s>,
+    sub_citizen_imprecise_name: IImpreciseNameS<'s>,
+    interface_kind_rune: RuneUsage<'s>,
+    super_interface_imprecise_name: IImpreciseNameS<'s>,
 ) -> Self {
     // These should be removed by the higher typer
     for rule in rules.iter() {
@@ -379,12 +379,12 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 */
 // mig: struct ExportAsA
 #[derive(Debug)]
-pub struct ExportAsA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub exported_name: StrI<'a>,
-    pub rules: &'s [IRulexSR<'a, 's>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub type_rune: RuneUsage<'a>,
+pub struct ExportAsA<'s> {
+    pub range: RangeS<'s>,
+    pub exported_name: StrI<'s>,
+    pub rules: &'s [IRulexSR<'s>],
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub type_rune: RuneUsage<'s>,
 }
 /*
 case class ExportAsA(
@@ -397,7 +397,7 @@ case class ExportAsA(
   val hash = range.hashCode() + exportedName.hashCode
 */
 // mig: impl ExportAsA
-impl<'a, 's> ExportAsA<'a, 's> {
+impl<'s> ExportAsA<'s> {
 /*
 */
 // mig: fn hash_code
@@ -422,7 +422,7 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 }
 */
 // mig: trait CitizenA
-pub trait CitizenA<'a, 's> {
+pub trait CitizenA<'s> {
 /*
 sealed trait CitizenA {
 */
@@ -432,7 +432,7 @@ fn tyype(&self) -> &TemplateTemplataType;
   def tyype: TemplateTemplataType
 */
 // mig: fn generic_parameters
-fn generic_parameters(&self) -> &[GenericParameterS<'a, 's>];
+fn generic_parameters(&self) -> &[GenericParameterS<'s>];
 /*
   def genericParameters: Vector[GenericParameterS]
 */
@@ -442,18 +442,18 @@ fn generic_parameters(&self) -> &[GenericParameterS<'a, 's>];
 */
 // mig: struct InterfaceA
 #[derive(Debug)]
-pub struct InterfaceA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub name: &'a TopLevelInterfaceDeclarationNameS<'a>,
-    pub attributes: &'s [ICitizenAttributeS<'a>],
+pub struct InterfaceA<'s> {
+    pub range: RangeS<'s>,
+    pub name: &'s TopLevelInterfaceDeclarationNameS<'s>,
+    pub attributes: &'s [ICitizenAttributeS<'s>],
     pub weakable: bool,
-    pub mutability_rune: RuneUsage<'a>,
+    pub mutability_rune: RuneUsage<'s>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub rules: &'s [IRulexSR<'a, 's>],
-    pub internal_methods: &'s [&'s FunctionA<'a, 's>],
+    pub generic_parameters: &'s [&'s GenericParameterS<'s>],
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub rules: &'s [IRulexSR<'s>],
+    pub internal_methods: &'s [&'s FunctionA<'s>],
 }
 /*
 case class InterfaceA(
@@ -501,19 +501,19 @@ case class InterfaceA(
   val hash = range.hashCode() + name.hashCode()
 */
 // mig: impl InterfaceA
-impl<'a, 's> InterfaceA<'a, 's> {
+impl<'s> InterfaceA<'s> {
 pub fn new(
-    range: RangeS<'a>,
-    name: &'a TopLevelInterfaceDeclarationNameS<'a>,
-    attributes: &'s [ICitizenAttributeS<'a>],
+    range: RangeS<'s>,
+    name: &'s TopLevelInterfaceDeclarationNameS<'s>,
+    attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
-    mutability_rune: RuneUsage<'a>,
+    mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
     tyype: TemplateTemplataType,
-    generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    rules: &'s [IRulexSR<'a, 's>],
-    internal_methods: &'s [&'s FunctionA<'a, 's>],
+    generic_parameters: &'s [&'s GenericParameterS<'s>],
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    rules: &'s [IRulexSR<'s>],
+    internal_methods: &'s [&'s FunctionA<'s>],
 ) -> Self {
     // These should be removed by the higher typer
     for rule in rules.iter() {
@@ -578,7 +578,7 @@ pub mod interface_name {
 object interfaceName {
 */
 // mig: fn unapply
-pub fn unapply<'a, 's>(_interface_a: &'s InterfaceA<'a, 's>) -> Option<&'a TopLevelInterfaceDeclarationNameS<'a>> {
+pub fn unapply<'s>(_interface_a: &'s InterfaceA<'s>) -> Option<&'s TopLevelInterfaceDeclarationNameS<'s>> {
     panic!("Unimplemented: unapply");
 }
 }
@@ -599,7 +599,7 @@ pub mod struct_name {
 object structName {
 */
 // mig: fn unapply
-pub fn unapply<'a, 's>(_struct_a: &'s StructA<'a, 's>) -> Option<&'a IStructDeclarationNameS<'a>> {
+pub fn unapply<'s>(_struct_a: &'s StructA<'s>) -> Option<&'s IStructDeclarationNameS<'s>> {
     panic!("Unimplemented: unapply");
 }
 }
@@ -631,17 +631,17 @@ pub fn unapply<'a, 's>(_struct_a: &'s StructA<'a, 's>) -> Option<&'a IStructDecl
 */
 // mig: struct FunctionA
 #[derive(Debug)]
-pub struct FunctionA<'a, 's> {
-    pub range: RangeS<'a>,
-    pub name: IFunctionDeclarationNameS<'a>,
-    pub attributes: &'s [IFunctionAttributeS<'a>],
+pub struct FunctionA<'s> {
+    pub range: RangeS<'s>,
+    pub name: IFunctionDeclarationNameS<'s>,
+    pub attributes: &'s [IFunctionAttributeS<'s>],
     pub tyype: TemplateTemplataType,
-    pub generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    pub params: &'s [ParameterS<'a>],
-    pub maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-    pub rules: &'s [IRulexSR<'a, 's>],
-    pub body: IBodyS<'a, 's>,
+    pub generic_parameters: &'s [&'s GenericParameterS<'s>],
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub params: &'s [ParameterS<'s>],
+    pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+    pub rules: &'s [IRulexSR<'s>],
+    pub body: IBodyS<'s>,
 }
 /*
 case class FunctionA(
@@ -670,18 +670,18 @@ case class FunctionA(
 ) {
 */
 // mig: impl FunctionA
-impl<'a, 's> FunctionA<'a, 's> {
+impl<'s> FunctionA<'s> {
 pub fn new(
-    range: RangeS<'a>,
-    name: IFunctionDeclarationNameS<'a>,
-    attributes: &'s [IFunctionAttributeS<'a>],
+    range: RangeS<'s>,
+    name: IFunctionDeclarationNameS<'s>,
+    attributes: &'s [IFunctionAttributeS<'s>],
     tyype: TemplateTemplataType,
-    generic_parameters: &'s [&'s GenericParameterS<'a, 's>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'a>, ITemplataType>,
-    params: &'s [ParameterS<'a>],
-    maybe_ret_coord_rune: Option<RuneUsage<'a>>,
-    rules: &'s [IRulexSR<'a, 's>],
-    body: IBodyS<'a, 's>,
+    generic_parameters: &'s [&'s GenericParameterS<'s>],
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    params: &'s [ParameterS<'s>],
+    maybe_ret_coord_rune: Option<RuneUsage<'s>>,
+    rules: &'s [IRulexSR<'s>],
+    body: IBodyS<'s>,
 ) -> Self {
     // These should be removed by the higher typer
     for rule in rules.iter() {

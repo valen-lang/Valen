@@ -17,7 +17,7 @@ class LoadTests extends FunSuite with Matchers with Collector with TestParseUtil
 */
 
 use bumpalo::Bump;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::lexing_iterator::LexingIterator;
 use crate::lexing::lexer::Lexer;
@@ -28,14 +28,13 @@ use crate::von::printer::VonPrinter;
 
 #[test]
 fn simple_program() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let original_file = compile_file(&interner, &keywords, &parse_arena, "exported func main() int { return 42; }").unwrap();
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let original_file = compile_file(&parse_arena, &keywords, "exported func main() int { return 42; }").unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let json = VonPrinter::new().print(&von);
-  let loaded_file = parsed_loader::load(&interner, &parse_arena, &json).unwrap();
+  let loaded_file = parsed_loader::load(&parse_arena, parse_arena.bump(), &json).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }
@@ -53,10 +52,10 @@ fn simple_program() {
 
 #[test]
 fn strings_with_special_characters() {
-  let arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let lexer = Lexer::new(&interner, &keywords);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let lexer = Lexer::new(&parse_arena, &keywords);
   let mut iter = LexingIterator::new("000a".to_string());
   assert_eq!(lexer.parse_four_digit_hex_num(&mut iter, 0), Some(10));
 
@@ -78,13 +77,12 @@ fn strings_with_special_characters() {
   // they won't have the 0x1b byte.
   assert!(code.contains("\\u001b"));
 
-  let parse_arena = Bump::new();
-  let original_file = compile_file(&interner, &keywords, &parse_arena, code).unwrap();
+  let original_file = compile_file(&parse_arena, &keywords, code).unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let generated_json_str = VonPrinter::new().print(&von);
   let generated_bytes = generated_json_str.as_bytes();
   let loaded_json_str = String::from_utf8(generated_bytes.to_vec()).unwrap();
-  let loaded_file = parsed_loader::load(&interner, &parse_arena, &loaded_json_str).unwrap();
+  let loaded_file = parsed_loader::load(&parse_arena, parse_arena.bump(), &loaded_json_str).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }

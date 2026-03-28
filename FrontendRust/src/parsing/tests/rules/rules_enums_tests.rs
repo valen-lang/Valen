@@ -19,50 +19,47 @@ class RulesEnumsTests extends FunSuite with Matchers with Collector with TestPar
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
-fn compile<'a, 'ctx, 'p>(
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  arena: &'p bumpalo::Bump,
+fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IRulexPR<'a, 'p>
+) -> IRulexPR<'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  compile_rulex_expect(interner, keywords, arena, code)
+  compile_rulex_expect(parse_arena, keywords, code)
 }
 
 #[test]
 fn ownership() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X");
+    let rule = compile(&parse_arena, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Ownership");
+    let rule = compile(&parse_arena, &keywords, "X Ownership");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X = own");
+    let rule = compile(&parse_arena, &keywords, "X = own");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left, IRulexPR::Templex), "X");
     let ownership = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Ownership);
     assert_eq!(ownership.1, OwnershipP::Own);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Ownership = any(own, borrow, weak)");
+    let rule = compile(&parse_arena, &keywords, "X Ownership = any(own, borrow, weak)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
@@ -84,18 +81,18 @@ fn ownership() {
     );
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Ownership");
+    let rule = compile(&parse_arena, &keywords, "_ Ownership");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::OwnershipType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "own");
+    let rule = compile(&parse_arena, &keywords, "own");
     let ownership = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Ownership);
     assert_eq!(ownership.1, OwnershipP::Own);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Ownership = any(own, share)");
+    let rule = compile(&parse_arena, &keywords, "_ Ownership = any(own, share)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert!(typed.rune.is_none());
@@ -134,30 +131,29 @@ fn ownership() {
 */
 #[test]
 fn mutability() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X");
+    let rule = compile(&parse_arena, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Mutability");
+    let rule = compile(&parse_arena, &keywords, "X Mutability");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X = mut");
+    let rule = compile(&parse_arena, &keywords, "X = mut");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left, IRulexPR::Templex), "X");
     let mutability = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Mutability);
     assert_eq!(mutability.1, MutabilityP::Mutable);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Mutability = mut");
+    let rule = compile(&parse_arena, &keywords, "X Mutability = mut");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
@@ -166,18 +162,18 @@ fn mutability() {
     assert_eq!(mutability.1, MutabilityP::Mutable);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Mutability");
+    let rule = compile(&parse_arena, &keywords, "_ Mutability");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::MutabilityType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "mut");
+    let rule = compile(&parse_arena, &keywords, "mut");
     let mutability = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Mutability);
     assert_eq!(mutability.1, MutabilityP::Mutable);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Mutability = any(mut, imm)");
+    let rule = compile(&parse_arena, &keywords, "_ Mutability = any(mut, imm)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert!(typed.rune.is_none());
@@ -216,30 +212,29 @@ fn mutability() {
 */
 #[test]
 fn location() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X");
+    let rule = compile(&parse_arena, &keywords, "X");
     let templex = cast!(rule, IRulexPR::Templex);
     assert_templex_name(&templex, "X");
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Location");
+    let rule = compile(&parse_arena, &keywords, "X Location");
     let typed = cast!(rule, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
     assert_eq!(typed.tyype, ITypePR::LocationType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X = inl");
+    let rule = compile(&parse_arena, &keywords, "X = inl");
     let equals = cast!(rule, IRulexPR::Equals);
     assert_templex_name(cast!(equals.left, IRulexPR::Templex), "X");
     let location = cast!(cast!(equals.right, IRulexPR::Templex), ITemplexPT::Location);
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "X Location = inl");
+    let rule = compile(&parse_arena, &keywords, "X Location = inl");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert_eq!(typed.rune.as_ref().unwrap().as_str(), "X");
@@ -248,18 +243,18 @@ fn location() {
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Location");
+    let rule = compile(&parse_arena, &keywords, "_ Location");
     let typed = cast!(rule, IRulexPR::Typed);
     assert!(typed.rune.is_none());
     assert_eq!(typed.tyype, ITypePR::LocationType);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "inl");
+    let rule = compile(&parse_arena, &keywords, "inl");
     let location = cast!(cast!(rule, IRulexPR::Templex), ITemplexPT::Location);
     assert_eq!(location.location, LocationP::Inline);
   }
   {
-    let rule = compile(&interner, &keywords, &parse_arena, "_ Location = any(inl, heap)");
+    let rule = compile(&parse_arena, &keywords, "_ Location = any(inl, heap)");
     let equals = cast!(rule, IRulexPR::Equals);
     let typed = cast!(equals.left, IRulexPR::Typed);
     assert!(typed.rune.is_none());

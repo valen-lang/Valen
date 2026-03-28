@@ -14,18 +14,17 @@ class IfTests extends FunSuite with Matchers with Collector with TestParseUtils 
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn ifs() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if true { doBlarks(&x) } else { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_expression_expect(&parse_arena, &keywords, "if true { doBlarks(&x) } else { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition, IExpressionPE::ConstantBool);
@@ -60,11 +59,10 @@ fn ifs() {
 */
 #[test]
 fn if_let() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if [u] = a {}");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_expression_expect(&parse_arena, &keywords, "if [u] = a {}");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let let_ = cast!(if_.condition, IExpressionPE::Let);
@@ -103,11 +101,10 @@ fn if_let() {
 */
 #[test]
 fn if_with_condition_declarations() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let expr = compile_expression_expect(&interner, &keywords, &parse_arena, "if x = 4; not x.isEmpty() { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let expr = compile_expression_expect(&parse_arena, &keywords, "if x = 4; not x.isEmpty() { }");
   let if_ = cast!(expr, IExpressionPE::If);
 
   let condition = cast!(if_.condition, IExpressionPE::Consecutor);
@@ -150,14 +147,12 @@ fn if_with_condition_declarations() {
 */
 #[test]
 fn if_with_condition_declarations_and_block_contents() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let expr = compile_block_contents_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "newLen = if num == 0 { 1 } else { 2 };",
   );
   let consecutor = cast!(expr, IExpressionPE::Consecutor);

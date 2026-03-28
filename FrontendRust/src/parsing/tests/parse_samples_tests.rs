@@ -1,5 +1,5 @@
 use bumpalo::Bump;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::tests::parser_test_compilation;
 use std::fs;
@@ -36,29 +36,28 @@ fn load_expected(path: &str) -> String {
     .unwrap_or_else(|e| panic!("Failed to load sample '{}': {} ({:?})", path, e, full_path))
 }
 
-fn parse<'a, 'ctx, 'p>(
+fn parse<'p, 'ctx>(
   path: &str,
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
-  resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
-  test_package_coord: &'a PackageCoordinate<'a>,
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
+  resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
+  test_package_coord: &'p PackageCoordinate<'p>,
   arena: &'p Bump,
 )
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  let mut compilation = parser_test_compilation::test(interner, keywords, resolver, test_package_coord, arena);
+  let mut compilation = parser_test_compilation::test(parse_arena, keywords, resolver, test_package_coord, arena);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
 }
 
-struct ParserTestResolver<'a> {
-  code_map: FileCoordinateMap<'a, String>,
+struct ParserTestResolver<'p> {
+  code_map: FileCoordinateMap<'p, String>,
 }
-impl<'a> IPackageResolver<'a, HashMap<String, String>> for ParserTestResolver<'a> {
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
+impl<'p> IPackageResolver<'p, HashMap<String, String>> for ParserTestResolver<'p> {
+  fn resolve(&self, package_coord: &'p PackageCoordinate<'p>) -> Option<HashMap<String, String>> {
     // For testing the parser, we dont want it to fetch things with import statements.
     Some(
       self
@@ -73,13 +72,12 @@ macro_rules! parse_sample_test {
   ($name:ident, $path:literal) => {
     #[test]
     fn $name() {
-      let arena = Bump::new();
-      let parse_arena = Bump::new();
-      let interner = Interner::with_arena(&arena);
-      let keywords = Keywords::new(&interner);
+      let parse_bump = Bump::new();
+      let parse_arena = ParseArena::new(&parse_bump);
+      let keywords = Keywords::new_for_parse(&parse_arena);
 
-      let test_module = interner.intern("test");
-      let test_package_coord = interner.intern_package_coordinate(test_module, &[]);
+      let test_module = parse_arena.intern_str("test");
+      let test_package_coord = parse_arena.intern_package_coordinate(test_module, &[]);
 
       let code: &[String] = &[load_expected($path)];
 
@@ -90,13 +88,13 @@ macro_rules! parse_sample_test {
         } else {
           format!("{}.vale", index)
         };
-        let file_coord = interner.intern_file_coordinate(test_package_coord, &filepath);
+        let file_coord = parse_arena.intern_file_coordinate(test_package_coord, &filepath);
         code_map.put(&file_coord, contents.clone());
       }
-    
+
       let resolver = ParserTestResolver { code_map };
 
-      parse($path, &interner, &keywords, &resolver, &test_package_coord, &parse_arena);
+      parse($path, &parse_arena, &keywords, &resolver, &test_package_coord, parse_arena.bump());
     }
   };
 }

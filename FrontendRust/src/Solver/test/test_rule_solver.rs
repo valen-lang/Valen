@@ -13,7 +13,7 @@ use crate::utils::range::RangeS;
 
 // mig: struct TestRuleSolver
 pub struct TestRuleSolver<'a> {
-    pub interner: &'a crate::Interner<'a>,
+    pub scout_arena: &'a crate::scout_arena::ScoutArena<'a>,
 }
 
 // MIGALLOW: Scala passed ruleToPuzzles as a Solver constructor closure; Rust stores it in the delegate.
@@ -182,7 +182,7 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
     _env: &(),
     solver_state: &mut S,
 ) -> Result<(), ISolverError<i64, String, String>> {
-    let range_s = vec![RangeS::test_zero(self.interner)];
+    let range_s = vec![RangeS::test_zero(self.scout_arena)];
     let unsolved_rules = solver_state.get_unsolved_rules();
     let receiver_runes: Vec<i64> = {
         let mut v: Vec<i64> = unsolved_rules
@@ -289,7 +289,7 @@ fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
   rule: &TestRule,
   solver_state: &mut S,
 ) -> Result<(), ISolverError<i64, String, String>> {
-    let range_s = vec![RangeS::test_zero(self.interner)];
+    let range_s = vec![RangeS::test_zero(self.scout_arena)];
     match rule {
         TestRule::Equals(Equals { left_rune, right_rune }) => {
             match solver_state.get_conclusion(*left_rune) {

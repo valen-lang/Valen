@@ -25,18 +25,18 @@ class StructTests extends FunSuite with Collector with TestParseUtils {
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::{Interner, StrI};
+use crate::interner::StrI;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
 
 #[test]
 fn simple_struct() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "struct Moo { }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "struct Moo { }");
   match denizen {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
@@ -69,14 +69,12 @@ fn simple_struct() {
 */
 #[test]
 fn struct_with_list_node() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let struct_ = compile_struct_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct Mork {
         a @ListNode<T>;
@@ -120,14 +118,12 @@ fn struct_with_list_node() {
 */
 #[test]
 fn imm_generic_param() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen = compile_denizen_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct MyImmContainer<T Ref imm> imm { value T; }
     ",
@@ -175,14 +171,12 @@ fn imm_generic_param() {
 */
 #[test]
 fn struct_with_imm_generic_param() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let struct_ = compile_struct_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct Mork {
         a []<imm>T;
@@ -219,11 +213,10 @@ fn struct_with_imm_generic_param() {
 */
 #[test]
 fn variadic_struct() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let struct_ = compile_struct_expect(&interner, &keywords, &parse_arena, "struct Moo<T> { _ ..T; }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let struct_ = compile_struct_expect(&parse_arena, &keywords, "struct Moo<T> { _ ..T; }");
   match expect_1(&struct_.members.contents) {
     IStructContent::VariadicStructMember(VariadicStructMemberP {
       variability: VariabilityP::Final,
@@ -244,11 +237,10 @@ fn variadic_struct() {
 */
 #[test]
 fn variadic_struct_with_varying() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let struct_ = compile_struct_expect(&interner, &keywords, &parse_arena, "struct Moo<T> { _! ..T; }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let struct_ = compile_struct_expect(&parse_arena, &keywords, "struct Moo<T> { _! ..T; }");
   match expect_1(&struct_.members.contents) {
     IStructContent::VariadicStructMember(VariadicStructMemberP {
       variability: VariabilityP::Varying,
@@ -267,11 +259,10 @@ fn variadic_struct_with_varying() {
 */
 #[test]
 fn struct_with_weak() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "struct Moo { x &&int; }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "struct Moo { x &&int; }");
   match denizen {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
@@ -308,11 +299,10 @@ fn struct_with_weak() {
 */
 #[test]
 fn struct_with_heap() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "struct Moo { x ^Marine; }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "struct Moo { x ^Marine; }");
   match denizen {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
@@ -349,11 +339,10 @@ fn struct_with_heap() {
 */
 #[test]
 fn export_struct() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let denizen = compile_denizen_expect(&interner, &keywords, &parse_arena, "exported struct Moo { x &int; }");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let denizen = compile_denizen_expect(&parse_arena, &keywords, "exported struct Moo { x &int; }");
   match denizen {
     IDenizenP::TopLevelStruct(StructP {
       name: NameP(_, StrI("Moo")),
@@ -390,14 +379,12 @@ fn export_struct() {
 */
 #[test]
 fn struct_with_rune() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen = compile_denizen_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct ListNode<E> {
         value E;
@@ -477,14 +464,12 @@ fn struct_with_rune() {
 */
 #[test]
 fn struct_with_int_rune() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen = compile_denizen_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct Vecf<N> where N Int
       {
@@ -563,14 +548,12 @@ fn struct_with_int_rune() {
 */
 #[test]
 fn struct_with_int_rune_array_sequence_specifies_mutability() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
   let denizen = compile_denizen_expect(
-    &interner,
-    &keywords,
     &parse_arena,
+    &keywords,
     "
       struct Vecf<N> where N Int
       {

@@ -16,7 +16,7 @@ class CaptureAndDestructureTests extends FunSuite with Matchers with Collector w
 */
 use bumpalo::Bump;
 use crate::cast;
-use crate::interner::Interner;
+use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::*;
 use crate::parsing::tests::utils::*;
@@ -25,11 +25,10 @@ use crate::parsing::tests::utils::{
 };
 #[test]
 fn capture_with_destructure_with_type_inside() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [a int, b bool]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile_pattern_expect(&parse_arena, &keywords, "a [a int, b bool]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -57,11 +56,10 @@ fn capture_with_destructure_with_type_inside() {
 */
 #[test]
 fn capture_with_empty_sequence_type() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a ()");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile_pattern_expect(&parse_arena, &keywords, "a ()");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
   assert!(tuple.elements.is_empty());
@@ -76,11 +74,10 @@ fn capture_with_empty_sequence_type() {
 */
 #[test]
 fn empty_destructure() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "[]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile_pattern_expect(&parse_arena, &keywords, "[]");
   assert!(pattern.destination.is_none());
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -95,11 +92,10 @@ fn empty_destructure() {
 #[test]
 fn capture_with_empty_destructure() {
   // Needs the space between the braces, see https://github.com/ValeLang/Vale/issues/434
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [ ]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile_pattern_expect(&parse_arena, &keywords, "a [ ]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();
@@ -115,11 +111,10 @@ fn capture_with_empty_destructure() {
 */
 #[test]
 fn destructure_with_nested_atom() {
-  let arena = Bump::new();
-  let parse_arena = Bump::new();
-  let interner = Interner::with_arena(&arena);
-  let keywords = Keywords::new(&interner);
-  let pattern = compile_pattern_expect(&interner, &keywords, &parse_arena, "a [b int]");
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile_pattern_expect(&parse_arena, &keywords, "a [b int]");
   assert_destination_local_name(pattern.destination.as_ref().unwrap(), "a");
   assert!(pattern.templex.is_none());
   let destructure = pattern.destructure.as_ref().unwrap();

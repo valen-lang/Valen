@@ -1,4 +1,3 @@
-use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
@@ -22,10 +21,10 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 #[derive(Clone)]
-pub struct PatternParser<'a, 'ctx, 'p> {
+pub struct PatternParser<'p, 'ctx> {
   #[allow(dead_code)]
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
+  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
   arena: &'p Bump,
 }
 /*
@@ -33,14 +32,13 @@ class PatternParser(interner: Interner, keywords: Keywords, templexParser: Templ
 Guardian: disable: NECX
 */
 
-impl<'a, 'ctx, 'p> PatternParser<'a, 'ctx, 'p>
+impl<'p, 'ctx> PatternParser<'p, 'ctx>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
-  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>, arena: &'p Bump) -> Self {
+  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>, arena: &'p Bump) -> Self {
     PatternParser {
-      interner,
+      parse_arena,
       keywords,
       arena,
     }
@@ -50,13 +48,13 @@ where
   /// Mirrors parseParameter in PatternParser.scala lines 13-72
   pub fn parse_parameter(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
-  ) -> ParseResult<ParameterP<'a, 'p>> {
+  ) -> ParseResult<ParameterP<'p>> {
     let pattern_begin = iter.get_pos();
     let pattern_range = iter.range();
 
@@ -211,15 +209,15 @@ where
   /// Mirrors parsePattern in PatternParser.scala lines 74-221
   pub fn parse_pattern(
     &self,
-    iter: &mut ScrambleIterator<'a, '_>,
-    templex_parser: &TemplexParser<'a, 'ctx, 'p>,
+    iter: &mut ScrambleIterator<'p, '_>,
+    templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_begin: i32,
     index: usize,
     is_in_citizen: bool,
     is_in_function: bool,
     is_in_lambda: bool,
-    maybe_name_from_parameter: Option<WordLE<'a>>,
-  ) -> ParseResult<PatternPP<'a, 'p>> {
+    maybe_name_from_parameter: Option<WordLE<'p>>,
+  ) -> ParseResult<PatternPP<'p>> {
     // Mirrors PatternParser.scala lines 75-88
     // The Scala code used to have an early return here, but it was dead code and has been commented out.
     // We just check for empty pattern with no name.
@@ -256,12 +254,12 @@ where
     let maybe_destination_local = match maybe_name_from_parameter {
       Some(WordLE { range, str }) => {
         if str == self.keywords.underscore {
-          Some(DestinationLocalP::<'a> {
+          Some(DestinationLocalP::<'p> {
             decl: INameDeclarationP::IgnoredLocalNameDeclaration(range),
             mutate: None,
           })
         } else {
-          Some(DestinationLocalP::<'a> {
+          Some(DestinationLocalP::<'p> {
             decl: INameDeclarationP::LocalNameDeclaration(NameP(range, str)),
             mutate: None,
           })
@@ -336,7 +334,7 @@ where
     };
 
     // Parse optional type (lines 175-194)
-    let maybe_type: Option<ITemplexPT<'a, 'p>> = if next_is_type {
+    let maybe_type: Option<ITemplexPT<'p>> = if next_is_type {
       Some(templex_parser.parse_templex(iter)?)
     } else {
       if is_in_lambda {
@@ -394,7 +392,7 @@ where
     };
 
     // Return the complete pattern (lines 217-220)
-    Ok(PatternPP::<'a, 'p> {
+    Ok(PatternPP::<'p> {
       range: RangeL(pattern_begin, iter.get_prev_end_pos()),
       destination: maybe_destination_local,
       templex: maybe_type,

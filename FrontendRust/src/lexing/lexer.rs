@@ -1,7 +1,7 @@
 use super::ast::*;
 use super::errors::*;
 use super::lexing_iterator::*;
-use crate::{Interner, Keywords};
+use crate::Keywords;
 /*
 package dev.vale.lexing
 
@@ -15,23 +15,23 @@ type Result<T> = std::result::Result<T, ParseError>;
 
 /// Vale lexer
 /// Matches Scala's Lexer class
-pub struct Lexer<'a, 'ctx> {
-  interner: &'ctx Interner<'a>,
-  keywords: &'ctx Keywords<'a>,
+pub struct Lexer<'p, 'ctx> {
+  parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
 }
-impl<'a, 'ctx> Lexer<'a, 'ctx>
+impl<'p, 'ctx> Lexer<'p, 'ctx>
 where
-  'a: 'ctx,
+  'p: 'ctx,
 {
   /*
   class Lexer(interner: Interner, keywords: Keywords) {
   */
-  pub fn new(interner: &'ctx Interner<'a>, keywords: &'ctx Keywords<'a>) -> Self {
-    Lexer { interner, keywords }
+  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
+    Lexer { parse_arena, keywords }
   }
 
   /// Lex attributes on a declaration
-  pub fn lex_attributes(&self, iter: &mut LexingIterator) -> Result<Vec<IAttributeL<'a>>>
+  pub fn lex_attributes(&self, iter: &mut LexingIterator) -> Result<Vec<IAttributeL<'p>>>
   {
     let mut attributes = Vec::new();
 
@@ -61,7 +61,7 @@ where
   */
 
   /// Lex a single attribute
-  pub fn lex_attribute(&self, iter: &mut LexingIterator) -> Result<Option<IAttributeL<'a>>>
+  pub fn lex_attribute(&self, iter: &mut LexingIterator) -> Result<Option<IAttributeL<'p>>>
   {
     let attribute_begin = iter.get_pos();
 
@@ -170,7 +170,7 @@ where
         None
       };
       let end = iter.get_pos();
-      return Ok(Some(IAttributeL::ExternAttribute::<'a> {
+      return Ok(Some(IAttributeL::ExternAttribute::<'p> {
         range: RangeL::new(attribute_begin, end),
         maybe_custom_name,
       }));
@@ -306,7 +306,7 @@ where
   */
 
   /// Lex a top-level denizen (function, struct, interface, impl, import, export)
-  pub fn lex_denizen(&self, iter: &mut LexingIterator) -> Result<IDenizenL<'a>>
+  pub fn lex_denizen(&self, iter: &mut LexingIterator) -> Result<IDenizenL<'p>>
   {
     let denizen_begin = iter.get_pos();
 
@@ -404,8 +404,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<ImplL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<ImplL<'p>>>
   {
     if !iter.try_skip_complete_word("impl") {
       return Ok(None);
@@ -424,11 +424,11 @@ where
     let maybe_interface_generic_args = self.lex_angled(iter)?;
 
     let interface = if let Some(interface_generic_args) = maybe_interface_generic_args {
-      ScrambleLE::<'a> {
+      ScrambleLE::<'p> {
         range: RangeL::new(interface_name.range.begin(), interface_generic_args.range.end()),
         elements: vec![
-          Box::new(INodeLEEnum::Word::<'a>(interface_name)),
-          Box::new(INodeLEEnum::Angled::<'a>(interface_generic_args)),
+          Box::new(INodeLEEnum::Word::<'p>(interface_name)),
+          Box::new(INodeLEEnum::Angled::<'p>(interface_generic_args)),
         ],
       }
     } else {
@@ -486,7 +486,7 @@ where
 
     let end = iter.get_pos();
 
-    Ok(Some(ImplL::<'a> {
+    Ok(Some(ImplL::<'p> {
       range: RangeL::new(begin, end),
       identifying_runes: maybe_identifying_runes,
       template_rules: maybe_rules,
@@ -610,8 +610,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<FunctionL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<FunctionL<'p>>>
   {
     if !iter.try_skip_complete_word("func") && !iter.try_skip_complete_word("funky") {
       return Ok(None);
@@ -720,7 +720,7 @@ where
       trailing_details,
     };
 
-    Ok(Some(FunctionL::<'a> {
+    Ok(Some(FunctionL::<'p> {
       range: RangeL::new(begin, end),
       header,
       body: maybe_body,
@@ -850,8 +850,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<StructL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<StructL<'p>>>
   {
     if !iter.try_skip_complete_word("struct") {
       return Ok(None);
@@ -1025,8 +1025,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<InterfaceL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<InterfaceL<'p>>>
   {
     if !iter.try_skip_complete_word("interface") {
       return Ok(None);
@@ -1220,8 +1220,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<ImportL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<ImportL<'p>>>
   {
     if !iter.try_skip_complete_word(self.keywords.impoort.as_str()) {
       return Ok(None);
@@ -1321,8 +1321,8 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'a>>,
-  ) -> Result<Option<ExportAsL<'a>>>
+    attributes: Vec<IAttributeL<'p>>,
+  ) -> Result<Option<ExportAsL<'p>>>
   {
     if !iter.try_skip_complete_word(self.keywords.export.as_str()) {
       return Ok(None);
@@ -1381,7 +1381,7 @@ where
   */
 
   /// Lex parenthesized expression
-  fn lex_parend(&self, iter: &mut LexingIterator) -> Result<Option<ParendLE<'a>>> {
+  fn lex_parend(&self, iter: &mut LexingIterator) -> Result<Option<ParendLE<'p>>> {
     let begin = iter.get_pos();
 
     if !iter.try_skip('(') {
@@ -1400,7 +1400,7 @@ where
 
     let end = iter.get_pos();
 
-    Ok(Some(ParendLE::<'a> {
+    Ok(Some(ParendLE::<'p> {
       range: RangeL::new(begin, end),
       contents: innards,
     }))
@@ -1440,7 +1440,7 @@ where
     &self,
     iter: &mut LexingIterator,
     stop_on_open_brace: bool,
-  ) -> Result<Option<CurliedLE<'a>>> {
+  ) -> Result<Option<CurliedLE<'p>>> {
     let begin = iter.get_pos();
 
     if iter.peek() == '{' && stop_on_open_brace {
@@ -1519,7 +1519,7 @@ where
   */
 
   /// Lex square bracketed expression
-  fn lex_squared(&self, iter: &mut LexingIterator) -> Result<Option<SquaredLE<'a>>> {
+  fn lex_squared(&self, iter: &mut LexingIterator) -> Result<Option<SquaredLE<'p>>> {
     let begin = iter.get_pos();
 
     if !iter.try_skip('[') {
@@ -1574,7 +1574,7 @@ where
   */
 
   /// Lex angle bracketed expression (generics)
-  fn lex_angled(&self, iter: &mut LexingIterator) -> Result<Option<AngledLE<'a>>> {
+  fn lex_angled(&self, iter: &mut LexingIterator) -> Result<Option<AngledLE<'p>>> {
     let begin = iter.get_pos();
 
     if !(iter.peek() == '<' && self.angle_is_open_or_close(iter)) {
@@ -1755,7 +1755,7 @@ where
     stop_on_open_brace: bool,
     stop_on_where: bool,
     stop_on_semicolon: bool,
-  ) -> Result<ScrambleLE<'a>> {
+  ) -> Result<ScrambleLE<'p>> {
     let begin = iter.get_pos();
 
     iter.consume_comments_and_whitespace();
@@ -1771,7 +1771,7 @@ where
 
     let end = iter.get_pos();
 
-    Ok(ScrambleLE::<'a> {
+    Ok(ScrambleLE::<'p> {
       range: RangeL::new(begin, end),
       elements: innards,
     })
@@ -1812,7 +1812,7 @@ where
     iter: &mut LexingIterator,
     stop_on_open_brace: bool,
     stop_on_where: bool,
-  ) -> Result<INodeLEEnum<'a>> {
+  ) -> Result<INodeLEEnum<'p>> {
     // Try angled
     if let Some(x) = self.lex_angled(iter)? {
       return Ok(INodeLEEnum::Angled(x));
@@ -1866,7 +1866,7 @@ where
   */
 
   /// Lex an atomic element (identifier, number, string, symbol)
-  fn lex_atom(&self, iter: &mut LexingIterator, stop_on_where: bool) -> Result<INodeLEEnum<'a>> {
+  fn lex_atom(&self, iter: &mut LexingIterator, stop_on_where: bool) -> Result<INodeLEEnum<'p>> {
     assert!(!(stop_on_where && iter.try_skip_complete_word("where")));
 
     // Try number
@@ -1937,7 +1937,7 @@ where
   */
 
   /// Lex an identifier
-  fn lex_identifier(&self, iter: &mut LexingIterator) -> Option<WordLE<'a>> {
+  fn lex_identifier(&self, iter: &mut LexingIterator) -> Option<WordLE<'p>> {
     let begin = iter.get_pos();
 
     // Keep eating identifier characters using isUnicodeIdentifierPart to match Scala
@@ -1953,7 +1953,7 @@ where
     } else {
       Some(WordLE {
         range: RangeL::new(begin, end),
-        str: self.interner.intern(word),
+        str: self.parse_arena.intern_str(word),
       })
     }
   }
@@ -1975,7 +1975,7 @@ where
   */
 
   /// Lex a number (integer or float)
-  fn lex_number(&self, original_iter: &mut LexingIterator) -> Result<Option<INodeLEEnum<'a>>> {
+  fn lex_number(&self, original_iter: &mut LexingIterator) -> Result<Option<INodeLEEnum<'p>>> {
     let begin = original_iter.get_pos();
 
     // Check if preceded by a dot (for array access like arr.2.1)
@@ -2182,7 +2182,7 @@ where
   */
 
   /// Lex a string literal (with interpolation support)
-  fn lex_string(&self, iter: &mut LexingIterator) -> Result<Option<INodeLEEnum<'a>>> {
+  fn lex_string(&self, iter: &mut LexingIterator) -> Result<Option<INodeLEEnum<'p>>> {
     let begin = iter.get_pos();
 
     let is_long_string = if iter.try_skip_str("\"\"\"") {
@@ -2301,7 +2301,7 @@ where
     &self,
     iter: &mut LexingIterator,
     _string_begin_pos: i32,
-  ) -> Result<StringPartResult<'a>> {
+  ) -> Result<StringPartResult<'p>> {
     // Handle interpolation
     if iter.try_skip_str("{\\\n") {
       // Line ending in {\
@@ -2463,7 +2463,7 @@ where
     }
   */
 
-  fn _lex_region(&self, _iter: &mut LexingIterator) -> Option<ScrambleLE<'a>> {
+  fn _lex_region(&self, _iter: &mut LexingIterator) -> Option<ScrambleLE<'p>> {
     panic!("Unimplemented");
   }
   /*
@@ -2495,9 +2495,9 @@ where
 }
 
 /// Helper enum for string parsing
-enum StringPartResult<'a> {
+enum StringPartResult<'p> {
   Char(char),
-  Expr(ScrambleLE<'a>),
+  Expr(ScrambleLE<'p>),
 }
 /*
 MIGALLOW: Scala didn't need this, it has Either for this.

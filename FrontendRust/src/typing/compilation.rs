@@ -4,7 +4,7 @@
 use crate::compile_options::GlobalOptions;
 use crate::higher_typing::HigherTypingCompilation;
 use crate::instantiating::InstantiatorCompilationOptions;
-use crate::interner::Interner;
+use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::lexing::ast::RangeL;
 use crate::lexing::errors::FailedParse;
@@ -22,27 +22,27 @@ pub struct TypingPassOptions {
 }
 
 // From Compilation.scala lines 22-78: TypingPassCompilation class
-pub struct TypingPassCompilation<'a, 'ctx, 'p, 's> {
-  higher_typing_compilation: HigherTypingCompilation<'a, 'ctx, 'p, 's>,
+pub struct TypingPassCompilation<'s, 'ctx, 'p> {
+  higher_typing_compilation: HigherTypingCompilation<'s, 'ctx, 'p>,
   #[allow(dead_code)]
   hinputs_cache: Option<()>, // HinputsT not yet ported
 }
 
-impl<'a, 'ctx, 'p, 's> TypingPassCompilation<'a, 'ctx, 'p, 's>
+impl<'s, 'ctx, 'p> TypingPassCompilation<'s, 'ctx, 'p>
 where
-  'a: 'ctx,
-  'a: 'p,
+  'p: 'ctx,
 {
   // From Compilation.scala lines 22-30
   pub fn new(
-    interner: &'ctx Interner<'a>,
-    keywords: &'ctx Keywords<'a>,
-    packages_to_build: Vec<&'a PackageCoordinate<'a>>,
-    package_to_contents_resolver: &'ctx dyn IPackageResolver<'a, HashMap<String, String>>,
+    scout_arena: &'ctx ScoutArena<'s>,
+    keywords: &'ctx Keywords<'s>,
+    parser_keywords: &'ctx Keywords<'p>,
+    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    packages_to_build: Vec<&'p PackageCoordinate<'p>>,
+    package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
-    parser_arena: &'p bumpalo::Bump,
-    scout_arena: &'s bumpalo::Bump,
+    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options,
@@ -51,13 +51,14 @@ where
     };
 
     let higher_typing_compilation = HigherTypingCompilation::new(
-      interner,
+      scout_arena,
       keywords,
+      parser_keywords,
+      parse_arena,
       packages_to_build,
       package_to_contents_resolver,
       typing_options.global_options,
-      parser_arena,
-      scout_arena,
+      parser_bump,
     );
 
     TypingPassCompilation {
@@ -67,17 +68,17 @@ where
   }
 
   // From Compilation.scala line 33: getCodeMap
-  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.higher_typing_compilation.get_code_map()
   }
 
   // From Compilation.scala line 34: getParseds
-  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'a, (FileP<'a, 'p>, Vec<RangeL>)>, FailedParse<'a>> {
+  pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
     self.higher_typing_compilation.get_parseds()
   }
 
   // From Compilation.scala line 35: getVpstMap
-  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'a, String>, FailedParse<'a>> {
+  pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.higher_typing_compilation.get_vpst_map()
   }
 
