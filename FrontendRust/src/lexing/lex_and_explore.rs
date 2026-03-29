@@ -290,6 +290,7 @@ where
   R: IPackageResolver<'p, HashMap<String, String>>,
 {
   todo!("lex_and_explore_and_collect: closure lifetime fix needed")
+  // V: what's this about? and it shouldn't be a todo!. we should have a rule that we cannot have any todo! in the codebase.
 }
 
 /*

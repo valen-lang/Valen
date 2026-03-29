@@ -39,7 +39,7 @@ Guardian: disable: NECX
 */
 
 /// A file with top-level denizens
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct FileL<'p> {
   pub denizens: Vec<IDenizenL<'p>>,
   pub comment_ranges: Vec<RangeL>,
@@ -55,7 +55,7 @@ Guardian: disable: NECX
 */
 
 /// Top-level items in a file
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IDenizenL<'p> {
   TopLevelFunction(FunctionL<'p>),
   TopLevelStruct(StructL<'p>),
@@ -126,6 +126,7 @@ case class ImportL(
   packageSteps: Vector[WordLE],
   importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
+// V: why do we have cloning on ImportL etc.?
 */
 
 /// Struct definition

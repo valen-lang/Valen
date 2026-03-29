@@ -29,7 +29,6 @@ type ParseResult<T> = Result<T, ParseError>;
 
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
-#[derive(Clone)]
 pub struct TemplexParser<'p, 'ctx> {
   #[allow(dead_code)]
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
@@ -361,14 +360,14 @@ where
   }
   /*
     def parseFunctionName(iter: ScrambleIterator): Option[NameP] = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(WordLE(range, name)) => {
           iter.advance()
           Some(NameP(range, name))
         }
         case Some(SymbolLE(_, _)) => {
           val begin = iter.getPos()
-          iter.peek3_cloned() match {
+          iter.peek3() match {
             case (Some(SymbolLE(_, '=')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '='))) => {
               iter.advance()
               iter.advance()
@@ -533,7 +532,7 @@ where
   /*
     def parseTemplateCallArgs(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
       val angled =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(a @ AngledLE(range, contents)) => a
           case Some(_) => return Ok(None)
           case None => return Ok(None)
@@ -858,7 +857,7 @@ where
   }
   /*
     def parseTemplexAtom(iter: ScrambleIterator): Result[ITemplexPT, IParseError] = {
-      vassert(iter.peek_cloned().nonEmpty)
+      vassert(iter.peek().nonEmpty)
       val begin = iter.getPos()
 
       iter.trySkipWord(keywords.UNDERSCORE) match {
@@ -940,7 +939,7 @@ where
         case Ok(Some(array)) => return Ok(array)
         case Ok(None) =>
       }
-      vassertSome(iter.peek_cloned()) match {
+      vassertSome(iter.peek()) match {
         case StringLE(range, parts) => {
           iter.advance()
           parts match {
@@ -1044,7 +1043,7 @@ where
       Profiler.frame(() => {
         vassert(iter.hasNext)
 
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(WordLE(_, in)) if in == keywords.in => {
             // This is here so if we say:
             //   foreach x in myList { ... }
@@ -1209,7 +1208,7 @@ where
   }
   /*
     def parseRuleCall(iter: ScrambleIterator): Result[Option[IRulexPR], IParseError] = {
-      iter.peek2_cloned() match {
+      iter.peek2() match {
         case (Some(WordLE(_, StrI("func"))), _) => return Ok(None)
         case (Some(WordLE(nameRange, name)), Some(ParendLE(argsRange, argsLR))) => {
           val range = RangeL(nameRange.begin, argsRange.end)
@@ -1430,7 +1429,7 @@ where
                 case Err(e) => return Err(e)
                 case Ok(x) => x
               }
-            Ok(EqualsPR(RangeL(left.range().begin(), right.range().end()), left, right))
+            Ok(EqualsPR(RangeL(left.range.begin, right.range.end), left, right))
           }
         }
       })
@@ -1500,7 +1499,7 @@ where
   /*
     def parseRuneType(iter: ScrambleIterator):
     Result[Option[ITypePR], IParseError] = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case None => Ok(None)
 
         case Some(WordLE(_, w)) if w == keywords.IntCapitalized => {

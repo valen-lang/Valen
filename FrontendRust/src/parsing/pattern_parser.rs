@@ -20,7 +20,6 @@ import scala.collection.mutable
 */
 type ParseResult<T> = Result<T, ParseError>;
 
-#[derive(Clone)]
 pub struct PatternParser<'p, 'ctx> {
   #[allow(dead_code)]
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
@@ -28,6 +27,8 @@ pub struct PatternParser<'p, 'ctx> {
   arena: &'p Bump,
 }
 /*
+// V: why is this cloneable?/
+// V: should this be folded into the main Parser struct?
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 Guardian: disable: NECX
 */
@@ -152,7 +153,7 @@ where
       }
 
       val maybeVirtual =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case None => return Err(EmptyParameter(patternRange.begin))
           case Some(WordLE(range, s)) if s == keywords.virtual => {
             iter.advance()
@@ -178,7 +179,7 @@ where
         }
         case None => {
           val maybeName =
-            iter.peek2_cloned() match {
+            iter.peek2() match {
               case (Some(SquaredLE(_, _)), _) => {
                 // This is a destructure parameter with no name or type, like func moo([a, b, c])
                 None
@@ -417,7 +418,7 @@ where
       }
 
       val isConstructing =
-        iter.peek2_cloned() match {
+        iter.peek2() match {
           case (Some(WordLE(_, self)), Some(SymbolLE(range, '.')))
             if self == keywords.self => {
             iter.advance()
@@ -443,7 +444,7 @@ where
           }
           case None => {
             val nameIsNext =
-              iter.peek2_cloned() match {
+              iter.peek2() match {
                 case (None, None) => vwat() // impossible
                 case (Some(_), None) => true
                 case (Some(first), Some(second)) => {
@@ -457,7 +458,7 @@ where
                 }
               }
             if (nameIsNext) {
-              iter.peek_cloned() match {
+              iter.peek() match {
                 case Some(WordLE(range, str)) => {
                   iter.advance()
                   if (str == keywords.UNDERSCORE) {
@@ -480,7 +481,7 @@ where
         }
 
       // We look ahead so we dont parse "in" as a type in: foreach x in myList { ... }
-      iter.peek_cloned() match {
+      iter.peek() match {
         case None =>
         case Some(WordLE(_, in)) if in == keywords.in => iter.stop()
         case Some(_) =>
@@ -490,7 +491,7 @@ where
       // If it's a square-braced thing with nothing after it, it's a destructure.
       // See https://github.com/ValeLang/Vale/issues/434
       val nextIsType =
-        iter.peek2_cloned() match {
+        iter.peek2() match {
           case (None, None) => false
           case (Some(SquaredLE(_, _)), maybeAfter) => {
             // If there's something after it, it's an array.
@@ -523,7 +524,7 @@ where
         }
 
       val maybeDestructure =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(SquaredLE(destructureRange, destructureElements)) => {
             iter.advance()
             val destructure =

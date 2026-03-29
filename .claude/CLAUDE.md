@@ -21,13 +21,13 @@ We're doing **incremental, safe migration**. Many functions have commented-out S
 
 ## Lifetime Model
 
-The Rust codebase uses **three arena lifetimes** (see `docs/arena-lifetimes.md` for full details):
+The Rust codebase uses **three arena lifetimes** (see `docs/background/arenas.md` for full details):
 
 - **`'p`** - Parser arena (via `ParseArena<'p>`): interned strings, coordinates, parser AST nodes
 - **`'s`** - Scout (postparser + higher_typing) arena (via `ScoutArena<'s>`): interned names, runes, imprecise names, postparser/higher-typing output nodes
 - **`'ctx`** - Context/infrastructure borrows: `&'ctx ParseArena<'p>`, `&'ctx ScoutArena<'s>`, `&'ctx Keywords<'p>`
 
-Each arena is self-contained with its own interning maps. Cross-pass data is re-interned at pass boundaries (e.g. `StrI<'p>` → `StrI<'s>` via `scout_arena.intern_str()`). The old `Interner<'a>` has been eliminated.
+Each arena is self-contained with its own interning maps. Cross-pass data is re-interned at pass boundaries (e.g. `StrI<'p>` → `StrI<'s>` via `scout_arena.intern_str()`).
 
 ## Conventions
 

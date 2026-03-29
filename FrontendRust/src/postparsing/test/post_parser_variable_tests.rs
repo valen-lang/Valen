@@ -26,6 +26,38 @@ import scala.runtime.Nothing$
 
 class PostParserVariableTests extends FunSuite with Matchers {
 */
+fn compile_for_error<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
+  code: &str,
+) -> ICompileErrorS<'s>
+where 'p: 's,
+{
+  let options = GlobalOptions {
+    sanity_check: true,
+    use_overload_index: true,
+    use_optimized_solver: true,
+    verbose_errors: false,
+    debug_output: false,
+  };
+
+  let keywords_p = Keywords::new_for_parse(parse_arena);
+  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
+  // Re-intern FileCoordinate from 'p into 's
+  let file_coord_s = scout_arena.intern_file_coordinate(
+    scout_arena.intern_package_coordinate(
+      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
+      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+    ),
+    only_file.file_coord.filepath.as_str(),
+  );
+  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
+  match post_parser.scout_program(file_coord_s, &only_file) {
+    Ok(_) => panic!("Accidentally compiled!"),
+    Err(e) => e,
+  }
+}
 /*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
@@ -64,38 +96,6 @@ where 'p: 's,
   post_parser
     .scout_program(file_coord_s, &only_file)
     .unwrap()
-}
-fn compile_for_error<'s, 'ctx, 'p>(
-  scout_arena: &'ctx ScoutArena<'s>,
-  keywords: &'ctx Keywords<'s>,
-  parse_arena: &'ctx ParseArena<'p>,
-  code: &str,
-) -> ICompileErrorS<'s>
-where 'p: 's,
-{
-  let options = GlobalOptions {
-    sanity_check: true,
-    use_overload_index: true,
-    use_optimized_solver: true,
-    verbose_errors: false,
-    debug_output: false,
-  };
-
-  let keywords_p = Keywords::new_for_parse(parse_arena);
-  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
-  // Re-intern FileCoordinate from 'p into 's
-  let file_coord_s = scout_arena.intern_file_coordinate(
-    scout_arena.intern_package_coordinate(
-      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
-      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
-    ),
-    only_file.file_coord.filepath.as_str(),
-  );
-  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
-  match post_parser.scout_program(file_coord_s, &only_file) {
-    Ok(_) => panic!("Accidentally compiled!"),
-    Err(e) => e,
-  }
 }
 /*
   private def compile(code: String): ProgramS = {

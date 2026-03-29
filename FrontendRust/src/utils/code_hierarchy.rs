@@ -140,6 +140,7 @@ Guardian: disable: NECX
       module: self.module,
       packages: InternedSlice::new(arena_packages),
     })
+    // V: do we have a coherent story for when something is inline or in the arena?
   }
 /*
   def parent(interner: Interner): Option[PackageCoordinate] = {

@@ -67,6 +67,7 @@ where 'p: 's,
     .unwrap()
 }
 /*
+  // V: above changes consistent with below scala?
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
     val compilation = PostParserTestCompilation.test(code, interner)
     compilation.getScoutput() match {
@@ -116,6 +117,7 @@ where 'p: 's,
   }
 }
 /*
+  // V: above changes consistent with below scala?
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e

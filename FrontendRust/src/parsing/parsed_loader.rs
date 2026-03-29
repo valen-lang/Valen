@@ -826,10 +826,10 @@ fn load_consecutor<'p>(
   arena: &'p Bump,
   jobj: &Map<String, Value>,
 ) -> ConsecutorPE<'p> {
-  let inners: Vec<_> = get_array_field(jobj, "inners")
+  let inners: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "inners")
     .iter()
     .map(expect_object)
-    .map(|x| load_expression(parse_arena, arena, x))
+    .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
     .collect();
   ConsecutorPE {
     inners: alloc_slice_from_vec(arena, inners),
@@ -927,10 +927,10 @@ fn load_expression<'p>(
       value: get_boolean_field(jobj, "value"),
     }),
     "StrInterpolate" => {
-      let parts: Vec<_> = get_array_field(jobj, "parts")
+      let parts: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "parts")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       IExpressionPE::StrInterpolate(StrInterpolatePE {
         range: load_range(get_object_field(jobj, "range")),
@@ -944,10 +944,10 @@ fn load_expression<'p>(
       member: load_name(parse_arena, get_object_field(jobj, "member")),
     }),
     "FunctionCall" => {
-      let arg_exprs: Vec<_> = get_array_field(jobj, "argExprs")
+      let arg_exprs: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "argExprs")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       IExpressionPE::FunctionCall(FunctionCallPE {
         range: load_range(get_object_field(jobj, "range")),
@@ -995,10 +995,10 @@ fn load_expression<'p>(
       source: &*arena.alloc(load_expression(parse_arena, arena, get_object_field(jobj, "source"))),
     }),
     "MethodCall" => {
-      let arg_exprs: Vec<_> = get_array_field(jobj, "argExprs")
+      let arg_exprs: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "argExprs")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       IExpressionPE::MethodCall(MethodCallPE {
         range: load_range(get_object_field(jobj, "range")),
@@ -1009,10 +1009,10 @@ fn load_expression<'p>(
       })
     }
     "Tuple" => {
-      let elements: Vec<_> = get_array_field(jobj, "elements")
+      let elements: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "elements")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       IExpressionPE::Tuple(TuplePE {
         range: load_range(get_object_field(jobj, "range")),
@@ -1047,10 +1047,10 @@ fn load_expression<'p>(
       to_expr: &*arena.alloc(load_expression(parse_arena, arena, get_object_field(jobj, "end"))),
     }),
     "BraceCall" => {
-      let arg_exprs: Vec<_> = get_array_field(jobj, "argExprs")
+      let arg_exprs: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "argExprs")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       IExpressionPE::BraceCall(BraceCallPE {
         range: load_range(get_object_field(jobj, "range")),
@@ -1065,7 +1065,7 @@ fn load_expression<'p>(
       inner: &*arena.alloc(load_expression(parse_arena, arena, get_object_field(jobj, "innerExpr"))),
     }),
     "ConstructArray" => IExpressionPE::ConstructArray(load_construct_array(parse_arena, arena, jobj)),
-    "Lookup" => IExpressionPE::Lookup(load_lookup(parse_arena, arena, jobj)),
+    "Lookup" => IExpressionPE::Lookup(&*arena.alloc(load_lookup(parse_arena, arena, jobj))),
     "Consecutor" => IExpressionPE::Consecutor(load_consecutor(parse_arena, arena, jobj)),
     "Block" => IExpressionPE::Block(load_block(parse_arena, arena, jobj)),
     other => panic!("Not implemented: load_expression {}", other),
@@ -1330,10 +1330,10 @@ fn load_construct_array<'p>(
     size: load_array_size(parse_arena, arena, get_object_field(jobj, "size")),
     initializing_individual_elements: get_boolean_field(jobj, "initializingIndividualElements"),
     args: {
-      let v: Vec<_> = get_array_field(jobj, "args")
+      let v: Vec<&'p IExpressionPE<'p>> = get_array_field(jobj, "args")
         .iter()
         .map(expect_object)
-        .map(|x| load_expression(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_expression(parse_arena, arena, x)))
         .collect();
       alloc_slice_from_vec(arena, v)
     },

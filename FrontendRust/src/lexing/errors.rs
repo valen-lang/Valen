@@ -1,7 +1,7 @@
 use crate::utils::code_hierarchy::FileCoordinate;
 
 /// Failed parse with context
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub struct FailedParse<'p> {
   pub code: String,
   pub file_coord: FileCoordinate<'p>,
@@ -9,7 +9,7 @@ pub struct FailedParse<'p> {
 }
 
 /// Parse error types
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 pub enum ParseError {
   RangedInternalError { pos: i32, msg: String },
   UnrecognizableExpressionAfterAugment(i32),

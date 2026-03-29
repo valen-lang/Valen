@@ -38,6 +38,7 @@ type ParseResult<T> = Result<T, ParseError>;
 /// Main parser coordinating all parsing operations
 /// Matches Scala's Parser class
 pub struct Parser<'p, 'ctx> {
+  // VV: crate::
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   arena: &'p Bump,
@@ -147,10 +148,11 @@ where
     })
   }
   /*
+    // V: someone changed a scala comment... looks like it was wrong before too.
     private[parsing] def parseIdentifyingRunes(node: AngledLE):
     Result[GenericParametersP, IParseError] = {
       val runesP =
-        U.map[ScrambleIterator, GenericParameterP]<'p>(
+        U.map[ScrambleIterator, GenericParameterP](
           new ScrambleIterator(node.contents).splitOnSymbol(',', false),
           inner => {
           parseGenericParameter(inner) match {
@@ -266,7 +268,7 @@ where
           case Err(x) => return Err(x)
           case Ok(None) => {
             val name =
-              iter.peek_cloned() match {
+              iter.peek() match {
                 case Some(WordLE(range, str)) => {
                   iter.advance()
                   NameP(range, str)
@@ -341,7 +343,7 @@ where
     }
   */
 
-  /// Parse optional prefixing region (e.g., `'p`)
+  /// Parse optional prefixing region (e.g., `'a`)
   fn parse_prefixing_region(
     &self,
     original_iter: &mut ScrambleIterator<'p, '_>,
@@ -493,7 +495,7 @@ where
       val begin = iter.getPos()
 
       val name =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(ParsedIntegerLE(range, int, _)) => {
             // This is just temporary until we add proper variadics again, see TAVWG.
             iter.advance()
@@ -510,7 +512,7 @@ where
       val variability = if (iter.trySkipSymbol('!')) VaryingP else FinalP
 
       val variadic =
-        iter.peek2_cloned() match {
+        iter.peek2() match {
           case (Some(SymbolLE(_, '.')), Some(SymbolLE(_, '.'))) => {
             iter.advance()
             iter.advance()
@@ -632,7 +634,7 @@ where
         val maybeTemplateRulesP =
           maybeTemplateRulesL.map(templateRulesScramble => {
             val elementsPR =
-              U.map[ScrambleIterator, IRulexPR]<'p>(
+              U.map[ScrambleIterator, IRulexPR](
                 new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
                 ruleIter => {
                   templexParser.parseRule(ruleIter) match {
@@ -784,7 +786,7 @@ where
         val maybeTemplateRulesP =
           maybeTemplateRulesL.map(templateRulesScramble => {
             val elementsPR =
-              U.map[ScrambleIterator, IRulexPR]<'p>(
+              U.map[ScrambleIterator, IRulexPR](
                 new ScrambleIterator(templateRulesScramble).splitOnSymbol(',', false),
                 ruleIter => {
                   templexParser.parseRule(ruleIter) match {
@@ -1114,7 +1116,7 @@ where
         ParseUtils.trySkipPastKeywordWhile(
           iter,
           keywords.as,
-          iter => iter.peek_cloned() match {
+          iter => iter.peek() match {
             case None => false
             case Some(SymbolLE(range, ';')) => false
             case _ => true
@@ -1131,7 +1133,7 @@ where
         }
 
       val name =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case None => return Err(BadExportEnd(iter.getPos()))
           case Some(WordLE(range, str)) => NameP(range, str)
         }
@@ -1376,7 +1378,7 @@ where
         val paramsP =
           ParamsP(
             paramsL.range,
-            U.mapWithIndex[ScrambleIterator, ParameterP]<'p>(
+            U.mapWithIndex[ScrambleIterator, ParameterP](
               new ScrambleIterator(paramsL.contents).splitOnSymbol(',', false),
               (index, patternIter) => {
                 patternParser.parseParameter(patternIter, index, isInCitizen, true, false) match {

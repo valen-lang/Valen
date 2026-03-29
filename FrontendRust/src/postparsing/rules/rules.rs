@@ -66,11 +66,13 @@ Guardian: disable-all
 // need to, it relies on delegates to do any rule-specific things.
 // Different stages will likely need different kinds of rules, so best not prematurely
 // combine them.
+// V: above comment match scala?
 trait IRulexSR {
   def range: RangeS
   def runeUsages: Vector[RuneUsage]
 }
 Guardian: disable: NECX
+// V: why cloneable?
 */
 
 impl<'s> IRulexSR<'s> {
@@ -169,6 +171,8 @@ pub struct EqualsSR<'s> {
 /*
 case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IRulexSR {
   // MIGALLOW: Rust doesn't need a equals override
+  // V: we should make equals and hashCode exceptions to the broad rule
+  // V: we should probably also combine the various closer-to-scala shields
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(left, right)

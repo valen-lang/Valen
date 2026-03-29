@@ -382,6 +382,8 @@ impl LexingIterator {
 
       self.comments.push(RangeL(begin as i32, (self.position - 1) as i32));
 
+      // V: are these changes closer or further from scala?
+
       self.consume_comments();
     }
   }

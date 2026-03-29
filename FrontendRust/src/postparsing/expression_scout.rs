@@ -1,9 +1,4 @@
-// bork
-// bork
-// bork
-// bork
-// bork
-// bork
+// V: we should totally make a tool that pulls out everything not in a block comment, and then compares it to the Frontend/ version
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
   BlockPE, DotPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, ITemplexPT, LoadAsP,
@@ -239,7 +234,7 @@ pub(crate) fn scout_block(
           case Some(RegionRunePT(range, name)) => {
             val regionRuneS = CodeRuneS(vassertSome(name).str) // impl isolates
             if (!parentStackFrame.parentEnv.allDeclaredRunes().contains(regionRuneS)) {
-              throw CompileErrorExceptionS(CouldntFindRuneS(rangeS, vassertSome(name).str.as_str())) // impl isolates
+              throw CompileErrorExceptionS(CouldntFindRuneS(rangeS, vassertSome(name).str.str)) // impl isolates
             }
             regionRuneS
           }
@@ -389,26 +384,26 @@ fn scout_impure_block(
       };
       let range_at_end = RangeL(range_s.end.offset, range_s.end.offset);
       // Per @PPSPASTNZ, allocate synthetic parser node in parse_arena
-      let callable_expr_p = &*self.parse_arena.alloc(IExpressionPE::Lookup(LookupPE {
+      let callable_expr_p = &*self.parse_arena.alloc(IExpressionPE::Lookup(self.parse_arena.alloc(LookupPE {
         name: IImpreciseNameP::LookupName(NameP(range_at_end, function_name)),
         template_args: None,
-      }));
+      })));
       // Per @PPSPASTNZ, all synthetic parser nodes allocated in parse_arena ('p)
       let self_keyword_p = self.parse_arena.intern_str(self.keywords.self_.as_str());
-      let arg_exprs_p: Vec<IExpressionPE<'p>> = constructing_member_names
+      let arg_exprs_p: Vec<&'p IExpressionPE<'p>> = constructing_member_names
         .iter()
-        .map(|member_name: &StrI<'s>| -> IExpressionPE<'p> {
-          let self_lookup_p = &*self.parse_arena.alloc(IExpressionPE::Lookup(LookupPE {
+        .map(|member_name: &StrI<'s>| -> &'p IExpressionPE<'p> {
+          let self_lookup_p = &*self.parse_arena.alloc(IExpressionPE::Lookup(self.parse_arena.alloc(LookupPE {
             name: IImpreciseNameP::LookupName(NameP(range_at_end, self_keyword_p)),
             template_args: None,
-          }));
+          })));
           let member_name_p = self.parse_arena.intern_str(member_name.as_str());
-          IExpressionPE::Dot(DotPE {
+          &*self.parse_arena.alloc(IExpressionPE::Dot(DotPE {
             range: range_at_end,
             left: self_lookup_p,
             operator_range: RangeL::zero(),
             member: NameP(range_at_end, member_name_p),
-          })
+          }))
         })
         .collect();
       // Per @PPSPASTNZ, allocate synthetic parser node in parse_arena
@@ -477,6 +472,7 @@ fn scout_impure_block(
       BlockSE::<'s> {
         range: range_s,
         locals: alloc_slice_from_vec(self.scout_arena.arena(), locals),
+        // V: how do these slices work with interning? if something is interned and has a slice, is that slice deduped? what's equality on these slices like? i hope we dont allocate a bunch of different of the same slices.
         expr: expr_with_constructing_if_necessary,
       }),
       self_uses_of_things_from_above,
@@ -1489,7 +1485,7 @@ fn scout_expression(
         _ => LoadAsP::Use,
       };
       // Per @PPSPASTNZ, allocate synthetic parser node in parse_arena
-      let method_lookup_expr: &'p IExpressionPE<'p> = &*self.parse_arena.alloc(IExpressionPE::Lookup(method_call.method_lookup.clone()));
+      let method_lookup_expr: &'p IExpressionPE<'p> = &*self.parse_arena.alloc(IExpressionPE::Lookup(method_call.method_lookup));
       let (stack_frame1, callable_expr_s, callable_self_uses, callable_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
         let mut callable_lidb = lidb.child();
         self.scout_expression_and_coerce(
@@ -2121,7 +2117,7 @@ pub(crate) fn scout_elements_as_expressions(
     &self,
     initial_stack_frame: StackFrame<'s>,
     lidb: &mut LocationInDenizenBuilder,
-    exprs_p: &'p [IExpressionPE<'p>],
+    exprs_p: &'p [&'p IExpressionPE<'p>],
   ) -> Result<(StackFrame<'s>, Vec<&'s IExpressionSE<'s>>, VariableUses<'s>, VariableUses<'s>), ICompileErrorS<'s>>
   {
     let mut self_uses = VariableUses::<'s>::empty();

@@ -49,9 +49,13 @@ TOOL_SCHEMA = {
             "reason": {
                 "type": "string",
                 "description": "1-3 sentence explanation of why this is a false positive (single line, no newlines)"
+            },
+            "shield_file": {
+                "type": "string",
+                "description": "Path to the shield .md file from the denial message (the Shield: path)"
             }
         },
-        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason"]
+        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file"]
     }
 }
 
@@ -108,6 +112,7 @@ def handle_tools_call(msg):
         "shield_code": args.get("shield_code", ""),
         "verdict_file": args.get("verdict_file", ""),
         "reason": args.get("reason", ""),
+        "shield_file": args.get("shield_file", ""),
     }).encode("utf-8")
 
     try:

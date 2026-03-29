@@ -1969,7 +1969,7 @@ where
       if (word.isEmpty) {
         None
       } else {
-        Some(WordLE(RangeL(begin, end), interner.intern(word)))
+        Some(WordLE(RangeL(begin, end), interner.intern(StrI(word))))
       }
     }
   */

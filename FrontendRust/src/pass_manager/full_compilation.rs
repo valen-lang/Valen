@@ -60,11 +60,13 @@ where
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
+    // VV: crate::
     parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: FullCompilationOptions,
     parser_bump: &'p bumpalo::Bump,
+    // V: i feel like parser_bump should be a private part of parse_arena.
   ) -> Self {
     let hammer_compilation = HammerCompilation::new(
       scout_arena,

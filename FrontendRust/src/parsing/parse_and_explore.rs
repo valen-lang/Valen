@@ -6,6 +6,7 @@ use crate::parsing::ast::IDenizenP;
 use crate::parsing::Parser;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::Keywords;
+// V: can we put the Keywords struct into the arena? so it doesnt have to be a separate thing...
 use std::collections::HashMap;
 /*
 package dev.vale.parsing
@@ -27,7 +28,7 @@ object ParseAndExplore {
   def parseAndExploreAndCollect(
     interner: Interner,
     keywords: Keywords,
-    _opts: GlobalOptions,
+    opts: GlobalOptions,
     parser: Parser,
     packages: Vector[PackageCoordinate],
     resolver: IPackageResolver[Map[String, String]]):

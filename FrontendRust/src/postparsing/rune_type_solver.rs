@@ -465,24 +465,24 @@ fn get_puzzles_rune_type<'s>(
     IRulexSR::MaybeCoercingCall(x) => {
       vec![vec![x.result_rune.rune.clone(), x.template_rune.rune.clone()]]
     }
-    IRulexSR::CoordComponents(_) => vec![vec![]],
-    IRulexSR::OneOf(_) => vec![vec![]],
-    IRulexSR::IsInterface(_) => vec![vec![]],
-    IRulexSR::CoerceToCoord(_) => vec![vec![]],
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type get_puzzles"),
-    IRulexSR::Literal(_) => vec![vec![]],
-    IRulexSR::Augment(_) => vec![vec![]],
     IRulexSR::Pack(_) => vec![vec![]],
     IRulexSR::DefinitionCoordIsa(_) => vec![vec![]],
     IRulexSR::CallSiteCoordIsa(_) => vec![vec![]],
     IRulexSR::KindComponents(_) => vec![vec![]],
+    IRulexSR::CoordComponents(_) => vec![vec![]],
     IRulexSR::PrototypeComponents(_) => vec![vec![]],
     IRulexSR::Resolve(_) => vec![vec![]],
     IRulexSR::CallSiteFunc(_) => vec![vec![]],
     IRulexSR::DefinitionFunc(_) => vec![vec![]],
+    IRulexSR::OneOf(_) => vec![vec![]],
     IRulexSR::IsConcrete(x) => vec![vec![x.rune.rune.clone()]],
+    IRulexSR::IsInterface(_) => vec![vec![]],
     IRulexSR::IsStruct(_) => vec![vec![]],
+    IRulexSR::CoerceToCoord(_) => vec![vec![]],
+    IRulexSR::Literal(_) => vec![vec![]],
+    IRulexSR::Augment(_) => vec![vec![]],
     IRulexSR::RefListCompoundMutability(_) => vec![vec![]],
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type get_puzzles"),
     IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type get_puzzles"),
     IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type get_puzzles"),
   }
@@ -577,6 +577,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverState<
   use crate::postparsing::rules::rules::IRulexSR;
   use crate::postparsing::itemplatatype::*;
   match rule {
+    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in rune_type solve_rule"),
     IRulexSR::CoordComponents(x) => {
       let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
       solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
@@ -586,68 +587,14 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverState<
       solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(kind_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
       Ok(())
     }
-    IRulexSR::CoerceToCoord(x) => {
-      let coord_idx = solver_state.get_canonical_rune(x.coord_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(coord_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
-      let kind_idx = solver_state.get_canonical_rune(x.kind_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(kind_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
-      Ok(())
-    }
-    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type solve_rule"),
-    IRulexSR::Literal(x) => {
-      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, x.literal.get_type()).map_err(|e| e)?;
-      Ok(())
-    }
-    IRulexSR::Equals(x) => {
-      let left_conclusion = solver_state.get_conclusion(x.left.rune.clone());
-      match left_conclusion {
-        None => {
-          let right_conclusion = solver_state.get_conclusion(x.right.rune.clone()).expect("Neither side of EqualsSR has a conclusion");
-          let left_idx = solver_state.get_canonical_rune(x.left.rune.clone());
-          solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(left_idx, right_conclusion).map_err(|e| e)?;
-          Ok(())
-        }
-        Some(left) => {
-          let right_idx = solver_state.get_canonical_rune(x.right.rune.clone());
-          solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(right_idx, left).map_err(|e| e)?;
-          Ok(())
-        }
-      }
-    }
-    // Rust OneOfSR struct has field named `rune` (not `result_rune`)
-    IRulexSR::OneOf(x) => {
-      let types: std::collections::HashSet<ITemplataType> = x.literals.iter().map(|l| l.get_type()).collect();
-      if types.len() > 1 {
-        panic!("OneOf rule's possibilities must all be the same type!");
-      }
-      let the_type = types.into_iter().next().unwrap();
-      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, the_type).map_err(|e| e)?;
-      Ok(())
-    }
-    IRulexSR::IsInterface(x) => {
-      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
-      Ok(())
-    }
-    IRulexSR::Augment(x) => {
+    IRulexSR::PrototypeComponents(x) => {
       let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
-      let inner_idx = solver_state.get_canonical_rune(x.inner_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(inner_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
       Ok(())
-    }
-    IRulexSR::Lookup(_) => {
-      panic!("solve_rule LookupSR not yet migrated");
-    }
-    IRulexSR::MaybeCoercingLookup(x) => {
-      let actual_lookup_result =
-          match env.lookup(x.range.clone(), x.name.clone()) {
-            Err(_e) => panic!("MaybeCoercingLookupSR solve error path not yet migrated"),
-            Ok(r) => r,
-          };
-      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)
     }
     IRulexSR::MaybeCoercingCall(x) => {
       match solver_state.get_conclusion(x.template_rune.rune.clone()).expect("MaybeCoercingCallSR: template rune has no conclusion") {
@@ -661,16 +608,13 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverState<
         other => panic!("MaybeCoercingCallSR: unexpected template type: {:?}", other),
       }
     }
-    IRulexSR::RuneParentEnvLookup(_) => {
-      panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
-    }
-    IRulexSR::Pack(x) => {
-      for member in x.members {
-        let member_idx = solver_state.get_canonical_rune(member.rune.clone());
-        solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(member_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
-      }
+    IRulexSR::Resolve(x) => {
       let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
+      let params_idx = solver_state.get_canonical_rune(x.params_list_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
+      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
       Ok(())
     }
     IRulexSR::CallSiteFunc(x) => {
@@ -691,31 +635,87 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverState<
       solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
       Ok(())
     }
-    IRulexSR::Resolve(x) => {
+    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in rune_type solve_rule"),
+    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in rune_type solve_rule"),
+    // Rust OneOfSR struct has field named `rune` (not `result_rune`)
+    IRulexSR::OneOf(x) => {
+      let types: std::collections::HashSet<ITemplataType> = x.literals.iter().map(|l| l.get_type()).collect();
+      if types.len() > 1 {
+        panic!("OneOf rule's possibilities must all be the same type!");
+      }
+      let the_type = types.into_iter().next().unwrap();
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, the_type).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Equals(x) => {
+      let left_conclusion = solver_state.get_conclusion(x.left.rune.clone());
+      match left_conclusion {
+        None => {
+          let right_conclusion = solver_state.get_conclusion(x.right.rune.clone()).expect("Neither side of EqualsSR has a conclusion");
+          let left_idx = solver_state.get_canonical_rune(x.left.rune.clone());
+          solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(left_idx, right_conclusion).map_err(|e| e)?;
+          Ok(())
+        }
+        Some(left) => {
+          let right_idx = solver_state.get_canonical_rune(x.right.rune.clone());
+          solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(right_idx, left).map_err(|e| e)?;
+          Ok(())
+        }
+      }
+    }
+    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule"),
+    IRulexSR::IsInterface(x) => {
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule"),
+    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule"),
+    IRulexSR::CoerceToCoord(x) => {
+      let coord_idx = solver_state.get_canonical_rune(x.coord_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(coord_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      let kind_idx = solver_state.get_canonical_rune(x.kind_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(kind_idx, ITemplataType::KindTemplataType(KindTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Literal(x) => {
+      let rune_idx = solver_state.get_canonical_rune(x.rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(rune_idx, x.literal.get_type()).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Lookup(_) => {
+      panic!("solve_rule LookupSR not yet migrated");
+    }
+    IRulexSR::MaybeCoercingLookup(x) => {
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), x.name.clone()) {
+            Err(_e) => panic!("MaybeCoercingLookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)
+    }
+    IRulexSR::RuneParentEnvLookup(_) => {
+      panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
+    }
+    IRulexSR::Augment(x) => {
       let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
-      let params_idx = solver_state.get_canonical_rune(x.params_list_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
-      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      let inner_idx = solver_state.get_canonical_rune(x.inner_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(inner_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      Ok(())
+    }
+    IRulexSR::Pack(x) => {
+      for member in x.members {
+        let member_idx = solver_state.get_canonical_rune(member.rune.clone());
+        solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(member_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
+      }
+      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
+      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
       Ok(())
     }
     IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type solve_rule"),
-    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in rune_type solve_rule"),
-    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in rune_type solve_rule"),
-    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in rune_type solve_rule"),
-    IRulexSR::PrototypeComponents(x) => {
-      let result_idx = solver_state.get_canonical_rune(x.result_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(result_idx, ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})).map_err(|e| e)?;
-      let params_idx = solver_state.get_canonical_rune(x.params_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(params_idx, ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })).map_err(|e| e)?;
-      let return_idx = solver_state.get_canonical_rune(x.return_rune.rune.clone());
-      solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(return_idx, ITemplataType::CoordTemplataType(CoordTemplataType {})).map_err(|e| e)?;
-      Ok(())
-    }
-    IRulexSR::IsConcrete(_) => panic!("IRulexSR::IsConcrete not yet migrated in rune_type solve_rule"),
-    IRulexSR::IsStruct(_) => panic!("IRulexSR::IsStruct not yet migrated in rune_type solve_rule"),
-    IRulexSR::RefListCompoundMutability(_) => panic!("IRulexSR::RefListCompoundMutability not yet migrated in rune_type solve_rule"),
+    IRulexSR::Call(_) => panic!("IRulexSR::Call not yet migrated in rune_type solve_rule"),
     IRulexSR::IndexList(_) => panic!("IRulexSR::IndexList not yet migrated in rune_type solve_rule"),
   }
 }
@@ -996,6 +996,7 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverStat
 */
 // mig: fn solve_rune_type
 pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
+  // V: we took out self here, do we have a coherent story about when something should be self/impl'd
   sanity_check: bool,
   env: &E,
   range: Vec<crate::utils::range::RangeS<'s>>,
@@ -1095,7 +1096,8 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
     initially_known_runes.insert(k, v);
   }
 
-  // Compute all_runes = rules.flatMap(getRunes) ++ initiallyKnownRunes.keys ++ additionalRunes, deduplicated
+  // Compute all_runes for solver = rules.flatMap(getRunes) ++ initiallyKnownRunes.keys, deduplicated
+  // (additionalRunes are NOT included here — they're added after solving for the completeness check)
   let mut all_runes_set = std::collections::HashSet::new();
   for rule in rules_s {
     for rune_usage in rule.rune_usages() {
@@ -1105,10 +1107,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   for k in initially_known_runes.keys() {
     all_runes_set.insert(k.clone());
   }
-  for r in additional_runes {
-    all_runes_set.insert(r.clone());
-  }
-  let all_runes: Vec<IRuneS<'s>> = all_runes_set.into_iter().collect();
+  let solver_runes: Vec<IRuneS<'s>> = all_runes_set.into_iter().collect();
 
   let delegate = RuneTypeSolverDelegate { predicting };
   let mut solver: Solver<'s, IRulexSR<'s>, IRuneS<'s>, E, (), ITemplataType, IRuneTypeRuleError<'s>, RuneTypeSolverDelegate> = Solver::new(
@@ -1117,7 +1116,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
     range.clone(),
     rules_s.to_vec(),
     initially_known_runes,
-    all_runes.clone(),
+    solver_runes,
   );
 
   loop {
@@ -1135,7 +1134,13 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
 
   let conclusions: HashMap<IRuneS<'s>, ITemplataType> = solver.userify_conclusions().into_iter().collect();
 
-  // Check completeness
+  // Check completeness: allRunes = solver.getAllRunes().map(solver.getUserRune) ++ additionalRunes
+  let mut all_runes: Vec<IRuneS<'s>> = solver.get_all_runes().into_iter().map(|r| solver.get_user_rune(r)).collect();
+  for r in additional_runes {
+    if !all_runes.contains(r) {
+      all_runes.push(r.clone());
+    }
+  }
   let unsolved_runes: Vec<IRuneS<'s>> = all_runes.iter()
     .filter(|r| !conclusions.contains_key(*r))
     .cloned()

@@ -1695,6 +1695,7 @@ fn create_magic_parameters(
       locals: alloc_slice_from_vec(self.scout_arena.arena(), combined_locals),
       expr: block1.expr,
     });
+    // V: tell me about the above change?
     let all_uses = self_uses.then_merge(&child_uses);
     let uses_of_parent_variables = all_uses
       .uses

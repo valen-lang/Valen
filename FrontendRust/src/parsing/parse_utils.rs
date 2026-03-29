@@ -18,7 +18,7 @@ import dev.vale.lexing.{SymbolLE, WordLE}
 object ParseUtils {
 */
 
-/// Parse optional region marker (e.g., 'p or ' for isolate).
+/// Parse optional region marker (e.g., 'a or ' for isolate).
 /// Shared between Parser and TemplexParser - mirrors Parser.parseRegion in Parser.scala lines 861-888.
 pub fn parse_region<'p>(
   original_iter: &mut ScrambleIterator<'p, '_>,
@@ -99,7 +99,7 @@ where
       scoutingIter.peek3() match {
         case (Some(prev), Some(SymbolLE(range, '=')), Some(next)) => {
           val surroundedBySpaces =
-            prev.range().end() < range.begin() && range.end() < next.range().begin()
+            prev.range.end < range.begin && range.end < next.range.begin
           if (surroundedBySpaces) {
             // We'll return this iterator for the things that come before the =
             val beforeIter = iter.clone()

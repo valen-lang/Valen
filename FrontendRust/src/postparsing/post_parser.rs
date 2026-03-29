@@ -84,6 +84,7 @@ pub struct CompileErrorExceptionS<'s> {
 
 #[derive(Clone, Debug, PartialEq)]
 // SPORK
+// V: whats the common theme between all SPORK comments?
 pub enum ICompileErrorS<'s> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'s>),
   CouldntFindRuneS(CouldntFindRuneS<'s>),
@@ -1883,6 +1884,7 @@ fn predict_mutability(
         .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
       self.scout_arena.arena(),
     );
+    // V: its suspicious that we're able to get the underlying arena from scout_arena.
     let members_rune_to_predicted_type = ArenaIndexMap::from_iter_in(
       rune_to_predicted_type
         .iter()
@@ -1996,7 +1998,7 @@ fn predict_mutability(
           val regionRangeS = evalRange(file, regionRangeP)
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!structEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.as_str().to_string()))
+            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.str))
           }
           (regionRangeS, rune, None)
         }
@@ -2278,7 +2280,7 @@ pub(crate) fn check_identifiability(
       .unwrap_or_default();
 
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
-
+    // V: is this whole function now closer or further from scala?
     assert!(
       interface.mutability.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_MUTABILITY_NOT_YET_IMPLEMENTED"
@@ -2288,40 +2290,34 @@ pub(crate) fn check_identifiability(
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
     );
 
-    let mut weakable = false;
-    let mut first_linear_attr_range = None;
-    let mut attributes = Vec::<ICitizenAttributeS>::new();
-    for attribute in interface.attributes {
-      match attribute {
-        IAttributeP::WeakableAttribute(_) => {
-          weakable = true;
-        }
-        IAttributeP::LinearAttribute(attr) => {
-          if first_linear_attr_range.is_none() {
-            first_linear_attr_range = Some(attr.range);
-          }
-        }
-        IAttributeP::SealedAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Sealed(SealedS));
-        }
-        IAttributeP::ExportAttribute(_) => {
-          attributes.push(ICitizenAttributeS::Export(ExportS {
-            package_coordinate: file.package_coord,
-          }));
-        }
-        IAttributeP::MacroCall(attr) => {
-          attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
-            range: Self::eval_range(file, attr.range),
-            include: attr.inclusion,
-            macro_name: self.scout_arena.intern_str(attr.name.str().as_str()),
-          }));
-        }
-        other => panic!("POSTPARSER_SCOUT_INTERFACE_ATTRIBUTE_NOT_YET_IMPLEMENTED: {:?}", other),
-      }
-    }
-    if let Some(range) = first_linear_attr_range {
+    let weakable = interface
+      .attributes
+      .iter()
+      .any(|attr| matches!(attr, IAttributeP::WeakableAttribute(_)));
+    let attrs_without_linear_s = Self::translate_citizen_attributes(
+      self.scout_arena,
+      file,
+      self.scout_arena.intern_name(INameValS::TopLevelInterfaceDeclaration(interface_name.clone())),
+      &interface
+        .attributes
+        .iter()
+        .filter(|attr| {
+          !matches!(
+            attr,
+            IAttributeP::WeakableAttribute(_) | IAttributeP::LinearAttribute(_)
+          )
+        })
+        .cloned()
+        .collect::<Vec<_>>(),
+    );
+    let mut attributes = attrs_without_linear_s;
+    if let Some(IAttributeP::LinearAttribute(attr)) = interface
+      .attributes
+      .iter()
+      .find(|attr| matches!(attr, IAttributeP::LinearAttribute(_)))
+    {
       attributes.push(ICitizenAttributeS::MacroCall(MacroCallS {
-        range: Self::eval_range(file, range),
+        range: Self::eval_range(file, attr.range),
         include: IMacroInclusionP::DontCallMacro,
         macro_name: self.keywords.derive_struct_drop,
       }));
@@ -2366,8 +2362,10 @@ pub(crate) fn check_identifiability(
     });
 
     let mut rule_builder = Vec::<IRulexSR<'s>>::new();
+    // This is an array instead of a map so we can detect conflicts afterward
     let mut rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
 
+    // Put this back in when we have regions
     let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
       DenizenDefaultRegionRuneS {
         denizen_name: self.scout_arena.intern_name(INameValS::TopLevelInterfaceDeclaration(
@@ -2517,7 +2515,7 @@ pub(crate) fn check_identifiability(
           val regionRangeS = evalRange(file, regionRangeP)
           val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
           if (!interfaceEnv.allDeclaredRunes().contains(rune)) {
-            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.as_str().to_string()))
+            throw CompileErrorExceptionS(CouldntFindRuneS(regionRangeS, rune.name.str))
           }
           (regionRangeS, rune, None)
         }
@@ -2654,6 +2652,7 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
       parser_compilation,
       scoutput_cache: None,
     }
+    // V: anything enforce that we actually have to call this constructor?
   }
   /*
   Guardian: disable-all
@@ -2703,6 +2702,7 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
     let mut scoutput: FileCoordinateMap<'s, ProgramS<'s>> = FileCoordinateMap::new();
     for (file_coordinate_p, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
       // Cross-pass translation: re-intern FileCoordinate from 'p into 's
+      // V: should we have arcana for this? also its weird how verbose this is compared to the scala version below
       let package_coord_s: &'s PackageCoordinate<'s> = self.scout_arena.intern_package_coordinate(
         self.scout_arena.intern_str(file_coordinate_p.package_coord.module.as_str()),
         &file_coordinate_p.package_coord.packages.iter()

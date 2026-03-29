@@ -2,29 +2,19 @@
 
 You must respond with ONLY valid JSON (no markdown fences) matching this schema:
 
-{
-  "violations": []
-}
-
-If there are violations, list each one:
-
-{
-  "violations": [
-    {"reason": "Explanation of first violation"},
-    {"reason": "Explanation of second violation"}
-  ]
-}
-
-An empty violations array means the code change is acceptable.
+{"violations": []}                          // if the code complies with the rule
+{"violations": [{"reason": "explanation"}]} // if the code violates the rule
 
 ## Important: How to Read the Diff
 
-You are reviewing a CODE CHANGE, not the entire file. The contextified diff uses these prefixes:
-- Lines starting with `+` are NEWLY ADDED code — these are what you must evaluate.
-- Lines starting with `-` are REMOVED code — shown for context only, not part of the new code.
-- Lines with NO prefix are UNCHANGED existing code — shown for context only, do NOT flag violations in these lines.
+You are reviewing a CODE CHANGE to a single definition (function, struct, impl block, etc.), not the entire file. The contextified diff uses these prefixes:
+- Lines starting with `+` are NEWLY ADDED code.
+- Lines starting with `-` are REMOVED code — you do not need to evaluate removed lines.
+- Lines with NO prefix are UNCHANGED existing code that is part of this definition.
 
-Only flag violations in the `+` (added) lines. Pre-existing code issues are not your concern.
+Evaluate both the added (`+`) lines AND the unchanged (no prefix) lines in this definition for violations. Only ignore removed (`-`) lines. Do not evaluate neighboring definitions that are not shown in the diff.
+
+Only flag violations of the specific rule described above. Do not flag violations unrelated to this rule or violations of different rules, even if you notice other issues in the code.
 
 ## File Being Modified
 
@@ -34,3 +24,5 @@ CONTEXTIFIED DIFF (shows enclosing functions/structs around each change):
 ```
 {{file_content}}
 ```
+
+{{referenced_defs}}

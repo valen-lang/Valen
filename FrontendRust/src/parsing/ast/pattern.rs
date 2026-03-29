@@ -118,7 +118,7 @@ sealed trait INameDeclarationP {
 }
 case class LocalNameDeclarationP(name: NameP) extends INameDeclarationP {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious(); override def range: RangeL = name.range
-  if (name.str == "_") {
+  if (name.str.str == "_") {
     vwat()
   }
 }

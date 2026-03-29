@@ -401,6 +401,7 @@ where
   // From PassManager.scala lines 231-233: Create FullCompilation
   // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
   // and the scout pass gets its own arena.
+  // V: should we reference some docs here about how our arenas work
   let scout_bump = bumpalo::Bump::new();
   let scout_arena = ScoutArena::new(&scout_bump);
   let scout_keywords = Keywords::new_for_scout(&scout_arena);

@@ -47,7 +47,7 @@ Scan source files for `//f Violation:` annotations left by the user after a Guar
 
 - `//t` annotations are left untouched — they indicate acknowledged true positives
 - `//d` annotations are not processed by this tool — the user removes them manually
-- Only `//f` annotations are processed: they become test cases for the shield's optimizer
-- Each test case consists of `case-N-input.txt` (the contextified diff) and `case-N-expected.json` (`{"violations": []}`) in a `cases/` directory next to the shield file
+- Only `//f` annotations are processed: they become disagreement cases indicating the shield instructions need clarification
+- Each case consists of `case-N-input.txt` (the contextified diff) and `case-N-expected.json` (`{"violations": []}`) in a `disagreements/human/` directory within the shield's companion directory (e.g., `Luz/shields/ShieldName-CODE/disagreements/human/`). These are later reviewed during the curation process and may be promoted to `tests/`.
 - **Run `guardian feedback-line` from the git repo root**, not from a subdirectory. Paths in annotations (Log, Shield, Context) are relative to the repo root.
 - **Strip `(V: ...)` user notes** from annotation lines before processing. The parser expects `//f Violation: CODE: reason...` — parenthetical notes between `Violation:` and the code will break parsing.

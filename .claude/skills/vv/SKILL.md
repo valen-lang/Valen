@@ -78,7 +78,7 @@ If it looks wrong, try adjusting the line number (the VV comment removal shifted
 
 **Then, for both existing and new shields:**
 
-1. Determine the cases directory: `Luz/shields/<ShieldName-CODEX>/cases/`. Create it if it doesn't exist (`mkdir -p`).
+1. Determine the tests directory: `Luz/shields/<ShieldName-CODEX>/tests/`. Create it if it doesn't exist (`mkdir -p`).
 2. Find the next case number by looking at existing `case-*-input.txt` files and picking the next integer.
 3. Write `case-N-input.txt` with the contextified diff content.
 4. Write `case-N-expected.json`:
@@ -102,5 +102,5 @@ Tell the user:
 
 - The `// VV:` comment describes what's WRONG with the code, not what's right.
 - Shield files live at `Luz/shields/`. The flat `.md` file stays where it is — do NOT move it into the directory.
-- The cases directory is `Luz/shields/<ShieldName-CODEX>/cases/` (a folder next to the flat file).
+- The tests directory is `Luz/shields/<ShieldName-CODEX>/tests/` (a folder next to the flat file). VV cases go directly to `tests/` (TDD-style target state), not to `disagreements/`.
 - When writing the violation reason for expected.json, be concise but specific enough that someone reading it understands what the LLM should catch.

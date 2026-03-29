@@ -1936,7 +1936,7 @@ impl<'p> ParserVonifier<'p> {
         field_name: "inners".to_string(),
         value: IVonData::Array(VonArray {
           id: None,
-          members: inners.iter().map(Self::vonify_expression).collect(),
+          members: inners.iter().map(|e| Self::vonify_expression(e)).collect(),
         }),
       }],
     })
@@ -2032,7 +2032,7 @@ impl<'p> ParserVonifier<'p> {
           field_name: "args".to_string(),
           value: IVonData::Array(VonArray {
             id: None,
-            members: args.iter().map(Self::vonify_expression).collect(),
+            members: args.iter().map(|e| Self::vonify_expression(e)).collect(),
           }),
         },
       ],
@@ -2161,7 +2161,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "argExprs".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: arg_exprs.iter().map(Self::vonify_expression).collect(),
+              members: arg_exprs.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],
@@ -2192,7 +2192,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "argExprs".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: arg_exprs.iter().map(Self::vonify_expression).collect(),
+              members: arg_exprs.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
           VonMember {
@@ -2295,7 +2295,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "innerExprs".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: inners.iter().map(Self::vonify_expression).collect(),
+              members: inners.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],
@@ -2343,7 +2343,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "argExprs".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: arg_exprs.iter().map(Self::vonify_expression).collect(),
+              members: arg_exprs.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],
@@ -2360,7 +2360,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "argExprs".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: arg_exprs.iter().map(Self::vonify_expression).collect(),
+              members: arg_exprs.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],
@@ -2408,7 +2408,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "args".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: args.iter().map(Self::vonify_expression).collect(),
+              members: args.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],
@@ -2591,7 +2591,7 @@ impl<'p> ParserVonifier<'p> {
               field_name: "parts".to_string(),
               value: IVonData::Array(VonArray {
                 id: None,
-                members: parts.iter().map(Self::vonify_expression).collect(),
+                members: parts.iter().map(|e| Self::vonify_expression(e)).collect(),
               }),
             },
           ],
@@ -2699,7 +2699,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "elements".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: elements.iter().map(Self::vonify_expression).collect(),
+              members: elements.iter().map(|e| Self::vonify_expression(e)).collect(),
             }),
           },
         ],

@@ -361,30 +361,30 @@ impl<'s> ConsecutorSE<'s> {
       self.exprs.last().unwrap().range().end,
     )
   }
-  /*
-    override def range: RangeS = RangeS(exprs.head.range.begin, exprs.last.range.end)
-  */
-  /*
-    // Should have at least one expression, because we'll
-    // return the last expression's result as its result.
-    vassert(exprs.size > 1)
-    vassert(exprs.collect({ case ConsecutorSE(_) => }).isEmpty)
+/*
+override def range: RangeS = RangeS(exprs.head.range.begin, exprs.last.range.end)
+*/
+/*
+// Should have at least one expression, because we'll
+// return the last expression's result as its result.
+vassert(exprs.size > 1)
+vassert(exprs.collect({ case ConsecutorSE(_) => }).isEmpty)
 
 
-  //  if (exprs.size >= 2) {
-  //    exprs.last match {
-  //      case VoidSE(_) => {
-  //        exprs.init.last match {
-  //          case ReturnSE(_, _) => vcurious()
-  //          case VoidSE(_) => vcurious()
-  //          case _ =>
-  //        }
-  //      }
-  //      case _ =>
-  //    }
-  //  }
-  }
-  */
+//  if (exprs.size >= 2) {
+//    exprs.last match {
+//      case VoidSE(_) => {
+//        exprs.init.last match {
+//          case ReturnSE(_, _) => vcurious()
+//          case VoidSE(_) => vcurious()
+//          case _ =>
+//        }
+//      }
+//      case _ =>
+//    }
+//  }
+}
+*/
 }
 /* Guardian: disable-all */
 
@@ -398,7 +398,6 @@ case class ArgLookupSE(range: RangeS, index: Int) extends IExpressionSE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-
 #[derive(Debug, PartialEq)]
 pub struct RepeaterBlockSE<'s> {
   pub range: RangeS<'s>,

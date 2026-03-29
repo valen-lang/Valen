@@ -137,7 +137,8 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
     runeS
   }
 */
-pub fn translate_value_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
+pub fn translate_value_templex<'s, 'p>(
+  scout_arena: &ScoutArena<'s>,
   templex: &ITemplexPT<'p>,
 ) -> Option<ILiteralSL<'s>> {
   match templex {
@@ -565,6 +566,8 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         rule_builder.push(IRulexSR::Resolve(ResolveSR { range: range_s, result_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s, return_rune: return_rune_s }));
 
         result_rune_s
+
+        // V: is the above a faithful translation of scala below?
       }
 /*
       case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {

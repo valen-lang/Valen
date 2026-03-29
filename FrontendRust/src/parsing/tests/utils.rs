@@ -128,7 +128,7 @@ pub fn compile_expression<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'p>, ParseError>
+) -> Result<&'p IExpressionPE<'p>, ParseError>
 where
   'p: 'ctx,
 {
@@ -148,7 +148,7 @@ pub fn compile_expression_expect<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'p>
+) -> &'p IExpressionPE<'p>
 where
   'p: 'ctx,
 {
@@ -172,7 +172,7 @@ pub fn compile_statement<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'p>, ParseError>
+) -> Result<&'p IExpressionPE<'p>, ParseError>
 where
   'p: 'ctx,
 {
@@ -192,7 +192,7 @@ pub fn compile_statement_expect<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'p>
+) -> &'p IExpressionPE<'p>
 where
   'p: 'ctx,
 {
@@ -204,7 +204,7 @@ pub fn compile_block_contents<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IExpressionPE<'p>, ParseError>
+) -> Result<&'p IExpressionPE<'p>, ParseError>
 where
   'p: 'ctx,
 {
@@ -227,7 +227,7 @@ pub fn compile_block_contents_expect<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IExpressionPE<'p>
+) -> &'p IExpressionPE<'p>
 where
   'p: 'ctx,
 {

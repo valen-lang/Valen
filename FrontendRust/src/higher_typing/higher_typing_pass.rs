@@ -509,6 +509,8 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
 
 
 */
+// Returns whether the imprecise name could be referring to the absolute name.
+// See MINAAN for what we're doing here.
 // mig: fn imprecise_name_matches_absolute_name
 fn imprecise_name_matches_absolute_name(&self, needle_imprecise_name_s: &IImpreciseNameS, absolute_name: &INameS) -> bool {
   match (needle_imprecise_name_s, absolute_name) {
@@ -537,6 +539,7 @@ fn imprecise_name_matches_absolute_name(&self, needle_imprecise_name_s: &IImprec
   }
 
 */
+// See MINAAN for what we're doing here.
 // mig: fn lookup_types
 fn lookup_types(&self, astrouts: &Astrouts<'s>, env: &EnvironmentA<'s>, needle_imprecise_name_s: &IImpreciseNameS<'s>) -> Vec<IRuneTypeSolverLookupResult<'s>> {
   use crate::postparsing::rune_type_solver::{PrimitiveRuneTypeSolverLookupResult, CitizenRuneTypeSolverLookupResult, TemplataLookupResult};
@@ -996,6 +999,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
 
   let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
+  // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit loose...
 
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
@@ -1132,6 +1136,9 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
     interface_kind_rune: interface_kind_rune_s,
     super_interface_imprecise_name,
   } = impl_s;
+
+  // Scala creates runeTypingEnv here, but Rust can't because it borrows astrouts immutably
+  // while calculate_rune_types needs &mut astrouts. Created below after mutable borrows end.
 
   let mut rune_to_explicit_type_with_kinds: HashMap<IRuneS<'s>, ITemplataType> = rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   rune_to_explicit_type_with_kinds.insert(struct_kind_rune_s.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}));
@@ -1312,6 +1319,8 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
   let maybe_ret_coord_rune = &function_s.maybe_ret_coord_rune;
   let rules_with_implicitly_coercing_lookups_s = function_s.rules;
   let body_s = function_s.body;
+  // Scala creates runeTypingEnv here, but Rust can't because it borrows astrouts immutably
+  // while calculate_rune_types needs &mut astrouts. Created below after mutable borrows end.
 
   let rune_a_to_type_with_implicitly_coercing_lookups_s =
     self.calculate_rune_types(
@@ -1438,6 +1447,7 @@ fn calculate_rune_types(
   let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {
     scout_arena: self.scout_arena,
   };
+  // Violation: RSMSCPX: Scala passes globalOptions.useOptimizedSolver as 2nd arg to solve; Rust's solve_rune_type omits it
   let rune_s_to_type = rune_type_solver.solve_rune_type(
     self.global_options.sanity_check,
     &rune_typing_env,

@@ -22,76 +22,76 @@ Since environments are immutable after construction, we can wrap them in `Rc` to
 **Before:**
 ```rust
 #[derive(Clone, Debug, PartialEq)]
-pub struct EnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub parent_env: Option<Box<EnvironmentS<'a>>>,
-  pub name: INameS<'a>,
-  pub user_declared_runes: Vec<IRuneS<'a>>,
+pub struct EnvironmentS<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub parent_env: Option<Box<EnvironmentS<'s>>>,
+  pub name: INameS<'s>,
+  pub user_declared_runes: Vec<IRuneS<'s>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionEnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: Option<Box<IEnvironmentS<'a>>>,
-  pub declared_runes: Vec<IRuneS<'a>>,
+pub struct FunctionEnvironmentS<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub name: IFunctionDeclarationNameS<'s>,
+  pub parent_env: Option<Box<IEnvironmentS<'s>>>,
+  pub declared_runes: Vec<IRuneS<'s>>,
   pub num_explicit_params: i32,
   pub is_interface_internal_method: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IEnvironmentS<'a> {
-  Environment(EnvironmentS<'a>),
-  FunctionEnvironment(FunctionEnvironmentS<'a>),
+pub enum IEnvironmentS<'s> {
+  Environment(EnvironmentS<'s>),
+  FunctionEnvironment(FunctionEnvironmentS<'s>),
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct StackFrame<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: FunctionEnvironmentS<'a>,
-  pub maybe_parent: Option<Box<StackFrame<'a>>>,
-  pub context_region: IRuneS<'a>,
+pub struct StackFrame<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub name: IFunctionDeclarationNameS<'s>,
+  pub parent_env: FunctionEnvironmentS<'s>,
+  pub maybe_parent: Option<Box<StackFrame<'s>>>,
+  pub context_region: IRuneS<'s>,
   pub pure_height: i32,
-  pub locals: VariableDeclarations<'a>,
+  pub locals: VariableDeclarations<'s>,
 }
 ```
 
 **After:**
 ```rust
 #[derive(Clone, Debug, PartialEq)]
-pub struct EnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub parent_env: Option<Rc<EnvironmentS<'a>>>,
-  pub name: INameS<'a>,
-  pub user_declared_runes: Vec<IRuneS<'a>>,
+pub struct EnvironmentS<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub parent_env: Option<Rc<EnvironmentS<'s>>>,
+  pub name: INameS<'s>,
+  pub user_declared_runes: Vec<IRuneS<'s>>,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub struct FunctionEnvironmentS<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: Option<Rc<IEnvironmentS<'a>>>,
-  pub declared_runes: Vec<IRuneS<'a>>,
+pub struct FunctionEnvironmentS<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub name: IFunctionDeclarationNameS<'s>,
+  pub parent_env: Option<Rc<IEnvironmentS<'s>>>,
+  pub declared_runes: Vec<IRuneS<'s>>,
   pub num_explicit_params: i32,
   pub is_interface_internal_method: bool,
 }
 
 #[derive(Clone, Debug, PartialEq)]
-pub enum IEnvironmentS<'a> {
-  Environment(EnvironmentS<'a>),
-  FunctionEnvironment(FunctionEnvironmentS<'a>),
+pub enum IEnvironmentS<'s> {
+  Environment(EnvironmentS<'s>),
+  FunctionEnvironment(FunctionEnvironmentS<'s>),
 }
 
 #[derive(Clone, Debug)]
-pub struct StackFrame<'a> {
-  pub file: &'a FileCoordinate<'a>,
-  pub name: IFunctionDeclarationNameS<'a>,
-  pub parent_env: Rc<FunctionEnvironmentS<'a>>,
-  pub maybe_parent: Option<Rc<StackFrame<'a>>>,
-  pub context_region: IRuneS<'a>,
+pub struct StackFrame<'s> {
+  pub file: &'s FileCoordinate<'s>,
+  pub name: IFunctionDeclarationNameS<'s>,
+  pub parent_env: Rc<FunctionEnvironmentS<'s>>,
+  pub maybe_parent: Option<Rc<StackFrame<'s>>>,
+  pub context_region: IRuneS<'s>,
   pub pure_height: i32,
-  pub locals: VariableDeclarations<'a>,
+  pub locals: VariableDeclarations<'s>,
 }
 ```
 
@@ -130,10 +130,10 @@ The only call sites that need actual changes are ones that access the inner data
 `StackFrame::plus()` currently clones all fields to return a new `StackFrame` with updated locals. With `Rc`:
 
 ```rust
-pub fn plus(&self, new_vars: &VariableDeclarations<'a>) -> StackFrame<'a> {
+pub fn plus(&self, new_vars: &VariableDeclarations<'s>) -> StackFrame<'s> {
   StackFrame {
     file: self.file,
-    name: self.name.clone(),           // IFunctionDeclarationNameS is small (enum of &'a refs)
+    name: self.name.clone(),           // IFunctionDeclarationNameS is small (enum of &'srefs)
     parent_env: self.parent_env.clone(), // Rc clone = refcount bump
     maybe_parent: self.maybe_parent.clone(), // Rc clone = refcount bump
     context_region: self.context_region.clone(), // IRuneS is small
@@ -160,10 +160,10 @@ let maybe_parent = parent_stack_frame.clone(); // if it's Option<Rc<StackFrame>>
 ```
 
 The exact change depends on whether `new_block` receives the parent as an owned `StackFrame` or `Rc<StackFrame>`. Since `new_block` is typically called from `scout_block` which receives the stack frame and wants to keep using it, the cleanest approach is:
-- `scout_block` receives `stack_frame: StackFrame<'a>` (owned)
+- `scout_block` receives `stack_frame: StackFrame<'s>` (owned)
 - Wraps it in `Rc` at the start: `let stack_frame = Rc::new(stack_frame);`
 - Passes `Rc::clone(&stack_frame)` to all sub-calls
-- `new_block` receives `parent_stack_frame: Option<Rc<StackFrame<'a>>>`
+- `new_block` receives `parent_stack_frame: Option<Rc<StackFrame<'s>>>`
 
 Alternatively, keep passing stack frames by value into `scout_block` and only wrap in `Rc` for child stack frames. Either approach works.
 

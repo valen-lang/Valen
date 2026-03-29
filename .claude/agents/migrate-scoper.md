@@ -9,7 +9,7 @@ If you don't see a "migrate-direction.md" file, please stop here and say "VERDAG
 
 Here's what I want you to do:
 
-First, please look at FrontendRust/zen/migration_process.md and FrontendRust/zen/migration_principles.md. The information will be necessary for this.
+First, please look at FrontendRust/docs/migration/process.md and FrontendRust/zen/migration_principles.md. The information will be necessary for this.
 
 Then, please answer these questions:
 

@@ -215,7 +215,7 @@ fn translate_rulex<'s, 'p>(
           members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(),arg_runes),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })));
-
+        // V: closer to scala or further?
         result_rune
       } else if name.str() == keywords.any {
         let literals: Vec<ILiteralSL> = args
@@ -328,6 +328,7 @@ fn translate_rulex<'s, 'p>(
             params_rune,
             return_rune,
           }));
+          // V: closer to scala or further?
         }
         _ => panic!("POSTPARSER_COMPONENTS_INVALID_TYPE_FOR_COMPONENTS_RULE"),
       }
@@ -508,7 +509,7 @@ fn translate_rulex<'s, 'p>(
 
           rules.RuneUsage(evalRange(range), resultRune.rune)
         } else {
-          throw new CompileErrorExceptionS(UnknownRuleFunctionS(evalRange(range), name.str.as_str()))
+          throw new CompileErrorExceptionS(UnknownRuleFunctionS(evalRange(range), name.str.str))
         }
       }
     }

@@ -18,21 +18,21 @@ include_shields = [
 
 [guard_mode]
 include_shields = [
-  # { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
-#   { name = "NeverRecoverAlwaysFail-NRAFX.md" },
-  # { name = "NoGlobalStateAnywhere-NGSAX.md" },
-#  { name = "FailFastFailLoud-FFFLX.md" },
-#   { name = "PortStructureExactly-PSEX.md" },
-#   { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
-#   { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+   { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
+   { name = "NeverRecoverAlwaysFail-NRAFX.md" },
+   { name = "NoGlobalStateAnywhere-NGSAX.md" },
+   { name = "FailFastFailLoud-FFFLX.md" },
+   { name = "PortStructureExactly-PSEX.md" },
+   { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
+   { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
    { name = "NoAddingOrChangingScalaComments-NAOCSCX.md" }, # this one not in review_mode because human might add these
-#   { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
-  # { name = "ImmediateInterningDiscipline-IIDX.md" },
-#   { name = "CloserToScalaNotFurther-CSTNFX.md" },
-#   { name = "NoNovelCodeDuringMigrations-NNCDMX.md" },
-#   { name = "NoNewDefinitions-NNDX.md" },
-#   { name = "NoRenamedDefinitions-NRDX.md" },
-#   { name = "NoMovedDefinitions-NMDX.md" },
+   { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
+   { name = "ImmediateInterningDiscipline-IIDX.md" },
+   { name = "CloserToScalaNotFurther-CSTNFX.md" },
+   { name = "NoNovelCodeDuringMigrations-NNCDMX.md" },
+   { name = "NoNewDefinitions-NNDX.md" },
+   { name = "NoRenamedDefinitions-NRDX.md" },
+   { name = "NoMovedDefinitions-NMDX.md" },
 ]
 
 [review_mode]

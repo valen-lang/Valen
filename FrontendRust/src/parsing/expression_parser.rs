@@ -29,9 +29,9 @@ import scala.util.matching.Regex
 type ParseResult<T> = Result<T, ParseError>;
 
 // Helper enum for expression parsing
-#[derive(Clone, Debug)]
+#[derive(Debug)]
 enum ExpressionElement<'p> {
-  Data(IExpressionPE<'p>),
+  Data(&'p IExpressionPE<'p>),
   BinaryCall(NameP<'p>, i32), // name and precedence
 }
 
@@ -71,7 +71,7 @@ where
     block_l: &CurliedLE<'p>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
     let mut iter = ScrambleIterator::new(&block_l.contents);
     self.parse_block_contents(&mut iter, false, templex_parser, pattern_parser)
   }
@@ -89,8 +89,8 @@ where
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
-    let mut statements = Vec::new();
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
+    let mut statements: Vec<&'p IExpressionPE<'p>> = Vec::new();
 
     // Parse statements (lines 603-615)
     while match iter.peek_cloned() {
@@ -118,22 +118,22 @@ where
     } else {
       if let Some(prev) = iter.peek_prev() {
         if let INodeLEEnum::Symbol(SymbolLE(range, ';')) = prev {
-          statements.push(IExpressionPE::Void(VoidPE {
+          statements.push(self.arena.alloc(IExpressionPE::Void(VoidPE {
             range: RangeL(range.end(), range.end()),
-          }));
+          })));
         }
       }
     }
 
     // Return result (lines 635-639)
     match statements.len() {
-      0 => Ok(IExpressionPE::Void(VoidPE {
+      0 => Ok(self.arena.alloc(IExpressionPE::Void(VoidPE {
         range: RangeL(iter.get_pos(), iter.get_pos()),
-      })),
+      }))),
       1 => Ok(statements.into_iter().next().unwrap()),
-      _ => Ok(IExpressionPE::Consecutor(ConsecutorPE {
+      _ => Ok(self.arena.alloc(IExpressionPE::Consecutor(ConsecutorPE {
         inners: alloc_slice_from_vec(self.arena, statements),
-      })),
+      })))
     }
   }
   /*
@@ -150,7 +150,7 @@ where
       //        false
       //      }
 
-      while (iter.peek_cloned() match {
+      while (iter.peek() match {
         case None => false
         case Some(CurliedLE(range, contents)) if stopOnCurlied => false
         case Some(_) => {
@@ -166,7 +166,7 @@ where
 
       // If we just ate a semicolon, but there's nothing after it, then add a void.
       if (iter.hasNext) {
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(SymbolLE(_, ')')) => vcurious()
           case Some(SymbolLE(_, ']')) => vcurious()
           case _ =>
@@ -241,7 +241,7 @@ where
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
     }
@@ -256,12 +256,13 @@ where
         templex_parser,
         pattern_parser,
       )?;
-      elements.push(ExpressionElement::Data(sub_expr.clone()));
+      let sub_expr_range_end = sub_expr.range().end();
+      elements.push(ExpressionElement::Data(sub_expr));
 
       if self.at_expression_end(iter, stop_on_curlied) {
         break;
       } else {
-        if sub_expr.range().end() == iter.get_pos() {
+        if sub_expr_range_end == iter.get_pos() {
           return Err(ParseError::NeedWhitespaceAroundBinaryOperator(
             iter.get_pos(),
           ));
@@ -326,7 +327,7 @@ where
                 elements += parsing.BinaryCallElement(symbol, precedence)
 
 
-                iter.peek_cloned() match {
+                iter.peek() match {
                   case None => return new Err(BadExpressionEnd(iter.getPos()))
                   case Some(node) => {
                     if (symbol.range.end == node.range.begin) {
@@ -360,13 +361,13 @@ where
         iter.advance();
         iter.advance();
         iter.advance();
-        Some(IExpressionPE::Lookup(LookupPE {
+        Some(IExpressionPE::Lookup(self.arena.alloc(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(
             RangeL(begin, iter.get_prev_end_pos()),
             self.keywords.spaceship,
           )),
           template_args: None,
-        }))
+        })))
       }
       (
         Some(INodeLEEnum::Symbol(SymbolLE(
@@ -379,30 +380,30 @@ where
         iter.advance();
         iter.advance();
         let combined = format!("{}{}", c1, '=');
-        Some(IExpressionPE::Lookup(LookupPE {
+        Some(IExpressionPE::Lookup(self.arena.alloc(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(
             RangeL(range1.begin(), range2.end()),
             self.parse_arena.intern_str(&combined),
           )),
           template_args: None,
-        }))
+        })))
       }
       (Some(INodeLEEnum::Symbol(SymbolLE(range, c))), _, _) => {
         iter.advance();
-        Some(IExpressionPE::Lookup(LookupPE {
+        Some(IExpressionPE::Lookup(self.arena.alloc(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(
             range,
             self.parse_arena.intern_str(&c.to_string()),
           )),
           template_args: None,
-        }))
+        })))
       }
       (Some(INodeLEEnum::Word(WordLE { range, str })), _, _) => {
         iter.advance();
-        Some(IExpressionPE::Lookup(LookupPE {
+        Some(IExpressionPE::Lookup(self.arena.alloc(LookupPE {
           name: IImpreciseNameP::LookupName(NameP(range, str)),
           template_args: None,
-        }))
+        })))
       }
       _ => None,
     }
@@ -411,7 +412,7 @@ where
   /*
     def parseLookup(iter: ScrambleIterator): Option[IExpressionPE] = {
       val begin = iter.getPos()
-      iter.peek3_cloned() match {
+      iter.peek3() match {
         case (Some(SymbolLE(_, '<')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '>'))) => {
           iter.advance()
           iter.advance()
@@ -556,14 +557,14 @@ where
         }
 
         // String interpolation
-        let mut parts_p = Vec::new();
+        let mut parts_p: Vec<&'p IExpressionPE<'p>> = Vec::new();
         for part in parts {
           match part {
             StringPart::Literal { range, s } => {
-              parts_p.push(IExpressionPE::ConstantStr(ConstantStrPE {
+              parts_p.push(self.arena.alloc(IExpressionPE::ConstantStr(ConstantStrPE {
                 range,
                 value: self.parse_arena.intern_str(&s),
-              }));
+              })));
             }
             StringPart::Expr(scramble) => {
               let scramble_clone = scramble.clone();
@@ -644,7 +645,7 @@ where
         case Ok(None) =>
       }
 
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(ParsedIntegerLE(range, num, bits)) => {
           iter.advance()
           return Ok(ConstantIntPE(range, num, bits))
@@ -708,7 +709,7 @@ where
     &self,
     spree_begin: i32,
     iter: &mut ScrambleIterator<'p, '_>,
-    expr_so_far: IExpressionPE<'p>,
+    expr_so_far: &'p IExpressionPE<'p>,
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
@@ -720,14 +721,14 @@ where
       let range_pe = AugmentPE {
       range: RangeL(spree_begin, iter.get_prev_end_pos()),
       target_ownership: OwnershipP::Borrow,
-        inner: self.arena.alloc(expr_so_far),
+        inner: expr_so_far,
       };
       return Ok(Some(IExpressionPE::Augment(range_pe)));
     }
 
     // Try template lookup
-    match self.parse_template_lookup(iter, expr_so_far.clone(), templex_parser)? {
-      Some(call) => return Ok(Some(IExpressionPE::Lookup(call))),
+    match self.parse_template_lookup(iter, expr_so_far, templex_parser)? {
+      Some(call) => return Ok(Some(IExpressionPE::Lookup(self.arena.alloc(call)))),
       None => {}
     }
 
@@ -735,7 +736,7 @@ where
     match self.parse_function_call(
       iter,
       spree_begin,
-      expr_so_far.clone(),
+      expr_so_far,
       templex_parser,
       pattern_parser,
     )? {
@@ -749,7 +750,7 @@ where
         return Ok(Some(IExpressionPE::BraceCall(BraceCallPE {
           range: RangeL(spree_begin, iter.get_prev_end_pos()),
           operator_range: RangeL(operator_begin, iter.get_prev_end_pos()),
-          subject_expr: self.arena.alloc(expr_so_far),
+          subject_expr: expr_so_far,
           arg_exprs: alloc_slice_from_vec(self.arena, arg_exprs),
           callable_readwrite: false,
         })));
@@ -762,7 +763,7 @@ where
       let operand = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
       let range_pe = RangePE {
         range: RangeL(spree_begin, iter.get_prev_end_pos()),
-        from_expr: self.arena.alloc(expr_so_far),
+        from_expr: expr_so_far,
         to_expr: self.arena.alloc(operand),
       };
       return Ok(Some(IExpressionPE::Range(range_pe)));
@@ -866,7 +867,7 @@ where
         Some((range, arg_exprs)) => {
           return Ok(Some(IExpressionPE::MethodCall(MethodCallPE {
             range: RangeL(operator_begin, range.end()),
-            subject_expr: self.arena.alloc(expr_so_far),
+            subject_expr: expr_so_far,
             operator_range: RangeL(operator_begin, operator_end),
             method_lookup: self.arena.alloc(LookupPE {
               name: IImpreciseNameP::LookupName(name),
@@ -882,7 +883,7 @@ where
 
           return Ok(Some(IExpressionPE::Dot(DotPE {
             range: RangeL(spree_begin, iter.get_prev_end_pos()),
-            left: self.arena.alloc(expr_so_far),
+            left: expr_so_far,
             operator_range: RangeL(operator_begin, operator_end),
             member: name,
           })));
@@ -949,7 +950,7 @@ where
       if (isMethodCall || isMapCall) {
         val nameBegin = iter.getPos()
         val name =
-          iter.peek_cloned() match {
+          iter.peek() match {
             case Some(ParsedIntegerLE(_, int, bits)) => {
               iter.advance()
               if (int < 0) {
@@ -962,7 +963,7 @@ where
             }
             case Some(SymbolLE(_, _)) => {
               val name =
-                iter.peek3_cloned() match {
+                iter.peek3() match {
                   case (Some(SymbolLE(_, '<')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '>'))) => keywords.spaceship
                   case (Some(SymbolLE(_, '=')), Some(SymbolLE(_, '=')), Some(SymbolLE(_, '='))) => keywords.tripleEquals
                   case (Some(SymbolLE(_, '>')), Some(SymbolLE(_, '=')), _) => keywords.greaterEquals
@@ -1031,7 +1032,7 @@ where
     &self,
     original_iter: &mut ScrambleIterator<'p, '_>,
     spree_begin: i32,
-    expr_so_far: IExpressionPE<'p>,
+    expr_so_far: &'p IExpressionPE<'p>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
   ) -> ParseResult<Option<IExpressionPE<'p>>>
@@ -1046,7 +1047,7 @@ where
         Ok(Some(IExpressionPE::FunctionCall(FunctionCallPE {
           range: RangeL(spree_begin, range.end()),
           operator_range: RangeL(operator_begin, range.end()),
-          callable_expr: self.arena.alloc(expr_so_far),
+          callable_expr: expr_so_far,
           arg_exprs: alloc_slice_from_vec(self.arena, args),
         })))
       }
@@ -1084,18 +1085,19 @@ where
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
     assert!(iter.has_next());
     let begin = iter.get_pos();
 
-    let mut expr_so_far = self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?;
+    let mut expr_so_far: &'p IExpressionPE<'p> = self.arena.alloc(
+      self.parse_atom(iter, stop_on_curlied, templex_parser, pattern_parser)?);
 
     let mut continuing = true;
     while continuing && iter.has_next() {
       match self.parse_spree_step(
         begin,
         iter,
-        expr_so_far.clone(),
+        expr_so_far,
         stop_on_curlied,
         templex_parser,
         pattern_parser,
@@ -1104,7 +1106,7 @@ where
           continuing = false;
         }
         Some(new_expr) => {
-          expr_so_far = new_expr;
+          expr_so_far = self.arena.alloc(new_expr);
         }
       }
     }
@@ -1112,6 +1114,7 @@ where
     Ok(expr_so_far)
   }
   /*
+Guardian: temp-disable: PSEX — User explicitly approved &/lifetime changes as equidistant. Changing owned to &'p matches Scala's JVM reference semantics — Scala's `var exprSoFar: IExpressionPE` is a mutable binding to a heap-allocated reference, which maps to `let mut expr_so_far: &'p IExpressionPE<'p>` in Rust's arena model. — FrontendRust/guardian-logs/request-1774809928725/hook/parse_atom_and_tight_suffixes--1086.0.PortStructureExactly-PSEX.PortStructureExactly-PSEX.verdict.md
     def parseAtomAndTightSuffixes(iter: ScrambleIterator, stopOnCurlied: Boolean):
     Result[IExpressionPE, IParseError] = {
       vassert(iter.hasNext)
@@ -1169,7 +1172,7 @@ where
   }
   /*
     def parseChevronPack(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(AngledLE(range, innerScramble)) => {
           iter.advance()
 
@@ -1194,7 +1197,7 @@ where
   pub fn parse_template_lookup(
     &self,
     iter: &mut ScrambleIterator<'p, '_>,
-    expr_so_far: IExpressionPE<'p>,
+    expr_so_far: &'p IExpressionPE<'p>,
     templex_parser: &TemplexParser<'p, 'ctx>,
   ) -> ParseResult<Option<LookupPE<'p>>> {
     let operator_begin = iter.get_pos();
@@ -1208,11 +1211,8 @@ where
     };
 
     let result_pe = match expr_so_far {
-      IExpressionPE::Lookup(LookupPE {
-        name,
-        template_args: None,
-      }) => LookupPE {
-        name,
+      IExpressionPE::Lookup(lookup) if lookup.template_args.is_none() => LookupPE {
+        name: lookup.name.clone(),
         template_args: Some(template_args),
       },
       _ => return Err(ParseError::BadTemplateCallee(operator_begin)),
@@ -1250,7 +1250,7 @@ where
     iter: &mut ScrambleIterator<'p, '_>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<Option<(RangeL, Vec<IExpressionPE<'p>>)>> {
+  ) -> ParseResult<Option<(RangeL, Vec<&'p IExpressionPE<'p>>)>> {
     let parend_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Parend(p)) => {
         let p = p.clone();
@@ -1274,7 +1274,7 @@ where
     def parsePack(iter: ScrambleIterator):
     Result[Option[(RangeL, Vector[IExpressionPE])], IParseError] = {
       val parendLE =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(p @ ParendLE(_, _)) => iter.advance(); p
           case _ => return Ok(None)
         }
@@ -1299,7 +1299,7 @@ where
     iter: &mut ScrambleIterator<'p, '_>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<Option<Vec<IExpressionPE<'p>>>> {
+  ) -> ParseResult<Option<Vec<&'p IExpressionPE<'p>>>> {
     let squared_le = match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(p)) => {
         let p = p.clone();
@@ -1323,7 +1323,7 @@ where
   /*
     def parseSquarePack(iter: ScrambleIterator): Result[Option[Vector[IExpressionPE]], IParseError] = {
       val squaredLE =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(p @ SquaredLE(_, _)) => iter.advance(); p
           case None => return Ok(None)
         }
@@ -1348,7 +1348,7 @@ where
     iter: &mut ScrambleIterator<'p, '_>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<Option<Vec<IExpressionPE<'p>>>> {
+  ) -> ParseResult<Option<Vec<&'p IExpressionPE<'p>>>> {
     match iter.peek_cloned() {
       Some(INodeLEEnum::Squared(SquaredLE { contents, .. })) => {
         let contents = contents.clone();
@@ -1371,7 +1371,7 @@ where
   }
   /*
     def parseBracePack(iter: ScrambleIterator): Result[Option[Vector[IExpressionPE]], IParseError] = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(SquaredLE(_, contents)) => {
           iter.advance()
           val elements =
@@ -1452,7 +1452,7 @@ where
   }
   /*
     def parseTupleOrSubExpression(iter: ScrambleIterator): Result[Option[IExpressionPE], IParseError] = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(ParendLE(range, contents)) => {
           iter.advance()
           val iters =
@@ -1505,18 +1505,18 @@ where
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
     assert!(iter.has_next());
 
     let begin = iter.get_pos();
 
     // Handle … symbol (Scala line 1422-1424)
     if iter.try_skip_symbol('…') {
-      return Ok(IExpressionPE::ConstantInt(ConstantIntPE {
+      return Ok(self.arena.alloc(IExpressionPE::ConstantInt(ConstantIntPE {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         value: 0,
         bits: None,
-      }));
+      })));
     }
 
     // Handle single quote prefix (Scala line 1426-1432)
@@ -1543,37 +1543,37 @@ where
         pattern_parser,
       )?;
       let end = inner_pe.range().end();
-      return Ok(IExpressionPE::Not(NotPE {
+      return Ok(self.arena.alloc(IExpressionPE::Not(NotPE {
         range: RangeL::new(begin, end),
-        inner: self.arena.alloc(inner_pe),
-      }));
+        inner: inner_pe,
+      })));
     }
 
     // Handle lone blocks (Scala line 1447-1451)
     if let Some(block) = self.parse_lone_block(iter, templex_parser, pattern_parser)? {
-      return Ok(block);
+      return Ok(self.arena.alloc(block));
     }
 
     // Handle if ladders (Scala line 1453-1457)
     if let Some(if_expr) = self.parse_if_ladder(iter, templex_parser, pattern_parser)? {
-      return Ok(if_expr);
+      return Ok(self.arena.alloc(if_expr));
     }
 
     // Handle destruct (Scala line 1461-1465)
     if let Some(destruct) =
       self.parse_destruct(iter, stop_on_curlied, templex_parser, pattern_parser)?
     {
-      return Ok(destruct);
+      return Ok(self.arena.alloc(destruct));
     }
 
     // Handle foreach (Scala line 1467-1471)
     if let Some(foreach) = self.parse_foreach(iter, templex_parser, pattern_parser)? {
-      return Ok(foreach);
+      return Ok(self.arena.alloc(foreach));
     }
 
     // Handle unlet (Scala line 1473-1477)
     if let Some(unlet) = self.parse_unlet(iter)? {
-      return Ok(unlet);
+      return Ok(self.arena.alloc(unlet));
     }
 
     // Handle transmigration region'expr (Scala line 1479-1493)
@@ -1594,11 +1594,11 @@ where
           templex_parser,
           pattern_parser,
         )?;
-        return Ok(IExpressionPE::Transmigrate(TransmigratePE {
+        return Ok(self.arena.alloc(IExpressionPE::Transmigrate(TransmigratePE {
           range: RangeL::new(begin, iter.get_prev_end_pos()),
           target_region: region_name,
-          inner: self.arena.alloc(inner_pe),
-        }));
+          inner: inner_pe,
+        })));
       }
       _ => {}
     }
@@ -1633,11 +1633,11 @@ where
         templex_parser,
         pattern_parser,
       )?;
-      return Ok(IExpressionPE::Augment(AugmentPE {
+      return Ok(self.arena.alloc(IExpressionPE::Augment(AugmentPE {
         range: RangeL::new(begin, iter.get_prev_end_pos()),
         target_ownership,
-        inner: self.arena.alloc(inner_pe),
-      }));
+        inner: inner_pe,
+      })));
     }
 
     // Now parse the atom and tight suffixes (Scala line 1541)
@@ -1653,7 +1653,7 @@ where
         return Ok(ConstantIntPE(RangeL(begin, iter.getPrevEndPos()), 0, None))
       }
 
-      iter.peek2_cloned() match {
+      iter.peek2() match {
         case (Some(SymbolLE(_, '\'')), Some(WordLE(range, str))) => {
           iter.advance()
           iter.advance()
@@ -1706,7 +1706,7 @@ where
         case Ok(None) =>
       }
 
-      iter.peek2_cloned() match {
+      iter.peek2() match {
         case (Some(WordLE(regionRange, region)), Some(SymbolLE(_, '\''))) => {
           iter.advance()
           iter.advance()
@@ -1723,14 +1723,14 @@ where
       }
 
       val maybeTargetOwnership =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(SymbolLE(range, '^')) => {
             iter.advance()
             Some(OwnP)
           }
           case Some(SymbolLE(range, '&')) => {
             iter.advance()
-            iter.peek_cloned() match {
+            iter.peek() match {
               case Some(SymbolLE(range, '&')) => {
                 iter.advance()
                 Some(WeakP)
@@ -1846,7 +1846,7 @@ where
       val begin = iter.getPos()
 
       val contents =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(CurliedLE(_, contents)) => {
             iter.advance()
             parseBlockContents(new ScrambleIterator(contents), false) match {
@@ -2249,7 +2249,7 @@ where
     def parseLambda(iter: ScrambleIterator): Result[Option[IExpressionPE], IParseError] = {
       val begin = iter.getPos()
       val headerP =
-        iter.peek3_cloned() match {
+        iter.peek3() match {
           case (Some(CurliedLE(range, contents)), _, _) => {
             val retuurn = FunctionReturnP(RangeL(iter.getPos(), iter.getPos()), None)
             // Don't iter.advance() because we still need to parse this later
@@ -2305,7 +2305,7 @@ where
         }
 
       val bodyP =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(blockL@CurliedLE(range, contents)) => {
             iter.advance()
             val statementsP =
@@ -2482,7 +2482,7 @@ where
         }
 
       val tyype =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(ParendLE(range, contents)) => None
           case _ => {
             templexParser.parseTemplex(iter) match {
@@ -2528,7 +2528,7 @@ where
     begin_index_inclusive: usize,
     end_index_inclusive: usize,
     min_precedence: i32,
-  ) -> ParseResult<(IExpressionPE<'p>, usize)> {
+  ) -> ParseResult<(&'p IExpressionPE<'p>, usize)> {
     assert!(!elements.is_empty());
     assert!(elements.len() % 2 == 1);
 
@@ -2537,14 +2537,14 @@ where
     // Base cases (lines 1832-1839)
     if begin_index_inclusive == end_index_inclusive {
       if let ExpressionElement::Data(expr) = &elements[begin_index_inclusive] {
-        return Ok((expr.clone(), begin_index_inclusive + 1));
+        return Ok((*expr, begin_index_inclusive + 1));
       } else {
         panic!("Expected DataElement");
       }
     }
     if min_precedence == MAX_PRECEDENCE {
       if let ExpressionElement::Data(expr) = &elements[begin_index_inclusive] {
-        return Ok((expr.clone(), begin_index_inclusive + 1));
+        return Ok((*expr, begin_index_inclusive + 1));
       } else {
         panic!("Expected DataElement");
       }
@@ -2585,34 +2585,34 @@ where
 
       // Construct the appropriate expression (lines 1854-1875)
       left_operand = if binary_call.str() == self.keywords.and {
-        IExpressionPE::And(AndPE {
+        self.arena.alloc(IExpressionPE::And(AndPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
-          left: self.arena.alloc(left_operand),
+          left: left_operand,
           right: self.arena.alloc(BlockPE {
             range: right_operand.range(),
             maybe_pure: None,
             maybe_default_region: None,
-            inner: self.arena.alloc(right_operand),
+            inner: right_operand,
           }),
-        })
+        }))
       } else if binary_call.str() == self.keywords.or {
-        IExpressionPE::Or(OrPE {
+        self.arena.alloc(IExpressionPE::Or(OrPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
-          left: self.arena.alloc(left_operand),
+          left: left_operand,
           right: self.arena.alloc(BlockPE {
             range: right_operand.range(),
             maybe_pure: None,
             maybe_default_region: None,
-            inner: self.arena.alloc(right_operand),
+            inner: right_operand,
           }),
-        })
+        }))
       } else {
-        IExpressionPE::BinaryCall(BinaryCallPE {
+        self.arena.alloc(IExpressionPE::BinaryCall(BinaryCallPE {
           range: RangeL(left_operand.range().begin(), right_operand.range().end()),
           function_name: binary_call,
-          left_expr: self.arena.alloc(left_operand),
-          right_expr: self.arena.alloc(right_operand),
-        })
+          left_expr: left_operand,
+          right_expr: right_operand,
+        }))
       };
     }
 
@@ -2770,7 +2770,7 @@ where
     def parseBinaryCall(iter: ScrambleIterator):
     Result[Option[NameP], IParseError] = {
       val name =
-        iter.peek3_cloned() match {
+        iter.peek3() match {
           case (Some(WordLE(range, str)), _, _) => {
             iter.advance()
             NameP(range, str)
@@ -2823,7 +2823,7 @@ where
   }
   /*
     def atExpressionEnd(iter: ScrambleIterator, stopOnCurlied: Boolean): Boolean = {
-      iter.peek_cloned() match {
+      iter.peek() match {
         case None => true
         case Some(SymbolLE(range, ';')) => true
         case Some(CurliedLE(range, contents)) if stopOnCurlied => true
@@ -2841,40 +2841,40 @@ where
     stop_on_curlied: bool,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<IExpressionPE<'p>> {
+  ) -> ParseResult<&'p IExpressionPE<'p>> {
     if !iter.has_next() {
       return Err(ParseError::BadExpressionBegin(iter.get_pos()));
     }
 
     // Try various statement types (lines 754-785)
     if let Some(x) = self.parse_while(iter, templex_parser, pattern_parser)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
     if let Some(x) = self.parse_explicit_block(iter, templex_parser, pattern_parser)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
     if let Some(x) = self.parse_if_ladder(iter, templex_parser, pattern_parser)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
     if let Some(x) = self.parse_foreach(iter, templex_parser, pattern_parser)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
     if let Some(x) = self.parse_break(iter)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
     if let Some(x) = self.parse_return(iter, stop_on_curlied, templex_parser, pattern_parser)? {
-      return Ok(x);
+      return Ok(self.arena.alloc(x));
     }
 
     // Parse let or lone expression (lines 789-818)
-    let let_or_lone_expr = if self.next_is_set_expr(iter) {
-      self
+    let let_or_lone_expr: &'p IExpressionPE<'p> = if self.next_is_set_expr(iter) {
+      self.arena.alloc(self
         .parse_mut_expr(iter, stop_on_curlied, templex_parser, pattern_parser)?
-        .expect("parse_mut_expr should return Some when next_is_set_expr is true")
+        .expect("parse_mut_expr should return Some when next_is_set_expr is true"))
     } else {
       // Try to parse as let statement
       match self.parse_let(iter, stop_on_curlied, templex_parser, pattern_parser)? {
-        Some(let_expr) => let_expr,
+        Some(let_expr) => self.arena.alloc(let_expr),
         None => self.parse_expression(iter, stop_on_curlied, templex_parser, pattern_parser)?,
       }
     };
@@ -2965,7 +2965,7 @@ where
             }
           }
         }
-      iter.peek_cloned() match {
+      iter.peek() match {
         case None => // okay, hit the end, continue
         case Some(CurliedLE(range, contents)) if stopOnCurlied => // okay, hit the end, continue
         case Some(SymbolLE(range, ';')) => {
@@ -3049,7 +3049,7 @@ where
         }
 
       val body =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(CurliedLE(range, contents)) => {
             iter.advance()
             parseBlockContents(new ScrambleIterator(contents), false) match {
@@ -3122,7 +3122,7 @@ where
       iter.skipTo(tentativeIter)
 
       val body =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(CurliedLE(range, contents)) => {
             iter.advance()
             parseBlockContents(new ScrambleIterator(contents), false) match {
@@ -3247,7 +3247,7 @@ where
     private def parseIfLadder(iter: ScrambleIterator): Result[Option[IfPE], IParseError] = {
       val ifLadderBegin = iter.getPos()
 
-      iter.peek_cloned() match {
+      iter.peek() match {
         case Some(WordLE(_, str)) if str == keywords.iff =>
         case _ => return Ok(None)
       }
@@ -3259,7 +3259,7 @@ where
         }
 
       val ifElses = mutable.MutableList[(IExpressionPE, BlockPE)]()
-      while (iter.peek2_cloned() match {
+      while (iter.peek2() match {
         case (Some(WordLE(_, elsse)), Some(WordLE(_, iff)))
           if elsse == keywords.elsse && iff == keywords.iff => true
         case _ => false
@@ -3277,7 +3277,7 @@ where
       val maybeElseBlock =
         if (iter.trySkipWord(keywords.elsse).nonEmpty) {
           val body =
-            iter.peek_cloned() match {
+            iter.peek() match {
               case Some(b @ CurliedLE(_, _)) => iter.advance(); b
               case _ => return Err(BadStartOfElseBody(iter.getPos()))
             }
@@ -3347,7 +3347,7 @@ where
     iter: &mut ScrambleIterator<'p, '_>,
     templex_parser: &TemplexParser<'p, 'ctx>,
     pattern_parser: &PatternParser<'p, 'ctx>,
-  ) -> ParseResult<(IExpressionPE<'p>, BlockPE<'p>)> {
+  ) -> ParseResult<(&'p IExpressionPE<'p>, BlockPE<'p>)> {
     let if_begin = iter.get_pos();
 
     if iter.try_skip_word(self.keywords.iff).is_none() {
@@ -3374,7 +3374,7 @@ where
         range: RangeL(if_begin, iter.get_prev_end_pos()),
         maybe_pure: None,
         maybe_default_region: None,
-        inner: self.arena.alloc(body),
+        inner: body,
       },
     ))
   }
@@ -3394,7 +3394,7 @@ where
         }
 
       val body =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(CurliedLE(_, contents)) => {
             iter.advance()
             parseBlockContents(new ScrambleIterator(contents), false) match {
@@ -3552,7 +3552,7 @@ where
       val bodyBegin = iter.getPos()
 
       val body =
-        iter.peek_cloned() match {
+        iter.peek() match {
           case Some(CurliedLE(_, contents)) => {
             iter.advance()
             parseBlockContents(new ScrambleIterator(contents), false) match {
@@ -3667,7 +3667,7 @@ where
   }
   /*
     private def nextIsSetExpr(iter: ScrambleIterator): Boolean = {
-      iter.peek2_cloned() match {
+      iter.peek2() match {
         case (Some(WordLE(setRange, set)), Some(other))
           if set == keywords.set && setRange.end < other.range.begin => {
           // Then there's indeed a space after the set. Continue!

@@ -183,12 +183,13 @@ impl<'p> NameOrRunePT<'p> {
     assert!(name.as_str() != "_", "vassert: NameOrRunePT name must not be \"_\"");
     Self(name)
   }
+// V: do we have anything enforcing that we must go through this constructor? and other constructors in general?
 }
 /*
 case class NameOrRunePT(name: NameP) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   def range = name.range
-  vassert(name.str != "_")
+  vassert(name.str.str != "_")
 Guardian: disable: NECX
 }
 */

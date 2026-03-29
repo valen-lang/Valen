@@ -26,7 +26,7 @@ Guardian: disable: NECX
 */
 
 /// Name in source code
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct NameP<'p>(pub RangeL, pub StrI<'p>);
 
 impl<'p> NameP<'p> {
@@ -64,7 +64,7 @@ case class FileP(
   def lookupFunction(name: String) = {
     val results =
       denizens.collect({
-        case TopLevelFunctionP(f) if f.header.name.exists(_.str == name) => f
+        case TopLevelFunctionP(f) if f.header.name.exists(_.str.str == name) => f
       })
     vassert(results.size == 1)
     results.head
@@ -212,6 +212,7 @@ pub struct PureAttributeP {
 /*
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
+// V: why are all of these things cloneable?
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdditiveAttributeP {
