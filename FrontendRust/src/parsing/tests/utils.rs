@@ -1,6 +1,5 @@
 use bumpalo::Bump;
 use crate::cast;
-use crate::utils::arena_utils::{alloc_slice_copy, alloc_slice_from_vec};
 use crate::parse_arena::ParseArena;
 use crate::keywords::Keywords;
 use crate::lexing::errors::ParseError;
@@ -26,7 +25,7 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
+  let parser = Parser::new(parse_arena, keywords);
 
   // Lex the entire file
   let mut iter_for_lex = LexingIterator::new(code.to_string());
@@ -51,8 +50,8 @@ where
 
   Ok(FileP {
     file_coord,
-    comments_ranges: alloc_slice_copy(parse_arena.bump(), &[]),
-    denizens: alloc_slice_from_vec(parse_arena.bump(), denizens),
+    comments_ranges: parse_arena.alloc_slice_copy(&[]),
+    denizens: parse_arena.alloc_slice_from_vec(denizens),
   })
 }
 
@@ -133,9 +132,9 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let expression_parser = ExpressionParser::new(parse_arena, keywords, parse_arena.bump());
-  let mut templex_parser = TemplexParser::new(parse_arena, keywords, parse_arena.bump());
-  let mut pattern_parser = PatternParser::new(parse_arena, keywords, parse_arena.bump());
+  let expression_parser = ExpressionParser::new(parse_arena, keywords);
+  let mut templex_parser = TemplexParser::new(parse_arena, keywords);
+  let mut pattern_parser = PatternParser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -177,9 +176,9 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let expression_parser = ExpressionParser::new(parse_arena, keywords, parse_arena.bump());
-  let mut templex_parser = TemplexParser::new(parse_arena, keywords, parse_arena.bump());
-  let mut pattern_parser = PatternParser::new(parse_arena, keywords, parse_arena.bump());
+  let expression_parser = ExpressionParser::new(parse_arena, keywords);
+  let mut templex_parser = TemplexParser::new(parse_arena, keywords);
+  let mut pattern_parser = PatternParser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -209,7 +208,7 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let mut parser = Parser::new(parse_arena, keywords, parse_arena.bump());
+  let mut parser = Parser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -244,7 +243,7 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let mut parser = Parser::new(parse_arena, keywords, parse_arena.bump());
+  let mut parser = Parser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
@@ -284,7 +283,7 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
+  let parser = Parser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;
@@ -314,7 +313,7 @@ where
   'p: 'ctx,
 {
   let lexer = Lexer::new(parse_arena, keywords);
-  let parser = Parser::new(parse_arena, keywords, parse_arena.bump());
+  let parser = Parser::new(parse_arena, keywords);
 
   let mut iter_for_lex = LexingIterator::new(code.to_string());
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;

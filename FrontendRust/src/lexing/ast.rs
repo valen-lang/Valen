@@ -35,7 +35,6 @@ case class RangeL(begin: Int, end: Int) {
 object RangeL {
   val zero = RangeL(0, 0)
 }
-Guardian: disable: NECX
 */
 
 /// A file with top-level denizens
@@ -51,7 +50,6 @@ case class FileL(
 ) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 /// Top-level items in a file
@@ -72,7 +70,6 @@ case class TopLevelInterfaceL(interface: InterfaceL) extends IDenizenL { overrid
 case class TopLevelImplL(impl: ImplL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class TopLevelExportAsL(export: ExportAsL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class TopLevelImportL(imporrt: ImportL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Impl block
@@ -95,7 +92,6 @@ case class ImplL(
   interface: ScrambleLE,
   attributes: Vector[IAttributeL]
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Export as declaration
@@ -108,7 +104,6 @@ pub struct ExportAsL<'p> {
 case class ExportAsL(
   range: RangeL,
   contents: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Import declaration
@@ -125,9 +120,7 @@ case class ImportL(
   moduleName: WordLE,
   packageSteps: Vector[WordLE],
   importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
-// V: why do we have cloning on ImportL etc.?
 
 /// Struct definition
 #[derive(Clone, Debug, PartialEq)]
@@ -149,7 +142,6 @@ case class StructL(
   identifyingRunes: Option[AngledLE],
   templateRules: Option[ScrambleLE],
   members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Interface definition
@@ -174,7 +166,6 @@ case class InterfaceL(
   templateRules: Option[ScrambleLE],
   bodyRange: RangeL,
   members: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Attributes on declarations
@@ -207,7 +198,6 @@ case class ExternAttributeL(range: RangeL, maybeCustomName: Option[ParendLE]) ex
 case class LinearAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class WeakableAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class SealedAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Macro inclusion type
@@ -221,7 +211,6 @@ sealed trait IMacroInclusionL
 case object CallMacroL extends IMacroInclusionL
 case object DontCallMacroL extends IMacroInclusionL
 case class MacroCallL(range: RangeL, inclusion: IMacroInclusionL, name: WordLE) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Function definition
@@ -236,7 +225,6 @@ case class FunctionL(
   range: RangeL,
   header: FunctionHeaderL,
   body: Option[FunctionBodyL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Function body
@@ -248,7 +236,6 @@ pub struct FunctionBodyL<'p> {
 case class FunctionBodyL(
   body: CurliedLE
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Function header
@@ -284,7 +271,6 @@ case class FunctionHeaderL(
 
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 /// Node in the lexer tree
@@ -322,7 +308,6 @@ case class ScrambleLE(
     case _ =>
   })
 }
-Guardian: disable: NECX
 */
 
 /// Enum wrapper for INodeLE to allow storing in vectors
@@ -372,7 +357,6 @@ impl INodeLE for ParendLE<'_> {
 case class ParendLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Angled brackets (generics)
@@ -390,7 +374,6 @@ impl INodeLE for AngledLE<'_> {
 case class AngledLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Squared brackets (arrays)
@@ -409,7 +392,6 @@ impl INodeLE for SquaredLE<'_> {
 case class SquaredLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Curly braces (blocks)
@@ -428,7 +410,6 @@ impl INodeLE for CurliedLE<'_> {
 case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Word/identifier
@@ -446,7 +427,6 @@ impl INodeLE for WordLE<'_> {
 case class WordLE(range: RangeL, str: StrI) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Single character symbol
@@ -472,7 +452,6 @@ impl INodeLE for SymbolLE {
 case class SymbolLE(range: RangeL, c: Char) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// String literal
@@ -491,7 +470,6 @@ impl INodeLE for StringLE<'_> {
 case class StringLE(range: RangeL, parts: Vector[StringPart]) extends INodeLE {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
 }
-Guardian: disable: NECX
 */
 
 /// Part of a string (literal or interpolated expression)
@@ -506,7 +484,6 @@ case class StringPartLiteral(range: RangeL, s: String) extends StringPart {
   vpass()
 }
 case class StringPartExpr(expr: ScrambleLE) extends StringPart
-Guardian: disable: NECX
 */
 
 /*
@@ -528,7 +505,6 @@ impl INodeLE for ParsedIntegerLE {
 }
 /*
 case class ParsedIntegerLE(range: RangeL, int: Long, bits: Option[Long]) extends IParsedNumberLE
-Guardian: disable: NECX
 */
 
 /// Parsed floating-point literal
@@ -546,5 +522,4 @@ impl INodeLE for ParsedDoubleLE {
 }
 /*
 case class ParsedDoubleLE(range: RangeL, double: Double, bits: Option[Long]) extends IParsedNumberLE
-Guardian: disable: NECX
 */

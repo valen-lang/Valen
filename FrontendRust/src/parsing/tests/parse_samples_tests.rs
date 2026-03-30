@@ -42,12 +42,11 @@ fn parse<'p, 'ctx>(
   keywords: &'ctx Keywords<'p>,
   resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   test_package_coord: &'p PackageCoordinate<'p>,
-  arena: &'p Bump,
 )
 where
   'p: 'ctx,
 {
-  let mut compilation = parser_test_compilation::test(parse_arena, keywords, resolver, test_package_coord, arena);
+  let mut compilation = parser_test_compilation::test(parse_arena, keywords, resolver, test_package_coord);
   compilation
     .get_parseds()
     .unwrap_or_else(|e| panic!("Failed to parse sample '{}': {:?}", path, e));
@@ -94,7 +93,7 @@ macro_rules! parse_sample_test {
 
       let resolver = ParserTestResolver { code_map };
 
-      parse($path, &parse_arena, &keywords, &resolver, &test_package_coord, parse_arena.bump());
+      parse($path, &parse_arena, &keywords, &resolver, &test_package_coord);
     }
   };
 }

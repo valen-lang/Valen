@@ -22,7 +22,6 @@ pub struct UnitP {
 // Something that exists in the source code. An Option[UnitP] is better than a boolean
 // because it also contains the range it was found.
 case class UnitP(range: RangeL) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Name in source code
@@ -45,7 +44,6 @@ impl<'p> NameP<'p> {
 }
 /*
 case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /// Parsed file
@@ -69,7 +67,6 @@ case class FileP(
     vassert(results.size == 1)
     results.head
   }
-Guardian: disable: NECX
 }
 */
 
@@ -90,7 +87,6 @@ case class TopLevelInterfaceP(interface: InterfaceP) extends IDenizenP { overrid
 case class TopLevelImplP(impl: ImplP) extends IDenizenP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class TopLevelExportAsP(export: ExportAsP) extends IDenizenP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class TopLevelImportP(imporrt: ImportP) extends IDenizenP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -113,7 +109,6 @@ case class ImplP(
   interface: ITemplexPT,
   attributes: Vector[IAttributeP]
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -127,7 +122,6 @@ case class ExportAsP(
   range: RangeL,
   struct: ITemplexPT,
   exportedName: NameP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -143,7 +137,6 @@ case class ImportP(
   moduleName: NameP,
   packageSteps: Vector[NameP],
   importeeName: NameP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -152,7 +145,6 @@ pub struct WeakableAttributeP {
 }
 /*
 case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct SealedAttributeP {
@@ -160,7 +152,6 @@ pub struct SealedAttributeP {
 }
 /*
 case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 impl IRuneAttributeP {
@@ -188,7 +179,6 @@ pub enum IMacroInclusionP {
 sealed trait IMacroInclusionP
 case object CallMacroP extends IMacroInclusionP
 case object DontCallMacroP extends IMacroInclusionP
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -199,7 +189,6 @@ pub struct MacroCallP<'p> {
 }
 /*
 case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
 pub struct StructP<'p> {
@@ -224,7 +213,6 @@ case class StructP(
   maybeDefaultRegionRuneP: Option[RegionRunePT],
   bodyRange: RangeL,
   members: StructMembersP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -236,7 +224,6 @@ pub struct StructMembersP<'p> {
 case class StructMembersP(
   range: RangeL,
   contents: Vector[IStructContent]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -272,7 +259,6 @@ case class VariadicStructMemberP(
   variability: VariabilityP,
   tyype: ITemplexPT
 ) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -298,7 +284,6 @@ case class InterfaceP(
   maybeDefaultRegionRuneP: Option[RegionRunePT],
   bodyRange: RangeL,
   members: Vector[FunctionP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -316,7 +301,6 @@ pub enum IAttributeP<'p> {
 }
 /*
 sealed trait IAttributeP
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -325,7 +309,6 @@ pub struct AbstractAttributeP {
 }
 /*
 case class AbstractAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExternAttributeP {
@@ -333,7 +316,6 @@ pub struct ExternAttributeP {
 }
 /*
 case class ExternAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct BuiltinAttributeP<'p> {
@@ -342,7 +324,6 @@ pub struct BuiltinAttributeP<'p> {
 }
 /*
 case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ExportAttributeP {
@@ -350,7 +331,6 @@ pub struct ExportAttributeP {
 }
 /*
 case class ExportAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct PureAttributeP {
@@ -358,16 +338,13 @@ pub struct PureAttributeP {
 }
 /*
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
-// V: why are all of these things cloneable?
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdditiveAttributeP {
   pub range: RangeL,
 }
 /*
 case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LinearAttributeP {
@@ -375,7 +352,6 @@ pub struct LinearAttributeP {
 }
 /*
 case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -404,7 +380,6 @@ case class AdditiveRegionRuneAttributeP(range: RangeL) extends IRuneAttributeP
 case class PoolRuneAttributeP(range: RangeL) extends IRuneAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class ArenaRuneAttributeP(range: RangeL) extends IRuneAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class BumpRuneAttributeP(range: RangeL) extends IRuneAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -425,7 +400,6 @@ case class GenericParameterP(
   attributes: Vector[IRuneAttributeP],
   maybeDefault: Option[ITemplexPT]
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -438,7 +412,6 @@ case class GenericParameterTypeP(
   range: RangeL,
   tyype: ITypePR
 )
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -448,7 +421,6 @@ pub struct GenericParametersP<'p> {
 }
 /*
 case class GenericParametersP(range: RangeL, params: Vector[GenericParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -458,7 +430,6 @@ pub struct TemplateRulesP<'p> {
 }
 /*
 case class TemplateRulesP(range: RangeL, rules: Vector[IRulexPR]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -468,7 +439,6 @@ pub struct ParamsP<'p> {
 }
 /*
 case class ParamsP(range: RangeL, params: Vector[ParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -482,7 +452,6 @@ case class FunctionP(
   range: RangeL,
   header: FunctionHeaderP,
   body: Option[BlockPE]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -495,7 +464,6 @@ case class FunctionReturnP(
   range: RangeL,
   retType: Option[ITemplexPT]
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -523,7 +491,6 @@ case class FunctionHeaderP(
   ret: FunctionReturnP
 ) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-Guardian: disable: NECX
 }
 */
 
@@ -536,7 +503,6 @@ pub enum MutabilityP {
 sealed trait MutabilityP
 case object MutableP extends MutabilityP { override def toString: String = "mut" }
 case object ImmutableP extends MutabilityP { override def toString: String = "imm" }
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -548,7 +514,6 @@ pub enum VariabilityP {
 sealed trait VariabilityP
 case object FinalP extends VariabilityP { override def toString: String = "final" }
 case object VaryingP extends VariabilityP { override def toString: String = "vary" }
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -566,7 +531,6 @@ case object BorrowP extends OwnershipP { override def toString: String = "borrow
 case object LiveP extends OwnershipP { override def toString: String = "live" }
 case object WeakP extends OwnershipP { override def toString: String = "weak" }
 case object ShareP extends OwnershipP { override def toString: String = "share" }
-Guardian: disable: NECX
 */
 
 /// This represents how to load something.
@@ -600,7 +564,6 @@ case object LoadAsBorrowP extends LoadAsP { val hash = runtime.ScalaRunTime._has
 case object LoadAsWeakP extends LoadAsP { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
 // This represents unspecified. It basically means, use whatever ownership already there.
 case object UseP extends LoadAsP
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -612,5 +575,4 @@ pub enum LocationP {
 sealed trait LocationP
 case object InlineP extends LocationP { override def toString: String = "inl" }
 case object YonderP extends LocationP { override def toString: String = "heap" }
-Guardian: disable: NECX
 */

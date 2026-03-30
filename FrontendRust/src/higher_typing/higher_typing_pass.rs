@@ -31,8 +31,6 @@ use crate::postparsing::rune_type_solver::{
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::postparsing::post_parser::ICompileErrorS;
 use crate::postparsing::ScoutCompilation;
-use crate::utils::arena_index_map::ArenaIndexMap;
-use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::FileCoordinateMap;
 use crate::utils::code_hierarchy::{IPackageResolver, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
@@ -80,7 +78,7 @@ case class Astrouts(
 pub struct EnvironmentA<'s> {
   maybe_name: Option<&'s INameS<'s>>,
   maybe_parent_env: Option<&'s EnvironmentA<'s>>,
-  code_map: PackageCoordinateMap<'s, ProgramS<'s>>,
+  code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>,
   rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType>,
 }
 
@@ -153,7 +151,7 @@ fn add_runes(&self, new_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITem
   EnvironmentA {
     maybe_name: self.maybe_name.clone(),
     maybe_parent_env: self.maybe_parent_env,
-    code_map: self.code_map.clone(),
+    code_map: self.code_map,
     rune_to_type: merged,
   }
 }
@@ -772,13 +770,11 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
     }
   }
 
-  let header_rune_a_to_type = ArenaIndexMap::from_iter_in(
+  let header_rune_a_to_type = self.scout_arena.alloc_index_map_from_iter(
     rune_a_to_type.iter().filter(|(k, _)| runes_in_header.contains(k)).map(|(k, v)| (k.clone(), v.clone())),
-    self.scout_arena.arena(),
   );
-  let members_rune_a_to_type = ArenaIndexMap::from_iter_in(
+  let members_rune_a_to_type = self.scout_arena.alloc_index_map_from_iter(
     rune_a_to_type.iter().filter(|(k, _)| !runes_in_header.contains(k)).map(|(k, v)| (k.clone(), v.clone())),
-    self.scout_arena.arena(),
   );
 
   // Shouldnt fail because we got a complete solve earlier
@@ -794,17 +790,17 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
   let struct_a = self.scout_arena.alloc(StructA::new(
     range_s.clone(),
     IStructDeclarationNameS::TopLevelStructDeclarationName((*name_s).clone()),
-    alloc_slice_from_vec(self.scout_arena.arena(), attributes_s.to_vec()),
+    attributes_s,
     *weakable,
     mutability_rune_s.clone(),
     *maybe_predicted_mutability,
     tyype.clone(),
     generic_parameters_s,
     header_rune_a_to_type,
-    alloc_slice_from_vec(self.scout_arena.arena(), header_rules_builder),
+    self.scout_arena.alloc_slice_from_vec(header_rules_builder),
     members_rune_a_to_type,
-    alloc_slice_from_vec(self.scout_arena.arena(), member_rules_builder),
-    alloc_slice_from_vec(self.scout_arena.arena(), members.to_vec()),
+    self.scout_arena.alloc_slice_from_vec(member_rules_builder),
+    members,
   ));
   astrouts.code_location_to_struct.insert(range_s.begin.clone(), struct_a);
   struct_a
@@ -1023,15 +1019,15 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
   let interface_a = self.scout_arena.alloc(InterfaceA::new(
     range_s.clone(),
     name_s,
-    alloc_slice_from_vec(self.scout_arena.arena(), attributes_s.to_vec()),
+    attributes_s,
     *weakable,
     mutability_rune_s.clone(),
     *maybe_predicted_mutability,
     tyype.clone(),
     generic_parameters_s,
-    ArenaIndexMap::from_iter_in(rune_a_to_type.into_iter(), self.scout_arena.arena()),
-    alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
-    alloc_slice_from_vec_of_refs(self.scout_arena.arena(), internal_methods_a),
+    self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
+    self.scout_arena.alloc_slice_from_vec(rule_builder),
+    self.scout_arena.alloc_slice_from_vec(internal_methods_a),
   ));
   astrouts.code_location_to_interface.insert(range_s.begin.clone(), interface_a);
   interface_a
@@ -1188,8 +1184,8 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
     range_s.clone(),
     IImplDeclarationNameS::ImplDeclarationName(name_s.clone()),
     identifying_runes_s,
-    alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
-    ArenaIndexMap::from_iter_in(rune_a_to_type.into_iter(), self.scout_arena.arena()),
+    self.scout_arena.alloc_slice_from_vec(rule_builder),
+    self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
     struct_kind_rune_s.clone(),
     sub_citizen_imprecise_name.clone(),
     interface_kind_rune_s.clone(),
@@ -1363,13 +1359,13 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
   self.scout_arena.alloc(FunctionA::new(
     range_s,
     name_s,
-    alloc_slice_from_vec(self.scout_arena.arena(), attributes),
+    self.scout_arena.alloc_slice_from_vec(attributes),
     tyype.clone(),
     identifying_runes_s,
-    ArenaIndexMap::from_iter_in(rune_a_to_type.into_iter(), self.scout_arena.arena()),
+    self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
     params_s,
     maybe_ret_coord_rune.clone(),
-    alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
+    self.scout_arena.alloc_slice_from_vec(rule_builder),
     *body_s,
   ))
 }
@@ -1503,7 +1499,7 @@ fn calculate_rune_types(
 
 */
 // mig: fn translate_program
-fn translate_program(&self, code_map: PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> ProgramA<'s> {
+fn translate_program(&self, code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>, supplied_functions: Vec<&'s FunctionA<'s>>, supplied_interfaces: Vec<&'s InterfaceA<'s>>) -> ProgramA<'s> {
   let env = EnvironmentA {
     maybe_name: None,
     maybe_parent_env: None,
@@ -1533,11 +1529,11 @@ fn translate_program(&self, code_map: PackageCoordinateMap<'s, ProgramS<'s>>, su
   let exports_a: Vec<&'s ExportAsA<'s>> = env.exports_s().into_iter().map(|e| self.translate_export(&mut astrouts, &env, e)).collect();
 
   ProgramA {
-    structs: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), structs_a),
-    interfaces: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), supplied_interfaces.into_iter().chain(interfaces_a).collect()),
-    impls: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), impls_a),
-    functions: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), supplied_functions.into_iter().chain(functions_a).collect()),
-    exports: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), exports_a),
+    structs: self.scout_arena.alloc_slice_from_vec(structs_a),
+    interfaces: self.scout_arena.alloc_slice_from_vec(supplied_interfaces.into_iter().chain(interfaces_a).collect()),
+    impls: self.scout_arena.alloc_slice_from_vec(impls_a),
+    functions: self.scout_arena.alloc_slice_from_vec(supplied_functions.into_iter().chain(functions_a).collect()),
+    exports: self.scout_arena.alloc_slice_from_vec(exports_a),
   }
 }
 /*
@@ -1605,6 +1601,7 @@ pub fn run_pass(
     merged_program_s.put(package_coord, merged);
   }
 
+  let merged_program_s = self.scout_arena.alloc(merged_program_s);
   let supplied_functions: Vec<&'s FunctionA<'s>> = Vec::new();
   let supplied_interfaces: Vec<&'s InterfaceA<'s>> = Vec::new();
   let program_a =
@@ -1648,11 +1645,11 @@ pub fn run_pass(
   let mut result = PackageCoordinateMap::<ProgramA<'s>>::new();
   for paackage in all_packages {
     let contents = ProgramA {
-      structs: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), package_to_structs_a.remove(paackage).unwrap_or_default()),
-      interfaces: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), package_to_interfaces_a.remove(paackage).unwrap_or_default()),
-      impls: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), package_to_impls_a.remove(paackage).unwrap_or_default()),
-      functions: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), package_to_functions_a.remove(paackage).unwrap_or_default()),
-      exports: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), package_to_exports_a.remove(paackage).unwrap_or_default()),
+      structs: self.scout_arena.alloc_slice_from_vec(package_to_structs_a.remove(paackage).unwrap_or_default()),
+      interfaces: self.scout_arena.alloc_slice_from_vec(package_to_interfaces_a.remove(paackage).unwrap_or_default()),
+      impls: self.scout_arena.alloc_slice_from_vec(package_to_impls_a.remove(paackage).unwrap_or_default()),
+      functions: self.scout_arena.alloc_slice_from_vec(package_to_functions_a.remove(paackage).unwrap_or_default()),
+      exports: self.scout_arena.alloc_slice_from_vec(package_to_exports_a.remove(paackage).unwrap_or_default()),
     };
     result.put(paackage, contents);
   }
@@ -1769,7 +1766,6 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
-    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let scout_compilation = ScoutCompilation::new(
       scout_arena,
@@ -1779,7 +1775,6 @@ impl<'s, 'ctx, 'p> HigherTypingCompilation<'s, 'ctx, 'p>
       packages_to_build,
       package_to_contents_resolver,
       global_options.clone(),
-      parser_bump,
     );
 
     HigherTypingCompilation {

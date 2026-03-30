@@ -1,5 +1,5 @@
 ---
-name: document
+name: good-doc
 description: Document information by splitting it into the correct categories (background, usage, arcana, shields, architecture, reasoning, skills) and writing it to the appropriate docs/ directories.
 ---
 
@@ -21,7 +21,7 @@ Split the information into the categories it belongs to. A single piece of knowl
 
 The categories are:
 
-1. **Background** — General knowledge needed to read code in this area.
+1. **Background** — General knowledge needed to read code in this area. Background docs must **as concise as possible** and should reference other docs for details rather than repeating information inline, because background docs are included in every prompt to every LLM, and they should keep noise to a minimum.
 2. **Usage** — How to interact with this feature correctly when writing code.
 3. **Arcana** — Cross-cutting concerns with non-obvious effects elsewhere. Has a unique ID (initialism + Z suffix) and `@ID` references at affected code sites.
 4. **Shields** — Enforceable rules/constraints. Has a unique ID (initialism + X suffix).
@@ -92,7 +92,17 @@ If any piece of information is a shield (enforceable rule):
 
 2. **Create the shield doc** at `<feature>/docs/shields/<HammerCaseTitle>-<ID>.md`.
 
-## Step 6: Report
+## Step 6: Cross-references
+
+After writing docs, add a `## See also` section with relative markdown links following the cross-reference chain defined in `docs/meta.md`:
+
+- **Background** docs → link to relevant **Usage** docs
+- **Usage** docs → link to relevant **Arcana** and **Shield** docs
+- **Architecture** docs → link to relevant **Reasoning** and **Skill** docs
+
+Only add links where related docs actually exist. Don't create empty See also sections.
+
+## Step 7: Report
 
 Tell the user:
 - What categories the information was split into

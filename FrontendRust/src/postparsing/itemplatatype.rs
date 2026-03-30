@@ -112,5 +112,4 @@ case class TemplateTemplataType(
 
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */

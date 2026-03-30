@@ -7,7 +7,6 @@ pub struct GlobalOptions {
   pub debug_output: bool,
 }
 /*
-Guardian: disable: NECX
 
 package dev.vale.options
 

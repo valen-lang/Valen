@@ -1,5 +1,4 @@
 /*
-Guardian: disable: NECX
 */
 
 /// Von data types - intermediate representation for JSON serialization
@@ -145,6 +144,4 @@ case class VonMap(
 case class VonMapEntry(
   key: IVonData,
   value: IVonData) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
-
-Guardian: disable: NECX
 */

@@ -59,10 +59,6 @@ impl<'p> ParseArena<'p> {
     }
   }
 
-  pub fn bump(&self) -> &'p Bump {
-    self.bump
-  }
-
   /// Allocate a value into the arena, returning a stable reference.
   pub fn alloc<T>(&self, val: T) -> &'p mut T {
     self.bump.alloc(val)
@@ -71,6 +67,11 @@ impl<'p> ParseArena<'p> {
   /// Allocate a slice copy into the arena.
   pub fn alloc_slice_copy<T: Copy>(&self, src: &[T]) -> &'p [T] {
     self.bump.alloc_slice_copy(src)
+  }
+
+  /// Allocate a slice from a Vec into the arena.
+  pub fn alloc_slice_from_vec<T>(&self, vec: Vec<T>) -> &'p [T] {
+    self.bump.alloc_slice_fill_iter(vec.into_iter())
   }
 
   /// Intern a string, returning a canonical StrI<'p>.
@@ -136,4 +137,3 @@ impl<'p> ParseArena<'p> {
     new_ref
   }
 }
-// V: where did all the parser interning stuff go?

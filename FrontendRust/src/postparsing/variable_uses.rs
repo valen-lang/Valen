@@ -25,7 +25,6 @@ case class VariableUse(
     mutated: Option[IVariableUseCertainty]) {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarationS<'s> {
@@ -36,7 +35,6 @@ case class VariableDeclaration(
     name: IVarNameS) {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarations<'s> {
@@ -134,7 +132,6 @@ case class VariableUses(uses: Vector[VariableUse]) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 
   vassert(uses.map(_.name).distinct == uses.map(_.name))
-Guardian: disable: NECX
 */
 impl<'s> VariableUses<'s> {
 

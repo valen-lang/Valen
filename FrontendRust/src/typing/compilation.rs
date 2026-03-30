@@ -42,7 +42,6 @@ where
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
     instantiator_options: InstantiatorCompilationOptions,
-    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let typing_options = TypingPassOptions {
       global_options,
@@ -58,7 +57,6 @@ where
       packages_to_build,
       package_to_contents_resolver,
       typing_options.global_options,
-      parser_bump,
     );
 
     TypingPassCompilation {

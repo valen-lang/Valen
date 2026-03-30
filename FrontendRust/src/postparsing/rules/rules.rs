@@ -19,7 +19,7 @@ import dev.vale.postparsing._
 import scala.collection.immutable.List
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneUsage<'s> {
   pub range: RangeS<'s>,
   pub rune: IRuneS<'s>,
@@ -28,7 +28,6 @@ pub struct RuneUsage<'s> {
 /*
 case class RuneUsage(range: RangeS, rune: IRuneS) {
 }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -70,10 +69,12 @@ trait IRulexSR {
   def range: RangeS
   def runeUsages: Vector[RuneUsage]
 }
-Guardian: disable: NECX
 */
-// V: above comment match scala?
 // V: why cloneable?
+// VA: It shouldn't be. Clone is derived but never called anywhere. IRulexSR is Clone-without-Copy
+// VA: (ATDCX violation). It's always stored as &'s [IRulexSR<'s>] in output structs. Safe to remove Clone.
+// VA: Also: GenericParameterDefaultS.rules is Vec<&'s IRulexSR<'s>> instead of &'s [IRulexSR<'s>],
+// VA: inconsistent with every other rule-holding struct (potential AASSNCMCX violation).
 
 impl<'s> IRulexSR<'s> {
   pub fn range<'r>(&'r self) -> &'r RangeS<'s> {
@@ -173,11 +174,11 @@ case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IR
   // MIGALLOW: Rust doesn't need a equals override
   // V: we should make equals and hashCode exceptions to the broad rule
   // V: we should probably also combine the various closer-to-scala shields
+  // VA: (these are process/shield-editing tasks, not code questions — not investigated here)
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(left, right)
 }
-Guardian: disable: NECX
 */
 // See SAIRFU and SRCAMP for what's going on with these rules.
 #[derive(Clone, Debug, PartialEq)]
@@ -200,7 +201,6 @@ case class CoordSendSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(senderRune, receiverRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct DefinitionCoordIsaSR<'s> {
@@ -214,7 +214,6 @@ case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: R
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, subRune, superRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CallSiteCoordIsaSR<'s> {
@@ -253,7 +252,6 @@ case class CallSiteCoordIsaSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = resultRune.toVector ++ Vector(subRune, superRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct KindComponentsSR<'s> {
@@ -272,7 +270,6 @@ case class KindComponentsSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(kindRune, mutabilityRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoordComponentsSR<'s> {
@@ -293,7 +290,6 @@ case class CoordComponentsSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, ownershipRune, kindRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct PrototypeComponentsSR<'s> {
@@ -314,7 +310,6 @@ case class PrototypeComponentsSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsRune, returnRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct ResolveSR<'s> {
@@ -337,7 +332,6 @@ case class ResolveSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CallSiteFuncSR<'s> {
@@ -360,7 +354,6 @@ case class CallSiteFuncSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(prototypeRune, paramsListRune, returnRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct DefinitionFuncSR<'s> {
@@ -383,7 +376,6 @@ case class DefinitionFuncSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct OneOfSR<'s> {
@@ -404,7 +396,6 @@ case class OneOfSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IsConcreteSR<'s> {
@@ -421,7 +412,6 @@ case class IsConcreteSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IsInterfaceSR<'s> {
@@ -438,7 +428,6 @@ case class IsInterfaceSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IsStructSR<'s> {
@@ -455,7 +444,6 @@ case class IsStructSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CoerceToCoordSR<'s> {
@@ -475,7 +463,6 @@ case class CoerceToCoordSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(coordRune, kindRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RefListCompoundMutabilitySR<'s> {
@@ -494,7 +481,6 @@ case class RefListCompoundMutabilitySR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, coordListRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct LiteralSR<'s> {
@@ -514,7 +500,6 @@ case class LiteralSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct MaybeCoercingLookupSR<'s> {
@@ -534,7 +519,6 @@ case class MaybeCoercingLookupSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 // A rule that looks up something that's not a Kind, so it doesn't need a default region.
 #[derive(Clone, Debug, PartialEq)]
@@ -555,7 +539,6 @@ case class LookupSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct MaybeCoercingCallSR<'s> {
@@ -576,7 +559,6 @@ case class MaybeCoercingCallSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 // MIGALLOW: Rust doesn't need a runeUsages override
@@ -598,7 +580,6 @@ case class CallSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IndexListSR<'s> {
@@ -619,7 +600,6 @@ case class IndexListSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, listRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RuneParentEnvLookupSR<'s> {
@@ -636,7 +616,6 @@ case class RuneParentEnvLookupSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct AugmentSR<'s> {
@@ -659,7 +638,6 @@ case class AugmentSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, innerRune)
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct PackSR<'s> {
@@ -678,7 +656,6 @@ case class PackSR(
   // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune) ++ members
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum ILiteralSL<'s> {
@@ -710,7 +687,6 @@ impl<'s> ILiteralSL<'s> {
 sealed trait ILiteralSL {
   def getType(): ITemplataType
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct IntLiteralSL {
@@ -722,7 +698,6 @@ case class IntLiteralSL(value: Long) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = IntegerTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl IntLiteralSL {
@@ -743,7 +718,6 @@ case class StringLiteralSL(value: String) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = StringTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl<'s> StringLiteralSL<'s> {
@@ -764,7 +738,6 @@ case class BoolLiteralSL(value: Boolean) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = BooleanTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl BoolLiteralSL {
@@ -785,7 +758,6 @@ case class MutabilityLiteralSL(mutability: MutabilityP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = MutabilityTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl MutabilityLiteralSL {
@@ -806,7 +778,6 @@ case class LocationLiteralSL(location: LocationP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = LocationTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl LocationLiteralSL {
@@ -827,7 +798,6 @@ case class OwnershipLiteralSL(ownership: OwnershipP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = OwnershipTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl OwnershipLiteralSL {
@@ -848,7 +818,6 @@ case class VariabilityLiteralSL(variability: VariabilityP) extends ILiteralSL {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   override def getType(): ITemplataType = VariabilityTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl VariabilityLiteralSL {

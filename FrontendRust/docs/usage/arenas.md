@@ -44,5 +44,3 @@ Arena-allocated output types must not `#[derive(Clone)]`. They are shared by ref
 This applies to all structs/enums that get `arena.alloc()`'d: postparsing AST nodes (`StructS`, `FunctionS`, etc.), their inner types (attribute/body/member variants), parser AST nodes, and higher typing nodes.
 
 **Exempt:** Copy types (interned handles like `StrI`, `RangeS`) and value types used as HashMap keys (`IRuneS`, `INameS`, `RuneUsage`).
-
-// V: we should figure out some way for the document skill to link together all the docs for a certain feature

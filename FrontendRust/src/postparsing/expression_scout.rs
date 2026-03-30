@@ -1,4 +1,3 @@
-// V: we should totally make a tool that pulls out everything not in a block comment, and then compares it to the Frontend/ version
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
   BlockPE, DotPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, ITemplexPT, LoadAsP,
@@ -28,7 +27,6 @@ use crate::postparsing::rules::rule_scout::translate_rulexes;
 use crate::postparsing::rules::templex_scout::translate_templex;
 use crate::postparsing::loop_post_parser::{scout_each, scout_while};
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
-use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::utils::range::RangeS;
 
 /*
@@ -73,7 +71,6 @@ pub(crate) enum IScoutResult<'s, 'p> {
 // MIGALLOW: Rust IScoutResult doesn't need to be generic, because we never made use of that in
 // Scala.
 sealed trait IScoutResult[+T <: IExpressionSE]
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct LocalLookupResultS<'s> {
@@ -85,7 +82,6 @@ pub(crate) struct LocalLookupResultS<'s> {
 case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct OutsideLookupResultS<'s, 'p> {
@@ -104,7 +100,6 @@ case class OutsideLookupResult(
 ) extends IScoutResult[IExpressionSE] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub(crate) struct NormalResultS<'s> {
@@ -119,7 +114,6 @@ case class NormalResult[+T <: IExpressionSE](expr: T) extends IScoutResult[T] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   def range: RangeS = expr.range
 }
-Guardian: disable: NECX
 */
 impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 {
@@ -198,7 +192,7 @@ pub(crate) fn scout_block(
     let block_s = &*self.scout_arena.alloc(block_s);
     &*self.scout_arena.alloc(IExpressionSE::Pure(PureSE {
       range: PostParser::eval_range(file, block_pe.range),
-      location: lidb.child().consume_in(self.scout_arena.arena()),
+      location: lidb.child().consume_in_arena(self.scout_arena),
       inner: &*self.scout_arena.alloc(IExpressionSE::Block(block_s)),
     }))
   } else {
@@ -411,7 +405,7 @@ fn scout_impure_block(
         range: range_at_end,
         operator_range: RangeL::zero(),
         callable_expr: callable_expr_p,
-        arg_exprs: alloc_slice_from_vec(self.parse_arena.bump(), arg_exprs_p),
+        arg_exprs: self.parse_arena.alloc_slice_from_vec(arg_exprs_p),
       }));
       let mut constructor_lidb = lidb.child();
       let (
@@ -471,8 +465,7 @@ fn scout_impure_block(
       &*self.scout_arena.alloc(
       BlockSE::<'s> {
         range: range_s,
-        locals: alloc_slice_from_vec(self.scout_arena.arena(), locals),
-        // V: how do these slices work with interning? if something is interned and has a slice, is that slice deduped? what's equality on these slices like? i hope we dont allocate a bunch of different of the same slices.
+        locals: self.scout_arena.alloc_slice_from_vec(locals),
         expr: expr_with_constructing_if_necessary,
       }),
       self_uses_of_things_from_above,
@@ -1054,9 +1047,9 @@ fn scout_expression(
           IScoutResult::NormalResult(NormalResultS {
             expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
               range: PostParser::eval_range(&file_coordinate, function_call.range),
-              location: lidb.child().consume_in(self.scout_arena.arena()),
+              location: lidb.child().consume_in_arena(self.scout_arena),
               callable_expr: callable_expr_s,
-              arg_exprs: alloc_slice_from_vec(self.scout_arena.arena(), arg_exprs_s),
+              arg_exprs: self.scout_arena.alloc_slice_from_vec(arg_exprs_s),
             })),
           });
       Ok((
@@ -1108,10 +1101,9 @@ fn scout_expression(
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
           range: PostParser::eval_range(&file_coordinate, binary_call.range),
-          location: lidb.child().consume_in(self.scout_arena.arena()),
+          location: lidb.child().consume_in_arena(self.scout_arena),
           callable_expr: callable_expr_s,
-          arg_exprs: alloc_slice_from_vec(
-            self.scout_arena.arena(),
+          arg_exprs: self.scout_arena.alloc_slice_from_vec(
             vec![left_expr_s, right_expr_s],
           ),
         })),
@@ -1197,9 +1189,9 @@ fn scout_expression(
       let result = IScoutResult::NormalResult(NormalResultS {
         expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
           range: PostParser::eval_range(&file_coordinate, method_call.range),
-          location: lidb.child().consume_in(self.scout_arena.arena()),
+          location: lidb.child().consume_in_arena(self.scout_arena),
           callable_expr: callable_expr_s,
-          arg_exprs: alloc_slice_from_vec(self.scout_arena.arena(), arg_exprs_s),
+          arg_exprs: self.scout_arena.alloc_slice_from_vec(arg_exprs_s),
         })),
       });
       Ok((
@@ -1709,7 +1701,7 @@ fn scout_expression(
         IScoutResult::NormalResult(NormalResultS {
           expr: &*self.scout_arena.alloc(IExpressionSE::Let(LetSE {
             range: PostParser::eval_range(&file_coordinate, lett.range),
-            rules: alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
+            rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
             pattern: pattern_s,
             expr: source_expr_s,
           })),
@@ -2040,11 +2032,11 @@ pub(crate) fn scout_expression_and_coerce(
             .collect::<Vec<_>>()
         });
         let maybe_template_args_slice = maybe_template_arg_runes
-          .map(|v| alloc_slice_from_vec(self.scout_arena.arena(), v) as &[_]);
+          .map(|v| self.scout_arena.alloc_slice_from_vec(v) as &[_]);
         (
           &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
             range,
-            rules: alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
+            rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
             name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
               name,
             })),

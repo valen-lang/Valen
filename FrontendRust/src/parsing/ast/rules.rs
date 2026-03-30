@@ -23,7 +23,6 @@ pub enum IRulexPR<'p> {
 sealed trait IRulexPR {
   def range: RangeL
 }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -147,7 +146,6 @@ case object PrototypeTypePR extends ITypePR
 case object KindTypePR extends ITypePR
 case object RegionTypePR extends ITypePR
 case object CitizenTemplateTypePR extends ITypePR
-Guardian: disable: NECX
 */
 
 /*

@@ -10,7 +10,6 @@ import scala.util.matching.Regex
   /*
   case class LexingIterator(code: String, var position: Int = 0) {
     override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
-  Guardian: disable: NECX
   */
 
 /// Lexing iterator for traversing source code
@@ -240,6 +239,10 @@ impl LexingIterator {
       self.comments.push(RangeL(begin as i32, (self.position - 1) as i32));
 
       // V: are these changes closer or further from scala?
+      // VA: Slightly further. Rust uses starts_with("//") instead of Scala's two charAt comparisons
+      // VA: with a bounds check (minor simplification). The comment-end loop inlines what Scala does
+      // VA: via skipToPast('\n') — equivalent behavior but more verbose and structurally different.
+      // VA: Also, nearby consume_ellipses_comments handles Unicode '…' (U+2026) which Scala doesn't.
 
       self.consume_comments();
     }

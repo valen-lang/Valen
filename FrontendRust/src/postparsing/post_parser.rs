@@ -43,7 +43,6 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
-use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -77,7 +76,7 @@ import scala.collection.mutable.ArrayBuffer
 /*
 case class CompileErrorExceptionS(err: ICompileErrorS) extends RuntimeException { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct CompileErrorExceptionS<'s> {
   pub err: ICompileErrorS<'s>,
 }
@@ -85,6 +84,12 @@ pub struct CompileErrorExceptionS<'s> {
 #[derive(Clone, Debug, PartialEq)]
 // SPORK
 // V: whats the common theme between all SPORK comments?
+// VA: SPORK marks things that exist in Rust but have no direct Scala counterpart — deviations from
+// VA: Scala parity. Examples: Clone+PartialEq derives on types Scala didn't derive (ICompileErrorS,
+// VA: IEnvironmentS), Rust-only convenience methods (CodeLocationS::internal, RangeS::file), and
+// VA: restructured trait shapes (SolverDelegate::rule_to_puzzles). It flags novel Rust logic for
+// VA: review under shields like ATDCX and NCWSRX. 6 occurrences across post_parser.rs, solver.rs,
+// VA: and utils/range.rs.
 pub enum ICompileErrorS<'s> {
   CouldntFindVarToMutateS(CouldntFindVarToMutateS<'s>),
   CouldntFindRuneS(CouldntFindRuneS<'s>),
@@ -104,7 +109,6 @@ pub enum ICompileErrorS<'s> {
 }
 /*
 sealed trait ICompileErrorS { def range: RangeS }
-Guardian: disable: NECX
 */
 
 impl ICompileErrorS<'_> {
@@ -153,7 +157,6 @@ pub struct CouldntFindVarToMutateS<'s> {
 }
 /*
 case class CouldntFindVarToMutateS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -163,7 +166,6 @@ pub struct CouldntFindRuneS<'s> {
 }
 /*
 case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -172,7 +174,6 @@ pub struct StatementAfterReturnS<'s> {
 }
 /*
 case class StatementAfterReturnS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /*
@@ -191,7 +192,6 @@ pub struct ExternHasBodyS<'s> {
 }
 /*
 case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -200,7 +200,6 @@ pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'s> {
 }
 /*
 case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -209,7 +208,6 @@ pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'s> {
 }
 /*
 case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 /*
@@ -228,7 +226,6 @@ pub struct VariableNameAlreadyExists<'s> {
 }
 /*
 case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -240,7 +237,6 @@ case class InterfaceMethodNeedsSelf(range: RangeS) extends ICompileErrorS {
   vpass()
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 /*
@@ -259,7 +255,6 @@ pub struct RuneExplicitTypeConflictS<'s> {
 }
 /*
 case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -269,7 +264,6 @@ pub struct IdentifyingRunesIncompleteS<'s> {
 }
 /*
 case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RangedInternalErrorS<'s> {
@@ -281,7 +275,6 @@ case class RangedInternalErrorS(range: RangeS, message: String) extends ICompile
   vpass()
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 // SPORK
@@ -291,7 +284,6 @@ pub enum IEnvironmentS<'s> {
 }
 /*
 sealed trait IEnvironmentS {
-Guardian: disable: NECX
 */
 impl<'s> IEnvironmentS<'s> {
   pub fn file(&self) -> &'s FileCoordinate<'s> {
@@ -349,7 +341,6 @@ case class EnvironmentS(
     name: INameS,
     userDeclaredRunes: Set[IRuneS]
 ) extends IEnvironmentS {
-Guardian: disable: NECX
 */
 impl<'s> EnvironmentS<'s> {
 /*
@@ -411,7 +402,6 @@ case class FunctionEnvironmentS(
   isInterfaceInternalMethod: Boolean
 ) extends IEnvironmentS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-Guardian: disable: NECX
 */
 
 impl<'s> FunctionEnvironmentS<'s> {
@@ -476,7 +466,6 @@ case class StackFrame(
     contextRegion: IRuneS,
     pureHeight: Int,
     locals: VariableDeclarations) {
-Guardian: disable: NECX
 */
 impl<'s> StackFrame<'s> {
 /*
@@ -695,7 +684,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         other => flattened.push(other),
       }
     }
-    let slice = alloc_slice_from_vec(self.scout_arena.arena(), flattened);
+    let slice = self.scout_arena.alloc_slice_from_vec(flattened);
     &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE { exprs: slice }))
   }
 /*
@@ -1073,12 +1062,12 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
     }
 
     Ok(ProgramS {
-      structs: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), structs),
-      interfaces: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), interfaces),
-      impls: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), impls),
-      implemented_functions: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), implemented_functions),
-      exports: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), exports),
-      imports: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), imports),
+      structs: self.scout_arena.alloc_slice_from_vec(structs),
+      interfaces: self.scout_arena.alloc_slice_from_vec(interfaces),
+      impls: self.scout_arena.alloc_slice_from_vec(impls),
+      implemented_functions: self.scout_arena.alloc_slice_from_vec(implemented_functions),
+      exports: self.scout_arena.alloc_slice_from_vec(exports),
+      imports: self.scout_arena.alloc_slice_from_vec(imports),
     })
   }
 /*
@@ -1395,9 +1384,9 @@ fn scout_impl(
   Ok(ImplS {
     range: range_s,
     name: impl_name,
-    user_specified_identifying_runes: alloc_slice_from_vec_of_refs(self.scout_arena.arena(), generic_parameters_s),
-    rules: alloc_slice_from_vec(self.scout_arena.arena(), rule_builder),
-    rune_to_explicit_type: ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena.arena()),
+    user_specified_identifying_runes: self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
+    rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+    rune_to_explicit_type: self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
     tyype,
     struct_kind_rune: struct_rune,
     sub_citizen_imprecise_name,
@@ -1763,7 +1752,7 @@ fn predict_mutability(
     );
 
     let mut member_rule_builder = Vec::<IRulexSR<'s>>::new();
-    let mut members_rune_to_explicit_type = ArenaIndexMap::<IRuneS, ITemplataType>::new_in(self.scout_arena.arena());
+    let mut members_rune_to_explicit_type = self.scout_arena.alloc_index_map::<IRuneS, ITemplataType>();
 
     let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
@@ -1878,20 +1867,17 @@ fn predict_mutability(
           .map(|usage| usage.rune.clone())
       }))
       .collect::<std::collections::HashSet<_>>();
-    let header_rune_to_predicted_type = ArenaIndexMap::from_iter_in(
+    let header_rune_to_predicted_type = self.scout_arena.alloc_index_map_from_iter(
       rune_to_predicted_type
         .iter()
         .filter(|(rune, _)| runes_from_header.contains(*rune))
         .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
-      self.scout_arena.arena(),
     );
-    // V: its suspicious that we're able to get the underlying arena from scout_arena.
-    let members_rune_to_predicted_type = ArenaIndexMap::from_iter_in(
+    let members_rune_to_predicted_type = self.scout_arena.alloc_index_map_from_iter(
       rune_to_predicted_type
         .iter()
         .filter(|(rune, _)| !runes_from_header.contains(*rune))
         .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
-      self.scout_arena.arena(),
     );
 
     let tyype = TemplateTemplataType {
@@ -1937,19 +1923,19 @@ fn predict_mutability(
     Ok(StructS::new(
       struct_range_s,
       struct_name,
-      alloc_slice_from_vec(self.scout_arena.arena(), attrs_s),
+      self.scout_arena.alloc_slice_from_vec(attrs_s),
       weakable,
-      alloc_slice_from_vec_of_refs(self.scout_arena.arena(), generic_parameters_s),
+      self.scout_arena.alloc_slice_from_vec(generic_parameters_s),
       mutability_rune_s,
       predicted_mutability,
       tyype,
-      ArenaIndexMap::from_iter_in(header_rune_to_explicit_type.into_iter(), self.scout_arena.arena()),
+      self.scout_arena.alloc_index_map_from_iter(header_rune_to_explicit_type.into_iter()),
       header_rune_to_predicted_type,
-      alloc_slice_from_vec(self.scout_arena.arena(), header_rules_s),
+      self.scout_arena.alloc_slice_from_vec(header_rules_s),
       members_rune_to_explicit_type,
       members_rune_to_predicted_type,
-      alloc_slice_from_vec(self.scout_arena.arena(), member_rules_s),
-      alloc_slice_from_vec(self.scout_arena.arena(), members_s),
+      self.scout_arena.alloc_slice_from_vec(member_rules_s),
+      self.scout_arena.alloc_slice_from_vec(members_s),
     ))
   }
 /*
@@ -2160,7 +2146,7 @@ pub(crate) fn predict_rune_types(
       .push(explicit_type.clone());
   }
 
-  let mut rune_to_explicit_type = ArenaIndexMap::<IRuneS<'s>, ITemplataType>::new_in(scout_arena.arena());
+  let mut rune_to_explicit_type = scout_arena.alloc_index_map::<IRuneS<'s>, ITemplataType>();
   for (rune, explicit_types) in grouped_explicit_types {
     let mut distinct_explicit_types =
       Vec::<crate::postparsing::itemplatatype::ITemplataType>::new();
@@ -2282,6 +2268,13 @@ pub(crate) fn check_identifiability(
 
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
     // V: is this whole function now closer or further from scala?
+    // VA: Mostly closer — the full pipeline (attributes, generic params, rules, mutability, members,
+    // VA: InterfaceS construction) is wired up and matches Scala's sequencing. The primary remaining
+    // VA: gap is maybeDefaultRegionRuneP handling: Scala has a full match that synthesizes an implicit
+    // VA: GenericParameterS with RegionGenericParameterTypeS(ReadWriteRegionS) on the None branch;
+    // VA: Rust replaces this with two assert!(is_none) panics. Also: attribute computation is reordered
+    // VA: (before generic params instead of after internalMethods), and predictRuneTypes receives
+    // VA: &identifying_runes_s instead of Scala's empty ArrayBuffer.
     assert!(
       interface.mutability.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_MUTABILITY_NOT_YET_IMPLEMENTED"
@@ -2433,7 +2426,7 @@ pub(crate) fn check_identifiability(
     let predicted_mutability =
       Self::predict_mutability(interface_range_s.clone(), mutability_rune_s.rune.clone(), &rules_s);
 
-    let generic_parameters_s: &'s [&'s GenericParameterS<'s>] = alloc_slice_from_vec_of_refs(self.scout_arena.arena(), generic_parameters_s);
+    let generic_parameters_s: &'s [&'s GenericParameterS<'s>] = self.scout_arena.alloc_slice_from_vec(generic_parameters_s);
 
     let tyype = TemplateTemplataType {
       param_types: generic_parameters_s.iter().map(|x| x.tyype.tyype()).collect(),
@@ -2448,23 +2441,23 @@ pub(crate) fn check_identifiability(
         &interface_env,
         generic_parameters_s,
         &rules_s,
-        &ArenaIndexMap::from_iter_in(rune_to_explicit_type.iter().cloned(), self.scout_arena.arena()),
+        &self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.iter().cloned()),
       )?);
     }
 
     Ok(InterfaceS::new(
       interface_range_s,
       interface_name,
-      alloc_slice_from_vec(self.scout_arena.arena(), attributes),
+      self.scout_arena.alloc_slice_from_vec(attributes),
       weakable,
       generic_parameters_s,
-      ArenaIndexMap::from_iter_in(rune_to_explicit_type.into_iter(), self.scout_arena.arena()),
+      self.scout_arena.alloc_index_map_from_iter(rune_to_explicit_type.into_iter()),
       mutability_rune_s,
       predicted_mutability,
       predicted_rune_to_type,
       tyype,
-      alloc_slice_from_vec(self.scout_arena.arena(), rules_s),
-      crate::utils::arena_utils::alloc_slice_from_vec_of_refs(self.scout_arena.arena(), internal_methods),
+      self.scout_arena.alloc_slice_from_vec(rules_s),
+      self.scout_arena.alloc_slice_from_vec(internal_methods),
     ))
   }
 /*
@@ -2633,7 +2626,6 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     global_options: GlobalOptions,
-    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let parser_compilation = ParserCompilation::new(
       global_options.clone(),
@@ -2641,7 +2633,6 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
       parser_keywords,
       packages_to_build,
       package_to_contents_resolver,
-      parser_bump,
     );
 
     ScoutCompilation {
@@ -2654,6 +2645,14 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
       scoutput_cache: None,
     }
     // V: anything enforce that we actually have to call this constructor?
+    // VA: All ScoutCompilation fields are private, so external callers are forced through new().
+    // But code within the same module can bypass it via struct literal — no language-level
+    // enforcement within the module.
+    // V: is there a way we can make it so people cant bypass it?
+    // VA: Yes — move ScoutCompilation to its own submodule (e.g. postparsing/scout_compilation.rs).
+    // VA: Rust's privacy is module-scoped, so code in the same module can always bypass private
+    // VA: fields via struct literal syntax. A separate module would make the private fields
+    // VA: truly inaccessible from the rest of postparsing.
   }
   /*
   Guardian: disable-all
@@ -2704,6 +2703,17 @@ impl<'s, 'ctx, 'p> ScoutCompilation<'s, 'ctx, 'p>
     for (file_coordinate_p, (file_p, _comments_and_ranges)) in &parseds.file_coord_to_contents {
       // Cross-pass translation: re-intern FileCoordinate from 'p into 's
       // V: should we have arcana for this? also its weird how verbose this is compared to the scala version below
+      // VA: The verbosity is inherent to the 'p/'s lifetime split — already explained in the VA below.
+      // VA: The verbosity is an inherent consequence of the 'p/'s lifetime split. Scala's single
+      // GC-backed interner didn't need cross-pass re-interning — coordinates were just reused.
+      // In Rust, every StrI<'p> must become StrI<'s> by re-interning through scout_arena.
+      // Good candidate for arcana documentation.
+      // V: can we have an intern_file_coordinate method on scout_arena that takes one from a
+      // different arena like p?
+      // VA: Yes. A method like `intern_file_coordinate_cross_pass(&self, fc: &FileCoordinate<'_>) -> &'s FileCoordinate<'s>`
+      // VA: would re-intern each package string via .as_str(), call intern_package_coordinate, then
+      // VA: intern_file_coordinate. Needs only &self — no ParseArena param, since StrI exposes .as_str().
+      // VA: Would reduce the two repeated 6-line blocks in this loop to one-liner calls.
       let package_coord_s: &'s PackageCoordinate<'s> = self.scout_arena.intern_package_coordinate(
         self.scout_arena.intern_str(file_coordinate_p.package_coord.module.as_str()),
         &file_coordinate_p.package_coord.packages.iter()

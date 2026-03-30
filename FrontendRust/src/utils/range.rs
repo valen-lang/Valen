@@ -60,7 +60,6 @@ case class CodeLocationS(
     }
   }
 }
-Guardian: disable: NECX
 */
 
 impl<'a> CodeLocationS<'a> {
@@ -124,6 +123,4 @@ case class RangeS(begin: CodeLocationS, end: CodeLocationS) {
     }
   }
 }
-
-Guardian: disable: NECX
 */

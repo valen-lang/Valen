@@ -23,7 +23,6 @@ pub fn test<'p, 'ctx>(
   keywords: &'ctx Keywords<'p>,
   resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
   test_package_coord: &'p PackageCoordinate<'p>,
-  arena: &'p bumpalo::Bump,
 ) -> ParserCompilation<'p, 'ctx>
 where
   'p: 'ctx,
@@ -40,7 +39,6 @@ where
     keywords,
     vec![test_package_coord],
     resolver,
-    arena,
   )
 }
 /*

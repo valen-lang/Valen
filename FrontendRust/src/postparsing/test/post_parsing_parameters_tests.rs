@@ -66,7 +66,7 @@ where 'p: 's,
     .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
-// V: above changes consistent with below scala?
+
 /*
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
     val compilation = PostParserTestCompilation.test(code, interner)
@@ -116,7 +116,7 @@ where 'p: 's,
     Err(e) => e,
   }
 }
-// V: above changes consistent with below scala?
+
 /*
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
@@ -319,7 +319,7 @@ fn anonymous_typed_param() {
     _ => panic!("param structure did not match (expected anonymous typed param)"),
   };
 
-  let rule_rune = crate::collect_only_snode!(
+  let rule_rune: RuneUsage = crate::collect_only_snode!(
     NodeRefS::Function(main),
     NodeRefS::MaybeCoercingLookupRule(MaybeCoercingLookupSR {
       name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("int") }),

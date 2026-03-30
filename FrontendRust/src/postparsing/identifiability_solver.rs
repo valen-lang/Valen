@@ -27,7 +27,6 @@ pub struct IdentifiabilitySolveError<'s> {
 case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, Boolean, IIdentifiabilityRuleError]) {
   vpass()
 }
-Guardian: disable: NECX
 */
 /*
 sealed trait IIdentifiabilityRuleError

@@ -38,8 +38,6 @@ where
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
     options: HammerCompilationOptions,
-    // V: why do we have parser_bump and also parse_arena
-    parser_bump: &'p bumpalo::Bump,
   ) -> Self {
     let typing_options = InstantiatorCompilationOptions {
       debug_out: options.debug_out.clone(),
@@ -54,7 +52,6 @@ where
       package_to_contents_resolver,
       options.global_options,
       typing_options,
-      parser_bump,
     );
 
     InstantiatedCompilation {

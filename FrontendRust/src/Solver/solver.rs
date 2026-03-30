@@ -36,8 +36,6 @@ where
 }
 /*
 case class Step[Rule, Rune, Conclusion](complex: Boolean, solvedRules: Vector[(Int, Rule)], addedRules: Vector[Rule], conclusions: Map[Rune, Conclusion])
-
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum SolverOutcome<Rule, Rune, Conclusion, ErrType>
@@ -81,7 +79,6 @@ where
 sealed trait ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
   def getOrDie(): Map[Rune, Conclusion]
 }
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>
@@ -141,7 +138,6 @@ sealed trait IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] extends I
   def unsolvedRunes: Vector[Rune]
   def steps: Stream[Step[Rule, Rune, Conclusion]]
 }
-Guardian: disable: NECX
 */
 // mig: struct CompleteSolve
 #[derive(Clone, Debug, PartialEq)]
@@ -166,7 +162,6 @@ case class CompleteSolve[Rule, Rune, Conclusion, ErrType](
 ) extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
   override def getOrDie(): Map[Rune, Conclusion] = conclusions
 }
-Guardian: disable: NECX
 */
 // mig: struct IncompleteSolve
 #[derive(Clone, Debug, PartialEq)]
@@ -199,7 +194,6 @@ case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
   override def getOrDie(): Map[Rune, Conclusion] = vfail()
   override def unsolvedRunes: Vector[Rune] = unknownRunes.toVector
 }
-Guardian: disable: NECX
 */
 // mig: struct FailedSolve
 #[derive(Clone, Debug, PartialEq)]
@@ -227,7 +221,6 @@ case class FailedSolve[Rule, Rune, Conclusion, ErrType](
   vpass()
   override def unsolvedRunes: Vector[Rune] = Vector()
 }
-Guardian: disable: NECX
 */
 // mig: trait ISolverError
 #[derive(Clone, Debug, PartialEq)]
@@ -237,7 +230,6 @@ pub enum ISolverError<Rune, Conclusion, ErrType> {
 }
 /*
 sealed trait ISolverError[Rune, Conclusion, ErrType]
-Guardian: disable: NECX
 */
 // mig: struct SolverConflict
 #[derive(Clone, Debug, PartialEq)]
@@ -257,7 +249,6 @@ case class SolverConflict[Rune, Conclusion, ErrType](
 ) extends ISolverError[Rune, Conclusion, ErrType] {
   vpass()
 }
-Guardian: disable: NECX
 */
 // mig: struct RuleError
 #[derive(Clone, Debug, PartialEq)]
@@ -272,7 +263,6 @@ case class RuleError[Rune, Conclusion, ErrType](
 //  ruleIndex: Int,
   err: ErrType
 ) extends ISolverError[Rune, Conclusion, ErrType]
-Guardian: disable: NECX
 */
 pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>
 where

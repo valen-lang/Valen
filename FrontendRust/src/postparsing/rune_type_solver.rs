@@ -995,6 +995,12 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverStat
 // mig: fn solve_rune_type
 pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   // V: we took out self here, do we have a coherent story about when something should be self/impl'd
+  // VA: In Scala, solveRuneType was a method on class RuneTypeSolver(interner). In Rust, it was
+  // VA: extracted to a free function while RuneTypeSolver exists as a thin delegating wrapper.
+  // VA: The dominant pattern across postparsing solvers is free functions: identifiability_solver.rs
+  // VA: and rule_scout.rs are entirely free functions with no struct. The RuneTypeSolver struct is
+  // VA: the exception — it could be removed to match the peer files, or the free functions could be
+  // VA: moved into it to match Scala's class structure. Currently inconsistent.
   sanity_check: bool,
   env: &E,
   range: Vec<crate::utils::range::RangeS<'s>>,

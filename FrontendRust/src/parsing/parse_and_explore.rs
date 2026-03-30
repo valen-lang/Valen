@@ -7,6 +7,11 @@ use crate::parsing::Parser;
 use crate::utils::code_hierarchy::{FileCoordinate, IPackageResolver, PackageCoordinate};
 use crate::Keywords;
 // V: can we put the Keywords struct into the arena? so it doesnt have to be a separate thing...
+// VA: Yes, with one fix: Keywords.tuple_human_name is Vec<StrI<'a>> (heap-allocated, AASSNCMCX
+// VA: violation). Change it to &'a [StrI<'a>] (arena slice), then arena-allocate via
+// VA: parse_arena.bump.alloc(Keywords::new_for_parse(...)). The result is &'p Keywords<'p> which
+// VA: coerces to &'ctx Keywords<'p> at all existing call sites — no signature changes needed.
+// VA: All other ~110 fields are StrI<'a> (Copy), so no other blockers.
 use std::collections::HashMap;
 /*
 package dev.vale.parsing

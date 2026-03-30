@@ -1,6 +1,5 @@
 use crate::compile_options::GlobalOptions;
 use crate::keywords::Keywords;
-use crate::utils::arena_utils::{alloc_slice_copy, alloc_slice_from_vec};
 use crate::lexing::ast::*;
 use crate::lexing::errors::FailedParse;
 use crate::lexing::errors::ParseError;
@@ -12,7 +11,6 @@ use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
-use bumpalo::Bump;
 use std::collections::HashMap;
 
 /*
@@ -41,7 +39,6 @@ pub struct Parser<'p, 'ctx> {
   // VV: crate::
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
-  arena: &'p Bump,
   pub templex_parser: TemplexParser<'p, 'ctx>,
   pub pattern_parser: PatternParser<'p, 'ctx>,
   pub expression_parser: ExpressionParser<'p, 'ctx>,
@@ -139,7 +136,7 @@ where
       name,
       maybe_type,
       coord_region: maybe_coord_region,
-      attributes: alloc_slice_from_vec(self.arena, attributes),
+      attributes: self.parse_arena.alloc_slice_from_vec(attributes),
       maybe_default,
     })
   }
@@ -237,16 +234,14 @@ where
   pub fn new(
     parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
     keywords: &'ctx Keywords<'p>,
-    arena: &'p Bump,
   ) -> Self {
-    let templex_parser = TemplexParser::new(parse_arena, keywords, arena);
-    let pattern_parser = PatternParser::new(parse_arena, keywords, arena);
-    let expression_parser = ExpressionParser::new(parse_arena, keywords, arena);
+    let templex_parser = TemplexParser::new(parse_arena, keywords);
+    let pattern_parser = PatternParser::new(parse_arena, keywords);
+    let expression_parser = ExpressionParser::new(parse_arena, keywords);
 
     Parser {
       parse_arena,
       keywords,
-      arena,
       templex_parser,
       pattern_parser,
       expression_parser,
@@ -273,8 +268,8 @@ where
 
     Ok(FileP {
       file_coord: empty_file,
-      comments_ranges: alloc_slice_from_vec(self.arena, comment_ranges),
-      denizens: alloc_slice_from_vec(self.arena, parsed_denizens),
+      comments_ranges: self.parse_arena.alloc_slice_from_vec(comment_ranges),
+      denizens: self.parse_arena.alloc_slice_from_vec(parsed_denizens),
     })
   }
 
@@ -321,7 +316,7 @@ where
 
     Ok(GenericParametersP {
       range: node.range,
-      params: alloc_slice_from_vec(self.arena, params),
+      params: self.parse_arena.alloc_slice_from_vec(params),
     })
   }
   /*
@@ -483,7 +478,7 @@ where
         }
         Ok(TemplateRulesP {
           range: rules_scramble.range,
-          rules: alloc_slice_from_vec(self.arena, rules),
+          rules: self.parse_arena.alloc_slice_from_vec(rules),
         })
       })
       .transpose()?;
@@ -514,13 +509,13 @@ where
 
     let members = StructMembersP {
       range: contents.range,
-      contents: alloc_slice_from_vec(self.arena, members_vec),
+      contents: self.parse_arena.alloc_slice_from_vec(members_vec),
     };
 
     Ok(StructP::<'p> {
       range: struct_range,
       name: self.to_name(name_l),
-      attributes: alloc_slice_from_vec(self.arena, attributes),
+      attributes: self.parse_arena.alloc_slice_from_vec(attributes),
       mutability: maybe_mutability,
       identifying_runes: maybe_identifying_runes,
       template_rules: maybe_template_rules,
@@ -643,7 +638,7 @@ where
         }
         Ok(TemplateRulesP {
           range: rules_scramble.range,
-          rules: alloc_slice_from_vec(self.arena, rules),
+          rules: self.parse_arena.alloc_slice_from_vec(rules),
         })
       })
       .transpose()?;
@@ -672,13 +667,13 @@ where
     Ok(InterfaceP {
       range: interface_range,
       name: self.to_name(name_l),
-      attributes: alloc_slice_from_vec(self.arena, attributes),
+      attributes: self.parse_arena.alloc_slice_from_vec(attributes),
       mutability: maybe_mutability,
       maybe_identifying_runes,
       template_rules: maybe_template_rules,
       maybe_default_region_rune: None,
       body_range,
-      members: alloc_slice_from_vec(self.arena, members_vec),
+      members: self.parse_arena.alloc_slice_from_vec(members_vec),
     })
   }
 
@@ -858,7 +853,7 @@ where
 
         Some(TemplateRulesP {
           range: template_rules_scramble.range,
-          rules: alloc_slice_from_vec(self.arena, elements_pr),
+          rules: self.parse_arena.alloc_slice_from_vec(elements_pr),
         })
       }
       None => None,
@@ -889,7 +884,7 @@ where
       template_rules: maybe_template_rules_p,
       struct_: struct_p,
       interface: interface_p,
-      attributes: alloc_slice_from_vec(self.arena, attributes_p),
+      attributes: self.parse_arena.alloc_slice_from_vec(attributes_p),
     })
   }
   /*
@@ -1087,7 +1082,7 @@ where
     Ok(ImportP {
       range,
       module_name: module_name_p,
-      package_steps: alloc_slice_from_vec(self.arena, package_steps_p),
+      package_steps: self.parse_arena.alloc_slice_from_vec(package_steps_p),
       importee_name: importee_name_p,
     })
   }
@@ -1269,7 +1264,7 @@ where
 
     let params_p = ParamsP {
       range: params_l.range,
-      params: alloc_slice_from_vec(self.arena, params_p_vec),
+      params: self.parse_arena.alloc_slice_from_vec(params_p_vec),
     };
 
     // Parse trailing details to extract return type, where clause, and default region
@@ -1333,7 +1328,7 @@ where
         }
         Ok(TemplateRulesP {
           range: rules_iter.scramble.range,
-          rules: alloc_slice_from_vec(self.arena, rules),
+          rules: self.parse_arena.alloc_slice_from_vec(rules),
         })
       })
       .transpose()?;
@@ -1347,7 +1342,7 @@ where
     let header = FunctionHeaderP {
       range: header_range_l,
       name: Some(self.to_name(name_l)),
-      attributes: alloc_slice_from_vec(self.arena, attributes_p),
+      attributes: self.parse_arena.alloc_slice_from_vec(attributes_p),
       generic_parameters: maybe_identifying_runes,
       template_rules: maybe_rules_p,
       params: Some(params_p),
@@ -1368,11 +1363,11 @@ where
         let FunctionBodyL { body: block_l } = body_l;
         let statements_p =
           expression_parser.parse_block(&block_l, templex_parser, pattern_parser)?;
-        Some(&*self.arena.alloc(BlockPE {
+        Some(&*self.parse_arena.alloc(BlockPE {
           range: block_l.range,
           maybe_pure: None,
           maybe_default_region: maybe_default_region,
-          inner: &*self.arena.alloc(statements_p),
+          inner: &*self.parse_arena.alloc(statements_p),
         }))
       }
       None => None,
@@ -1630,7 +1625,6 @@ pub struct ParserCompilation<'p, 'ctx> {
   keywords: &'ctx Keywords<'p>,
   packages_to_build: Vec<&'p PackageCoordinate<'p>>,
   package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-  arena: &'p Bump,
   code_map_cache: Option<FileCoordinateMap<'p, String>>,
   vpst_map_cache: Option<FileCoordinateMap<'p, String>>,
   parseds_cache: Option<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>>,
@@ -1657,7 +1651,6 @@ where
     keywords: &'ctx Keywords<'p>,
     packages_to_build: Vec<&'p PackageCoordinate<'p>>,
     package_to_contents_resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-    arena: &'p Bump,
   ) -> Self {
     ParserCompilation {
       opts,
@@ -1665,7 +1658,6 @@ where
       keywords,
       packages_to_build,
       package_to_contents_resolver,
-      arena,
       code_map_cache: None,
       vpst_map_cache: None,
       parseds_cache: None,
@@ -1730,7 +1722,7 @@ where
 
     // From Parser.scala lines 751-770: Process .vale files through lex/parse flow
     use crate::parsing::parse_and_explore;
-    let parser = Parser::new(self.parse_arena, self.keywords, self.arena);
+    let parser = Parser::new(self.parse_arena, self.keywords);
     parse_and_explore::parse_and_explore(
             self.parse_arena,
             self.keywords,
@@ -1742,8 +1734,8 @@ where
             |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
                 // From Parser.scala lines 756-766
                 found_code_map.put(file_coord, code.to_string());
-                let comments_slice = alloc_slice_copy(self.arena, comment_ranges);
-                let denizens_slice = alloc_slice_from_vec(self.arena, denizens);
+                let comments_slice = self.parse_arena.alloc_slice_copy(comment_ranges);
+                let denizens_slice = self.parse_arena.alloc_slice_from_vec(denizens);
                 let file = FileP {
                     file_coord: file_coord,
                     comments_ranges: comments_slice,
@@ -1757,7 +1749,7 @@ where
                     use crate::von::printer::VonPrinter;
 
                     let json = VonPrinter::new().print(&ParserVonifier::vonify_file(&file));
-                    let loaded_file = parsed_loader::load(self.parse_arena, self.arena, &json).unwrap_or_else(|e| {
+                    let loaded_file = parsed_loader::load(self.parse_arena, &json).unwrap_or_else(|e| {
                         panic!(
                             "Sanity check failed to load generated VPST for {}: {:?}",
                             file_coord.filepath, e

@@ -97,7 +97,6 @@ impl<'a> IFrontendInput<'a> {
     val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
     override def packageCoord(interner: Interner): PackageCoordinate = packageCoordinate
   }
-Guardian: disable: NECX
 */
 // From PassManager.scala lines 52-68: Options
 pub struct Options<'a> {
@@ -699,6 +698,7 @@ where
   // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
   // and the scout pass gets its own arena.
   // V: should we reference some docs here about how our arenas work
+  // VA: (documentation task — see docs/background/arenas.md and docs/architecture/arenas.md)
   let scout_bump = bumpalo::Bump::new();
   let scout_arena = ScoutArena::new(&scout_bump);
   let scout_keywords = Keywords::new_for_scout(&scout_arena);
@@ -711,7 +711,6 @@ where
     packages_to_build,
     &resolver,
     options,
-    parse_arena.bump(),
   );
 
   // From PassManager.scala line 255

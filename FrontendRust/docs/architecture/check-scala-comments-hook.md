@@ -35,5 +35,3 @@ Uses a char-based state machine (not regex) to correctly handle multi-byte UTF-8
 - **0**: File not in map, or parity check passed
 - **2**: Parity check failed (diff printed to stderr)
 - **panic**: Nested block comment, missing file, missing env var, parse failure
-
-// V: lets symlink this from the hook's rust directory

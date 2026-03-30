@@ -158,6 +158,16 @@ Each directory can have a `CLAUDE.md` that Guardian keeps up to date:
 - **Background docs (#1):** Auto-imported from current directory and all ancestors. A file in `src/postparsing/` sees project-wide background + postparsing-specific background.
 - **Shield lists (#4):** Auto-updated by scanning for X-suffix initialisms in the directory's `docs/shields/`.
 
+## Cross-References Between Categories
+
+Docs link to more specific categories, forming a discovery chain:
+
+- **Background** → links to relevant **Usage** docs
+- **Usage** → links to relevant **Arcana** and **Shield** docs
+- **Architecture** → links to relevant **Reasoning** and **Skill** docs
+
+Each link is a relative markdown link in a `## See also` section at the bottom of the doc. The good-doc skill maintains these when creating or updating docs.
+
 ## What Does NOT Get a Document
 
 - **Inventories/catalogs** of structs, functions, or types. These are derivable from code and go stale. If needed during migration, they belong in #5.

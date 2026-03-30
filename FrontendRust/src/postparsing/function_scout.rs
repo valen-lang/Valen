@@ -39,7 +39,6 @@ use crate::postparsing::rules::rules::{
 };
 use crate::postparsing::variable_uses::{VariableDeclarationS, VariableDeclarations, VariableUses};
 use crate::utils::range::RangeS;
-use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::FileCoordinate;
 use std::collections::HashMap;
 use crate::utils::arena_index_map::ArenaIndexMap;
@@ -86,7 +85,6 @@ pub enum IFunctionParent<'s>
 
 /*
 sealed trait IFunctionParent
-Guardian: disable: NECX
 */
 /*
 case class FunctionNoParent() extends IFunctionParent
@@ -787,7 +785,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       &rules_array,
     )?;
     rune_to_predicted_type.retain(|_, tyype| !matches!(tyype, ITemplataType::RegionTemplataType(_)));
-    let rules_array: &'s [IRulexSR<'s>] = alloc_slice_from_vec(self.scout_arena.arena(), rules_array);
+    let rules_array: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(rules_array);
     self.check_identifiability(
       range_s,
       &generic_params
@@ -813,11 +811,11 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         FunctionS::new(
           Self::eval_range(file_coordinate, function.range),
           function_name_ref,
-          alloc_slice_from_vec(self.scout_arena.arena(), func_attrs_s),
-          alloc_slice_from_vec_of_refs(self.scout_arena.arena(), generic_params),
+          self.scout_arena.alloc_slice_from_vec(func_attrs_s),
+          self.scout_arena.alloc_slice_from_vec(generic_params),
           rune_to_predicted_type,
           tyype,
-          alloc_slice_from_vec(self.scout_arena.arena(), total_params_s),
+          self.scout_arena.alloc_slice_from_vec(total_params_s),
           maybe_ret_coord_rune,
           rules_array,
           body_s,
@@ -1616,7 +1614,7 @@ fn create_magic_parameters(
               exprs.into_iter().next().unwrap()
             } else {
               &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-                exprs: alloc_slice_from_vec(self.scout_arena.arena(), exprs),
+                exprs: self.scout_arena.alloc_slice_from_vec(exprs),
               }))
             }
           }
@@ -1670,10 +1668,14 @@ fn create_magic_parameters(
     combined_locals.extend(magic_param_locals);
     let block1 = &*self.scout_arena.alloc(BlockSE {
       range: block1.range.clone(),
-      locals: alloc_slice_from_vec(self.scout_arena.arena(), combined_locals),
+      locals: self.scout_arena.alloc_slice_from_vec(combined_locals),
       expr: block1.expr,
     });
     // V: tell me about the above change?
+    // VA: This is a faithful translation of Scala's `BlockSE(bodyRangeS, block1.locals ++ magicParamLocals, block1.expr)`.
+    // VA: It re-allocates BlockSE with combined locals (original + magic params) into the arena. Not novel logic.
+    // VA: One minor divergence: Rust uses block1.range (already computed) while Scala uses bodyRangeS
+    // VA: (a fresh evalRange(body0.range)). They likely resolve to the same value but the source differs.
     let all_uses = self_uses.then_merge(&child_uses);
     let uses_of_parent_variables = all_uses
       .uses
@@ -1693,7 +1695,7 @@ fn create_magic_parameters(
       .collect();
     let body_s = &*self.scout_arena.alloc(BodySE {
       range: PostParser::eval_range(function_body_env.file, body0.range),
-      closured_names: alloc_slice_from_vec(self.scout_arena.arena(), closured_names),
+      closured_names: self.scout_arena.alloc_slice_from_vec(closured_names),
       block: block1,
     });
     Ok((body_s, VariableUses { uses: uses_of_parent_variables }, magic_param_names))

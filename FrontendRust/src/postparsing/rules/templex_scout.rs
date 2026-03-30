@@ -492,7 +492,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), arg_runes),
+          args: scout_arena.alloc_slice_from_vec(arg_runes),
         }));
         result_rune_s
       }
@@ -546,7 +546,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
             translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
           }).collect();
         let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
-        rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), params_s) }));
+        rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: scout_arena.alloc_slice_from_vec(params_s) }));
 
         let return_rune_s = translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
 
@@ -561,7 +561,6 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
 
         result_rune_s
 
-        // V: is the above a faithful translation of scala below?
       }
 /*
       case FuncPT(range, NameP(nameRange, name), paramsRangeL, paramsP, returnTypeP) => {
@@ -674,7 +673,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s]),
+          args: scout_arena.alloc_slice_from_vec(vec![size_rune_s, mutability_rune_s, variability_rune_s, element_rune_s]),
         }));
         result_rune_s
       }
@@ -744,7 +743,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), vec![mutability_rune_s, element_rune_s]),
+          args: scout_arena.alloc_slice_from_vec(vec![mutability_rune_s, element_rune_s]),
         }));
         result_rune_s
       }
@@ -805,7 +804,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           range: range_s,
           result_rune: result_rune_s.clone(),
           template_rune: template_rune_s,
-          args: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), element_runes),
+          args: scout_arena.alloc_slice_from_vec(element_runes),
         }));
         result_rune_s
       }

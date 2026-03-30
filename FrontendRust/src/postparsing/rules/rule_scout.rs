@@ -210,10 +210,10 @@ fn translate_rulex<'s, 'p>(
         builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
           range: PostParser::eval_range(file, *range),
           result_rune: result_rune.clone(),
-          members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(),arg_runes),
+          members: scout_arena.alloc_slice_from_vec(arg_runes),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})) })));
-        // V: closer to scala or further?
+
         result_rune
       } else if name.str() == keywords.any {
         let literals: Vec<ILiteralSL> = args
@@ -246,7 +246,7 @@ fn translate_rulex<'s, 'p>(
         builder.push(IRulexSR::OneOf(OneOfSR {
           range: PostParser::eval_range(file, *range),
           rune: result_rune.clone(),
-          literals: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(),literals),
+          literals: scout_arena.alloc_slice_from_vec(literals),
         }));
         rune_to_explicit_type.push((result_rune.rune.clone(), explicit_type));
         result_rune
@@ -322,7 +322,7 @@ fn translate_rulex<'s, 'p>(
             params_rune,
             return_rune,
           }));
-          // V: closer to scala or further?
+  
         }
         _ => panic!("POSTPARSER_COMPONENTS_INVALID_TYPE_FOR_COMPONENTS_RULE"),
       }

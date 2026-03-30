@@ -4,8 +4,6 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
-use crate::utils::arena_utils::alloc_slice_from_vec;
-use bumpalo::Bump;
 
 /*
 package dev.vale.parsing
@@ -21,27 +19,28 @@ import scala.collection.mutable
 type ParseResult<T> = Result<T, ParseError>;
 
 pub struct PatternParser<'p, 'ctx> {
-  #[allow(dead_code)]
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
-  arena: &'p Bump,
 }
 // V: why is this cloneable?/
+// VA: It isn't — PatternParser has no derive macros at all and is never cloned. Question is moot.
 // V: should this be folded into the main Parser struct?
+// VA: It could be — its only fields (parse_arena, keywords) duplicate what Parser already holds.
+// VA: It exists as a separate struct for method grouping, matching Scala's separate class. Parser
+// VA: holds it as a field and creates it in Parser::new(). Keeping it separate is faithful to Scala's
+// VA: structure; folding it in would reduce indirection but diverge from the Scala class layout.
 /*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
-Guardian: disable: NECX
 */
 
 impl<'p, 'ctx> PatternParser<'p, 'ctx>
 where
   'p: 'ctx,
 {
-  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>, arena: &'p Bump) -> Self {
+  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     PatternParser {
       parse_arena,
       keywords,
-      arena,
     }
   }
 
@@ -385,7 +384,7 @@ where
 
         Some(DestructureP {
           range: destructure_range,
-          patterns: alloc_slice_from_vec(self.arena, patterns),
+          patterns: self.parse_arena.alloc_slice_from_vec(patterns),
         })
       }
       Some(other) => return Err(ParseError::BadThingAfterTypeInPattern(other.range().begin())),

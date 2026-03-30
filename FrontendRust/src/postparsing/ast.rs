@@ -38,7 +38,7 @@ trait IExpressionSE {
   def range: RangeS
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ProgramS<'s> {
   pub structs: &'s [&'s StructS<'s>],
   pub interfaces: &'s [&'s InterfaceS<'s>],
@@ -56,10 +56,10 @@ case class ProgramS(
     exports: Vector[ExportAsS],
     imports: Vector[ImportS]) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-Guardian: disable: NECX
 */
 // V: lets make sure equals and hashCode are mentioned in the shields as exceptions.
 // V: lets combine the various "must match scala" shields
+// VA: (these are process/shield-editing tasks, not code questions — not investigated here)
 
 impl<'s> ProgramS<'s> {
   pub fn lookup_function(&'s self, name: &str) -> &'s FunctionS<'s> {
@@ -126,7 +126,7 @@ impl<'s> ProgramS<'s> {
   */
 }
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ICitizenAttributeS<'s> {
   Extern(ExternS<'s>),
   Sealed(SealedS),
@@ -136,11 +136,10 @@ pub enum ICitizenAttributeS<'s> {
 }
 /*
 sealed trait ICitizenAttributeS
-Guardian: disable: NECX
 */
 
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IFunctionAttributeS<'s> {
   Extern(ExternS<'s>),
   Pure(PureS),
@@ -151,10 +150,9 @@ pub enum IFunctionAttributeS<'s> {
 }
 /*
 sealed trait IFunctionAttributeS
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternS<'s> {
   pub package_coord: &'s PackageCoordinate<'s>,
 }
@@ -162,31 +160,27 @@ pub struct ExternS<'s> {
 case class ExternS(packageCoord: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PureS;
 /*
 case object PureS extends IFunctionAttributeS
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AdditiveS;
 /*
 case object AdditiveS extends IFunctionAttributeS
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SealedS;
 /*
 case object SealedS extends ICitizenAttributeS
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuiltinS<'s> {
   // AFTERM: can we give everything a lifetime into an arena so we can
   // all have references instead of using Arc everywhere?
@@ -196,10 +190,9 @@ pub struct BuiltinS<'s> {
 case class BuiltinS(generatorName: StrI) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MacroCallS<'s> {
   pub range: RangeS<'s>,
   pub include: IMacroInclusionP,
@@ -209,10 +202,9 @@ pub struct MacroCallS<'s> {
 case class MacroCallS(range: RangeS, include: IMacroInclusionP, macroName: StrI) extends ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExportS<'s> {
   pub package_coordinate: &'s PackageCoordinate<'s>,
 }
@@ -220,14 +212,12 @@ pub struct ExportS<'s> {
 case class ExportS(packageCoordinate: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
-Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UserFunctionS;
 /*
 case object UserFunctionS extends IFunctionAttributeS // Whether it was written by a human. Mostly for tests right now.
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -375,7 +365,7 @@ impl<'s> StructS<'s> {
 //  vassert(isTemplate == identifyingRunes.nonEmpty)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IStructMemberS<'s> {
   NormalStructMember(NormalStructMemberS<'s>),
   VariadicStructMember(VariadicStructMemberS<'s>),
@@ -414,9 +404,8 @@ sealed trait IStructMemberS {
   def variability: VariabilityP
   def typeRune: RuneUsage
 }
-Guardian: disable: NECX
   */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct NormalStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub name: StrI<'s>,
@@ -432,9 +421,8 @@ case class NormalStructMemberS(
     typeRune: RuneUsage) extends IStructMemberS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
   */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariadicStructMemberS<'s> {
   pub range: RangeS<'s>,
   pub variability: VariabilityP,
@@ -448,7 +436,6 @@ case class VariadicStructMemberS(
   typeRune: RuneUsage) extends IStructMemberS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
 pub struct InterfaceS<'s> {
@@ -682,7 +669,7 @@ case class ParameterS(
   vassert(pattern.coordRune.nonEmpty)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct AbstractSP<'s> {
   pub range: RangeS<'s>,
   pub is_internal_method: bool,
@@ -695,9 +682,8 @@ case class AbstractSP(
   // False if this is a free function somewhere else
   isInternalMethod: Boolean
 )
-Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct SimpleParameterS<'s> {
   pub origin: Option<AtomSP<'s>>,
   pub name: StrI<'s>,
@@ -712,7 +698,6 @@ case class SimpleParameterS(
     tyype: IRulexSR) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -725,21 +710,18 @@ pub enum IBodyS<'s> {
 
 /*
 sealed trait IBodyS
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternBodyS {}
 /*
 case object ExternBodyS extends IBodyS
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractBodyS {}
 /*
 case object AbstractBodyS extends IBodyS
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -750,7 +732,6 @@ pub struct GeneratedBodyS<'s> {
 case class GeneratedBodyS(generatorId: StrI) extends IBodyS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -761,7 +742,6 @@ pub struct CodeBodyS<'s> {
 case class CodeBodyS(body: BodySE) extends IBodyS {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
@@ -777,9 +757,8 @@ case object ReadWriteRegionS extends IRegionMutabilityS
 case object ReadOnlyRegionS extends IRegionMutabilityS
 case object ImmutableRegionS extends IRegionMutabilityS
 case object AdditiveRegionS extends IRegionMutabilityS
-Guardian: disable: NECX
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
   CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
@@ -787,7 +766,6 @@ pub enum IGenericParameterTypeS<'s> {
 }
 /*
 object IGenericParameterTypeS {
-Guardian: disable: NECX
 */
 
 impl IGenericParameterTypeS<'_> {
@@ -827,7 +805,7 @@ Guardian: disable-all
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct RegionGenericParameterTypeS {
   pub mutability: IRegionMutabilityS,
 }
@@ -835,7 +813,6 @@ pub struct RegionGenericParameterTypeS {
 case class RegionGenericParameterTypeS(mutability: IRegionMutabilityS) extends IGenericParameterTypeS {
   def tyype: ITemplataType = RegionTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl RegionGenericParameterTypeS {
@@ -846,7 +823,7 @@ impl RegionGenericParameterTypeS {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct CoordGenericParameterTypeS<'s> {
   pub coord_region: Option<RuneUsage<'s>>,
   pub kind_mutable: bool,
@@ -862,7 +839,6 @@ case class CoordGenericParameterTypeS(
 
   def tyype: ITemplataType = CoordTemplataType()
 }
-Guardian: disable: NECX
 */
 
 impl CoordGenericParameterTypeS<'_> {
@@ -874,7 +850,7 @@ impl CoordGenericParameterTypeS<'_> {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct OtherGenericParameterTypeS {
   pub tyype: ITemplataType,
 }
@@ -894,7 +870,6 @@ case class OtherGenericParameterTypeS(tyype: ITemplataType) extends IGenericPara
     case _ =>
   }
 }
-Guardian: disable: NECX
 */
 
 #[derive(Debug, PartialEq)]
@@ -919,7 +894,7 @@ case class GenericParameterS(
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct GenericParameterDefaultS<'s> {
   pub result_rune: IRuneS<'s>,
   pub rules: Vec<&'s IRulexSR<'s>>,
@@ -930,7 +905,6 @@ case class GenericParameterDefaultS(
   // and other things to make it its own little world.
   resultRune: IRuneS,
   rules: Vector[IRulexSR])
-Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
 pub struct FunctionS<'s> {
@@ -1065,7 +1039,7 @@ Guardian: disable-all
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct LocationInDenizenBuilder {
   path: Vec<i32>,
   consumed: bool,
@@ -1082,7 +1056,6 @@ class LocationInDenizenBuilder(path: Vector[Int]) {
 
   // Note how this is hashing `path`, not `this` like usual.
   val hash = runtime.ScalaRunTime._hashCode(path.toList); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
-Guardian: disable: NECX
 */
 
 impl LocationInDenizenBuilder {
@@ -1113,6 +1086,22 @@ impl LocationInDenizenBuilder {
 
   // Per @DSAUIMZ, this is for NON-interned uses only (expression AST nodes).
   pub fn consume_in<'x>(&mut self, arena: &'x bumpalo::Bump) -> LocationInDenizen<'x> {
+    assert!(
+      !self.consumed,
+      "Location in denizen was already used for something, add a .child() somewhere."
+    );
+    self.consumed = true;
+    LocationInDenizen {
+      path: arena.alloc_slice_copy(&self.path),
+    }
+  }
+
+  // Per @DSAUIMZ, this is for NON-interned uses only (expression AST nodes).
+  // Takes a ScoutArena instead of raw Bump to avoid exposing the allocator.
+  // V: this feels weird. theres nothing guaranteeing that this LocationInDenizen will actually land anywhere,
+  // in which case we're just leaking those allocations. i think we need a LocationInDenizenVal.
+  // maybe LocationInDenizenVal can even be a stack-based linked list.
+  pub fn consume_in_arena<'x>(&mut self, arena: &crate::scout_arena::ScoutArena<'x>) -> LocationInDenizen<'x> {
     assert!(
       !self.consumed,
       "Location in denizen was already used for something, add a .child() somewhere."
@@ -1158,7 +1147,7 @@ impl LocationInDenizenBuilder {
 ///
 /// The path is an arena-allocated slice rather than a Vec so that the entire
 /// struct can live in an arena without heap pointers.
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocationInDenizen<'x> {
   pub path: &'x [i32],
 }
@@ -1172,13 +1161,12 @@ case class LocationInDenizen(path: Vector[Int]) {
       case _ => false
     }
   }
-Guardian: disable: NECX
 */
 
 /// Borrowed view of a LocationInDenizen path, for use as an intern lookup key.
 /// Per @DSAUIMZ, fields are private to prevent pre-allocation.
 /// Only constructible via LocationInDenizenBuilder::borrow_val().
-#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocationInDenizenVal<'tmp> {
   path: &'tmp [i32],
 }

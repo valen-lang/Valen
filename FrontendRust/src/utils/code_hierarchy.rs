@@ -65,8 +65,6 @@ case class FileCoordinate(packageCoordinate: PackageCoordinate, filepath: String
 }
 
 object FileCoordinate {// extends Ordering[FileCoordinate] {
-
-Guardian: disable: NECX
 */
   pub fn is_internal(&self) -> bool {
     self.package_coord.is_internal()
@@ -118,8 +116,6 @@ case class PackageCoordinate(module: StrI, packages: Vector[StrI]) extends IInte
   def isTest = module.str == "test" && packages == Vector()
 
 //  def compareTo(that: PackageCoordinate) = PackageCoordinate.compare(this, that)
-
-Guardian: disable: NECX
 */
   pub fn is_internal(&self) -> bool {
     self.module == ""
@@ -141,6 +137,12 @@ Guardian: disable: NECX
       packages: InternedSlice::new(arena_packages),
     })
     // V: do we have a coherent story for when something is inline or in the arena?
+    // VA: Not yet. This parent() method takes a raw &Bump and calls alloc_slice_copy directly,
+    // VA: bypassing interning. Every other PackageCoordinate constructor goes through
+    // VA: parse_arena/scout_arena intern_package_coordinate() which deduplicates. If called, this
+    // VA: would produce non-interned coordinates that break pointer-identity equality. Rule: semantic
+    // VA: types (PackageCoordinate, FileCoordinate) should always go through an arena intern method;
+    // VA: raw bump is only for internal data structures (ArenaIndexMap). This method has zero callers.
   }
 /*
   def parent(interner: Interner): Option[PackageCoordinate] = {
@@ -314,8 +316,6 @@ class FileCoordinateMap[Contents](
     mutable.HashMap[FileCoordinate, Contents]()
 ) extends IPackageResolver[Map[String, Contents]] {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-
-Guardian: disable: NECX
 */
   pub fn new() -> Self {
     FileCoordinateMap {
@@ -647,8 +647,6 @@ case class PackageCoordinateMap[Contents](
     mutable.HashMap[PackageCoordinate, Contents]()) {
 
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-
-Guardian: disable: NECX
 */
   pub fn new() -> Self {
     PackageCoordinateMap {

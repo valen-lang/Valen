@@ -80,20 +80,27 @@ impl<'s> ScoutArena<'s> {
     }
   }
 
-  pub fn bump(&self) -> &'s Bump {
-    self.bump
-  }
-
-  pub fn arena(&self) -> &'s Bump {
-    self.bump
-  }
-
   pub fn alloc<T>(&self, val: T) -> &'s mut T {
     self.bump.alloc(val)
   }
 
   pub fn alloc_slice_copy<T: Copy>(&self, src: &[T]) -> &'s [T] {
     self.bump.alloc_slice_copy(src)
+  }
+
+  /// Allocate a slice from a Vec into the arena.
+  pub fn alloc_slice_from_vec<T>(&self, vec: Vec<T>) -> &'s [T] {
+    self.bump.alloc_slice_fill_iter(vec.into_iter())
+  }
+
+  /// Create an empty ArenaIndexMap allocated in this arena.
+  pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> crate::utils::arena_index_map::ArenaIndexMap<'s, K, V> {
+    crate::utils::arena_index_map::ArenaIndexMap::new_in(self.bump)
+  }
+
+  /// Create an ArenaIndexMap from an iterator, allocated in this arena.
+  pub fn alloc_index_map_from_iter<K: std::hash::Hash + Eq + Clone, V, I: IntoIterator<Item = (K, V)>>(&self, iter: I) -> crate::utils::arena_index_map::ArenaIndexMap<'s, K, V> {
+    crate::utils::arena_index_map::ArenaIndexMap::from_iter_in(iter, self.bump)
   }
 
   // --- String interning ---

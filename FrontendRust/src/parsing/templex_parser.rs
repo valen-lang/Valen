@@ -9,8 +9,6 @@ use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
 use crate::parsing::expression_parser::ScrambleIterator;
-use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
-use bumpalo::Bump;
 /*
 package dev.vale.parsing.templex
 
@@ -30,25 +28,21 @@ type ParseResult<T> = Result<T, ParseError>;
 /// TemplexParser - parses type expressions
 /// Mirrors Scala's TemplexParser class (line 13 in TemplexParser.scala)
 pub struct TemplexParser<'p, 'ctx> {
-  #[allow(dead_code)]
   parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
-  arena: &'p Bump,
 }
 /*
 class TemplexParser(interner: Interner, keywords: Keywords) {
-Guardian: disable: NECX
 */
 
 impl<'p, 'ctx> TemplexParser<'p, 'ctx>
 where
   'p: 'ctx,
 {
-  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>, arena: &'p Bump) -> Self {
+  pub fn new(parse_arena: &'ctx crate::parse_arena::ParseArena<'p>, keywords: &'ctx Keywords<'p>) -> Self {
     TemplexParser {
       parse_arena,
       keywords,
-      arena,
     }
   }
 
@@ -101,11 +95,11 @@ where
     ) {
       (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
       (false, Some(templex)) => templex,
-      (true, None) => &*self.arena.alloc(ITemplexPT::Mutability(MutabilityPT(
+      (true, None) => &*self.parse_arena.alloc(ITemplexPT::Mutability(MutabilityPT(
         RangeL(template_args_begin, template_args_end),
         MutabilityP::Immutable,
       ))),
-      (false, None) => &*self.arena.alloc(ITemplexPT::Mutability(MutabilityPT(
+      (false, None) => &*self.parse_arena.alloc(ITemplexPT::Mutability(MutabilityPT(
         RangeL(template_args_begin, template_args_end),
         MutabilityP::Mutable,
       ))),
@@ -115,7 +109,7 @@ where
         .as_ref()
         .and_then(|v| v.get(1).copied())
         .unwrap_or_else(|| {
-          &*self.arena.alloc(ITemplexPT::Variability(VariabilityPT(
+          &*self.parse_arena.alloc(ITemplexPT::Variability(VariabilityPT(
             RangeL(template_args_begin, template_args_end),
             VariabilityP::Final,
           )))
@@ -127,14 +121,14 @@ where
       None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
         mutability,
-        element: &*self.arena.alloc(element_type),
+        element: &*self.parse_arena.alloc(element_type),
       }),
       Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
         mutability,
         variability,
-        size: &*self.arena.alloc(size_templex),
-        element: &*self.arena.alloc(element_type),
+        size: &*self.parse_arena.alloc(size_templex),
+        element: &*self.parse_arena.alloc(element_type),
       }),
     };
 
@@ -467,7 +461,7 @@ where
       name,
       params_range: RangeL(args_begin, args_end),
       parameters: args,
-      return_type: &*self.arena.alloc(return_type),
+      return_type: &*self.parse_arena.alloc(return_type),
     });
 
     Ok(Some(result))
@@ -565,9 +559,9 @@ where
 
     Ok(Some(ITemplexPT::Interpreted(InterpretedPT {
       range: RangeL(begin, iter.get_prev_end_pos()),
-      maybe_ownership: maybe_ownership.map(|x| &*self.arena.alloc(x)),
-      maybe_region: maybe_region.map(|x| &*self.arena.alloc(x)),
-      inner: &*self.arena.alloc(inner),
+      maybe_ownership: maybe_ownership.map(|x| &*self.parse_arena.alloc(x)),
+      maybe_region: maybe_region.map(|x| &*self.parse_arena.alloc(x)),
+      inner: &*self.parse_arena.alloc(inner),
     })))
   }
   /*
@@ -912,10 +906,10 @@ where
 
     for element_iter in element_iters {
       let mut elem_iter = element_iter.clone();
-      elements_p.push(&*self.arena.alloc(self.parse_templex(&mut elem_iter)?));
+      elements_p.push(&*self.parse_arena.alloc(self.parse_templex(&mut elem_iter)?));
     }
 
-    Ok(Some(alloc_slice_from_vec_of_refs(self.arena, elements_p)))
+    Ok(Some(self.parse_arena.alloc_slice_from_vec(elements_p)))
   }
   /*
     def parseTemplateCallArgs(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
@@ -958,12 +952,12 @@ where
 
         for iter_split in iter_splits {
           let mut iter = iter_split.clone();
-          elements.push(&*self.arena.alloc(self.parse_templex(&mut iter)?));
+          elements.push(&*self.parse_arena.alloc(self.parse_templex(&mut iter)?));
         }
 
         Ok(Some(ITemplexPT::Tuple(TuplePT {
           range,
-          elements: alloc_slice_from_vec_of_refs(self.arena, elements),
+          elements: self.parse_arena.alloc_slice_from_vec(elements),
         })))
       }
       _ => Ok(None),
@@ -1006,7 +1000,7 @@ where
       Some(args) => {
         return Ok(ITemplexPT::Call(CallPT {
           range: RangeL(begin, iter.get_prev_end_pos()),
-          template: &*self.arena.alloc(atom),
+          template: &*self.parse_arena.alloc(atom),
           args,
         }));
       }
@@ -1228,7 +1222,7 @@ where
         Ok(Some(IRulexPR::BuiltinCall(BuiltinCallPR {
           range,
           name: NameP(name_range, name),
-          args: alloc_slice_from_vec(self.arena, args_pr),
+          args: self.parse_arena.alloc_slice_from_vec(args_pr),
         })))
       }
       _ => Ok(None),
@@ -1313,7 +1307,7 @@ where
     Ok(Some(IRulexPR::Components(ComponentsPR {
       range: RangeL(begin, end),
       container: rune_type,
-      components: alloc_slice_from_vec(self.arena, components_p),
+      components: self.parse_arena.alloc_slice_from_vec(components_p),
     })))
   }
   /*
@@ -1426,8 +1420,8 @@ where
         let right = self.parse_rule_atom(iter)?;
         Ok(IRulexPR::Equals(EqualsPR {
           range: RangeL(left.range().begin(), right.range().end()),
-          left: &*self.arena.alloc(left),
-          right: &*self.arena.alloc(right),
+          left: &*self.parse_arena.alloc(left),
+          right: &*self.parse_arena.alloc(right),
         }))
       }
     }

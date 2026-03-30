@@ -34,7 +34,7 @@ fn simple_program() {
   let original_file = compile_file(&parse_arena, &keywords, "exported func main() int { return 42; }").unwrap();
   let von = ParserVonifier::vonify_file(&original_file);
   let json = VonPrinter::new().print(&von);
-  let loaded_file = parsed_loader::load(&parse_arena, parse_arena.bump(), &json).unwrap();
+  let loaded_file = parsed_loader::load(&parse_arena,&json).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }
@@ -82,7 +82,7 @@ fn strings_with_special_characters() {
   let generated_json_str = VonPrinter::new().print(&von);
   let generated_bytes = generated_json_str.as_bytes();
   let loaded_json_str = String::from_utf8(generated_bytes.to_vec()).unwrap();
-  let loaded_file = parsed_loader::load(&parse_arena, parse_arena.bump(), &loaded_json_str).unwrap();
+  let loaded_file = parsed_loader::load(&parse_arena,&loaded_json_str).unwrap();
   // This is because we don't want to enable .equals, see EHCFBD.
   assert_eq!(format!("{:?}", original_file), format!("{:?}", loaded_file));
 }

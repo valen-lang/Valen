@@ -164,7 +164,6 @@ pub enum IVariableUseCertainty {
 sealed trait IVariableUseCertainty
 case object Used extends IVariableUseCertainty
 case object NotUsed extends IVariableUseCertainty
-Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalS<'s> {
@@ -188,7 +187,6 @@ case class LocalS(
     childMutated: IVariableUseCertainty) {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
-Guardian: disable: NECX
 */
 #[derive(Debug, PartialEq)]
 pub struct BodySE<'s> {

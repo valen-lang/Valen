@@ -8,7 +8,6 @@ use crate::postparsing::expressions::{
 };
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser, StackFrame};
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
-use crate::utils::arena_utils::alloc_slice_from_vec;
 use crate::lexing::ast::RangeL;
 /*
 package dev.vale.postparsing
@@ -132,7 +131,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
           target_ownership: OwnershipP::Borrow,
           inner: iterable_lookup_expr_p,
         });
-        let begin_args: &'p [&'p IExpressionPE<'p>] = alloc_slice_from_vec(pa.bump(), vec![&*pa.alloc(iterable_borrow_expr_p)]);
+        let begin_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iterable_borrow_expr_p)]);
         let begin_call_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::FunctionCall(FunctionCallPE {
           range: in_keyword_range,
           operator_range: in_keyword_range,
@@ -329,7 +328,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
         target_ownership: OwnershipP::Borrow,
         inner: iterator_lookup_expr_p,
       });
-      let next_args: &'p [&'p IExpressionPE<'p>] = alloc_slice_from_vec(pa.bump(), vec![&*pa.alloc(iterator_borrow_expr_p)]);
+      let next_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iterator_borrow_expr_p)]);
       let next_call_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::FunctionCall(FunctionCallPE {
         range: in_keyword_range,
         operator_range: in_keyword_range,
@@ -362,14 +361,14 @@ fn scout_each_body<'s, 'p, 'ctx>(
         target_ownership: OwnershipP::Borrow,
         inner: iteration_option_lookup_expr_p,
       });
-      let is_empty_args: &'p [&'p IExpressionPE<'p>] = alloc_slice_from_vec(pa.bump(), vec![&*pa.alloc(iteration_option_borrow_expr_p)]);
+      let is_empty_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iteration_option_borrow_expr_p)]);
       let is_empty_call_expr_p = IExpressionPE::FunctionCall(FunctionCallPE {
         range: in_keyword_range,
         operator_range: in_keyword_range,
         callable_expr: is_empty_lookup_expr_p,
         arg_exprs: is_empty_args,
       });
-      let condition_inners: &'p [&'p IExpressionPE<'p>] = alloc_slice_from_vec(pa.bump(), vec![&*pa.alloc(let_iteration_option_expr_p), &*pa.alloc(is_empty_call_expr_p)]);
+      let condition_inners: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(let_iteration_option_expr_p), &*pa.alloc(is_empty_call_expr_p)]);
       let condition_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::Consecutor(ConsecutorPE {
         inners: condition_inners,
       }));
@@ -442,7 +441,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
       name: IImpreciseNameP::IterationOptionName(in_keyword_range),
       template_args: None,
     }));
-    let get_args: &'p [&'p IExpressionPE<'p>] = alloc_slice_from_vec(pa.bump(), vec![&*pa.alloc(iteration_option_lookup_expr_p)]);
+    let get_args: &'p [&'p IExpressionPE<'p>] = pa.alloc_slice_from_vec(vec![&*pa.alloc(iteration_option_lookup_expr_p)]);
     let get_call_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::FunctionCall(FunctionCallPE {
       range: in_keyword_range,
       operator_range: in_keyword_range,
