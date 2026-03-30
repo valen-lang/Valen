@@ -98,10 +98,7 @@ where
     Conclusion: Clone + PartialEq,
 {
 /*
-    // MIGALLOW: No equals yet until we know it's really necessary
-  override def equals(obj: Any): Boolean = vcurious();
-  // MIGALLOW: No hashCode yet until we know it's really necessary
-  override def hashCode(): Int = vfail() // is mutable, should never be hashed
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
 */
 // mig: fn deep_clone

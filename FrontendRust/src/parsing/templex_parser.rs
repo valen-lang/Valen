@@ -8,8 +8,8 @@ use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
 use crate::parsing::parse_utils::{parse_region, try_skip_past_equals_while};
-use crate::parsing::scramble_iterator::ScrambleIterator;
-use crate::utils::arena_utils::alloc_slice_from_vec;
+use crate::parsing::expression_parser::ScrambleIterator;
+use crate::utils::arena_utils::{alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use bumpalo::Bump;
 /*
 package dev.vale.parsing.templex
@@ -95,45 +95,44 @@ where
     let maybe_template_args = self.parse_template_call_args(iter)?;
     let template_args_end = iter.get_pos();
 
-    let mutability = match (
+    let mutability: &'p ITemplexPT<'p> = match (
       immutable,
       maybe_template_args.as_ref().and_then(|v| v.get(0)),
     ) {
       (true, Some(_)) => return Err(ParseError::FoundBothImmutableAndMutabilityInArray(begin)),
-      (false, Some(templex)) => templex.clone(),
-      (true, None) => ITemplexPT::Mutability(MutabilityPT(
+      (false, Some(templex)) => templex,
+      (true, None) => &*self.arena.alloc(ITemplexPT::Mutability(MutabilityPT(
         RangeL(template_args_begin, template_args_end),
         MutabilityP::Immutable,
-      )),
-      (false, None) => ITemplexPT::Mutability(MutabilityPT(
+      ))),
+      (false, None) => &*self.arena.alloc(ITemplexPT::Mutability(MutabilityPT(
         RangeL(template_args_begin, template_args_end),
         MutabilityP::Mutable,
-      )),
+      ))),
     };
 
-    let variability = maybe_template_args
-      .as_ref()
-      .and_then(|v| v.get(1))
-      .cloned()
-      .unwrap_or_else(|| {
-        ITemplexPT::Variability(VariabilityPT(
-          RangeL(template_args_begin, template_args_end),
-          VariabilityP::Final,
-        ))
-      });
+    let variability: &'p ITemplexPT<'p> = maybe_template_args
+        .as_ref()
+        .and_then(|v| v.get(1).copied())
+        .unwrap_or_else(|| {
+          &*self.arena.alloc(ITemplexPT::Variability(VariabilityPT(
+            RangeL(template_args_begin, template_args_end),
+            VariabilityP::Final,
+          )))
+        });
 
     let element_type = self.parse_templex(iter)?;
 
     let result = match maybe_size_templex {
       None => ITemplexPT::RuntimeSizedArray(RuntimeSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-        mutability: &*self.arena.alloc(mutability),
+        mutability,
         element: &*self.arena.alloc(element_type),
       }),
       Some(size_templex) => ITemplexPT::StaticSizedArray(StaticSizedArrayPT {
         range: RangeL(begin, iter.get_prev_end_pos()),
-        mutability: &*self.arena.alloc(mutability),
-        variability: &*self.arena.alloc(variability),
+        mutability,
+        variability,
         size: &*self.arena.alloc(size_templex),
         element: &*self.arena.alloc(element_type),
       }),
@@ -464,7 +463,7 @@ where
     let return_type = self.parse_templex(iter)?;
 
     let result = ITemplexPT::Func(FuncPT {
-        range: RangeL(begin, iter.get_prev_end_pos()),
+      range: RangeL(begin, iter.get_prev_end_pos()),
       name,
       params_range: RangeL(args_begin, args_end),
       parameters: args,
@@ -502,107 +501,35 @@ where
       Ok(Some(result))
     }
   */
-
-  /// Parse template call arguments <...>
-  /// Mirrors parseTemplateCallArgs in TemplexParser.scala lines 443-461
-  pub fn parse_template_call_args(
-    &self,
-    iter: &mut ScrambleIterator<'p, '_>,
-  ) -> ParseResult<Option<&'p [ITemplexPT<'p>]>> {
-    let angled = match iter.peek_cloned() {
-      Some(INodeLEEnum::Angled(a)) => a.clone(),
-      Some(_) => return Ok(None),
-      None => return Ok(None),
-    };
-
-    iter.advance();
-
-    let mut elements_p = Vec::new();
-    let angled_contents = angled.contents.clone();
-    let contents_iter = ScrambleIterator::new(&angled_contents);
-    let element_iters = contents_iter.split_on_symbol(',', false);
-
-    for element_iter in element_iters {
-      let mut elem_iter = element_iter.clone();
-      elements_p.push(self.parse_templex(&mut elem_iter)?);
-    }
-
-    Ok(Some(alloc_slice_from_vec(self.arena, elements_p)))
-  }
   /*
-    def parseTemplateCallArgs(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
-      val angled =
-        iter.peek() match {
-          case Some(a @ AngledLE(range, contents)) => a
-          case Some(_) => return Ok(None)
-          case None => return Ok(None)
-        }
-      iter.advance()
-      val elementsP =
-        U.map[ScrambleIterator, ITemplexPT](
-          new ScrambleIterator(angled.contents).splitOnSymbol(',', false),
-          elementIter => {
-            parseTemplex(elementIter) match {
-              case Err(e) => return Err(e)
-              case Ok(x) => x
-            }
-          })
-      Ok(Some(elementsP.toVector))
-    }
+  //  def parseRegioned(iter: ScrambleIterator): Result[Option[ITemplexPT], IParseError] = {
+  //    val begin = iter.getPos()
+  //    if (!iter.trySkipSymbol('\'')) {
+  //      return Ok(None)
+  //    }
+  //
+  //    val name =
+  //      iter.nextWord() match {
+  //        case None => return Err(BadRegionName(iter.getPos()))
+  //        case Some(x) => x
+  //      }
+  //
+  //    if (iter.hasNext) {
+  //      val inner =
+  //        parseTemplexAtomAndCallAndPrefixes(iter) match {
+  //          case Err(e) => return Err(e)
+  //          case Ok(t) => t
+  //        }
+  //      Ok(Some(inner))
+  //    } else {
+  //      val rune =
+  //        RegionRunePT(
+  //          RangeL(begin, iter.getPrevEndPos()),
+  //          NameP(name.range, name.str))
+  //      Ok(Some(rune))
+  //    }
+  //  }
   */
-
-  /// Parse a tuple type
-  /// Mirrors parseTuple in TemplexParser.scala lines 463-481
-  pub fn parse_tuple(
-    &self,
-    outer_iter: &mut ScrambleIterator<'p, '_>,
-  ) -> ParseResult<Option<ITemplexPT<'p>>> {
-    let _begin = outer_iter.get_pos();
-
-    match outer_iter.peek_cloned() {
-      Some(INodeLEEnum::Parend(ParendLE { range, contents })) => {
-        let contents = contents.clone();
-        outer_iter.advance();
-
-        let mut elements = Vec::new();
-        let contents_iter = ScrambleIterator::new(&contents);
-        let iter_splits = contents_iter.split_on_symbol(',', false);
-
-        for iter_split in iter_splits {
-          let mut iter = iter_split.clone();
-          elements.push(self.parse_templex(&mut iter)?);
-        }
-
-        Ok(Some(ITemplexPT::Tuple(TuplePT {
-          range,
-          elements: alloc_slice_from_vec(self.arena, elements),
-        })))
-      }
-      _ => Ok(None),
-    }
-  }
-  /*
-    def parseTuple(outerIter: ScrambleIterator): Result[Option[TuplePT], IParseError] = {
-      val begin = outerIter.getPos()
-      outerIter.peek() match {
-        case Some(ParendLE(range, contents)) => {
-          outerIter.advance()
-          val elements =
-            U.map[ScrambleIterator, ITemplexPT](
-              new ScrambleIterator(contents).splitOnSymbol(',', false),
-              iter => {
-                parseTemplex(iter) match {
-                  case Err(e) => return Err(e)
-                  case Ok(x) => x
-                }
-              })
-          Ok(Some(TuplePT(range, elements.toVector)))
-        }
-        case _ => Ok(None)
-      }
-    }
-  */
-
   /// Parse interpreted type (with ownership/region prefixes)
   /// Mirrors parseInterpreted in TemplexParser.scala lines 273-303
   pub fn parse_interpreted(
@@ -637,7 +564,7 @@ where
     let inner = self.parse_templex_atom_and_call_and_prefixes(iter)?;
 
     Ok(Some(ITemplexPT::Interpreted(InterpretedPT {
-        range: RangeL(begin, iter.get_prev_end_pos()),
+      range: RangeL(begin, iter.get_prev_end_pos()),
       maybe_ownership: maybe_ownership.map(|x| &*self.arena.alloc(x)),
       maybe_region: maybe_region.map(|x| &*self.arena.alloc(x)),
       inner: &*self.arena.alloc(inner),
@@ -964,6 +891,107 @@ where
     }
   */
 
+  /// Parse template call arguments <...>
+  /// Mirrors parseTemplateCallArgs in TemplexParser.scala lines 443-461
+  pub fn parse_template_call_args(
+    &self,
+    iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<&'p [&'p ITemplexPT<'p>]>> {
+    let angled = match iter.peek_cloned() {
+      Some(INodeLEEnum::Angled(a)) => a.clone(),
+      Some(_) => return Ok(None),
+      None => return Ok(None),
+    };
+
+    iter.advance();
+
+    let mut elements_p: Vec<&'p ITemplexPT<'p>> = Vec::new();
+    let angled_contents = angled.contents.clone();
+    let contents_iter = ScrambleIterator::new(&angled_contents);
+    let element_iters = contents_iter.split_on_symbol(',', false);
+
+    for element_iter in element_iters {
+      let mut elem_iter = element_iter.clone();
+      elements_p.push(&*self.arena.alloc(self.parse_templex(&mut elem_iter)?));
+    }
+
+    Ok(Some(alloc_slice_from_vec_of_refs(self.arena, elements_p)))
+  }
+  /*
+    def parseTemplateCallArgs(iter: ScrambleIterator): Result[Option[Vector[ITemplexPT]], IParseError] = {
+      val angled =
+        iter.peek() match {
+          case Some(a @ AngledLE(range, contents)) => a
+          case Some(_) => return Ok(None)
+          case None => return Ok(None)
+        }
+      iter.advance()
+      val elementsP =
+        U.map[ScrambleIterator, ITemplexPT](
+          new ScrambleIterator(angled.contents).splitOnSymbol(',', false),
+          elementIter => {
+            parseTemplex(elementIter) match {
+              case Err(e) => return Err(e)
+              case Ok(x) => x
+            }
+          })
+      Ok(Some(elementsP.toVector))
+    }
+  */
+
+  /// Parse a tuple type
+  /// Mirrors parseTuple in TemplexParser.scala lines 463-481
+  pub fn parse_tuple(
+    &self,
+    outer_iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<ITemplexPT<'p>>> {
+    let _begin = outer_iter.get_pos();
+
+    match outer_iter.peek_cloned() {
+      Some(INodeLEEnum::Parend(ParendLE { range, contents })) => {
+        let contents = contents.clone();
+        outer_iter.advance();
+
+        let mut elements: Vec<&'p ITemplexPT<'p>> = Vec::new();
+        let contents_iter = ScrambleIterator::new(&contents);
+        let iter_splits = contents_iter.split_on_symbol(',', false);
+
+        for iter_split in iter_splits {
+          let mut iter = iter_split.clone();
+          elements.push(&*self.arena.alloc(self.parse_templex(&mut iter)?));
+        }
+
+        Ok(Some(ITemplexPT::Tuple(TuplePT {
+          range,
+          elements: alloc_slice_from_vec_of_refs(self.arena, elements),
+        })))
+      }
+      _ => Ok(None),
+    }
+  }
+  /*
+    def parseTuple(outerIter: ScrambleIterator): Result[Option[TuplePT], IParseError] = {
+      val begin = outerIter.getPos()
+      outerIter.peek() match {
+        case Some(ParendLE(range, contents)) => {
+          outerIter.advance()
+          val elements =
+            U.map[ScrambleIterator, ITemplexPT](
+              new ScrambleIterator(contents).splitOnSymbol(',', false),
+              iter => {
+                parseTemplex(iter) match {
+                  case Err(e) => return Err(e)
+                  case Ok(x) => x
+                }
+              })
+          Ok(Some(TuplePT(range, elements.toVector)))
+        }
+        case _ => Ok(None)
+      }
+    }
+  */
+
+
   /// Parse templex atom and any following call
   /// Mirrors parseTemplexAtomAndCall in TemplexParser.scala lines 483-499
   pub fn parse_templex_atom_and_call(
@@ -977,7 +1005,7 @@ where
     match self.parse_template_call_args(iter)? {
       Some(args) => {
         return Ok(ITemplexPT::Call(CallPT {
-        range: RangeL(begin, iter.get_prev_end_pos()),
+          range: RangeL(begin, iter.get_prev_end_pos()),
           template: &*self.arena.alloc(atom),
           args,
         }));
@@ -1102,18 +1130,18 @@ where
     match original_iter.peek2_cloned() {
       // Don't parse "func moo()void" (lines 550-552)
       (Some(INodeLEEnum::Word(WordLE { str: name_str, .. })), _)
-        if name_str == self.keywords.func =>
-      {
-        Ok(None)
-      }
+      if name_str == self.keywords.func =>
+        {
+          Ok(None)
+        }
       (
         Some(INodeLEEnum::Word(WordLE {
-          range: name_range,
-          str: name_str,
-        })),
+                                 range: name_range,
+                                 str: name_str,
+                               })),
         Some(INodeLEEnum::Word(WordLE {
-          range: type_range, ..
-        })),
+                                 range: type_range, ..
+                               })),
       ) => {
         // Parse the rune name (or underscore for anonymous)
         let maybe_name = if name_str == self.keywords.underscore {
@@ -1176,13 +1204,13 @@ where
       }
       (
         Some(INodeLEEnum::Word(WordLE {
-          range: name_range,
-          str: name,
-        })),
+                                 range: name_range,
+                                 str: name,
+                               })),
         Some(INodeLEEnum::Parend(ParendLE {
-          range: args_range,
-          contents: args_lr,
-        })),
+                                   range: args_range,
+                                   contents: args_lr,
+                                 })),
       ) => {
         let range = RangeL(name_range.begin(), args_range.end());
 
@@ -1254,12 +1282,12 @@ where
     let (begin, end, components_l) = match original_iter.peek2_cloned() {
       (
         Some(INodeLEEnum::Word(WordLE {
-          range: word_range, ..
-        })),
+                                 range: word_range, ..
+                               })),
         Some(INodeLEEnum::Squared(SquaredLE {
-          range: squared_range,
-          contents: components_l,
-        })),
+                                    range: squared_range,
+                                    contents: components_l,
+                                  })),
       ) => (word_range.begin(), squared_range.end(), components_l.clone()),
       _ => return Ok(None),
     };
@@ -1537,91 +1565,6 @@ where
     }
   */
 }
-
-/*
-//  private[parser] def tupleTemplex: Parser[ITemplexPT] = {
-//    (pos <~ "(" <~ optWhite <~ ")") ~ pos ^^ {
-//      case begin ~ end => TuplePT(ast.RangeP(begin, end), Vector.empty)
-//    } |
-//      pos ~ ("(" ~> optWhite ~> repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ "," <~ optWhite <~ ")") ~ pos ^^ {
-//        case begin ~ members ~ end => TuplePT(ast.RangeP(begin, end), members.toVector)
-//      } |
-//      pos ~
-//        ("(" ~> optWhite ~> templex <~ optWhite <~ "," <~ optWhite) ~
-//        (repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ ")") ~
-//        pos ^^ {
-//        case begin ~ first ~ rest ~ end => TuplePT(ast.RangeP(begin, end), (first :: rest).toVector)
-//      }
-//    // Old:
-//    //  pos ~ ("[" ~> optWhite ~> repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ "]") ~ pos ^^ {
-//    //    case begin ~ members ~ end => ManualSequencePT(ast.RangeP(begin, end), members.toVector)
-//    //  }
-//  }
-//
-//  private[parser] def atomTemplex: Parser[ITemplexPT] = {
-//    ("(" ~> optWhite ~> templex <~ optWhite <~ ")") |
-//      staticSizedArrayTemplex |
-//      runtimeSizedArrayTemplex |
-//      tupleTemplex |
-//      (pos ~ long ~ pos ^^ { case begin ~ value ~ end => IntPT(ast.RangeP(begin, end), value) }) |
-//      pos ~ "true" ~ pos ^^ { case begin ~ _ ~ end => BoolPT(ast.RangeP(begin, end), true) } |
-//      pos ~ "false" ~ pos ^^ { case begin ~ _ ~ end => BoolPT(ast.RangeP(begin, end), false) } |
-//      pos ~ "own" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), OwnP) } |
-//      pos ~ "borrow" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), BorrowP) } |
-//      pos ~ "ptr" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), PointerP) } |
-//      pos ~ "weak" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), WeakP) } |
-//      pos ~ "share" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), ShareP) } |
-//      mutabilityAtomTemplex |
-//      variabilityAtomTemplex |
-//      pos ~ "inl" ~ pos ^^ { case begin ~ _ ~ end => LocationPT(ast.RangeP(begin, end), InlineP) } |
-//      pos ~ "yon" ~ pos ^^ { case begin ~ _ ~ end => LocationPT(ast.RangeP(begin, end), YonderP) } |
-//      pos ~ "xrw" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ExclusiveReadwriteP) } |
-//      pos ~ "rw" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ReadwriteP) } |
-//      pos ~ "ro" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ReadonlyP) } |
-//      pos ~ ("_\\b".r) ~ pos ^^ { case begin ~ _ ~ end => AnonymousRunePT(ast.RangeP(begin, end)) } |
-//      (typeIdentifier ^^ NameOrRunePT)
-//  }
-//
-//  def mutabilityAtomTemplex: Parser[MutabilityPT] = {
-//    pos ~ "mut" ~ pos ^^ { case begin ~ _ ~ end => MutabilityPT(ast.RangeP(begin, end), MutableP) } |
-//      pos ~ "imm" ~ pos ^^ { case begin ~ _ ~ end => MutabilityPT(ast.RangeP(begin, end), ImmutableP) }
-//  }
-//
-//  def variabilityAtomTemplex: Parser[VariabilityPT] = {
-//    pos ~ "vary" ~ pos ^^ { case begin ~ _ ~ end => VariabilityPT(ast.RangeP(begin, end), VaryingP) } |
-//      pos ~ "final" ~ pos ^^ { case begin ~ _ ~ end => VariabilityPT(ast.RangeP(begin, end), FinalP) }
-//  }
-//
-*/
-/*
-//  def parseRegioned(iter: ScrambleIterator): Result[Option[ITemplexPT], IParseError] = {
-//    val begin = iter.getPos()
-//    if (!iter.trySkipSymbol('\'')) {
-//      return Ok(None)
-//    }
-//
-//    val name =
-//      iter.nextWord() match {
-//        case None => return Err(BadRegionName(iter.getPos()))
-//        case Some(x) => x
-//      }
-//
-//    if (iter.hasNext) {
-//      val inner =
-//        parseTemplexAtomAndCallAndPrefixes(iter) match {
-//          case Err(e) => return Err(e)
-//          case Ok(t) => t
-//        }
-//      Ok(Some(inner))
-//    } else {
-//      val rune =
-//        RegionRunePT(
-//          RangeL(begin, iter.getPrevEndPos()),
-//          NameP(name.range, name.str))
-//      Ok(Some(rune))
-//    }
-//  }
-*/
 /*
 }
 */

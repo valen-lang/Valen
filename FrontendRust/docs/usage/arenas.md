@@ -36,3 +36,13 @@ Some types live in multiple arenas. `LocationInDenizen<'x>` holds `path: &'x [i3
 ## No Malloc in Arena Structs
 
 Arena-allocated structs must not contain `Vec`, `HashMap`, or `String`. Bumpalo doesn't run destructors, so these would leak. Use arena slices and `ArenaIndexMap` instead. See shield AASSNCMCX.
+
+## No Clone on Arena Types
+
+Arena-allocated output types must not `#[derive(Clone)]`. They are shared by reference (`&'p`, `&'s`), never duplicated. See shield ATDCX.
+
+This applies to all structs/enums that get `arena.alloc()`'d: postparsing AST nodes (`StructS`, `FunctionS`, etc.), their inner types (attribute/body/member variants), parser AST nodes, and higher typing nodes.
+
+**Exempt:** Copy types (interned handles like `StrI`, `RangeS`) and value types used as HashMap keys (`IRuneS`, `INameS`, `RuneUsage`).
+
+// V: we should figure out some way for the document skill to link together all the docs for a certain feature

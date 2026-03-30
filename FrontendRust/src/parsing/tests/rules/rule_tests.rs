@@ -86,7 +86,7 @@ fn relations() {
     assert_eq!(builtin.name.as_str(), "exists");
     let func = cast!(cast!(expect_1(&builtin.args), IRulexPR::Templex), ITemplexPT::Func);
     assert_eq!(func.name.as_str(), "+");
-    assert_templex_name(expect_1(&func.parameters), "T");
+    assert_templex_name(*expect_1(func.parameters), "T");
     assert_templex_name(func.return_type, "int");
   }
 }

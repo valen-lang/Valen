@@ -25,6 +25,65 @@ import scala.collection.mutable
 object LexAndExplore {
 */
 
+/// Helper function that collects all denizens and files
+/// From LexAndExplore.scala lines 12-40
+/// TODO: Fix closure lifetime issues - collect pattern causes borrow checker to reject.
+/// Workaround: Implement without using lex_and_explore's callback, or change handler to take owned data.
+#[allow(dead_code)]
+pub fn lex_and_explore_and_collect<'p, R>(
+  _parse_arena: &ParseArena<'p>,
+  _keywords: &Keywords<'p>,
+  _packages: Vec<&'p PackageCoordinate<'p>>,
+  _resolver: &R,
+) -> Result<
+  (
+    Vec<(Arc<FileCoordinate<'p>>, String, Vec<ImportL<'p>>, IDenizenL<'p>)>,
+    Vec<(Arc<FileCoordinate<'p>>, String, Vec<RangeL>, Vec<IDenizenL<'p>>)>,
+  ),
+  FailedParse<'p>,
+>
+where
+  R: IPackageResolver<'p, HashMap<String, String>>,
+{
+  todo!("lex_and_explore_and_collect: closure lifetime fix needed")
+  // V: what's this about? and it shouldn't be a todo!. we should have a rule that we cannot have any todo! in the codebase.
+}
+
+/*
+  // This is a helper function that one doesn't need to use, but it can be handy and also
+  // serves as a great example on how to use the lexAndExplore() method.
+  def lexAndExploreAndCollect[D, F](
+    interner: Interner,
+    keywords: Keywords,
+    packages: Vector[PackageCoordinate],
+    resolver: IPackageResolver[Map[String, String]]):
+  Result[
+    (
+      Accumulator[(FileCoordinate, String, Vector[ImportL], IDenizenL)],
+      Accumulator[(FileCoordinate, String, Vector[RangeL], Vector[IDenizenL])]),
+  FailedParse] = {
+    val denizens = new Accumulator[(FileCoordinate, String, Vector[ImportL], IDenizenL)]()
+    val files = new Accumulator[(FileCoordinate, String, Vector[RangeL], Vector[IDenizenL])]()
+
+    lexAndExplore[IDenizenL, Unit](
+      interner, keywords, packages, resolver,
+      (file, code, imports, denizen) => {
+        denizens.add((file, code, imports, denizen))
+        denizen
+      },
+      (file, code, ranges, denizens) => {
+        files.add((file, code, ranges.buildArray(), denizens.buildArray()))
+        Unit
+      }) match {
+      case Err(e) => return Err(e)
+      case Ok(_) =>
+    }
+
+    Ok((denizens, files))
+  }
+*/
+
+
 /// Main generic lexing function with import-driven package discovery
 /// From LexAndExplore.scala lines 43-150
 pub fn lex_and_explore<'p, 'ctx, D, F, R>(
@@ -33,7 +92,7 @@ pub fn lex_and_explore<'p, 'ctx, D, F, R>(
   packages: Vec<&'p PackageCoordinate<'p>>,
   resolver: &R,
   mut denizen_handler: impl FnMut(&'p FileCoordinate<'p>, &str, &[ImportL<'p>], &IDenizenL<'p>) -> D,
-  mut file_handler: impl FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], &[D]) -> F,
+  mut file_handler: impl FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], Vec<D>) -> F,
 ) -> Result<Vec<F>, FailedParse<'p>>
 where
   'p: 'ctx,
@@ -149,7 +208,7 @@ where
       }
 
       let comments_ranges = iter.comments.clone();
-      let file = file_handler(file_coord, &code, &comments_ranges, &result_acc);
+      let file = file_handler(file_coord, &code, &comments_ranges, result_acc);
       files_acc.push(file);
     }
   }
@@ -268,65 +327,6 @@ where
     })
   }
 */
-
-/// Helper function that collects all denizens and files
-/// From LexAndExplore.scala lines 12-40
-/// TODO: Fix closure lifetime issues - collect pattern causes borrow checker to reject.
-/// Workaround: Implement without using lex_and_explore's callback, or change handler to take owned data.
-#[allow(dead_code)]
-pub fn lex_and_explore_and_collect<'p, R>(
-  _parse_arena: &ParseArena<'p>,
-  _keywords: &Keywords<'p>,
-  _packages: Vec<&'p PackageCoordinate<'p>>,
-  _resolver: &R,
-) -> Result<
-  (
-    Vec<(Arc<FileCoordinate<'p>>, String, Vec<ImportL<'p>>, IDenizenL<'p>)>,
-    Vec<(Arc<FileCoordinate<'p>>, String, Vec<RangeL>, Vec<IDenizenL<'p>>)>,
-  ),
-  FailedParse<'p>,
->
-where
-  R: IPackageResolver<'p, HashMap<String, String>>,
-{
-  todo!("lex_and_explore_and_collect: closure lifetime fix needed")
-  // V: what's this about? and it shouldn't be a todo!. we should have a rule that we cannot have any todo! in the codebase.
-}
-
-/*
-  // This is a helper function that one doesn't need to use, but it can be handy and also
-  // serves as a great example on how to use the lexAndExplore() method.
-  def lexAndExploreAndCollect[D, F](
-    interner: Interner,
-    keywords: Keywords,
-    packages: Vector[PackageCoordinate],
-    resolver: IPackageResolver[Map[String, String]]):
-  Result[
-    (
-      Accumulator[(FileCoordinate, String, Vector[ImportL], IDenizenL)],
-      Accumulator[(FileCoordinate, String, Vector[RangeL], Vector[IDenizenL])]),
-  FailedParse] = {
-    val denizens = new Accumulator[(FileCoordinate, String, Vector[ImportL], IDenizenL)]()
-    val files = new Accumulator[(FileCoordinate, String, Vector[RangeL], Vector[IDenizenL])]()
-
-    lexAndExplore[IDenizenL, Unit](
-      interner, keywords, packages, resolver,
-      (file, code, imports, denizen) => {
-        denizens.add((file, code, imports, denizen))
-        denizen
-      },
-      (file, code, ranges, denizens) => {
-        files.add((file, code, ranges.buildArray(), denizens.buildArray()))
-        Unit
-      }) match {
-      case Err(e) => return Err(e)
-      case Ok(_) =>
-    }
-
-    Ok((denizens, files))
-  }
-*/
-
 /*
 }
 */

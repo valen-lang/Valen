@@ -29,7 +29,8 @@ case class EnvironmentA(
     maybeParentEnv: Option[EnvironmentA],
     codeMap: PackageCoordinateMap[ProgramS],
     runeToType: Map[IRuneS, ITemplataType]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
 
   val structsS: Vector[StructS] = codeMap.packageCoordToContents.values.flatMap(_.structs).toVector
   val interfacesS: Vector[InterfaceS] = codeMap.packageCoordToContents.values.flatMap(_.interfaces).toVector

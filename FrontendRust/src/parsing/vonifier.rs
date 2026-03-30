@@ -1398,7 +1398,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "args".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: args.iter().map(Self::vonify_templex).collect(),
+              members: args.iter().map(|x| Self::vonify_templex(x)).collect(),
             }),
           },
         ],
@@ -1459,7 +1459,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "members".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: elements.iter().map(Self::vonify_templex).collect(),
+              members: elements.iter().map(|x| Self::vonify_templex(x)).collect(),
             }),
           },
         ],
@@ -1635,7 +1635,7 @@ impl<'p> ParserVonifier<'p> {
                   field_name: "members".to_string(),
                   value: IVonData::Array(VonArray {
                     id: None,
-                    members: parameters.members.iter().map(Self::vonify_templex).collect(),
+                    members: parameters.members.iter().map(|x| Self::vonify_templex(x)).collect(),
                   }),
                 },
               ],
@@ -1659,7 +1659,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "members".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: members.iter().map(Self::vonify_templex).collect(),
+              members: members.iter().map(|x| Self::vonify_templex(x)).collect(),
             }),
           },
         ],
@@ -1690,7 +1690,7 @@ impl<'p> ParserVonifier<'p> {
             field_name: "params".to_string(),
             value: IVonData::Array(VonArray {
               id: None,
-              members: parameters.iter().map(Self::vonify_templex).collect(),
+              members: parameters.iter().map(|x| Self::vonify_templex(x)).collect(),
             }),
           },
           VonMember {
@@ -1958,7 +1958,7 @@ impl<'p> ParserVonifier<'p> {
           field_name: "args".to_string(),
           value: IVonData::Array(VonArray {
             id: None,
-            members: args.iter().map(Self::vonify_templex).collect(),
+            members: args.iter().map(|x| Self::vonify_templex(x)).collect(),
           }),
         },
       ],

@@ -386,6 +386,12 @@ After Phase 12:
 
 ---
 
+## Future: Turn `/audit-error-handling` into a Shield
+
+The `/audit-error-handling` skill (`Guardian/.claude/skills/audit-error-handling/SKILL.md`) documents patterns for finding silent failures (FFFL violations). This knowledge should be distilled into a Guardian shield that runs automatically on code changes — catching `let _ =` on Results, `Err(_) => continue` without logging, `.ok()` discarding errors, `eprintln!` without return/panic, etc. The skill documents the exact patterns and tiers; the shield would enforce the most critical ones (Tier 1 and Tier 2) at review time.
+
+---
+
 ## Files Created Today (reference)
 - `docs/meta.md` — documentation strategy
 - `docs/skills/document.md` — the /document skill

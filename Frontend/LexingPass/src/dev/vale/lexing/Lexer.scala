@@ -825,37 +825,6 @@ class Lexer(interner: Interner, keywords: Keywords) {
     isOpenOrClose
   }
 
-//  def lexSemicolonSeparatedList(iter: LexingIterator, stopOnOpenBrace: Boolean, stopOnWhere: Boolean): Result[SemicolonSeparatedListLE, IParseError] = {
-//    val begin = iter.getPos()
-//
-//    // If this encounters a ; or or ) or } a non-binary > then it should stop.
-//    iter.consumeCommentsAndWhitespace()
-//
-//    val elements = new Accumulator[ScrambleLE]()
-//    var trailingSemicolon = false
-//
-//    while (!atEnd(iter, stopOnOpenBrace, stopOnWhere) && iter.trySkip(';')) {
-//      iter.consumeCommentsAndWhitespace()
-//
-//      if (atEnd(iter, stopOnOpenBrace, stopOnWhere)) {
-//        trailingSemicolon = true
-//      } else {
-//        val node =
-//          lexScramble(iter, stopOnOpenBrace, stopOnWhere) match {
-//            case Err(e) => return Err(e)
-//            case Ok(x) => x
-//          }
-//        elements.add(node)
-//      }
-//
-//      iter.consumeCommentsAndWhitespace()
-//    }
-//
-//    val end = iter.getPos()
-//
-//    Ok(SemicolonSeparatedListLE(RangeL(begin, end), elements.buildArray(), trailingSemicolon))
-//  }
-
 //  def lexCommaSeparatedList(iter: LexingIterator, stopOnOpenBrace: Boolean, stopOnWhere: Boolean): Result[CommaSeparatedListLE, IParseError] = {
 //    val begin = iter.getPos()
 //
@@ -1023,62 +992,6 @@ class Lexer(interner: Interner, keywords: Keywords) {
     val scramble = ScrambleLE(RangeL(begin, end), Vector(name, symbolL))
     return Some(scramble)
   }
-
-//
-//  def lexStringPart(iter: LexingIterator, stringBeginPos: Int): Result[Char, IParseError] = {
-//    if (iter.trySkip(() => "^\\\\".r)) {
-//      if (iter.trySkip(() => "^r".r) || iter.trySkip(() => "^\\r".r)) {
-//        Ok('\r')
-//      } else if (iter.trySkip(() => "^t".r)) {
-//        Ok('\t')
-//      } else if (iter.trySkip(() => "^n".r) || iter.trySkip(() => "^\\n".r)) {
-//        Ok('\n')
-//      } else if (iter.trySkip(() => "^\\\\".r)) {
-//        Ok('\\')
-//      } else if (iter.trySkip(() => "^\"".r)) {
-//        Ok('\"')
-//      } else if (iter.trySkip(() => "^/".r)) {
-//        Ok('/')
-//      } else if (iter.trySkip(() => "^\\{".r)) {
-//        Ok('{')
-//      } else if (iter.trySkip(() => "^\\}".r)) {
-//        Ok('}')
-//      } else if (iter.trySkip(() => "^u".r)) {
-//        val num =
-//          StringParser.parseFourDigitHexNum(iter) match {
-//            case None => {
-//              return Err(BadUnicodeChar(iter.getPos()))
-//            }
-//            case Some(x) => x
-//          }
-//        Ok(num.toChar)
-//      } else {
-//        Ok(iter.tryy(() => "^.".r).get.charAt(0))
-//      }
-//    } else {
-//      val c =
-//        iter.tryy(() => "^(.|\\n)".r) match {
-//          case None => {
-//            return Err(BadStringChar(stringBeginPos, iter.getPos()))
-//          }
-//          case Some(x) => x
-//        }
-//      Ok(c.charAt(0))
-//    }
-//  }
-//
-//  def lexString(iter: LexingIterator): Result[Option[StringPT], IParseError] = {
-//    val begin = iter.getPos()
-//    if (!iter.trySkip(() => "^\"".r)) {
-//      return Ok(None)
-//    }
-//    val stringSoFar = new StringBuilder()
-//    while (!(iter.atEnd() || iter.trySkip(() => "^\"".r))) {
-//      val c = lexStringPart(iter, begin) match { case Err(e) => return Err(e) case Ok(c) => c }
-//      stringSoFar += c
-//    }
-//    Ok(Some(StringPT(RangeL(begin, iter.getPos()), stringSoFar.toString())))
-//  }
 
   def lexStringEnd(iter: LexingIterator, isLongString: Boolean): Boolean = {
     iter.atEnd() || iter.trySkip(if (isLongString) "\"\"\"" else "\"")

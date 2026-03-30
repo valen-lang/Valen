@@ -105,6 +105,7 @@ These shields define the rules enforced during migration:
 @../../Luz/shields/ImmediateInterningDiscipline-IIDX.md
 @../../Luz/shields/CloserToScalaNotFurther-CSTNFX.md
 @../../Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
+@../FrontendRust/docs/shields/ArenaTypesDontClone-ATDCX.md
 
 ## Bulk Sed Safety Protocol
 

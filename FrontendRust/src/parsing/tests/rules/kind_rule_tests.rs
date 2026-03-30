@@ -473,13 +473,13 @@ fn regular_sequence() {
     compile_templex_expect(&parse_arena, &keywords, "(int)"),
     ITemplexPT::Tuple
   );
-  assert_templex_name(expect_1(&tuple.elements), "int");
+  assert_templex_name(*expect_1(tuple.elements), "int");
 
   let tuple = cast!(
     compile_templex_expect(&parse_arena, &keywords, "(int, bool)"),
     ITemplexPT::Tuple
   );
-  let (int_, bool_) = expect_2(&tuple.elements);
+  let (int_, bool_) = expect_2(tuple.elements);
   assert_templex_name(int_, "int");
   assert_templex_name(bool_, "bool");
 
@@ -487,7 +487,7 @@ fn regular_sequence() {
     compile_templex_expect(&parse_arena, &keywords, "(_, bool)"),
     ITemplexPT::Tuple
   );
-  let (anonymous_, bool_) = expect_2(&tuple.elements);
+  let (anonymous_, bool_) = expect_2(tuple.elements);
   cast!(anonymous_, ITemplexPT::AnonymousRune);
   assert_templex_name(bool_, "bool");
 
@@ -495,7 +495,7 @@ fn regular_sequence() {
     compile_templex_expect(&parse_arena, &keywords, "(_, _)"),
     ITemplexPT::Tuple
   );
-  let (anonymous1_, anonymous2_) = expect_2(&tuple.elements);
+  let (anonymous1_, anonymous2_) = expect_2(tuple.elements);
   cast!(anonymous1_, ITemplexPT::AnonymousRune);
   cast!(anonymous2_, ITemplexPT::AnonymousRune);
 }
@@ -531,13 +531,13 @@ fn prototype_kind_rule() {
   let templex = compile_templex_expect(&parse_arena, &keywords, "func moo(int)void");
   let prototype = cast!(templex, ITemplexPT::Func);
   assert_eq!(prototype.name.as_str(), "moo");
-  assert_templex_name(expect_1(&prototype.parameters), "int");
+  assert_templex_name(*expect_1(prototype.parameters), "int");
   assert_templex_name(prototype.return_type, "void");
 
   let templex = compile_templex_expect(&parse_arena, &keywords, "func moo(T)R");
   let prototype = cast!(templex, ITemplexPT::Func);
   assert_eq!(prototype.name.as_str(), "moo");
-  assert_templex_name(expect_1(&prototype.parameters), "T");
+  assert_templex_name(*expect_1(prototype.parameters), "T");
   assert_templex_name(prototype.return_type, "R");
 }
 /*

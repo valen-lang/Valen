@@ -123,6 +123,9 @@ trait ISolverState[Rule, Rune, Conclusion] {
 // mig: fn sanity_check
     fn sanity_check(&self);
 /*
+  def sanityCheck(): Unit
+*/
+/*
   // Success returns number of new conclusions
   def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
   Result[Int, ISolverError[Rune, Conclusion, ErrType]]

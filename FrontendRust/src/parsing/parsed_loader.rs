@@ -14,7 +14,7 @@ use crate::interner::StrI;
 use crate::parse_arena::ParseArena;
 use crate::lexing::{ParseError, RangeL};
 use crate::parsing::ast::*;
-use crate::utils::arena_utils::{alloc_slice_copy, alloc_slice_from_vec};
+use crate::utils::arena_utils::{alloc_slice_copy, alloc_slice_from_vec, alloc_slice_from_vec_of_refs};
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use bumpalo::Bump;
 use serde_json::{Map, Value, from_str};
@@ -981,7 +981,7 @@ fn load_expression<'p>(
     }),
     "Let" => IExpressionPE::Let(LetPE {
       range: load_range(get_object_field(jobj, "range")),
-      pattern: load_pattern(parse_arena, arena, get_object_field(jobj, "pattern")),
+      pattern: &*arena.alloc(load_pattern(parse_arena, arena, get_object_field(jobj, "pattern"))),
       source: &*arena.alloc(load_expression(parse_arena, arena, get_object_field(jobj, "source"))),
     }),
     "While" => IExpressionPE::While(WhilePE {
@@ -1377,12 +1377,12 @@ fn load_template_args<'p>(
 ) -> TemplateArgsP<'p> {
   TemplateArgsP {
     range: load_range(get_object_field(jobj, "range")),
-    args: alloc_slice_from_vec(
+    args: alloc_slice_from_vec_of_refs(
       arena,
       get_array_field(jobj, "args")
         .iter()
         .map(expect_object)
-        .map(|x| load_templex(parse_arena, arena, x))
+        .map(|x| &*arena.alloc(load_templex(parse_arena, arena, x)))
         .collect(),
     ),
   }
@@ -1884,12 +1884,12 @@ fn load_templex<'p>(
     "CallT" => ITemplexPT::Call(CallPT {
       range: load_range(get_object_field(jobj, "range")),
       template: &*arena.alloc(load_templex(parse_arena, arena, get_object_field(jobj, "template"))),
-      args: alloc_slice_from_vec(
+      args: alloc_slice_from_vec_of_refs(
         arena,
         get_array_field(jobj, "args")
           .iter()
           .map(expect_object)
-          .map(|x| load_templex(parse_arena, arena, x))
+          .map(|x| &*arena.alloc(load_templex(parse_arena, arena, x)))
           .collect(),
       ),
     }),
@@ -1922,12 +1922,12 @@ fn load_templex<'p>(
     }),
     "ManualSequenceT" => ITemplexPT::Tuple(TuplePT {
       range: load_range(get_object_field(jobj, "range")),
-      elements: alloc_slice_from_vec(
+      elements: alloc_slice_from_vec_of_refs(
         arena,
         get_array_field(jobj, "members")
           .iter()
           .map(expect_object)
-          .map(|x| load_templex(parse_arena, arena, x))
+          .map(|x| &*arena.alloc(load_templex(parse_arena, arena, x)))
           .collect(),
       ),
     }),
@@ -1935,12 +1935,12 @@ fn load_templex<'p>(
       range: load_range(get_object_field(jobj, "range")),
       name: load_name(parse_arena, get_object_field(jobj, "name")),
       params_range: load_range(get_object_field(jobj, "paramsRange")),
-      parameters: alloc_slice_from_vec(
+      parameters: alloc_slice_from_vec_of_refs(
         arena,
         get_array_field(jobj, "params")
           .iter()
           .map(expect_object)
-          .map(|x| load_templex(parse_arena, arena, x))
+          .map(|x| &*arena.alloc(load_templex(parse_arena, arena, x)))
           .collect(),
       ),
       return_type: &*arena.alloc(load_templex(parse_arena, arena, get_object_field(jobj, "returnType"))),

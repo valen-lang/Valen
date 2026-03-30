@@ -131,7 +131,8 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     }
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // is mutable, should never be hashed
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
   override def deepClone(): OptimizedSolverState[Rule, Rune, Conclusion] = {
     OptimizedSolverState[Rule, Rune, Conclusion](

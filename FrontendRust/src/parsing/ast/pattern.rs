@@ -19,7 +19,7 @@ case class AbstractP(range: RangeL)// extends IVirtualityP
 Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ParameterP<'p> {
   pub range: RangeL,
   pub virtuality: Option<AbstractP>,
@@ -50,7 +50,7 @@ case class DestinationLocalP(decl: INameDeclarationP, mutate: Option[RangeL])
 Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct PatternPP<'p> {
   pub range: RangeL,
   pub destination: Option<DestinationLocalP<'p>>,

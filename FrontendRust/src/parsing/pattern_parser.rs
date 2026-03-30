@@ -2,7 +2,7 @@ use crate::keywords::Keywords;
 use crate::lexing::ast::*;
 use crate::lexing::errors::ParseError;
 use crate::parsing::ast::*;
-use crate::parsing::scramble_iterator::ScrambleIterator;
+use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::utils::arena_utils::alloc_slice_from_vec;
 use bumpalo::Bump;
@@ -26,9 +26,9 @@ pub struct PatternParser<'p, 'ctx> {
   keywords: &'ctx Keywords<'p>,
   arena: &'p Bump,
 }
-/*
 // V: why is this cloneable?/
 // V: should this be folded into the main Parser struct?
+/*
 class PatternParser(interner: Interner, keywords: Keywords, templexParser: TemplexParser) {
 Guardian: disable: NECX
 */

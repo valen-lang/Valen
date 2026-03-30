@@ -8,7 +8,7 @@ use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::parse_utils::{parse_region as parse_region_shared, try_skip_past_keyword_while};
 use crate::parsing::pattern_parser::PatternParser;
-use crate::parsing::scramble_iterator::ScrambleIterator;
+use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::utils::code_hierarchy::{FileCoordinate, PackageCoordinate};
 use crate::utils::code_hierarchy::{FileCoordinateMap, IPackageResolver};
@@ -52,119 +52,10 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
   val patternParser = new PatternParser(interner, keywords, templexParser)
   val expressionParser = new ExpressionParser(interner, keywords, opts, patternParser, templexParser)
 */
-
 impl<'p, 'ctx> Parser<'p, 'ctx>
 where
-  'p: 'ctx,
+    'p: 'ctx,
 {
-  pub fn new(
-    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
-    keywords: &'ctx Keywords<'p>,
-    arena: &'p Bump,
-  ) -> Self {
-    let templex_parser = TemplexParser::new(parse_arena, keywords, arena);
-    let pattern_parser = PatternParser::new(parse_arena, keywords, arena);
-    let expression_parser = ExpressionParser::new(parse_arena, keywords, arena);
-
-    Parser {
-      parse_arena,
-      keywords,
-      arena,
-      templex_parser,
-      pattern_parser,
-      expression_parser,
-    }
-  }
-
-  /// Parse a complete file from lexer output
-  pub fn parse_file(&self, file: FileL<'p>) -> ParseResult<FileP<'p>> {
-    let FileL {
-      denizens,
-      comment_ranges,
-    } = file;
-
-    let mut parsed_denizens = Vec::new();
-
-    for denizen in denizens {
-      let parsed = self.parse_denizen(denizen)?;
-      parsed_denizens.push(parsed);
-    }
-
-    let empty_str = self.parse_arena.intern_str("");
-    let empty_package = self.parse_arena.intern_package_coordinate(empty_str, &[]);
-    let empty_file = self.parse_arena.intern_file_coordinate(empty_package, "");
-
-    Ok(FileP {
-      file_coord: empty_file,
-      comments_ranges: alloc_slice_from_vec(self.arena, comment_ranges),
-      denizens: alloc_slice_from_vec(self.arena, parsed_denizens),
-    })
-  }
-
-  /// Parse a top-level denizen
-  pub fn parse_denizen(&self, denizen: IDenizenL<'p>) -> ParseResult<IDenizenP<'p>> {
-    match denizen {
-      IDenizenL::TopLevelFunction(func) => {
-        let parsed = self.parse_function(func, false)?;
-        Ok(IDenizenP::TopLevelFunction(parsed))
-      }
-      IDenizenL::TopLevelStruct(struct_) => {
-        let parsed = self.parse_struct(struct_)?;
-        Ok(IDenizenP::TopLevelStruct(parsed))
-      }
-      IDenizenL::TopLevelInterface(interface) => {
-        let parsed = self.parse_interface(interface)?;
-        Ok(IDenizenP::TopLevelInterface(parsed))
-      }
-      IDenizenL::TopLevelImpl(impl_) => {
-        let parsed = self.parse_impl(impl_)?;
-        Ok(IDenizenP::TopLevelImpl(parsed))
-      }
-      IDenizenL::TopLevelExportAs(export) => {
-        let parsed = self.parse_export_as(export)?;
-        Ok(IDenizenP::TopLevelExportAs(parsed))
-      }
-      IDenizenL::TopLevelImport(import) => {
-        let parsed = self.parse_import(import)?;
-        Ok(IDenizenP::TopLevelImport(parsed))
-      }
-    }
-  }
-
-  /// Parse generic parameters from angled brackets
-  fn parse_identifying_runes(&self, node: &AngledLE<'p>) -> ParseResult<GenericParametersP<'p>> {
-    let iter = ScrambleIterator::new(&node.contents);
-    let parts = iter.split_on_symbol(',', false);
-
-    let mut params = Vec::new();
-    for part in parts {
-      let param = self.parse_generic_parameter(part)?;
-      params.push(param);
-    }
-
-    Ok(GenericParametersP {
-      range: node.range,
-      params: alloc_slice_from_vec(self.arena, params),
-    })
-  }
-  /*
-    // V: someone changed a scala comment... looks like it was wrong before too.
-    private[parsing] def parseIdentifyingRunes(node: AngledLE):
-    Result[GenericParametersP, IParseError] = {
-      val runesP =
-        U.map[ScrambleIterator, GenericParameterP](
-          new ScrambleIterator(node.contents).splitOnSymbol(',', false),
-          inner => {
-          parseGenericParameter(inner) match {
-            case Err(e) => return Err(e)
-            case Ok(x) => x
-          }
-        })
-
-      Ok(GenericParametersP(node.range, runesP.toVector))
-    }
-  */
-
   /// Parse a single generic parameter
   fn parse_generic_parameter(
     &self,
@@ -343,87 +234,110 @@ where
     }
   */
 
-  /// Parse optional prefixing region (e.g., `'a`)
-  fn parse_prefixing_region(
-    &self,
-    original_iter: &mut ScrambleIterator<'p, '_>,
-  ) -> ParseResult<Option<RegionRunePT<'p>>> {
-    let mut tentative_iter = original_iter.clone();
+  pub fn new(
+    parse_arena: &'ctx crate::parse_arena::ParseArena<'p>,
+    keywords: &'ctx Keywords<'p>,
+    arena: &'p Bump,
+  ) -> Self {
+    let templex_parser = TemplexParser::new(parse_arena, keywords, arena);
+    let pattern_parser = PatternParser::new(parse_arena, keywords, arena);
+    let expression_parser = ExpressionParser::new(parse_arena, keywords, arena);
 
-    let region = match parse_region_shared(&mut tentative_iter)? {
-      Some(region) => {
-        // Check if the next token immediately follows (no gap)
-        match tentative_iter.peek_cloned() {
-          Some(next) if next.range().begin() == region.range.end() => region,
-          _ => return Ok(None),
-        }
-      }
-      None => return Ok(None),
-    };
-
-    original_iter.skip_to(&tentative_iter);
-    Ok(Some(region))
-  }
-  /*
-    // A prefixing region is one that appears before something else to modify it, like t'T.
-    def parsePrefixingRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
-      val tentativeIter = originalIter.clone()
-
-      val region =
-        parseRegion(tentativeIter) match {
-          case Err(x) => return Err(x)
-          case Ok(Some(region)) => {
-            tentativeIter.peek() match {
-              case Some(next) if next.range.begin == region.range.end => {
-                region
-              }
-              case _ => return Ok(None)
-            }
-          }
-          case _ => return Ok(None)
-        }
-
-      originalIter.skipTo(tentativeIter)
-
-      Ok(Some(region))
+    Parser {
+      parse_arena,
+      keywords,
+      arena,
+      templex_parser,
+      pattern_parser,
+      expression_parser,
     }
-  */
+  }
 
-  /// Parse optional region marker - delegates to shared parse_region (Parser.parseRegion in Scala)
-  fn parse_region(
-    &self,
-    original_iter: &mut ScrambleIterator<'p, '_>,
-  ) -> ParseResult<Option<RegionRunePT<'p>>> {
-    parse_region_shared(original_iter)
+  /// Parse a complete file from lexer output
+  pub fn parse_file(&self, file: FileL<'p>) -> ParseResult<FileP<'p>> {
+    let FileL {
+      denizens,
+      comment_ranges,
+    } = file;
+
+    let mut parsed_denizens = Vec::new();
+
+    for denizen in denizens {
+      let parsed = self.parse_denizen(denizen)?;
+      parsed_denizens.push(parsed);
+    }
+
+    let empty_str = self.parse_arena.intern_str("");
+    let empty_package = self.parse_arena.intern_package_coordinate(empty_str, &[]);
+    let empty_file = self.parse_arena.intern_file_coordinate(empty_package, "");
+
+    Ok(FileP {
+      file_coord: empty_file,
+      comments_ranges: alloc_slice_from_vec(self.arena, comment_ranges),
+      denizens: alloc_slice_from_vec(self.arena, parsed_denizens),
+    })
+  }
+
+  /// Parse a top-level denizen
+  pub fn parse_denizen(&self, denizen: IDenizenL<'p>) -> ParseResult<IDenizenP<'p>> {
+    match denizen {
+      IDenizenL::TopLevelFunction(func) => {
+        let parsed = self.parse_function(func, false)?;
+        Ok(IDenizenP::TopLevelFunction(parsed))
+      }
+      IDenizenL::TopLevelStruct(struct_) => {
+        let parsed = self.parse_struct(struct_)?;
+        Ok(IDenizenP::TopLevelStruct(parsed))
+      }
+      IDenizenL::TopLevelInterface(interface) => {
+        let parsed = self.parse_interface(interface)?;
+        Ok(IDenizenP::TopLevelInterface(parsed))
+      }
+      IDenizenL::TopLevelImpl(impl_) => {
+        let parsed = self.parse_impl(impl_)?;
+        Ok(IDenizenP::TopLevelImpl(parsed))
+      }
+      IDenizenL::TopLevelExportAs(export) => {
+        let parsed = self.parse_export_as(export)?;
+        Ok(IDenizenP::TopLevelExportAs(parsed))
+      }
+      IDenizenL::TopLevelImport(import) => {
+        let parsed = self.parse_import(import)?;
+        Ok(IDenizenP::TopLevelImport(parsed))
+      }
+    }
+  }
+
+  /// Parse generic parameters from angled brackets
+  fn parse_identifying_runes(&self, node: &AngledLE<'p>) -> ParseResult<GenericParametersP<'p>> {
+    let iter = ScrambleIterator::new(&node.contents);
+    let parts = iter.split_on_symbol(',', false);
+
+    let mut params = Vec::new();
+    for part in parts {
+      let param = self.parse_generic_parameter(part)?;
+      params.push(param);
+    }
+
+    Ok(GenericParametersP {
+      range: node.range,
+      params: alloc_slice_from_vec(self.arena, params),
+    })
   }
   /*
-    def parseRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
-      val tentativeIter = originalIter.clone()
-
-      val runeBegin = tentativeIter.getPos()
-      val maybeRune =
-        if (tentativeIter.trySkipSymbol('\'')) {
-          // Anonymous region, in other words an isolate
-          None
-        } else {
-          val regionRune =
-            tentativeIter.nextWord() match {
-              case None => return Ok(None)
-              case Some(r) => r
-            }
-
-          if (!tentativeIter.trySkipSymbol('\'')) {
-            return Ok(None)
+    private[parsing] def parseIdentifyingRunes(node: AngledLE):
+    Result[GenericParametersP, IParseError] = {
+      val runesP =
+        U.map[ScrambleIterator, GenericParameterP](
+          new ScrambleIterator(node.contents).splitOnSymbol(',', false),
+          inner => {
+          parseGenericParameter(inner) match {
+            case Err(e) => return Err(e)
+            case Ok(x) => x
           }
+        })
 
-          Some(regionRune)
-        }
-      val runeEnd = tentativeIter.getPrevEndPos()
-
-      originalIter.skipTo(tentativeIter)
-
-      val range = RangeL(runeBegin, runeEnd)
-      return Ok(Some(RegionRunePT(range, maybeRune.map(z => NameP(RangeL(runeBegin, runeEnd), z.str)))))
+      Ok(GenericParametersP(node.range, runesP.toVector))
     }
   */
 
@@ -1046,6 +960,15 @@ where
     }
   */
 
+  /// Helper to convert WordLE to NameP
+  fn to_name(&self, word: WordLE<'p>) -> NameP<'p> {
+    NameP(word.range, word.str)
+  }
+
+/*
+  val export = interner.intern(StrI("export"))
+*/
+
   /// Parse an export-as declaration
   /// Mirrors Parser.parseExportAs in Parser.scala lines 465-497
   pub fn parse_export_as(&self, export_l: ExportAsL<'p>) -> ParseResult<ExportAsP<'p>> {
@@ -1186,6 +1109,107 @@ where
       val importeeNameP = NameP(importeeNameRange, importeeNameStr)
 
       Ok(ImportP(range, moduleNameP, packageStepsP.toVector, importeeNameP))
+    }
+  */
+
+  /// Parse an attribute
+  fn parse_attribute(&self, attr_l: IAttributeL<'p>) -> ParseResult<IAttributeP<'p>> {
+    match attr_l {
+      IAttributeL::WeakableAttribute(range) => {
+        Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
+      }
+      IAttributeL::SealedAttribute(range) => {
+        Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
+      }
+      IAttributeL::MacroCall {
+        range,
+        inclusion,
+        name,
+      } => Ok(IAttributeP::MacroCall(MacroCallP {
+        range,
+        inclusion: match inclusion {
+          IMacroInclusionL::CallMacro => IMacroInclusionP::CallMacro,
+          IMacroInclusionL::DontCallMacro => IMacroInclusionP::DontCallMacro,
+        },
+        name: self.to_name(name),
+      })),
+      IAttributeL::AbstractAttribute(range) => {
+        Ok(IAttributeP::AbstractAttribute(AbstractAttributeP { range }))
+      }
+      IAttributeL::ExternAttribute {
+        range,
+        maybe_custom_name,
+      } => {
+        // Mirrors Parser.scala parseAttribute handling of ExternAttribute
+        match maybe_custom_name {
+          None => Ok(IAttributeP::ExternAttribute(ExternAttributeP { range })),
+          Some(parend) => {
+            // extern("name") becomes BuiltinAttribute
+            let iter = ScrambleIterator::new(&parend.contents);
+            if let Some(INodeLEEnum::String(string_le)) = iter.peek_cloned() {
+              // Extract the string value from the parts
+              // For a simple string like "bork", there should be one Literal part
+              if string_le.parts.len() == 1 {
+                if let StringPart::Literal { s, .. } = &string_le.parts[0] {
+                  let name = NameP(string_le.range, self.parse_arena.intern_str(s));
+                  return Ok(IAttributeP::BuiltinAttribute(BuiltinAttributeP {
+                    range,
+                    generator_name: name,
+                  }));
+                }
+              }
+              Err(ParseError::BadExternAttribute(range.begin()))
+            } else {
+              Err(ParseError::BadExternAttribute(range.begin()))
+            }
+          }
+        }
+      }
+      IAttributeL::ExportAttribute(range) => {
+        Ok(IAttributeP::ExportAttribute(ExportAttributeP { range }))
+      }
+      IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(PureAttributeP { range })),
+      IAttributeL::AdditiveAttribute(range) => {
+        Ok(IAttributeP::AdditiveAttribute(AdditiveAttributeP { range }))
+      }
+      IAttributeL::LinearAttribute(range) => {
+        Ok(IAttributeP::LinearAttribute(LinearAttributeP { range }))
+      }
+    }
+  }
+  /*
+    def parseAttribute(attrL: IAttributeL):
+    Result[IAttributeP, IParseError] = {
+      attrL match {
+        case AbstractAttributeL(range) => Ok(AbstractAttributeP(range))
+        case ExternAttributeL(range, None) => Ok(ExternAttributeP(range))
+        case LinearAttributeL(range) => Ok(LinearAttributeP(range))
+        case ExternAttributeL(range, Some(maybeName)) => {
+          val name =
+            maybeName.contents match {
+              case ScrambleLE(_, Vector(StringLE(_, Vector(StringPartLiteral(range, s))))) => {
+                NameP(range, interner.intern(StrI(s)))
+              }
+              case _ => vfail("Bad builtin extern!")
+            }
+          Ok(BuiltinAttributeP(range, name))
+        }
+        case ExportAttributeL(range) => Ok(ExportAttributeP(range))
+        case PureAttributeL(range) => Ok(PureAttributeP(range))
+        case AdditiveAttributeL(range) => Ok(AdditiveAttributeP(range))
+        case WeakableAttributeL(range) => Ok(WeakableAttributeP(range))
+        case SealedAttributeL(range) => Ok(SealedAttributeP(range))
+        case MacroCallL(range, inclusion, name) => {
+          Ok(
+            MacroCallP(
+              range,
+              inclusion match {
+                case CallMacroL => CallMacroP
+                case DontCallMacroL => DontCallMacroP
+              },
+              toName(name)))
+        }
+      }
     }
   */
 
@@ -1587,121 +1611,7 @@ where
       (precedingElementsScramble, Some(defaultRegion))
     }
   */
-
-  /// Parse an attribute
-  fn parse_attribute(&self, attr_l: IAttributeL<'p>) -> ParseResult<IAttributeP<'p>> {
-    match attr_l {
-      IAttributeL::WeakableAttribute(range) => {
-        Ok(IAttributeP::WeakableAttribute(WeakableAttributeP { range }))
-      }
-      IAttributeL::SealedAttribute(range) => {
-        Ok(IAttributeP::SealedAttribute(SealedAttributeP { range }))
-      }
-      IAttributeL::MacroCall {
-        range,
-        inclusion,
-        name,
-      } => Ok(IAttributeP::MacroCall(MacroCallP {
-        range,
-        inclusion: match inclusion {
-          IMacroInclusionL::CallMacro => IMacroInclusionP::CallMacro,
-          IMacroInclusionL::DontCallMacro => IMacroInclusionP::DontCallMacro,
-        },
-        name: self.to_name(name),
-      })),
-      IAttributeL::AbstractAttribute(range) => {
-        Ok(IAttributeP::AbstractAttribute(AbstractAttributeP { range }))
-      }
-      IAttributeL::ExternAttribute {
-        range,
-        maybe_custom_name,
-      } => {
-        // Mirrors Parser.scala parseAttribute handling of ExternAttribute
-        match maybe_custom_name {
-          None => Ok(IAttributeP::ExternAttribute(ExternAttributeP { range })),
-          Some(parend) => {
-            // extern("name") becomes BuiltinAttribute
-            let iter = ScrambleIterator::new(&parend.contents);
-            if let Some(INodeLEEnum::String(string_le)) = iter.peek_cloned() {
-              // Extract the string value from the parts
-              // For a simple string like "bork", there should be one Literal part
-              if string_le.parts.len() == 1 {
-                if let StringPart::Literal { s, .. } = &string_le.parts[0] {
-                  let name = NameP(string_le.range, self.parse_arena.intern_str(s));
-                  return Ok(IAttributeP::BuiltinAttribute(BuiltinAttributeP {
-                    range,
-                    generator_name: name,
-                  }));
-                }
-              }
-              Err(ParseError::BadExternAttribute(range.begin()))
-            } else {
-              Err(ParseError::BadExternAttribute(range.begin()))
-            }
-          }
-        }
-      }
-      IAttributeL::ExportAttribute(range) => {
-        Ok(IAttributeP::ExportAttribute(ExportAttributeP { range }))
-      }
-      IAttributeL::PureAttribute(range) => Ok(IAttributeP::PureAttribute(PureAttributeP { range })),
-      IAttributeL::AdditiveAttribute(range) => {
-        Ok(IAttributeP::AdditiveAttribute(AdditiveAttributeP { range }))
-      }
-      IAttributeL::LinearAttribute(range) => {
-        Ok(IAttributeP::LinearAttribute(LinearAttributeP { range }))
-      }
-    }
-  }
-  /*
-    def parseAttribute(attrL: IAttributeL):
-    Result[IAttributeP, IParseError] = {
-      attrL match {
-        case AbstractAttributeL(range) => Ok(AbstractAttributeP(range))
-        case ExternAttributeL(range, None) => Ok(ExternAttributeP(range))
-        case LinearAttributeL(range) => Ok(LinearAttributeP(range))
-        case ExternAttributeL(range, Some(maybeName)) => {
-          val name =
-            maybeName.contents match {
-              case ScrambleLE(_, Vector(StringLE(_, Vector(StringPartLiteral(range, s))))) => {
-                NameP(range, interner.intern(StrI(s)))
-              }
-              case _ => vfail("Bad builtin extern!")
-            }
-          Ok(BuiltinAttributeP(range, name))
-        }
-        case ExportAttributeL(range) => Ok(ExportAttributeP(range))
-        case PureAttributeL(range) => Ok(PureAttributeP(range))
-        case AdditiveAttributeL(range) => Ok(AdditiveAttributeP(range))
-        case WeakableAttributeL(range) => Ok(WeakableAttributeP(range))
-        case SealedAttributeL(range) => Ok(SealedAttributeP(range))
-        case MacroCallL(range, inclusion, name) => {
-          Ok(
-            MacroCallP(
-              range,
-              inclusion match {
-                case CallMacroL => CallMacroP
-                case DontCallMacroL => DontCallMacroP
-              },
-              toName(name)))
-        }
-      }
-    }
-  */
-
-  /// Helper to convert WordLE to NameP
-  fn to_name(&self, word: WordLE<'p>) -> NameP<'p> {
-    NameP(word.range, word.str)
-  }
 }
-
-// TemplexParser and PatternParser are defined in their respective modules
-
-// ExpressionParser is defined in expression_parser.rs
-
-/*
-  val export = interner.intern(StrI("export"))
-*/
 /*
   def toName(wordL: WordLE): NameP = {
     val WordLE(range, s) = wordL
@@ -1738,11 +1648,6 @@ where
     packageToContentsResolver: IPackageResolver[Map[String, String]]
   ) {
     val parser = new Parser(interner, keywords, opts)
-  */
-  /*
-    var codeMapCache: Option[FileCoordinateMap[String]] = None
-    var vpstMapCache: Option[FileCoordinateMap[String]] = None
-    var parsedsCache: Option[FileCoordinateMap[(FileP, Vector[RangeL])]] = None
   */
 
   // From Parser.scala lines 699-706
@@ -1834,11 +1739,11 @@ where
             needed_packages.to_vec(),
             &vale_only_resolver,
             |_file_coord, _code, _imports, denizen| denizen,
-            |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens| {
+            |file_coord: &'p FileCoordinate<'p>, code, comment_ranges, denizens: Vec<IDenizenP<'p>>| {
                 // From Parser.scala lines 756-766
                 found_code_map.put(file_coord, code.to_string());
                 let comments_slice = alloc_slice_copy(self.arena, comment_ranges);
-                let denizens_slice = alloc_slice_from_vec(self.arena, denizens.to_vec());
+                let denizens_slice = alloc_slice_from_vec(self.arena, denizens);
                 let file = FileP {
                     file_coord: file_coord,
                     comments_ranges: comments_slice,
@@ -1944,6 +1849,11 @@ where
     }
   */
 
+  /*
+    var codeMapCache: Option[FileCoordinateMap[String]] = None
+    var vpstMapCache: Option[FileCoordinateMap[String]] = None
+    var parsedsCache: Option[FileCoordinateMap[(FileP, Vector[RangeL])]] = None
+  */
   // From Parser.scala lines 779-784: getCodeMap
   pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
     self.get_parseds()?;
@@ -2073,6 +1983,95 @@ where
 }
 object Parser {
 */
+
+impl<'p, 'ctx> Parser<'p, 'ctx>
+where
+    'p: 'ctx,
+{
+  /// Parse optional prefixing region (e.g., `'a`)
+  fn parse_prefixing_region(
+    &self,
+    original_iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<RegionRunePT<'p>>> {
+    let mut tentative_iter = original_iter.clone();
+
+    let region = match parse_region_shared(&mut tentative_iter)? {
+      Some(region) => {
+        // Check if the next token immediately follows (no gap)
+        match tentative_iter.peek_cloned() {
+          Some(next) if next.range().begin() == region.range.end() => region,
+          _ => return Ok(None),
+        }
+      }
+      None => return Ok(None),
+    };
+
+    original_iter.skip_to(&tentative_iter);
+    Ok(Some(region))
+  }
+  /*
+    // A prefixing region is one that appears before something else to modify it, like t'T.
+    def parsePrefixingRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
+      val tentativeIter = originalIter.clone()
+
+      val region =
+        parseRegion(tentativeIter) match {
+          case Err(x) => return Err(x)
+          case Ok(Some(region)) => {
+            tentativeIter.peek() match {
+              case Some(next) if next.range.begin == region.range.end => {
+                region
+              }
+              case _ => return Ok(None)
+            }
+          }
+          case _ => return Ok(None)
+        }
+
+      originalIter.skipTo(tentativeIter)
+
+      Ok(Some(region))
+    }
+  */
+
+  /// Parse optional region marker - delegates to shared parse_region (Parser.parseRegion in Scala)
+  fn parse_region(
+    &self,
+    original_iter: &mut ScrambleIterator<'p, '_>,
+  ) -> ParseResult<Option<RegionRunePT<'p>>> {
+    parse_region_shared(original_iter)
+  }
+  /*
+    def parseRegion(originalIter: ScrambleIterator): Result[Option[RegionRunePT], IParseError] = {
+      val tentativeIter = originalIter.clone()
+
+      val runeBegin = tentativeIter.getPos()
+      val maybeRune =
+        if (tentativeIter.trySkipSymbol('\'')) {
+          // Anonymous region, in other words an isolate
+          None
+        } else {
+          val regionRune =
+            tentativeIter.nextWord() match {
+              case None => return Ok(None)
+              case Some(r) => r
+            }
+
+          if (!tentativeIter.trySkipSymbol('\'')) {
+            return Ok(None)
+          }
+
+          Some(regionRune)
+        }
+      val runeEnd = tentativeIter.getPrevEndPos()
+
+      originalIter.skipTo(tentativeIter)
+
+      val range = RangeL(runeBegin, runeEnd)
+      return Ok(Some(RegionRunePT(range, maybeRune.map(z => NameP(RangeL(runeBegin, runeEnd), z.str)))))
+    }
+  */
+}
 /*
 }
  */

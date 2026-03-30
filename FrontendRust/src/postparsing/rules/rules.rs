@@ -66,14 +66,14 @@ Guardian: disable-all
 // need to, it relies on delegates to do any rule-specific things.
 // Different stages will likely need different kinds of rules, so best not prematurely
 // combine them.
-// V: above comment match scala?
 trait IRulexSR {
   def range: RangeS
   def runeUsages: Vector[RuneUsage]
 }
 Guardian: disable: NECX
-// V: why cloneable?
 */
+// V: above comment match scala?
+// V: why cloneable?
 
 impl<'s> IRulexSR<'s> {
   pub fn range<'r>(&'r self) -> &'r RangeS<'s> {
@@ -210,10 +210,8 @@ pub struct DefinitionCoordIsaSR<'s> {
   pub super_rune: RuneUsage<'s>,
 }
 /*
-case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: RuneUsage, superR
-  // MIGALLOW: Rust doesn't need a equals overrideune: RuneUsage) extends IRulexSR {
+case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: RuneUsage, superRune: RuneUsage) extends IRulexSR {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  // MIGALLOW: Rust doesn't need a runeUsages override
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, subRune, superRune)
 }
 Guardian: disable: NECX
@@ -546,6 +544,7 @@ pub struct LookupSR<'s> {
   pub name: IImpreciseNameS<'s>,
 }
 /*
+// A rule that looks up something that's not a Kind, so it doesn't need a default region.
 case class LookupSR(
   range: RangeS,
   rune: RuneUsage,
@@ -680,33 +679,6 @@ case class PackSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune) ++ members
 }
 Guardian: disable: NECX
-*/
-/*
-//case class StaticSizedArraySR(
-//  range: RangeS,
-//  resultRune: RuneUsage,
-//  mutabilityRune: RuneUsage,
-//  variabilityRune: RuneUsage,
-//  sizeRune: RuneUsage,
-//  elementRune: RuneUsage
-//) extends IRulexSR {
-  // MIGALLOW: Rust doesn't need a equals override
-//  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-// MIGALLOW: Rust doesn't need a runeUsages override
-//  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, mutabilityRune, variabilityRune, sizeRune, elementRune)
-//}
-//
-//case class RuntimeSizedArraySR(
-//  range: RangeS,
-//  resultRune: RuneUsage,
-//  mutabilityRune: RuneUsage,
-//  elementRune: RuneUsage
-//) extends IRulexSR {
-  // MIGALLOW: Rust doesn't need a equals override
-//  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-// MIGALLOW: Rust doesn't need a runeUsages override
-//  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, mutabilityRune, elementRune)
-//}
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum ILiteralSL<'s> {

@@ -8,7 +8,7 @@ import dev.vale.lexing.RangeL
 import dev.vale.vcurious
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IRulexPR<'p> {
   Equals(EqualsPR<'p>),
   Or(OrPR<'p>),
@@ -19,53 +19,89 @@ pub enum IRulexPR<'p> {
   BuiltinCall(BuiltinCallPR<'p>),
   Pack(PackPR<'p>),
 }
+/*
+sealed trait IRulexPR {
+  def range: RangeL
+}
+Guardian: disable: NECX
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct EqualsPR<'p> {
   pub range: RangeL,
   pub left: &'p IRulexPR<'p>,
   pub right: &'p IRulexPR<'p>,
 }
+/*
+case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct OrPR<'p> {
   pub range: RangeL,
   pub possibilities: &'p [IRulexPR<'p>],
 }
+/*
+case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct DotPR<'p> {
   pub range: RangeL,
   pub container: &'p IRulexPR<'p>,
   pub member_name: NameP<'p>,
 }
+/*
+case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ComponentsPR<'p> {
   pub range: RangeL,
   pub container: ITypePR,
   pub components: &'p [IRulexPR<'p>],
 }
+/*
+case class ComponentsPR(
+  range: RangeL,
+  container: ITypePR,
+  components: Vector[IRulexPR]
+) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct TypedPR<'p> {
   pub range: RangeL,
   pub rune: Option<NameP<'p>>,
   pub tyype: ITypePR,
 }
+/*
+case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
+  def range = templex.range
+}
+// This is for built-in parser functions, such as exists() or isBaseOf() etc.
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct BuiltinCallPR<'p> {
   pub range: RangeL,
   pub name: NameP<'p>,
   pub args: &'p [IRulexPR<'p>],
 }
+/*
+case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+//case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct PackPR<'p> {
   pub range: RangeL,
   pub elements: &'p [IRulexPR<'p>],
 }
+/*
+case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+*/
 
 impl IRulexPR<'_> {
   pub fn range(&self) -> RangeL {
@@ -81,12 +117,6 @@ impl IRulexPR<'_> {
     }
   }
 }
-/*
-sealed trait IRulexPR {
-  def range: RangeL
-}
-Guardian: disable: NECX
-*/
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]
 pub enum ITypePR {
@@ -175,11 +205,11 @@ pub fn get_ordered_rune_declarations_from_rulex_with_duplicates<'p>(
   }
 */
 pub fn get_ordered_rune_declarations_from_templexes_with_duplicates<'p>(
-  templexes: &[ITemplexPT<'p>],
+  templexes: &[&'p ITemplexPT<'p>],
 ) -> Vec<NameP<'p>> {
   templexes
     .iter()
-    .flat_map(get_ordered_rune_declarations_from_templex_with_duplicates)
+    .flat_map(|t| get_ordered_rune_declarations_from_templex_with_duplicates(t))
     .collect()
 }
 /*
@@ -210,20 +240,20 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
     ),
     ITemplexPT::TypedRune(typed_rune) => vec![typed_rune.rune.clone()],
     ITemplexPT::Call(call) => {
-      let mut templexes = vec![(*call.template).clone()];
-      templexes.extend(call.args.iter().cloned());
+      let mut templexes: Vec<&'p ITemplexPT<'p>> = vec![call.template];
+      templexes.extend(call.args.iter().copied());
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::Function(function) => {
-      let mutability_templexes = function
+      let mutability_refs: Vec<&'p ITemplexPT<'p>> = function
         .mutability
         .iter()
-        .map(|x| (*x).clone())
-        .collect::<Vec<_>>();
+        .copied()
+        .collect();
       let mut out =
-        get_ordered_rune_declarations_from_templexes_with_duplicates(&mutability_templexes);
-      out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(
-        &ITemplexPT::Pack(function.parameters.clone()),
+        get_ordered_rune_declarations_from_templexes_with_duplicates(&mutability_refs);
+      out.extend(get_ordered_rune_declarations_from_templexes_with_duplicates(
+        function.parameters.members,
       ));
       out.extend(get_ordered_rune_declarations_from_templex_with_duplicates(
         function.return_type,
@@ -231,24 +261,24 @@ pub fn get_ordered_rune_declarations_from_templex_with_duplicates<'p>(
       out
     }
     ITemplexPT::Func(func) => {
-      let mut templexes = func.parameters.to_vec();
-      templexes.push((*func.return_type).clone());
+      let mut templexes: Vec<&'p ITemplexPT<'p>> = func.parameters.to_vec();
+      templexes.push(func.return_type);
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::Pack(pack) => get_ordered_rune_declarations_from_templexes_with_duplicates(pack.members),
     ITemplexPT::StaticSizedArray(static_sized_array) => {
-      let templexes = vec![
-        (*static_sized_array.mutability).clone(),
-        (*static_sized_array.variability).clone(),
-        (*static_sized_array.size).clone(),
-        (*static_sized_array.element).clone(),
+      let templexes: Vec<&'p ITemplexPT<'p>> = vec![
+        static_sized_array.mutability,
+        static_sized_array.variability,
+        static_sized_array.size,
+        static_sized_array.element,
       ];
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }
     ITemplexPT::RuntimeSizedArray(runtime_sized_array) => {
-      let templexes = vec![
-        (*runtime_sized_array.mutability).clone(),
-        (*runtime_sized_array.element).clone(),
+      let templexes: Vec<&'p ITemplexPT<'p>> = vec![
+        runtime_sized_array.mutability,
+        runtime_sized_array.element,
       ];
       get_ordered_rune_declarations_from_templexes_with_duplicates(&templexes)
     }

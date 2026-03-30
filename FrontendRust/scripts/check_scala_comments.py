@@ -320,26 +320,11 @@ def filter_migration_annotations(text):
 def normalize(text):
     """Normalize text for comparison:
     - Strip leading whitespace from each line
-    - Collapse multiple consecutive blank lines into one
-    - Strip leading/trailing blank lines
+    - Remove all blank lines
     """
     lines = text.split('\n')
-    # Strip leading whitespace from each line
-    lines = [line.lstrip() for line in lines]
-    # Collapse multiple consecutive blank lines into one
-    result = []
-    prev_blank = False
-    for line in lines:
-        is_blank = line.strip() == ''
-        if is_blank and prev_blank:
-            continue
-        result.append(line)
-        prev_blank = is_blank
-    # Strip leading/trailing blank lines
-    while result and result[0].strip() == '':
-        result.pop(0)
-    while result and result[-1].strip() == '':
-        result.pop()
+    # Strip leading whitespace from each line, remove blank lines entirely
+    result = [line.lstrip() for line in lines if line.strip() != '']
     return result
 
 
@@ -444,3 +429,5 @@ def main():
 
 if __name__ == '__main__':
     main()
+
+// V: i think we can delete this whole script right?

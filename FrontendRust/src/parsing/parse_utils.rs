@@ -121,6 +121,35 @@ where
     return None
   }
 */
+/*
+  // This method modifies the current iterator to skip it past the next = symbol
+  // that's surrounded by spaces. Note that it won't catch an = at the beginning or
+  // end of the statement.
+  // It returns None if there wasn't one (which leaves self untouched) or a Some
+  // containing everything we skipped past (minus the =).
+  def trySkipPastSemicolonWhile(iter: ScrambleIterator, continueWhile: ScrambleIterator => Boolean): Option[ScrambleIterator] = {
+    val scoutingIter = iter.clone()
+    while (continueWhile(scoutingIter)) {
+      scoutingIter.peek() match {
+        case Some(SymbolLE(_, ';')) => {
+          // We'll return this iterator for the things that come before the =
+          val beforeIter = iter.clone()
+          beforeIter.end = scoutingIter.index + 1
+
+          // Now modify self to skip past it.
+          iter.skipTo(scoutingIter)
+          iter.advance()
+
+          return Some(beforeIter)
+        }
+        case _ =>
+      }
+      scoutingIter.advance()
+    }
+
+    return None
+  }
+*/
 
 /// Try to skip past a keyword, returning the portion before it
 /// Mirrors trySkipPastKeywordWhile in ParseUtils.scala lines 77-102
@@ -198,37 +227,6 @@ where
     return None
   }
 */
-
-/*
-  // This method modifies the current iterator to skip it past the next = symbol
-  // that's surrounded by spaces. Note that it won't catch an = at the beginning or
-  // end of the statement.
-  // It returns None if there wasn't one (which leaves self untouched) or a Some
-  // containing everything we skipped past (minus the =).
-  def trySkipPastSemicolonWhile(iter: ScrambleIterator, continueWhile: ScrambleIterator => Boolean): Option[ScrambleIterator] = {
-    val scoutingIter = iter.clone()
-    while (continueWhile(scoutingIter)) {
-      scoutingIter.peek() match {
-        case Some(SymbolLE(_, ';')) => {
-          // We'll return this iterator for the things that come before the =
-          val beforeIter = iter.clone()
-          beforeIter.end = scoutingIter.index + 1
-
-          // Now modify self to skip past it.
-          iter.skipTo(scoutingIter)
-          iter.advance()
-
-          return Some(beforeIter)
-        }
-        case _ =>
-      }
-      scoutingIter.advance()
-    }
-
-    return None
-  }
-*/
-
 /*
   def trySkipTo(
     iter: ScrambleIterator,

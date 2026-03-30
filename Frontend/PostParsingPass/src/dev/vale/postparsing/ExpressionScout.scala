@@ -678,47 +678,12 @@ class ExpressionScout(
               this, stackFrame0, lidb, range, conditionPE, uncombinedBodyPE)
 
           (stackFrame0, NormalResult(loopSE), loopSelfUses, loopChildUses)
-  //
-  //        val (combinedBodySE, selfUses, childUses) =
-  //          newBlock(
-  //            stackFrame0.parentEnv,
-  //            Some(stackFrame0),
-  //            lidb.child(),
-  //            evalRange(range),
-  //            noDeclarations,
-  //            true,
-  //            (stackFrame1, lidb) => {
-  //              vassert(resultRequested)
-  //              val (stackFrame2, condSE, condSelfUses, condChildUses) =
-  //                scoutExpressionAndCoerce(stackFrame1, lidb.child(), conditionPE, UseP)
-  //
-  //              val (thenSE, thenSelfUses, thenChildUses) =
-  //                scoutBlock(
-  //                  stackFrame2, lidb.child(), noDeclarations, true,
-  //                  BlockPE(range, ConsecutorPE(Vector(uncombinedBodyPE, ConstantBoolPE(range, true)))))
-  //
-  //              val elseSE = BlockSE(evalRange(range), Vector(), ConstantBoolSE(evalRange(range), false))
-  //
-  //              // Condition's uses isn't sent through a branch merge because the condition
-  //              // is *always* evaluated (at least once).
-  //              val selfCaseUses = thenSelfUses.branchMerge(noVariableUses)
-  //              val selfUses = condSelfUses.thenMerge(selfCaseUses);
-  //              val childCaseUses = thenChildUses.branchMerge(noVariableUses)
-  //              val childUses = condChildUses.thenMerge(childCaseUses);
-  //
-  //              val ifSE = IfSE(evalRange(range), condSE, thenSE, elseSE)
-  //              (stackFrame2, ifSE, selfUses, childUses)
-  //            })
-  //        (stackFrame0, NormalResult(WhileSE(evalRange(range), combinedBodySE)), selfUses, childUses)
         }
         case EachPE(range, maybePure, entryPatternPP, inKeywordRange, iterableExpr, body) => {
           val (loopSE, selfUses, childUses) =
             loopPostParser.scoutEach(this, stackFrame0, lidb, range, maybePure.nonEmpty, entryPatternPP, inKeywordRange, iterableExpr, body)
           (stackFrame0, NormalResult(loopSE), selfUses, childUses)
         }
-  //      case BadLetPE(range) => {
-  //        throw CompileErrorExceptionS(ForgotSetKeywordError(evalRange(range)))
-  //      }
         case LetPE(range, patternP, exprPE) => {
           val codeLocation = PostParser.evalPos(stackFrame0.file, range.begin)
           val (stackFrame1, expr1, selfUses, childUses) =

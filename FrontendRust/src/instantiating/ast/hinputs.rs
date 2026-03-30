@@ -1,6 +1,5 @@
+// VISTODO: rename Hinputs everywhere
 /*
-VISTODO: rename Hinputs everywhere
-
 package dev.vale.instantiating.ast
 
 import dev.vale.postparsing.IRuneS

@@ -56,7 +56,7 @@ If any piece of information is an arcana (cross-cutting concern):
 
 1. **Generate title and ID.** The title describes the concern plainly (does NOT contain the word "arcana"). The ID is an uppercase initialism of the title words with Z appended. Keep the acronym readable (4-10 letters before the Z). Present to user for approval.
 
-2. **Create the arcana doc** at `<feature>/docs/arcana/<HammerCaseTitle>-<ID>.md` in the `docs/` directory of the feature that *causes* the cross-cutting effect:
+2. **Create the arcana doc** at `<feature>/docs/arcana/<HammerCaseTitle>-<ID>.md` in the `docs/` directory of the feature that *causes* the cross-cutting effect. HammerCase means each word is capitalized and concatenated with no separators, e.g., `PostParserSynthesizesParserASTNodes-PPSPASTNZ.md`:
 
 ```markdown
 # <Title> (<ID>)

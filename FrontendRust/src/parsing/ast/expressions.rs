@@ -225,9 +225,9 @@ case class PackPE(range: RangeL, inners: Vector[IExpressionPE]) extends IExpress
   override def needsSemicolonBeforeNextStatement: Boolean = true
   override def producesResult(): Boolean = true
 Guardian: disable: NECX
-// V: why are all of these things cloneable?
 }
 */
+// V: why are all of these things cloneable?
 
 // Parens that we use for precedence
 #[derive(Debug, PartialEq)]
@@ -431,7 +431,7 @@ Guardian: disable: NECX
 #[derive(Debug, PartialEq)]
 pub struct LetPE<'p> {
   pub range: RangeL,
-  pub pattern: PatternPP<'p>,
+  pub pattern: &'p PatternPP<'p>,
   pub source: &'p IExpressionPE<'p>,
 }
 /*
@@ -812,7 +812,7 @@ Guardian: disable: NECX
 #[derive(Debug, PartialEq)]
 pub struct TemplateArgsP<'p> {
   pub range: RangeL,
-  pub args: &'p [ITemplexPT<'p>],
+  pub args: &'p [&'p ITemplexPT<'p>],
 }
 /*
 case class TemplateArgsP(range: RangeL, args: Vector[ITemplexPT]) {

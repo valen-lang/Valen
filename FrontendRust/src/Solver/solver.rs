@@ -229,6 +229,16 @@ case class FailedSolve[Rule, Rune, Conclusion, ErrType](
 }
 Guardian: disable: NECX
 */
+// mig: trait ISolverError
+#[derive(Clone, Debug, PartialEq)]
+pub enum ISolverError<Rune, Conclusion, ErrType> {
+  SolverConflict(SolverConflict<Rune, Conclusion, ErrType>),
+  RuleError(RuleError<Rune, Conclusion, ErrType>),
+}
+/*
+sealed trait ISolverError[Rune, Conclusion, ErrType]
+Guardian: disable: NECX
+*/
 // mig: struct SolverConflict
 #[derive(Clone, Debug, PartialEq)]
 pub struct SolverConflict<Rune, Conclusion, ErrType> {
@@ -262,16 +272,6 @@ case class RuleError[Rune, Conclusion, ErrType](
 //  ruleIndex: Int,
   err: ErrType
 ) extends ISolverError[Rune, Conclusion, ErrType]
-Guardian: disable: NECX
-*/
-// mig: trait ISolverError
-#[derive(Clone, Debug, PartialEq)]
-pub enum ISolverError<Rune, Conclusion, ErrType> {
-    SolverConflict(SolverConflict<Rune, Conclusion, ErrType>),
-    RuleError(RuleError<Rune, Conclusion, ErrType>),
-}
-/*
-sealed trait ISolverError[Rune, Conclusion, ErrType]
 Guardian: disable: NECX
 */
 pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>

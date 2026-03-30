@@ -69,8 +69,8 @@ where 'p: 's,
     .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
+// V: is the above a faithful translation of the below?
 /*
-  // V: is the above a faithful translation of the below?
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
     val compile = PostParserTestCompilation.test(code, interner)
     compile.getScoutput() match {
@@ -120,8 +120,8 @@ where 'p: 's,
     Err(e) => e,
   }
 }
+// V: is the above a faithful translation of the below?
 /*
-  // V: is the above a faithful translation of the below?
   private def compileForError(code: String): ICompileErrorS = {
     PostParserTestCompilation.test(code).getScoutput() match {
       case Err(e) => e

@@ -203,31 +203,6 @@ object PostParser {
     }
   }
 
-//  def knownEndsInVoid(expr: IExpressionSE): Boolean = {
-//    expr match {
-//      case VoidSE(_) => true
-//      case ReturnSE(_, _) => true
-//      case DestructSE(_, _) => true
-//      case IfSE(_, _, thenBody, elseBody) => knownEndsInVoid(thenBody) && knownEndsInVoid(elseBody)
-//      case WhileSE(_, _) => true
-//    }
-//  }
-
-//  def pruneTrailingVoids(exprs: Vector[IExpressionSE]): Vector[IExpressionSE] = {
-//    if (exprs.size >= 2) {
-//      exprs.last match {
-//        case VoidSE(_) => {
-//          exprs.init.last match {
-//            case ReturnSE(_, _) => return exprs.init
-//            case VoidSE(_) => return pruneTrailingVoids(exprs.init)
-//            case
-//          }
-//        }
-//        case _ =>
-//      }
-//    }
-//  }
-
   def consecutive(exprs: Vector[IExpressionSE]): IExpressionSE = {
     if (exprs.isEmpty) {
       vcurious()

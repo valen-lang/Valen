@@ -1,5 +1,3 @@
-// good
-
 package dev.vale.parsing.ast
 
 import dev.vale.lexing.{RangeL, WordLE}
@@ -54,8 +52,6 @@ case class ImportP(
   packageSteps: Vector[NameP],
   importeeName: NameP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 
-//sealed trait IAttributeP
-//case class ExportP(range: RangeP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 
@@ -111,8 +107,6 @@ case class ExportAttributeP(range: RangeL) extends IAttributeP { override def eq
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-//case class RuleAttributeP(rule: IRulexPR) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-
 sealed trait IRuneAttributeP {
   def range: RangeL
 }

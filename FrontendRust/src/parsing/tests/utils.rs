@@ -10,7 +10,7 @@ use crate::parsing::ast::*;
 use crate::parsing::expression_parser::ExpressionParser;
 use crate::parsing::parser::Parser;
 use crate::parsing::pattern_parser::PatternParser;
-use crate::parsing::scramble_iterator::ScrambleIterator;
+use crate::parsing::expression_parser::ScrambleIterator;
 use crate::parsing::templex_parser::TemplexParser;
 use crate::parsing::tests::traverse::NodeRefP;
 
@@ -73,11 +73,11 @@ pub fn compile_denizens<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<Vec<IDenizenP<'p>>, ParseError>
+) -> Result<&'p [IDenizenP<'p>], ParseError>
 where
   'p: 'ctx,
 {
-  compile_file(parse_arena, keywords, code).map(|file| file.denizens.to_vec())
+  compile_file(parse_arena, keywords, code).map(|file| file.denizens)
 }
 
 /// Compile a single denizen from code
@@ -85,13 +85,13 @@ pub fn compile_denizen<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<IDenizenP<'p>, ParseError>
+) -> Result<&'p IDenizenP<'p>, ParseError>
 where
   'p: 'ctx,
 {
   let denizens = compile_denizens(parse_arena, keywords, code)?;
   assert_eq!(denizens.len(), 1, "Expected exactly one denizen");
-  Ok(denizens.into_iter().next().unwrap())
+  Ok(&denizens[0])
 }
 
 /// Compile a single denizen and panic if it fails
@@ -99,7 +99,7 @@ pub fn compile_denizen_expect<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> IDenizenP<'p>
+) -> &'p IDenizenP<'p>
 where
   'p: 'ctx,
 {
@@ -339,7 +339,7 @@ pub fn compile_struct<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> Result<StructP<'p>, ParseError>
+) -> Result<&'p StructP<'p>, ParseError>
 where
   'p: 'ctx,
 {
@@ -355,7 +355,7 @@ pub fn compile_struct_expect<'p, 'ctx>(
   parse_arena: &'ctx ParseArena<'p>,
   keywords: &'ctx Keywords<'p>,
   code: &str,
-) -> StructP<'p>
+) -> &'p StructP<'p>
 where
   'p: 'ctx,
 {

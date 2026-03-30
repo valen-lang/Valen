@@ -1,5 +1,5 @@
+// VISTODO: delete
 /*
-VISTODO: delete
 package dev.vale.highertyping
 
 import dev.vale.postparsing.patterns._

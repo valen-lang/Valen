@@ -5,7 +5,7 @@ package dev.vale.lexing
 import dev.vale.{IInterning, StrI, U, vassert, vcurious, vpass, vwat}
 */
 
-/// Position range in source code
+/// Position range in source code (test edit)
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RangeL(pub i32, pub i32);
 
@@ -126,8 +126,8 @@ case class ImportL(
   packageSteps: Vector[WordLE],
   importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
-// V: why do we have cloning on ImportL etc.?
 */
+// V: why do we have cloning on ImportL etc.?
 
 /// Struct definition
 #[derive(Clone, Debug, PartialEq)]

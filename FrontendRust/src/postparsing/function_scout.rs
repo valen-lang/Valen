@@ -288,15 +288,6 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         };
         (rune, Some(implicit_region_generic_param))
       }
-      /*
-      case Some(RegionRunePT(regionRange, regionName)) => {
-        val rune = CodeRuneS(vassertSome(regionName).str) // impl isolates
-        if (!functionEnv.allDeclaredRunes().contains(rune)) {
-          throw CompileErrorExceptionS(CouldntFindRuneS(PostParser.evalRange(file, range), rune.name.str))
-        }
-        (evalRange(file, regionRange), rune, None)
-      }
-      */
       Some(region_rune_pt) => {
         let region_name = region_rune_pt
           .name

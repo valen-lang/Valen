@@ -347,10 +347,7 @@ pub struct ConsecutorSE<'s> {
 case class ConsecutorSE(
   exprs: Vector[IExpressionSE],
 ) extends IExpressionSE {
-  // MIGALLOW: Rust doesnt need an equals override
-  override def equals(obj: Any): Boolean = vcurious()
-  // MIGALLOW: Rust doesnt need a hashCode override
-  override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 */
 
 impl<'s> ConsecutorSE<'s> {

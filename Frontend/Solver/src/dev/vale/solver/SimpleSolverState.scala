@@ -189,9 +189,7 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
     override def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedUserRune: Rune, conclusion: Conclusion): Unit = {
       vassert(alive)
-//      val newlySolvedCanonicalRune = SimpleSolverState.this.userRuneToCanonicalRune(newlySolvedUserRune)
       tentativeStep = tentativeStep.copy(conclusions = tentativeStep.conclusions + (newlySolvedUserRune -> conclusion))
-//      Ok(true)
     }
   }
 

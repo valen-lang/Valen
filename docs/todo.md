@@ -62,12 +62,13 @@ Files already in their correct location per `docs/meta.md` can be checked off wi
 
 ## .claude/skills/
 
-- [ ] `.claude/skills/arcana/SKILL.md` — Fold into `docs/skills/document.md` (already done, verify and delete)
+- [x] `.claude/skills/arcana/SKILL.md` — Fold into `docs/skills/document.md` (already done, verify and delete)
 - [ ] `.claude/skills/migration-check-correct-loop/SKILL.md`
 - [ ] `.claude/skills/migration-diff-review/SKILL.md`
 - [ ] `.claude/skills/migration-drive/SKILL.md`
 - [ ] `.claude/skills/migration-test-fixer/SKILL.md`
 - [ ] `.claude/skills/migration-test-fixer-2/SKILL.md`
+- [ ] `.claude/skills/curate-shields/SKILL.md`
 - [ ] `.claude/skills/process-feedback/SKILL.md`
 - [ ] `.claude/skills/slice-pipeline/SKILL.md`
 - [ ] `.claude/skills/slice-pipeline/EXAMPLES.md`

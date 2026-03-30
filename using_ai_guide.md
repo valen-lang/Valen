@@ -30,7 +30,9 @@ Type these directly in Claude Code.
 | Command | What it does |
 |---|---|
 | `/vv` | Process a `// VV:` violation comment. Match it to a Guardian shield or create a new one, then add a test case. |
-| `/process-feedback` | Process `//f` annotations from a Guardian review. Validates context quality and creates test cases. |
+| `/process-feedback` | Process `//f` annotations from a Guardian review. Validates context quality and creates disagreement cases. |
+| `/curate-shields` | Weekly curation of shield disagreements. Triage opus/ cases, refine prompts, promote cases to tests/. |
+| `/audit-error-handling` | Audit codebase for silent failures, swallowed errors, and FFFL violations. Launches parallel agents for exhaustive search. |
 
 ## Agents (Spawned Internally)
 
@@ -74,6 +76,9 @@ Guardian runs automatically when Claude edits code (configured in `FrontendRust/
 ```bash
 # Review changes against all shields
 guardian review --config FrontendRust/guardian.toml --mode review_mode --base HEAD --votes 1
+
+# Optimize a shield prompt for a weaker model using test cases
+guardian optimize --shield path/to/shield.md --rounds 5 --config guardian.toml --cache-dir .cache
 
 # Future: documentation support (see Guardian/doc-design-doc.md)
 guardian docs rebuild    # Regenerate CLAUDE.md files and symlinks

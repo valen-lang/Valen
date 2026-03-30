@@ -1635,11 +1635,11 @@ fn predict_mutability(
     let body_range_s = Self::eval_range(file, head.body_range);
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
 
-    let generic_parameters_p = head
+    let generic_parameters_p: &[GenericParameterP<'p>] = head
       .identifying_runes
       .as_ref()
-      .map(|x| x.params.to_vec())
-      .unwrap_or_default();
+      .map(|x| x.params as &[GenericParameterP<'p>])
+      .unwrap_or(&[]);
     let user_specified_identifying_runes = generic_parameters_p
       .iter()
       .map(|generic_parameter| RuneUsage {
@@ -1649,11 +1649,11 @@ fn predict_mutability(
         })),
       })
       .collect::<Vec<_>>();
-    let template_rules_p = head
+    let template_rules_p: &[crate::parsing::ast::IRulexPR<'p>] = head
       .template_rules
       .as_ref()
-      .map(|x| x.rules.to_vec())
-      .unwrap_or_default();
+      .map(|x| x.rules as &[crate::parsing::ast::IRulexPR<'p>])
+      .unwrap_or(&[]);
     let runes_from_rules =
       get_ordered_rune_declarations_from_rulexes_with_duplicates(&template_rules_p)
       .iter()
@@ -1765,12 +1765,13 @@ fn predict_mutability(
     let mut member_rule_builder = Vec::<IRulexSR<'s>>::new();
     let mut members_rune_to_explicit_type = ArenaIndexMap::<IRuneS, ITemplataType>::new_in(self.scout_arena.arena());
 
-    let mutability = head.mutability.clone().unwrap_or(ITemplexPT::Mutability(
+    let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
         RangeL(head.body_range.begin(), head.body_range.begin()),
         MutabilityP::Mutable,
       ),
-    ));
+    );
+    let mutability: &ITemplexPT<'p> = head.mutability.as_ref().unwrap_or(&default_mutability);
     let mutability_rune_s = translate_templex(
       self.scout_arena,
       self.keywords,
@@ -1778,7 +1779,7 @@ fn predict_mutability(
       &mut lidb.child(),
       &mut header_rule_builder,
       default_region_rune_s.clone(),
-      &mutability,
+      mutability,
     );
     header_rune_to_explicit_type.push((
       mutability_rune_s.rune.clone(),
@@ -2273,11 +2274,11 @@ pub(crate) fn check_identifiability(
       name: self.scout_arena.intern_str(interface.name.str().as_str()),
       range: Self::eval_range(file, interface.name.range()),
     });
-    let rules_p: Vec<crate::parsing::ast::IRulexPR<'p>> = interface
+    let rules_p: &[crate::parsing::ast::IRulexPR<'p>] = interface
       .template_rules
       .as_ref()
-      .map(|x| x.rules.to_vec())
-      .unwrap_or_default();
+      .map(|x| x.rules as &[crate::parsing::ast::IRulexPR<'p>])
+      .unwrap_or(&[]);
 
     let mut lidb = LocationInDenizenBuilder::new(Vec::new());
     // V: is this whole function now closer or further from scala?
@@ -2323,11 +2324,11 @@ pub(crate) fn check_identifiability(
       }));
     }
 
-    let generic_parameters_p = interface
+    let generic_parameters_p: &[GenericParameterP<'p>] = interface
       .maybe_identifying_runes
       .as_ref()
-      .map(|x| x.params.to_vec())
-      .unwrap_or_default();
+      .map(|x| x.params as &[GenericParameterP<'p>])
+      .unwrap_or(&[]);
 
     let user_specified_identifying_runes = generic_parameters_p
       .iter()

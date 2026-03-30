@@ -270,15 +270,6 @@ sealed trait IVarNameS extends INameS
 Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub struct ClosureParamNameS<'s> {
-  pub code_location: CodeLocationS<'s>,
-}
-/*
-case class ClosureParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
-Guardian: disable: NECX
-*/
-
 /// Value form for interner lookups.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarNameValS<'s> {
@@ -644,6 +635,14 @@ pub struct LetNameS<'s> {
 }
 /*
 case class LetNameS(codeLocation: CodeLocationS) extends INameS {  }
+Guardian: disable: NECX
+*/
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ClosureParamNameS<'s> {
+  pub code_location: CodeLocationS<'s>,
+}
+/*
+case class ClosureParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
 Guardian: disable: NECX
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]

@@ -49,210 +49,6 @@ object PassManager {
   def DEFAULT_PACKAGE_COORD(interner: Interner, keywords: Keywords) = interner.intern(PackageCoordinate(keywords.my_module, Vector.empty))
 */
 
-// From PassManager.scala lines 153-201: Resolver that reads .vale files from filesystem
-pub struct FileSystemResolver<'a> {
-  module_roots: HashMap<String, PathBuf>,
-  direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
-}
-
-impl<'a> FileSystemResolver<'a> {
-  pub fn new(
-    module_roots: HashMap<String, PathBuf>,
-    direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
-  ) -> Self {
-    FileSystemResolver {
-      module_roots,
-      direct_file_inputs,
-    }
-  }
-}
-
-impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a> {
-  // From PassManager.scala lines 153-201
-  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
-    // From PassManager.scala lines 190-196: Check for DirectFilePathInput first
-    if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
-      if let Ok(code) = fs::read_to_string(file_path) {
-        let filepath = file_path.to_string_lossy().to_string();
-        let mut result = HashMap::new();
-        result.insert(filepath, code);
-        return Some(result);
-      }
-    }
-
-    // From PassManager.scala lines 168-189: ModulePathInput - find all files in directory
-    let module_name = package_coord.module.as_str();
-    let module_root = self.module_roots.get(module_name)?;
-
-    // Build path: module_root/package1/package2/...
-    let mut dir_path = module_root.clone();
-    for package_step in &package_coord.packages {
-      dir_path.push(package_step.as_str());
-    }
-
-    // Find all .vale files in this directory
-    let mut results = HashMap::new();
-
-    if let Ok(entries) = fs::read_dir(&dir_path) {
-      for entry in entries.flatten() {
-        let path = entry.path();
-        if path.extension().and_then(|s| s.to_str()) == Some("vale") {
-          if let Ok(code) = fs::read_to_string(&path) {
-            let filepath = path.to_string_lossy().to_string();
-            results.insert(filepath, code);
-          }
-        }
-      }
-    }
-
-    if results.is_empty() {
-      None
-    } else {
-      Some(results)
-    }
-  }
-}
-
-// From PassManager.scala lines 153-201: resolvePackageContents
-fn resolve_package_contents<'a>(
-  parse_arena: &ParseArena<'a>,
-  inputs: &[IFrontendInput<'a>],
-  package_coord: &PackageCoordinate<'a>,
-) -> Option<HashMap<String, String>>
-{
-  // From PassManager.scala line 158
-  let module = &package_coord.module;
-  let packages = &package_coord.packages;
-
-  // From PassManager.scala lines 162-197
-  let mut source_inputs: Vec<(String, String)> = Vec::new();
-
-  for (index, input) in inputs.iter().enumerate() {
-    if input.package_coord(parse_arena).module != *module {
-      continue;
-    }
-
-    match input {
-      IFrontendInput::SourceInput {
-        package_coord: _,
-        name,
-        code,
-      } => {
-        // From PassManager.scala lines 164-167: SourceInput (for .vpst and .vale direct inputs)
-        if packages.is_empty() {
-          source_inputs.push((format!("{}({})", index, name), code.clone()));
-        }
-      }
-      IFrontendInput::ModulePathInput {
-        module: _,
-        module_path,
-      } => {
-        // From PassManager.scala lines 168-188: ModulePathInput
-        let mut directory_path = module_path.clone();
-        for package_step in packages {
-          directory_path.push('/');
-          directory_path.push_str(package_step.as_str());
-        }
-
-        let directory = std::path::Path::new(&directory_path);
-        if let Ok(entries) = fs::read_dir(directory) {
-          for entry in entries.flatten() {
-            let path = entry.path();
-            if let Some(name) = path.file_name() {
-              let name_str = name.to_string_lossy();
-              if name_str.ends_with(".vale") || name_str.ends_with(".vpst") {
-                if let Ok(code) = fs::read_to_string(&path) {
-                  source_inputs.push((path.display().to_string(), code));
-                }
-              }
-            }
-          }
-        }
-      }
-      IFrontendInput::DirectFilePathInput {
-        package_coord: _,
-        path,
-      } => {
-        // From PassManager.scala lines 190-196: DirectFilePathInput
-        if let Ok(code) = fs::read_to_string(path) {
-          source_inputs.push((path.clone(), code));
-        }
-      }
-    }
-  }
-
-  // From PassManager.scala lines 198-200: Group by filepath and check for overlaps
-  let mut filepath_to_source: HashMap<String, String> = HashMap::new();
-  for (filepath, code) in source_inputs {
-    if filepath_to_source.contains_key(&filepath) {
-      panic!("Input filepaths overlap!");
-    }
-    filepath_to_source.insert(filepath, code);
-  }
-
-  Some(filepath_to_source)
-}
-
-/*
-  AFTERM: dedup the above with FileSystemResolver.
-  def resolvePackageContents(
-    interner: Interner,
-      inputs: Vector[IFrontendInput],
-      packageCoord: PackageCoordinate):
-  Option[Map[String, String]] = {
-    val PackageCoordinate(module, packages) = packageCoord
-
-//    println("resolving " + packageCoord + " with inputs:\n" + inputs)
-
-    val sourceInputs =
-      inputs.zipWithIndex.filter(_._1.packageCoord(interner).module == module).flatMap({
-        case (SourceInput(_, name, code), index) if (packages == Vector.empty) => {
-          // All .vpst and .vale direct inputs are considered part of the root paackage.
-          Vector((index + "(" + name + ")" -> code))
-        }
-        case (mpi @ ModulePathInput(_, modulePath), _) => {
-//          println("checking with modulepathinput " + mpi)
-          val directoryPath = modulePath + packages.map(File.separator + _.str).mkString("")
-//          println("looking in dir " + directoryPath)
-          val directory = new java.io.File(directoryPath)
-          val filesInDirectory = directory.listFiles()
-          if (filesInDirectory == null) {
-            Vector()
-          } else {
-            val inputFiles =
-              filesInDirectory.filter(_.getName.endsWith(".vale")) ++
-                filesInDirectory.filter(_.getName.endsWith(".vpst"))
-            //          println("found files: " + inputFiles)
-            val inputFilePaths = inputFiles.map(_.getPath)
-            inputFilePaths.toVector.map(filepath => {
-              val bufferedSource = Source.fromFile(filepath)
-              val code = bufferedSource.getLines.mkString("\n")
-              bufferedSource.close
-              (filepath -> code)
-            })
-          }
-        }
-        case (DirectFilePathInput(_, path), _) => {
-          val file = path
-          val bufferedSource = Source.fromFile(file)
-          val code = bufferedSource.getLines.mkString("\n")
-          bufferedSource.close
-          Vector((path -> code))
-        }
-      })
-    val filepathToSource = sourceInputs.groupBy(_._1).mapValues(_.head._2)
-    vassert(sourceInputs.size == filepathToSource.size, "Input filepaths overlap!")
-    Some(filepathToSource)
-  }
-*/
-
-// From PassManager.scala lines 29-50: IFrontendInput trait and implementations
-// From PassManager.scala lines 31-44: IFrontendInput sealed trait
-/*
-  sealed trait IFrontendInput {
-    def packageCoord(interner: Interner): PackageCoordinate
-  }
-*/
 #[derive(Clone)]
 pub enum IFrontendInput<'a> {
   SourceInput {
@@ -303,320 +99,6 @@ impl<'a> IFrontendInput<'a> {
   }
 Guardian: disable: NECX
 */
-
-// From PassManager.scala lines 356-366: buildAndOutput
-fn build_and_output<'p>(parse_arena: &'p ParseArena<'p>, keywords: &'p Keywords<'p>, opts: &Options<'p>) {
-  match build(parse_arena, keywords, opts) {
-    Ok(_) => {
-      // Success
-    }
-    Err(error) => {
-      eprintln!("Error: {}", error);
-      std::process::exit(22);
-    }
-  }
-}
-
-/*
-  def buildAndOutput(interner: Interner, keywords: Keywords, opts: Options) = {
-      build(interner, keywords, opts) match {
-        case Ok(_) => {
-        }
-        case Err(error) => {
-          System.err.println("Error: " + error)
-          System.exit(22)
-          vfail()
-        }
-      }
-  }
-*/
-
-// From PassManager.scala lines 203-342: build function
-pub fn build<'p, 'ctx>(
-  parse_arena: &'ctx ParseArena<'p>,
-  keywords: &'ctx Keywords<'p>,
-  opts: &Options<'p>,
-) -> Result<(), String>
-where
-  'p: 'ctx,
-{
-  // From PassManager.scala lines 205-207: Create output directories
-  let output_dir_path = opts.output_dir_path.as_ref().unwrap();
-  fs::create_dir_all(output_dir_path)
-    .map_err(|e| format!("Failed to create output directory: {}", e))?;
-  fs::create_dir_all(format!("{}/vast", output_dir_path))
-    .map_err(|e| format!("Failed to create vast directory: {}", e))?;
-  fs::create_dir_all(format!("{}/vpst", output_dir_path))
-    .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
-
-  // From PassManager.scala line 209
-  let _start_time = std::time::Instant::now();
-
-  // From PassManager.scala lines 211-227: Load .vpst files if --input_vpst is provided
-  if opts.input_vpst_dir.is_some() {
-    panic!("Loading .vpst files not yet implemented - see PassManager.scala lines 213-225. Need ParsedLoader and SourceInput")
-  }
-  let all_inputs = &opts.inputs;
-
-  // From PassManager.scala line 229: Get distinct package coordinates
-  let package_coords: Vec<&PackageCoordinate<'p>> = all_inputs
-    .iter()
-    .map(|input| input.package_coord(parse_arena))
-    .collect::<std::collections::HashSet<_>>()
-    .into_iter()
-    .collect();
-
-  // From PassManager.scala lines 231-253: Create FullCompilation
-  // Note: Builtins are needed but we don't have builtins_dir available yet.
-  // For now, create an empty builtins map. This will need to be fixed when
-  // builtins are actually required for parsing.
-  let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
-
-  // From PassManager.scala line 235: Add BUILTIN package coordinate
-  let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
-  packages_to_build.extend(package_coords);
-
-  // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
-  let all_inputs_clone = all_inputs.clone();
-  let resolver = builtins_code_map.or(move |package_coord: &'p PackageCoordinate<'p>| {
-    resolve_package_contents(parse_arena, &all_inputs_clone, &*package_coord)
-  });
-
-  // From PassManager.scala lines 238-253: Create FullCompilationOptions
-  let options = FullCompilationOptions {
-    global_options: GlobalOptions {
-      sanity_check: opts.sanity_check,
-      use_overload_index: opts.use_overload_index,
-      use_optimized_solver: opts.use_optimized_solver,
-      verbose_errors: opts.verbose_errors,
-      debug_output: opts.debug_output,
-    },
-    debug_out: if opts.debug_output {
-      Arc::new(|s: &str| println!("#: {}", s))
-    } else {
-      Arc::new(|_: &str| {})
-    },
-  };
-
-  // From PassManager.scala lines 231-233: Create FullCompilation
-  // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
-  // and the scout pass gets its own arena.
-  // V: should we reference some docs here about how our arenas work
-  let scout_bump = bumpalo::Bump::new();
-  let scout_arena = ScoutArena::new(&scout_bump);
-  let scout_keywords = Keywords::new_for_scout(&scout_arena);
-  let parser_keywords = Keywords::new_for_parse(parse_arena);
-  let mut compilation = FullCompilation::new(
-    &scout_arena,
-    &scout_keywords,
-    &parser_keywords,
-    parse_arena,
-    packages_to_build,
-    &resolver,
-    options,
-    parse_arena.bump(),
-  );
-
-  // From PassManager.scala line 255
-  let _start_load_and_parse_time = std::time::Instant::now();
-
-  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
-  // Keep this before get_parseds so mutable borrows don't overlap.
-  let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
-  let _ = vale_code_map; // Suppress unused warning
-
-  // From PassManager.scala lines 257-263: Get parsed files
-  let parseds = match compilation.get_parseds() {
-    Err(failed_parse) => {
-      // From PassManager.scala lines 259-261
-      panic!(
-        "ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}",
-        failed_parse
-      );
-    }
-    Ok(p) => p,
-  };
-  // From PassManager.scala lines 271-279: Write VPST files if requested
-  if opts.output_vpst {
-    use crate::parsing::vonifier::ParserVonifier;
-    use crate::von::printer::VonPrinter;
-
-    for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
-      // From PassManager.scala line 273
-      let von = ParserVonifier::vonify_file(program_p);
-      // From PassManager.scala line 274
-      let vpst_json = VonPrinter::new().print(&von);
-      // From PassManager.scala lines 275-276
-      let parts: Vec<&str> = file_coord.filepath.split(&['/', '\\'][..]).collect();
-      let filename = parts.last().unwrap().replace(".vale", ".vpst");
-      let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
-      // From PassManager.scala line 277
-      std::fs::write(&vpst_filepath, vpst_json)
-        .unwrap_or_else(|e| panic!("Failed to write VPST file {}: {}", vpst_filepath, e));
-    }
-  }
-
-  // From PassManager.scala lines 281-284: Benchmark timing
-  let _start_scout_time = std::time::Instant::now();
-  if opts.benchmark {
-    println!(
-      "Loading and parsing duration: {:?}",
-      _start_scout_time.duration_since(_start_load_and_parse_time)
-    );
-  }
-
-  // From PassManager.scala lines 286-341: Full compilation (scout, typing, hammer) - only if outputVAST
-  if opts.output_vast {
-    // From PassManager.scala lines 287-290: Scout phase
-    panic!("Scout phase not yet implemented - see PassManager.scala lines 287-341. Need getScoutput, getAstrouts, getCompilerOutputs, getHamuts");
-  }
-
-  Ok(())
-}
-
-/*
-  def build(interner: Interner, keywords: Keywords, opts: Options):
-  Result[Option[ProgramH], String] = {
-    new java.io.File(opts.outputDirPath.get).mkdirs()
-    new java.io.File(opts.outputDirPath.get + "/vast").mkdir()
-    new java.io.File(opts.outputDirPath.get + "/vpst").mkdir()
-
-    val startTime = java.lang.System.currentTimeMillis()
-
-    // If --input_vpst is provided, load .vpst files
-    // The Rust parser already filtered to only needed packages via import-driven parsing
-    val allInputs = opts.inputVpstDir match {
-      case Some(vpstDir) => {
-        val vpstFiles = new java.io.File(vpstDir).listFiles().filter(_.getName.endsWith(".vpst"))
-        val vpstInputs = vpstFiles.map(file => {
-          val code = Source.fromFile(file).mkString
-          val fileP = new ParsedLoader(interner).load(code) match {
-            case Err(e) => return Err(s"Failed to load ${file.getName}: $e")
-            case Ok(f) => f
-          }
-          SourceInput(fileP.fileCoord.packageCoordinate, file.getPath, code)
-        }).toVector
-        opts.inputs ++ vpstInputs
-      }
-      case None => opts.inputs
-    }
-
-    val packageCoords = allInputs.map(_.packageCoord(interner)).distinct
-
-    val compilation =
-      new FullCompilation(
-        interner,
-        keywords,
-        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
-        Builtins.getCodeMap(interner, keywords)
-          .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
-        passmanager.FullCompilationOptions(
-          GlobalOptions(
-            sanityCheck = opts.sanityCheck,
-            useOverloadIndex = opts.useOverloadIndex,
-            useOptimizedSolver = opts.useOptimizedSolver,
-            verboseErrors = opts.verboseErrors,
-            debugOutput = opts.debugOutput),
-          if (opts.debugOutput) {
-            (x => {
-              println("#: " + x)
-            })
-          } else {
-            x => Unit // do nothing with it
-          }
-        )
-      )
-
-    val startLoadAndParseTime = java.lang.System.currentTimeMillis()
-
-    val parseds =
-      compilation.getParseds() match {
-        case Err(FailedParse(code, fileCoord, err)) => {
-          vfail(ParseErrorHumanizer.humanize(SourceCodeUtils.humanizeFile(fileCoord), code, err))
-        }
-        case Ok(p) => p
-      }
-    val valeCodeMap = compilation.getCodeMap().getOrDie()
-
-    val humanizePos = (x: CodeLocationS) => SourceCodeUtils.humanizePos(valeCodeMap, x)
-    val linesBetween = (x: CodeLocationS, y: CodeLocationS) => SourceCodeUtils.linesBetween(valeCodeMap, x, y)
-    val lineRangeContaining = (x: CodeLocationS) => SourceCodeUtils.lineRangeContaining(valeCodeMap, x)
-    val lineContaining = (x: CodeLocationS) => SourceCodeUtils.lineContaining(valeCodeMap, x)
-
-    if (opts.outputVPST) {
-      parseds.map({ case (FileCoordinate(_, filepath), (programP, commentRanges)) =>
-        val von = ParserVonifier.vonifyFile(programP)
-        val vpstJson = new VonPrinter(JsonSyntax, 120).print(von)
-        val parts = filepath.split("[/\\\\]")
-        val vpstFilepath = opts.outputDirPath.get + "/vpst/" + parts.last.replaceAll("\\.vale", ".vpst")
-        writeFile(vpstFilepath, vpstJson)
-      })
-    }
-
-    val startScoutTime = java.lang.System.currentTimeMillis()
-    if (opts.benchmark) {
-      println("Loading and parsing duration: " + (startScoutTime - startLoadAndParseTime))
-    }
-
-    if (opts.outputVAST) {
-      compilation.getScoutput() match {
-        case Err(e) => return Err(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining, e))
-        case Ok(p) => p
-      }
-
-      val startHigherTypingTime = java.lang.System.currentTimeMillis()
-      if (opts.benchmark) {
-        println("Scout phase duration: " + (startHigherTypingTime - startScoutTime))
-      }
-
-      compilation.getAstrouts() match {
-        case Err(error) => return Err(HigherTypingErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining, error))
-        case Ok(result) => result
-      }
-
-      val startTypingPassTime = java.lang.System.currentTimeMillis()
-      if (opts.benchmark) {
-        println("Higher typing phase duration: " + (startTypingPassTime - startHigherTypingTime))
-      }
-
-      compilation.getCompilerOutputs() match {
-        case Err(error) => return Err(CompilerErrorHumanizer.humanize(opts.verboseErrors, humanizePos, linesBetween, lineRangeContaining, lineContaining, error))
-        case Ok(x) => x
-      }
-
-      val startHammerTime = java.lang.System.currentTimeMillis()
-      if (opts.benchmark) {
-        println("Compiler phase duration: " + (startHammerTime - startTypingPassTime))
-      }
-
-      val programH = compilation.getHamuts()
-
-      val finishTime = java.lang.System.currentTimeMillis()
-      if (opts.benchmark) {
-        println("Hammer phase duration: " + (finishTime - startHammerTime))
-      }
-
-      programH.packages.flatMap({ case (packageCoord, paackage) =>
-        val outputVastFilepath =
-          opts.outputDirPath.get + "/vast/" +
-          (if (packageCoord.isInternal) {
-            "__vale"
-          } else {
-            packageCoord.module.str + packageCoord.packages.map("." + _.str).mkString("")
-          }) +
-          ".vast"
-        val json = jsonifyPackage(compilation.getVonHammer(), packageCoord, paackage)
-        writeFile(outputVastFilepath, json)
-//        println("Wrote VAST to file " + outputVastFilepath)
-      })
-
-      Ok(Some(programH))
-    } else {
-      Ok(None)
-    }
-  }
-*/
-
 // From PassManager.scala lines 52-68: Options
 pub struct Options<'a> {
   pub inputs: Vec<IFrontendInput<'a>>,
@@ -936,6 +418,554 @@ fn parse_opts_recursive<'a>(
   }
 */
 
+// From PassManager.scala lines 153-201: Resolver that reads .vale files from filesystem
+pub struct FileSystemResolver<'a> {
+  module_roots: HashMap<String, PathBuf>,
+  direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
+}
+
+impl<'a> FileSystemResolver<'a> {
+  pub fn new(
+    module_roots: HashMap<String, PathBuf>,
+    direct_file_inputs: HashMap<&'a PackageCoordinate<'a>, PathBuf>,
+  ) -> Self {
+    FileSystemResolver {
+      module_roots,
+      direct_file_inputs,
+    }
+  }
+}
+
+impl<'a> IPackageResolver<'a, HashMap<String, String>> for FileSystemResolver<'a> {
+  // From PassManager.scala lines 153-201
+  fn resolve(&self, package_coord: &'a PackageCoordinate<'a>) -> Option<HashMap<String, String>> {
+    // From PassManager.scala lines 190-196: Check for DirectFilePathInput first
+    if let Some(file_path) = self.direct_file_inputs.get(package_coord) {
+      if let Ok(code) = fs::read_to_string(file_path) {
+        let filepath = file_path.to_string_lossy().to_string();
+        let mut result = HashMap::new();
+        result.insert(filepath, code);
+        return Some(result);
+      }
+    }
+
+    // From PassManager.scala lines 168-189: ModulePathInput - find all files in directory
+    let module_name = package_coord.module.as_str();
+    let module_root = self.module_roots.get(module_name)?;
+
+    // Build path: module_root/package1/package2/...
+    let mut dir_path = module_root.clone();
+    for package_step in &package_coord.packages {
+      dir_path.push(package_step.as_str());
+    }
+
+    // Find all .vale files in this directory
+    let mut results = HashMap::new();
+
+    if let Ok(entries) = fs::read_dir(&dir_path) {
+      for entry in entries.flatten() {
+        let path = entry.path();
+        if path.extension().and_then(|s| s.to_str()) == Some("vale") {
+          if let Ok(code) = fs::read_to_string(&path) {
+            let filepath = path.to_string_lossy().to_string();
+            results.insert(filepath, code);
+          }
+        }
+      }
+    }
+
+    if results.is_empty() {
+      None
+    } else {
+      Some(results)
+    }
+  }
+}
+
+// From PassManager.scala lines 153-201: resolvePackageContents
+fn resolve_package_contents<'a>(
+  parse_arena: &ParseArena<'a>,
+  inputs: &[IFrontendInput<'a>],
+  package_coord: &PackageCoordinate<'a>,
+) -> Option<HashMap<String, String>>
+{
+  // From PassManager.scala line 158
+  let module = &package_coord.module;
+  let packages = &package_coord.packages;
+
+  // From PassManager.scala lines 162-197
+  let mut source_inputs: Vec<(String, String)> = Vec::new();
+
+  for (index, input) in inputs.iter().enumerate() {
+    if input.package_coord(parse_arena).module != *module {
+      continue;
+    }
+
+    match input {
+      IFrontendInput::SourceInput {
+        package_coord: _,
+        name,
+        code,
+      } => {
+        // From PassManager.scala lines 164-167: SourceInput (for .vpst and .vale direct inputs)
+        if packages.is_empty() {
+          source_inputs.push((format!("{}({})", index, name), code.clone()));
+        }
+      }
+      IFrontendInput::ModulePathInput {
+        module: _,
+        module_path,
+      } => {
+        // From PassManager.scala lines 168-188: ModulePathInput
+        let mut directory_path = module_path.clone();
+        for package_step in packages {
+          directory_path.push('/');
+          directory_path.push_str(package_step.as_str());
+        }
+
+        let directory = std::path::Path::new(&directory_path);
+        if let Ok(entries) = fs::read_dir(directory) {
+          for entry in entries.flatten() {
+            let path = entry.path();
+            if let Some(name) = path.file_name() {
+              let name_str = name.to_string_lossy();
+              if name_str.ends_with(".vale") || name_str.ends_with(".vpst") {
+                if let Ok(code) = fs::read_to_string(&path) {
+                  source_inputs.push((path.display().to_string(), code));
+                }
+              }
+            }
+          }
+        }
+      }
+      IFrontendInput::DirectFilePathInput {
+        package_coord: _,
+        path,
+      } => {
+        // From PassManager.scala lines 190-196: DirectFilePathInput
+        if let Ok(code) = fs::read_to_string(path) {
+          source_inputs.push((path.clone(), code));
+        }
+      }
+    }
+  }
+
+  // From PassManager.scala lines 198-200: Group by filepath and check for overlaps
+  let mut filepath_to_source: HashMap<String, String> = HashMap::new();
+  for (filepath, code) in source_inputs {
+    if filepath_to_source.contains_key(&filepath) {
+      panic!("Input filepaths overlap!");
+    }
+    filepath_to_source.insert(filepath, code);
+  }
+
+  Some(filepath_to_source)
+}
+
+/*
+  AFTERM: dedup the above with FileSystemResolver.
+  def resolvePackageContents(
+    interner: Interner,
+      inputs: Vector[IFrontendInput],
+      packageCoord: PackageCoordinate):
+  Option[Map[String, String]] = {
+    val PackageCoordinate(module, packages) = packageCoord
+
+//    println("resolving " + packageCoord + " with inputs:\n" + inputs)
+
+    val sourceInputs =
+      inputs.zipWithIndex.filter(_._1.packageCoord(interner).module == module).flatMap({
+        case (SourceInput(_, name, code), index) if (packages == Vector.empty) => {
+          // All .vpst and .vale direct inputs are considered part of the root paackage.
+          Vector((index + "(" + name + ")" -> code))
+        }
+        case (mpi @ ModulePathInput(_, modulePath), _) => {
+//          println("checking with modulepathinput " + mpi)
+          val directoryPath = modulePath + packages.map(File.separator + _.str).mkString("")
+//          println("looking in dir " + directoryPath)
+          val directory = new java.io.File(directoryPath)
+          val filesInDirectory = directory.listFiles()
+          if (filesInDirectory == null) {
+            Vector()
+          } else {
+            val inputFiles =
+              filesInDirectory.filter(_.getName.endsWith(".vale")) ++
+                filesInDirectory.filter(_.getName.endsWith(".vpst"))
+            //          println("found files: " + inputFiles)
+            val inputFilePaths = inputFiles.map(_.getPath)
+            inputFilePaths.toVector.map(filepath => {
+              val bufferedSource = Source.fromFile(filepath)
+              val code = bufferedSource.getLines.mkString("\n")
+              bufferedSource.close
+              (filepath -> code)
+            })
+          }
+        }
+        case (DirectFilePathInput(_, path), _) => {
+          val file = path
+          val bufferedSource = Source.fromFile(file)
+          val code = bufferedSource.getLines.mkString("\n")
+          bufferedSource.close
+          Vector((path -> code))
+        }
+      })
+    val filepathToSource = sourceInputs.groupBy(_._1).mapValues(_.head._2)
+    vassert(sourceInputs.size == filepathToSource.size, "Input filepaths overlap!")
+    Some(filepathToSource)
+  }
+*/
+
+// From PassManager.scala lines 356-366: buildAndOutput
+fn build_and_output<'p>(parse_arena: &'p ParseArena<'p>, keywords: &'p Keywords<'p>, opts: &Options<'p>) {
+  match build(parse_arena, keywords, opts) {
+    Ok(_) => {
+      // Success
+    }
+    Err(error) => {
+      eprintln!("Error: {}", error);
+      std::process::exit(22);
+    }
+  }
+}
+
+// From PassManager.scala lines 203-342: build function
+pub fn build<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
+  opts: &Options<'p>,
+) -> Result<(), String>
+where
+  'p: 'ctx,
+{
+  // From PassManager.scala lines 205-207: Create output directories
+  let output_dir_path = opts.output_dir_path.as_ref().unwrap();
+  fs::create_dir_all(output_dir_path)
+    .map_err(|e| format!("Failed to create output directory: {}", e))?;
+  fs::create_dir_all(format!("{}/vast", output_dir_path))
+    .map_err(|e| format!("Failed to create vast directory: {}", e))?;
+  fs::create_dir_all(format!("{}/vpst", output_dir_path))
+    .map_err(|e| format!("Failed to create vpst directory: {}", e))?;
+
+  // From PassManager.scala line 209
+  let _start_time = std::time::Instant::now();
+
+  // From PassManager.scala lines 211-227: Load .vpst files if --input_vpst is provided
+  if opts.input_vpst_dir.is_some() {
+    panic!("Loading .vpst files not yet implemented - see PassManager.scala lines 213-225. Need ParsedLoader and SourceInput")
+  }
+  let all_inputs = &opts.inputs;
+
+  // From PassManager.scala line 229: Get distinct package coordinates
+  let package_coords: Vec<&PackageCoordinate<'p>> = all_inputs
+    .iter()
+    .map(|input| input.package_coord(parse_arena))
+    .collect::<std::collections::HashSet<_>>()
+    .into_iter()
+    .collect();
+
+  // From PassManager.scala lines 231-253: Create FullCompilation
+  // Note: Builtins are needed but we don't have builtins_dir available yet.
+  // For now, create an empty builtins map. This will need to be fixed when
+  // builtins are actually required for parsing.
+  let builtins_code_map = crate::utils::code_hierarchy::FileCoordinateMap::<String>::new();
+
+  // From PassManager.scala line 235: Add BUILTIN package coordinate
+  let mut packages_to_build = vec![PackageCoordinate::builtin(parse_arena, keywords)];
+  packages_to_build.extend(package_coords);
+
+  // From PassManager.scala lines 236-237: Create resolver that tries builtins first, then resolvePackageContents
+  let all_inputs_clone = all_inputs.clone();
+  let resolver = builtins_code_map.or(move |package_coord: &'p PackageCoordinate<'p>| {
+    resolve_package_contents(parse_arena, &all_inputs_clone, &*package_coord)
+  });
+
+  // From PassManager.scala lines 238-253: Create FullCompilationOptions
+  let options = FullCompilationOptions {
+    global_options: GlobalOptions {
+      sanity_check: opts.sanity_check,
+      use_overload_index: opts.use_overload_index,
+      use_optimized_solver: opts.use_optimized_solver,
+      verbose_errors: opts.verbose_errors,
+      debug_output: opts.debug_output,
+    },
+    debug_out: if opts.debug_output {
+      Arc::new(|s: &str| println!("#: {}", s))
+    } else {
+      Arc::new(|_: &str| {})
+    },
+  };
+
+  // From PassManager.scala lines 231-233: Create FullCompilation
+  // Under the per-pass arena model, the parser uses the 'p arena via parse_arena,
+  // and the scout pass gets its own arena.
+  // V: should we reference some docs here about how our arenas work
+  let scout_bump = bumpalo::Bump::new();
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let scout_keywords = Keywords::new_for_scout(&scout_arena);
+  let parser_keywords = Keywords::new_for_parse(parse_arena);
+  let mut compilation = FullCompilation::new(
+    &scout_arena,
+    &scout_keywords,
+    &parser_keywords,
+    parse_arena,
+    packages_to_build,
+    &resolver,
+    options,
+    parse_arena.bump(),
+  );
+
+  // From PassManager.scala line 255
+  let _start_load_and_parse_time = std::time::Instant::now();
+
+  // From PassManager.scala lines 266-269: Error humanizer functions (not used yet)
+  // Keep this before get_parseds so mutable borrows don't overlap.
+  let vale_code_map = compilation.get_code_map().expect("getCodeMap failed");
+  let _ = vale_code_map; // Suppress unused warning
+
+  // From PassManager.scala lines 257-263: Get parsed files
+  let parseds = match compilation.get_parseds() {
+    Err(failed_parse) => {
+      // From PassManager.scala lines 259-261
+      panic!(
+        "ParseErrorHumanizer.humanize not yet implemented. FailedParse: {:?}",
+        failed_parse
+      );
+    }
+    Ok(p) => p,
+  };
+  // From PassManager.scala lines 271-279: Write VPST files if requested
+  if opts.output_vpst {
+    use crate::parsing::vonifier::ParserVonifier;
+    use crate::von::printer::VonPrinter;
+
+    for (file_coord, (program_p, _comment_ranges)) in &parseds.file_coord_to_contents {
+      // From PassManager.scala line 273
+      let von = ParserVonifier::vonify_file(program_p);
+      // From PassManager.scala line 274
+      let vpst_json = VonPrinter::new().print(&von);
+      // From PassManager.scala lines 275-276
+      let parts: Vec<&str> = file_coord.filepath.split(&['/', '\\'][..]).collect();
+      let filename = parts.last().unwrap().replace(".vale", ".vpst");
+      let vpst_filepath = format!("{}/vpst/{}", output_dir_path, filename);
+      // From PassManager.scala line 277
+      std::fs::write(&vpst_filepath, vpst_json)
+        .unwrap_or_else(|e| panic!("Failed to write VPST file {}: {}", vpst_filepath, e));
+    }
+  }
+
+  // From PassManager.scala lines 281-284: Benchmark timing
+  let _start_scout_time = std::time::Instant::now();
+  if opts.benchmark {
+    println!(
+      "Loading and parsing duration: {:?}",
+      _start_scout_time.duration_since(_start_load_and_parse_time)
+    );
+  }
+
+  // From PassManager.scala lines 286-341: Full compilation (scout, typing, hammer) - only if outputVAST
+  if opts.output_vast {
+    // From PassManager.scala lines 287-290: Scout phase
+    panic!("Scout phase not yet implemented - see PassManager.scala lines 287-341. Need getScoutput, getAstrouts, getCompilerOutputs, getHamuts");
+  }
+
+  Ok(())
+}
+
+/*
+  def build(interner: Interner, keywords: Keywords, opts: Options):
+  Result[Option[ProgramH], String] = {
+    new java.io.File(opts.outputDirPath.get).mkdirs()
+    new java.io.File(opts.outputDirPath.get + "/vast").mkdir()
+    new java.io.File(opts.outputDirPath.get + "/vpst").mkdir()
+
+    val startTime = java.lang.System.currentTimeMillis()
+
+    // If --input_vpst is provided, load .vpst files
+    // The Rust parser already filtered to only needed packages via import-driven parsing
+    val allInputs = opts.inputVpstDir match {
+      case Some(vpstDir) => {
+        val vpstFiles = new java.io.File(vpstDir).listFiles().filter(_.getName.endsWith(".vpst"))
+        val vpstInputs = vpstFiles.map(file => {
+          val code = Source.fromFile(file).mkString
+          val fileP = new ParsedLoader(interner).load(code) match {
+            case Err(e) => return Err(s"Failed to load ${file.getName}: $e")
+            case Ok(f) => f
+          }
+          SourceInput(fileP.fileCoord.packageCoordinate, file.getPath, code)
+        }).toVector
+        opts.inputs ++ vpstInputs
+      }
+      case None => opts.inputs
+    }
+
+    val packageCoords = allInputs.map(_.packageCoord(interner)).distinct
+
+    val compilation =
+      new FullCompilation(
+        interner,
+        keywords,
+        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
+        Builtins.getCodeMap(interner, keywords)
+          .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
+        passmanager.FullCompilationOptions(
+          GlobalOptions(
+            sanityCheck = opts.sanityCheck,
+            useOverloadIndex = opts.useOverloadIndex,
+            useOptimizedSolver = opts.useOptimizedSolver,
+            verboseErrors = opts.verboseErrors,
+            debugOutput = opts.debugOutput),
+          if (opts.debugOutput) {
+            (x => {
+              println("#: " + x)
+            })
+          } else {
+            x => Unit // do nothing with it
+          }
+        )
+      )
+
+    val startLoadAndParseTime = java.lang.System.currentTimeMillis()
+
+    val parseds =
+      compilation.getParseds() match {
+        case Err(FailedParse(code, fileCoord, err)) => {
+          vfail(ParseErrorHumanizer.humanize(SourceCodeUtils.humanizeFile(fileCoord), code, err))
+        }
+        case Ok(p) => p
+      }
+    val valeCodeMap = compilation.getCodeMap().getOrDie()
+
+    val humanizePos = (x: CodeLocationS) => SourceCodeUtils.humanizePos(valeCodeMap, x)
+    val linesBetween = (x: CodeLocationS, y: CodeLocationS) => SourceCodeUtils.linesBetween(valeCodeMap, x, y)
+    val lineRangeContaining = (x: CodeLocationS) => SourceCodeUtils.lineRangeContaining(valeCodeMap, x)
+    val lineContaining = (x: CodeLocationS) => SourceCodeUtils.lineContaining(valeCodeMap, x)
+
+    if (opts.outputVPST) {
+      parseds.map({ case (FileCoordinate(_, filepath), (programP, commentRanges)) =>
+        val von = ParserVonifier.vonifyFile(programP)
+        val vpstJson = new VonPrinter(JsonSyntax, 120).print(von)
+        val parts = filepath.split("[/\\\\]")
+        val vpstFilepath = opts.outputDirPath.get + "/vpst/" + parts.last.replaceAll("\\.vale", ".vpst")
+        writeFile(vpstFilepath, vpstJson)
+      })
+    }
+
+    val startScoutTime = java.lang.System.currentTimeMillis()
+    if (opts.benchmark) {
+      println("Loading and parsing duration: " + (startScoutTime - startLoadAndParseTime))
+    }
+
+    if (opts.outputVAST) {
+      compilation.getScoutput() match {
+        case Err(e) => return Err(PostParserErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining, e))
+        case Ok(p) => p
+      }
+
+      val startHigherTypingTime = java.lang.System.currentTimeMillis()
+      if (opts.benchmark) {
+        println("Scout phase duration: " + (startHigherTypingTime - startScoutTime))
+      }
+
+      compilation.getAstrouts() match {
+        case Err(error) => return Err(HigherTypingErrorHumanizer.humanize(humanizePos, linesBetween, lineRangeContaining, lineContaining, error))
+        case Ok(result) => result
+      }
+
+      val startTypingPassTime = java.lang.System.currentTimeMillis()
+      if (opts.benchmark) {
+        println("Higher typing phase duration: " + (startTypingPassTime - startHigherTypingTime))
+      }
+
+      compilation.getCompilerOutputs() match {
+        case Err(error) => return Err(CompilerErrorHumanizer.humanize(opts.verboseErrors, humanizePos, linesBetween, lineRangeContaining, lineContaining, error))
+        case Ok(x) => x
+      }
+
+      val startHammerTime = java.lang.System.currentTimeMillis()
+      if (opts.benchmark) {
+        println("Compiler phase duration: " + (startHammerTime - startTypingPassTime))
+      }
+
+      val programH = compilation.getHamuts()
+
+      val finishTime = java.lang.System.currentTimeMillis()
+      if (opts.benchmark) {
+        println("Hammer phase duration: " + (finishTime - startHammerTime))
+      }
+
+      programH.packages.flatMap({ case (packageCoord, paackage) =>
+        val outputVastFilepath =
+          opts.outputDirPath.get + "/vast/" +
+          (if (packageCoord.isInternal) {
+            "__vale"
+          } else {
+            packageCoord.module.str + packageCoord.packages.map("." + _.str).mkString("")
+          }) +
+          ".vast"
+        val json = jsonifyPackage(compilation.getVonHammer(), packageCoord, paackage)
+        writeFile(outputVastFilepath, json)
+//        println("Wrote VAST to file " + outputVastFilepath)
+      })
+
+      Ok(Some(programH))
+    } else {
+      Ok(None)
+    }
+  }
+*/
+
+
+/*
+  def jsonifyPackage(vonHammer: VonHammer, packageCoord: PackageCoordinate, packageH: PackageH): String = {
+    val programV = vonHammer.vonifyPackage(packageCoord, packageH)
+    val json = new VonPrinter(JsonSyntax, 120).print(programV)
+    json
+  }
+*/
+/*
+  def jsonifyProgram(vonHammer: VonHammer, programH: ProgramH): String = {
+    val programV = vonHammer.vonifyProgram(programH)
+    val json = new VonPrinter(JsonSyntax, 120).print(programV)
+    json
+  }
+*/
+/*
+  def buildAndOutput(interner: Interner, keywords: Keywords, opts: Options) = {
+      build(interner, keywords, opts) match {
+        case Ok(_) => {
+        }
+        case Err(error) => {
+          System.err.println("Error: " + error)
+          System.exit(22)
+          vfail()
+        }
+      }
+  }
+*/
+/*
+  def run(program: ProgramH, verbose: Boolean): IVonData = {
+    if (verbose) {
+      Vivem.executeWithPrimitiveArgs(
+        program, Vector(), System.out, Vivem.emptyStdin, Vivem.nullStdout)
+    } else {
+      Vivem.executeWithPrimitiveArgs(
+        program,
+        Vector(),
+        new PrintStream(new OutputStream() {
+          override def write(b: Int): Unit = {
+            // System.out.write(b)
+          }
+        }),
+        () => {
+          scala.io.StdIn.readLine()
+        },
+        (str: String) => {
+          print(str)
+        })
+    }
+  }
+*/
+
 // From PassManager.scala lines 390-481: main
 pub fn main(args: Vec<String>) {
   // From PassManager.scala lines 391-393
@@ -1090,44 +1120,6 @@ pub fn main(args: Vec<String>) {
         println(msg)
         System.exit(22)
       }
-    }
-  }
-*/
-
-/*
-  def jsonifyPackage(vonHammer: VonHammer, packageCoord: PackageCoordinate, packageH: PackageH): String = {
-    val programV = vonHammer.vonifyPackage(packageCoord, packageH)
-    val json = new VonPrinter(JsonSyntax, 120).print(programV)
-    json
-  }
-*/
-/*
-  def jsonifyProgram(vonHammer: VonHammer, programH: ProgramH): String = {
-    val programV = vonHammer.vonifyProgram(programH)
-    val json = new VonPrinter(JsonSyntax, 120).print(programV)
-    json
-  }
-*/
-/*
-  def run(program: ProgramH, verbose: Boolean): IVonData = {
-    if (verbose) {
-      Vivem.executeWithPrimitiveArgs(
-        program, Vector(), System.out, Vivem.emptyStdin, Vivem.nullStdout)
-    } else {
-      Vivem.executeWithPrimitiveArgs(
-        program,
-        Vector(),
-        new PrintStream(new OutputStream() {
-          override def write(b: Int): Unit = {
-            // System.out.write(b)
-          }
-        }),
-        () => {
-          scala.io.StdIn.readLine()
-        },
-        (str: String) => {
-          print(str)
-        })
     }
   }
 */

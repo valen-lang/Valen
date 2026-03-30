@@ -53,9 +53,13 @@ TOOL_SCHEMA = {
             "shield_file": {
                 "type": "string",
                 "description": "Path to the shield .md file from the denial message (the Shield: path)"
+            },
+            "context_file": {
+                "type": "string",
+                "description": "Path to the contextified diff file from the denial message (the Context: path)"
             }
         },
-        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file"]
+        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file", "context_file"]
     }
 }
 
@@ -113,6 +117,7 @@ def handle_tools_call(msg):
         "verdict_file": args.get("verdict_file", ""),
         "reason": args.get("reason", ""),
         "shield_file": args.get("shield_file", ""),
+        "context_file": args.get("context_file", ""),
     }).encode("utf-8")
 
     try:

@@ -57,7 +57,7 @@ where
   'p: 'ctx,
   R: IPackageResolver<'p, HashMap<String, String>>,
   HandleParsedDenizen: FnMut(&'p FileCoordinate<'p>, &str, &[ImportL<'p>], IDenizenP<'p>) -> D,
-  FileHandler: FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], &[D]) -> F,
+  FileHandler: FnMut(&'p FileCoordinate<'p>, &str, &[RangeL], Vec<D>) -> F,
 {
   // From ParseAndExplore.scala lines 45-100: Call lexAndExplore with parsing logic
   lex_and_explore::lex_and_explore(
@@ -127,7 +127,7 @@ where
     |file_coord: &'p FileCoordinate<'p>,
      code: &str,
      comment_ranges: &[RangeL],
-     denizens: &[D]|
+     denizens: Vec<D>|
      -> F {
       // From ParseAndExplore.scala lines 98-100
       file_handler(file_coord, code, comment_ranges, denizens)

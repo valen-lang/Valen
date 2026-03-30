@@ -7,14 +7,13 @@ pub mod parse_utils;
 pub mod parsed_loader;
 pub mod parser;
 pub mod pattern_parser;
-pub mod scramble_iterator;
 pub mod string_parser;
 pub mod templex_parser;
 pub mod vonifier;
 
 pub use ast::*;
 pub use parser::*;
-pub use scramble_iterator::*;
+pub use expression_parser::ScrambleIterator;
 pub use vonifier::*;
 // Don't re-export parsers to avoid name conflicts
 // Use explicit imports: templex_parser::TemplexParser, etc.

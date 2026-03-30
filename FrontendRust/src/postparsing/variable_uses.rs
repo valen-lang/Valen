@@ -411,8 +411,8 @@ fn then_merge_certainty(
     }
   }
 }
+// MIGALLOW: thenMerge -> then_merge_certainty
 /*
-  // MIGALLOW: thenMerge -> then_merge_certainty
   // If A happens, then B happens, we want the resulting use to reflect that.
   private def thenMerge(
       a: Option[IVariableUseCertainty],

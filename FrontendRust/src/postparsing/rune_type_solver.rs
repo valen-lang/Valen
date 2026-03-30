@@ -163,7 +163,6 @@ fn hash_code(&self) -> i32 {
 } // end impl RuneTypingTooManyMatchingTypes
 /*
   override def hashCode(): Int = vcurious()
-  vpass()
 }
 */
 // mig: struct RuneTypingCouldntFindType
@@ -190,7 +189,6 @@ fn hash_code(&self) -> i32 {
 } // end impl RuneTypingCouldntFindType
 /*
   override def hashCode(): Int = vcurious()
-  vpass()
 }
 */
 // mig: struct FoundTemplataDidntMatchExpectedTypeA

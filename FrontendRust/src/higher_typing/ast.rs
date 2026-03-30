@@ -146,7 +146,6 @@ pub fn lookup_struct_by_str(&self, name: &str) -> &StructA<'s> {
     matches.head
   }
 }
-}
 */
 // mig: struct StructA
 #[derive(Debug)]
@@ -296,7 +295,6 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 //  vassert((knowableRunes -- runeToType.keySet).isEmpty)
 //  vassert((localRunes -- runeToType.keySet).isEmpty)
 }
-}
 */
 // mig: struct ImplA
 #[derive(Debug)]
@@ -375,7 +373,6 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     return range == that.range && name == that.name;
   }
 }
-}
 */
 // mig: struct ExportAsA
 #[derive(Debug)]
@@ -418,7 +415,6 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     val that = obj.asInstanceOf[ExportAsA]
     return range == that.range && exportedName == that.exportedName;
   }
-}
 }
 */
 // mig: trait CitizenA
@@ -566,7 +562,6 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
   internalMethods.foreach(internalMethod => {
     vassert(genericParameters == internalMethod.genericParameters)
   })
-}
 */
 /*
 }
@@ -587,7 +582,6 @@ pub fn unapply<'s>(_interface_a: &'s InterfaceA<'s>) -> Option<&'s TopLevelInter
   def unapply(interfaceA: InterfaceA): Option[INameS] = {
     Some(interfaceA.name)
   }
-}
 */
 /*
 }
@@ -608,7 +602,6 @@ pub fn unapply<'s>(_struct_a: &'s StructA<'s>) -> Option<&'s IStructDeclarationN
   def unapply(structA: StructA): Option[INameS] = {
     Some(structA.name)
   }
-}
 */
 /*
 }
@@ -783,8 +776,5 @@ pub fn is_lambda(&self) -> bool {
       case _ => false
     }
   }
-}
-*/
-/*
 }
 */

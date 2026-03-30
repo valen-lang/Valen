@@ -76,7 +76,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
   lidb: &mut LocationInDenizenBuilder,
   range: RangeL,
   _pure: bool,
-  entry_pattern_pp: &PatternPP<'p>,
+  entry_pattern_pp: &'p PatternPP<'p>,
   in_keyword_range: RangeL,
   iterable_expr: &'p IExpressionPE<'p>,
   body: &'p BlockPE<'p>,
@@ -100,7 +100,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
       let (stack_frame2, let_iterable_se, let_iterable_self_uses, let_iterable_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
         let let_iterable_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::Let(LetPE {
           range: in_keyword_range,
-          pattern: PatternPP {
+          pattern: &*pa.alloc(PatternPP {
             range: in_keyword_range,
             destination: Some(DestinationLocalP {
               decl: INameDeclarationP::IterableNameDeclaration(in_keyword_range),
@@ -108,7 +108,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
             }),
             templex: None,
             destructure: None,
-          },
+          }),
           source: iterable_expr,
         }));
         post_parser.scout_expression_and_coerce(
@@ -141,7 +141,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
         }));
         let let_iterator_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::Let(LetPE {
           range: in_keyword_range,
-          pattern: PatternPP {
+          pattern: &*pa.alloc(PatternPP {
             range: in_keyword_range,
             destination: Some(DestinationLocalP {
               decl: INameDeclarationP::IteratorNameDeclaration(in_keyword_range),
@@ -149,7 +149,7 @@ pub(crate) fn scout_each<'s, 'p, 'ctx>(
             }),
             templex: None,
             destructure: None,
-          },
+          }),
           source: begin_call_expr_p,
         }));
         post_parser.scout_expression_and_coerce(
@@ -295,7 +295,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
   lidb: &mut LocationInDenizenBuilder,
   range: RangeL,
   in_keyword_range: RangeL,
-  entry_pattern_pp: &PatternPP<'p>,
+  entry_pattern_pp: &'p PatternPP<'p>,
   body_pe: &'p BlockPE<'p>,
 ) -> Result<
   (
@@ -338,7 +338,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
       }));
       let let_iteration_option_expr_p = IExpressionPE::Let(LetPE {
         range: entry_pattern_pp.range,
-        pattern: PatternPP {
+        pattern: &*pa.alloc(PatternPP {
           range: in_keyword_range,
           destination: Some(DestinationLocalP {
             decl: INameDeclarationP::IterationOptionNameDeclaration(in_keyword_range),
@@ -346,7 +346,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
           }),
           templex: None,
           destructure: None,
-        },
+        }),
         source: next_call_expr_p,
       });
       let is_empty_lookup_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::Lookup(pa.alloc(LookupPE {
@@ -451,7 +451,7 @@ fn scout_each_body<'s, 'p, 'ctx>(
     }));
     let consume_some_expr_p: &'p IExpressionPE<'p> = &*pa.alloc(IExpressionPE::Let(LetPE {
       range: in_keyword_range,
-      pattern: entry_pattern_pp.clone(),
+      pattern: entry_pattern_pp,
       source: get_call_expr_p,
     }));
     let mut consume_some_lidb = lidb.child();
@@ -818,7 +818,5 @@ fn scout_while_body<'s, 'p, 'ctx>(
 
     (stackFrame4, loopBodySE, selfUses, childUses)
   }
-*/
-/*
 }
 */

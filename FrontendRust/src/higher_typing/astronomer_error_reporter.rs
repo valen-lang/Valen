@@ -1,8 +1,8 @@
 use crate::utils::range::RangeS;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::postparsing::rune_type_solver::RuneTypeSolveError;
+// VISTODO: rename
 /*
-VISTODO: rename
 package dev.vale.highertyping
 
 import dev.vale.{RangeS, vcurious, vpass}
@@ -26,6 +26,9 @@ impl<'s> CompileErrorExceptionA<'s> {
 pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
     panic!("Unimplemented: equals");
 }
+/*
+  override def equals(obj: Any): Boolean = vcurious();
+*/
 // mig: fn hash_code
 pub fn hash_code(&self) -> i32 {
     panic!("Unimplemented: hash_code");

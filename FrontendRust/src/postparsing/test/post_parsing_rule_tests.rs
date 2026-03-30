@@ -56,8 +56,8 @@ where 'p: 's,
     .scout_program(file_coord_s, &only_file)
     .unwrap()
 }
+// V: above changes consistent with below scala?
 /*
-  // V: above changes consistent with below scala?
   private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
     val compile = PostParserTestCompilation.test(code, interner)
     compile.getScoutput() match {

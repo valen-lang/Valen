@@ -9,9 +9,8 @@ use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTe
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
 use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
+// TODO: rename
 /*
-TODO: rename
-
 package dev.vale.highertyping
 
 import dev.vale.{Err, Ok, PackageCoordinate, vassertSome, vfail}
@@ -479,7 +478,6 @@ fn test_infer_pack_from_empty_result() {
     val main = program.lookupFunction("moo")
     main.runeToType(CodeRuneS(compilation.interner.intern(StrI("P")))) shouldEqual PackTemplataType(CoordTemplataType())
   }
-}
 //  test("Test cant solve empty Pack") {
 //    val compilation =
 //      AstronomerTestCompilation.test(
@@ -494,6 +492,7 @@ fn test_infer_pack_from_empty_result() {
 //      }
 //    }
 //  }
+}
 */
 // mig: fn type_simple_impl
 // NOVEL CODE

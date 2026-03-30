@@ -237,7 +237,6 @@ class ScrambleIterator(
 }
 
 class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptions, patternParser: PatternParser, templexParser: TemplexParser) {
-//  val stringParser = new StringParser(this)
 
   private def parseWhile(iter: ScrambleIterator): Result[Option[WhilePE], IParseError] = {
     val whileBegin = iter.getPos()

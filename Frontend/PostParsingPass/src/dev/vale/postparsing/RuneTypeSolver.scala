@@ -44,12 +44,12 @@ case class GenericCallArgTypeMismatch(
 
 sealed trait IRuneTypingLookupFailedError extends IRuneTypeRuleError
 case class RuneTypingTooManyMatchingTypes(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  vpass()
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
 }
 case class RuneTypingCouldntFindType(range: RangeS, name: IImpreciseNameS) extends IRuneTypingLookupFailedError {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-  vpass()
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
 }
 case class FoundTemplataDidntMatchExpectedTypeA(
     range: List[RangeS],
@@ -429,12 +429,6 @@ class RuneTypeSolver(interner: Interner) {
           // Calculate what types we can beforehand, see KVCIE.
           rules.flatMap({
             case LookupSR(range, rune, name) => {
-              name match {
-                case CodeNameS(StrI("Array")) => {
-                  vpass()
-                }
-                case _ =>
-              }
               env.lookup(range, name) match {
                 case Err(e) => {
                   return Err(
@@ -462,12 +456,6 @@ class RuneTypeSolver(interner: Interner) {
               }
             }
             case MaybeCoercingLookupSR(range, rune, name) => {
-              name match {
-                case CodeNameS(StrI("Array")) => {
-                  vpass()
-                }
-                case _ =>
-              }
               env.lookup(range, name) match {
                 case Err(e) => {
                   return Err(

@@ -73,7 +73,7 @@ Guardian: disable: NECX
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub enum IDenizenP<'p> {
   TopLevelFunction(FunctionP<'p>),
   TopLevelStruct(StructP<'p>),
@@ -93,7 +93,7 @@ case class TopLevelImportP(imporrt: ImportP) extends IDenizenP { override def eq
 Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ImplP<'p> {
   pub range: RangeL,
   pub generic_params: Option<GenericParametersP<'p>>,
@@ -116,7 +116,7 @@ case class ImplP(
 Guardian: disable: NECX
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct ExportAsP<'p> {
   pub range: RangeL,
   pub struct_: ITemplexPT<'p>,
@@ -162,6 +162,35 @@ pub struct SealedAttributeP {
 case class SealedAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
 */
+
+impl IRuneAttributeP {
+  pub fn range(&self) -> RangeL {
+    match self {
+      IRuneAttributeP::ImmutableRuneAttribute(r) => *r,
+      IRuneAttributeP::MutableRuneAttribute(r) => *r,
+      IRuneAttributeP::ReadOnlyRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::ReadWriteRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::ImmutableRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::AdditiveRegionRuneAttribute(r) => *r,
+      IRuneAttributeP::PoolRuneAttribute(r) => *r,
+      IRuneAttributeP::ArenaRuneAttribute(r) => *r,
+      IRuneAttributeP::BumpRuneAttribute(r) => *r,
+    }
+  }
+}
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum IMacroInclusionP {
+  CallMacro,
+  DontCallMacro,
+}
+/*
+sealed trait IMacroInclusionP
+case object CallMacroP extends IMacroInclusionP
+case object DontCallMacroP extends IMacroInclusionP
+Guardian: disable: NECX
+*/
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct MacroCallP<'p> {
   pub range: RangeL,
@@ -172,6 +201,124 @@ pub struct MacroCallP<'p> {
 case class MacroCallP(range: RangeL, inclusion: IMacroInclusionP, name: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
 */
+#[derive(Debug, PartialEq)]
+pub struct StructP<'p> {
+  pub range: RangeL,
+  pub name: NameP<'p>,
+  pub attributes: &'p [IAttributeP<'p>],
+  pub mutability: Option<ITemplexPT<'p>>,
+  pub identifying_runes: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
+  pub body_range: RangeL,
+  pub members: StructMembersP<'p>,
+}
+/*
+case class StructP(
+  range: RangeL,
+  name: NameP,
+  attributes: Vector[IAttributeP],
+  mutability: Option[ITemplexPT],
+  identifyingRunes: Option[GenericParametersP],
+  templateRules: Option[TemplateRulesP],
+  maybeDefaultRegionRuneP: Option[RegionRunePT],
+  bodyRange: RangeL,
+  members: StructMembersP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct StructMembersP<'p> {
+  pub range: RangeL,
+  pub contents: &'p [IStructContent<'p>],
+}
+/*
+case class StructMembersP(
+  range: RangeL,
+  contents: Vector[IStructContent]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub enum IStructContent<'p> {
+  StructMethod(FunctionP<'p>),
+  NormalStructMember(NormalStructMemberP<'p>),
+  VariadicStructMember(VariadicStructMemberP<'p>),
+}
+#[derive(Debug, PartialEq)]
+pub struct NormalStructMemberP<'p> {
+  pub range: RangeL,
+  pub name: NameP<'p>,
+  pub variability: VariabilityP,
+  pub tyype: ITemplexPT<'p>,
+}
+#[derive(Debug, PartialEq)]
+pub struct VariadicStructMemberP<'p> {
+  pub range: RangeL,
+  pub variability: VariabilityP,
+  pub tyype: ITemplexPT<'p>,
+}
+/*
+sealed trait IStructContent
+case class StructMethodP(func: FunctionP) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class NormalStructMemberP(
+  range: RangeL,
+  name: NameP,
+  variability: VariabilityP,
+  tyype: ITemplexPT
+) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class VariadicStructMemberP(
+  range: RangeL,
+  variability: VariabilityP,
+  tyype: ITemplexPT
+) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct InterfaceP<'p> {
+  pub range: RangeL,
+  pub name: NameP<'p>,
+  pub attributes: &'p [IAttributeP<'p>],
+  pub mutability: Option<ITemplexPT<'p>>,
+  pub maybe_identifying_runes: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
+  pub body_range: RangeL,
+  pub members: &'p [FunctionP<'p>],
+}
+/*
+case class InterfaceP(
+  range: RangeL,
+  name: NameP,
+  attributes: Vector[IAttributeP],
+  mutability: Option[ITemplexPT],
+  maybeIdentifyingRunes: Option[GenericParametersP],
+  templateRules: Option[TemplateRulesP],
+  maybeDefaultRegionRuneP: Option[RegionRunePT],
+  bodyRange: RangeL,
+  members: Vector[FunctionP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Clone, Debug, PartialEq)]
+pub enum IAttributeP<'p> {
+  WeakableAttribute(WeakableAttributeP),
+  SealedAttribute(SealedAttributeP),
+  MacroCall(MacroCallP<'p>),
+  AbstractAttribute(AbstractAttributeP),
+  ExternAttribute(ExternAttributeP),
+  BuiltinAttribute(BuiltinAttributeP<'p>),
+  ExportAttribute(ExportAttributeP),
+  PureAttribute(PureAttributeP),
+  AdditiveAttribute(AdditiveAttributeP),
+  LinearAttribute(LinearAttributeP),
+}
+/*
+sealed trait IAttributeP
+Guardian: disable: NECX
+*/
+
 #[derive(Clone, Debug, PartialEq)]
 pub struct AbstractAttributeP {
   pub range: RangeL,
@@ -212,8 +359,8 @@ pub struct PureAttributeP {
 /*
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
-// V: why are all of these things cloneable?
 */
+// V: why are all of these things cloneable?
 #[derive(Clone, Debug, PartialEq)]
 pub struct AdditiveAttributeP {
   pub range: RangeL,
@@ -228,36 +375,6 @@ pub struct LinearAttributeP {
 }
 /*
 case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum IAttributeP<'p> {
-  WeakableAttribute(WeakableAttributeP),
-  SealedAttribute(SealedAttributeP),
-  MacroCall(MacroCallP<'p>),
-  AbstractAttribute(AbstractAttributeP),
-  ExternAttribute(ExternAttributeP),
-  BuiltinAttribute(BuiltinAttributeP<'p>),
-  ExportAttribute(ExportAttributeP),
-  PureAttribute(PureAttributeP),
-  AdditiveAttribute(AdditiveAttributeP),
-  LinearAttribute(LinearAttributeP),
-}
-/*
-sealed trait IAttributeP
-Guardian: disable: NECX
-*/
-
-#[derive(Copy, Clone, Debug, PartialEq, Eq)]
-pub enum IMacroInclusionP {
-  CallMacro,
-  DontCallMacro,
-}
-/*
-sealed trait IMacroInclusionP
-case object CallMacroP extends IMacroInclusionP
-case object DontCallMacroP extends IMacroInclusionP
 Guardian: disable: NECX
 */
 
@@ -290,178 +407,7 @@ case class BumpRuneAttributeP(range: RangeL) extends IRuneAttributeP { override 
 Guardian: disable: NECX
 */
 
-impl IRuneAttributeP {
-  pub fn range(&self) -> RangeL {
-    match self {
-      IRuneAttributeP::ImmutableRuneAttribute(r) => *r,
-      IRuneAttributeP::MutableRuneAttribute(r) => *r,
-      IRuneAttributeP::ReadOnlyRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::ReadWriteRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::ImmutableRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::AdditiveRegionRuneAttribute(r) => *r,
-      IRuneAttributeP::PoolRuneAttribute(r) => *r,
-      IRuneAttributeP::ArenaRuneAttribute(r) => *r,
-      IRuneAttributeP::BumpRuneAttribute(r) => *r,
-    }
-  }
-}
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct StructP<'p> {
-  pub range: RangeL,
-  pub name: NameP<'p>,
-  pub attributes: &'p [IAttributeP<'p>],
-  pub mutability: Option<ITemplexPT<'p>>,
-  pub identifying_runes: Option<GenericParametersP<'p>>,
-  pub template_rules: Option<TemplateRulesP<'p>>,
-  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
-  pub body_range: RangeL,
-  pub members: StructMembersP<'p>,
-}
-/*
-case class StructP(
-  range: RangeL,
-  name: NameP,
-  attributes: Vector[IAttributeP],
-  mutability: Option[ITemplexPT],
-  identifyingRunes: Option[GenericParametersP],
-  templateRules: Option[TemplateRulesP],
-  maybeDefaultRegionRuneP: Option[RegionRunePT],
-  bodyRange: RangeL,
-  members: StructMembersP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct StructMembersP<'p> {
-  pub range: RangeL,
-  pub contents: &'p [IStructContent<'p>],
-}
-/*
-case class StructMembersP(
-  range: RangeL,
-  contents: Vector[IStructContent]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub enum IStructContent<'p> {
-  StructMethod(FunctionP<'p>),
-  NormalStructMember(NormalStructMemberP<'p>),
-  VariadicStructMember(VariadicStructMemberP<'p>),
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct NormalStructMemberP<'p> {
-  pub range: RangeL,
-  pub name: NameP<'p>,
-  pub variability: VariabilityP,
-  pub tyype: ITemplexPT<'p>,
-}
-#[derive(Clone, Debug, PartialEq)]
-pub struct VariadicStructMemberP<'p> {
-  pub range: RangeL,
-  pub variability: VariabilityP,
-  pub tyype: ITemplexPT<'p>,
-}
-/*
-sealed trait IStructContent
-case class StructMethodP(func: FunctionP) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class NormalStructMemberP(
-  range: RangeL,
-  name: NameP,
-  variability: VariabilityP,
-  tyype: ITemplexPT
-) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class VariadicStructMemberP(
-  range: RangeL,
-  variability: VariabilityP,
-  tyype: ITemplexPT
-) extends IStructContent { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct InterfaceP<'p> {
-  pub range: RangeL,
-  pub name: NameP<'p>,
-  pub attributes: &'p [IAttributeP<'p>],
-  pub mutability: Option<ITemplexPT<'p>>,
-  pub maybe_identifying_runes: Option<GenericParametersP<'p>>,
-  pub template_rules: Option<TemplateRulesP<'p>>,
-  pub maybe_default_region_rune: Option<RegionRunePT<'p>>,
-  pub body_range: RangeL,
-  pub members: &'p [FunctionP<'p>],
-}
-/*
-case class InterfaceP(
-  range: RangeL,
-  name: NameP,
-  attributes: Vector[IAttributeP],
-  mutability: Option[ITemplexPT],
-  maybeIdentifyingRunes: Option[GenericParametersP],
-  templateRules: Option[TemplateRulesP],
-  maybeDefaultRegionRuneP: Option[RegionRunePT],
-  bodyRange: RangeL,
-  members: Vector[FunctionP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FunctionP<'p> {
-  pub range: RangeL,
-  pub header: FunctionHeaderP<'p>,
-  pub body: Option<&'p BlockPE<'p>>,
-}
-/*
-case class FunctionP(
-  range: RangeL,
-  header: FunctionHeaderP,
-  body: Option[BlockPE]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
-pub struct FunctionHeaderP<'p> {
-  pub range: RangeL,
-  pub name: Option<NameP<'p>>,
-  pub attributes: &'p [IAttributeP<'p>],
-  // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
-  pub generic_parameters: Option<GenericParametersP<'p>>,
-  pub template_rules: Option<TemplateRulesP<'p>>,
-  pub params: Option<ParamsP<'p>>,
-  pub ret: FunctionReturnP<'p>,
-}
-/*
-case class FunctionHeaderP(
-  range: RangeL,
-  name: Option[NameP],
-  attributes: Vector[IAttributeP],
-
-  // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
-  genericParameters: Option[GenericParametersP],
-  templateRules: Option[TemplateRulesP],
-
-  params: Option[ParamsP],
-  ret: FunctionReturnP
-) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
-Guardian: disable: NECX
-}
-*/
-#[derive(Clone, Debug, PartialEq)]
-pub struct FunctionReturnP<'p> {
-  pub range: RangeL,
-  pub ret_type: Option<ITemplexPT<'p>>,
-}
-/*
-case class FunctionReturnP(
-  range: RangeL,
-  retType: Option[ITemplexPT]
-) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-Guardian: disable: NECX
-*/
-
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Debug, PartialEq)]
 pub struct GenericParameterP<'p> {
   pub range: RangeL,
   pub name: NameP<'p>,
@@ -523,6 +469,62 @@ pub struct ParamsP<'p> {
 /*
 case class ParamsP(range: RangeL, params: Vector[ParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionP<'p> {
+  pub range: RangeL,
+  pub header: FunctionHeaderP<'p>,
+  pub body: Option<&'p BlockPE<'p>>,
+}
+/*
+case class FunctionP(
+  range: RangeL,
+  header: FunctionHeaderP,
+  body: Option[BlockPE]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionReturnP<'p> {
+  pub range: RangeL,
+  pub ret_type: Option<ITemplexPT<'p>>,
+}
+/*
+case class FunctionReturnP(
+  range: RangeL,
+  retType: Option[ITemplexPT]
+) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+Guardian: disable: NECX
+*/
+
+#[derive(Debug, PartialEq)]
+pub struct FunctionHeaderP<'p> {
+  pub range: RangeL,
+  pub name: Option<NameP<'p>>,
+  pub attributes: &'p [IAttributeP<'p>],
+  // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
+  pub generic_parameters: Option<GenericParametersP<'p>>,
+  pub template_rules: Option<TemplateRulesP<'p>>,
+  pub params: Option<ParamsP<'p>>,
+  pub ret: FunctionReturnP<'p>,
+}
+/*
+case class FunctionHeaderP(
+  range: RangeL,
+  name: Option[NameP],
+  attributes: Vector[IAttributeP],
+
+  // If Some(Vector.empty), should show up like the <> in func moo<>(a int, b bool)
+  genericParameters: Option[GenericParametersP],
+  templateRules: Option[TemplateRulesP],
+
+  params: Option[ParamsP],
+  ret: FunctionReturnP
+) {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+Guardian: disable: NECX
+}
 */
 
 #[derive(Copy, Clone, Debug, PartialEq, Eq)]

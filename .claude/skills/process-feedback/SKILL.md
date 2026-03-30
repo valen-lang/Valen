@@ -1,6 +1,6 @@
 ---
 name: process-feedback
-description: Process //f violation annotations from a Guardian review. Validates context quality before creating test cases. Invoke after applying a Guardian review patch and marking false positives with //f.
+description: Process //f violation annotations from a Guardian review. Validates context quality before creating disagreement cases in disagreements/human/. Invoke after applying a Guardian review patch and marking false positives with //f.
 argument-hint: [optional: path to scan, defaults to src/]
 allowed-tools: Bash(guardian feedback-line *), Read, Grep, Glob
 ---
