@@ -12,17 +12,17 @@ use crate::solver::{ISolverError, SolverDelegate};
 use crate::utils::range::RangeS;
 
 // mig: struct TestRuleSolver
-pub struct TestRuleSolver<'a> {
-    pub scout_arena: &'a crate::scout_arena::ScoutArena<'a>,
+pub struct TestRuleSolver<'ctx, 's> {
+    pub scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
 }
 
 // MIGALLOW: Scala passed ruleToPuzzles as a Solver constructor closure; Rust stores it in the delegate.
-pub struct CustomPuzzlerDelegate<'a, F: Fn(&TestRule) -> Vec<Vec<i64>>> {
-    pub base: TestRuleSolver<'a>,
+pub struct CustomPuzzlerDelegate<'ctx, 's, F: Fn(&TestRule) -> Vec<Vec<i64>>> {
+    pub base: TestRuleSolver<'ctx, 's>,
     pub puzzler: F,
 }
 // mig: impl SolverDelegate for TestRuleSolver
-impl<'a> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolver<'a> {
+impl<'ctx, 's> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolver<'ctx, 's> {
   /*
   class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
   */
@@ -58,7 +58,7 @@ impl<'a> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolve
     }
 }
 
-impl<'a, F: Fn(&TestRule) -> Vec<Vec<i64>>> SolverDelegate<TestRule, i64, (), (), String, String> for CustomPuzzlerDelegate<'a, F> {
+impl<'ctx, 's, F: Fn(&TestRule) -> Vec<Vec<i64>>> SolverDelegate<TestRule, i64, (), (), String, String> for CustomPuzzlerDelegate<'ctx, 's, F> {
     fn rule_to_puzzles(&self, rule: &TestRule) -> Vec<Vec<i64>> {
         (self.puzzler)(rule)
     }
@@ -93,7 +93,7 @@ impl<'a, F: Fn(&TestRule) -> Vec<Vec<i64>>> SolverDelegate<TestRule, i64, (), ()
 }
 
 // mig: impl TestRuleSolver
-impl<'a> TestRuleSolver<'a> {
+impl<'ctx, 's> TestRuleSolver<'ctx, 's> {
 /*
 */
 /*

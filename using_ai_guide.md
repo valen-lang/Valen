@@ -10,7 +10,6 @@ Type these directly in Claude Code.
 | Command | What it does |
 |---|---|
 | `/document` | Categorize information and write it to the correct `docs/` directories per `docs/meta.md`. Handles arcana (@ID references) and shields. |
-| `/arcana` | Document a cross-cutting concern. Creates a doc with a Z-suffix ID and adds `@ID` references at all affected code sites. |
 
 ### Migration — Driving Work Forward
 | Command | What it does |
@@ -32,7 +31,11 @@ Type these directly in Claude Code.
 | `/vv` | Process a `// VV:` violation comment. Match it to a Guardian shield or create a new one, then add a test case. |
 | `/process-feedback` | Process `//f` annotations from a Guardian review. Validates context quality and creates disagreement cases. |
 | `/curate-shields` | Weekly curation of shield disagreements. Triage opus/ cases, refine prompts, promote cases to tests/. |
-| `/audit-error-handling` | Audit codebase for silent failures, swallowed errors, and FFFL violations. Launches parallel agents for exhaustive search. |
+
+### Infrastructure
+| Command | What it does |
+|---|---|
+| `/write-pretooluse-hook` | Step-by-step guide to build a Rust binary PreToolUse hook that can block Edit/Write/Bash calls. Covers JSON protocol, exit codes, settings.json config. |
 
 ## Agents (Spawned Internally)
 

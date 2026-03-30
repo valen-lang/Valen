@@ -1,5 +1,8 @@
 // AFTERM: rename to function_post_parser.rs
 // AFTERM: review scout_function
+// Per @DSAUIMZ, all borrow_val() calls in this file borrow from a stack-local
+// LocationInDenizenBuilder instead of arena-allocating. The slice is promoted
+// to permanent arena storage only inside intern_rune on a miss.
 
 use crate::parsing::ast::{FunctionP, GenericParameterP, IAttributeP, ITemplexPT, LoadAsP};
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
@@ -20,8 +23,8 @@ use crate::lexing::ast::RangeL;
 use crate::postparsing::names::{
   ClosureParamNameS, CodeNameS, CodeRuneS, DenizenDefaultRegionRuneS, FunctionNameS,
   IFunctionDeclarationNameS, IFunctionDeclarationNameValS, IImpreciseNameValS, INameS, INameValS,
-  IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplicitRuneS, LambdaDeclarationNameS,
-  LambdaStructDeclarationNameS, MagicParamRuneS,
+  IRuneS, IRuneValS, IVarNameS, IVarNameValS, ImplicitRuneValS, LambdaDeclarationNameS,
+  LambdaStructDeclarationNameS, MagicParamRuneValS,
 };
 use crate::postparsing::post_parser::{
   CouldntFindRuneS, ExternHasBodyS, FunctionEnvironmentS, ICompileErrorS, IEnvironmentS,
@@ -398,9 +401,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
               (Some(_), None) => {
                 let coord_rune = RuneUsage {
                   range: param_range.clone(),
-                  rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-                    lid: lidb.child().consume_in(self.scout_arena.arena()),
-                  })),
+                  rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                 };
                 rune_to_explicit_type.push((
                   coord_rune.rune.clone(),
@@ -448,9 +449,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
                 if pattern_s.coord_rune.is_none() {
                   let coord_rune = RuneUsage {
                     range: param_range.clone(),
-                    rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-                      lid: lidb.child().consume_in(self.scout_arena.arena()),
-                    })),
+                    rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
                   };
                   rune_to_explicit_type.push((
                     coord_rune.rune.clone(),
@@ -511,9 +510,7 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
           let ret_range_s = Self::eval_range(file_coordinate, function.header.ret.range);
           let ret_rune = RuneUsage {
             range: ret_range_s.clone(),
-            rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-              lid: lidb.child().consume_in(self.scout_arena.arena()),
-            })),
+            rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
           };
           rules.push(IRulexSR::MaybeCoercingLookup(MaybeCoercingLookupSR {
             range: ret_range_s.clone(),
@@ -679,15 +676,9 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
         let IFunctionParent::ParentFunction { parent_stack_frame } = &maybe_parent else {
           panic!("POSTPARSER_SCOUT_FUNCTION_EXPECTED_PARENT_FUNCTION");
         };
-        let closure_struct_region_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume_in(self.scout_arena.arena()),
-        }));
-        let closure_struct_kind_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume_in(self.scout_arena.arena()),
-        }));
-        let closure_struct_coord_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: lidb.child().consume_in(self.scout_arena.arena()),
-        }));
+        let closure_struct_region_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+        let closure_struct_kind_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+        let closure_struct_coord_rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
         let closure_param_s = self.create_closure_param(
           function.range,
           function_declaration_name_for_env.clone(),
@@ -1408,9 +1399,7 @@ fn create_closure_param(
   }));
   let closure_param_type_rune = RuneUsage {
     range: closure_param_range.clone(),
-    rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-      lid: lidb.child().consume_in(self.scout_arena.arena()),
-    })),
+    rune: self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))),
   };
   rule_builder.push(IRulexSR::Augment(AugmentSR {
     range: closure_param_range.clone(),
@@ -1503,9 +1492,7 @@ fn create_magic_parameters(
         code_location.clone(),
         code_location.clone(),
       );
-      let magic_param_rune = self.scout_arena.intern_rune(IRuneValS::MagicParamRune(MagicParamRuneS {
-        lid: lidb.child().consume_in(self.scout_arena.arena()),
-      }));
+      let magic_param_rune = self.scout_arena.intern_rune(IRuneValS::MagicParamRune(MagicParamRuneValS::new(lidb.child().borrow_val())));
       rune_to_explicit_type.push((
         magic_param_rune.clone(),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),

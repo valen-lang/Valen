@@ -1,3 +1,7 @@
+// Per @DSAUIMZ, all borrow_val() calls in this file borrow from a stack-local
+// LocationInDenizenBuilder instead of arena-allocating. The slice is promoted
+// to permanent arena storage only inside intern_rune on a miss.
+
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{BuiltinCallPR, ComponentsPR, EqualsPR, IntPT, IRulexPR, ITypePR, ITemplexPT, OwnershipPT};
@@ -7,7 +11,7 @@ use crate::postparsing::itemplatatype::{
   LocationTemplataType, MutabilityTemplataType, OwnershipTemplataType, PackTemplataType,
   PrototypeTemplataType, RegionTemplataType, VariabilityTemplataType,
 };
-use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneS};
+use crate::postparsing::names::{CodeRuneS, IImpreciseNameS, IRuneS, IRuneValS, ImplicitRuneValS};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
 use crate::postparsing::rules::rules::{
   CoordComponentsSR, EqualsSR, IntLiteralSL, IsInterfaceSR, IRulexSR, OneOfSR,
@@ -100,9 +104,7 @@ fn translate_rulex<'s, 'p>(
         Some(rune_name) => scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str(rune_name.str().as_str()) })),
         None => {
           let mut child_lidb = lidb.child();
-          scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          }))
+          scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val())))
         }
       };
       let tyype = translate_type(typed_rule.tyype);
@@ -126,9 +128,7 @@ fn translate_rulex<'s, 'p>(
     }
     IRulexPR::Equals(EqualsPR { range, left, right }) => {
       let mut child_lidb = lidb.child();
-      let rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-        lid: child_lidb.consume_in(scout_arena.arena()),
-      }));
+      let rune = scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val())));
       let left_usage = {
         let mut child_lidb = lidb.child();
         translate_rulex(scout_arena,
@@ -205,9 +205,7 @@ fn translate_rulex<'s, 'p>(
         let mut child_lidb = lidb.child();
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
-          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         builder.push(IRulexSR::Pack(crate::postparsing::rules::rules::PackSR {
           range: PostParser::eval_range(file, *range),
@@ -243,9 +241,7 @@ fn translate_rulex<'s, 'p>(
         let mut child_lidb = lidb.child();
         let result_rune = RuneUsage {
           range: PostParser::eval_range(file, *range),
-          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         builder.push(IRulexSR::OneOf(OneOfSR {
           range: PostParser::eval_range(file, *range),
@@ -266,9 +262,7 @@ fn translate_rulex<'s, 'p>(
       let mut rune_child_lidb = lidb.child();
       let rune = RuneUsage {
         range: PostParser::eval_range(file, *range),
-        rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneS {
-          lid: rune_child_lidb.consume_in(scout_arena.arena()),
-        })),
+        rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(rune_child_lidb.borrow_val()))),
       };
       rune_to_explicit_type.push((rune.rune.clone(), translate_type(*tyype)));
       match tyype {

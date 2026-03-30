@@ -1,6 +1,6 @@
 use crate::interner::StrI;
 use crate::scout_arena::ScoutArena;
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{LocationInDenizen, LocationInDenizenVal};
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 /*
@@ -77,6 +77,7 @@ Guardian: disable-all
 */
 
 /// Value/key form for interner lookups. Shallow Val structs reference canonical INameS/IFunctionDeclarationNameS/etc.
+/// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum INameValS<'s> {
   FunctionDeclaration(IFunctionDeclarationNameValS<'s>),
@@ -227,6 +228,7 @@ pub struct RuneNameValS<'s> {
 /* Guardian: disable-all */
 
 /// Value/key form of imprecise name for interner lookups. Storage uses canonical `IImpreciseNameS<'s>`.
+/// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameValS<'s> {
   CodeName(CodeNameS<'s>),
@@ -1002,26 +1004,58 @@ pub struct CaseRuneFromImplValS<'s> {
 Guardian: disable-all
 */
 
+// Per @DSAUIMZ, these Val structs have private lid fields to prevent pre-allocation.
+// Only constructible via new() which takes a LocationInDenizenVal from borrow_val().
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct ImplicitRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> ImplicitRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct PureBlockRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> PureBlockRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CallRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> CallRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct CallPureMergeRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> CallPureMergeRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LetImplicitRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> LetImplicitRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct MagicParamRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> MagicParamRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+pub struct LocalDefaultRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
+impl<'tmp> LocalDefaultRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
+
+/// Per @DSAUIMZ, 'tmp carries a temporary borrow to defer slice allocation.
 /// Value/key form of rune for interner lookups. Used when constructing runes before
 /// canonicalizing via `intern_rune`. Storage fields use canonical `IRuneS<'s>`.
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
-pub enum IRuneValS<'s> {
+pub enum IRuneValS<'s, 'tmp> {
   CodeRune(CodeRuneS<'s>),
   ImplDropCoordRune(ImplDropCoordRuneS),
   ImplDropVoidRune(ImplDropVoidRuneS),
-  ImplicitRune(ImplicitRuneS<'s>),
-  PureBlockRegionRune(PureBlockRegionRuneS<'s>),
-  CallRegionRune(CallRegionRuneS<'s>),
-  CallPureMergeRegionRune(CallPureMergeRegionRuneS<'s>),
+  ImplicitRune(ImplicitRuneValS<'tmp>),
+  PureBlockRegionRune(PureBlockRegionRuneValS<'tmp>),
+  CallRegionRune(CallRegionRuneValS<'tmp>),
+  CallPureMergeRegionRune(CallPureMergeRegionRuneValS<'tmp>),
   ImplicitRegionRune(ImplicitRegionRuneValS<'s>),
   ReachablePrototypeRune(ReachablePrototypeRuneS),
   FreeOverrideStructTemplateRune(FreeOverrideStructTemplateRuneS),
   FreeOverrideStructRune(FreeOverrideStructRuneS),
   FreeOverrideInterfaceRune(FreeOverrideInterfaceRuneS),
-  LetImplicitRune(LetImplicitRuneS<'s>),
-  MagicParamRune(MagicParamRuneS<'s>),
+  LetImplicitRune(LetImplicitRuneValS<'tmp>),
+  MagicParamRune(MagicParamRuneValS<'tmp>),
   MemberRune(MemberRuneS),
-  LocalDefaultRegionRune(LocalDefaultRegionRuneS<'s>),
+  LocalDefaultRegionRune(LocalDefaultRegionRuneValS<'tmp>),
   DenizenDefaultRegionRune(DenizenDefaultRegionRuneS<'s>),
   ExportDefaultRegionRune(ExportDefaultRegionRuneS<'s>),
   ExternDefaultRegionRune(ExternDefaultRegionRuneS<'s>),
@@ -1070,6 +1104,102 @@ pub enum IRuneValS<'s> {
   FunctorReturnRuneName(FunctorReturnRuneNameS),
   DispatcherRuneFromImpl(DispatcherRuneFromImplValS<'s>),
   CaseRuneFromImpl(CaseRuneFromImplValS<'s>),
+}
+
+/// Per @DSAUIMZ, wrapper enabling heterogeneous HashMap lookup.
+///
+/// The intern map stores `IRuneValS<'s, 's>` keys (both lifetimes = arena).
+/// But callers build `IRuneValS<'s, 'tmp>` where 'tmp borrows a stack-local
+/// builder (not the arena). We need to look up in the map using the 'tmp version.
+///
+/// We can't implement `Equivalent<IRuneValS<'s,'s>> for IRuneValS<'s,'tmp>` directly
+/// because when 'tmp = 's, the two types are identical, and Rust's blanket impl
+/// `Equivalent<K> for K` (from PartialEq) already covers that case. The orphan
+/// rules see a potential overlap and reject our impl.
+///
+/// This wrapper is a distinct type that breaks the overlap. It holds a reference
+/// to the query val and delegates Hash/Equivalent to the inner val's contents.
+/// The Hash output is identical for equal values regardless of lifetime, because
+/// both LocationInDenizenVal and LocationInDenizen hash by slice contents.
+pub struct RuneValQuery<'a, 's, 'tmp>(pub &'a IRuneValS<'s, 'tmp>);
+
+impl<'a, 's, 'tmp> std::hash::Hash for RuneValQuery<'a, 's, 'tmp> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a, 's, 'tmp> {
+  fn equivalent(&self, key: &IRuneValS<'s, 's>) -> bool {
+    use IRuneValS::*;
+    match (self.0, key) {
+      // 7 lid variants: compare path contents
+      (ImplicitRune(a), ImplicitRune(b)) => a.lid().path() == b.lid().path(),
+      (PureBlockRegionRune(a), PureBlockRegionRune(b)) => a.lid().path() == b.lid().path(),
+      (CallRegionRune(a), CallRegionRune(b)) => a.lid().path() == b.lid().path(),
+      (CallPureMergeRegionRune(a), CallPureMergeRegionRune(b)) => a.lid().path() == b.lid().path(),
+      (LetImplicitRune(a), LetImplicitRune(b)) => a.lid().path() == b.lid().path(),
+      (MagicParamRune(a), MagicParamRune(b)) => a.lid().path() == b.lid().path(),
+      (LocalDefaultRegionRune(a), LocalDefaultRegionRune(b)) => a.lid().path() == b.lid().path(),
+      // All other variants: same inner type on both sides, delegate to PartialEq
+      (CodeRune(a), CodeRune(b)) => a == b,
+      (ImplDropCoordRune(a), ImplDropCoordRune(b)) => a == b,
+      (ImplDropVoidRune(a), ImplDropVoidRune(b)) => a == b,
+      (ImplicitRegionRune(a), ImplicitRegionRune(b)) => a == b,
+      (ReachablePrototypeRune(a), ReachablePrototypeRune(b)) => a == b,
+      (FreeOverrideStructTemplateRune(a), FreeOverrideStructTemplateRune(b)) => a == b,
+      (FreeOverrideStructRune(a), FreeOverrideStructRune(b)) => a == b,
+      (FreeOverrideInterfaceRune(a), FreeOverrideInterfaceRune(b)) => a == b,
+      (MemberRune(a), MemberRune(b)) => a == b,
+      (DenizenDefaultRegionRune(a), DenizenDefaultRegionRune(b)) => a == b,
+      (ExportDefaultRegionRune(a), ExportDefaultRegionRune(b)) => a == b,
+      (ExternDefaultRegionRune(a), ExternDefaultRegionRune(b)) => a == b,
+      (ImplicitCoercionOwnershipRune(a), ImplicitCoercionOwnershipRune(b)) => a == b,
+      (ImplicitCoercionKindRune(a), ImplicitCoercionKindRune(b)) => a == b,
+      (ImplicitCoercionTemplateRune(a), ImplicitCoercionTemplateRune(b)) => a == b,
+      (ArraySizeImplicitRune(a), ArraySizeImplicitRune(b)) => a == b,
+      (ArrayMutabilityImplicitRune(a), ArrayMutabilityImplicitRune(b)) => a == b,
+      (ArrayVariabilityImplicitRune(a), ArrayVariabilityImplicitRune(b)) => a == b,
+      (ReturnRune(a), ReturnRune(b)) => a == b,
+      (StructNameRune(a), StructNameRune(b)) => a == b,
+      (InterfaceNameRune(a), InterfaceNameRune(b)) => a == b,
+      (SelfRune(a), SelfRune(b)) => a == b,
+      (SelfOwnershipRune(a), SelfOwnershipRune(b)) => a == b,
+      (SelfKindRune(a), SelfKindRune(b)) => a == b,
+      (SelfKindTemplateRune(a), SelfKindTemplateRune(b)) => a == b,
+      (SelfCoordRune(a), SelfCoordRune(b)) => a == b,
+      (MacroVoidKindRune(a), MacroVoidKindRune(b)) => a == b,
+      (MacroVoidCoordRune(a), MacroVoidCoordRune(b)) => a == b,
+      (MacroSelfKindRune(a), MacroSelfKindRune(b)) => a == b,
+      (MacroSelfKindTemplateRune(a), MacroSelfKindTemplateRune(b)) => a == b,
+      (MacroSelfCoordRune(a), MacroSelfCoordRune(b)) => a == b,
+      (ArgumentRune(a), ArgumentRune(b)) => a == b,
+      (PatternInputRune(a), PatternInputRune(b)) => a == b,
+      (ExplicitTemplateArgRune(a), ExplicitTemplateArgRune(b)) => a == b,
+      (AnonymousSubstructParentInterfaceTemplateRune(a), AnonymousSubstructParentInterfaceTemplateRune(b)) => a == b,
+      (AnonymousSubstructParentInterfaceKindRune(a), AnonymousSubstructParentInterfaceKindRune(b)) => a == b,
+      (AnonymousSubstructParentInterfaceCoordRune(a), AnonymousSubstructParentInterfaceCoordRune(b)) => a == b,
+      (AnonymousSubstructTemplateRune(a), AnonymousSubstructTemplateRune(b)) => a == b,
+      (AnonymousSubstructKindRune(a), AnonymousSubstructKindRune(b)) => a == b,
+      (AnonymousSubstructCoordRune(a), AnonymousSubstructCoordRune(b)) => a == b,
+      (AnonymousSubstructVoidKindRune(a), AnonymousSubstructVoidKindRune(b)) => a == b,
+      (AnonymousSubstructVoidCoordRune(a), AnonymousSubstructVoidCoordRune(b)) => a == b,
+      (AnonymousSubstructMemberRune(a), AnonymousSubstructMemberRune(b)) => a == b,
+      (AnonymousSubstructMethodSelfBorrowCoordRune(a), AnonymousSubstructMethodSelfBorrowCoordRune(b)) => a == b,
+      (AnonymousSubstructMethodSelfOwnCoordRune(a), AnonymousSubstructMethodSelfOwnCoordRune(b)) => a == b,
+      (AnonymousSubstructDropBoundPrototypeRune(a), AnonymousSubstructDropBoundPrototypeRune(b)) => a == b,
+      (AnonymousSubstructDropBoundParamsListRune(a), AnonymousSubstructDropBoundParamsListRune(b)) => a == b,
+      (AnonymousSubstructFunctionBoundPrototypeRune(a), AnonymousSubstructFunctionBoundPrototypeRune(b)) => a == b,
+      (AnonymousSubstructFunctionBoundParamsListRune(a), AnonymousSubstructFunctionBoundParamsListRune(b)) => a == b,
+      (AnonymousSubstructFunctionInterfaceTemplateRune(a), AnonymousSubstructFunctionInterfaceTemplateRune(b)) => a == b,
+      (AnonymousSubstructFunctionInterfaceKindRune(a), AnonymousSubstructFunctionInterfaceKindRune(b)) => a == b,
+      (AnonymousSubstructMethodInheritedRune(a), AnonymousSubstructMethodInheritedRune(b)) => a == b,
+      (FunctorPrototypeRuneName(a), FunctorPrototypeRuneName(b)) => a == b,
+      (FunctorParamRuneName(a), FunctorParamRuneName(b)) => a == b,
+      (FunctorReturnRuneName(a), FunctorReturnRuneName(b)) => a == b,
+      (DispatcherRuneFromImpl(a), DispatcherRuneFromImpl(b)) => a == b,
+      (CaseRuneFromImpl(a), CaseRuneFromImpl(b)) => a == b,
+      _ => false,
+    }
+  }
 }
 
 /*

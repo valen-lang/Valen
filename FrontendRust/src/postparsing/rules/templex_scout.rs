@@ -1,3 +1,7 @@
+// Per @DSAUIMZ, all borrow_val() calls in this file borrow from a stack-local
+// LocationInDenizenBuilder instead of arena-allocating. The slice is promoted
+// to permanent arena storage only inside intern_rune on a miss.
+
 use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::parsing::ast::{
@@ -7,7 +11,7 @@ use crate::parsing::ast::{
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, ImplicitRuneS, IRuneS,
+  CodeNameS, CodeRuneS, IImpreciseNameS, IImpreciseNameValS::CodeName, ImplicitRuneValS, IRuneS,
 };
 use crate::postparsing::names::IRuneValS::{CodeRune, ImplicitRune};
 use crate::postparsing::post_parser::{IEnvironmentS, PostParser};
@@ -50,9 +54,7 @@ fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
   let mut child_lidb = lidb.child();
   let rune_s = RuneUsage {
     range: range_s.clone(),
-    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume_in(scout_arena.arena()),
-    })),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
   };
   rule_builder.push(IRulexSR::Literal(LiteralSR {
     range: range_s,
@@ -113,9 +115,7 @@ fn add_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
   let mut child_lidb = lidb.child();
   let rune_s = RuneUsage {
     range: range_s.clone(),
-    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-      lid: child_lidb.consume_in(scout_arena.arena()),
-    })),
+    rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
   };
   rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
     range: range_s,
@@ -255,9 +255,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let rune = RuneUsage {
           range: PostParser::eval_range(file, anonymous_rune.range),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rune
       }
@@ -387,9 +385,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
 
         let maybe_region_rune = interpreted.maybe_region.as_ref().map(|region_rune| {
@@ -467,9 +463,7 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = translate_templex(
@@ -551,12 +545,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
           func.parameters.iter().map(|param_p| {
             translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), param_p)
           }).collect();
-        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(scout_arena.arena()) })) };
+        let param_list_rune_s = RuneUsage { range: params_range_s.clone(), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
         rule_builder.push(IRulexSR::Pack(PackSR { range: params_range_s, result_rune: param_list_rune_s.clone(), members: crate::utils::arena_utils::alloc_slice_from_vec(scout_arena.arena(), params_s) }));
 
         let return_rune_s = translate_templex(scout_arena, keywords, env.clone(), &mut lidb.child(), rule_builder, context_region.clone(), func.return_type);
 
-        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS { lid: lidb.child().consume_in(scout_arena.arena()) })) };
+        let result_rune_s = RuneUsage { range: PostParser::eval_range(file, func.range), rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val()))) };
 
         // Only appears in call site; filtered out when solving definition
         rule_builder.push(IRulexSR::CallSiteFunc(CallSiteFuncSR { range: range_s.clone(), prototype_rune: result_rune_s.clone(), name: name.clone(), params_list_rune: param_list_rune_s.clone(), return_rune: return_rune_s.clone() }));
@@ -622,16 +616,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
@@ -716,16 +706,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(Lookup(LookupSR {
           range: range_s.clone(),
@@ -788,16 +774,12 @@ pub fn translate_templex<'s, 'p>(scout_arena: &ScoutArena<'s>,
         let mut child_lidb = lidb.child();
         let result_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         let mut child_lidb = lidb.child();
         let template_rune_s = RuneUsage {
           range: range_s.clone(),
-          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-            lid: child_lidb.consume_in(scout_arena.arena()),
-          })),
+          rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
         };
         rule_builder.push(MaybeCoercingLookup(MaybeCoercingLookupSR {
           range: range_s.clone(),
@@ -938,9 +920,7 @@ pub fn translate_maybe_type_into_rune<'s, 'p>(scout_arena: &ScoutArena<'s>,
       let mut child_lidb = lidb.child();
       let result_rune_s = RuneUsage {
         range,
-        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneS {
-          lid: child_lidb.consume_in(scout_arena.arena()),
-        })),
+        rune: scout_arena.intern_rune(ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
       };
       result_rune_s
     }

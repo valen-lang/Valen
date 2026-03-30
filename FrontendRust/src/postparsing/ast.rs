@@ -1111,6 +1111,7 @@ impl LocationInDenizenBuilder {
     }
   */
 
+  // Per @DSAUIMZ, this is for NON-interned uses only (expression AST nodes).
   pub fn consume_in<'x>(&mut self, arena: &'x bumpalo::Bump) -> LocationInDenizen<'x> {
     assert!(
       !self.consumed,
@@ -1128,6 +1129,17 @@ impl LocationInDenizenBuilder {
       LocationInDenizen(path)
     }
   */
+
+  // Per @DSAUIMZ, this is the only way to construct a LocationInDenizenVal.
+  // Borrows from the builder's Vec, so 'tmp is a stack lifetime, not 's.
+  pub fn borrow_val(&mut self) -> LocationInDenizenVal<'_> {
+    assert!(
+      !self.consumed,
+      "Location in denizen was already used for something, add a .child() somewhere."
+    );
+    self.consumed = true;
+    LocationInDenizenVal { path: &self.path }
+  }
 }
 /*
   override def toString: String = path.mkString(".")
@@ -1162,6 +1174,32 @@ case class LocationInDenizen(path: Vector[Int]) {
   }
 Guardian: disable: NECX
 */
+
+/// Borrowed view of a LocationInDenizen path, for use as an intern lookup key.
+/// Per @DSAUIMZ, fields are private to prevent pre-allocation.
+/// Only constructible via LocationInDenizenBuilder::borrow_val().
+#[derive(Clone, Copy, Debug, PartialEq, Eq, Hash)]
+pub struct LocationInDenizenVal<'tmp> {
+  path: &'tmp [i32],
+}
+
+impl<'tmp> LocationInDenizenVal<'tmp> {
+  /// Read access to path contents (for Hash/Eq/Debug implementations).
+  pub fn path(&self) -> &[i32] {
+    self.path
+  }
+
+  /// Per @DSAUIMZ, only called inside intern methods on a miss.
+  pub(crate) fn promote_in<'s>(&self, arena: &'s bumpalo::Bump) -> LocationInDenizen<'s> {
+    LocationInDenizen { path: arena.alloc_slice_copy(self.path) }
+  }
+
+  /// Per @DSAUIMZ, only used inside intern methods to construct stored HashMap keys
+  /// from a just-promoted LocationInDenizen.
+  pub(crate) fn from_canonical<'s>(lid: &LocationInDenizen<'s>) -> LocationInDenizenVal<'s> {
+    LocationInDenizenVal { path: lid.path }
+  }
+}
 
 impl<'x> LocationInDenizen<'x> {
   pub fn before(&self, that: &LocationInDenizen) -> bool {

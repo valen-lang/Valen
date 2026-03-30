@@ -37,3 +37,7 @@ At the parser->postparser boundary, `StrI<'p>` values are re-interned into `'s` 
 ## Key Invariant
 
 Arena-allocated structs are **immutable after construction**. Data is built using mutable heap collections, then frozen into the arena. See `docs/usage/arenas.md` for the pattern.
+
+## Transient vs Permanent
+
+Interned types (runes, names, imprecise names) have two forms: a **transient Val** used to check "does this already exist?" and a **permanent** arena-allocated canonical form. Transient Vals live on the stack and are discarded on an intern hit, or promoted to permanent on a miss. A Val struct defines an **internable unit** — the boundary around everything that gets interned together. Slices and collections inside a Val are parts of that unit, not independently interned. When a transient Val contains a slice, the slice borrows from a stack temporary (lifetime `'tmp`) so that no arena space is wasted on hits. See @DSAUIMZ for the full pattern.
