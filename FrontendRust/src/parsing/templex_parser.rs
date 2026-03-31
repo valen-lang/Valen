@@ -752,7 +752,7 @@ where
         match parts.as_slice() {
           [StringPart::Literal { range, s }] => Ok(ITemplexPT::String(StringPT {
             range: *range,
-            str: s.clone(),
+            str: self.parse_arena.intern_str(s.as_str()),
           })),
           _ => Err(ParseError::BadStringInTemplex(range.begin())),
         }

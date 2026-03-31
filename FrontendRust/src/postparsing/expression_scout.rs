@@ -12,7 +12,7 @@ use crate::postparsing::expressions::{
   ReturnSE, RuneLookupSE, VoidSE,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS,
   IImpreciseNameValS, IRuneS, IRuneValS, IVarNameS,
 };
 use crate::postparsing::post_parser::{

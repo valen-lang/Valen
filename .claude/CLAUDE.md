@@ -70,6 +70,8 @@ Use **`cargo check`** for faster iteration during development.
 
 The build may have warnings during migration - that's expected. Focus on getting it to compile first.
 
+Eliminate all compiler warnings (unused imports, unused variables, dead code) before saying you're done. Variables prefixed with `_` are intentionally unused and don't count.
+
 ## Working with This Project
 
 1. When editing postparser files, relevant lifetime and migration rules auto-load

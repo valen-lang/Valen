@@ -7,7 +7,7 @@ use crate::postparsing::expressions::{
   BlockSE, BreakSE, IExpressionSE, MapSE, VoidSE, WhileSE,
 };
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser, StackFrame};
-use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
+use crate::postparsing::variable_uses::VariableUses;
 use crate::lexing::ast::RangeL;
 /*
 package dev.vale.postparsing

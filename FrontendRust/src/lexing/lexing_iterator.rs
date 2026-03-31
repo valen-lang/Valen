@@ -171,33 +171,22 @@ impl LexingIterator {
     }
   */
 
-  /// Consume ellipses comments (... or …)
-  /// Note: Ellipses are treated as placeholder tokens, not line comments
+  /// Consume ellipses comments (...)
   fn consume_ellipses_comments(&mut self) {
     let pos_after_whitespace = self.find_whitespace_end();
 
-    // Check for "..." (three ASCII dots) or "…" (Unicode ellipsis U+2026)
-    // Use starts_with for proper Unicode handling
-    let rest_of_code = &self.code[pos_after_whitespace..];
-    let has_ellipsis = rest_of_code.starts_with("...");
-    let has_unicode_ellipsis = rest_of_code.starts_with('…');
-
-    if has_ellipsis || has_unicode_ellipsis {
+    if pos_after_whitespace + 2 < self.code.len()
+      && self.code.as_bytes()[pos_after_whitespace] == b'.'
+      && self.code.as_bytes()[pos_after_whitespace + 1] == b'.'
+      && self.code.as_bytes()[pos_after_whitespace + 2] == b'.'
+    {
       let begin = self.position;
-      self.position = if has_ellipsis {
-        pos_after_whitespace + 3 // Skip "..."
-      } else {
-        pos_after_whitespace + '…'.len_utf8() // Skip "…" (3 bytes)
-      };
-
-      // Unlike line comments, ellipses don't extend to end of line
-      // They're just consumed as placeholder tokens (Scala line 103)
+      self.position = pos_after_whitespace + 3;
+      assert!(self.position <= self.code.len());
       self.comments.push(RangeL(begin as i32, self.position as i32));
-
       self.consume_comments();
     }
 
-    // Also try to skip "..." unconditionally (Scala line 107)
     self.try_skip_str("...");
   }
   /*
@@ -222,28 +211,15 @@ impl LexingIterator {
   fn consume_line_comments(&mut self) {
     let pos_after_whitespace = self.find_whitespace_end();
 
-    // Use starts_with for Unicode-safe prefix checking
-    if self.code[pos_after_whitespace..].starts_with("//") {
+    if pos_after_whitespace + 2 <= self.code.len()
+      && self.code.as_bytes()[pos_after_whitespace] == b'/'
+      && self.code.as_bytes()[pos_after_whitespace + 1] == b'/'
+    {
       let begin = pos_after_whitespace;
-      self.position = pos_after_whitespace + 2; // "//" is always 2 bytes (ASCII)
+      self.position = pos_after_whitespace + 2;
       assert!(self.position <= self.code.len());
-
-      // Skip to end of line
-      while !self.at_end() {
-        let c = self.advance();
-        if c == '\n' {
-          break;
-        }
-      }
-
+      self.skip_to_past('\n');
       self.comments.push(RangeL(begin as i32, (self.position - 1) as i32));
-
-      // V: are these changes closer or further from scala?
-      // VA: Slightly further. Rust uses starts_with("//") instead of Scala's two charAt comparisons
-      // VA: with a bounds check (minor simplification). The comment-end loop inlines what Scala does
-      // VA: via skipToPast('\n') — equivalent behavior but more verbose and structurally different.
-      // VA: Also, nearby consume_ellipses_comments handles Unicode '…' (U+2026) which Scala doesn't.
-
       self.consume_comments();
     }
   }

@@ -1,5 +1,4 @@
-data_file = "check-template.txt"
-shields_dir = "../Luz/shields"
+shields_dirs = ["../Luz/shields", "docs/shields"]
 backend = "claude"
 server_url = "http://127.0.0.1:7300"
 simple_smart_config = "../Guardian/gpt-oss-20b.config.json"
@@ -9,6 +8,13 @@ agentic_smart_model = "claude-opus-4-20250514"
 agentic_medium_model = "claude-sonnet-4-20250514"
 agentic_small_model = "claude-haiku-4-5-20251001"
 exclude_shields = [
+  "AvoidIfMatchesInTestsIfPossible-AIMITIPX.md",
+  "BaseDirPathDiscipline-BDPDX.md",
+  "DocumentPublicAPIs-DPAPIX.md",
+  "ExtractMagicNumbersIntoNamedConstants-EMNINCX.md",
+  "IntegrationTestsBehaveLikeUsers-ITBLUX.md",
+  "DontConvenientlyChangeRequirements-DCCRX.md", # would be good as follower
+  "ExplicitArgumentsNoOptionalOrDefaultedValues-EANODVX.md",
 ]
 
 [slice_mode]
@@ -18,27 +24,28 @@ include_shields = [
 
 [guard_mode]
 include_shields = [
-   { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
-   { name = "NeverRecoverAlwaysFail-NRAFX.md" },
-   { name = "NoGlobalStateAnywhere-NGSAX.md" },
-   { name = "FailFastFailLoud-FFFLX.md" },
-   { name = "PortStructureExactly-PSEX.md" },
-   { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
-   { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
-   { name = "NoAddingOrChangingScalaComments-NAOCSCX.md" }, # this one not in review_mode because human might add these
-   { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
-   { name = "ImmediateInterningDiscipline-IIDX.md" },
-   { name = "CloserToScalaNotFurther-CSTNFX.md" },
-   { name = "NoNovelCodeDuringMigrations-NNCDMX.md" },
-   { name = "NoNewDefinitions-NNDX.md" },
-   { name = "NoRenamedDefinitions-NRDX.md" },
-   { name = "NoMovedDefinitions-NMDX.md" },
+    { name = "ScalaParityDuringMigration-SPDMX.md" },
+    { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
+    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+
+    { name = "NeverRecoverAlwaysFail-NRAFX.md" }, # add some filters for this... can train async in review
+    { name = "FailFastFailLoud-FFFLX.md" }, # add some filters for this... can train async in review
+
+    { name = "NoChangesWithoutScalaReference-NCWSRX.md" }, # make into a rust shield
+    { name = "NoGlobalStateAnywhere-NGSAX.md" }, # need a rust program for this
+    { name = "NoNewDefinitions-NNDX.md" }, # need a rust program for this
+    { name = "NoRenamedDefinitions-NRDX.md" }, # need a rust program for this
+    { name = "NoMovedDefinitions-NMDX.md" }, # need a rust program for this
+
+    { name = "KeepInlineComparisonsInline-KICIX.md" },
+    { name = "NeverHaveConditionalsInTests-NHCITX.md" },
+    { name = "NeverDowncastTraits-NEDCX.md" },
+    { name = "OutputAndLoggingZenDiscipline-OALZDX.md" },
 ]
 
 [review_mode]
 include_shields = [
-  { name = "NoValidSimplifications-NVSEX.md" },
-  { name = "RustShouldMirrorScalaAsCloseAsPossible-RSMSCPX.md" },
+  { name = "ScalaParityDuringMigration-SPDMX.md" },
   { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
   { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
   { name = "NoExpensiveClones-NECX.md" },
@@ -49,9 +56,13 @@ include_shields = [
   { name = "NeverRecoverAlwaysFail-NRAFX.md" },
   { name = "NoGlobalStateAnywhere-NGSAX.md" },
   { name = "FailFastFailLoud-FFFLX.md" },
-  { name = "SameHelperCallsNoExceptions-SHCNEX.md" },
   { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
   { name = "ImmediateInterningDiscipline-IIDX.md" },
-  { name = "CloserToScalaNotFurther-CSTNFX.md" },
   { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
+  { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },
+  { name = "NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md" },
+  { name = "TestsPreferUnwrapToExpectForConciseness-TPUTEFCX.md" },
+  { name = "PreferSingleMatchOverNestedMatches-PSMONMX.md" },
+  { name = "ArenaTypesDontClone-ATDCX.md" },
+  { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
 ]

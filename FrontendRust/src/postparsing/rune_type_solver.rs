@@ -596,7 +596,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>, S: crate::solver::ISolverState<
     }
     IRulexSR::MaybeCoercingCall(x) => {
       match solver_state.get_conclusion(x.template_rune.rune.clone()).expect("MaybeCoercingCallSR: template rune has no conclusion") {
-        ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type }) => {
+        ITemplataType::TemplateTemplataType(TemplateTemplataType { param_types, return_type: _ }) => {
           for (arg_rune, param_type) in x.args.iter().map(|a| a.rune.clone()).zip(param_types.iter()) {
             let arg_idx = solver_state.get_canonical_rune(arg_rune);
             solver_state.conclude_rune::<IRuneTypeRuleError<'s>>(arg_idx, param_type.clone()).map_err(|e| e)?;

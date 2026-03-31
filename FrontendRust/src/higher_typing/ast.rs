@@ -1,4 +1,3 @@
-use std::collections::HashMap;
 use crate::interner::StrI;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::parsing::MutabilityP;

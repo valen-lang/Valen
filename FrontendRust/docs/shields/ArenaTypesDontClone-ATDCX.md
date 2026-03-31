@@ -1,6 +1,7 @@
 ---
 model: AgenticSmall
 description: Output data must be Copy or behind &'s — Clone-without-Copy on output data is a smell.
+when_mentioned: or("\\.clone\\(\\)", "derive.*Clone")
 ---
 
 # ArenaTypesDontClone (ATDCX)
@@ -46,6 +47,6 @@ Clone-without-Copy on output data:
 2. Wastes memory if accidentally called — the clone goes on the heap, not in the arena
 3. May hide expensive heap allocations (Vec, HashMap inside cloned structs)
 
-// V: we should have something that checks that weve put every shield in either include_shields or exclude_shields
 // V: lets have a filter on this. lets maybe run it only during review.
 // V: actually maybe lets nuke this shield
+Z: include

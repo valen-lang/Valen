@@ -1723,7 +1723,7 @@ impl<'p> ParserVonifier<'p> {
           },
           VonMember {
             field_name: "str".to_string(),
-            value: IVonData::Str(VonStr { value: str.clone() }),
+            value: IVonData::Str(VonStr { value: str.as_str().to_string() }),
           },
         ],
       }),

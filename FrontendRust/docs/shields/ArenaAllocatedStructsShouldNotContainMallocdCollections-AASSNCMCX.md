@@ -2,6 +2,7 @@
 description: Arena-allocated structs must use arena slices and ArenaIndexMap, not Vec, HashMap, or String.
 model: AgenticSmall
 defs: struct
+when_mentioned: or("Vec<", "HashMap<", "BTreeMap<", "String,", "String>")
 ---
 
 # Arena-Allocated Structs Should Not Contain Malloc'd Collections (AASSNCMCX)

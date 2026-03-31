@@ -75,7 +75,7 @@ fn add_literal_rule<'s>(scout_arena: &ScoutArena<'s>,
     runeS
   }
 */
-fn add_rune_parent_env_lookup_rule<'s>(scout_arena: &ScoutArena<'s>,
+fn add_rune_parent_env_lookup_rule<'s>(_scout_arena: &ScoutArena<'s>,
   _lidb: &mut LocationInDenizenBuilder,
   rule_builder: &mut Vec<IRulexSR<'s>>,
   range_s: RangeS<'s>,

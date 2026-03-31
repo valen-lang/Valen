@@ -30,7 +30,7 @@ case class RuneUsage(range: RangeS, rune: IRuneS) {
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRulexSR<'s> {
   Equals(EqualsSR<'s>),
   Literal(LiteralSR<'s>),
@@ -163,7 +163,7 @@ impl<'s> IRulexSR<'s> {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct EqualsSR<'s> {
   pub range: RangeS<'s>,
   pub left: RuneUsage<'s>,
@@ -181,7 +181,7 @@ case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IR
 }
 */
 // See SAIRFU and SRCAMP for what's going on with these rules.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 // MIGALLOW: Rust doesn't need a runeUsages override
 pub struct CoordSendSR<'s> {
   pub range: RangeS<'s>,
@@ -202,7 +202,7 @@ case class CoordSendSR(
   override def runeUsages: Vector[RuneUsage] = Vector(senderRune, receiverRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DefinitionCoordIsaSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -215,7 +215,7 @@ case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: R
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, subRune, superRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallSiteCoordIsaSR<'s> {
   pub range: RangeS<'s>,
   // This is here because when we add this CallSiteCoordIsaSR and its companion DefinitionCoordIsaSR,
@@ -253,7 +253,7 @@ case class CallSiteCoordIsaSR(
   override def runeUsages: Vector[RuneUsage] = resultRune.toVector ++ Vector(subRune, superRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct KindComponentsSR<'s> {
   pub range: RangeS<'s>,
   pub kind_rune: RuneUsage<'s>,
@@ -271,7 +271,7 @@ case class KindComponentsSR(
   override def runeUsages: Vector[RuneUsage] = Vector(kindRune, mutabilityRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CoordComponentsSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -291,7 +291,7 @@ case class CoordComponentsSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, ownershipRune, kindRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PrototypeComponentsSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -311,7 +311,7 @@ case class PrototypeComponentsSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsRune, returnRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ResolveSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -333,7 +333,7 @@ case class ResolveSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CallSiteFuncSR<'s> {
   pub range: RangeS<'s>,
   pub prototype_rune: RuneUsage<'s>,
@@ -355,7 +355,7 @@ case class CallSiteFuncSR(
   override def runeUsages: Vector[RuneUsage] = Vector(prototypeRune, paramsListRune, returnRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DefinitionFuncSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -377,7 +377,7 @@ case class DefinitionFuncSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OneOfSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -397,7 +397,7 @@ case class OneOfSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IsConcreteSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -413,7 +413,7 @@ case class IsConcreteSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IsInterfaceSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -429,7 +429,7 @@ case class IsInterfaceSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IsStructSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -445,7 +445,7 @@ case class IsStructSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CoerceToCoordSR<'s> {
   pub range: RangeS<'s>,
   pub coord_rune: RuneUsage<'s>,
@@ -464,7 +464,7 @@ case class CoerceToCoordSR(
   override def runeUsages: Vector[RuneUsage] = Vector(coordRune, kindRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RefListCompoundMutabilitySR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -482,7 +482,7 @@ case class RefListCompoundMutabilitySR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, coordListRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LiteralSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -501,7 +501,7 @@ case class LiteralSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MaybeCoercingLookupSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -521,7 +521,7 @@ case class MaybeCoercingLookupSR(
 }
 */
 // A rule that looks up something that's not a Kind, so it doesn't need a default region.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LookupSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -540,7 +540,7 @@ case class LookupSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MaybeCoercingCallSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -560,7 +560,7 @@ case class MaybeCoercingCallSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 // MIGALLOW: Rust doesn't need a runeUsages override
 pub struct CallSR<'s> {
   pub range: RangeS<'s>,
@@ -581,7 +581,7 @@ case class CallSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IndexListSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -601,7 +601,7 @@ case class IndexListSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, listRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct RuneParentEnvLookupSR<'s> {
   pub range: RangeS<'s>,
   pub rune: RuneUsage<'s>,
@@ -617,7 +617,7 @@ case class RuneParentEnvLookupSR(
   override def runeUsages: Vector[RuneUsage] = Vector(rune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AugmentSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -639,7 +639,7 @@ case class AugmentSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune, innerRune)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PackSR<'s> {
   pub range: RangeS<'s>,
   pub result_rune: RuneUsage<'s>,
@@ -657,7 +657,7 @@ case class PackSR(
   override def runeUsages: Vector[RuneUsage] = Vector(resultRune) ++ members
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum ILiteralSL<'s> {
   IntLiteral(IntLiteralSL),
   StringLiteral(StringLiteralSL<'s>),
@@ -688,7 +688,7 @@ sealed trait ILiteralSL {
   def getType(): ITemplataType
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct IntLiteralSL {
   pub value: i64,
 }
@@ -708,7 +708,7 @@ impl IntLiteralSL {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringLiteralSL<'s> {
   pub value: StrI<'s>,
 }
@@ -728,7 +728,7 @@ impl<'s> StringLiteralSL<'s> {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BoolLiteralSL {
   pub value: bool,
 }
@@ -748,7 +748,7 @@ impl BoolLiteralSL {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MutabilityLiteralSL {
   pub mutability: MutabilityP,
 }
@@ -768,7 +768,7 @@ impl MutabilityLiteralSL {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LocationLiteralSL {
   pub location: LocationP,
 }
@@ -788,7 +788,7 @@ impl LocationLiteralSL {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct OwnershipLiteralSL {
   pub ownership: OwnershipP,
 }
@@ -808,7 +808,7 @@ impl OwnershipLiteralSL {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariabilityLiteralSL {
   pub variability: VariabilityP,
 }

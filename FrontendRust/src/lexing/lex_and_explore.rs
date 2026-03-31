@@ -45,14 +45,7 @@ pub fn lex_and_explore_and_collect<'p, R>(
 where
   R: IPackageResolver<'p, HashMap<String, String>>,
 {
-  todo!("lex_and_explore_and_collect: closure lifetime fix needed")
-  // V: what's this about? and it shouldn't be a todo!. we should have a rule that we cannot have any todo! in the codebase.
-  // VA: Deferred port of LexAndExplore.scala lines 12-40 (collects denizens + files via two closures).
-  // VA: Blocked on borrow-checker: both closures need &mut to the same local Vecs. This is the only
-  // VA: todo!() in src/ — convention per TUCMPX shield is panic!, not todo!. Zero callers; dead code.
-  // VA: This is a deferred port of a ~10-line Scala helper (LexAndExplore.scala lines 12-40)
-  // that collects denizens and files via two closures passed to lex_and_explore. Blocked on a
-  // borrow-checker issue: both closures need to mutably borrow the same local Vecs.
+  panic!("lex_and_explore_and_collect: closure lifetime fix needed")
   // Already tracked in docs/migration/todo.md line 47.
 }
 

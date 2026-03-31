@@ -20,10 +20,10 @@ use crate::parsing::ast::IRuneAttributeP::{
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::parsing::parser::ParserCompilation;
 use crate::postparsing::ast::{
-  CoordGenericParameterTypeS, ExportS, GenericParameterS, IBodyS, ICitizenAttributeS,
+  CoordGenericParameterTypeS, GenericParameterS, IBodyS, ICitizenAttributeS,
   IGenericParameterTypeS, IRegionMutabilityS, ImportS, ImplS, InterfaceS, IStructMemberS,
   LocationInDenizenBuilder, MacroCallS, NormalStructMemberS, OtherGenericParameterTypeS,
-  ProgramS, RegionGenericParameterTypeS, SealedS, StructS, VariadicStructMemberS,
+  ProgramS, RegionGenericParameterTypeS, StructS, VariadicStructMemberS,
 };
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
@@ -48,8 +48,6 @@ use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::{CodeLocationS, RangeS};
 use std::collections::HashMap;
 use indexmap::IndexSet;
-use std::marker::PhantomData;
-use std::sync::Arc;
 
 /*
 package dev.vale.postparsing
@@ -2255,7 +2253,7 @@ pub(crate) fn check_identifiability(
     interface: &crate::parsing::ast::InterfaceP<'p>,
   ) -> Result<InterfaceS<'s>, ICompileErrorS<'s>> {
     let interface_range_s = Self::eval_range(file, interface.range);
-    let body_range_s = Self::eval_range(file, interface.body_range);
+    let _body_range_s = Self::eval_range(file, interface.body_range);
     let interface_name = self.scout_arena.intern_interface_declaration_name(TopLevelInterfaceDeclarationNameS {
       name: self.scout_arena.intern_str(interface.name.str().as_str()),
       range: Self::eval_range(file, interface.name.range()),

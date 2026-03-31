@@ -7,7 +7,7 @@ use crate::scout_arena::ScoutArena;
 use crate::keywords::Keywords;
 use crate::postparsing::itemplatatype::{CoordTemplataType, ITemplataType, PackTemplataType};
 use crate::postparsing::names::{CodeRuneS, IRuneValS};
-use crate::utils::code_hierarchy::{self, FileCoordinateMap, IPackageResolver, PackageCoordinate};
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 // TODO: rename
 /*

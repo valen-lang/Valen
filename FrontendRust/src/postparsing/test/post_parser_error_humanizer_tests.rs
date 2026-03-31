@@ -26,10 +26,10 @@ import org.scalatest._
 class PostParserErrorHumanizerTests extends FunSuite with Matchers {
 */
 fn compile<'s, 'ctx, 'p>(
-  scout_arena: &'ctx ScoutArena<'s>,
-  keywords: &'ctx Keywords<'s>,
-  parse_arena: &'ctx ParseArena<'p>,
-  code: &str,
+  _scout_arena: &'ctx ScoutArena<'s>,
+  _keywords: &'ctx Keywords<'s>,
+  _parse_arena: &'ctx ParseArena<'p>,
+  _code: &str,
 ) -> ProgramS<'s>
 {
   panic!("Unimplemented: compile");
@@ -53,10 +53,10 @@ fn compile<'s, 'ctx, 'p>(
 }
 */
 fn compile_for_error<'s, 'ctx, 'p>(
-  scout_arena: &'ctx ScoutArena<'s>,
-  keywords: &'ctx Keywords<'s>,
-  parse_arena: &'ctx ParseArena<'p>,
-  code: &str,
+  _scout_arena: &'ctx ScoutArena<'s>,
+  _keywords: &'ctx Keywords<'s>,
+  _parse_arena: &'ctx ParseArena<'p>,
+  _code: &str,
 ) -> ICompileErrorS<'s>
 {
   panic!("Unimplemented: compile_for_error");

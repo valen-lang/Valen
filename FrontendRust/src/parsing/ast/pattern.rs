@@ -8,7 +8,7 @@ import dev.vale.lexing.RangeL
 import dev.vale._
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractP {
   pub range: RangeL,
 }
@@ -38,7 +38,7 @@ case class ParameterP(
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DestinationLocalP<'p> {
   pub decl: INameDeclarationP<'p>,
   pub mutate: Option<RangeL>,
@@ -72,7 +72,7 @@ case class PatternPP(
     destructure: Option[DestructureP])
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct DestructureP<'p> {
   pub range: RangeL,
   pub patterns: &'p [PatternPP<'p>],
@@ -86,7 +86,7 @@ case class DestructureP(
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum INameDeclarationP<'p> {
   LocalNameDeclaration(NameP<'p>),
   IgnoredLocalNameDeclaration(RangeL),

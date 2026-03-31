@@ -14,7 +14,7 @@ import dev.vale.{FileCoordinate, StrI, vassert, vcurious, vpass}
 
 /// Something that exists in the source code. An Option[UnitP] is better than a boolean
 /// because it also contains the range it was found.
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct UnitP {
   pub range: RangeL,
 }
@@ -47,7 +47,7 @@ case class NameP(range: RangeL, str: StrI) { override def equals(obj: Any): Bool
 */
 
 /// Parsed file
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FileP<'p> {
   pub file_coord: &'p FileCoordinate<'p>,
   pub comments_ranges: &'p [RangeL],
@@ -124,7 +124,7 @@ case class ExportAsP(
   exportedName: NameP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ImportP<'p> {
   pub range: RangeL,
   pub module_name: NameP<'p>,
@@ -139,14 +139,14 @@ case class ImportP(
   importeeName: NameP) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WeakableAttributeP {
   pub range: RangeL,
 }
 /*
 case class WeakableAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SealedAttributeP {
   pub range: RangeL,
 }
@@ -181,7 +181,7 @@ case object CallMacroP extends IMacroInclusionP
 case object DontCallMacroP extends IMacroInclusionP
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct MacroCallP<'p> {
   pub range: RangeL,
   pub inclusion: IMacroInclusionP,
@@ -286,7 +286,7 @@ case class InterfaceP(
   members: Vector[FunctionP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeP<'p> {
   WeakableAttribute(WeakableAttributeP),
   SealedAttribute(SealedAttributeP),
@@ -303,21 +303,21 @@ pub enum IAttributeP<'p> {
 sealed trait IAttributeP
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AbstractAttributeP {
   pub range: RangeL,
 }
 /*
 case class AbstractAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternAttributeP {
   pub range: RangeL,
 }
 /*
 case class ExternAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct BuiltinAttributeP<'p> {
   pub range: RangeL,
   pub generator_name: NameP<'p>,
@@ -325,28 +325,28 @@ pub struct BuiltinAttributeP<'p> {
 /*
 case class BuiltinAttributeP(range: RangeL, generatorName: NameP) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExportAttributeP {
   pub range: RangeL,
 }
 /*
 case class ExportAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct PureAttributeP {
   pub range: RangeL,
 }
 /*
 case class PureAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AdditiveAttributeP {
   pub range: RangeL,
 }
 /*
 case class AdditiveAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct LinearAttributeP {
   pub range: RangeL,
 }
@@ -354,7 +354,7 @@ pub struct LinearAttributeP {
 case class LinearAttributeP(range: RangeL) extends IAttributeP { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IRuneAttributeP {
   ImmutableRuneAttribute(RangeL),
   MutableRuneAttribute(RangeL),
@@ -402,7 +402,7 @@ case class GenericParameterP(
 ) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParameterTypeP {
   pub range: RangeL,
   pub tyype: ITypePR,
@@ -414,7 +414,7 @@ case class GenericParameterTypeP(
 )
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct GenericParametersP<'p> {
   pub range: RangeL,
   pub params: &'p [GenericParameterP<'p>],
@@ -423,7 +423,7 @@ pub struct GenericParametersP<'p> {
 case class GenericParametersP(range: RangeL, params: Vector[GenericParameterP]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct TemplateRulesP<'p> {
   pub range: RangeL,
   pub rules: &'p [IRulexPR<'p>],
@@ -432,7 +432,7 @@ pub struct TemplateRulesP<'p> {
 case class TemplateRulesP(range: RangeL, rules: Vector[IRulexPR]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParamsP<'p> {
   pub range: RangeL,
   pub params: &'p [ParameterP<'p>],

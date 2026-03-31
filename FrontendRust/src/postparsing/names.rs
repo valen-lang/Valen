@@ -77,7 +77,7 @@ Guardian: disable-all
 
 /// Value/key form for interner lookups. Shallow Val structs reference canonical INameS/IFunctionDeclarationNameS/etc.
 /// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum INameValS<'s> {
   FunctionDeclaration(IFunctionDeclarationNameValS<'s>),
   ImplDeclaration(ImplDeclarationNameS<'s>),
@@ -98,14 +98,14 @@ pub enum INameValS<'s> {
 /* Guardian: disable-all */
 
 /// Shallow: inner already canonical.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructImplDeclarationNameValS<'s> {
   pub interface: &'s TopLevelInterfaceDeclarationNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Shallow: interface_name already canonical.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateNameValS<'s> {
   pub interface_name: &'s TopLevelInterfaceDeclarationNameS<'s>,
 }
@@ -176,28 +176,28 @@ Guardian: disable-all
 */
 
 /// Value-struct for LambdaStructImpreciseNameS key. Shallow: references canonical child.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructImpreciseNameValS<'s> {
   pub lambda_name: IImpreciseNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Value-struct for AnonymousSubstructTemplateImpreciseNameS key. Shallow: references canonical child.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameValS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Value-struct for AnonymousSubstructConstructorTemplateImpreciseNameS key. Shallow: references canonical child.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameValS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Value-struct for ImplImpreciseNameS key. Shallow: references canonical children.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameValS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
@@ -205,21 +205,21 @@ pub struct ImplImpreciseNameValS<'s> {
 /* Guardian: disable-all */
 
 /// Value-struct for ImplSubCitizenImpreciseNameS key. Shallow: references canonical child.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameValS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Value-struct for ImplSuperInterfaceImpreciseNameS key. Shallow: references canonical child.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameValS<'s> {
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
 /* Guardian: disable-all */
 
 /// Value-struct for RuneNameS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneNameValS<'s> {
   pub rune: IRuneS<'s>,
 }
@@ -227,7 +227,7 @@ pub struct RuneNameValS<'s> {
 
 /// Value/key form of imprecise name for interner lookups. Storage uses canonical `IImpreciseNameS<'s>`.
 /// Per @DSAUIMZ, if a variant gains a slice field, add a 'tmp lifetime and use a transient ValS struct.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImpreciseNameValS<'s> {
   CodeName(CodeNameS<'s>),
   IterableName(IterableNameS<'s>),
@@ -270,7 +270,7 @@ sealed trait IVarNameS extends INameS
 */
 
 /// Value form for interner lookups.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IVarNameValS<'s> {
   CodeVarName(StrI<'s>),
   ConstructingMemberName(StrI<'s>),
@@ -303,7 +303,7 @@ trait IFunctionDeclarationNameS extends INameS {
 
 
 /// Value form for interner lookups. Shallow variant holds canonical IFunctionDeclarationNameS.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IFunctionDeclarationNameValS<'s> {
   FunctionName(FunctionNameS<'s>),
   LambdaDeclarationName(LambdaDeclarationNameS<'s>),
@@ -315,7 +315,7 @@ pub enum IFunctionDeclarationNameValS<'s> {
 /* Guardian: disable-all */
 
 /// Shallow: inner already canonical.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ForwarderFunctionDeclarationNameValS<'s> {
   pub inner: IFunctionDeclarationNameS<'s>,
   pub index: i32,
@@ -370,7 +370,7 @@ impl<'s> IFunctionDeclarationNameS<'s> {
 }
 /* Guardian: disable-all */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IImplDeclarationNameS<'s> {
   ImplDeclarationName(ImplDeclarationNameS<'s>),
   AnonymousSubstructImplDeclarationName(AnonymousSubstructImplDeclarationNameS<'s>),
@@ -431,13 +431,13 @@ impl<'s> LambdaDeclarationNameS<'s> {
 */
 }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaImpreciseNameS {}
 /*
 case class LambdaImpreciseNameS() extends IImpreciseNameS {
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PlaceholderImpreciseNameS {
   pub index: i32,
 }
@@ -465,7 +465,7 @@ case class FunctionNameS(name: StrI, codeLocation: CodeLocationS) extends IFunct
 //  override def getImpreciseName(interner: Interner): IImpreciseNameS = interner.intern(CodeNameS(Scout.VIRTUAL_DROP_FUNCTION_NAME))
 //}
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ForwarderFunctionDeclarationNameS<'s> {
   pub inner: IFunctionDeclarationNameS<'s>,
   pub index: i32,
@@ -476,7 +476,7 @@ case class ForwarderFunctionDeclarationNameS(inner: IFunctionDeclarationNameS, i
   override def getImpreciseName(interner: Interner): IImpreciseNameS = inner.getImpreciseName(interner)
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum TopLevelCitizenDeclarationNameS<'s> {
   TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'s>),
   TopLevelInterfaceDeclarationName(TopLevelInterfaceDeclarationNameS<'s>),
@@ -500,12 +500,12 @@ object TopLevelCitizenDeclarationNameS {
 /*
 sealed trait IStructDeclarationNameS extends ICitizenDeclarationNameS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IStructDeclarationNameS<'s> {
   TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'s>),
   AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'s>),
 }
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TopLevelStructDeclarationNameS<'s> {
   pub name: StrI<'s>,
   pub range: RangeS<'s>,
@@ -517,7 +517,7 @@ case class TopLevelStructDeclarationNameS(name: StrI, range: RangeS) extends ISt
 /*
 sealed trait IInterfaceDeclarationNameS extends ICitizenDeclarationNameS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct TopLevelInterfaceDeclarationNameS<'s> {
   pub name: StrI<'s>,
   pub range: RangeS<'s>,
@@ -555,7 +555,7 @@ impl<'s> From<&TopLevelInterfaceDeclarationNameS<'s>> for TopLevelCitizenDeclara
 Guardian: disable-all
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructDeclarationNameS<'s> {
   pub lambda_name: LambdaDeclarationNameS<'s>,
 }
@@ -579,7 +579,7 @@ impl<'s> LambdaStructDeclarationNameS<'s> {
 }
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LambdaStructImpreciseNameS<'s> {
   pub lambda_name: IImpreciseNameS<'s>,
 }
@@ -587,7 +587,7 @@ pub struct LambdaStructImpreciseNameS<'s> {
 case class LambdaStructImpreciseNameS(lambdaName: LambdaImpreciseNameS) extends IImpreciseNameS {  }
 */
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDeclarationNameS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
@@ -596,7 +596,7 @@ case class ImplDeclarationNameS(codeLocation: CodeLocationS) extends IImplDeclar
   override def packageCoordinate: PackageCoordinate = codeLocation.file.packageCoordinate
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructImplDeclarationNameS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
 }
@@ -605,7 +605,7 @@ case class AnonymousSubstructImplDeclarationNameS(interface: TopLevelInterfaceDe
   override def packageCoordinate: PackageCoordinate = interface.packageCoordinate
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExportAsNameS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
@@ -613,39 +613,39 @@ pub struct ExportAsNameS<'s> {
 /*
 case class ExportAsNameS(codeLocation: CodeLocationS) extends INameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetNameS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
 /*
 case class LetNameS(codeLocation: CodeLocationS) extends INameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ClosureParamNameS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
 /*
 case class ClosureParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ClosureParamImpreciseNameS {}
 /*
 case class ClosureParamImpreciseNameS() extends IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PrototypeNameS {}
 /*
 // All prototypes can be looked up via this name.
 case class PrototypeNameS() extends IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamNameS<'s> {
   pub code_location: CodeLocationS<'s>,
 }
 /*
 case class MagicParamNameS(codeLocation: CodeLocationS) extends IVarNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateNameS<'s> {
   pub interface_name: TopLevelInterfaceDeclarationNameS<'s>,
 }
@@ -657,7 +657,7 @@ case class AnonymousSubstructTemplateNameS(interfaceName: TopLevelInterfaceDecla
   override def range: RangeS = interfaceName.range
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateImpreciseNameS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
 }
@@ -666,7 +666,7 @@ case class AnonymousSubstructTemplateImpreciseNameS(interfaceImpreciseName: IImp
 
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructConstructorTemplateImpreciseNameS<'s> {
   pub interface_imprecise_name: IImpreciseNameS<'s>,
 }
@@ -675,14 +675,14 @@ case class AnonymousSubstructConstructorTemplateImpreciseNameS(interfaceImprecis
 
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMemberNameS {
   pub index: i32,
 }
 /*
 case class AnonymousSubstructMemberNameS(index: Int) extends IVarNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeVarNameS<'s> {
   pub name: StrI<'s>,
 }
@@ -692,54 +692,54 @@ case class CodeVarNameS(name: StrI) extends IVarNameS {
   vcheck(name.str != "mut", "Can't name a variable 'mut'")
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstructingMemberNameS<'s> {
   pub name: StrI<'s>,
 }
 /*
 case class ConstructingMemberNameS(name: StrI) extends IVarNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IterableNameS<'s> {
   pub range: RangeS<'s>,
 }
 /*
 case class IterableNameS(range: RangeS) extends IVarNameS with IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IteratorNameS<'s> {
   pub range: RangeS<'s>,
 }
 /*
 case class IteratorNameS(range: RangeS) extends IVarNameS with IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct IterationOptionNameS<'s> {
   pub range: RangeS<'s>,
 }
 /*
 case class IterationOptionNameS(range: RangeS) extends IVarNameS with IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct WhileCondResultNameS<'s> {
   pub range: RangeS<'s>,
 }
 /*
 case class WhileCondResultNameS(range: RangeS) extends IVarNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuneNameS<'s> {
   pub rune: IRuneS<'s>,
 }
 /*
 case class RuneNameS(rune: IRuneS) extends INameS with IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct RuntimeSizedArrayDeclarationNameS {}
 /*
 case class RuntimeSizedArrayDeclarationNameS() extends INameS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StaticSizedArrayDeclarationNameS {}
 /*
 case class StaticSizedArrayDeclarationNameS() extends INameS
@@ -901,7 +901,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for ImplicitRegionRuneS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRegionRuneValS<'s> {
   pub original_rune: IRuneS<'s>,
 }
@@ -910,7 +910,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for ImplicitCoercionOwnershipRuneS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionOwnershipRuneValS<'s> {
   pub range: RangeS<'s>,
   pub original_coord_rune: IRuneS<'s>,
@@ -920,7 +920,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for ImplicitCoercionKindRuneS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionKindRuneValS<'s> {
   pub range: RangeS<'s>,
   pub original_coord_rune: IRuneS<'s>,
@@ -930,7 +930,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for ImplicitCoercionTemplateRuneS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionTemplateRuneValS<'s> {
   pub range: RangeS<'s>,
   pub original_kind_rune: IRuneS<'s>,
@@ -940,7 +940,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for AnonymousSubstructMethodInheritedRuneS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMethodInheritedRuneValS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -951,7 +951,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for DispatcherRuneFromImplS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DispatcherRuneFromImplValS<'s> {
   pub inner_rune: IRuneS<'s>,
 }
@@ -960,7 +960,7 @@ Guardian: disable-all
 */
 
 /// Value-struct for CaseRuneFromImplS key. Shallow: references canonical child rune.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CaseRuneFromImplValS<'s> {
   pub inner_rune: IRuneS<'s>,
 }
@@ -971,38 +971,38 @@ Guardian: disable-all
 // Per @DSAUIMZ, these Val structs have private lid fields to prevent pre-allocation.
 // Only constructible via new() which takes a LocationInDenizenVal from borrow_val().
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> ImplicitRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PureBlockRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> PureBlockRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> CallRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallPureMergeRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> CallPureMergeRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetImplicitRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> LetImplicitRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> MagicParamRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalDefaultRegionRuneValS<'tmp> { lid: LocationInDenizenVal<'tmp> }
 impl<'tmp> LocalDefaultRegionRuneValS<'tmp> { pub fn new(lid: LocationInDenizenVal<'tmp>) -> Self { Self { lid } } pub fn lid(&self) -> LocationInDenizenVal<'tmp> { self.lid } }
 
 /// Per @DSAUIMZ, 'tmp carries a temporary borrow to defer slice allocation.
 /// Value/key form of rune for interner lookups. Used when constructing runes before
 /// canonicalizing via `intern_rune`. Storage fields use canonical `IRuneS<'s>`.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub enum IRuneValS<'s, 'tmp> {
   CodeRune(CodeRuneS<'s>),
   ImplDropCoordRune(ImplDropCoordRuneS),
@@ -1179,7 +1179,7 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
 // This extends INameS so we can use it as a lookup key in Compiler's environments.
 trait IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeRuneS<'s> {
   pub name: StrI<'s>,
 }
@@ -1189,17 +1189,17 @@ case class CodeRuneS(name: StrI) extends IRuneS {
   vpass()
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDropCoordRuneS {}
 /*
 case class ImplDropCoordRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplDropVoidRuneS {}
 /*
 case class ImplDropVoidRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
@@ -1214,78 +1214,78 @@ case class ImplicitRuneS(lid: LocationInDenizen) extends IRuneS {
   }
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PureBlockRegionRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
 /*
 case class PureBlockRegionRuneS(lid: LocationInDenizen) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallRegionRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
 /*
 case class CallRegionRuneS(lid: LocationInDenizen) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CallPureMergeRegionRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
 /*
 case class CallPureMergeRegionRuneS(lid: LocationInDenizen) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitRegionRuneS<'s> {
   pub original_rune: IRuneS<'s>,
 }
 /*
 case class ImplicitRegionRuneS(originalRune: IRuneS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ReachablePrototypeRuneS {
   pub num: i32,
 }
 /*
 case class ReachablePrototypeRuneS(num: Int) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FreeOverrideStructTemplateRuneS {}
 /*
 case class FreeOverrideStructTemplateRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FreeOverrideStructRuneS {}
 /*
 case class FreeOverrideStructRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FreeOverrideInterfaceRuneS {}
 /*
 case class FreeOverrideInterfaceRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LetImplicitRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
 /*
 case class LetImplicitRuneS(lid: LocationInDenizen) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MagicParamRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
 /*
 case class MagicParamRuneS(lid: LocationInDenizen) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MemberRuneS {
   pub member_index: i32,
 }
 /*
 case class MemberRuneS(memberIndex: Int) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalDefaultRegionRuneS<'s> {
   pub lid: LocationInDenizen<'s>,
 }
@@ -1296,7 +1296,7 @@ case class LocalDefaultRegionRuneS(lid: LocationInDenizen) extends IRuneS
 // When a function calls the constructor for a struct, the function has its own default region,
 // but it's also evaluating the rules for the struct. Best not mix them up.
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DenizenDefaultRegionRuneS<'s> {
   pub denizen_name: INameS<'s>,
 }
@@ -1304,21 +1304,21 @@ pub struct DenizenDefaultRegionRuneS<'s> {
 /*
 case class DenizenDefaultRegionRuneS(denizenName: INameS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExportDefaultRegionRuneS<'s> {
   pub denizen_name: INameS<'s>,
 }
 /*
 case class ExportDefaultRegionRuneS(denizenName: INameS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExternDefaultRegionRuneS<'s> {
   pub denizen_name: INameS<'s>,
 }
 /*
 case class ExternDefaultRegionRuneS(denizenName: INameS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionOwnershipRuneS<'s> {
   pub range: RangeS<'s>,
   pub original_coord_rune: IRuneS<'s>,
@@ -1326,7 +1326,7 @@ pub struct ImplicitCoercionOwnershipRuneS<'s> {
 /*
 case class ImplicitCoercionOwnershipRuneS(range: RangeS, originalCoordRune: IRuneS) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionKindRuneS<'s> {
   pub range: RangeS<'s>,
   pub original_coord_rune: IRuneS<'s>,
@@ -1334,7 +1334,7 @@ pub struct ImplicitCoercionKindRuneS<'s> {
 /*
 case class ImplicitCoercionKindRuneS(range: RangeS, originalCoordRune: IRuneS) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplicitCoercionTemplateRuneS<'s> {
   pub range: RangeS<'s>,
   pub original_kind_rune: IRuneS<'s>,
@@ -1342,60 +1342,60 @@ pub struct ImplicitCoercionTemplateRuneS<'s> {
 /*
 case class ImplicitCoercionTemplateRuneS(range: RangeS, originalKindRune: IRuneS) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArraySizeImplicitRuneS {}
 /*
 // Used to type the templex handed to the size part of the static sized array expressions
 case class ArraySizeImplicitRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArrayMutabilityImplicitRuneS {}
 /*
 // Used to type the templex handed to the mutability part of the static sized array expressions
 case class ArrayMutabilityImplicitRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArrayVariabilityImplicitRuneS {}
 /*
 // Used to type the templex handed to the variability part of the static sized array expressions
 case class ArrayVariabilityImplicitRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ReturnRuneS {}
 /*
 case class ReturnRuneS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructNameRuneS<'s> {
   pub struct_name: TopLevelCitizenDeclarationNameS<'s>,
 }
 /*
 case class StructNameRuneS(structName: ICitizenDeclarationNameS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct InterfaceNameRuneS<'s> {
   pub interface_name: TopLevelCitizenDeclarationNameS<'s>,
 }
 /*
 case class InterfaceNameRuneS(interfaceName: ICitizenDeclarationNameS) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfRuneS {}
 /*
 // Vale has no notion of Self, it's just a convenient name for a first parameter.
 case class SelfRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfOwnershipRuneS {}
 /*
 case class SelfOwnershipRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfKindRuneS {}
 /*
 case class SelfKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfKindTemplateRuneS<'s> {
   pub loc: CodeLocationS<'s>,
 }
@@ -1404,37 +1404,37 @@ case class SelfKindTemplateRuneS(loc: CodeLocationS) extends IRuneS {
   vpass()
 }
   */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfCoordRuneS {}
 /*
 case class SelfCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroVoidKindRuneS {}
 /*
 case class MacroVoidKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroVoidCoordRuneS {}
 /*
 case class MacroVoidCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfKindRuneS {}
 /*
 case class MacroSelfKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfKindTemplateRuneS {}
 /*
 case class MacroSelfKindTemplateRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct MacroSelfCoordRuneS {}
 /*
 case class MacroSelfCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CodeNameS<'s> {
   pub name: StrI<'s>,
 }
@@ -1445,7 +1445,7 @@ case class CodeNameS(name: StrI) extends IImpreciseNameS {
   vassert(name.str != "_")
 }
   */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct GlobalFunctionFamilyNameS<'s> {
   pub name: StrI<'s>,
 }
@@ -1454,7 +1454,7 @@ pub struct GlobalFunctionFamilyNameS<'s> {
 // If we want a specific function, we use TopLevelDeclarationNameS.
 case class GlobalFunctionFamilyNameS(name: String) extends INameS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArgumentRuneS {
   pub arg_index: i32,
 }
@@ -1462,61 +1462,61 @@ pub struct ArgumentRuneS {
 // These are only made by the typingpass
 case class ArgumentRuneS(argIndex: Int) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct PatternInputRuneS<'s> {
   pub code_loc: CodeLocationS<'s>,
 }
 /*
 case class PatternInputRuneS(codeLoc: CodeLocationS) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ExplicitTemplateArgRuneS {
   pub index: i32,
 }
 /*
 case class ExplicitTemplateArgRuneS(index: Int) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructParentInterfaceTemplateRuneS {}
 /*
 case class AnonymousSubstructParentInterfaceTemplateRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructParentInterfaceKindRuneS {}
 /*
 case class AnonymousSubstructParentInterfaceKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructParentInterfaceCoordRuneS {}
 /*
 case class AnonymousSubstructParentInterfaceCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructTemplateRuneS {}
 /*
 case class AnonymousSubstructTemplateRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructKindRuneS {}
 /*
 case class AnonymousSubstructKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructCoordRuneS {}
 /*
 case class AnonymousSubstructCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructVoidKindRuneS {}
 /*
 case class AnonymousSubstructVoidKindRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructVoidCoordRuneS {}
 /*
 case class AnonymousSubstructVoidCoordRuneS() extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMemberRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1524,7 +1524,7 @@ pub struct AnonymousSubstructMemberRuneS<'s> {
 /*
 case class AnonymousSubstructMemberRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMethodSelfBorrowCoordRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1532,7 +1532,7 @@ pub struct AnonymousSubstructMethodSelfBorrowCoordRuneS<'s> {
 /*
 case class AnonymousSubstructMethodSelfBorrowCoordRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMethodSelfOwnCoordRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1540,7 +1540,7 @@ pub struct AnonymousSubstructMethodSelfOwnCoordRuneS<'s> {
 /*
 case class AnonymousSubstructMethodSelfOwnCoordRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructDropBoundPrototypeRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1548,7 +1548,7 @@ pub struct AnonymousSubstructDropBoundPrototypeRuneS<'s> {
 /*
 case class AnonymousSubstructDropBoundPrototypeRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructDropBoundParamsListRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1556,7 +1556,7 @@ pub struct AnonymousSubstructDropBoundParamsListRuneS<'s> {
 /*
 case class AnonymousSubstructDropBoundParamsListRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructFunctionBoundPrototypeRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1564,7 +1564,7 @@ pub struct AnonymousSubstructFunctionBoundPrototypeRuneS<'s> {
 /*
 case class AnonymousSubstructFunctionBoundPrototypeRuneS(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructFunctionBoundParamsListRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1578,7 +1578,7 @@ case class AnonymousSubstructFunctionBoundParamsListRuneS(interface: TopLevelInt
 /*
 //case class AnonymousSubstructFunctionInterfaceOwnershipRune(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructFunctionInterfaceTemplateRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1586,7 +1586,7 @@ pub struct AnonymousSubstructFunctionInterfaceTemplateRuneS<'s> {
 /*
 case class AnonymousSubstructFunctionInterfaceTemplateRune(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructFunctionInterfaceKindRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1594,7 +1594,7 @@ pub struct AnonymousSubstructFunctionInterfaceKindRuneS<'s> {
 /*
 case class AnonymousSubstructFunctionInterfaceKindRune(interface: TopLevelInterfaceDeclarationNameS, method: IFunctionDeclarationNameS) extends IRuneS { }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct AnonymousSubstructMethodInheritedRuneS<'s> {
   pub interface: TopLevelInterfaceDeclarationNameS<'s>,
   pub method: IFunctionDeclarationNameS<'s>,
@@ -1610,37 +1610,37 @@ case class AnonymousSubstructMethodInheritedRuneS(interface: TopLevelInterfaceDe
   }
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctorPrototypeRuneNameS {}
 /*
 case class FunctorPrototypeRuneNameS() extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctorParamRuneNameS {
   pub index: i32,
 }
 /*
 case class FunctorParamRuneNameS(index: Int) extends IRuneS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct FunctorReturnRuneNameS {}
 /*
 case class FunctorReturnRuneNameS() extends IRuneS
 */
 // Vale has no notion of Self, it's just a convenient name for a first parameter.
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct SelfNameS {}
 /*
 // Vale has no notion of Self, it's just a convenient name for a first parameter.
 case class SelfNameS() extends IVarNameS with IImpreciseNameS {  }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ArbitraryNameS {}
 /*
 // A miscellaneous name, for when a name doesn't really make sense, like it's the only entry in the environment or something.
 case class ArbitraryNameS() extends INameS with IImpreciseNameS
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct DispatcherRuneFromImplS<'s> {
   pub inner_rune: IRuneS<'s>,
 }
@@ -1648,7 +1648,7 @@ pub struct DispatcherRuneFromImplS<'s> {
 case class DispatcherRuneFromImplS(innerRune: IRuneS) extends IRuneS
 */
 // Only made by typingpass, see if we can take these out
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct CaseRuneFromImplS<'s> {
   pub inner_rune: IRuneS<'s>,
 }
@@ -1657,7 +1657,7 @@ case class CaseRuneFromImplS(innerRune: IRuneS) extends IRuneS
 
 // Only made by typingpass, see if we can take these out
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstructorNameS<'s> {
   pub tlcd: TopLevelCitizenDeclarationNameS<'s>,
 }
@@ -1667,7 +1667,7 @@ case class ConstructorNameS(tlcd: ICitizenDeclarationNameS) extends IFunctionDec
   override def getImpreciseName(interner: Interner): IImpreciseNameS = tlcd.getImpreciseName(interner)
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImmConcreteDestructorNameS<'s> {
   pub package_coordinate: PackageCoordinate<'s>,
 }
@@ -1676,7 +1676,7 @@ case class ImmConcreteDestructorNameS(packageCoordinate: PackageCoordinate) exte
   override def getImpreciseName(interner: Interner): IImpreciseNameS = vimpl()
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImmInterfaceDestructorNameS<'s> {
   pub package_coordinate: PackageCoordinate<'s>,
 }
@@ -1685,16 +1685,16 @@ case class ImmInterfaceDestructorNameS(packageCoordinate: PackageCoordinate) ext
   override def getImpreciseName(interner: Interner): IImpreciseNameS = vimpl()
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplImpreciseNameS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSubCitizenImpreciseNameS<'s> {
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
 }
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ImplSuperInterfaceImpreciseNameS<'s> {
   pub super_interface_imprecise_name: IImpreciseNameS<'s>,
 }
