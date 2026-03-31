@@ -28,7 +28,7 @@ where
   let parser = Parser::new(parse_arena, keywords);
 
   // Lex the entire file
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
 
   // Parse denizens one by one
   let mut denizens = Vec::new();
@@ -136,7 +136,7 @@ where
   let mut templex_parser = TemplexParser::new(parse_arena, keywords);
   let mut pattern_parser = PatternParser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
   let mut iter = ScrambleIterator::new(&scramble);
   expression_parser.parse_expression(&mut iter, false, &mut templex_parser, &mut pattern_parser)
@@ -180,7 +180,7 @@ where
   let mut templex_parser = TemplexParser::new(parse_arena, keywords);
   let mut pattern_parser = PatternParser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
   let mut iter = ScrambleIterator::new(&scramble);
   expression_parser.parse_statement(&mut iter, false, &mut templex_parser, &mut pattern_parser)
@@ -210,7 +210,7 @@ where
   let lexer = Lexer::new(parse_arena, keywords);
   let mut parser = Parser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
   let mut iter = ScrambleIterator::new(&scramble);
   parser.expression_parser.parse_block_contents(
@@ -245,7 +245,7 @@ where
   let lexer = Lexer::new(parse_arena, keywords);
   let mut parser = Parser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, false)?;
   let begin = scramble.range.begin();
   let mut iter = ScrambleIterator::new(&scramble);
@@ -285,7 +285,7 @@ where
   let lexer = Lexer::new(parse_arena, keywords);
   let parser = Parser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;
   let mut iter = ScrambleIterator::new(&scramble);
   parser.templex_parser.parse_templex(&mut iter)
@@ -315,7 +315,7 @@ where
   let lexer = Lexer::new(parse_arena, keywords);
   let parser = Parser::new(parse_arena, keywords);
 
-  let mut iter_for_lex = LexingIterator::new(code.to_string());
+  let mut iter_for_lex = LexingIterator::new(code);
   let scramble = lexer.lex_scramble(&mut iter_for_lex, false, false, true)?;
   let mut iter = ScrambleIterator::new(&scramble);
   parser.templex_parser.parse_rule(&mut iter)

@@ -59,7 +59,7 @@ import scala.collection.mutable.ArrayBuffer
 */
 // mig: struct Astrouts
 pub struct Astrouts<'s> {
-  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS<'s>, Option<ITemplataType>>,
+  code_location_to_maybe_type: std::collections::HashMap<CodeLocationS<'s>, Option<ITemplataType<'s>>>,
   code_location_to_struct: std::collections::HashMap<CodeLocationS<'s>, &'s StructA<'s>>,
   code_location_to_interface: std::collections::HashMap<CodeLocationS<'s>, &'s InterfaceA<'s>>,
 }
@@ -79,7 +79,7 @@ pub struct EnvironmentA<'s> {
   maybe_name: Option<&'s INameS<'s>>,
   maybe_parent_env: Option<&'s EnvironmentA<'s>>,
   code_map: &'s PackageCoordinateMap<'s, ProgramS<'s>>,
-  rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType>,
+  rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
 }
 
 // mig: impl EnvironmentA
@@ -145,7 +145,7 @@ fn hash_code(&self) -> i32 {
 */
 
 // mig: fn add_runes
-fn add_runes(&self, new_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType>) -> EnvironmentA<'s> {
+fn add_runes(&self, new_rune_to_type: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>) -> EnvironmentA<'s> {
   let mut merged = self.rune_to_type.clone();
   merged.extend(new_rune_to_type);
   EnvironmentA {
@@ -167,7 +167,7 @@ object HigherTypingPass {
 */
 
 // mig: fn explicify_lookups
-fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'s>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>>) -> Result<(), IRuneTypingLookupFailedError<'s>> {
+fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>>) -> Result<(), IRuneTypingLookupFailedError<'s>> {
   use crate::postparsing::rune_type_solver::{IRuneTypeSolverLookupResult, PrimitiveRuneTypeSolverLookupResult};
   use crate::postparsing::rules::rules::{MaybeCoercingLookupSR, MaybeCoercingCallSR, LookupSR, CallSR, CoerceToCoordSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
@@ -358,7 +358,7 @@ fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena: &S
 
 */
 // mig: fn coerce_kind_lookup_to_coord
-fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
+fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>) {
   use crate::postparsing::rules::rules::{LookupSR, CoerceToCoordSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionKindRuneValS};
   let kind_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
@@ -386,7 +386,7 @@ fn coerce_kind_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type:
 
 */
 // mig: fn coerce_kind_template_lookup_to_kind
-fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, actual_template_type: TemplateTemplataType<'s>) {
   use crate::postparsing::rules::rules::{LookupSR, CallSR};
   use crate::postparsing::names::{IRuneValS, ImplicitCoercionTemplateRuneValS};
   let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
@@ -415,7 +415,7 @@ fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_
 
 */
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord<'s>(_rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType>, _rule_builder: &mut Vec<IRulexSR<'s>>, _range: RangeS<'s>, _result_rune: RuneUsage<'s>, _name: &IImpreciseNameS<'s>, _ttt: TemplateTemplataType) {
+fn coerce_kind_template_lookup_to_coord<'s>(_rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, _rule_builder: &mut Vec<IRulexSR<'s>>, _range: RangeS<'s>, _result_rune: RuneUsage<'s>, _name: &IImpreciseNameS<'s>, _ttt: TemplateTemplataType) {
   panic!("Unimplemented: coerce_kind_template_lookup_to_coord");
 }
 /*
@@ -443,7 +443,7 @@ pub struct HigherTypingPass<'s, 'ctx> {
   global_options: GlobalOptions,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
-  primitives: std::collections::HashMap<StrI<'s>, ITemplataType>,
+  primitives: std::collections::HashMap<StrI<'s>, ITemplataType<'s>>,
 }
 
 // mig: impl HigherTypingPass
@@ -462,20 +462,20 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
     primitives.insert(keywords.void, ITemplataType::KindTemplataType(KindTemplataType {}));
     primitives.insert(keywords.__never, ITemplataType::KindTemplataType(KindTemplataType {}));
     primitives.insert(keywords.array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
-      param_types: vec![
+      param_types: scout_arena.alloc_slice_copy(&[
         ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
-      ],
-      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+      ]),
+      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
     }));
     primitives.insert(keywords.static_array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
-      param_types: vec![
+      param_types: scout_arena.alloc_slice_copy(&[
         ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
         ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
         ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
-      ],
-      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+      ]),
+      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
     }));
     HigherTypingPass {
       global_options,
@@ -704,7 +704,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
   let all_rules_with_implicitly_coercing_lookups_s: Vec<IRulexSR<'s>> =
     header_rules_with_implicitly_coercing_lookups_s.iter().chain(member_rules_with_implicitly_coercing_lookups_s.iter()).cloned().collect();
-  let mut all_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType> = header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+  let mut all_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = header_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   all_rune_to_explicit_type.extend(members_rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())));
 
   let rune_a_to_type_with_implicitly_coercing_lookups_s =
@@ -718,7 +718,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
       env,
     );
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType> =
+  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
 
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
@@ -917,7 +917,7 @@ fn translate_struct(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, 
 
 */
 // mig: fn get_interface_type
-fn get_interface_type(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'s>, _interface_s: &InterfaceS<'s>) -> ITemplataType {
+fn get_interface_type(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'s>, _interface_s: &InterfaceS<'s>) -> ITemplataType<'s> {
   panic!("Unimplemented: get_interface_type");
 }
 /*
@@ -993,7 +993,7 @@ fn translate_interface(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s
       env,
     );
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType> =
+  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit loose...
 
@@ -1136,7 +1136,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
   // Scala creates runeTypingEnv here, but Rust can't because it borrows astrouts immutably
   // while calculate_rune_types needs &mut astrouts. Created below after mutable borrows end.
 
-  let mut rune_to_explicit_type_with_kinds: HashMap<IRuneS<'s>, ITemplataType> = rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
+  let mut rune_to_explicit_type_with_kinds: HashMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type.iter().map(|(k, v)| (k.clone(), v.clone())).collect();
   rune_to_explicit_type_with_kinds.insert(struct_kind_rune_s.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}));
   rune_to_explicit_type_with_kinds.insert(interface_kind_rune_s.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}));
 
@@ -1154,7 +1154,7 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
   // getOrDie because we should have gotten a complete solve
   astrouts.code_location_to_maybe_type.insert(range_s.begin.clone(), Some(tyype.clone()));
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType> =
+  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
   // loose. We intentionally ignored the types of the things they're looking up, so we could know
@@ -1329,7 +1329,7 @@ fn translate_function(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>
       env,
     );
 
-  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType> =
+  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
     rune_a_to_type_with_implicitly_coercing_lookups_s;
   // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
   // loose. We intentionally ignored the types of the things they're looking up, so we could know
@@ -1423,18 +1423,18 @@ fn calculate_rune_types(
   astrouts: &mut Astrouts<'s>,
   range_s: RangeS<'s>,
   identifying_runes_s: Vec<IRuneS<'s>>,
-  rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType>,
+  rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
   params_s: &[ParameterS<'s>],
   rules_s: &[IRulexSR<'s>],
   env: &EnvironmentA<'s>,
-) -> HashMap<IRuneS<'s>, ITemplataType> {
+) -> HashMap<IRuneS<'s>, ITemplataType<'s>> {
   let rune_typing_env = HigherTypingRuneTypeSolverEnv {
     pass: self,
     astrouts,
     env,
     range_s: range_s.clone(),
   };
-  let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'s>, ITemplataType> = rune_to_explicit_type;
+  let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'s>, ITemplataType<'s>> = rune_to_explicit_type;
   for param in params_s {
     if let Some(ref coord_rune) = param.pattern.coord_rune {
       rune_s_to_pre_known_type_a.insert(coord_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {}));

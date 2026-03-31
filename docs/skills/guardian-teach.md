@@ -1,5 +1,5 @@
 ---
-name: vv
+name: guardian-teach
 description: Process a // VV: violation comment in Rust code — match it to an existing Guardian shield or create a new one, then add a test case to the shield's tests/ directory.
 ---
 

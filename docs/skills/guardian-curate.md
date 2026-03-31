@@ -1,5 +1,5 @@
 ---
-name: curate-shields
+name: guardian-curate
 description: Review shield disagreements, refine shield prompts, and promote cases to the curated tests/ corpus. Invoke periodically (typically weekly) to improve shield accuracy.
 argument-hint: [optional: shield name or path to focus on, defaults to all shields]
 ---
@@ -13,34 +13,49 @@ Review disagreement cases, refine shield prompts, fix Rust companion programs, a
 For each shield with cases in `disagreements/opus/`:
 
 1. Read each case's `case-N-input.txt` (the contextified diff Claude saw) and `case-N-context.json` (metadata including temp_disable_reason).
-2. Present the case to the human with context: what the shield decided, why Claude disagreed.
-3. Determine together:
-   - **Opus was right** (shield was wrong) → move the case to `disagreements/human/`
-   - **Opus was wrong** (shield was right) → move the case to `tests/` as a confirmed-correct example, or delete if uninteresting
+2. Present **one case at a time** to the human with context: what the shield decided, why Claude disagreed. Include your assessment and **present labeled options** for the human to choose from. Always include at least these options:
+   - **(A) Opus was right** (shield was wrong) → move the case to `disagreements/human/` for shield refinement
+   - **(B) Delete** — uninteresting case, not worth keeping
+   - **(C) Opus was wrong** (shield was right) → move the case to `tests/` as a confirmed-correct example
+   - **(D) Permanently disable** — add a `Guardian: disable: <SHIELD_CODE>` directive inside the function's post-block-comment (`/* ... */`), preferably above the Scala source within that comment, then delete the case
+3. **Wait for the human's feedback before presenting the next case.** Do not batch multiple cases together.
 
 ## Step 2: Refine Shield Prompt
 
 Review `disagreements/human/` cases (including any just moved from Step 1).
 
+**Required reading:** Before this step, read `Guardian/README.md` (especially the `## Exceptions` section) to understand the available mechanisms.
+
 1. Read each case and the current shield prompt.
-2. Work with the human to adjust the shield prompt so it would handle these cases correctly.
-3. Goal: clarify the shield instructions to eliminate the class of error each case represents.
-4. Changes go in the shield's `# Clarifications` section or restructure existing sections.
+2. Present your recommended fix and **labeled options** for how to address it:
+   - **(A) Add a clarification** — add text to the shield's `# Clarifications` section to help the LLM avoid this false positive class
+   - **(B) Add an exception** — add a lettered entry to the shield's `# Exceptions` section (see `Guardian/README.md`). Exceptions run as a second LLM pass that auto-dismisses matching violations. Better for broad categories of false positives.
+   - **(C) Both** — add a clarification and an exception
+   - **(D) Skip** — case doesn't warrant a shield change right now
+3. Wait for the human's feedback before proceeding.
+4. Goal: clarify the shield instructions to eliminate the class of error each case represents.
 
 **Important:** Only humans edit shield files. Present proposed changes and let the human approve.
 
 ## Step 3: Validate Prompt Changes
 
-Run the updated shield prompt against the `disagreements/human/` cases:
+Run the updated shield prompt against the `disagreements/human/` cases using `check-direct`:
 
 ```bash
 cd /Volumes/V/Sylvan && \
-Guardian/target/debug/guardian check \
-  --config FrontendRust/guardian.toml \
-  --shield <shield_path> \
-  --data <case-N-input.txt> \
-  --backend claude
+Guardian/target/debug/guardian check-direct \
+  --input <case-N-input.txt> \
+  --referenced-defs <case-N-referenced_defs.txt> \
+  --file-path <file_path from case-N-context.json> \
+  --check <shield_path> \
+  --cache-dir /tmp/guardian-cache \
+  --backend claude \
+  --log-dir /tmp/guardian-logs \
+  --format human \
+  --log-level overview
 ```
+
+If `case-N-referenced_defs.txt` doesn't exist (older cases), create an empty file and use that.
 
 Report results to the human. Iterate on the prompt until satisfied.
 
@@ -82,3 +97,4 @@ If `disagreements/rust/` has cases, process them one by one:
 - This skill should be run from the Sylvan repo root.
 - Only the human edits shield files and approves Rust program changes.
 - When moving cases between directories, preserve the `case-N-input.txt` + `case-N-expected.json` (or `case-N-context.json`) pairs. Renumber if needed.
+- **Ignore shields under `tests/` directories** (e.g. `Guardian/tests/sandbox-final/`). Only process shields from the active project shield paths configured in `guardian.toml`.

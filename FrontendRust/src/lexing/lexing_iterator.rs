@@ -15,15 +15,15 @@ import scala.util.matching.Regex
 /// Lexing iterator for traversing source code
 /// Matches Scala's LexingIterator
 #[derive(Clone, Debug)]
-pub struct LexingIterator {
-  pub code: String,
+pub struct LexingIterator<'a> {
+  pub code: &'a str,
   pub position: usize, // Byte position in the string
   pub comments: Vec<RangeL>,
   /*
     val comments = new Accumulator[RangeL]()
   */
 }
-impl LexingIterator {
+impl<'a> LexingIterator<'a> {
   /// Get the rest of the code from current position (for debugging)
   pub fn rest(&self) -> &str {
     &self.code[self.position..]
@@ -363,7 +363,7 @@ impl LexingIterator {
   override def clone(): LexingIterator = LexingIterator(code, position)
 */
 
-  pub fn new(code: String) -> Self {
+  pub fn new(code: &'a str) -> Self {
     LexingIterator {
       code,
       position: 0,

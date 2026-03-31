@@ -155,11 +155,11 @@ pub struct StructA<'s> {
     pub weakable: bool,
     pub mutability_rune: RuneUsage<'s>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
-    pub tyype: TemplateTemplataType,
+    pub tyype: TemplateTemplataType<'s>,
     pub generic_parameters: &'s [&'s GenericParameterS<'s>],
-    pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub header_rules: &'s [IRulexSR<'s>],
-    pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub member_rules: &'s [IRulexSR<'s>],
     pub members: &'s [IStructMemberS<'s>],
 }
@@ -199,11 +199,11 @@ pub fn new(
     weakable: bool,
     mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
-    tyype: TemplateTemplataType,
+    tyype: TemplateTemplataType<'s>,
     generic_parameters: &'s [&'s GenericParameterS<'s>],
-    header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    header_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_rules: &'s [IRulexSR<'s>],
-    members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    members_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
 ) -> Self {
@@ -302,7 +302,7 @@ pub struct ImplA<'s> {
     pub name: IImplDeclarationNameS<'s>,
     pub generic_params: &'s [&'s GenericParameterS<'s>],
     pub rules: &'s [IRulexSR<'s>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub sub_citizen_rune: RuneUsage<'s>,
     pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
     pub interface_kind_rune: RuneUsage<'s>,
@@ -335,7 +335,7 @@ pub fn new(
     name: IImplDeclarationNameS<'s>,
     generic_params: &'s [&'s GenericParameterS<'s>],
     rules: &'s [IRulexSR<'s>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     sub_citizen_rune: RuneUsage<'s>,
     sub_citizen_imprecise_name: IImpreciseNameS<'s>,
     interface_kind_rune: RuneUsage<'s>,
@@ -379,7 +379,7 @@ pub struct ExportAsA<'s> {
     pub range: RangeS<'s>,
     pub exported_name: StrI<'s>,
     pub rules: &'s [IRulexSR<'s>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub type_rune: RuneUsage<'s>,
 }
 /*
@@ -422,7 +422,7 @@ pub trait CitizenA<'s> {
 sealed trait CitizenA {
 */
 // mig: fn tyype
-fn tyype(&self) -> &TemplateTemplataType;
+fn tyype(&self) -> &TemplateTemplataType<'s>;
 /*
   def tyype: TemplateTemplataType
 */
@@ -444,9 +444,9 @@ pub struct InterfaceA<'s> {
     pub weakable: bool,
     pub mutability_rune: RuneUsage<'s>,
     pub maybe_predicted_mutability: Option<MutabilityP>,
-    pub tyype: TemplateTemplataType,
+    pub tyype: TemplateTemplataType<'s>,
     pub generic_parameters: &'s [&'s GenericParameterS<'s>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub rules: &'s [IRulexSR<'s>],
     pub internal_methods: &'s [&'s FunctionA<'s>],
 }
@@ -504,9 +504,9 @@ pub fn new(
     weakable: bool,
     mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
-    tyype: TemplateTemplataType,
+    tyype: TemplateTemplataType<'s>,
     generic_parameters: &'s [&'s GenericParameterS<'s>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     rules: &'s [IRulexSR<'s>],
     internal_methods: &'s [&'s FunctionA<'s>],
 ) -> Self {
@@ -627,9 +627,9 @@ pub struct FunctionA<'s> {
     pub range: RangeS<'s>,
     pub name: IFunctionDeclarationNameS<'s>,
     pub attributes: &'s [IFunctionAttributeS<'s>],
-    pub tyype: TemplateTemplataType,
+    pub tyype: TemplateTemplataType<'s>,
     pub generic_parameters: &'s [&'s GenericParameterS<'s>],
-    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    pub rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     pub params: &'s [ParameterS<'s>],
     pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
     pub rules: &'s [IRulexSR<'s>],
@@ -667,9 +667,9 @@ pub fn new(
     range: RangeS<'s>,
     name: IFunctionDeclarationNameS<'s>,
     attributes: &'s [IFunctionAttributeS<'s>],
-    tyype: TemplateTemplataType,
+    tyype: TemplateTemplataType<'s>,
     generic_parameters: &'s [&'s GenericParameterS<'s>],
-    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     params: &'s [ParameterS<'s>],
     maybe_ret_coord_rune: Option<RuneUsage<'s>>,
     rules: &'s [IRulexSR<'s>],

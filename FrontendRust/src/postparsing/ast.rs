@@ -240,7 +240,7 @@ impl<'s> ICitizenS<'s> {
   }
   /* Guardian: disable-all */
 
-  pub fn tyype(&self) -> &TemplateTemplataType {
+  pub fn tyype(&self) -> &TemplateTemplataType<'s> {
     match self {
       ICitizenS::Struct(s) => &s.tyype,
       ICitizenS::Interface(i) => &i.tyype,
@@ -267,12 +267,12 @@ pub struct StructS<'s> {
   pub generic_params: &'s [&'s GenericParameterS<'s>],
   pub mutability_rune: RuneUsage<'s>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
-  pub tyype: TemplateTemplataType,
-  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub tyype: TemplateTemplataType<'s>,
+  pub header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  pub header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub header_rules: &'s [IRulexSR<'s>],
-  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  pub members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub member_rules: &'s [IRulexSR<'s>],
   pub members: &'s [IStructMemberS<'s>],
 }
@@ -313,12 +313,12 @@ impl<'s> StructS<'s> {
     generic_params: &'s [&'s GenericParameterS<'s>],
     mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
-    tyype: TemplateTemplataType,
-    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    tyype: TemplateTemplataType<'s>,
+    header_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    header_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     header_rules: &'s [IRulexSR<'s>],
-    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    members_rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    members_predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     member_rules: &'s [IRulexSR<'s>],
     members: &'s [IStructMemberS<'s>],
   ) -> Self {
@@ -442,11 +442,11 @@ pub struct InterfaceS<'s> {
   pub attributes: &'s [ICitizenAttributeS<'s>],
   pub weakable: bool,
   pub generic_params: &'s [&'s GenericParameterS<'s>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   pub mutability_rune: RuneUsage<'s>,
   pub maybe_predicted_mutability: Option<MutabilityP>,
-  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-  pub tyype: TemplateTemplataType,
+  pub predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  pub tyype: TemplateTemplataType<'s>,
   pub rules: &'s [IRulexSR<'s>],
   pub internal_methods: &'s [&'s FunctionS<'s>],
 }
@@ -457,11 +457,11 @@ impl<'s> InterfaceS<'s> {
     attributes: &'s [ICitizenAttributeS<'s>],
     weakable: bool,
     generic_params: &'s [&'s GenericParameterS<'s>],
-    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+    rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
     mutability_rune: RuneUsage<'s>,
     maybe_predicted_mutability: Option<MutabilityP>,
-    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-    tyype: TemplateTemplataType,
+    predicted_rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    tyype: TemplateTemplataType<'s>,
     rules: &'s [IRulexSR<'s>],
     internal_methods: &'s [&'s FunctionS<'s>],
   ) -> Self {
@@ -544,8 +544,8 @@ pub struct ImplS<'s> {
   pub name: ImplDeclarationNameS<'s>,
   pub user_specified_identifying_runes: &'s [&'s GenericParameterS<'s>],
   pub rules: &'s [IRulexSR<'s>],
-  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-  pub tyype: ITemplataType,
+  pub rune_to_explicit_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  pub tyype: ITemplataType<'s>,
   pub struct_kind_rune: RuneUsage<'s>,
   pub sub_citizen_imprecise_name: IImpreciseNameS<'s>,
   pub interface_kind_rune: RuneUsage<'s>,
@@ -760,13 +760,13 @@ case object AdditiveRegionS extends IRegionMutabilityS
 pub enum IGenericParameterTypeS<'s> {
   RegionGenericParameterType(RegionGenericParameterTypeS),
   CoordGenericParameterType(CoordGenericParameterTypeS<'s>),
-  OtherGenericParameterType(OtherGenericParameterTypeS),
+  OtherGenericParameterType(OtherGenericParameterTypeS<'s>),
 }
 /*
 object IGenericParameterTypeS {
 */
 
-impl IGenericParameterTypeS<'_> {
+impl<'s> IGenericParameterTypeS<'s> {
   pub fn expect_region(&self) -> &RegionGenericParameterTypeS {
     match self {
       IGenericParameterTypeS::RegionGenericParameterType(x) => x,
@@ -787,7 +787,7 @@ impl IGenericParameterTypeS<'_> {
   sealed trait IGenericParameterTypeS {
   */
 
-  pub fn tyype(&self) -> ITemplataType {
+  pub fn tyype(&self) -> ITemplataType<'s> {
     match self {
       IGenericParameterTypeS::RegionGenericParameterType(x) => x.tyype(),
       IGenericParameterTypeS::CoordGenericParameterType(x) => x.tyype(),
@@ -814,7 +814,7 @@ case class RegionGenericParameterTypeS(mutability: IRegionMutabilityS) extends I
 */
 
 impl RegionGenericParameterTypeS {
-  pub fn tyype(&self) -> ITemplataType {
+  pub fn tyype<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::RegionTemplataType(RegionTemplataType {})
   }
   /* Guardian: disable-all */
@@ -840,7 +840,7 @@ case class CoordGenericParameterTypeS(
 */
 
 impl CoordGenericParameterTypeS<'_> {
-  pub fn tyype(&self) -> ITemplataType {
+  pub fn tyype<'a>(&self) -> ITemplataType<'a> {
     assert!(self.coord_region.is_none());
     ITemplataType::CoordTemplataType(CoordTemplataType {})
   }
@@ -849,11 +849,11 @@ impl CoordGenericParameterTypeS<'_> {
 /* Guardian: disable-all */
 
 #[derive(Debug, PartialEq)]
-pub struct OtherGenericParameterTypeS {
-  pub tyype: ITemplataType,
+pub struct OtherGenericParameterTypeS<'s> {
+  pub tyype: ITemplataType<'s>,
 }
-impl OtherGenericParameterTypeS {
-  pub fn new(tyype: ITemplataType) -> Self {
+impl<'s> OtherGenericParameterTypeS<'s> {
+  pub fn new(tyype: ITemplataType<'s>) -> Self {
     assert!(
       !matches!(tyype, ITemplataType::RegionTemplataType(_) | ITemplataType::CoordTemplataType(_)),
       "vwat: Use RegionGenericParameterTypeS or CoordGenericParameterTypeS for these types"
@@ -910,8 +910,8 @@ pub struct FunctionS<'s> {
   pub name: &'s IFunctionDeclarationNameS<'s>,
   pub attributes: &'s [IFunctionAttributeS<'s>],
   pub generic_params: &'s [&'s GenericParameterS<'s>],
-  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-  pub tyype: TemplateTemplataType,
+  pub rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+  pub tyype: TemplateTemplataType<'s>,
   pub params: &'s [ParameterS<'s>],
   pub maybe_ret_coord_rune: Option<RuneUsage<'s>>,
   pub rules: &'s [IRulexSR<'s>],
@@ -923,8 +923,8 @@ impl<'s> FunctionS<'s> {
     name: &'s IFunctionDeclarationNameS<'s>,
     attributes: &'s [IFunctionAttributeS<'s>],
     generic_params: &'s [&'s GenericParameterS<'s>],
-    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
-    tyype: TemplateTemplataType,
+    rune_to_predicted_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
+    tyype: TemplateTemplataType<'s>,
     params: &'s [ParameterS<'s>],
     maybe_ret_coord_rune: Option<RuneUsage<'s>>,
     rules: &'s [IRulexSR<'s>],

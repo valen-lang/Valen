@@ -28,7 +28,7 @@ use crate::postparsing::ast::{
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, PackTemplataType,
+  CoordTemplataType, ITemplataType, MutabilityTemplataType, PackTemplataType,
   TemplateTemplataType,
 };
 use crate::postparsing::names::{
@@ -166,7 +166,7 @@ pub struct CouldntFindRuneS<'s> {
 case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StatementAfterReturnS<'s> {
   pub range: RangeS<'s>,
 }
@@ -184,7 +184,7 @@ case class UnknownRegionError(range: RangeS, name: String) extends ICompileError
 }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExternHasBodyS<'s> {
   pub range: RangeS<'s>,
 }
@@ -192,7 +192,7 @@ pub struct ExternHasBodyS<'s> {
 case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'s> {
   pub range: RangeS<'s>,
 }
@@ -200,7 +200,7 @@ pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'s> {
 case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'s> {
   pub range: RangeS<'s>,
 }
@@ -217,7 +217,7 @@ case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { ove
 /*
 case class CantOverrideOwnershipped(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariableNameAlreadyExists<'s> {
   pub range: RangeS<'s>,
   pub name: IVarNameS<'s>,
@@ -226,7 +226,7 @@ pub struct VariableNameAlreadyExists<'s> {
 case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InterfaceMethodNeedsSelf<'s> {
   pub range: RangeS<'s>,
 }
@@ -249,7 +249,7 @@ case class CouldntSolveRulesS(range: RangeS, error: RuneTypeSolveError) extends 
 pub struct RuneExplicitTypeConflictS<'s> {
   pub range: RangeS<'s>,
   pub rune: IRuneS<'s>,
-  pub types: Vec<ITemplataType>,
+  pub types: Vec<ITemplataType<'s>>,
 }
 /*
 case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
@@ -611,10 +611,10 @@ pub(crate) fn translate_imprecise_name<'s, 'p>(
   }
 */
 fn determine_denizen_type<'s>(
-  _template_result_type: crate::postparsing::itemplatatype::ITemplataType,
+  _template_result_type: crate::postparsing::itemplatatype::ITemplataType<'s>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'s>],
-  _rune_a_to_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType>,
-) -> Result<crate::postparsing::itemplatatype::ITemplataType, crate::postparsing::names::IRuneS<'s>> {
+  _rune_a_to_type: &std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType<'s>>,
+) -> Result<crate::postparsing::itemplatatype::ITemplataType<'s>, crate::postparsing::names::IRuneS<'s>> {
   panic!("Unimplemented determine_denizen_type");
 }
 /*
@@ -704,7 +704,7 @@ pub(crate) fn scout_generic_parameter(
   &self,
   env: IEnvironmentS<'s>,
   _lidb: &mut LocationInDenizenBuilder,
-  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType)>,
+  rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
   _rule_builder: &mut Vec<IRulexSR<'s>>,
   // This might seem a bit weird, because the region rune usually comes last and is usually
   // mentioned at the end of the header too. But indeed we need it for knowing the region to use
@@ -1180,7 +1180,7 @@ fn scout_impl(
 
   let mut lidb = crate::postparsing::ast::LocationInDenizenBuilder::new(Vec::new());
   let mut rule_builder = Vec::<IRulexSR<'s>>::new();
-  let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType)>::new();
+  let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
   let default_region_rune_range_s = RangeS::new(
     range_s.end.clone(),
@@ -1371,12 +1371,13 @@ fn scout_impl(
   // ++ userSpecifiedRunesImplicitRegionRunesS
   let _maybe_region_generic_param = maybe_region_generic_param;
 
-  let tyype = ITemplataType::TemplateTemplataType(TemplateTemplataType {
-    param_types: generic_parameters_s
+  let param_types_vec: Vec<ITemplataType<'s>> = generic_parameters_s
       .iter()
       .map(|generic_parameter_s| generic_parameter_s.tyype.tyype())
-      .collect(),
-    return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+      .collect();
+  let tyype = ITemplataType::TemplateTemplataType(TemplateTemplataType {
+    param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
+    return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
   });
 
   Ok(ImplS {
@@ -1667,7 +1668,7 @@ fn predict_mutability(
     });
 
     let mut header_rule_builder = Vec::<IRulexSR<'s>>::new();
-    let mut header_rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
+    let mut header_rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
     let (_default_region_rune_range_s, default_region_rune_s, _maybe_region_generic_param) =
       match &head.maybe_default_region_rune {
@@ -1750,7 +1751,7 @@ fn predict_mutability(
     );
 
     let mut member_rule_builder = Vec::<IRulexSR<'s>>::new();
-    let mut members_rune_to_explicit_type = self.scout_arena.alloc_index_map::<IRuneS, ITemplataType>();
+    let mut members_rune_to_explicit_type = self.scout_arena.alloc_index_map::<IRuneS, ITemplataType<'s>>();
 
     let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
@@ -1812,7 +1813,7 @@ fn predict_mutability(
           members_rune_to_explicit_type.insert(
             member_rune.rune.clone(),
             ITemplataType::PackTemplataType(PackTemplataType {
-              element_type: Box::new(ITemplataType::CoordTemplataType(CoordTemplataType {})),
+              element_type: &*self.scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})),
             }),
           );
           vec![IStructMemberS::VariadicStructMember(VariadicStructMemberS {
@@ -1878,12 +1879,13 @@ fn predict_mutability(
         .map(|(rune, tyype)| (rune.clone(), tyype.clone())),
     );
 
-    let tyype = TemplateTemplataType {
-      param_types: generic_parameters_s
+    let param_types_vec: Vec<ITemplataType<'s>> = generic_parameters_s
         .iter()
         .map(|x| x.tyype.tyype())
-        .collect::<Vec<_>>(),
-      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+        .collect();
+    let tyype = TemplateTemplataType {
+      param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
+      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
     };
     let weakable = head
       .attributes
@@ -1937,6 +1939,7 @@ fn predict_mutability(
     ))
   }
 /*
+Guardian: disable: TUCMPX
   private def scoutStruct(file: FileCoordinate, head: StructP): StructS = {
     val StructP(rangeP, NameP(structNameRange, structHumanName), attributesP, mutabilityPT, maybeGenericParametersP, maybeTemplateRulesP, maybeDefaultRegionRuneP, bodyRangeP, StructMembersP(_, members)) = head
 
@@ -2127,15 +2130,15 @@ pub(crate) fn predict_rune_types(
   scout_arena: &crate::scout_arena::ScoutArena<'s>,
   range_s: crate::utils::range::RangeS<'s>,
   _identifying_runes_s: &[crate::postparsing::names::IRuneS<'s>],
-  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType)>,
+  rune_to_explicit_type: &mut Vec<(crate::postparsing::names::IRuneS<'s>, crate::postparsing::itemplatatype::ITemplataType<'s>)>,
   _rules_s: &[crate::postparsing::rules::rules::IRulexSR<'s>],
 ) -> Result<
-  ArenaIndexMap<'s, IRuneS<'s>, ITemplataType>,
+  ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>>,
   ICompileErrorS<'s>,
 > {
   let mut grouped_explicit_types = std::collections::HashMap::<
     crate::postparsing::names::IRuneS<'s>,
-    Vec<crate::postparsing::itemplatatype::ITemplataType>,
+    Vec<crate::postparsing::itemplatatype::ITemplataType<'s>>,
   >::new();
   for (rune, explicit_type) in rune_to_explicit_type.iter() {
     grouped_explicit_types
@@ -2355,7 +2358,7 @@ pub(crate) fn check_identifiability(
 
     let mut rule_builder = Vec::<IRulexSR<'s>>::new();
     // This is an array instead of a map so we can detect conflicts afterward
-    let mut rune_to_explicit_type = Vec::<(IRuneS, ITemplataType)>::new();
+    let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
 
     // Put this back in when we have regions
     let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
@@ -2426,9 +2429,10 @@ pub(crate) fn check_identifiability(
 
     let generic_parameters_s: &'s [&'s GenericParameterS<'s>] = self.scout_arena.alloc_slice_from_vec(generic_parameters_s);
 
+    let param_types_vec: Vec<ITemplataType<'s>> = generic_parameters_s.iter().map(|x| x.tyype.tyype()).collect();
     let tyype = TemplateTemplataType {
-      param_types: generic_parameters_s.iter().map(|x| x.tyype.tyype()).collect(),
-      return_type: Box::new(ITemplataType::KindTemplataType(KindTemplataType {})),
+      param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
+      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
     };
 
     let mut internal_methods = Vec::new();

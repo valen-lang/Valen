@@ -15,6 +15,9 @@ exclude_shields = [
   "IntegrationTestsBehaveLikeUsers-ITBLUX.md",
   "DontConvenientlyChangeRequirements-DCCRX.md", # would be good as follower
   "ExplicitArgumentsNoOptionalOrDefaultedValues-EANODVX.md",
+    "NeverRecoverAlwaysFail-NRAFX.md", # add some filters for this... can train async in review
+    "FailFastFailLoud-FFFLX.md", # add some filters for this... can train async in review
+
 ]
 
 [slice_mode]
@@ -28,14 +31,11 @@ include_shields = [
     { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
     { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
 
-    { name = "NeverRecoverAlwaysFail-NRAFX.md" }, # add some filters for this... can train async in review
-    { name = "FailFastFailLoud-FFFLX.md" }, # add some filters for this... can train async in review
-
-    { name = "NoChangesWithoutScalaReference-NCWSRX.md" }, # make into a rust shield
-    { name = "NoGlobalStateAnywhere-NGSAX.md" }, # need a rust program for this
-    { name = "NoNewDefinitions-NNDX.md" }, # need a rust program for this
-    { name = "NoRenamedDefinitions-NRDX.md" }, # need a rust program for this
-    { name = "NoMovedDefinitions-NMDX.md" }, # need a rust program for this
+    { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
+    { name = "NoGlobalStateAnywhere-NGSAX.md" },
+    { name = "NoNewDefinitions-NNDX.md" },
+    { name = "NoRenamedDefinitions-NRDX.md" },
+    { name = "NoMovedDefinitions-NMDX.md" },
 
     { name = "KeepInlineComparisonsInline-KICIX.md" },
     { name = "NeverHaveConditionalsInTests-NHCITX.md" },

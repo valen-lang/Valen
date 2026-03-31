@@ -1,1 +1,0 @@
-/Volumes/V/Sylvan/docs/skills/vv.md

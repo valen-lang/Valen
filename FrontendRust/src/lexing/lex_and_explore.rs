@@ -133,7 +133,7 @@ where
     for (file_coord, code) in filepaths_and_contents {
       let mut result_acc = Vec::new();
 
-      let mut iter = LexingIterator::new(code.clone());
+      let mut iter = LexingIterator::new(&code);
       let lexer = Lexer::<'p, 'ctx>::new(parse_arena, keywords);
       // Store (module, packages) as owned strings to avoid lexer borrow conflict.
       let mut packages_to_explore: Vec<(String, Vec<String>)> = Vec::new();

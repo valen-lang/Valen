@@ -28,9 +28,9 @@ Type these directly in Claude Code.
 ### Guardian Integration
 | Command | What it does |
 |---|---|
-| `/vv` | Process a `// VV:` violation comment. Match it to a Guardian shield or create a new one, then add a test case. |
-| `/process-feedback` | Process `//f` annotations from a Guardian review. Validates context quality and creates disagreement cases. |
-| `/curate-shields` | Weekly curation of shield disagreements. Triage opus/ cases, refine prompts, promote cases to tests/. |
+| `/guardian-teach` | Process a `// VV:` violation comment. Match it to a Guardian shield or create a new one, then add a test case. |
+| `/guardian-post-review` | Process `//f` annotations from a Guardian review. Validates context quality and creates disagreement cases. |
+| `/guardian-curate` | Weekly curation of shield disagreements. Triage opus/ cases, refine prompts, promote cases to tests/. |
 
 ### Infrastructure
 | Command | What it does |

@@ -684,7 +684,7 @@ where
   if let Some(coord_rune) = &pattern.coord_rune {
     visit_rune_usage(pred, out, coord_rune);
   }
-  if let Some(destructure) = &pattern.destructure {
+  if let Some(destructure) = pattern.destructure {
     for child_pattern in destructure {
       visit_pattern(pred, out, child_pattern);
     }

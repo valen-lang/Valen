@@ -56,7 +56,7 @@ fn strings_with_special_characters() {
   let parse_arena = ParseArena::new(&parse_bump);
   let keywords = Keywords::new_for_parse(&parse_arena);
   let lexer = Lexer::new(&parse_arena, &keywords);
-  let mut iter = LexingIterator::new("000a".to_string());
+  let mut iter = LexingIterator::new("000a");
   assert_eq!(lexer.parse_four_digit_hex_num(&mut iter, 0), Some(10));
 
   let code = "exported func main() str { \"hello\\u001bworld\" }";

@@ -258,7 +258,7 @@ where
     let mut parsed_denizens = Vec::new();
 
     for denizen in denizens {
-      let parsed = self.parse_denizen(denizen)?;
+      let parsed = self.parse_denizen(*denizen)?;
       parsed_denizens.push(parsed);
     }
 
@@ -268,7 +268,7 @@ where
 
     Ok(FileP {
       file_coord: empty_file,
-      comments_ranges: self.parse_arena.alloc_slice_from_vec(comment_ranges),
+      comments_ranges: comment_ranges,
       denizens: self.parse_arena.alloc_slice_from_vec(parsed_denizens),
     })
   }
@@ -486,7 +486,7 @@ where
     // Parse attributes
     let mut attributes = Vec::new();
     for attr_l in attributes_l {
-      attributes.push(self.parse_attribute(attr_l)?);
+      attributes.push(self.parse_attribute(*attr_l)?);
     }
 
     // Parse mutability
@@ -646,7 +646,7 @@ where
     // Parse attributes
     let mut attributes = Vec::new();
     for attr_l in attributes_l {
-      attributes.push(self.parse_attribute(attr_l)?);
+      attributes.push(self.parse_attribute(*attr_l)?);
     }
 
     // Parse mutability
@@ -661,7 +661,7 @@ where
     // Interface methods are in a citizen (interface), so is_in_citizen = true
     let mut members_vec = Vec::new();
     for method_l in methods {
-      members_vec.push(self.parse_function(method_l, true)?);
+      members_vec.push(self.parse_function(*method_l, true)?);
     }
 
     Ok(InterfaceP {
@@ -875,7 +875,7 @@ where
     // Parse attributes
     let mut attributes_p = Vec::new();
     for attribute_l in attributes_l {
-      attributes_p.push(self.parse_attribute(attribute_l)?);
+      attributes_p.push(self.parse_attribute(*attribute_l)?);
     }
 
     Ok(ImplP {
@@ -1074,7 +1074,7 @@ where
 
     let mut package_steps_p = Vec::new();
     for step in package_steps_l {
-      package_steps_p.push(self.to_name(step));
+      package_steps_p.push(self.to_name(*step));
     }
 
     let importee_name_p = self.to_name(importee_name_l);
@@ -1146,7 +1146,7 @@ where
               // For a simple string like "bork", there should be one Literal part
               if string_le.parts.len() == 1 {
                 if let StringPart::Literal { s, .. } = &string_le.parts[0] {
-                  let name = NameP(string_le.range, self.parse_arena.intern_str(s));
+                  let name = NameP(string_le.range, *s);
                   return Ok(IAttributeP::BuiltinAttribute(BuiltinAttributeP {
                     range,
                     generator_name: name,
@@ -1336,7 +1336,7 @@ where
     // Parse attributes
     let mut attributes_p = Vec::new();
     for attribute_l in attributes_l {
-      attributes_p.push(self.parse_attribute(attribute_l)?);
+      attributes_p.push(self.parse_attribute(*attribute_l)?);
     }
 
     let header = FunctionHeaderP {
@@ -1546,11 +1546,8 @@ where
       _ => 2, // Word and apostrophe
     };
 
-    let preceding_elements: Vec<_> = input_scramble.elements
-      [..input_scramble.elements.len() - elements_to_remove]
-      .iter()
-      .cloned()
-      .collect();
+    let preceding_elements = &input_scramble.elements
+      [..input_scramble.elements.len() - elements_to_remove];
 
     let preceding_elements_range = if preceding_elements.is_empty() {
       RangeL(input_scramble.range.begin(), input_scramble.range.begin())

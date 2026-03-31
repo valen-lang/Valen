@@ -9,7 +9,7 @@ package dev.vale.postparsing
 import dev.vale.{vassert, vcurious, vfail}
 import dev.vale.vimpl
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableUseS<'s> {
   pub name: IVarNameS<'s>,
   pub borrowed: Option<IVariableUseCertainty>,
@@ -26,7 +26,7 @@ case class VariableUse(
   val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
 }
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct VariableDeclarationS<'s> {
   pub name: IVarNameS<'s>,
 }

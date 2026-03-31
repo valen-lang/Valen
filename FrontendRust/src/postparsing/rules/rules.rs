@@ -669,7 +669,7 @@ pub enum ILiteralSL<'s> {
 }
 
 impl<'s> ILiteralSL<'s> {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     match self {
       ILiteralSL::IntLiteral(x) => x.get_type(),
       ILiteralSL::StringLiteral(x) => x.get_type(),
@@ -701,7 +701,7 @@ case class IntLiteralSL(value: Long) extends ILiteralSL {
 */
 
 impl IntLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::IntegerTemplataType(IntegerTemplataType {})
   }
   /* Guardian: disable-all */
@@ -721,7 +721,7 @@ case class StringLiteralSL(value: String) extends ILiteralSL {
 */
 
 impl<'s> StringLiteralSL<'s> {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::StringTemplataType(StringTemplataType {})
   }
   /* Guardian: disable-all */
@@ -741,7 +741,7 @@ case class BoolLiteralSL(value: Boolean) extends ILiteralSL {
 */
 
 impl BoolLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::BooleanTemplataType(BooleanTemplataType {})
   }
   /* Guardian: disable-all */
@@ -761,7 +761,7 @@ case class MutabilityLiteralSL(mutability: MutabilityP) extends ILiteralSL {
 */
 
 impl MutabilityLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})
   }
   /* Guardian: disable-all */
@@ -781,7 +781,7 @@ case class LocationLiteralSL(location: LocationP) extends ILiteralSL {
 */
 
 impl LocationLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::LocationTemplataType(LocationTemplataType {})
   }
   /* Guardian: disable-all */
@@ -801,7 +801,7 @@ case class OwnershipLiteralSL(ownership: OwnershipP) extends ILiteralSL {
 */
 
 impl OwnershipLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})
   }
   /* Guardian: disable-all */
@@ -821,7 +821,7 @@ case class VariabilityLiteralSL(variability: VariabilityP) extends ILiteralSL {
 */
 
 impl VariabilityLiteralSL {
-  pub fn get_type(&self) -> ITemplataType {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
     ITemplataType::VariabilityTemplataType(VariabilityTemplataType {})
   }
   /* Guardian: disable-all */

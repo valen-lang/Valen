@@ -38,10 +38,10 @@ object RangeL {
 */
 
 /// A file with top-level denizens
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FileL<'p> {
-  pub denizens: Vec<IDenizenL<'p>>,
-  pub comment_ranges: Vec<RangeL>,
+  pub denizens: &'p [IDenizenL<'p>],
+  pub comment_ranges: &'p [RangeL],
 }
 /*
 case class FileL(
@@ -53,7 +53,7 @@ case class FileL(
 */
 
 /// Top-level items in a file
-#[derive(Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IDenizenL<'p> {
   TopLevelFunction(FunctionL<'p>),
   TopLevelStruct(StructL<'p>),
@@ -73,14 +73,14 @@ case class TopLevelImportL(imporrt: ImportL) extends IDenizenL { override def eq
 */
 
 /// Impl block
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ImplL<'p> {
   pub range: RangeL,
   pub identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
   pub struct_: Option<ScrambleLE<'p>>, // Option because we can say `impl MyInterface;` inside a struct
   pub interface: ScrambleLE<'p>,
-  pub attributes: Vec<IAttributeL<'p>>,
+  pub attributes: &'p [IAttributeL<'p>],
 }
 /*
 case class ImplL(
@@ -95,7 +95,7 @@ case class ImplL(
 */
 
 /// Export as declaration
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ExportAsL<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
@@ -107,11 +107,11 @@ case class ExportAsL(
 */
 
 /// Import declaration
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ImportL<'p> {
   pub range: RangeL,
   pub module_name: WordLE<'p>,
-  pub package_steps: Vec<WordLE<'p>>,
+  pub package_steps: &'p [WordLE<'p>],
   pub importee_name: WordLE<'p>,
 }
 /*
@@ -123,11 +123,11 @@ case class ImportL(
 */
 
 /// Struct definition
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StructL<'p> {
   pub range: RangeL,
   pub name: WordLE<'p>,
-  pub attributes: Vec<IAttributeL<'p>>,
+  pub attributes: &'p [IAttributeL<'p>],
   pub mutability: Option<ScrambleLE<'p>>,
   pub identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
@@ -145,16 +145,16 @@ case class StructL(
 */
 
 /// Interface definition
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct InterfaceL<'p> {
   pub range: RangeL,
   pub name: WordLE<'p>,
-  pub attributes: Vec<IAttributeL<'p>>,
+  pub attributes: &'p [IAttributeL<'p>],
   pub mutability: Option<ScrambleLE<'p>>,
   pub maybe_identifying_runes: Option<AngledLE<'p>>,
   pub template_rules: Option<ScrambleLE<'p>>,
   pub body_range: RangeL,
-  pub members: Vec<FunctionL<'p>>,
+  pub members: &'p [FunctionL<'p>],
 }
 /*
 case class InterfaceL(
@@ -169,7 +169,7 @@ case class InterfaceL(
 */
 
 /// Attributes on declarations
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum IAttributeL<'p> {
   AbstractAttribute(RangeL),
   ExportAttribute(RangeL),
@@ -214,7 +214,7 @@ case class MacroCallL(range: RangeL, inclusion: IMacroInclusionL, name: WordLE) 
 */
 
 /// Function definition
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionL<'p> {
   pub range: RangeL,
   pub header: FunctionHeaderL<'p>,
@@ -228,7 +228,7 @@ case class FunctionL(
 */
 
 /// Function body
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionBodyL<'p> {
   pub body: CurliedLE<'p>,
 }
@@ -239,11 +239,11 @@ case class FunctionBodyL(
 */
 
 /// Function header
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct FunctionHeaderL<'p> {
   pub range: RangeL,
   pub name: WordLE<'p>,
-  pub attributes: Vec<IAttributeL<'p>>,
+  pub attributes: &'p [IAttributeL<'p>],
   pub maybe_user_specified_identifying_runes: Option<AngledLE<'p>>,
   pub params: ParendLE<'p>,
   /// Includes: where clause, return type, default region for the body
@@ -284,10 +284,10 @@ trait INodeLE {
 */
 
 /// A scramble of lexer nodes (no structure yet)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ScrambleLE<'p> {
   pub range: RangeL,
-  pub elements: Vec<Box<INodeLEEnum<'p>>>,
+  pub elements: &'p [&'p INodeLEEnum<'p>],
 }
 impl INodeLE for ScrambleLE<'_> {
   fn range(&self) -> RangeL {
@@ -311,7 +311,7 @@ case class ScrambleLE(
 */
 
 /// Enum wrapper for INodeLE to allow storing in vectors
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum INodeLEEnum<'p> {
   Parend(ParendLE<'p>),
   Curlied(CurliedLE<'p>),
@@ -343,7 +343,7 @@ impl INodeLE for INodeLEEnum<'_> {
 }
 
 /// Parenthesized expression
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParendLE<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
@@ -360,7 +360,7 @@ case class ParendLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 */
 
 /// Angled brackets (generics)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AngledLE<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
@@ -377,7 +377,7 @@ case class AngledLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 */
 
 /// Squared brackets (arrays)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SquaredLE<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
@@ -395,7 +395,7 @@ case class SquaredLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 */
 
 /// Curly braces (blocks)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CurliedLE<'p> {
   pub range: RangeL,
   pub contents: ScrambleLE<'p>,
@@ -413,7 +413,7 @@ case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
 */
 
 /// Word/identifier
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct WordLE<'p> {
   pub range: RangeL,
   pub str: StrI<'p>,
@@ -430,7 +430,7 @@ case class WordLE(range: RangeL, str: StrI) extends INodeLE {
 */
 
 /// Single character symbol
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct SymbolLE(pub RangeL, pub char);
 
 impl SymbolLE {
@@ -455,10 +455,10 @@ case class SymbolLE(range: RangeL, c: Char) extends INodeLE {
 */
 
 /// String literal
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct StringLE<'p> {
   pub range: RangeL,
-  pub parts: Vec<StringPart<'p>>,
+  pub parts: &'p [StringPart<'p>],
 }
 
 impl INodeLE for StringLE<'_> {
@@ -473,9 +473,9 @@ case class StringLE(range: RangeL, parts: Vector[StringPart]) extends INodeLE {
 */
 
 /// Part of a string (literal or interpolated expression)
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub enum StringPart<'p> {
-  Literal { range: RangeL, s: String },
+  Literal { range: RangeL, s: StrI<'p> },
   Expr(ScrambleLE<'p>),
 }
 /*
@@ -491,7 +491,7 @@ sealed trait IParsedNumberLE extends INodeLE
 */
 
 /// Parsed integer literal
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParsedIntegerLE {
   pub range: RangeL,
   pub value: i64,
@@ -508,7 +508,7 @@ case class ParsedIntegerLE(range: RangeL, int: Long, bits: Option[Long]) extends
 */
 
 /// Parsed floating-point literal
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct ParsedDoubleLE {
   pub range: RangeL,
   pub value: f64,

@@ -76,7 +76,7 @@ pub enum IFunctionParent<'s>
     interface_env: FunctionEnvironmentS<'s>,
     interface_generic_params: &'s [&'s GenericParameterS<'s>],
     interface_rules: Vec<IRulexSR<'s>>,
-    interface_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType>,
+    interface_rune_to_explicit_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
   },
   ParentFunction {
     parent_stack_frame: StackFrame<'s>,
@@ -795,12 +795,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       rules_array,
     )?;
 
-    let tyype = TemplateTemplataType {
-      param_types: generic_params
+    let param_types_vec: Vec<ITemplataType<'s>> = generic_params
         .iter()
         .map(|generic_param| generic_param.tyype.tyype())
-        .collect(),
-      return_type: Box::new(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
+        .collect();
+    let tyype = TemplateTemplataType {
+      param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
+      return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
     };
     let function_name_ref: &'s IFunctionDeclarationNameS<'s> = match function_declaration_name {
       INameS::FunctionDeclaration(r) => r,

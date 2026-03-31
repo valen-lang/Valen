@@ -1,5 +1,5 @@
 ---
-name: process-feedback
+name: guardian-post-review
 description: Process //f violation annotations from a Guardian review. Validates context quality before creating disagreement cases in disagreements/human/. Invoke after applying a Guardian review patch and marking false positives with //f.
 argument-hint: [optional: path to scan, defaults to src/]
 allowed-tools: Bash(guardian feedback-line *), Read, Grep, Glob
@@ -48,6 +48,6 @@ Scan source files for `//f Violation:` annotations left by the user after a Guar
 - `//t` annotations are left untouched — they indicate acknowledged true positives
 - `//d` annotations are not processed by this tool — the user removes them manually
 - Only `//f` annotations are processed: they become disagreement cases indicating the shield instructions need clarification
-- Each case consists of `case-N-input.txt` (the contextified diff) and `case-N-expected.json` (`{"violations": []}`) in a `disagreements/human/` directory within the shield's companion directory (e.g., `Luz/shields/ShieldName-CODE/disagreements/human/`). These are later reviewed during the curation process and may be promoted to `tests/`.
+- Each case consists of `case-N-input.txt` (the contextified diff), `case-N-expected.json` (`{"violations": []}`), and `case-N-referenced_defs.txt` (referenced definitions, may be empty) in a `disagreements/human/` directory within the shield's companion directory (e.g., `Luz/shields/ShieldName-CODE/disagreements/human/`). The `referenced_defs.txt` is read from the `ReferencedDefs:` path in the annotation line; if that path doesn't exist, create an empty file. These are later reviewed during the curation process and may be promoted to `tests/`.
 - **Run `guardian feedback-line` from the git repo root**, not from a subdirectory. Paths in annotations (Log, Shield, Context) are relative to the repo root.
 - **Strip `(V: ...)` user notes** from annotation lines before processing. The parser expects `//f Violation: CODE: reason...` — parenthetical notes between `Violation:` and the code will break parsing.

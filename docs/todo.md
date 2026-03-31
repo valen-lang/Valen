@@ -68,12 +68,12 @@ Files already in their correct location per `docs/meta.md` can be checked off wi
 - [ ] `.claude/skills/migration-drive/SKILL.md`
 - [ ] `.claude/skills/migration-test-fixer/SKILL.md`
 - [ ] `.claude/skills/migration-test-fixer-2/SKILL.md`
-- [ ] `.claude/skills/curate-shields/SKILL.md`
-- [ ] `.claude/skills/process-feedback/SKILL.md`
+- [ ] `.claude/skills/guardian-curate/SKILL.md`
+- [ ] `.claude/skills/guardian-post-review/SKILL.md`
 - [ ] `.claude/skills/slice-pipeline/SKILL.md`
 - [ ] `.claude/skills/slice-pipeline/EXAMPLES.md`
 - [ ] `.claude/skills/slice-pipeline/TROUBLESHOOTING.md`
-- [ ] `.claude/skills/vv/SKILL.md`
+- [ ] `.claude/skills/guardian-teach/SKILL.md`
 
 ## .claude/agents/
 

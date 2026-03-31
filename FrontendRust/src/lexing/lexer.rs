@@ -39,7 +39,7 @@ where
   }
 
   /// Lex attributes on a declaration
-  pub fn lex_attributes(&self, iter: &mut LexingIterator) -> Result<Vec<IAttributeL<'p>>>
+  pub fn lex_attributes(&self, iter: &mut LexingIterator) -> Result<&'p [IAttributeL<'p>]>
   {
     let mut attributes = Vec::new();
 
@@ -51,7 +51,7 @@ where
       }
     }
 
-    Ok(attributes)
+    Ok(self.parse_arena.alloc_slice_from_vec(attributes))
   }
   /*
     def lexAttributes(iter: LexingIterator): Result[Vector[IAttributeL], IParseError] = {
@@ -322,32 +322,32 @@ where
     iter.consume_comments_and_whitespace();
 
     // Try function
-    if let Some(func) = self.lex_function(iter, denizen_begin, attributes.clone())? {
+    if let Some(func) = self.lex_function(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelFunction(func));
     }
 
     // Try struct
-    if let Some(strukt) = self.lex_struct(iter, denizen_begin, attributes.clone())? {
+    if let Some(strukt) = self.lex_struct(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelStruct(strukt));
     }
 
     // Try interface
-    if let Some(interface) = self.lex_interface(iter, denizen_begin, attributes.clone())? {
+    if let Some(interface) = self.lex_interface(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelInterface(interface));
     }
 
     // Try impl
-    if let Some(impl_) = self.lex_impl(iter, denizen_begin, attributes.clone())? {
+    if let Some(impl_) = self.lex_impl(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelImpl(impl_));
     }
 
     // Try import
-    if let Some(import) = self.lex_import(iter, denizen_begin, attributes.clone())? {
+    if let Some(import) = self.lex_import(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelImport(import));
     }
 
     // Try export
-    if let Some(export) = self.lex_export(iter, denizen_begin, attributes.clone())? {
+    if let Some(export) = self.lex_export(iter, denizen_begin, attributes)? {
       return Ok(IDenizenL::TopLevelExportAs(export));
     }
 
@@ -412,7 +412,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<ImplL<'p>>>
   {
     if !iter.try_skip_complete_word("impl") {
@@ -434,15 +434,17 @@ where
     let interface = if let Some(interface_generic_args) = maybe_interface_generic_args {
       ScrambleLE::<'p> {
         range: RangeL::new(interface_name.range.begin(), interface_generic_args.range.end()),
-        elements: vec![
-          Box::new(INodeLEEnum::Word::<'p>(interface_name)),
-          Box::new(INodeLEEnum::Angled::<'p>(interface_generic_args)),
-        ],
+        elements: self.parse_arena.alloc_slice_copy(&[
+          &*self.parse_arena.alloc(INodeLEEnum::Word::<'p>(interface_name)),
+          &*self.parse_arena.alloc(INodeLEEnum::Angled::<'p>(interface_generic_args)),
+        ]),
       }
     } else {
       ScrambleLE {
         range: interface_name.range,
-        elements: vec![Box::new(INodeLEEnum::Word(interface_name))],
+        elements: self.parse_arena.alloc_slice_copy(&[
+          &*self.parse_arena.alloc(INodeLEEnum::Word(interface_name)),
+        ]),
       }
     };
 
@@ -464,15 +466,17 @@ where
     let struct_ = if let Some(struct_generic_args) = maybe_struct_generic_args {
       ScrambleLE {
         range: RangeL::new(struct_name.range.begin(), struct_generic_args.range.end()),
-        elements: vec![
-          Box::new(INodeLEEnum::Word(struct_name)),
-          Box::new(INodeLEEnum::Angled(struct_generic_args)),
-        ],
+        elements: self.parse_arena.alloc_slice_copy(&[
+          &*self.parse_arena.alloc(INodeLEEnum::Word(struct_name)),
+          &*self.parse_arena.alloc(INodeLEEnum::Angled(struct_generic_args)),
+        ]),
       }
     } else {
       ScrambleLE {
         range: struct_name.range,
-        elements: vec![Box::new(INodeLEEnum::Word(struct_name))],
+        elements: self.parse_arena.alloc_slice_copy(&[
+          &*self.parse_arena.alloc(INodeLEEnum::Word(struct_name)),
+        ]),
       }
     };
 
@@ -618,7 +622,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<FunctionL<'p>>>
   {
     if !iter.try_skip_complete_word("func") && !iter.try_skip_complete_word("funky") {
@@ -858,7 +862,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<StructL<'p>>>
   {
     if !iter.try_skip_complete_word("struct") {
@@ -1033,7 +1037,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<InterfaceL<'p>>>
   {
     if !iter.try_skip_complete_word("interface") {
@@ -1109,7 +1113,7 @@ where
       maybe_identifying_runes: maybe_generic_args,
       template_rules: maybe_rules,
       body_range: RangeL::new(members_begin, end),
-      members,
+      members: self.parse_arena.alloc_slice_from_vec(members),
     }))
   }
 
@@ -1228,7 +1232,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<ImportL<'p>>>
   {
     if !iter.try_skip_complete_word(self.keywords.impoort.as_str()) {
@@ -1269,7 +1273,7 @@ where
 
     let module_name = steps[0].clone();
     let importee_name = steps.last().unwrap().clone();
-    let package_steps = steps[1..steps.len() - 1].to_vec();
+    let package_steps = self.parse_arena.alloc_slice_copy(&steps[1..steps.len() - 1]);
 
     Ok(Some(ImportL {
       range: RangeL::new(begin, iter.get_pos()),
@@ -1329,7 +1333,7 @@ where
     &self,
     iter: &mut LexingIterator,
     begin: i32,
-    attributes: Vec<IAttributeL<'p>>,
+    attributes: &'p [IAttributeL<'p>],
   ) -> Result<Option<ExportAsL<'p>>>
   {
     if !iter.try_skip_complete_word(self.keywords.export.as_str()) {
@@ -1801,11 +1805,11 @@ where
 
     iter.consume_comments_and_whitespace();
 
-    let mut innards = Vec::new();
+    let mut innards: Vec<&'p INodeLEEnum<'p>> = Vec::new();
 
     while !self.at_end(iter, stop_on_open_brace, stop_on_where, stop_on_semicolon) {
       let node = self.lex_node(iter, stop_on_open_brace, stop_on_where)?;
-      innards.push(Box::new(node));
+      innards.push(&*self.parse_arena.alloc(node));
 
       iter.consume_comments_and_whitespace();
     }
@@ -1814,7 +1818,7 @@ where
 
     Ok(ScrambleLE::<'p> {
       range: RangeL::new(begin, end),
-      elements: innards,
+      elements: self.parse_arena.alloc_slice_copy(&innards),
     })
   }
   /*
@@ -2092,7 +2096,7 @@ where
           if !string_so_far.is_empty() {
             parts.push(StringPart::Literal {
               range: RangeL::new(string_so_far_begin, string_so_far_end_pos),
-              s: string_so_far.clone(),
+              s: self.parse_arena.intern_str(&string_so_far),
             });
             string_so_far.clear();
           }
@@ -2109,13 +2113,13 @@ where
     if !string_so_far.is_empty() {
       parts.push(StringPart::Literal {
         range: RangeL::new(string_so_far_begin, iter.get_pos()),
-        s: string_so_far,
+        s: self.parse_arena.intern_str(&string_so_far),
       });
     }
 
     Ok(Some(INodeLEEnum::String(StringLE {
       range: RangeL::new(begin, iter.get_pos()),
-      parts,
+      parts: self.parse_arena.alloc_slice_from_vec(parts),
     })))
   }
   /*

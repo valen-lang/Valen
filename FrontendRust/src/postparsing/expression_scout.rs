@@ -61,7 +61,7 @@ trait IExpressionScoutDelegate {
   (FunctionS, VariableUses)
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) enum IScoutResult<'s, 'p> {
   LocalLookupResult(LocalLookupResultS<'s>),
   OutsideLookupResult(OutsideLookupResultS<'s, 'p>),
@@ -72,7 +72,7 @@ pub(crate) enum IScoutResult<'s, 'p> {
 // Scala.
 sealed trait IScoutResult[+T <: IExpressionSE]
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct LocalLookupResultS<'s> {
   range: RangeS<'s>,
   name: IVarNameS<'s>,
@@ -83,7 +83,7 @@ case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResul
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct OutsideLookupResultS<'s, 'p> {
   range: RangeS<'s>,
   name: StrI<'s>,
@@ -101,7 +101,7 @@ case class OutsideLookupResult(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub(crate) struct NormalResultS<'s> {
   pub(crate) expr: &'s IExpressionSE<'s>,
 }

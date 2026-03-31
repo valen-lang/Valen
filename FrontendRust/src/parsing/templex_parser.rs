@@ -747,12 +747,11 @@ where
     // Parse other node types (lines 419-440)
     match iter.peek_cloned().expect("peek should not be empty") {
       INodeLEEnum::String(StringLE { range, parts }) => {
-        let parts = parts.clone();
         iter.advance();
-        match parts.as_slice() {
+        match parts {
           [StringPart::Literal { range, s }] => Ok(ITemplexPT::String(StringPT {
             range: *range,
-            str: self.parse_arena.intern_str(s.as_str()),
+            str: *s,
           })),
           _ => Err(ParseError::BadStringInTemplex(range.begin())),
         }

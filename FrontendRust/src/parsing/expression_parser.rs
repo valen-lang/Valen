@@ -2323,7 +2323,6 @@ where
         }));
       }
       Some(INodeLEEnum::String(StringLE { range, parts })) => {
-        let parts = parts.clone();
         iter.advance();
 
         // Check if it's a simple literal string
@@ -2342,8 +2341,8 @@ where
           match part {
             StringPart::Literal { range, s } => {
               parts_p.push(self.parse_arena.alloc(IExpressionPE::ConstantStr(ConstantStrPE {
-                range,
-                value: self.parse_arena.intern_str(&s),
+                range: *range,
+                value: self.parse_arena.intern_str(s.as_str()),
               })));
             }
             StringPart::Expr(scramble) => {

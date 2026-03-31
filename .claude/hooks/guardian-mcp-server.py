@@ -25,7 +25,10 @@ TOOL_SCHEMA = {
         "is a false positive. You MUST cite the .verdict.md file path from the denial message. "
         "Guardian will verify the denial happened and insert a temp-disable comment "
         "into the function's post-comment block. The human will review and remove "
-        "temp-disables during code review. Your reason should be 1-3 sentences on one line."
+        "temp-disables during code review. Your reason should be 1-3 sentences on one line. "
+        "IMPORTANT: After calling this tool, you MUST re-read the file_path with the Read tool "
+        "before making any further edits to it, because this tool modifies the file and the "
+        "editor needs to see the updated contents (otherwise you'll get 'File has not been read yet')."
     ),
     "inputSchema": {
         "type": "object",
@@ -57,9 +60,13 @@ TOOL_SCHEMA = {
             "context_file": {
                 "type": "string",
                 "description": "Path to the contextified diff file from the denial message (the Context: path)"
+            },
+            "referenced_defs_file": {
+                "type": "string",
+                "description": "Path to the referenced_defs.txt file from the denial message (the ReferencedDefs: path)"
             }
         },
-        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file", "context_file"]
+        "required": ["file_path", "definition_name", "shield_code", "verdict_file", "reason", "shield_file", "context_file", "referenced_defs_file"]
     }
 }
 
@@ -118,6 +125,7 @@ def handle_tools_call(msg):
         "reason": args.get("reason", ""),
         "shield_file": args.get("shield_file", ""),
         "context_file": args.get("context_file", ""),
+        "referenced_defs_file": args.get("referenced_defs_file", ""),
     }).encode("utf-8")
 
     try:

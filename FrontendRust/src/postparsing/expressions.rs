@@ -165,7 +165,7 @@ sealed trait IVariableUseCertainty
 case object Used extends IVariableUseCertainty
 case object NotUsed extends IVariableUseCertainty
 */
-#[derive(Clone, Debug, PartialEq, Eq, Hash)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct LocalS<'s> {
   pub var_name: IVarNameS<'s>,
   pub self_borrowed: IVariableUseCertainty,

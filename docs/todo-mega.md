@@ -232,7 +232,7 @@ Skills and agents are AI workflow definitions. They should be documented in `doc
 ### Skills
 - `arcana/SKILL.md` → incorporated into `docs/skills/document.md`. Delete after verifying.
 - Migration skills (`migration-drive`, `migration-test-fixer`, etc.) → each gets a brief entry in `FrontendRust/docs/skills/` explaining the workflow, with the SKILL.md staying in `.claude/skills/` as the executable entrypoint.
-- `vv/SKILL.md`, `process-feedback/SKILL.md` → same pattern
+- `guardian-teach/SKILL.md`, `guardian-post-review/SKILL.md` → same pattern
 - `slice-pipeline/` → consolidate SKILL.md + EXAMPLES.md + TROUBLESHOOTING.md into a single `docs/skills/slice-pipeline.md`
 
 ### Agents

@@ -12,7 +12,7 @@ import dev.vale.postparsing._
 import scala.collection.immutable.List
 */
 
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct CaptureS<'s> {
   pub name: IVarNameS<'s>,
   pub mutate: bool,
@@ -25,12 +25,12 @@ case class CaptureS(
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 */
-#[derive(Clone, Debug, PartialEq)]
+#[derive(Copy, Clone, Debug, PartialEq)]
 pub struct AtomSP<'s> {
   pub range: RangeS<'s>,
   pub name: Option<CaptureS<'s>>,
   pub coord_rune: Option<RuneUsage<'s>>,
-  pub destructure: Option<Vec<AtomSP<'s>>>,
+  pub destructure: Option<&'s [AtomSP<'s>]>,
 }
 
 /*

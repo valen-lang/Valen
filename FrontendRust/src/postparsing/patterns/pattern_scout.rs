@@ -35,7 +35,7 @@ pub(crate) fn get_parameter_captures<'s>(
   if let Some(capture) = &pattern.name {
     captures.extend(get_capture_captures(capture));
   }
-  if let Some(destructure) = &pattern.destructure {
+  if let Some(destructure) = pattern.destructure {
     for inner_pattern in destructure {
       captures.extend(get_parameter_captures(inner_pattern));
     }
@@ -120,7 +120,7 @@ pub(crate) fn translate_pattern<'s, 'p>(
           inner_pattern_p,
         ));
       }
-      Some(patterns)
+      Some(scout_arena.alloc_slice_from_vec(patterns))
     }
   };
 
