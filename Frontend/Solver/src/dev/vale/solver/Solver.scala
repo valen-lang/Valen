@@ -66,7 +66,7 @@ trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
   def solve(
     state: State,
     env: Env,
-    solverState: ISolverState[Rule, Rune, Conclusion],
+    solverState: SimpleSolverState[Rule, Rune, Conclusion],
     ruleIndex: Int,
     rule: Rule):
   Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
@@ -77,7 +77,7 @@ trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
   def complexSolve(
     state: State,
     env: Env,
-    solverState: ISolverState[Rule, Rune, Conclusion]
+    solverState: SimpleSolverState[Rule, Rune, Conclusion]
   ): Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
 
   def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
@@ -97,7 +97,8 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
   val solverState =
     if (useOptimizedSolver) {
-      OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
     } else {
       SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
     }
@@ -109,7 +110,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
       vassert(allRunes == allRunes.distinct)
     }
 
-    allRunes.foreach(solverState.addRune)
+     allRunes.foreach(solverState.addRune)
 
     if (sanityCheck) {
       solverState.sanityCheck()
@@ -118,8 +119,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     { // manualStep(initiallyKnownRunes)
       val step = Step[Rule, Rune, Conclusion](false, Vector(), Vector(), Map())
       initiallyKnownRunes.foreach({ case (rune, conclusion) =>
-        val runeIndex = solverState.getCanonicalRune(rune)
-        solverState.concludeRune(runeIndex, conclusion).getOrDie()
+        solverState.concludeRune(rune, conclusion).getOrDie()
       })
 
 //      rules.foreach({ case (ruleIndex, rule) =>
@@ -161,7 +161,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
         solverState.sanityCheck()
       }
       ruleToPuzzles(rule).foreach(puzzleRunes => {
-        solverState.addPuzzle(ruleIndex, puzzleRunes.map(solverState.getCanonicalRune).distinct)
+        solverState.addPuzzle(ruleIndex, puzzleRunes.distinct)
       })
       if (sanityCheck) {
         solverState.sanityCheck()

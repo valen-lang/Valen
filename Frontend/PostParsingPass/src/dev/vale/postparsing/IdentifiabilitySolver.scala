@@ -1,7 +1,7 @@
 package dev.vale.postparsing
 
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{IIncompleteOrFailedSolve, ISolveRule, ISolverError, ISolverState, IncompleteSolve, Solver}
+import dev.vale.solver.{IIncompleteOrFailedSolve, ISolveRule, ISolverError, IncompleteSolve, SimpleSolverState, Solver}
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vimpl, vpass}
 import dev.vale._
 import dev.vale.postparsing.rules._
@@ -102,111 +102,111 @@ object IdentifiabilitySolver {
   private def solveRule(
     state: Unit,
     env: Unit,
-    solverState: ISolverState[IRulexSR, IRuneS, Boolean],
+    solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean],
     ruleIndex: Int,
     callRange: List[RangeS],
     rule: IRulexSR):
   Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
     rule match {
       case KindComponentsSR(range, resultRune, mutabilityRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(mutabilityRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](mutabilityRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(ownershipRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(kindRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](ownershipRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](kindRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(paramsRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(returnRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](paramsRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](returnRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case MaybeCoercingCallSR(range, resultRune, templateRune, argRunes) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(templateRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](templateRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         argRunes.map(_.rune).foreach({ case argRune =>
-          solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(argRune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+          solverState.concludeRune[IIdentifiabilityRuleError](argRune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         })
         Ok(())
       }
       case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(paramListRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(returnRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](paramListRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](returnRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(paramListRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(returnRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](paramListRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](returnRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case DefinitionFuncSR(range, resultRune, name, paramsListRune, returnRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(paramsListRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(returnRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](paramsListRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](returnRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case DefinitionCoordIsaSR(range, resultRune, subRune, superRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(subRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(superRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](subRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](superRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CallSiteCoordIsaSR(range, resultRune, subRune, superRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(subRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(superRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](subRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](superRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         resultRune match {
-          case Some(resultRune) => solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+          case Some(resultRune) => solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
           case None =>
         }
         Ok(())
       }
       case OneOfSR(range, resultRune, literals) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case EqualsSR(range, leftRune, rightRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(leftRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rightRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](leftRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rightRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case IsConcreteSR(range, rune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case IsInterfaceSR(range, rune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case IsStructSR(range, rune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(coordListRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](coordListRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CoerceToCoordSR(range, coordRune, kindRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(kindRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(coordRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](kindRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](coordRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case LiteralSR(range, rune, literal) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case LookupSR(range, rune, name) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case MaybeCoercingLookupSR(range, rune, name) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case RuneParentEnvLookupSR(range, rune) => {
@@ -223,19 +223,19 @@ object IdentifiabilitySolver {
         Ok(())
       }
       case MaybeCoercingLookupSR(range, rune, name) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(rune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](rune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case AugmentSR(range, resultRune, ownership, innerRune) => {
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(innerRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](innerRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case PackSR(range, resultRune, memberRunes) => {
         memberRunes.foreach(x => {
-          solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(x.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+          solverState.concludeRune[IIdentifiabilityRuleError](x.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         })
-        solverState.concludeRune[IIdentifiabilityRuleError](solverState.getCanonicalRune(resultRune.rune), true) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IIdentifiabilityRuleError](resultRune.rune, true) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
 //      case StaticSizedArraySR(range, resultRune, mutabilityRune, variabilityRune, sizeRune, elementRune) => {
@@ -274,11 +274,11 @@ object IdentifiabilitySolver {
         new ISolveRule[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError] {
           override def sanityCheckConclusion(env: Unit, state: Unit, rune: IRuneS, conclusion: Boolean): Unit = {}
 
-          override def complexSolve(state: Unit, env: Unit, solverState: ISolverState[IRulexSR, IRuneS, Boolean]): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
+          override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean]): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
             Ok(())
           }
 
-          override def solve(state: Unit, env: Unit, solverState: ISolverState[IRulexSR, IRuneS, Boolean], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
+          override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
             solveRule(state, env, solverState, ruleIndex, callRange, rule)
           }
         },
@@ -297,7 +297,7 @@ object IdentifiabilitySolver {
     val steps = solver.solverState.getSteps().toStream
     val conclusions = solver.solverState.userifyConclusions().toMap
 
-    val allRunes = solver.solverState.getAllRunes().map(solver.solverState.getUserRune)
+    val allRunes = solver.solverState.getAllRunes()
     val unsolvedRunes = allRunes -- conclusions.keySet
     if (unsolvedRunes.nonEmpty) {
       Err(

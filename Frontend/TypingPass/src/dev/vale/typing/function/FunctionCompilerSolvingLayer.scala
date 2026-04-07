@@ -574,7 +574,7 @@ class FunctionCompilerSolvingLayer(
             { // solver.manualStep(Map(genericParam.rune.rune -> templata))
               val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
               Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
-                solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion).getOrDie()
+                solver.solverState.concludeRune(rune, conclusion).getOrDie()
               })
               solver.solverState.addStep(step)
 //              solver.solverState.addStep(step)

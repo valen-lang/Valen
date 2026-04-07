@@ -2,7 +2,7 @@ package dev.vale.postparsing
 
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vpass, vwat}
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolveRule, ISolverError, ISolverState, IncompleteSolve, RuleError, Solver, SolverConflict}
+import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolveRule, ISolverError, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale._
 import dev.vale.postparsing.RuneTypeSolver._
 import dev.vale.postparsing.rules._
@@ -185,33 +185,33 @@ class RuneTypeSolver(interner: Interner) {
   private def solveRule(
     state: Unit,
     env: IRuneTypeSolverEnv,
-    solverState: ISolverState[IRulexSR, IRuneS, ITemplataType],
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType],
     ruleIndex: Int,
     rule: IRulexSR):
   Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
     rule match {
       case KindComponentsSR(range, resultRune, mutabilityRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(mutabilityRune.rune), MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](mutabilityRune.rune, MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(ownershipRune.rune), OwnershipTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(kindRune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](ownershipRune.rune, OwnershipTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](kindRune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(paramsRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(returnRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](paramsRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](returnRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case MaybeCoercingCallSR(range, resultRune, templateRune, argRunes) => {
         vassertSome(solverState.getConclusion(templateRune.rune)) match {
           case TemplateTemplataType(paramTypes, returnType) => {
             argRunes.map(_.rune).zip(paramTypes).foreach({ case (argRune, paramType) =>
-              solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(argRune), paramType) match { case Ok(_) => case Err(e) => return Err(e) }
+              solverState.concludeRune[IRuneTypeRuleError](argRune, paramType) match { case Ok(_) => case Err(e) => return Err(e) }
             })
             Ok(())
           }
@@ -219,36 +219,36 @@ class RuneTypeSolver(interner: Interner) {
         }
       }
       case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(paramListRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(returnRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](paramListRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](returnRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(paramListRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(returnRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](paramListRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](returnRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case DefinitionFuncSR(range, resultRune, name, paramListRune, returnRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(paramListRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(returnRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, PrototypeTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](paramListRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](returnRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case DefinitionCoordIsaSR(range, resultRune, subRune, superRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), ImplTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(subRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(superRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, ImplTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](subRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](superRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CallSiteCoordIsaSR(range, resultRune, subRune, superRune) => {
         resultRune match {
-          case Some(resultRune) => solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), ImplTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+          case Some(resultRune) => solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, ImplTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
           case None =>
         }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(subRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(superRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](subRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](superRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case OneOfSR(range, resultRune, literals) => {
@@ -256,45 +256,45 @@ class RuneTypeSolver(interner: Interner) {
         if (types.size > 1) {
           vfail("OneOf rule's possibilities must all be the same type!")
         }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), types.head) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, types.head) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case EqualsSR(range, leftRune, rightRune) => {
         solverState.getConclusion(leftRune.rune) match {
           case None => {
-            solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(leftRune.rune), vassertSome(solverState.getConclusion(rightRune.rune))) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.concludeRune[IRuneTypeRuleError](leftRune.rune, vassertSome(solverState.getConclusion(rightRune.rune))) match { case Ok(_) => case Err(e) => return Err(e) }
             Ok(())
           }
           case Some(left) => {
-            solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(rightRune.rune), left) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.concludeRune[IRuneTypeRuleError](rightRune.rune, left) match { case Ok(_) => case Err(e) => return Err(e) }
             Ok(())
           }
         }
       }
       case IsConcreteSR(range, rune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(rune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](rune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case IsInterfaceSR(range, rune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(rune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](rune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case IsStructSR(range, rune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(rune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](rune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(coordListRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](coordListRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case CoerceToCoordSR(range, coordRune, kindRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(coordRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(kindRune.rune), KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](coordRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](kindRune.rune, KindTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case LiteralSR(range, rune, literal) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(rune.rune), literal.getType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](rune.rune, literal.getType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case LookupSR(range, resultRune, name) => {
@@ -305,13 +305,13 @@ class RuneTypeSolver(interner: Interner) {
           }
         actualLookupResult match {
           case PrimitiveRuneTypeSolverLookupResult(tyype) => {
-            solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), tyype) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, tyype) match { case Ok(_) => case Err(e) => return Err(e) }
           }
           case TemplataLookupResult(actualType) => {
-            solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), actualType) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, actualType) match { case Ok(_) => case Err(e) => return Err(e) }
           }
           case CitizenRuneTypeSolverLookupResult(tyype, genericParams) => {
-            solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), tyype) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, tyype) match { case Ok(_) => case Err(e) => return Err(e) }
           }
         }
         Ok(())
@@ -333,27 +333,27 @@ class RuneTypeSolver(interner: Interner) {
         lookup(env, solverState, range, rune, actualLookupResult)
       }
       case AugmentSR(range, resultRune, ownership, innerRune) => {
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(innerRune.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](innerRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
       case PackSR(range, resultRune, memberRunes) => {
         memberRunes.foreach(x => {
-          solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(x.rune), CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+          solverState.concludeRune[IRuneTypeRuleError](x.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
         })
-        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(resultRune.rune), PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
+        solverState.concludeRune[IRuneTypeRuleError](resultRune.rune, PackTemplataType(CoordTemplataType())) match { case Ok(_) => case Err(e) => return Err(e) }
         Ok(())
       }
 //      case StaticSizedArraySR(range, resultRune, mutabilityRune, variabilityRune, sizeRune, elementRune) => {
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(mutabilityRune.rune, MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(variabilityRune.rune, VariabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(sizeRune.rune, IntegerTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(elementRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](mutabilityRune.rune MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](variabilityRune.rune VariabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](sizeRune.rune IntegerTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](elementRune.rune CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
 //        Ok(())
 //      }
 //      case RuntimeSizedArraySR(range, resultRune, mutabilityRune, elementRune) => {
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(mutabilityRune.rune, MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
-//        solverState.concludeRune[IRuneTypeRuleError](solverState.getCanonicalRune(elementRune.rune, CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](mutabilityRune.rune MutabilityTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
+//        solverState.concludeRune[IRuneTypeRuleError](elementRune.rune CoordTemplataType()) match { case Ok(_) => case Err(e) => return Err(e) }
 //        Ok(())
 //      }
     }
@@ -361,7 +361,7 @@ class RuneTypeSolver(interner: Interner) {
 
   private def lookup(
       env: IRuneTypeSolverEnv,
-      solverState: ISolverState[IRulexSR, IRuneS, ITemplataType],
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType],
       range: RangeS,
       rune: RuneUsage,
       actualLookupResult: IRuneTypeSolverLookupResult):
@@ -501,11 +501,11 @@ class RuneTypeSolver(interner: Interner) {
         new ISolveRule[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError] {
           override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
 
-          override def complexSolve(state: Unit, env: IRuneTypeSolverEnv, solverState: ISolverState[IRulexSR, IRuneS, ITemplataType]): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
+          override def complexSolve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType]): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
             Ok(())
           }
 
-          override def solve(state: Unit, env: IRuneTypeSolverEnv, solverState: ISolverState[IRulexSR, IRuneS, ITemplataType], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
+          override def solve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
             solveRule(state, env, solverState, ruleIndex, rule)
           }
         },
@@ -522,7 +522,7 @@ class RuneTypeSolver(interner: Interner) {
     val steps = solver.solverState.getSteps().toStream
     val conclusions = solver.solverState.userifyConclusions().toMap
 
-    val allRunes = solver.solverState.getAllRunes().map(solver.solverState.getUserRune) ++ additionalRunes
+    val allRunes = solver.solverState.getAllRunes() ++ additionalRunes
     val unsolvedRunes = allRunes -- conclusions.keySet
     if (expectCompleteSolve && unsolvedRunes.nonEmpty) {
       Err(

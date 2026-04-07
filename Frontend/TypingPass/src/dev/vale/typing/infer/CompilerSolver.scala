@@ -5,7 +5,7 @@ import dev.vale.parsing.ast.ShareP
 import dev.vale.postparsing.rules._
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vimpl, vwat}
 import dev.vale.postparsing._
-import dev.vale.solver.{CompleteSolve, FailedSolve, ISolveRule, ISolverError, ISolverOutcome, ISolverState, IncompleteSolve, RuleError, Solver, SolverConflict}
+import dev.vale.solver.{CompleteSolve, FailedSolve, ISolveRule, ISolverError, ISolverOutcome, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.ast.PrototypeT
 import dev.vale.typing.names._
@@ -329,7 +329,7 @@ class CompilerSolver(
     val conclusionsStream = solver.solverState.userifyConclusions().toMap
 
     val conclusions = conclusionsStream.toMap
-    val allRunes = runeToType.keySet ++ solver.solverState.getAllRunes().map(solver.solverState.getUserRune)
+    val allRunes = runeToType.keySet ++ solver.solverState.getAllRunes()
 
     // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
     // Caller should remember to do that!
@@ -359,7 +359,7 @@ class CompilerRuleSolver(
   override def complexSolve(
       state: CompilerOutputs,
       env: InferEnv,
-      solverState: ISolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     val equivalencies = new Equivalencies(solverState.getUnsolvedRules())
 
@@ -445,7 +445,7 @@ class CompilerRuleSolver(
       }).toMap
 
     newConclusions.foreach({ case (rune, conclusion) =>
-      solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rune), conclusion) match { case Ok(_) => case Err(e) => return Err(e) }
+      solverState.concludeRune[ITypingPassSolverError](rune, conclusion) match { case Ok(_) => case Err(e) => return Err(e) }
     })
 
     Ok(())
@@ -533,7 +533,7 @@ class CompilerRuleSolver(
   override def solve(
     state: CompilerOutputs,
     env: InferEnv,
-    solverState: ISolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
     ruleIndex: Int,
     rule: IRulexSR):
   Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
@@ -548,7 +548,7 @@ class CompilerRuleSolver(
     env: InferEnv,
     ruleIndex: Int,
     rule: IRulexSR,
-    solverState: ISolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   // One might expect us to return the conclusions in this Result. Instead we take in a
   // lambda to avoid intermediate allocations, for speed.
   Result[Unit, ITypingPassSolverError] = {
@@ -556,7 +556,7 @@ class CompilerRuleSolver(
       case KindComponentsSR(range, kindRune, mutabilityRune) => {
         val KindTemplataT(kind) = vassertSome(solverState.getConclusion(kindRune.rune))
         val mutability = delegate.getMutability(state, kind)
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(mutabilityRune.rune), mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](mutabilityRune.rune, mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => {
@@ -572,21 +572,21 @@ class CompilerRuleSolver(
                   CoordT(ownership, RegionT(), kind)
                 }
               }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), CoordTemplataT(newCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, CoordTemplataT(newCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case Some(coord) => {
             val CoordTemplataT(CoordT(ownership, region, kind)) = coord
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(ownershipRune.rune), OwnershipTemplataT(ownership)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(kindRune.rune), KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](ownershipRune.rune, OwnershipTemplataT(ownership)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](kindRune.rune, KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
         }
       }
       case PrototypeComponentsSR(range, resultRune, ownershipRune, kindRune) => {
         val PrototypeTemplataT(prototype) = vassertSome(solverState.getConclusion(resultRune.rune))
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(ownershipRune.rune), CoordListTemplataT(prototype.paramTypes)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(kindRune.rune), CoordTemplataT(prototype.returnType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](ownershipRune.rune, CoordListTemplataT(prototype.paramTypes)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](kindRune.rune, CoordTemplataT(prototype.returnType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
@@ -599,7 +599,7 @@ class CompilerRuleSolver(
         val CoordTemplataT(returnCoord) = vassertSome(solverState.getConclusion(returnRune.rune))
         // We only pretend this function exists for now, and postpone actually resolving it until later, see SFWPRL.
         val prototypeTemplata = delegate.predictFunction(env, state, range, name, paramCoords, returnCoord)
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), prototypeTemplata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](resultRune.rune, prototypeTemplata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case CallSiteFuncSR(range, prototypeRune, name, paramListRune, returnRune) => {
@@ -609,8 +609,8 @@ class CompilerRuleSolver(
 
         vassertSome(solverState.getConclusion(prototypeRune.rune)) match {
           case PrototypeTemplataT(prototype) => {
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(paramListRune.rune), CoordListTemplataT(prototype.paramTypes)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(returnRune.rune), CoordTemplataT(prototype.returnType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](paramListRune.rune, CoordListTemplataT(prototype.paramTypes)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](returnRune.rune, CoordTemplataT(prototype.returnType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
           }
           case _ => {
             return Err(CantCheckPlaceholder(range :: env.parentRanges))
@@ -631,7 +631,7 @@ class CompilerRuleSolver(
         val newPrototype =
           delegate.assemblePrototype(env, state, range, name, paramCoords, returnType)
 
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), PrototypeTemplataT(newPrototype)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](resultRune.rune, PrototypeTemplataT(newPrototype)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case CallSiteCoordIsaSR(range, resultRune, subRune, superRune) => {
@@ -664,7 +664,7 @@ class CompilerRuleSolver(
 
         resultRune match {
           case Some(resultRune) => {
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), resultingIsaTemplata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, resultingIsaTemplata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
           }
           case None =>
         }
@@ -691,17 +691,17 @@ class CompilerRuleSolver(
         // Now introduce an impl so that we can later know sub implements super.
         val newImpl = delegate.assembleImpl(env, range, subKind, superKind)
 
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), newImpl)  match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](resultRune.rune, newImpl)  match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case EqualsSR(range, leftRune, rightRune) => {
         solverState.getConclusion(leftRune.rune) match {
           case None => {
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(leftRune.rune), vassertSome(solverState.getConclusion(rightRune.rune))) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](leftRune.rune, vassertSome(solverState.getConclusion(rightRune.rune))) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case Some(left) => {
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rightRune.rune), left) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](rightRune.rune, left) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
         }
@@ -720,7 +720,7 @@ class CompilerRuleSolver(
             } else {
               // We're sending something that can't be upcast, so both sides are definitely the same type.
               // We can shortcut things here, even knowing only the sender's type.
-              solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(receiverRune.rune), CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+              solverState.concludeRune[ITypingPassSolverError](receiverRune.rune, CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
               Ok(())
             }
           }
@@ -735,7 +735,7 @@ class CompilerRuleSolver(
             } else {
               // We're receiving a concrete type, so both sides are definitely the same type.
               // We can shortcut things here, even knowing only the receiver's type.
-              solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(senderRune.rune), CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+              solverState.concludeRune[ITypingPassSolverError](senderRune.rune, CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
               Ok(())
             }
           }
@@ -795,7 +795,7 @@ class CompilerRuleSolver(
             val CoordTemplataT(coord) = vassertSome(solverState.getConclusion(coordRune.rune))
             coord.ownership match {
               case OwnT | ShareT => {
-                solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(kindRune.rune), KindTemplataT(coord.kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+                solverState.concludeRune[ITypingPassSolverError](kindRune.rune, KindTemplataT(coord.kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
                 Ok(())
               }
               case _ => {
@@ -805,14 +805,14 @@ class CompilerRuleSolver(
           }
           case Some(kind) => {
             val coerced = delegate.coerceToCoord(env, state, range :: env.parentRanges, kind, RegionT())
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(coordRune.rune), coerced) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](coordRune.rune, coerced) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
         }
       }
       case LiteralSR(range, rune, literal) => {
         val templata = literalToTemplata(literal)
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rune.rune), templata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](rune.rune, templata) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case LookupSR(range, rune, name) => {
@@ -821,7 +821,7 @@ class CompilerRuleSolver(
             case None => return Err(LookupFailed(name))
             case Some(x) => x
           }
-        solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rune.rune), result) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+        solverState.concludeRune[ITypingPassSolverError](rune.rune, result) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         Ok(())
       }
       case RuneParentEnvLookupSR(range, rune) => {
@@ -858,7 +858,7 @@ class CompilerRuleSolver(
 
             val innerCoord = CoordT(innerOwnership, outerRegion, innerKind)
 
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(innerRune.rune), CoordTemplataT(innerCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](innerRune.rune, CoordTemplataT(innerCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case None => {
@@ -887,7 +887,7 @@ class CompilerRuleSolver(
                 }
               }
             val newCoord = CoordT(newOwnership, newRegion, innerCoord.kind)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(outerCoordRune.rune), CoordTemplataT(newCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](outerCoordRune.rune, CoordTemplataT(newCoord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
         }
@@ -900,13 +900,13 @@ class CompilerRuleSolver(
                 val CoordTemplataT(coord) = vassertSome(solverState.getConclusion(memberRune.rune))
                 coord
               })
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), CoordListTemplataT(members.toVector)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, CoordListTemplataT(members.toVector)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case Some(CoordListTemplataT(members)) => {
             vassert(members.size == memberRunes.size)
             memberRunes.zip(members).foreach({ case (rune, coord) =>
-              solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rune.rune), templata.CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+              solverState.concludeRune[ITypingPassSolverError](rune.rune, templata.CoordTemplataT(coord)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             })
             Ok(())
           }
@@ -975,9 +975,9 @@ class CompilerRuleSolver(
       case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => {
         val CoordListTemplataT(coords) = vassertSome(solverState.getConclusion(coordListRune.rune))
         if (coords.forall(_.ownership == ShareT)) {
-          solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), MutabilityTemplataT(ImmutableT)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+          solverState.concludeRune[ITypingPassSolverError](resultRune.rune, MutabilityTemplataT(ImmutableT)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         } else {
-          solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), MutabilityTemplataT(MutableT)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+          solverState.concludeRune[ITypingPassSolverError](resultRune.rune, MutabilityTemplataT(MutableT)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
         }
         Ok(())
       }
@@ -990,7 +990,7 @@ class CompilerRuleSolver(
   private def solveCallRule(
       state: CompilerOutputs,
       env: InferEnv,
-      solverState: ISolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
       range: RangeS,
       resultRune: RuneUsage,
       templateRune: RuneUsage,
@@ -1015,8 +1015,8 @@ class CompilerRuleSolver(
 
             val mutabilityRune = argRunes(0)
             val elementRune = argRunes(1)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(mutabilityRune.rune), mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(elementRune.rune), CoordTemplataT(memberType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](mutabilityRune.rune, mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](elementRune.rune, CoordTemplataT(memberType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case KindTemplataT(ssaTT @ contentsStaticSizedArrayTT(size, mutability, variability, memberType, region)) => {
@@ -1035,10 +1035,10 @@ class CompilerRuleSolver(
 
             // We don't take in the region rune here because there's no syntactical way to specify it.
             val Vector(sizeRune, mutabilityRune, variabilityRune, elementRune) = argRunes
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(sizeRune.rune), size) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(mutabilityRune.rune), mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(variabilityRune.rune), variability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(elementRune.rune), CoordTemplataT(memberType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](sizeRune.rune, size) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](mutabilityRune.rune, mutability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](variabilityRune.rune, variability) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](elementRune.rune, CoordTemplataT(memberType)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             // // We still have the region rune though, the rule still gives it to us.
             // solverState.concludeRune[ITypingPassSolverError](contextRegionRune.rune, region.region) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
@@ -1073,7 +1073,7 @@ class CompilerRuleSolver(
             }
 
             argRunes.zip(interface.id.localName.templateArgs).foreach({ case (rune, templateArg) =>
-              solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(rune.rune), templateArg) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+              solverState.concludeRune[ITypingPassSolverError](rune.rune, templateArg) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             })
             Ok(())
           }
@@ -1109,7 +1109,7 @@ class CompilerRuleSolver(
             struct.id.localName.templateArgs.zip(argRunes).foreach({ case (templateArg, argRune) =>
               // The user specified this argument, so let's match the result's
               // corresponding generic arg with the user specified argument here.
-              solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(argRune.rune), templateArg) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+              solverState.concludeRune[ITypingPassSolverError](argRune.rune, templateArg) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             })
 
             Ok(())
@@ -1347,7 +1347,7 @@ class CompilerRuleSolver(
             val contextRegion = RegionT()
             val mutability = ITemplataT.expectMutability(m)
             val rsaKind = delegate.predictRuntimeSizedArrayKind(env, state, coord, mutability, contextRegion)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), KindTemplataT(rsaKind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, KindTemplataT(rsaKind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case StaticSizedArrayTemplateTemplataT() => {
@@ -1358,25 +1358,25 @@ class CompilerRuleSolver(
             val mutability = ITemplataT.expectMutability(m)
             val variability = ITemplataT.expectVariability(v)
             val rsaKind = delegate.predictStaticSizedArrayKind(env, state, mutability, variability, size, coord, contextRegion)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), KindTemplataT(rsaKind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, KindTemplataT(rsaKind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case it@StructDefinitionTemplataT(_, _) => {
             val args = argRunes.map(argRune => vassertSome(solverState.getConclusion(argRune.rune)))
             // See SFWPRL for why we're calling predictStruct instead of resolveStruct
             val kind = delegate.predictStruct(env, state, it, args.toVector)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case it@InterfaceDefinitionTemplataT(_, _) => {
             val args = argRunes.map(argRune => vassertSome(solverState.getConclusion(argRune.rune)))
             // See SFWPRL for why we're calling predictInterface instead of resolveInterface
             val kind = delegate.predictInterface(env, state, it, args.toVector)
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, KindTemplataT(kind)) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case kt@KindTemplataT(_) => {
-            solverState.concludeRune[ITypingPassSolverError](solverState.getCanonicalRune(resultRune.rune), kt) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
+            solverState.concludeRune[ITypingPassSolverError](resultRune.rune, kt) match { case Ok(_) => case Err(e) => return Err(InternalSolverError(range :: env.parentRanges, e)) }
             Ok(())
           }
           case other => vimpl(other)
