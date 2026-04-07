@@ -251,10 +251,10 @@ class SolverTests extends FunSuite with Matchers with Collector {
         case Err(e) => vfail(e)
       }
     }) {}
-    val firstConclusions = solver.userifyConclusions().toMap
+    val firstConclusions = solver.solverState.userifyConclusions().toMap
 
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
-    solver.markRulesSolved(Vector(), Map(solver.getCanonicalRune(-1) -> "Firefly"))
+//    solver.markRulesSolved(Vector(), Map(solver.solverState.getCanonicalRune(-1) -> "Firefly"))
 
     while ( {
       solver.advance(Unit, Unit) match {
@@ -262,7 +262,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
         case Err(e) => vfail(e)
       }
     }) {}
-    val secondConclusions = solver.userifyConclusions().toMap
+    val secondConclusions = solver.solverState.userifyConclusions().toMap
 
     secondConclusions.toMap shouldEqual
       Map(-1 -> "Firefly", -2 -> "A", -3 -> "Firefly:A")
@@ -321,7 +321,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
           case Err(e) => vfail(e)
         }
       }) {}
-      val conclusions = solver.userifyConclusions().toMap
+      val conclusions = solver.solverState.userifyConclusions().toMap
       conclusions
     }
 
@@ -405,7 +405,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
-    val conclusionsMap = solver.userifyConclusions().toMap
+    val conclusionsMap = solver.solverState.userifyConclusions().toMap
 
     vassert(expectCompleteSolve == (conclusionsMap.keySet == rules.flatMap(_.allRunes).toSet))
     conclusionsMap

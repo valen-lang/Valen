@@ -13,7 +13,7 @@ import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
 import dev.vale.typing.function._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Solver}
+import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Solver, Step}
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -371,7 +371,7 @@ class FunctionCompilerSolvingLayer(
 
         TemplataCompiler.getFirstUnsolvedIdentifyingRune(
           function.genericParameters,
-          (rune) => solver.getConclusion(rune).nonEmpty) match {
+          (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // This unsolved rune better be one we didn't explicitly hand in already.
@@ -472,7 +472,7 @@ class FunctionCompilerSolvingLayer(
 
     // Skip checking that the conclusions are all there, because we don't assume that they will all be there. We expect
     // an incomplete solve.
-    val preliminaryInferences = preliminarySolver.userifyConclusions().toMap
+    val preliminaryInferences = preliminarySolver.solverState.userifyConclusions().toMap
     // Now we can use preliminaryInferences to know whether or not we need a placeholder for an
     // identifying rune.
     // Our
@@ -562,7 +562,7 @@ class FunctionCompilerSolvingLayer(
       // Each step happens after the solver has done all it possibly can. Sometimes this can lead
       // to races, see RRBFS.
       (solver) => {
-        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solver.getConclusion(rune).nonEmpty) match {
+        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
@@ -570,7 +570,19 @@ class FunctionCompilerSolvingLayer(
             val templata =
               templataCompiler.createPlaceholder(
                 coutputs, nearEnv, functionTemplateId, genericParam, index, function.runeToType, placeholderPureHeight, true)
-            solver.manualStep(Map(genericParam.rune.rune -> templata))
+
+            { // solver.manualStep(Map(genericParam.rune.rune -> templata))
+              val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
+              Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
+                solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion).getOrDie()
+              })
+              solver.solverState.addStep(step)
+//              solver.solverState.addStep(step)
+//              step.conclusions.foreach({ case (rune, conclusion) =>
+//                solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)
+//              })
+            }
+
             true
           }
         }

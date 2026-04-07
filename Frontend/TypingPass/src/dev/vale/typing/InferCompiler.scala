@@ -227,7 +227,7 @@ class InferCompiler(
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.userifyConclusions().toMap)
+    Ok(solver.solverState.userifyConclusions().toMap)
   }
 
 
@@ -761,7 +761,7 @@ class InferCompiler(
 
       // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
       // Caller should remember to do that!
-      if (!solver.isComplete()) {
+      if (!solver.solverState.isComplete()) {
         val continue = onIncompleteSolve(solver)
         if (!continue) {
           return Ok(false)

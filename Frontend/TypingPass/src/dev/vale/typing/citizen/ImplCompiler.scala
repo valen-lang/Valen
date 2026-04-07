@@ -156,7 +156,7 @@ class ImplCompiler(
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.userifyConclusions().toMap)
+    Ok(solver.solverState.userifyConclusions().toMap)
   }
 
   // This will just figure out the struct template and interface template,

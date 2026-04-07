@@ -11,7 +11,7 @@ import dev.vale.typing.templata._
 import dev.vale.typing.types._
 import dev.vale.{Accumulator, Err, Interner, Keywords, Ok, Profiler, RangeS, typing, vassert, vassertSome, vcurious, vfail, vimpl, vregionmut, vwat}
 import dev.vale.highertyping._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve}
+import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Step}
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing._
@@ -327,7 +327,7 @@ class StructCompilerGenericArgsLayer(
         // Each step happens after the solver has done all it possibly can. Sometimes this can lead
         // to races, see RRBFS.
         (solver) => {
-          TemplataCompiler.getFirstUnsolvedIdentifyingRune(structA.genericParameters, (rune) => solver.getConclusion(rune).nonEmpty) match {
+          TemplataCompiler.getFirstUnsolvedIdentifyingRune(structA.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
             case None => false
             case Some((genericParam, index)) => {
               val placeholderPureHeight = vregionmut(None)
@@ -335,7 +335,15 @@ class StructCompilerGenericArgsLayer(
               val templata =
                 templataCompiler.createPlaceholder(
                   coutputs, outerEnv, structTemplateId, genericParam, index, allRuneToType, placeholderPureHeight, true)
-              solver.manualStep(Map(genericParam.rune.rune -> templata))
+
+              { // solver.manualStep(Map(genericParam.rune.rune -> templata))
+                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
+                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
+                  solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion).getOrDie()
+                })
+                solver.solverState.addStep(step)
+              }
+
               true
             }
           }
@@ -422,7 +430,7 @@ class StructCompilerGenericArgsLayer(
         // Each step happens after the solver has done all it possibly can. Sometimes this can lead
         // to races, see RRBFS.
         (solver) => {
-          TemplataCompiler.getFirstUnsolvedIdentifyingRune(interfaceA.genericParameters, (rune) => solver.getConclusion(rune).nonEmpty) match {
+          TemplataCompiler.getFirstUnsolvedIdentifyingRune(interfaceA.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
             case None => false
             case Some((genericParam, index)) => {
               // Make a placeholder for every argument even if it has a default, see DUDEWCD.
@@ -430,7 +438,19 @@ class StructCompilerGenericArgsLayer(
               val templata =
                 templataCompiler.createPlaceholder(
                   coutputs, outerEnv, interfaceTemplateId, genericParam, index, interfaceA.runeToType, placeholderPureHeight, true)
-              solver.manualStep(Map(genericParam.rune.rune -> templata))
+
+              { // solver.manualStep(Map(genericParam.rune.rune -> templata))
+                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
+                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
+                  solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion).getOrDie()
+                })
+                solver.solverState.addStep(step)
+//                solver.solverState.addStep(step)
+//                step.conclusions.foreach({ case (rune, conclusion) =>
+//                  solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)
+//                })
+              }
+
               true
             }
           }

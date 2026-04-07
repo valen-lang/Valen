@@ -6,8 +6,9 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 object OptimizedSolverState {
-  def apply[Rule, Rune, Conclusion](): OptimizedSolverState[Rule, Rune, Conclusion] = {
+  def apply[Rule, Rune, Conclusion](ruleToPuzzles_ : Rule => Vector[Vector[Rune]]): OptimizedSolverState[Rule, Rune, Conclusion] = {
     OptimizedSolverState[Rule, Rune, Conclusion](
+      ruleToPuzzles_,
       mutable.ArrayBuffer[Step[Rule, Rune, Conclusion]](),
       mutable.HashMap[Rune, Int](),
       mutable.HashMap[Int, Rune](),
@@ -29,6 +30,8 @@ object OptimizedSolverState {
 }
 
 case class OptimizedSolverState[Rule, Rune, Conclusion](
+  ruleToPuzzles_ : Rule => Vector[Vector[Rune]],
+
   private val steps: mutable.ArrayBuffer[Step[Rule, Rune, Conclusion]],
 
   private val userRuneToCanonicalRune: mutable.HashMap[Rune, Int],
@@ -89,53 +92,12 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
 ) extends ISolverState[Rule, Rune, Conclusion] {
 
 
-  class OptimizedStepState(
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    complex: Boolean,
-    rules: Vector[(Int, Rule)]
-  ) extends IStepState[Rule, Rune, Conclusion] {
-    private var alive = true
-    private var tentativeStep: Step[Rule, Rune, Conclusion] = Step(complex, rules, Vector(), Map())
-
-    def close(): Step[Rule, Rune, Conclusion] = {
-      vassert(alive)
-      alive = false
-      tentativeStep
-    }
-
-    override def getConclusion(requestedUserRune: Rune): Option[Conclusion] = {
-      vassert(alive)
-      OptimizedSolverState.this.getConclusion(requestedUserRune)
-    }
-
-    override def addRule(rule: Rule): Unit = {
-      vassert(alive)
-      val ruleIndex = OptimizedSolverState.this.addRule(rule)
-      tentativeStep = tentativeStep.copy(addedRules = tentativeStep.addedRules :+ rule)
-      ruleToPuzzles(rule).foreach(puzzleUserRunes => {
-        val puzzleCanonicalRunes = puzzleUserRunes.map(OptimizedSolverState.this.getCanonicalRune)
-        OptimizedSolverState.this.addPuzzle(ruleIndex, puzzleCanonicalRunes)
-      })
-    }
-
-    override def getUnsolvedRules(): Vector[Rule] = {
-      vassert(alive)
-      OptimizedSolverState.this.getUnsolvedRules()
-    }
-
-    override def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedUserRune: Rune, conclusion: Conclusion): Unit = {
-      vassert(alive)
-      //      val newlySolvedCanonicalRune = OptimizedSolverState.this.userRuneToCanonicalRune(newlySolvedUserRune)
-      tentativeStep = tentativeStep.copy(conclusions = tentativeStep.conclusions + (newlySolvedUserRune -> conclusion))
-      //      Ok(true)
-    }
-  }
-
   override def equals(obj: Any): Boolean = vcurious();
   override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
   override def deepClone(): OptimizedSolverState[Rule, Rune, Conclusion] = {
     OptimizedSolverState[Rule, Rune, Conclusion](
+      ruleToPuzzles_,
       steps.clone(),
       userRuneToCanonicalRune.clone(),
       canonicalRuneToUserRune.clone(),
@@ -159,61 +121,13 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     canonicalRuneToUserRune.keySet.toSet
   }
 
-  override def complexStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new OptimizedStepState(ruleToPuzzles, true, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps += step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
   override def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream
 
-  override def simpleStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    ruleIndex: Int, rule: Rule, step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new OptimizedStepState(ruleToPuzzles, false, Vector((ruleIndex, rule)))
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps += step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
+  def addStep(step: Step[Rule, Rune, Conclusion]): Unit = {
+    steps += step
   }
 
-  override def initialStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new OptimizedStepState(ruleToPuzzles, false, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps += step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
+  override def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]] = ruleToPuzzles_(rule)
 
   override def getCanonicalRune(rune: Rune): Int = {
     userRuneToCanonicalRune.get(rune) match {
@@ -281,6 +195,10 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     runeToConclusion(getCanonicalRune(rune))
   }
 
+  override def isComplete(): Boolean = {
+    userifyConclusions().size == userRuneToCanonicalRune.size
+  }
+
   override def addRune(rune: Rune): Int = {
 //    vassert(!userRuneToCanonicalRune.contains(rune))
     val newCanonicalRune = userRuneToCanonicalRune.size
@@ -294,7 +212,15 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     newCanonicalRune
   }
 
-  override def getConclusions(): Stream[(Int, Conclusion)] = vimpl()
+  override def getConclusions(): Stream[(Int, Conclusion)] = {
+    runeToConclusion
+        .zipWithIndex
+        .flatMap({
+          case (None, _) => None
+          case (Some(conclusion), runeIndex) => Some((runeIndex, conclusion))
+        })
+        .toStream
+  }
 
   override def getAllRules(): Vector[Rule] = rules.toVector
 
@@ -341,45 +267,6 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     puzzleToIndexInNumUnknowns += indexInNumUnknownsBucket
 
     puzzleIndex
-  }
-
-  override def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
-  Result[Int, ISolverError[Rune, Conclusion, ErrType]] = {
-
-    // Check to make sure there are no mismatches with previous conclusions
-    newConclusions.foreach({ case (newlySolvedCanonicalRune, newConclusion) =>
-      runeToConclusion(newlySolvedCanonicalRune) match {
-        case None =>
-        case Some(existingConclusion) => {
-          if (existingConclusion != newConclusion) {
-            return Err(
-              SolverConflict(
-                canonicalRuneToUserRune(newlySolvedCanonicalRune),
-                existingConclusion,
-                newConclusion))
-          }
-        }
-      }
-    })
-
-    val numNewConclusions =
-      newConclusions.map({ case (newlySolvedCanonicalRune, newConclusion) =>
-        runeToConclusion(newlySolvedCanonicalRune) match {
-          case None => {
-            concludeRune(newlySolvedCanonicalRune, newConclusion)
-            1
-          }
-          case Some(existingConclusion) => {
-            0
-          }
-        }
-      }).sum
-
-    ruleIndices.foreach(ruleIndex => {
-      removeRule(ruleIndex)
-    })
-
-    Ok(numNewConclusions)
   }
 
   override def userifyConclusions(): Stream[(Rune, Conclusion)] = {
@@ -483,7 +370,7 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     Ok(true)
   }
 
-  private def removeRule(ruleIndex: Int): Unit = {
+  override def removeRule(ruleIndex: Int): Unit = {
     // Here we used to check that the rule's runes were solved, but
     // we don't do that anymore because some rules leave their runes
     // as mysteries, see SAIRFU.

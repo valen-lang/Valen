@@ -619,7 +619,7 @@ class OverloadResolver(
         throw CompileErrorExceptionT(
           CouldntNarrowDownCandidates(
             callRange,
-            vimpl()))
+            vimpl(duplicateBanners)))
         //            duplicateBanners.map(_.range.getOrElse(RangeS.internal(interner, -296729)))))
       } else if (normalIndicesAndCandidates.size == 1) {
         normalIndicesAndCandidates.head._1

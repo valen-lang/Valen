@@ -7,8 +7,9 @@ import scala.collection.mutable.ArrayBuffer
 
 
 object SimpleSolverState {
-  def apply[Rule, Rune, Conclusion](): SimpleSolverState[Rule, Rune, Conclusion] = {
+  def apply[Rule, Rune, Conclusion](ruleToPuzzles: Rule => Vector[Vector[Rune]]): SimpleSolverState[Rule, Rune, Conclusion] = {
     SimpleSolverState[Rule, Rune, Conclusion](
+      ruleToPuzzles,
       Vector(),
       Map[Rune, Int](),
       Map[Int, Rune](),
@@ -19,6 +20,8 @@ object SimpleSolverState {
 }
 
 case class SimpleSolverState[Rule, Rune, Conclusion](
+  private val ruleToPuzzles_ : (Rule) => Vector[Vector[Rune]],
+
   private var steps: Vector[Step[Rule, Rune, Conclusion]],
 
   private var userRuneToCanonicalRune: Map[Rune, Int],
@@ -36,6 +39,7 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
   def deepClone(): SimpleSolverState[Rule, Rune, Conclusion] = {
     vcurious()
     SimpleSolverState(
+      ruleToPuzzles_,
       steps,
       userRuneToCanonicalRune,
       canonicalRuneToUserRune,
@@ -58,6 +62,8 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     canonicalRuneToConclusion.toStream
   }
 
+  override def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]] = ruleToPuzzles_(rule)
+
   override def userifyConclusions(): Stream[(Rune, Conclusion)] = {
     canonicalRuneToConclusion
       .toStream
@@ -76,6 +82,10 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     newCanonicalRune
   }
 
+  override def isComplete(): Boolean = {
+    userifyConclusions().size == userRuneToCanonicalRune.size
+  }
+
   override def getAllRules(): Vector[Rule] = {
     rules
   }
@@ -85,6 +95,10 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     rules = rules :+ rule
 //    canonicalRuleToUserRule = canonicalRuleToUserRule + (newCanonicalRule -> rule)
     newCanonicalRule
+  }
+
+  def addStep(step: Step[Rule, Rune, Conclusion]): Unit = {
+    steps = steps :+ step
   }
 
   override def getCanonicalRune(rune: Rune): Int = {
@@ -133,120 +147,8 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     Ok(isNew)
   }
 
-  // Success returns number of new conclusions
-  override def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
-  Result[Int, ISolverError[Rune, Conclusion, ErrType]] = {
-    val numNewConclusions =
-      newConclusions.map({ case (newlySolvedRune, newConclusion) =>
-        concludeRune[ErrType](newlySolvedRune, newConclusion) match {
-          case Err(e) => return Err(e)
-          case Ok(isNew) => isNew
-        }
-      }).count(_ == true)
-
-    ruleIndices.foreach(removeRule)
-
-    Ok(numNewConclusions)
-  }
-
-  private def removeRule(ruleIndex: Int) = {
+  override def removeRule(ruleIndex: Int) = {
     openRuleToPuzzleToRunes = openRuleToPuzzleToRunes - ruleIndex
-  }
-
-  class SimpleStepState(
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    complex: Boolean,
-    rules: Vector[(Int, Rule)]
-  ) extends IStepState[Rule, Rune, Conclusion] {
-    private var alive = true
-    private var tentativeStep: Step[Rule, Rune, Conclusion] = Step(complex, rules, Vector(), Map())
-
-    def close(): Step[Rule, Rune, Conclusion] = {
-      vassert(alive)
-      alive = false
-      tentativeStep
-    }
-
-    override def getConclusion(requestedUserRune: Rune): Option[Conclusion] = {
-      vassert(alive)
-      SimpleSolverState.this.getConclusion(requestedUserRune)
-    }
-
-    override def addRule(rule: Rule): Unit = {
-      vassert(alive)
-      val ruleIndex = SimpleSolverState.this.addRule(rule)
-      tentativeStep = tentativeStep.copy(addedRules = tentativeStep.addedRules :+ rule)
-      ruleToPuzzles(rule).foreach(puzzleUserRunes => {
-        val puzzleCanonicalRunes = puzzleUserRunes.map(SimpleSolverState.this.getCanonicalRune)
-        SimpleSolverState.this.addPuzzle(ruleIndex, puzzleCanonicalRunes)
-      })
-    }
-
-    override def getUnsolvedRules(): Vector[Rule] = {
-      vassert(alive)
-      SimpleSolverState.this.getUnsolvedRules()
-    }
-
-    override def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedUserRune: Rune, conclusion: Conclusion): Unit = {
-      vassert(alive)
-      tentativeStep = tentativeStep.copy(conclusions = tentativeStep.conclusions + (newlySolvedUserRune -> conclusion))
-    }
-  }
-
-  override def initialStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, false, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
-  override def simpleStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    ruleIndex: Int,
-    rule: Rule,
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, false, Vector((ruleIndex, rule)))
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
-  override def complexStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, true, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
   }
 
   override def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream
