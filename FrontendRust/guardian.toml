@@ -34,8 +34,10 @@ include_shields = [
     { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
     { name = "NoGlobalStateAnywhere-NGSAX.md" },
     { name = "NoNewDefinitions-NNDX.md" },
+    { name = "NoAddingGuardianDirectives-NAGDX.md" },
     { name = "NoRenamedDefinitions-NRDX.md" },
     { name = "NoMovedDefinitions-NMDX.md" },
+    { name = "TypesFitIntoTheseCategories-TFITCX.md" },
 
     { name = "KeepInlineComparisonsInline-KICIX.md" },
     { name = "NeverHaveConditionalsInTests-NHCITX.md" },

@@ -15,4 +15,8 @@ CRITICAL RULES:
 
 If any of these sound like a problem, then stop and ask me for help.
 
+GUARDIAN: A "Guardian" system watches your edits and may block them with violation messages. How to handle:
+ * It often flags pre-existing issues in the code you're touching. If minor, fix it. If deferrable, add a `panic!` placeholder. If too disruptive, stop and ask the user.
+ * If the violation is wrong or a hallucination, use `guardian_temp_disable` to disable it for that definition.
+
 proceed.

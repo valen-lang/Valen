@@ -1,52 +1,58 @@
 ---
-model: AgenticSmall
 description: Output data must be Copy or behind &'s — Clone-without-Copy on output data is a smell.
-when_mentioned: or("\\.clone\\(\\)", "derive.*Clone")
+model: AgenticSmall
+assumes: TFITCX
+when_mentioned: "Arena-allocated"
 ---
 
-# ArenaTypesDontClone (ATDCX)
+# Arena Types Don't Clone (ATDCX)
 
-Output data (AST nodes, rules, names, attributes) must be either **Copy** (stored inline, trivially cheap to duplicate) or **behind `&'s`/`&'p`** (arena-allocated, accessed by reference, never duplicated). The smell to watch for is **Clone-without-Copy** — that means either the type should be Copy (and something is blocking it), or it's working state that belongs on the heap, not in the output.
+Output data (AST nodes, rules, names, attributes) must be either **Copy** (stored inline, trivially cheap) or **behind `&'s`/`&'p`** (arena-allocated, shared by reference, never duplicated). Clone-without-Copy on output data means something is wrong. Rust requires `Clone` as a supertrait of `Copy`, so Copy types having Clone is fine — the concern is only Clone *without* Copy.
 
-Note: Rust requires `Clone` as a supertrait of `Copy`, so every `Copy` type will also have `Clone` in its derive list. That's fine — the compiler generates a trivial memcpy. The concern is only with types that have `Clone` *without* `Copy`.
+Arena-allocated types (`StructS`, `FunctionS`, `IExpressionSE` variants, `StructA`, `FunctionA`, parser AST nodes, etc.) must NOT derive Clone. Copy types (`StrI`, `IRuneS`, `RangeS`, `CodeLocationS`, `RuneUsage`, attribute/body/member enums) derive Copy+Clone.
 
-## Output data categories
+Working state (`StackFrame`, `EnvironmentS`, `FunctionEnvironmentS`, `VariableDeclarations`, solver types) may have Clone-without-Copy — they live on the heap and clone for scope forking.
 
-### Behind `&'s` — arena-allocated, accessed by reference
+## Examples
 
-These must NOT derive Clone. They are allocated into the arena once and shared by reference:
+**DENY:**
+```rust
+#[derive(Clone, Debug)]  // Clone without Copy on arena-allocated output
+pub struct StructS<'s> {
+    pub name: INameS<'s>,
+    pub attributes: &'s [ICitizenAttributeS<'s>],
+}
+```
 
-- Postparsing AST output nodes: `StructS`, `InterfaceS`, `ImplS`, `FunctionS`, `ParameterS`, `GenericParameterS`, `FileS`, etc.
-- Parser AST output nodes: `FileP`, `FunctionP`, `StructP`, `InterfaceP`, `IExpressionPE`, `ITemplexPT`, etc.
-- Higher typing output nodes: `StructA`, `FunctionA`, `InterfaceA`, etc.
-- Generic parameter type variants: `RegionGenericParameterTypeS`, `CoordGenericParameterTypeS`, `OtherGenericParameterTypeS`
+**DENY:**
+```rust
+let copy = struct_s.clone();  // cloning arena-allocated output data
+```
 
-### Copy — small value types stored inline
+**ALLOW:**
+```rust
+#[derive(Copy, Clone, Debug)]  // Copy+Clone on small value type
+pub struct RangeS<'s> {
+    pub begin: CodeLocationS<'s>,
+    pub end: CodeLocationS<'s>,
+}
+```
 
-These derive `Copy` (and `Clone` as required supertrait). They're stored by value in slices or struct fields and are trivially cheap to duplicate:
+**ALLOW:**
+```rust
+#[derive(Debug)]  // No Clone on arena-allocated type
+pub struct StructS<'s> {
+    pub name: INameS<'s>,
+    pub attributes: &'s [ICitizenAttributeS<'s>],
+}
+```
 
-- Interned handles: `StrI`, `IRuneS`, `INameS`, `IImpreciseNameS`, `IVarNameS`, `IFunctionDeclarationNameS` (all tagged pointers to arena data)
-- Coordinates: `RangeS`, `CodeLocationS`, `RangeL`, `FileCoordinate`, `PackageCoordinate`
-- Small structs: `RuneUsage`, `FunctionNameS`, `LambdaDeclarationNameS`, `LocationInDenizen`
-- Attribute enums and their variants: `ICitizenAttributeS`, `IFunctionAttributeS`, `ExternS`, `PureS`, `SealedS`, `BuiltinS`, `MacroCallS`, `ExportS`, `UserFunctionS`, `AdditiveS`
-- Member enums and their variants: `IStructMemberS`, `NormalStructMemberS`, `VariadicStructMemberS`
-- Body enums: `IBodyS`, `CodeBodyS`, `ExternBodyS`, `AbstractBodyS`, `GeneratedBodyS`
+**ALLOW:**
+```rust
+// Working state — Clone is acceptable
+let new_frame = stack_frame.clone();
+```
 
-## Known exceptions
+## Exceptions
 
-- **`ProgramS`**: Currently Clone-without-Copy because `EnvironmentA` stores `PackageCoordinateMap<ProgramS>` by value and clones it on scope entry. All fields are `&'s` slices (Copy-eligible). Fix: change `EnvironmentA.code_map` to a `&'s` reference.
-
-## Working state (not covered by this shield)
-
-Working state types (`StackFrame`, `EnvironmentS`, `FunctionEnvironmentS`, `VariableDeclarations`, solver types) live on the heap and may legitimately need Clone for scope forking. These are not output data and are not covered by this shield.
-
-## Why
-
-Clone-without-Copy on output data:
-1. Creates a false affordance — it suggests deep-copying is a valid operation when it never should be
-2. Wastes memory if accidentally called — the clone goes on the heap, not in the arena
-3. May hide expensive heap allocations (Vec, HashMap inside cloned structs)
-
-// V: lets have a filter on this. lets maybe run it only during review.
-// V: actually maybe lets nuke this shield
-Z: include
+A. `ProgramS` — currently Clone-without-Copy because `EnvironmentA` stores `PackageCoordinateMap<ProgramS>` by value.

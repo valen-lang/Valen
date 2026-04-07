@@ -180,7 +180,7 @@ These are cross-project shields and should stay in `Luz/shields/` per `docs/meta
 - [ ] `Luz/shields/ExtractPromptsIntoFunctions-EPIFX.md`
 - [ ] `Luz/shields/FailFastFailLoud-FFFLX.md`
 - [ ] `Luz/shields/ForkInsideJoin-FIJX.md`
-- [ ] `Luz/shields/GUIDE-bringing-in-a-shield.md`
+- [x] `Luz/shields/GUIDE-bringing-in-a-shield.md` — Merged into `Guardian/README.md` § "Creating and Calibrating Shields"
 - [ ] `Luz/shields/ImmediateInterningDiscipline-IIDX.md`
 - [ ] `Luz/shields/IntegrationTestsBehaveLikeUsers-ITBLUX.md`
 - [ ] `Luz/shields/KeepInlineComparisonsInline-KICIX.md`

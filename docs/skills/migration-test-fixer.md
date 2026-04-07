@@ -1,5 +1,5 @@
 ---
-name: migration-text-fixer
+name: migration-test-fixer
 description: Migrate Scala code to Rust verbatim until a given test passes
 ---
 

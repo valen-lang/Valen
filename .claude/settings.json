@@ -35,7 +35,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Sylvan/.claude/hooks/validate-readonly/target/release/validate-readonly",
+            "command": "/Volumes/V/Sylvan/Luz/hooks/validate-readonly/target/release/validate-readonly",
             "timeout": 5000
           }
         ]

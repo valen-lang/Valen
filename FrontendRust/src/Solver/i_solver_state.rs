@@ -8,6 +8,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 */
+// AFTERM: definitely needs more comments
+// AFTERM: lets send a bunch of haikus crawling around figuring out better names for all these things
 // mig: trait ISolverState
 pub trait ISolverState<Rule, Rune, Conclusion>
 where
@@ -174,4 +176,5 @@ trait ISolverState[Rule, Rune, Conclusion] {
   Result[Boolean, ISolverError[Rune, Conclusion, ErrType]]
 }
 */
+    fn new() -> Self where Self: Sized;
 }

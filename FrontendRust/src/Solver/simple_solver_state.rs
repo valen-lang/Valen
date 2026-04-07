@@ -101,6 +101,10 @@ where
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
 */
+    fn new() -> Self {
+        SimpleSolverState::new()
+    }
+
 // mig: fn deep_clone
     fn deep_clone(&self) -> Self
     where
