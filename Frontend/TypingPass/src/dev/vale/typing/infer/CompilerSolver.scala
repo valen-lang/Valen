@@ -715,10 +715,7 @@ class CompilerRuleSolver(
               // We know that the sender can be upcast, so we can't shortcut.
               // We need to wait for the receiver rune to know what to do.
               val newRule = CallSiteCoordIsaSR(range, None, senderRune, receiverRune)
-              val newRuleIndex = solverState.addRule(newRule)
-              solverState.getPuzzlesForRule(newRule).foreach(puzzle => {
-                solverState.addPuzzle(newRuleIndex, puzzle.map(r => solverState.getCanonicalRune(r)))
-              })
+              solverState.addRuleAndPuzzles(newRule)
               Ok(())
             } else {
               // We're sending something that can't be upcast, so both sides are definitely the same type.
@@ -733,10 +730,7 @@ class CompilerRuleSolver(
               // We need to wait for the sender rune to be able to confirm the sender
               // implements the receiver.
               val newRule = CallSiteCoordIsaSR(range, None, senderRune, receiverRune)
-              val newRuleIndex = solverState.addRule(newRule)
-              solverState.getPuzzlesForRule(newRule).foreach(puzzle => {
-                solverState.addPuzzle(newRuleIndex, puzzle.map(r => solverState.getCanonicalRune(r)))
-              })
+              solverState.addRuleAndPuzzles(newRule)
               Ok(())
             } else {
               // We're receiving a concrete type, so both sides are definitely the same type.

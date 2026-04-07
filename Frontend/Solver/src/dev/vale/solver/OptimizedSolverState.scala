@@ -127,7 +127,12 @@ case class OptimizedSolverState[Rule, Rune, Conclusion](
     steps += step
   }
 
-  override def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]] = ruleToPuzzles_(rule)
+  override def addRuleAndPuzzles(rule: Rule): Unit = {
+    val ruleIndex = addRule(rule)
+    ruleToPuzzles_(rule).foreach(puzzle => {
+      addPuzzle(ruleIndex, puzzle.map(r => getCanonicalRune(r)))
+    })
+  }
 
   override def getCanonicalRune(rune: Rune): Int = {
     userRuneToCanonicalRune.get(rune) match {

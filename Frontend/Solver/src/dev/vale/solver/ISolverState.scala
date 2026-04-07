@@ -39,8 +39,10 @@ trait ISolverState[Rule, Rune, Conclusion] {
 
   def addPuzzle(ruleIndex: Int, runes: Vector[Int]): Unit
 
-  // TODO DO NOT SUBMIT: add a addRuleAndPuzzles which calls addPuzzle, addRule, and this, and get rid of this
-  def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]]
+//  // TODO DO NOT SUBMIT: add a addRuleAndPuzzles which calls addPuzzle, addRule, and this, and get rid of this
+//  def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]]
+
+  def addRuleAndPuzzles(rule: Rule): Unit
 
   def sanityCheck(): Unit
 

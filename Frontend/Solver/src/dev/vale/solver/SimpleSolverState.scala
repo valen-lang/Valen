@@ -62,7 +62,12 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     canonicalRuneToConclusion.toStream
   }
 
-  override def getPuzzlesForRule(rule: Rule): Vector[Vector[Rune]] = ruleToPuzzles_(rule)
+  override def addRuleAndPuzzles(rule: Rule): Unit = {
+    val ruleIndex = addRule(rule)
+    ruleToPuzzles_(rule).foreach(puzzle => {
+      addPuzzle(ruleIndex, puzzle.map(r => getCanonicalRune(r)))
+    })
+  }
 
   override def userifyConclusions(): Stream[(Rune, Conclusion)] = {
     canonicalRuneToConclusion
