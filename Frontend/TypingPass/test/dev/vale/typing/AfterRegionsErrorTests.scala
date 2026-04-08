@@ -233,7 +233,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         fff.rejectedCalleeToReason.map(_._2).head match {
           case InferFailure(reason) => {
             reason match {
-              case FailedCompilerSolve(_, _, RuleError(SendingNonCitizen(IntT(32)))) =>
+              case FailedSolve(_, _, _, _, RuleError(SendingNonCitizen(IntT(32)))) =>
               case other => vfail(other)
             }
           }

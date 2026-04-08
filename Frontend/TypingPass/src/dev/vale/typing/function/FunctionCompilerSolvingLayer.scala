@@ -390,7 +390,7 @@ class FunctionCompilerSolvingLayer(
           }
         }
       }) match {
-      case Err(f@FailedCompilerSolve(_, _, _)) => {
+      case Err(f@FailedSolve(_, _, _, _, _)) => {
         return (ResolveFunctionFailure(ResolvingSolveFailedOrIncomplete(f)))
       }
       case Ok(true) =>
@@ -583,7 +583,7 @@ class FunctionCompilerSolvingLayer(
           }
         }
       }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(function.range :: parentRanges, f))
         }
         case Ok(true) =>

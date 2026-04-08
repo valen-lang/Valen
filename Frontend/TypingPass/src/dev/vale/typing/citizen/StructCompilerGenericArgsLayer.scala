@@ -349,7 +349,7 @@ class StructCompilerGenericArgsLayer(
             }
           }
         }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, f))
         }
         case Ok(true) =>
@@ -452,7 +452,7 @@ class StructCompilerGenericArgsLayer(
             }
           }
         }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(interfaceA.range :: parentRanges, f))
         }
         case Ok(true) =>

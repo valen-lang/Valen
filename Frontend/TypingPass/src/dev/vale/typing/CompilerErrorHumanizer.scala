@@ -101,16 +101,7 @@ object CompilerErrorHumanizer {
         }
         case CouldntEvaluatImpl(range, eff) => {
           "Couldn't evaluate impl statement:\n" +
-            humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, eff match {
-              case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-                FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                  steps, incompleteConclusions, unsolvedRules, unknownRunes.toVector, SolveIncomplete())
-              }
-              case FailedCompilerSolve(steps, unsolvedRules, error) => {
-                FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                  steps, Map(), unsolvedRules, Vector(), error)
-              }
-            })
+            humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, eff)
       }
         case BodyResultDoesntMatch(range, functionName, expectedReturnType, resultType) => {
           "Function " + printableName(codeMap, functionName) + " return type " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType)) + " doesn't match body's result: " + humanizeTemplata(codeMap, CoordTemplataT(resultType))
@@ -203,16 +194,7 @@ object CompilerErrorHumanizer {
               (rule: IRulexSR) => rule.runeUsages.map(usage => (usage.rune, usage.range)),
               (rule: IRulexSR) => rule.runeUsages.map(_.rune),
               PostParserErrorHumanizer.humanizeRule,
-              failedSolve match {
-                case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-                  FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                    steps, incompleteConclusions, unsolvedRules, unknownRunes.toVector, SolveIncomplete())
-                }
-                case FailedCompilerSolve(steps, unsolvedRules, error) => {
-                  FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                    steps, Map(), unsolvedRules, Vector(), error)
-                }
-              })
+              failedSolve)
           text
         }
         case HigherTypingInferError(range, err) => {
@@ -296,18 +278,9 @@ object CompilerErrorHumanizer {
       linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
       lineRangeContaining: (CodeLocationS) => RangeS,
       lineContaining: (CodeLocationS) => String,
-      error: IIncompleteOrFailedCompilerSolve):
+      error: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]):
   String = {
-    humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, error match {
-      case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-        FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-          steps, incompleteConclusions, unsolvedRules, unknownRunes.toVector, SolveIncomplete())
-      }
-      case FailedCompilerSolve(steps, unsolvedRules, error) => {
-        FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-          steps, Map(), unsolvedRules, Vector(), error)
-      }
-    })
+    humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, error)
   }
 
   def humanizeConclusionResolveError(
@@ -465,16 +438,7 @@ object CompilerErrorHumanizer {
       }
 //      case Outscored() => "Outscored!"
       case InferFailure(reason) => {
-        humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason match {
-          case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-            FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-              steps, incompleteConclusions, unsolvedRules, unknownRunes.toVector, SolveIncomplete())
-          }
-          case FailedCompilerSolve(steps, unsolvedRules, error) => {
-            FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-              steps, Map(), unsolvedRules, Vector(), error)
-          }
-        })
+        humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
       }
     })
   }

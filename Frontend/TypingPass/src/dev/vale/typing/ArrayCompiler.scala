@@ -11,6 +11,7 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import OverloadResolver._
 import dev.vale.highertyping.HigherTypingPass.explicifyLookups
+import dev.vale.solver.FailedSolve
 import dev.vale.typing.ast.{DestroyImmRuntimeSizedArrayTE, DestroyStaticSizedArrayIntoFunctionTE, FunctionCallTE, NewImmRuntimeSizedArrayTE, ReferenceExpressionTE, RuntimeSizedArrayLookupTE, StaticArrayFromCallableTE, StaticArrayFromValuesTE, StaticSizedArrayLookupTE}
 import dev.vale.typing.env._
 import dev.vale.typing.names._
@@ -198,7 +199,7 @@ class ArrayCompiler(
         // TODO(regions): Sometimes add default region rune
         false
       }) match {
-      case Err(f @ FailedCompilerSolve(_, _, err)) => {
+      case Err(f @ FailedSolve(_, _, _, _, err)) => {
         throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
       }
       case Ok(true) =>
@@ -387,7 +388,7 @@ class ArrayCompiler(
         // TODO(regions): Sometimes add default region
         false
       }) match {
-      case Err(f @ FailedCompilerSolve(_, _, err)) => {
+      case Err(f @ FailedSolve(_, _, _, _, err)) => {
         throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
       }
       case Ok(true) =>

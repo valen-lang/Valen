@@ -114,7 +114,7 @@ class ImplCompiler(
     callingEnv: IInDenizenEnvironmentT,
     initialKnowns: Vector[InitialKnown],
     implTemplata: ImplDefinitionTemplataT):
-  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedCompilerSolve] = {
+  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
 
     val ImplDefinitionTemplataT(parentEnv, impl) = implTemplata
     val ImplA(
