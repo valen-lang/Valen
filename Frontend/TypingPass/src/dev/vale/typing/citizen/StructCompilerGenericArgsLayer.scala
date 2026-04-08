@@ -337,11 +337,12 @@ class StructCompilerGenericArgsLayer(
                   coutputs, outerEnv, structTemplateId, genericParam, index, allRuneToType, placeholderPureHeight, true)
 
               { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
-                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
-                  solver.solverState.concludeRune(rune, conclusion).getOrDie()
-                })
-                solver.solverState.addStep(step)
+//                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
+//                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
+//                  solver.solverState.concludeRune(rune, conclusion).getOrDie()
+//                })
+//                solver.solverState.addStep(step)
+                solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
               }
 
               true
@@ -440,11 +441,7 @@ class StructCompilerGenericArgsLayer(
                   coutputs, outerEnv, interfaceTemplateId, genericParam, index, interfaceA.runeToType, placeholderPureHeight, true)
 
               { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
-                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
-                  solver.solverState.concludeRune(rune, conclusion).getOrDie()
-                })
-                solver.solverState.addStep(step)
+                solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
 //                solver.solverState.addStep(step)
 //                step.conclusions.foreach({ case (rune, conclusion) =>
 //                  solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)

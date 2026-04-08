@@ -116,23 +116,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
       solverState.sanityCheck()
     }
 
-    { // manualStep(initiallyKnownRunes)
-      val step = Step[Rule, Rune, Conclusion](false, Vector(), Vector(), Map())
-      initiallyKnownRunes.foreach({ case (rune, conclusion) =>
-        solverState.concludeRune(rune, conclusion).getOrDie()
-      })
-
-//      rules.foreach({ case (ruleIndex, rule) =>
-//        SimpleSolverState.this.removeRule(ruleIndex)
-//      })
-      solverState.addStep(step)
-    }
-
-    if (sanityCheck) {
-      solverState.sanityCheck()
-    }
-
-    addRules(initialRules.toVector)
+    solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
 
     if (sanityCheck) {
       solverState.sanityCheck()
@@ -155,17 +139,8 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     rules.foreach(rule => addRule(rule))
   }
 
-  def addRule(rule: Rule): Unit = {
-      val ruleIndex = solverState.addRule(rule)
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
-      ruleToPuzzles(rule).foreach(puzzleRunes => {
-        solverState.addPuzzle(ruleIndex, puzzleRunes.distinct)
-      })
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
+  private def addRule(rule: Rule): Unit = {
+    solverState.addRuleAndPuzzles(rule)
   }
 
 //  def manualStep(newConclusions: Map[Rune, Conclusion]): Unit = {
@@ -233,18 +208,14 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
         case Some(solvingRuleIndex) => {
           val rule = solverState.getRule(solvingRuleIndex)
 
-          val step = Step[Rule, Rune, Conclusion](false, Vector((solvingRuleIndex, rule)), Vector(), Map())
+          val stepsBefore = solverState.getSteps().size
           solveRule.solve(state, env, solverState, solvingRuleIndex, rule) match {
-            case Ok(()) => {
-              solverState.removeRule(solvingRuleIndex)
-              solverState.addStep(step)
-            }
-            case Err(e) => {
-              solverState.removeRule(solvingRuleIndex)
-              solverState.addStep(step)
-              return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-            }
+            case Ok(()) => {}
+            case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
           }
+          val stepsAfter = solverState.getSteps().size
+          vassert(stepsAfter == stepsBefore + 1)
+          vassert(!solverState.openRuleToPuzzleToRunes.contains(solvingRuleIndex))
 
           if (sanityCheck) {
 //            step.conclusions.foreach({ case (rune, conclusion) =>
@@ -261,22 +232,13 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
       // Stage 2: Do a complex solve if available.
 
       if (solverState.getUnsolvedRules().nonEmpty) {
-        val step = Step[Rule, Rune, Conclusion](true, Vector(), Vector(), Map())
 
         val conclusionsBefore = solverState.getConclusions().toMap.size
 
         solveRule.complexSolve(state, env, solverState) match {
           case Ok(()) => {
-//            rules.foreach({ case (ruleIndex, rule) =>
-//              SimpleSolverState.this.removeRule(ruleIndex)
-//            })
-            solverState.addStep(step)
           }
           case Err(e) => {
-//            rules.foreach({ case (ruleIndex, rule) =>
-//              SimpleSolverState.this.removeRule(ruleIndex)
-//            })
-            solverState.addStep(step)
             return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
           }
         }

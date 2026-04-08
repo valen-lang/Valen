@@ -32,24 +32,13 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
   private var allRunes: Set[Rune],
 
-  private var openRuleToPuzzleToRunes: Map[Int, Vector[Vector[Rune]]],
+  var openRuleToPuzzleToRunes: Map[Int, Vector[Vector[Rune]]],
 
   private var runeToConclusion: Map[Rune, Conclusion]
 ) {
 
   override def equals(obj: Any): Boolean = vcurious()
   override def hashCode(): Int = vfail() // is mutable, should never be hashed
-
-  def deepClone(): SimpleSolverState[Rule, Rune, Conclusion] = {
-    vcurious()
-    SimpleSolverState(
-      ruleToPuzzles_,
-      steps,
-      rules,
-      allRunes,
-      openRuleToPuzzleToRunes,
-      runeToConclusion)
-  }
 
   def sanityCheck(): Unit = {
 //    vassert(rules == rules.distinct)
@@ -67,9 +56,11 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
   def addRuleAndPuzzles(rule: Rule): Unit = {
     val ruleIndex = addRule(rule)
+    sanityCheck()
     ruleToPuzzles_(rule).foreach(puzzle => {
-      addPuzzle(ruleIndex, puzzle)
+      addPuzzle(ruleIndex, puzzle.distinct) // TODO: is distinct necessary?
     })
+    sanityCheck()
   }
 
   def userifyConclusions(): Stream[(Rune, Conclusion)] = {
@@ -84,18 +75,14 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     userifyConclusions().size == getAllRunes().size
   }
 
-  def getAllRules(): Vector[Rule] = {
-    rules
-  }
-
   def addRune(rune: Rune): Int = {
     vassert(!allRunes.contains(rune))
     val index = allRunes.size
     allRunes += rune
-    return index
+    index
   }
 
-  def addRule(rule: Rule): Int = {
+  private def addRule(rule: Rule): Int = {
     val newCanonicalRule = rules.size
     rules = rules :+ rule
     ruleToPuzzles_(rule).foreach(_.foreach(rune => vassert(allRunes.contains(rune))))
@@ -103,18 +90,28 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
     newCanonicalRule
   }
 
-  def addStep(step: Step[Rule, Rune, Conclusion]): Unit = {
+  private def addStep(step: Step[Rule, Rune, Conclusion]): Unit = {
     steps = steps :+ step
   }
 
-  def addPuzzle(ruleIndex: Int, runes: Vector[Rune]): Unit = {
+  private def addPuzzle(ruleIndex: Int, runes: Vector[Rune]): Unit = {
     val thisRulePuzzleToRunes = openRuleToPuzzleToRunes.getOrElse(ruleIndex, Vector())
     openRuleToPuzzleToRunes = openRuleToPuzzleToRunes + (ruleIndex -> (thisRulePuzzleToRunes :+ runes))
   }
 
-  def commitStep[ErrType](ruleIndex: Int, conclusions: Map[Rune, Conclusion], newRules: Vector[Rule]):
-  Result[Boolean, ISolverError[Rune, Conclusion, ErrType]] = {
-    vimpl()
+  def commitStep[ErrType](complex: Boolean, solvedRuleIndices: Vector[Int], conclusions: Map[Rune, Conclusion], newRules: Vector[Rule]):
+  Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
+    val step = Step[Rule, Rune, Conclusion](complex, solvedRuleIndices.map(ruleIndex => (ruleIndex, rules(ruleIndex))), newRules, conclusions)
+    conclusions.foreach({ case (rune, conclusion) =>
+      concludeRune[ErrType](rune, conclusion) match {
+        case Ok(_) =>
+        case Err(e) => return Err(e)
+      }
+    })
+    solvedRuleIndices.foreach(ruleIndex => removeRule(ruleIndex))
+    addStep(step)
+    newRules.foreach(rule => addRuleAndPuzzles(rule))
+    Ok(())
   }
 
   def getNextSolvable(): Option[Int] = {
@@ -134,7 +131,7 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
   }
 
   // Returns whether it's a new conclusion
-  def concludeRune[ErrType](newlySolvedRune: Rune, newConclusion: Conclusion):
+  private def concludeRune[ErrType](newlySolvedRune: Rune, newConclusion: Conclusion):
   Result[Boolean, ISolverError[Rune, Conclusion, ErrType]] = {
     val isNew =
       runeToConclusion.get(newlySolvedRune) match {

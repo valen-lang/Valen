@@ -379,7 +379,7 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solver.addRules(defaultRules.rules)
+                solver.addRules(defaultRules.rules) // ZTODO: figure out what to do with this
                 true
               }
               case None => {
@@ -572,11 +572,7 @@ class FunctionCompilerSolvingLayer(
                 coutputs, nearEnv, functionTemplateId, genericParam, index, function.runeToType, placeholderPureHeight, true)
 
             { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-              val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
-              Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
-                solver.solverState.concludeRune(rune, conclusion).getOrDie()
-              })
-              solver.solverState.addStep(step)
+              solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
 //              solver.solverState.addStep(step)
 //              step.conclusions.foreach({ case (rune, conclusion) =>
 //                solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)

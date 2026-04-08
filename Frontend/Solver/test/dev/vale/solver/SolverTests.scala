@@ -410,4 +410,97 @@ class SolverTests extends FunSuite with Matchers with Collector {
     vassert(expectCompleteSolve == (conclusionsMap.keySet == rules.flatMap(_.allRunes).toSet))
     conclusionsMap
   }
+
+  // --- TDD tests: these document expected Step behavior ---
+
+  test("Simple solve produces exactly one step per rule") {
+    // A single Literal rule should produce:
+    //   1 initial step (from constructor's commitStep for initiallyKnownRunes)
+    //   + 1 solve step (from solving the Literal rule)
+    //   = 2 total steps
+    // REGRESSION: currently produces 3, because both solve() and advance()
+    // each call commitStep, creating duplicate steps.
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
+      true, true, interner,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      new TestRuleSolver(interner),
+      List(RangeS.testZero(interner)),
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solver.solverState.getSteps()
+    steps.size shouldEqual 2
+  }
+
+  test("No duplicate solvedRules entries across steps") {
+    // Each rule index should appear in solvedRules of at most one step.
+    // REGRESSION: currently the same ruleIndex appears in two steps,
+    // because solve() calls commitStep(Vector(ruleIndex),...) and then
+    // advance() calls commitStep(Vector(ruleIndex),...) again.
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
+      true, true, interner,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      new TestRuleSolver(interner),
+      List(RangeS.testZero(interner)),
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solver.solverState.getSteps()
+    val allSolvedRuleIndices = steps.flatMap(_.solvedRules.map(_._1))
+    allSolvedRuleIndices shouldEqual allSolvedRuleIndices.distinct
+  }
+
+  test("Multi-rule solve has correct step count") {
+    // Two Literal rules + one Equals:
+    //   1 initial step
+    //   + 3 solve steps (one per rule)
+    //   = 4 total
+    // REGRESSION: currently 7, because each solve produces a double step.
+    val interner = new Interner()
+    val rules = Vector(
+      Literal(-1L, "1337"),
+      Literal(-2L, "1337"),
+      Equals(-1L, -2L))
+    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
+      true, true, interner,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      new TestRuleSolver(interner),
+      List(RangeS.testZero(interner)),
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solver.solverState.getSteps()
+    // initial + 3 solves = 4
+    steps.size shouldEqual 4
+  }
+
+  test("Solve step records its conclusions") {
+    // The step that solves a Literal rule should contain the conclusion
+    // from that solve, not an empty map.
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
+      true, true, interner,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      new TestRuleSolver(interner),
+      List(RangeS.testZero(interner)),
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solver.solverState.getSteps()
+    // Find the step(s) that solved rule 0
+    val solveSteps = steps.filter(_.solvedRules.exists(_._1 == 0))
+    // There should be exactly one step that solved this rule
+    solveSteps.size shouldEqual 1
+    // And it should contain the conclusion
+    solveSteps.head.conclusions shouldEqual Map(-1L -> "1337")
+  }
 }
