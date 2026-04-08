@@ -8,50 +8,21 @@ import scala.collection.mutable
 case class Step[Rule, Rune, Conclusion](complex: Boolean, solvedRules: Vector[(Int, Rule)], addedRules: Vector[Rule], conclusions: Map[Rune, Conclusion])
 
 
-sealed trait ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  def getOrDie(): Map[Rune, Conclusion]
-}
-sealed trait IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  def unsolvedRules: Vector[Rule]
-  def unsolvedRunes: Vector[Rune]
-  def steps: Stream[Step[Rule, Rune, Conclusion]]
-}
-case class CompleteSolve[Rule, Rune, Conclusion, ErrType](
-  steps: Stream[Step[Rule, Rune, Conclusion]],
-  conclusions: Map[Rune, Conclusion]
-) extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  override def getOrDie(): Map[Rune, Conclusion] = conclusions
-}
-case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
-  steps: Stream[Step[Rule, Rune, Conclusion]],
-  unsolvedRules: Vector[Rule],
-  unknownRunes: Set[Rune],
-  incompleteConclusions: Map[Rune, Conclusion]
-) extends IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] {
-  vassert(unknownRunes.nonEmpty)
-  vpass()
-  override def getOrDie(): Map[Rune, Conclusion] = vfail()
-  override def unsolvedRunes: Vector[Rune] = unknownRunes.toVector
-}
-
 case class FailedSolve[Rule, Rune, Conclusion, ErrType](
   steps: Stream[Step[Rule, Rune, Conclusion]],
+  conclusions: Map[Rune, Conclusion],
   unsolvedRules: Vector[Rule],
+  unsolvedRunes: Vector[Rune],
   error: ISolverError[Rune, Conclusion, ErrType]
-) extends IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] {
-  override def getOrDie(): Map[Rune, Conclusion] = vfail()
-  vpass()
-  override def unsolvedRunes: Vector[Rune] = Vector()
-}
+)
 
 sealed trait ISolverError[Rune, Conclusion, ErrType]
+case class SolveIncomplete[Rune, Conclusion, ErrType]() extends ISolverError[Rune, Conclusion, ErrType]
 case class SolverConflict[Rune, Conclusion, ErrType](
   rune: Rune,
   previousConclusion: Conclusion,
   newConclusion: Conclusion
-) extends ISolverError[Rune, Conclusion, ErrType] {
-  vpass()
-}
+) extends ISolverError[Rune, Conclusion, ErrType]
 case class RuleError[Rune, Conclusion, ErrType](
 //  ruleIndex: Int,
   err: ErrType

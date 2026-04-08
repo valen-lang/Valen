@@ -13,7 +13,7 @@ import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
 import dev.vale.typing.function._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Solver, Step}
+import dev.vale.solver.{FailedSolve, Solver, Step}
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env._
 import dev.vale.typing.infer.ITypingPassSolverError

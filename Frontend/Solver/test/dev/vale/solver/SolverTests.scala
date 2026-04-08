@@ -41,7 +41,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
         val stepsBefore = solverState.getSteps().size
         solveRule.solve(Unit, Unit, solverState, solvingRuleIndex, rule) match {
           case Ok(()) => {}
-          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
         }
         val stepsAfter = solverState.getSteps().size
         vassert(stepsAfter == stepsBefore + 1)
@@ -57,7 +57,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       val conclusionsBefore = solverState.getConclusions().toMap.size
       solveRule.complexSolve(Unit, Unit, solverState) match {
         case Ok(()) =>
-        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
       }
       solverState.sanityCheck()
       val conclusionsAfter = solverState.getConclusions().toMap.size
@@ -201,7 +201,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
         Literal(-2L, "ISpaceship"),
         Send(-2L, -1L))
     expectSolveFailure(rules) match {
-      case FailedSolve(steps, unsolvedRules, err) => {
+      case FailedSolve(steps, conclusions, unsolvedRules, unsolvedRunes, err) => {
         steps.flatMap(_.conclusions).toSet shouldEqual
           Set((-1,"Firefly"), (-2,"ISpaceship"), (-2,"Firefly"))
         unsolvedRules.toSet shouldEqual Set(Send(-2, -1))
@@ -301,6 +301,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
     val firstConclusions = solverState.userifyConclusions().toMap
 
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
+    solverState.commitStep[String](false, Vector(), Map(-1L -> "Firefly"), Vector()).getOrDie()
 
     while ( {
       advance(solverState, testRuleSolver) match {
@@ -390,7 +391,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
         Literal(-1L, "1448"),
         Literal(-1L, "1337"))
     expectSolveFailure(rules) match {
-      case FailedSolve(_, _, SolverConflict(_, conclusionA, conclusionB)) => {
+      case FailedSolve(_, _, _, _, SolverConflict(_, conclusionA, conclusionB)) => {
         Vector(conclusionA, conclusionB).sorted shouldEqual Vector("1337", "1448").sorted
       }
     }

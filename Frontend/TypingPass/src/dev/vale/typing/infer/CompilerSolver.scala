@@ -5,7 +5,7 @@ import dev.vale.parsing.ast.ShareP
 import dev.vale.postparsing.rules._
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vimpl, vwat}
 import dev.vale.postparsing._
-import dev.vale.solver.{CompleteSolve, FailedSolve, ISolverError, ISolverOutcome, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
+import dev.vale.solver.{FailedSolve, ISolverError, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.ast.PrototypeT
 import dev.vale.typing.names._
@@ -324,7 +324,7 @@ class CompilerSolver(
         val stepsBefore = solverState.getSteps().size
         CompilerRuleSolver.solve(delegate, state, env, solverState, solvingRuleIndex, rule) match {
           case Ok(()) => {}
-          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
         }
         val stepsAfter = solverState.getSteps().size
         vassert(stepsAfter == stepsBefore + 1)
@@ -340,7 +340,7 @@ class CompilerSolver(
       val conclusionsBefore = solverState.getConclusions().toMap.size
       CompilerRuleSolver.complexSolve(delegate, state, env, solverState) match {
         case Ok(()) =>
-        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
       }
       solverState.sanityCheck()
       val conclusionsAfter = solverState.getConclusions().toMap.size
@@ -369,34 +369,11 @@ class CompilerSolver(
         env, state, solverState, delegate
       ) match {
         case Ok(continue) => continue
-        case Err(f@FailedSolve(_, _, _)) => return Err(f)
+        case Err(f@FailedSolve(_, _, _, _, _)) => return Err(f)
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
     Ok(Unit)
-  }
-
-  def interpretResults(
-    runeToType: Map[IRuneS, ITemplataType],
-    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
-  ISolverOutcome[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError] = {
-    val stepsStream = solverState.getSteps().toStream
-    val conclusionsStream = solverState.userifyConclusions().toMap
-
-    val conclusions = conclusionsStream.toMap
-    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
-
-    // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
-    // Caller should remember to do that!
-    if ((allRunes -- conclusions.keySet).nonEmpty) {
-      IncompleteSolve(
-        stepsStream,
-        solverState.getUnsolvedRules(),
-        allRunes -- conclusions.keySet,
-        conclusions)
-    } else {
-      CompleteSolve(stepsStream, conclusions)
-    }
   }
 }
 

@@ -17,18 +17,18 @@ object SolverErrorHumanizer {
     getRuneUsages: (Rule) => Iterable[(RuneID, RangeS)],
     ruleToRunes: (Rule) => Iterable[RuneID],
     ruleToString: (Rule) => String,
-    result: IIncompleteOrFailedSolve[Rule, RuneID, Conclusion, ErrType]):
+    result: FailedSolve[Rule, RuneID, Conclusion, ErrType]):
   // Returns text and all line begins
   (String, Vector[CodeLocationS]) = {
     val errorBody =
       (result match {
-        case IncompleteSolve(_, _, unknownRunes, _) => {
-          "Couldn't solve some runes: "  + unknownRunes.toVector.map(humanizeRune).mkString(", ")
-        }
-        case FailedSolve(_, _, error) => {
+        case FailedSolve(_, conclusions, unsolvedRules, unsolvedRunes, error) => {
           error match {
             case SolverConflict(rune, previousConclusion, newConclusion) => {
               "Conflict, thought rune " + humanizeRune(rune) + " was " + humanizeConclusion(previousConclusion) + " but now concluding it's " + humanizeConclusion(newConclusion)
+            }
+            case SolveIncomplete() => {
+              "Couldn't solve some runes: "  + unsolvedRunes.toVector.map(humanizeRune).mkString(", ")
             }
             case RuleError(err) => {
               humanizeRuleError(err)

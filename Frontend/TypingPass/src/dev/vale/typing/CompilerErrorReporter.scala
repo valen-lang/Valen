@@ -2,7 +2,7 @@ package dev.vale.typing
 
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.IIncompleteOrFailedSolve
+import dev.vale.solver.FailedSolve
 import dev.vale.typing.infer.ITypingPassSolverError
 import dev.vale.typing.templata.ITemplataT
 import dev.vale.{PackageCoordinate, RangeS, vbreak, vcurious, vfail, vpass}
@@ -47,7 +47,7 @@ case class CantReconcileBranchesResults(range: List[RangeS], thenResult: CoordT,
 }
 case class IndexedArrayWithNonInteger(range: List[RangeS], types: CoordT) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class WrongNumberOfDestructuresError(range: List[RangeS], actualNum: Int, expectedNum: Int) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CantDowncastUnrelatedTypes(range: List[RangeS], sourceKind: KindT, targetKind: KindT, candidates: Vector[IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]]) extends ICompileErrorT {
+case class CantDowncastUnrelatedTypes(range: List[RangeS], sourceKind: KindT, targetKind: KindT, candidates: Vector[FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }

@@ -1,14 +1,14 @@
 package dev.vale.postparsing
 
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolverError, IncompleteSolve, SimpleSolverState, Solver}
+import dev.vale.solver.{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, Solver}
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vimpl, vpass}
 import dev.vale._
 import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 
-case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, Boolean, IIdentifiabilityRuleError]) {
+case class IdentifiabilitySolveError(range: List[RangeS], failedSolve: FailedSolve[IRulexSR, IRuneS, Boolean, IIdentifiabilityRuleError]) {
   vpass()
 }
 
@@ -237,7 +237,7 @@ object IdentifiabilitySolver {
           val stepsBefore = solverState.getSteps().size
           solveRule(solverState, solvingRuleIndex, rule) match {
             case Ok(()) => {}
-            case Err(e) => return Err(IdentifiabilitySolveError(callRange, FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e)))
+            case Err(e) => return Err(IdentifiabilitySolveError(callRange, FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e)))
           }
           val stepsAfter = solverState.getSteps().size
           vassert(stepsAfter == stepsBefore + 1)
@@ -260,11 +260,12 @@ object IdentifiabilitySolver {
       Err(
         IdentifiabilitySolveError(
           callRange,
-          IncompleteSolve(
+          FailedSolve(
             steps,
+            conclusions,
             solverState.getUnsolvedRules(),
-            unsolvedRunes,
-            conclusions)))
+            unsolvedRunes.toVector,
+            SolveIncomplete())))
     } else {
       Ok(conclusions)
     }

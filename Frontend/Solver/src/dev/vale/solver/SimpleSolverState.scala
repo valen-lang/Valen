@@ -76,6 +76,9 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
   def commitStep[ErrType](complex: Boolean, solvedRuleIndices: Vector[Int], conclusions: Map[Rune, Conclusion], newRules: Vector[Rule]):
   Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
     val step = Step[Rule, Rune, Conclusion](complex, solvedRuleIndices.map(ruleIndex => (ruleIndex, rules(ruleIndex))), newRules, conclusions)
+    // Append step before checking for conflicts, so the audit trail captures
+    // the conflicting step even when we return an error below.
+    steps = steps :+ step
     conclusions.foreach({ case (newlySolvedRune, newConclusion) =>
       runeToConclusion.get(newlySolvedRune) match {
         case Some(existingConclusion) => {
@@ -92,7 +95,6 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
       runeToConclusion = runeToConclusion + (newlySolvedRune -> newConclusion)
     })
     solvedRuleIndices.foreach(ruleIndex => openRuleToPuzzleToRunes = openRuleToPuzzleToRunes - ruleIndex)
-    steps = steps :+ step
     newRules.foreach(rule => {
       val ruleIndex = {
         val newCanonicalRule = rules.size
@@ -127,6 +129,9 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
   def getUnsolvedRules(): Vector[Rule] = {
     openRuleToPuzzleToRunes.keySet.toVector.map(rules)
+  }
+  def getUnsolvedRunes(): Vector[Rune] = {
+    (getAllRunes() -- getConclusions().map(_._1)).toVector
   }
 
   def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream

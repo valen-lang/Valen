@@ -279,7 +279,7 @@ class InferCompiler(
   Result[Unit, FailedCompilerSolve] = {
     compilerSolver.continue(envs, state, solver) match {
       case Ok(()) => Ok(())
-      case Err(FailedSolve(steps, unsolvedRules, error)) => Err(FailedCompilerSolve(steps, unsolvedRules, error))
+      case Err(FailedSolve(steps, _, unsolvedRules, _, error)) => Err(FailedCompilerSolve(steps, unsolvedRules, error))
     }
   }
 
@@ -291,28 +291,19 @@ class InferCompiler(
       runeToType: Map[IRuneS, ITemplataType],
       rules: Vector[IRulexSR],
       includeReachableBoundsForRunes: Vector[IRuneS],
-      solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[CompleteResolveSolve, IResolvingError] = {
-    val (steps, conclusions) =
-      compilerSolver.interpretResults(runeToType, solver) match {
-        case CompleteSolve(steps, conclusions) => (steps, conclusions)
-        case IncompleteSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-          return Err(ResolvingSolveFailedOrIncomplete(IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions)))
-        }
-        case FailedSolve(steps, unsolvedRules, error) => {
-          return Err(ResolvingSolveFailedOrIncomplete(FailedCompilerSolve(steps, unsolvedRules, error)))
-        }
-      }
-    // rules.collect({
-    //   case r@CallSR(_, RuneUsage(_, callerResolveResultRune), _, _) => {
-    //     val inferences =
-    //       resolveTemplateCallConclusion(envs.originalCallingEnv, state, ranges, callLocation, r, conclusions) match {
-    //         case Ok(i) => i
-    //         case Err(e) => return Err(FailedCompilerSolve(steps, Vector(), RuleError(CouldntResolveKind(e))))
-    //       }
-    //     val _ = inferences // We don't care, we just did the resolve so that we could instantiate it and add its
-    //   }
-    // })
+    val stepsStream = solverState.getSteps().toStream
+    val conclusionsStream = solverState.userifyConclusions().toMap
+
+    val conclusions = conclusionsStream.toMap
+    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
+
+    // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+    // Caller should remember to do that!
+    if ((allRunes -- conclusions.keySet).nonEmpty) {
+      return Err(ResolvingSolveFailedOrIncomplete(IncompleteCompilerSolve(stepsStream, solverState.getUnsolvedRules(), allRunes -- conclusions.keySet, conclusions)))
+    }
 
     val citizensFromCalls =
       rules
@@ -366,7 +357,7 @@ class InferCompiler(
         val inferences =
           resolveTemplateCallConclusion(envWithConclusions, state, ranges, callLocation, r, conclusions) match {
             case Ok(i) => i
-            case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(FailedCompilerSolve(steps, Vector(), RuleError(CouldntResolveKind(e)))))
+            case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(FailedCompilerSolve(stepsStream, Vector(), RuleError(CouldntResolveKind(e)))))
           }
         val _ = inferences // We don't care, we just did the resolve so that we could instantiate it and add its
       }
@@ -417,16 +408,18 @@ class InferCompiler(
 
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
-      solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Map[IRuneS, ITemplataT[ITemplataType]], IIncompleteOrFailedCompilerSolve] = {
-    compilerSolver.interpretResults(runeToType, solver) match {
-      case CompleteSolve(steps, conclusions) => Ok(conclusions)
-      case IncompleteSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-        Err(IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions))
-      }
-      case FailedSolve(steps, unsolvedRules, error) => {
-        Err(FailedCompilerSolve(steps, unsolvedRules, error))
-      }
+    val conclusions = solverState.userifyConclusions().toMap
+    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
+    // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+    // Caller should remember to do that!
+    if ((allRunes -- conclusions.keySet).nonEmpty) {
+      Err(
+        IncompleteCompilerSolve(
+          solverState.getSteps(), solverState.getUnsolvedRules(), allRunes -- conclusions.keySet, conclusions))
+    } else {
+      Ok(conclusions)
     }
   }
 

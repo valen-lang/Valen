@@ -12,7 +12,7 @@ import dev.vale.solver.RuleError
 import OverloadResolver.{FindFunctionFailure, InferFailure, SpecificParamDoesntSend, WrongNumberOfArguments}
 import dev.vale.Collector.ProgramWithExpect
 import dev.vale.postparsing._
-import dev.vale.solver.{FailedSolve, IncompleteSolve, RuleError, SolverConflict, Step}
+import dev.vale.solver.{FailedSolve, RuleError, SolverConflict, Step}
 import dev.vale.typing.ast._
 import dev.vale.typing.infer._
 import dev.vale.typing.names._

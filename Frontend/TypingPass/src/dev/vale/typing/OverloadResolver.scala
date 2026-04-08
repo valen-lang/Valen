@@ -3,7 +3,7 @@ package dev.vale.typing
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules._
-import dev.vale.solver.IIncompleteOrFailedSolve
+import dev.vale.solver.FailedSolve
 import dev.vale.typing.expression.CallCompiler
 import dev.vale.typing.function._
 import dev.vale.typing.infer.ITypingPassSolverError

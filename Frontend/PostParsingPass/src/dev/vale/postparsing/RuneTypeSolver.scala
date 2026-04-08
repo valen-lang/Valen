@@ -2,14 +2,14 @@ package dev.vale.postparsing
 
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vpass, vwat}
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolverError, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
+import dev.vale.solver.{FailedSolve, ISolverError, RuleError, SimpleSolverState, SolveIncomplete, Solver, SolverConflict}
 import dev.vale._
 import dev.vale.postparsing.RuneTypeSolver._
 import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 
-case class RuneTypeSolveError(range: List[RangeS], failedSolve: IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataType, IRuneTypeRuleError]) {
+case class RuneTypeSolveError(range: List[RangeS], failedSolve: FailedSolve[IRulexSR, IRuneS, ITemplataType, IRuneTypeRuleError]) {
   vpass()
 }
 
@@ -384,6 +384,7 @@ class RuneTypeSolver(interner: Interner) {
     expectCompleteSolve: Boolean,
     unpreprocessedInitiallyKnownRunes: Map[IRuneS, ITemplataType]):
   Result[Map[IRuneS, ITemplataType], RuneTypeSolveError] = {
+    val initialRunes = (rules.flatMap(_.runeUsages).map(_.rune) ++ additionalRunes).toVector
     val initiallyKnownRunes =
         (if (predicting) {
           Map()
@@ -396,7 +397,7 @@ class RuneTypeSolver(interner: Interner) {
                   return Err(
                     RuneTypeSolveError(
                       List(range),
-                      FailedSolve(Vector().toStream, rules.toVector, RuleError(e))))
+                      FailedSolve(Vector().toStream, Map(), rules.toVector, initialRunes, RuleError(e))))
                 }
                 // We don't know whether we'll coerce this into a kind or a coord.
                 case Ok(PrimitiveRuneTypeSolverLookupResult(KindTemplataType())) => List()
@@ -423,7 +424,7 @@ class RuneTypeSolver(interner: Interner) {
                   return Err(
                     RuneTypeSolveError(
                       List(range),
-                      FailedSolve(Vector().toStream, rules.toVector, RuleError(e))))
+                      FailedSolve(Vector().toStream, Map(), rules.toVector, initialRunes, RuleError(e))))
                 }
                 // We don't know whether we'll coerce this into a kind or a coord.
                 case Ok(PrimitiveRuneTypeSolverLookupResult(KindTemplataType())) => List()
@@ -469,7 +470,7 @@ class RuneTypeSolver(interner: Interner) {
           val stepsBefore = solverState.getSteps().size
           solveRule(env, solverState, solvingRuleIndex, rule) match {
             case Err(e) => {
-              return Err(RuneTypeSolveError(range, FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e)))
+              return Err(RuneTypeSolveError(range, FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e)))
             }
             case Ok(()) =>
           }
@@ -490,11 +491,12 @@ class RuneTypeSolver(interner: Interner) {
       Err(
         RuneTypeSolveError(
           range,
-          IncompleteSolve(
+          FailedSolve(
             steps,
+            solverState.getConclusions().toMap,
             solverState.getUnsolvedRules(),
-            unsolvedRunes,
-            conclusions)))
+            unsolvedRunes.toVector,
+            SolveIncomplete())))
     } else {
       Ok(conclusions)
     }
