@@ -1,6 +1,6 @@
 package dev.vale.solver
 
-import dev.vale.{Collector, Err, Interner, Ok, RangeS, vassert, vfail}
+import dev.vale.{Collector, Err, Interner, Ok, RangeS, Result, vassert, vfail}
 import org.scalatest._
 
 import scala.collection.immutable.Map
@@ -21,6 +21,57 @@ class SolverTests extends FunSuite with Matchers with Collector {
   def testSimpleAndOptimized(testName: String, testTags : org.scalatest.Tag*)(testFun : Boolean => scala.Any)(implicit pos : org.scalactic.source.Position) : scala.Unit = {
     test(testName + " (simple solver)", testTags: _*){ testFun(false) }(pos)
     test(testName + " (optimized solver)", testTags: _*){ testFun(true) }(pos)
+  }
+
+  // DO NOT SUBMIT its weird that this is here
+  // Returns true if there's more to be done, false if we've gotten as far as we can.
+  def advance(
+      solverState: SimpleSolverState[IRule, Long, String],
+      solveRule: TestRuleSolver):
+  Result[Boolean, FailedSolve[IRule, Long, String, String]] = {
+    solverState.sanityCheck()
+    solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
+      solveRule.sanityCheckConclusion(Unit, Unit, rune, conclusion)
+    })
+    // Stage 1: Do simple solves
+    solverState.getNextSolvable() match {
+      case None => // continue onto the next stage
+      case Some(solvingRuleIndex) => {
+        val rule = solverState.getRule(solvingRuleIndex)
+        val stepsBefore = solverState.getSteps().size
+        solveRule.solve(Unit, Unit, solverState, solvingRuleIndex, rule) match {
+          case Ok(()) => {}
+          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+        }
+        val stepsAfter = solverState.getSteps().size
+        vassert(stepsAfter == stepsBefore + 1)
+        vassert(solverState.ruleIsSolved(solvingRuleIndex))
+        solverState.sanityCheck()
+        // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
+        // it'll start doing a complex solve if available, or just finish.
+        return Ok(true)
+      }
+    }
+    // Stage 2: Do a complex solve if available.
+    if (solverState.getUnsolvedRules().nonEmpty) {
+      val conclusionsBefore = solverState.getConclusions().toMap.size
+      solveRule.complexSolve(Unit, Unit, solverState) match {
+        case Ok(()) =>
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+      }
+      solverState.sanityCheck()
+      val conclusionsAfter = solverState.getConclusions().toMap.size
+      if (conclusionsAfter == conclusionsBefore) {
+        // There's nothing more to be done. Let's continue on to stage 3.
+      } else {
+        return Ok(true) // Go back to stage 1
+      }
+    } else {
+      // No more rules to solve, so continue to the wrapping up stages of the solve.
+    }
+    // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
+    // and they can even add more rules if they want.
+    Ok(false)
   }
 
   test("Simple int rule") {
@@ -242,7 +293,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
           rules.flatMap(_.allRunes).distinct)
     val testRuleSolver = new TestRuleSolver(interner)
     while ( {
-      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
+      advance(solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
@@ -252,7 +303,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
 
     while ( {
-      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
+      advance(solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
@@ -308,7 +359,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       val testRuleSolver = new TestRuleSolver(interner)
 
       while ( {
-        Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
+        advance(solverState, testRuleSolver) match {
           case Ok(continue) => continue
           case Err(e) => vfail(e)
         }
@@ -360,7 +411,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
         rules.flatMap(_.allRunes).distinct.toVector)
     val testRuleSolver = new TestRuleSolver(interner)
     while ( {
-      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
+      advance(solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => return e
       }
@@ -387,7 +438,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
     val testRuleSolver = new TestRuleSolver(interner)
 
     while ( {
-      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
+      advance(solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
@@ -414,7 +465,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       (rule: IRule) => rule.allRunes.toVector,
       rules, Map(), rules.flatMap(_.allRunes).distinct)
     val testRuleSolver = new TestRuleSolver(interner)
-    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    while (advance(solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
     val steps = solverState.getSteps()
     steps.size shouldEqual 2
@@ -430,7 +481,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       (rule: IRule) => rule.allRunes.toVector,
       rules, Map(), rules.flatMap(_.allRunes).distinct)
     val testRuleSolver = new TestRuleSolver(interner)
-    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    while (advance(solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
     val steps = solverState.getSteps()
     val allSolvedRuleIndices = steps.flatMap(_.solvedRules.map(_._1))
@@ -453,7 +504,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       (rule: IRule) => rule.allRunes.toVector,
       rules, Map(), rules.flatMap(_.allRunes).distinct)
     val testRuleSolver = new TestRuleSolver(interner)
-    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    while (advance(solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
     val steps = solverState.getSteps()
     // initial + 3 solves = 4
@@ -471,7 +522,7 @@ class SolverTests extends FunSuite with Matchers with Collector {
       (rule: IRule) => rule.allRunes.toVector,
       rules, Map(), rules.flatMap(_.allRunes).distinct)
     val testRuleSolver = new TestRuleSolver(interner)
-    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    while (advance(solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
     val steps = solverState.getSteps()
     // Find the step(s) that solved rule 0

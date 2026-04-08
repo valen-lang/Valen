@@ -2,7 +2,7 @@ package dev.vale.postparsing
 
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vpass, vwat}
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolveRule, ISolverError, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
+import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolverError, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale._
 import dev.vale.postparsing.RuneTypeSolver._
 import dev.vale.postparsing.rules._
@@ -183,7 +183,6 @@ class RuneTypeSolver(interner: Interner) {
   }
 
   private def solveRule(
-    state: Unit,
     env: IRuneTypeSolverEnv,
     solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType],
     ruleIndex: Int,
@@ -461,21 +460,25 @@ class RuneTypeSolver(interner: Interner) {
         rules,
         initiallyKnownRunes,
         (rules.flatMap(getRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
-    val solveRuleImpl = new ISolveRule[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError] {
-      override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
-
-      override def complexSolve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType]): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
-        Ok(())
-      }
-
-      override def solve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
-        solveRule(state, env, solverState, ruleIndex, rule)
-      }
-    }
     while ({
-      Solver.advance[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError](env, Unit, solverState, solveRuleImpl) match {
-        case Ok(continue) => continue
-        case Err(e) => return Err(RuneTypeSolveError(range, e))
+      solverState.sanityCheck()
+      solverState.getNextSolvable() match {
+        case None => false // break
+        case Some(solvingRuleIndex) => {
+          val rule = solverState.getRule(solvingRuleIndex)
+          val stepsBefore = solverState.getSteps().size
+          solveRule(env, solverState, solvingRuleIndex, rule) match {
+            case Err(e) => {
+              return Err(RuneTypeSolveError(range, FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e)))
+            }
+            case Ok(()) =>
+          }
+          val stepsAfter = solverState.getSteps().size
+          vassert(stepsAfter == stepsBefore + 1)
+          vassert(solverState.ruleIsSolved(solvingRuleIndex))
+          solverState.sanityCheck()
+          true // continue
+        }
       }
     }) {}
     val steps = solverState.getSteps().toStream

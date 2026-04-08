@@ -5,7 +5,7 @@ import dev.vale.parsing.ast.ShareP
 import dev.vale.postparsing.rules._
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vimpl, vwat}
 import dev.vale.postparsing._
-import dev.vale.solver.{CompleteSolve, FailedSolve, ISolveRule, ISolverError, ISolverOutcome, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
+import dev.vale.solver.{CompleteSolve, FailedSolve, ISolverError, ISolverOutcome, IncompleteSolve, RuleError, SimpleSolverState, Solver, SolverConflict}
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.ast.PrototypeT
 import dev.vale.typing.names._
@@ -304,6 +304,59 @@ class CompilerSolver(
     solver
   }
 
+
+  // Returns true if there's more to be done, false if we've gotten as far as we can.
+  def advanceInfer(
+      env: InferEnv,
+      state: CompilerOutputs,
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
+      delegate: IInfererDelegate):
+  Result[Boolean, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+    solverState.sanityCheck()
+    solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
+      CompilerRuleSolver.sanityCheckConclusion(delegate, env, state, rune, conclusion)
+    })
+    // Stage 1: Do simple solves
+    solverState.getNextSolvable() match {
+      case None => // continue onto the next stage
+      case Some(solvingRuleIndex) => {
+        val rule = solverState.getRule(solvingRuleIndex)
+        val stepsBefore = solverState.getSteps().size
+        CompilerRuleSolver.solve(delegate, state, env, solverState, solvingRuleIndex, rule) match {
+          case Ok(()) => {}
+          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+        }
+        val stepsAfter = solverState.getSteps().size
+        vassert(stepsAfter == stepsBefore + 1)
+        vassert(solverState.ruleIsSolved(solvingRuleIndex))
+        solverState.sanityCheck()
+        // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
+        // it'll start doing a complex solve if available, or just finish.
+        return Ok(true)
+      }
+    }
+    // Stage 2: Do a complex solve if available.
+    if (solverState.getUnsolvedRules().nonEmpty) {
+      val conclusionsBefore = solverState.getConclusions().toMap.size
+      CompilerRuleSolver.complexSolve(delegate, state, env, solverState) match {
+        case Ok(()) =>
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+      }
+      solverState.sanityCheck()
+      val conclusionsAfter = solverState.getConclusions().toMap.size
+      if (conclusionsAfter == conclusionsBefore) {
+        // There's nothing more to be done. Let's continue on to stage 3.
+      } else {
+        return Ok(true) // Go back to stage 1
+      }
+    } else {
+      // No more rules to solve, so continue to the wrapping up stages of the solve.
+    }
+    // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
+    // and they can even add more rules if they want.
+    Ok(false)
+  }
+
   // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
   // Caller should remember to do that!
   def continue(
@@ -312,8 +365,8 @@ class CompilerSolver(
     solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     while ( {
-      Solver.advance[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError](
-        env, state, solverState, new CompilerRuleSolver(delegate)
+      advanceInfer(
+        env, state, solverState, delegate
       ) match {
         case Ok(continue) => continue
         case Err(f@FailedSolve(_, _, _)) => return Err(f)
@@ -347,23 +400,22 @@ class CompilerSolver(
   }
 }
 
-class CompilerRuleSolver(
-    delegate: IInfererDelegate)
-  extends ISolveRule[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError] {
+object CompilerRuleSolver {
 
-  override def sanityCheckConclusion(env: InferEnv, state: CompilerOutputs, rune: IRuneS, conclusion: ITemplataT[ITemplataType]): Unit = {
+  def sanityCheckConclusion(delegate: IInfererDelegate, env: InferEnv, state: CompilerOutputs, rune: IRuneS, conclusion: ITemplataT[ITemplataType]): Unit = {
     delegate.sanityCheckConclusion(env, state, rune, conclusion)
   }
 
-  override def complexSolve(
+  def complexSolve(
+      delegate: IInfererDelegate,
       state: CompilerOutputs,
       env: InferEnv,
       solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
-    complexSolveInner(state, env, solverState)
+    complexSolveInner(delegate, state, env, solverState)
   }
 
-  private def complexSolveInner(state: CompilerOutputs, env: InferEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]): Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+  private def complexSolveInner(delegate: IInfererDelegate, state: CompilerOutputs, env: InferEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]): Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     val equivalencies = new Equivalencies(solverState.getUnsolvedRules())
 
     val unsolvedRules = solverState.getUnsolvedRules()
@@ -410,7 +462,7 @@ class CompilerRuleSolver(
         // careful to not assume between any possibilities below.
         val allSendersKnown = senderConclusions.size == runesSendingToThisReceiver.size
         val allCallsKnown = callRulesTemplateRunes.size == callTemplates.size
-        solveReceives(env, state, senderConclusions, callTemplates, allSendersKnown, allCallsKnown) match {
+        solveReceives(delegate, env, state, senderConclusions, callTemplates, allSendersKnown, allCallsKnown) match {
           case Err(e) => return Err(RuleError(e))
           case Ok(None) => None
           case Ok(Some(receiverInstantiationKind)) => {
@@ -462,6 +514,7 @@ class CompilerRuleSolver(
   }
 
   private def solveReceives(
+    delegate: IInfererDelegate,
     env: InferEnv,
     state: CompilerOutputs,
     senders: Vector[(IRuneS, CoordT)],
@@ -511,7 +564,7 @@ class CompilerRuleSolver(
           return Ok(None)
         }
         // If there are multiple, like [IWeapon, ISystem], get rid of any that are parents of others, now [IWeapon].
-        narrow(env, state, commonAncestorsCallConstrained) match {
+        narrow(delegate, env, state, commonAncestorsCallConstrained) match {
           case Ok(x) => x
           case Err(e) => return Err(e)
         }
@@ -520,6 +573,7 @@ class CompilerRuleSolver(
   }
 
   def narrow(
+    delegate: IInfererDelegate,
     env: InferEnv,
     state: CompilerOutputs,
     kinds: Set[KindT]):
@@ -540,20 +594,22 @@ class CompilerRuleSolver(
     }
   }
 
-  override def solve(
+  def solve(
+    delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
     solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
     ruleIndex: Int,
     rule: IRulexSR):
   Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
-    solveRule(state, env, ruleIndex, rule, solverState) match {
+    solveRule(delegate, state, env, ruleIndex, rule, solverState) match {
       case Ok(x) => Ok(x)
       case Err(e) => Err(RuleError(e))
     }
   }
 
   private def solveRule(
+    delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
     ruleIndex: Int,
@@ -965,12 +1021,13 @@ class CompilerRuleSolver(
         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(resultRune.rune -> mutability), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
       }
       case CallSR(range, resultRune, templateRune, argRunes) => {
-        solveCallRule(state, env, solverState, ruleIndex, range, resultRune, templateRune, argRunes)
+        solveCallRule(delegate, state, env, solverState, ruleIndex, range, resultRune, templateRune, argRunes)
       }
     }
   }
 
   private def solveCallRule(
+      delegate: IInfererDelegate,
       state: CompilerOutputs,
       env: InferEnv,
       solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],

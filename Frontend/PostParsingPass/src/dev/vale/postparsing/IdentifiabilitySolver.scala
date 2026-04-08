@@ -1,7 +1,7 @@
 package dev.vale.postparsing
 
 import dev.vale.postparsing.rules._
-import dev.vale.solver.{IIncompleteOrFailedSolve, ISolveRule, ISolverError, IncompleteSolve, SimpleSolverState, Solver}
+import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, ISolverError, IncompleteSolve, SimpleSolverState, Solver}
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vimpl, vpass}
 import dev.vale._
 import dev.vale.postparsing.rules._
@@ -100,11 +100,8 @@ object IdentifiabilitySolver {
   }
 
   private def solveRule(
-    state: Unit,
-    env: Unit,
     solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean],
     ruleIndex: Int,
-    callRange: List[RangeS],
     rule: IRulexSR):
   Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
     rule match {
@@ -231,21 +228,25 @@ object IdentifiabilitySolver {
         rules,
         initiallyKnownRunes,
         (rules.flatMap(getRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
-    val solveRuleImpl = new ISolveRule[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError] {
-      override def sanityCheckConclusion(env: Unit, state: Unit, rune: IRuneS, conclusion: Boolean): Unit = {}
-
-      override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean]): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
-        Ok(())
-      }
-
-      override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
-        solveRule(state, env, solverState, ruleIndex, callRange, rule)
-      }
-    }
     while ( {
-      Solver.advance[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError](Unit, Unit, solverState, solveRuleImpl) match {
-        case Ok(continue) => continue
-        case Err(e) => return Err(IdentifiabilitySolveError(callRange, e))
+      solverState.sanityCheck()
+      solverState.getNextSolvable() match {
+        case None => false // break
+        case Some(solvingRuleIndex) => {
+          val rule = solverState.getRule(solvingRuleIndex)
+          val stepsBefore = solverState.getSteps().size
+          solveRule(solverState, solvingRuleIndex, rule) match {
+            case Ok(()) => {}
+            case Err(e) => return Err(IdentifiabilitySolveError(callRange, FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e)))
+          }
+          val stepsAfter = solverState.getSteps().size
+          vassert(stepsAfter == stepsBefore + 1)
+          vassert(solverState.ruleIsSolved(solvingRuleIndex))
+          solverState.sanityCheck()
+          // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
+          // it'll start doing a complex solve if available, or just finish.
+          true
+        }
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.

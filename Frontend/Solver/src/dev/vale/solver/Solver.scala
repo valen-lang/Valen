@@ -62,26 +62,26 @@ case class RuleError[Rune, Conclusion, ErrType](
 // This class's purpose is to take those things, and see if it can figure out as many
 // inferences as possible.
 
-trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
-  def solve(
-    state: State,
-    env: Env,
-    solverState: SimpleSolverState[Rule, Rune, Conclusion],
-    ruleIndex: Int,
-    rule: Rule):
-  Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
-
-  // Called when we can't do any regular solves, we don't have enough
-  // runes. This is where we do more interesting rules, like SMCMST.
-  // See CSALR for more.
-  def complexSolve(
-    state: State,
-    env: Env,
-    solverState: SimpleSolverState[Rule, Rune, Conclusion]
-  ): Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
-
-  def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
-}
+//trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
+//  def solve(
+//    state: State,
+//    env: Env,
+//    solverState: SimpleSolverState[Rule, Rune, Conclusion],
+//    ruleIndex: Int,
+//    rule: Rule):
+//  Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
+//
+//  // Called when we can't do any regular solves, we don't have enough
+//  // runes. This is where we do more interesting rules, like SMCMST.
+//  // See CSALR for more.
+//  def complexSolve(
+//    state: State,
+//    env: Env,
+//    solverState: SimpleSolverState[Rule, Rune, Conclusion]
+//  ): Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
+//
+//  def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
+//}
 
 object Solver {
   def makeSolverState[Rule, Rune, Conclusion](
@@ -117,57 +117,5 @@ object Solver {
       solverState.sanityCheck()
     }
     solverState
-  }
-
-  // Returns true if there's more to be done, false if we've gotten as far as we can.
-  def advance[Rule, Rune, Env, State, Conclusion, ErrType](
-      env: Env,
-      state: State,
-      solverState: SimpleSolverState[Rule, Rune, Conclusion],
-      solveRule: ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType]):
-  Result[Boolean, FailedSolve[Rule, Rune, Conclusion, ErrType]] = {
-    solverState.sanityCheck()
-    solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
-      solveRule.sanityCheckConclusion(env, state, rune, conclusion)
-    })
-    // Stage 1: Do simple solves
-    solverState.getNextSolvable() match {
-      case None => // continue onto the next stage
-      case Some(solvingRuleIndex) => {
-        val rule = solverState.getRule(solvingRuleIndex)
-        val stepsBefore = solverState.getSteps().size
-        solveRule.solve(state, env, solverState, solvingRuleIndex, rule) match {
-          case Ok(()) => {}
-          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-        }
-        val stepsAfter = solverState.getSteps().size
-        vassert(stepsAfter == stepsBefore + 1)
-        vassert(solverState.ruleIsSolved(solvingRuleIndex))
-        solverState.sanityCheck()
-        // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
-        // it'll start doing a complex solve if available, or just finish.
-        return Ok(true)
-      }
-    }
-    // Stage 2: Do a complex solve if available.
-    if (solverState.getUnsolvedRules().nonEmpty) {
-      val conclusionsBefore = solverState.getConclusions().toMap.size
-      solveRule.complexSolve(state, env, solverState) match {
-        case Ok(()) =>
-        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-      }
-      solverState.sanityCheck()
-      val conclusionsAfter = solverState.getConclusions().toMap.size
-      if (conclusionsAfter == conclusionsBefore) {
-        // There's nothing more to be done. Let's continue on to stage 3.
-      } else {
-        return Ok(true) // Go back to stage 1
-      }
-    } else {
-      // No more rules to solve, so continue to the wrapping up stages of the solve.
-    }
-    // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
-    // and they can even add more rules if they want.
-    Ok(false)
   }
 }
