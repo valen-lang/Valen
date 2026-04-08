@@ -231,38 +231,33 @@ class SolverTests extends FunSuite with Matchers with Collector {
         Literal(-2, "A"),
         Call(-3, -1, -2)) // We dont know the template, -1, yet
 
-
-    val solver =
-      new Solver(
-        true,
-        true,
-        interner,
-        (rule: IRule) => rule.allPuzzles,
-        (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
-        rules,
-        Map(),
-        rules.flatMap(_.allRunes).distinct)
-
+    val solverState =
+        Solver.makeSolverState[IRule, Long, String](
+          true,
+          true,
+          (rule: IRule) => rule.allPuzzles,
+          (rule: IRule) => rule.allRunes.toVector,
+          rules,
+          Map(),
+          rules.flatMap(_.allRunes).distinct)
+    val testRuleSolver = new TestRuleSolver(interner)
     while ( {
-      solver.advance(Unit, Unit) match {
+      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
-    val firstConclusions = solver.solverState.userifyConclusions().toMap
+    val firstConclusions = solverState.userifyConclusions().toMap
 
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
-//    solver.markRulesSolved(Vector(), Map(solver.solverState.getCanonicalRune(-1) -> "Firefly"))
 
     while ( {
-      solver.advance(Unit, Unit) match {
+      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
-    val secondConclusions = solver.solverState.userifyConclusions().toMap
+    val secondConclusions = solverState.userifyConclusions().toMap
 
     secondConclusions.toMap shouldEqual
       Map(-1 -> "Firefly", -2 -> "A", -3 -> "Firefly:A")
@@ -301,27 +296,24 @@ class SolverTests extends FunSuite with Matchers with Collector {
           Literal(-2, "1337"),
           Call(-3, -1, -2)) // X = Firefly<A>
 
-      val solver =
-        new Solver[IRule, Long, Unit, Unit, String, String](
+      val solverState =
+        Solver.makeSolverState[IRule, Long, String](
           true,
           true,
-          interner,
           puzzler,
           (rule: IRule) => rule.allRunes.toVector,
-          new TestRuleSolver(interner),
-          List(RangeS.testZero(interner)),
           rules,
           Map(),
           rules.flatMap(_.allRunes).distinct)
-
+      val testRuleSolver = new TestRuleSolver(interner)
 
       while ( {
-        solver.advance(Unit, Unit) match {
+        Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
           case Ok(continue) => continue
           case Err(e) => vfail(e)
         }
       }) {}
-      val conclusions = solver.solverState.userifyConclusions().toMap
+      val conclusions = solverState.userifyConclusions().toMap
       conclusions
     }
 
@@ -357,20 +349,18 @@ class SolverTests extends FunSuite with Matchers with Collector {
   FailedSolve[IRule, Long, String, String] = {
     val interner = new Interner()
 
-    val solver =
-      new Solver[IRule, Long, Unit, Unit, String, String](
+    val solverState =
+      Solver.makeSolverState[IRule, Long, String](
         true,
         true,
-        interner,
         (rule: IRule) => rule.allPuzzles,
         (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
         rules,
         Map(),
         rules.flatMap(_.allRunes).distinct.toVector)
+    val testRuleSolver = new TestRuleSolver(interner)
     while ( {
-      solver.advance(Unit, Unit) match {
+      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => return e
       }
@@ -385,27 +375,25 @@ class SolverTests extends FunSuite with Matchers with Collector {
   Map[Long, String] = {
     val interner = new Interner()
 
-    val solver =
-      new Solver[IRule, Long, Unit, Unit, String, String](
+    val solverState =
+      Solver.makeSolverState[IRule, Long, String](
         true,
         true,
-        interner,
         (r: IRule) => r.allPuzzles,
         (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
         rules,
         initiallyKnownRunes,
         (rules.flatMap(_.allRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
+    val testRuleSolver = new TestRuleSolver(interner)
 
     while ( {
-      solver.advance(Unit, Unit) match {
+      Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
-    val conclusionsMap = solver.solverState.userifyConclusions().toMap
+    val conclusionsMap = solverState.userifyConclusions().toMap
 
     vassert(expectCompleteSolve == (conclusionsMap.keySet == rules.flatMap(_.allRunes).toSet))
     conclusionsMap
@@ -418,40 +406,33 @@ class SolverTests extends FunSuite with Matchers with Collector {
     //   1 initial step (from constructor's commitStep for initiallyKnownRunes)
     //   + 1 solve step (from solving the Literal rule)
     //   = 2 total steps
-    // REGRESSION: currently produces 3, because both solve() and advance()
-    // each call commitStep, creating duplicate steps.
     val interner = new Interner()
     val rules = Vector(Literal(-1L, "1337"))
-    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
-      true, true, interner,
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
       (r: IRule) => r.allPuzzles,
       (rule: IRule) => rule.allRunes.toVector,
-      new TestRuleSolver(interner),
-      List(RangeS.testZero(interner)),
       rules, Map(), rules.flatMap(_.allRunes).distinct)
-    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    val testRuleSolver = new TestRuleSolver(interner)
+    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
-    val steps = solver.solverState.getSteps()
+    val steps = solverState.getSteps()
     steps.size shouldEqual 2
   }
 
   test("No duplicate solvedRules entries across steps") {
     // Each rule index should appear in solvedRules of at most one step.
-    // REGRESSION: currently the same ruleIndex appears in two steps,
-    // because solve() calls commitStep(Vector(ruleIndex),...) and then
-    // advance() calls commitStep(Vector(ruleIndex),...) again.
     val interner = new Interner()
     val rules = Vector(Literal(-1L, "1337"))
-    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
-      true, true, interner,
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
       (r: IRule) => r.allPuzzles,
       (rule: IRule) => rule.allRunes.toVector,
-      new TestRuleSolver(interner),
-      List(RangeS.testZero(interner)),
       rules, Map(), rules.flatMap(_.allRunes).distinct)
-    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    val testRuleSolver = new TestRuleSolver(interner)
+    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
-    val steps = solver.solverState.getSteps()
+    val steps = solverState.getSteps()
     val allSolvedRuleIndices = steps.flatMap(_.solvedRules.map(_._1))
     allSolvedRuleIndices shouldEqual allSolvedRuleIndices.distinct
   }
@@ -461,22 +442,20 @@ class SolverTests extends FunSuite with Matchers with Collector {
     //   1 initial step
     //   + 3 solve steps (one per rule)
     //   = 4 total
-    // REGRESSION: currently 7, because each solve produces a double step.
     val interner = new Interner()
     val rules = Vector(
       Literal(-1L, "1337"),
       Literal(-2L, "1337"),
       Equals(-1L, -2L))
-    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
-      true, true, interner,
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
       (r: IRule) => r.allPuzzles,
       (rule: IRule) => rule.allRunes.toVector,
-      new TestRuleSolver(interner),
-      List(RangeS.testZero(interner)),
       rules, Map(), rules.flatMap(_.allRunes).distinct)
-    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    val testRuleSolver = new TestRuleSolver(interner)
+    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
-    val steps = solver.solverState.getSteps()
+    val steps = solverState.getSteps()
     // initial + 3 solves = 4
     steps.size shouldEqual 4
   }
@@ -486,16 +465,15 @@ class SolverTests extends FunSuite with Matchers with Collector {
     // from that solve, not an empty map.
     val interner = new Interner()
     val rules = Vector(Literal(-1L, "1337"))
-    val solver = new Solver[IRule, Long, Unit, Unit, String, String](
-      true, true, interner,
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
       (r: IRule) => r.allPuzzles,
       (rule: IRule) => rule.allRunes.toVector,
-      new TestRuleSolver(interner),
-      List(RangeS.testZero(interner)),
       rules, Map(), rules.flatMap(_.allRunes).distinct)
-    while (solver.advance(Unit, Unit) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+    val testRuleSolver = new TestRuleSolver(interner)
+    while (Solver.advance[IRule, Long, Unit, Unit, String, String](Unit, Unit, solverState, testRuleSolver) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
 
-    val steps = solver.solverState.getSteps()
+    val steps = solverState.getSteps()
     // Find the step(s) that solved rule 0
     val solveSteps = steps.filter(_.solvedRules.exists(_._1 == 0))
     // There should be exactly one step that solved this rule

@@ -326,8 +326,8 @@ class StructCompilerGenericArgsLayer(
         envs, coutputs, solver,
         // Each step happens after the solver has done all it possibly can. Sometimes this can lead
         // to races, see RRBFS.
-        (solver) => {
-          TemplataCompiler.getFirstUnsolvedIdentifyingRune(structA.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
+        (solverState) => {
+          TemplataCompiler.getFirstUnsolvedIdentifyingRune(structA.genericParameters, (rune) => solverState.getConclusion(rune).nonEmpty) match {
             case None => false
             case Some((genericParam, index)) => {
               val placeholderPureHeight = vregionmut(None)
@@ -339,10 +339,10 @@ class StructCompilerGenericArgsLayer(
               { // solver.manualStep(Map(genericParam.rune.rune -> templata))
 //                val step = Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](false, Vector(), Vector(), Map())
 //                Map(genericParam.rune.rune -> templata).foreach({ case (rune, conclusion) =>
-//                  solver.solverState.concludeRune(rune, conclusion).getOrDie()
+//                  solverState.concludeRune(rune, conclusion).getOrDie()
 //                })
-//                solver.solverState.addStep(step)
-                solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+//                solverState.addStep(step)
+                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
               }
 
               true
@@ -430,8 +430,8 @@ class StructCompilerGenericArgsLayer(
         envs, coutputs, solver,
         // Each step happens after the solver has done all it possibly can. Sometimes this can lead
         // to races, see RRBFS.
-        (solver) => {
-          TemplataCompiler.getFirstUnsolvedIdentifyingRune(interfaceA.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
+        (solverState) => {
+          TemplataCompiler.getFirstUnsolvedIdentifyingRune(interfaceA.genericParameters, (rune) => solverState.getConclusion(rune).nonEmpty) match {
             case None => false
             case Some((genericParam, index)) => {
               // Make a placeholder for every argument even if it has a default, see DUDEWCD.
@@ -441,10 +441,10 @@ class StructCompilerGenericArgsLayer(
                   coutputs, outerEnv, interfaceTemplateId, genericParam, index, interfaceA.runeToType, placeholderPureHeight, true)
 
               { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-                solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
-//                solver.solverState.addStep(step)
+                solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+//                solverState.addStep(step)
 //                step.conclusions.foreach({ case (rune, conclusion) =>
-//                  solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)
+//                  solverState.concludeRune(solverState.getCanonicalRune(rune), conclusion)
 //                })
               }
 

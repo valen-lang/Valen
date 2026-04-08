@@ -221,13 +221,14 @@ class InferCompiler(
       initialKnowns: Vector[InitialKnown],
       initialSends: Vector[InitialSend]):
   Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedCompilerSolve] = {
-    val solver =
+    val solverState =
       makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
-    continue(envs, coutputs, solver) match {
+    // DO NOT SUBMIT rename makeSolver to makeSolverState
+    continue(envs, coutputs, solverState) match {
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.solverState.userifyConclusions().toMap)
+    Ok(solverState.userifyConclusions().toMap)
   }
 
 
@@ -239,8 +240,7 @@ class InferCompiler(
     invocationRange: List[RangeS],
     initialKnowns: Vector[InitialKnown],
     initialSends: Vector[InitialSend]):
-  Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType],
-    ITypingPassSolverError] = {
+  SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]] = {
     Profiler.frame(() => {
       val runeToType =
         initialRuneToType ++
@@ -275,7 +275,7 @@ class InferCompiler(
   def continue(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+    solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, FailedCompilerSolve] = {
     compilerSolver.continue(envs, state, solver) match {
       case Ok(()) => Ok(())
@@ -291,7 +291,7 @@ class InferCompiler(
       runeToType: Map[IRuneS, ITemplataType],
       rules: Vector[IRulexSR],
       includeReachableBoundsForRunes: Vector[IRuneS],
-      solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+      solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[CompleteResolveSolve, IResolvingError] = {
     val (steps, conclusions) =
       compilerSolver.interpretResults(runeToType, solver) match {
@@ -417,7 +417,7 @@ class InferCompiler(
 
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
-      solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+      solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Map[IRuneS, ITemplataT[ITemplataType]], IIncompleteOrFailedCompilerSolve] = {
     compilerSolver.interpretResults(runeToType, solver) match {
       case CompleteSolve(steps, conclusions) => Ok(conclusions)
@@ -749,20 +749,20 @@ class InferCompiler(
   def incrementallySolve(
     envs: InferEnv,
     coutputs: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError],
-    onIncompleteSolve: (Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]) => Boolean):
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
+    onIncompleteSolve: (SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]) => Boolean):
   Result[Boolean, FailedCompilerSolve] = {
     // See IRAGP for why we have this incremental solving/placeholdering.
     while ( {
-      continue(envs, coutputs, solver) match {
+      continue(envs, coutputs, solverState) match {
         case Ok(()) =>
         case Err(f) => return Err(f)
       }
 
       // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
       // Caller should remember to do that!
-      if (!solver.solverState.isComplete()) {
-        val continue = onIncompleteSolve(solver)
+      if (!solverState.isComplete()) {
+        val continue = onIncompleteSolve(solverState)
         if (!continue) {
           return Ok(false)
         }

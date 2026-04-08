@@ -222,40 +222,38 @@ object IdentifiabilitySolver {
     identifyingRunes: Iterable[IRuneS]):
   Result[Map[IRuneS, Boolean], IdentifiabilitySolveError] = {
     val initiallyKnownRunes = identifyingRunes.map(r => (r, true)).toMap
-    val solver =
-      new Solver[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError](
+    val solverState =
+      Solver.makeSolverState(
         sanityCheck,
         useOptimizedSolver,
-        interner,
         (rule: IRulexSR) => getPuzzles(rule),
         getRunes,
-        new ISolveRule[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError] {
-          override def sanityCheckConclusion(env: Unit, state: Unit, rune: IRuneS, conclusion: Boolean): Unit = {}
-
-          override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean]): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
-            Ok(())
-          }
-
-          override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
-            solveRule(state, env, solverState, ruleIndex, callRange, rule)
-          }
-        },
-        callRange,
         rules,
         initiallyKnownRunes,
         (rules.flatMap(getRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
+    val solveRuleImpl = new ISolveRule[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError] {
+      override def sanityCheckConclusion(env: Unit, state: Unit, rune: IRuneS, conclusion: Boolean): Unit = {}
+
+      override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean]): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
+        Ok(())
+      }
+
+      override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRulexSR, IRuneS, Boolean], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, Boolean, IIdentifiabilityRuleError]] = {
+        solveRule(state, env, solverState, ruleIndex, callRange, rule)
+      }
+    }
     while ( {
-      solver.advance(Unit, Unit) match {
+      Solver.advance[IRulexSR, IRuneS, Unit, Unit, Boolean, IIdentifiabilityRuleError](Unit, Unit, solverState, solveRuleImpl) match {
         case Ok(continue) => continue
         case Err(e) => return Err(IdentifiabilitySolveError(callRange, e))
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
 
-    val steps = solver.solverState.getSteps().toStream
-    val conclusions = solver.solverState.userifyConclusions().toMap
+    val steps = solverState.getSteps().toStream
+    val conclusions = solverState.userifyConclusions().toMap
 
-    val allRunes = solver.solverState.getAllRunes()
+    val allRunes = solverState.getAllRunes()
     val unsolvedRunes = allRunes -- conclusions.keySet
     if (unsolvedRunes.nonEmpty) {
       Err(
@@ -263,7 +261,7 @@ object IdentifiabilitySolver {
           callRange,
           IncompleteSolve(
             steps,
-            solver.solverState.getUnsolvedRules(),
+            solverState.getUnsolvedRules(),
             unsolvedRunes,
             conclusions)))
     } else {

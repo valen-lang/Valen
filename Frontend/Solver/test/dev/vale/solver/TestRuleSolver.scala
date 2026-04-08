@@ -1,6 +1,6 @@
 package dev.vale.solver
 
-import dev.vale.solver.TestRuleSolver.{complexSolveInner, sanityCheckConclusionInner}
+import dev.vale.solver.TestRuleSolver.{complexSolveInner, sanityCheckConclusionInner, solveInner}
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
 import org.scalatest._
 
@@ -211,5 +211,5 @@ object TestRuleSolver {
 class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
   override def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = sanityCheckConclusionInner(env, state, rune, conclusion)
   override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = complexSolveInner(state, env, solverState)
-  override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = solve(state, env, solverState, ruleIndex, rule)
+  override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = solveInner(state, env, solverState, ruleIndex, rule)
 }

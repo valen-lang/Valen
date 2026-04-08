@@ -268,7 +268,7 @@ class CompilerSolver(
     rules: IndexedSeq[IRulexSR],
     initialRuneToType: Map[IRuneS, ITemplataType],
     initiallyKnownRuneToTemplata: Map[IRuneS, ITemplataT[ITemplataType]]):
-  Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError] = {
+  SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]] = {
 
     rules.foreach(rule => rule.runeUsages.foreach(rune => vassert(initialRuneToType.contains(rune.rune))))
 
@@ -289,14 +289,14 @@ class CompilerSolver(
     })
 
     val solver =
-      new Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError](
+      Solver.makeSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]](
         globalOptions.sanityCheck,
         globalOptions.useOptimizedSolver,
-        interner,
+//        interner,
         (rule: IRulexSR) => getPuzzles(rule),
         getRunes,
-        new CompilerRuleSolver(globalOptions.sanityCheck, interner, delegate, initialRuneToType),
-        range,
+//        new CompilerRuleSolver(globalOptions.sanityCheck, interner, delegate, initialRuneToType),
+//        range,
         rules,
         initiallyKnownRuneToTemplata,
         initialRuneToType.keys.toVector.distinct)
@@ -309,10 +309,12 @@ class CompilerSolver(
   def continue(
     env: InferEnv,
     state: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     while ( {
-      solver.advance(env, state) match {
+      Solver.advance[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError](
+        env, state, solverState, new CompilerRuleSolver(delegate)
+      ) match {
         case Ok(continue) => continue
         case Err(f@FailedSolve(_, _, _)) => return Err(f)
       }
@@ -323,20 +325,20 @@ class CompilerSolver(
 
   def interpretResults(
     runeToType: Map[IRuneS, ITemplataType],
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   ISolverOutcome[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError] = {
-    val stepsStream = solver.solverState.getSteps().toStream
-    val conclusionsStream = solver.solverState.userifyConclusions().toMap
+    val stepsStream = solverState.getSteps().toStream
+    val conclusionsStream = solverState.userifyConclusions().toMap
 
     val conclusions = conclusionsStream.toMap
-    val allRunes = runeToType.keySet ++ solver.solverState.getAllRunes()
+    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
 
     // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
     // Caller should remember to do that!
     if ((allRunes -- conclusions.keySet).nonEmpty) {
       IncompleteSolve(
         stepsStream,
-        solver.solverState.getUnsolvedRules(),
+        solverState.getUnsolvedRules(),
         allRunes -- conclusions.keySet,
         conclusions)
     } else {
@@ -346,10 +348,7 @@ class CompilerSolver(
 }
 
 class CompilerRuleSolver(
-  sanityCheck: Boolean,
-    interner: Interner,
-    delegate: IInfererDelegate,
-    runeToType: Map[IRuneS, ITemplataType])
+    delegate: IInfererDelegate)
   extends ISolveRule[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError] {
 
   override def sanityCheckConclusion(env: InferEnv, state: CompilerOutputs, rune: IRuneS, conclusion: ITemplataT[ITemplataType]): Unit = {

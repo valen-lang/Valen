@@ -149,14 +149,14 @@ class ImplCompiler(
     // to evaluate an override.
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
-    val solver =
+    val solverState =
       inferCompiler.makeSolver(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
-    inferCompiler.continue(envs, coutputs, solver) match {
+    inferCompiler.continue(envs, coutputs, solverState) match {
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.solverState.userifyConclusions().toMap)
+    Ok(solverState.userifyConclusions().toMap)
   }
 
   // This will just figure out the struct template and interface template,

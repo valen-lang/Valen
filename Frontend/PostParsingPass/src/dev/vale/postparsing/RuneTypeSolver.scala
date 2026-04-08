@@ -452,38 +452,36 @@ class RuneTypeSolver(interner: Interner) {
       // an initially known conclusion might know that a pattern's incoming rune should be a coord,
       // while the above code might think it's a template.
       unpreprocessedInitiallyKnownRunes
-    val solver =
-      new Solver[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError](
+    val solverState =
+      Solver.makeSolverState(
         sanityCheck,
         useOptimizedSolver,
-        interner,
         (rule: IRulexSR) => getPuzzles(predicting, rule),
         getRunes,
-        new ISolveRule[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError] {
-          override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
-
-          override def complexSolve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType]): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
-            Ok(())
-          }
-
-          override def solve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
-            solveRule(state, env, solverState, ruleIndex, rule)
-          }
-        },
-        range,
         rules,
         initiallyKnownRunes,
         (rules.flatMap(getRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
+    val solveRuleImpl = new ISolveRule[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError] {
+      override def sanityCheckConclusion(env: IRuneTypeSolverEnv, state: Unit, rune: IRuneS, conclusion: ITemplataType): Unit = {}
+
+      override def complexSolve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType]): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
+        Ok(())
+      }
+
+      override def solve(state: Unit, env: IRuneTypeSolverEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataType], ruleIndex: Int, rule: IRulexSR): Result[Unit, ISolverError[IRuneS, ITemplataType, IRuneTypeRuleError]] = {
+        solveRule(state, env, solverState, ruleIndex, rule)
+      }
+    }
     while ({
-      solver.advance(env, Unit) match {
+      Solver.advance[IRulexSR, IRuneS, IRuneTypeSolverEnv, Unit, ITemplataType, IRuneTypeRuleError](env, Unit, solverState, solveRuleImpl) match {
         case Ok(continue) => continue
         case Err(e) => return Err(RuneTypeSolveError(range, e))
       }
     }) {}
-    val steps = solver.solverState.getSteps().toStream
-    val conclusions = solver.solverState.userifyConclusions().toMap
+    val steps = solverState.getSteps().toStream
+    val conclusions = solverState.userifyConclusions().toMap
 
-    val allRunes = solver.solverState.getAllRunes() ++ additionalRunes
+    val allRunes = solverState.getAllRunes() ++ additionalRunes
     val unsolvedRunes = allRunes -- conclusions.keySet
     if (expectCompleteSolve && unsolvedRunes.nonEmpty) {
       Err(
@@ -491,7 +489,7 @@ class RuneTypeSolver(interner: Interner) {
           range,
           IncompleteSolve(
             steps,
-            solver.solverState.getUnsolvedRules(),
+            solverState.getUnsolvedRules(),
             unsolvedRunes,
             conclusions)))
     } else {

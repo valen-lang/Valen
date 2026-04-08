@@ -83,27 +83,24 @@ trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
   def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
 }
 
-class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
-    sanityCheck: Boolean,
-    useOptimizedSolver: Boolean,
-    interner: Interner,
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    ruleToRunes: Rule => Iterable[Rune],
-    solveRule: ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType],
-    setupRange: List[RangeS],
-    initialRules: IndexedSeq[Rule],
-    initiallyKnownRunes: Map[Rune, Conclusion],
-    allRunes: Vector[Rune]) {
+object Solver {
+  def makeSolverState[Rule, Rune, Conclusion](
+      sanityCheck: Boolean,
+      useOptimizedSolver: Boolean,
+      ruleToPuzzles: Rule => Vector[Vector[Rune]],
+      ruleToRunes: Rule => Iterable[Rune],
+      initialRules: IndexedSeq[Rule],
+      initiallyKnownRunes: Map[Rune, Conclusion],
+      allRunes: Vector[Rune]
+  ): SimpleSolverState[Rule, Rune, Conclusion] = {
+    val solverState =
+      if (useOptimizedSolver) {
+        SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+        // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      } else {
+        SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+      }
 
-  val solverState =
-    if (useOptimizedSolver) {
-      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
-      // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
-    } else {
-      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
-    }
-
-  Profiler.frame(() => {
     if (sanityCheck) {
       initialRules.flatMap(ruleToRunes).foreach(rune => vassert(allRunes.contains(rune)))
       initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
@@ -120,57 +117,57 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
       solverState.sanityCheck()
     }
     solverState
-  })
+  }
 
   // Returns true if there's more to be done, false if we've gotten as far as we can.
-  def advance(env: Env, state: State):
+  def advance[Rule, Rune, Env, State, Conclusion, ErrType](
+      env: Env,
+      state: State,
+      solverState: SimpleSolverState[Rule, Rune, Conclusion],
+      solveRule: ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType]):
   Result[Boolean, FailedSolve[Rule, Rune, Conclusion, ErrType]] = {
-    Profiler.frame(() => {
-      if (sanityCheck) {
-        solverState.sanityCheck()
-        solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
-          solveRule.sanityCheckConclusion(env, state, rune, conclusion)
-        })
-      }
-      // Stage 1: Do simple solves
-      solverState.getNextSolvable() match {
-        case None => // continue onto the next stage
-        case Some(solvingRuleIndex) => {
-          val rule = solverState.getRule(solvingRuleIndex)
-          val stepsBefore = solverState.getSteps().size
-          solveRule.solve(state, env, solverState, solvingRuleIndex, rule) match {
-            case Ok(()) => {}
-            case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-          }
-          val stepsAfter = solverState.getSteps().size
-          vassert(stepsAfter == stepsBefore + 1)
-          vassert(solverState.ruleIsSolved(solvingRuleIndex))
-          solverState.sanityCheck()
-          // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
-          // it'll start doing a complex solve if available, or just finish.
-          return Ok(true)
-        }
-      }
-      // Stage 2: Do a complex solve if available.
-      if (solverState.getUnsolvedRules().nonEmpty) {
-        val conclusionsBefore = solverState.getConclusions().toMap.size
-        solveRule.complexSolve(state, env, solverState) match {
-          case Ok(()) =>
+    solverState.sanityCheck()
+    solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
+      solveRule.sanityCheckConclusion(env, state, rune, conclusion)
+    })
+    // Stage 1: Do simple solves
+    solverState.getNextSolvable() match {
+      case None => // continue onto the next stage
+      case Some(solvingRuleIndex) => {
+        val rule = solverState.getRule(solvingRuleIndex)
+        val stepsBefore = solverState.getSteps().size
+        solveRule.solve(state, env, solverState, solvingRuleIndex, rule) match {
+          case Ok(()) => {}
           case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
         }
+        val stepsAfter = solverState.getSteps().size
+        vassert(stepsAfter == stepsBefore + 1)
+        vassert(solverState.ruleIsSolved(solvingRuleIndex))
         solverState.sanityCheck()
-        val conclusionsAfter = solverState.getConclusions().toMap.size
-        if (conclusionsAfter == conclusionsBefore) {
-          // There's nothing more to be done. Let's continue on to stage 3.
-        } else {
-          return Ok(true) // Go back to stage 1
-        }
-      } else {
-        // No more rules to solve, so continue to the wrapping up stages of the solve.
+        // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
+        // it'll start doing a complex solve if available, or just finish.
+        return Ok(true)
       }
-      // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
-      // and they can even add more rules if they want.
-      return Ok(false)
-    })
+    }
+    // Stage 2: Do a complex solve if available.
+    if (solverState.getUnsolvedRules().nonEmpty) {
+      val conclusionsBefore = solverState.getConclusions().toMap.size
+      solveRule.complexSolve(state, env, solverState) match {
+        case Ok(()) =>
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
+      }
+      solverState.sanityCheck()
+      val conclusionsAfter = solverState.getConclusions().toMap.size
+      if (conclusionsAfter == conclusionsBefore) {
+        // There's nothing more to be done. Let's continue on to stage 3.
+      } else {
+        return Ok(true) // Go back to stage 1
+      }
+    } else {
+      // No more rules to solve, so continue to the wrapping up stages of the solve.
+    }
+    // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
+    // and they can even add more rules if they want.
+    Ok(false)
   }
 }

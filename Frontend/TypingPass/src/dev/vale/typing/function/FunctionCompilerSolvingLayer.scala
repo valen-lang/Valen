@@ -363,7 +363,7 @@ class FunctionCompilerSolvingLayer(
     // Incrementally solve and add default generic parameters (and context region).
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
-      (solver) => {
+      (solverState) => {
         if (loopCheck == 0) {
           throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Infinite loop detected in incremental call solve!"))
         }
@@ -371,7 +371,7 @@ class FunctionCompilerSolvingLayer(
 
         TemplataCompiler.getFirstUnsolvedIdentifyingRune(
           function.genericParameters,
-          (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
+          (rune) => solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // This unsolved rune better be one we didn't explicitly hand in already.
@@ -379,7 +379,7 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solver.solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
+                solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
                 true
               }
               case None => {
@@ -454,7 +454,7 @@ class FunctionCompilerSolvingLayer(
     // into a:
     //   func map<F>(self Opt<$0>, f F, t $0) { ... }
     val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT())
-    val preliminarySolver =
+    val preliminarySolverState =
       inferCompiler.makeSolver(
         preliminaryEnvs,
         coutputs,
@@ -463,7 +463,7 @@ class FunctionCompilerSolvingLayer(
         function.range :: callRange,
         Vector(),
         initialSends)
-    inferCompiler.continue(preliminaryEnvs, coutputs, preliminarySolver) match {
+    inferCompiler.continue(preliminaryEnvs, coutputs, preliminarySolverState) match {
       case Ok(()) =>
       case Err(f) => {
         throw CompileErrorExceptionT(typing.TypingPassSolverError(function.range :: callRange, f))
@@ -472,7 +472,7 @@ class FunctionCompilerSolvingLayer(
 
     // Skip checking that the conclusions are all there, because we don't assume that they will all be there. We expect
     // an incomplete solve.
-    val preliminaryInferences = preliminarySolver.solverState.userifyConclusions().toMap
+    val preliminaryInferences = preliminarySolverState.userifyConclusions().toMap
     // Now we can use preliminaryInferences to know whether or not we need a placeholder for an
     // identifying rune.
     // Our
@@ -561,8 +561,8 @@ class FunctionCompilerSolvingLayer(
       envs, coutputs, solver,
       // Each step happens after the solver has done all it possibly can. Sometimes this can lead
       // to races, see RRBFS.
-      (solver) => {
-        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solver.solverState.getConclusion(rune).nonEmpty) match {
+      (solverState) => {
+        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
@@ -572,10 +572,10 @@ class FunctionCompilerSolvingLayer(
                 coutputs, nearEnv, functionTemplateId, genericParam, index, function.runeToType, placeholderPureHeight, true)
 
             { // solver.manualStep(Map(genericParam.rune.rune -> templata))
-              solver.solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
-//              solver.solverState.addStep(step)
+              solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+//              solverState.addStep(step)
 //              step.conclusions.foreach({ case (rune, conclusion) =>
-//                solver.solverState.concludeRune(solver.solverState.getCanonicalRune(rune), conclusion)
+//                solverState.concludeRune(solverState.getCanonicalRune(rune), conclusion)
 //              })
             }
 
