@@ -97,10 +97,10 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 
   val solverState =
     if (useOptimizedSolver) {
-      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
       // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
     } else {
-      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
     }
 
   Profiler.frame(() => {
@@ -109,8 +109,6 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
       initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
       vassert(allRunes == allRunes.distinct)
     }
-
-     allRunes.foreach(solverState.addRune)
 
     if (sanityCheck) {
       solverState.sanityCheck()
@@ -134,14 +132,6 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
 //  ): Step[Rule, Rune, Conclusion] = {
 //    Step(complex, rules, Vector(), Map())
 //  }
-
-  def addRules(rules: Vector[Rule]): Unit = {
-    rules.foreach(rule => addRule(rule))
-  }
-
-  private def addRule(rule: Rule): Unit = {
-    solverState.addRuleAndPuzzles(rule)
-  }
 
 //  def manualStep(newConclusions: Map[Rune, Conclusion]): Unit = {
 //    val stepState = solverState.makeStepState(ruleToPuzzles, false, Vector())
@@ -215,7 +205,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
           }
           val stepsAfter = solverState.getSteps().size
           vassert(stepsAfter == stepsBefore + 1)
-          vassert(!solverState.openRuleToPuzzleToRunes.contains(solvingRuleIndex))
+          vassert(solverState.ruleIsSolved(solvingRuleIndex))
 
           if (sanityCheck) {
 //            step.conclusions.foreach({ case (rune, conclusion) =>

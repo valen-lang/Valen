@@ -379,7 +379,7 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solver.addRules(defaultRules.rules) // ZTODO: figure out what to do with this
+                solver.solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
                 true
               }
               case None => {
