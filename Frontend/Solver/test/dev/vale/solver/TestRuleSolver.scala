@@ -1,46 +1,15 @@
 package dev.vale.solver
 
+import dev.vale.solver.TestRuleSolver.{complexSolveInner, sanityCheckConclusionInner}
 import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
 import org.scalatest._
 
 import scala.collection.immutable.Map
 
-class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
-  override def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
+object TestRuleSolver {
+  def sanityCheckConclusionInner(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
 
-  def instantiateAncestorTemplate(descendants: Vector[String], ancestorTemplate: String): String = {
-    // IRL, we may want to doublecheck that all descendants *can* instantiate as the ancestor template.
-    val descendant = descendants.head
-    (descendant, ancestorTemplate) match {
-      case (x, y) if x == y => x
-      case (x, y) if !x.contains(":") => y
-      case ("Flamethrower:int", "IWeapon") => "IWeapon:int"
-      case ("Rockets:int", "IWeapon") => "IWeapon:int"
-      case other => vimpl(other)
-    }
-  }
-
-  def getAncestors(descendant: String, includeSelf: Boolean): Vector[String] = {
-    val selfAndAncestors =
-      getTemplate(descendant) match {
-        case "Firefly" => Vector("ISpaceship")
-        case "Serenity" => Vector("ISpaceship")
-        case "ISpaceship" => Vector()
-        case "Flamethrower" => Vector("IWeapon")
-        case "Rockets" => Vector("IWeapon")
-        case "IWeapon" => Vector()
-        case "int" => Vector()
-        case other => vimpl(other)
-      }
-    selfAndAncestors ++ (if (includeSelf) List(descendant) else List())
-  }
-
-  // Turns eg Flamethrower:int into Flamethrower. Firefly just stays Firefly.
-  def getTemplate(tyype: String): String = {
-    if (tyype.contains(":")) tyype.split(":")(0) else tyype
-  }
-
-  override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
+  def complexSolveInner(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
     val unsolvedRules = solverState.getUnsolvedRules()
     val receiverRunes = unsolvedRules.collect({ case Send(_, receiverRune) => receiverRune })
     val newConclusions =
@@ -63,12 +32,12 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     Ok(())
   }
 
-  override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = {
+  def solveInner(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = {
     rule match {
       case Equals(leftRune, rightRune) => {
         solverState.getConclusion(leftRune) match {
           case Some(left) => {
-//            solverState.commitStep[String](rightRune, left) match { case Ok(_) => case Err(e) => return Err(e) }
+            //            solverState.commitStep[String](rightRune, left) match { case Ok(_) => case Err(e) => return Err(e) }
             solverState.commitStep[String](false, Vector(ruleIndex), Map(rightRune -> left), Vector())
           }
           case None => {
@@ -158,10 +127,42 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     }
   }
 
+  def instantiateAncestorTemplate(descendants: Vector[String], ancestorTemplate: String): String = {
+    // IRL, we may want to doublecheck that all descendants *can* instantiate as the ancestor template.
+    val descendant = descendants.head
+    (descendant, ancestorTemplate) match {
+      case (x, y) if x == y => x
+      case (x, y) if !x.contains(":") => y
+      case ("Flamethrower:int", "IWeapon") => "IWeapon:int"
+      case ("Rockets:int", "IWeapon") => "IWeapon:int"
+      case other => vimpl(other)
+    }
+  }
+
+  def getAncestors(descendant: String, includeSelf: Boolean): Vector[String] = {
+    val selfAndAncestors =
+      getTemplate(descendant) match {
+        case "Firefly" => Vector("ISpaceship")
+        case "Serenity" => Vector("ISpaceship")
+        case "ISpaceship" => Vector()
+        case "Flamethrower" => Vector("IWeapon")
+        case "Rockets" => Vector("IWeapon")
+        case "IWeapon" => Vector()
+        case "int" => Vector()
+        case other => vimpl(other)
+      }
+    selfAndAncestors ++ (if (includeSelf) List(descendant) else List())
+  }
+
+  // Turns eg Flamethrower:int into Flamethrower. Firefly just stays Firefly.
+  def getTemplate(tyype: String): String = {
+    if (tyype.contains(":")) tyype.split(":")(0) else tyype
+  }
+
   private def solveReceives(
-    senders: Vector[String],
-    callTemplates: Vector[String],
-    anyUnknownConstraints: Boolean) = {
+      senders: Vector[String],
+      callTemplates: Vector[String],
+      anyUnknownConstraints: Boolean) = {
     val senderTemplates = senders.map(getTemplate)
     // Theoretically possible, not gonna handle it for this test
     vassert(callTemplates.toSet.size <= 1)
@@ -185,8 +186,8 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
   }
 
   def narrow(
-    ancestorTemplateUnnarrowed: Set[String],
-    anyUnknownConstraints: Boolean):
+      ancestorTemplateUnnarrowed: Set[String],
+      anyUnknownConstraints: Boolean):
   Set[String] = {
     val ancestorTemplate =
       if (ancestorTemplateUnnarrowed.size > 1) {
@@ -205,5 +206,10 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     vassert(ancestorTemplate.size <= 1)
     ancestorTemplate
   }
+}
 
+class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
+  override def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = sanityCheckConclusionInner(env, state, rune, conclusion)
+  override def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = complexSolveInner(state, env, solverState)
+  override def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = solve(state, env, solverState, ruleIndex, rule)
 }

@@ -361,6 +361,10 @@ class CompilerRuleSolver(
       env: InferEnv,
       solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+    complexSolveInner(state, env, solverState)
+  }
+
+  private def complexSolveInner(state: CompilerOutputs, env: InferEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]): Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     val equivalencies = new Equivalencies(solverState.getUnsolvedRules())
 
     val unsolvedRules = solverState.getUnsolvedRules()
@@ -387,21 +391,21 @@ class CompilerRuleSolver(
         val callRulesTemplateRunes =
           unsolvedRules
               .collect({
-                case z @ CallSR(range, r, templateRune, _) if equivalencies.getKindEquivalentRunes(r.rune).contains(receiver) => templateRune
+                case z@CallSR(range, r, templateRune, _) if equivalencies.getKindEquivalentRunes(r.rune).contains(receiver) => templateRune
               })
         val senderConclusions =
           runesSendingToThisReceiver
-            .flatMap(senderRune => solverState.getConclusion(senderRune).map(senderRune -> _))
-            .map({
-              case (senderRune, CoordTemplataT(coord)) => (senderRune -> coord)
-              case other => vwat(other)
-            })
-            .toVector
+              .flatMap(senderRune => solverState.getConclusion(senderRune).map(senderRune -> _))
+              .map({
+                case (senderRune, CoordTemplataT(coord)) => (senderRune -> coord)
+                case other => vwat(other)
+              })
+              .toVector
         val callTemplates =
           equivalencies.getKindEquivalentRunes(
-            callRulesTemplateRunes.map(_.rune))
-            .flatMap(solverState.getConclusion)
-            .toVector
+                callRulesTemplateRunes.map(_.rune))
+              .flatMap(solverState.getConclusion)
+              .toVector
         vassert(callTemplates.distinct.size <= 1)
         // If true, there are some senders/constraints we don't know yet, so lets be
         // careful to not assume between any possibilities below.
@@ -424,9 +428,9 @@ class CompilerRuleSolver(
                     receiverInstantiationKind)
                 }
               }) ++
-                senderConclusions.map(_._2).map({ case CoordT(ownership, _, _) =>
-                  CoordT(ownership, RegionT(), receiverInstantiationKind)
-                })
+                  senderConclusions.map(_._2).map({ case CoordT(ownership, _, _) =>
+                    CoordT(ownership, RegionT(), receiverInstantiationKind)
+                  })
             if (possibleCoords.nonEmpty) {
               val ownership =
                 possibleCoords.map(_.ownership).distinct match {
@@ -445,12 +449,15 @@ class CompilerRuleSolver(
       }).toMap
 
     // DO NOT SUBMIT: its odd that we're not handing in any new rules or solved rules here
-    solverState.commitStep[ITypingPassSolverError](true, Vector(), newConclusions, Vector()) match { case Ok(_) => case Err(e) => return Err(e) }
+    solverState.commitStep[ITypingPassSolverError](true, Vector(), newConclusions, Vector()) match {
+      case Ok(_) =>
+      case Err(e) => return Err(e)
+    }
 
-//
-//    newConclusions.foreach({ case (rune, conclusion) =>
-//      solverState.concludeRune[ITypingPassSolverError](rune, conclusion) match { case Ok(_) => case Err(e) => return Err(e) }
-//    })
+    //
+    //    newConclusions.foreach({ case (rune, conclusion) =>
+    //      solverState.concludeRune[ITypingPassSolverError](rune, conclusion) match { case Ok(_) => case Err(e) => return Err(e) }
+    //    })
 
     Ok(())
   }
