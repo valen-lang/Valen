@@ -523,14 +523,14 @@ class ImplCompiler(
   //   parent: InterfaceTT,
   //   verifyConclusions: Boolean,
   //   declareBounds: Boolean):
-  // Result[ICitizenTT, IIncompleteOrFailedCompilerSolve] = {
+  // Result[ICitizenTT, FailedSolve] = {
   //   val initialKnowns =
   //     Vector(
   //       InitialKnown(implTemplata.impl.interfaceKindRune, KindTemplataT(parent)))
   //   val CompleteCompilerSolve(_, conclusions, _, _) =
   //     solveImplForCall(coutputs, parentRanges, callLocation, callingEnv, initialKnowns, implTemplata, declareBounds, true) match {
   //       case ccs @ CompleteCompilerSolve(_, _, _, _) => ccs
-  //       case x : IIncompleteOrFailedCompilerSolve => return Err(x)
+  //       case x : FailedSolve => return Err(x)
   //     }
   //   val parentTT = conclusions.get(implTemplata.impl.subCitizenRune.rune)
   //   vassertSome(parentTT) match {

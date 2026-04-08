@@ -30,29 +30,6 @@ case class CompleteDefineSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
     runeToBound: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT])
 
-//sealed trait IIncompleteOrFailedCompilerSolve extends IResolveSolveOutcome {
-//  def unsolvedRules: Vector[IRulexSR]
-//  def unsolvedRunes: Vector[IRuneS]
-//  def steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]]
-//}
-//case class IncompleteCompilerSolve(
-//  steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]],
-//  unsolvedRules: Vector[IRulexSR],
-//  unknownRunes: Set[IRuneS],
-//  incompleteConclusions: Map[IRuneS, ITemplataT[ITemplataType]]
-//) extends IIncompleteOrFailedCompilerSolve {
-//  vassert(unknownRunes.nonEmpty)
-//  override def unsolvedRunes: Vector[IRuneS] = unknownRunes.toVector
-//}
-//
-//case class FailedCompilerSolve(
-//  steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]],
-//  unsolvedRules: Vector[IRulexSR],
-//  error: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]
-//) extends IIncompleteOrFailedCompilerSolve {
-//  override def unsolvedRunes: Vector[IRuneS] = Vector()
-//}
-
 sealed trait IConclusionResolveError
 case class CouldntFindImplForConclusionResolve(range: List[RangeS], fail: IsntParent) extends IConclusionResolveError
 case class CouldntFindKindForConclusionResolve(inner: ResolveFailure[KindT]) extends IConclusionResolveError

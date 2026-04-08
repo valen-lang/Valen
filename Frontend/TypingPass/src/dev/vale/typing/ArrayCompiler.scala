@@ -203,7 +203,7 @@ class ArrayCompiler(
         throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
       }
       case Ok(true) =>
-      case Ok(false) => // Incomplete, will be detected as IncompleteCompilerSolve below.
+      case Ok(false) => // Incomplete, will be detected as SolveIncomplete below.
     }
 
     val CompleteResolveSolve(templatas, _) =
@@ -392,7 +392,7 @@ class ArrayCompiler(
         throw CompileErrorExceptionT(TypingPassSolverError(invocationRange, f))
       }
       case Ok(true) =>
-      case Ok(false) => // Incomplete, will be detected as IncompleteCompilerSolve below.
+      case Ok(false) => // Incomplete, will be detected as SolveIncomplete below.
     }
 
     val CompleteResolveSolve(templatas, _) =

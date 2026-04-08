@@ -394,7 +394,7 @@ class FunctionCompilerSolvingLayer(
         return (ResolveFunctionFailure(ResolvingSolveFailedOrIncomplete(f)))
       }
       case Ok(true) =>
-      case Ok(false) => // Incomplete, will be detected as IncompleteCompilerSolve below.
+      case Ok(false) => // Incomplete, will be detected as SolveIncomplete below.
     }
 
     outerEnv.id match {

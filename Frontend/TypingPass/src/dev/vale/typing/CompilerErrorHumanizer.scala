@@ -225,7 +225,7 @@ object CompilerErrorHumanizer {
         humanizeConclusionResolveError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case DefiningSolveFailedOrIncomplete(inner) => {
-        humanizeIncompleteOrFailedCompilerSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
+        humanizeFailedSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
     }
   }
@@ -241,16 +241,6 @@ object CompilerErrorHumanizer {
     val ResolveFailure(range, reason) = fff
     humanizeResolvingError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
 
-    // humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason match {
-    //   case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-    //     IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-    //       steps, unsolvedRules, unknownRunes, incompleteConclusions)
-    //   }
-    //   case FailedCompilerSolve(steps, unsolvedRules, error) => {
-    //     FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-    //       steps, unsolvedRules, error)
-    //   }
-    // })
   }
 
   def humanizeResolvingError(
@@ -266,13 +256,13 @@ object CompilerErrorHumanizer {
         humanizeConclusionResolveError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case ResolvingSolveFailedOrIncomplete(inner) => {
-        humanizeIncompleteOrFailedCompilerSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
+        humanizeFailedSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case other => vimpl(other)
     }
   }
 
-  def humanizeIncompleteOrFailedCompilerSolve(
+  def humanizeFailedSolve(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
       linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
