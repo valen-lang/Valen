@@ -60,7 +60,7 @@ class StructCompilerGenericArgsLayer(
       // Check if its a valid use of this template
       val envs = InferEnv(originalCallingEnv, callRange, callLocation, declaringEnv, contextRegion)
       val solver =
-        inferCompiler.makeSolver(
+        inferCompiler.makeSolverState(
           envs,
           coutputs,
           callSiteRules,
@@ -319,7 +319,7 @@ class StructCompilerGenericArgsLayer(
 
       val envs = InferEnv(outerEnv, List(structA.range), callLocation, outerEnv, RegionT())
       val solver =
-        inferCompiler.makeSolver(
+        inferCompiler.makeSolverState(
           envs, coutputs, definitionRules, allRuneToType, structA.range :: parentRanges, Vector(), Vector())
       // Incrementally solve and add placeholders, see IRAGP.
       inferCompiler.incrementallySolve(
@@ -423,7 +423,7 @@ class StructCompilerGenericArgsLayer(
 
       val envs = InferEnv(outerEnv, List(interfaceA.range), callLocation, outerEnv, RegionT())
       val solver =
-        inferCompiler.makeSolver(
+        inferCompiler.makeSolverState(
           envs, coutputs, definitionRules, interfaceA.runeToType, interfaceA.range :: parentRanges, Vector(), Vector())
       // Incrementally solve and add placeholders, see IRAGP.
       inferCompiler.incrementallySolve(

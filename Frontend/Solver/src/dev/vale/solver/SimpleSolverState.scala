@@ -5,58 +5,6 @@ import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vcurious, vfail,
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-object SimpleSolverState {
-  def apply[Rule, Rune, Conclusion](ruleToPuzzles: Rule => Vector[Vector[Rune]], allRunes: Vector[Rune]): SimpleSolverState[Rule, Rune, Conclusion] = {
-    SimpleSolverState[Rule, Rune, Conclusion](
-      ruleToPuzzles,
-      Vector(),
-//      Map[Rune, Int](),
-//      Map[Int, Rune](),
-      Vector[Rule](),
-      allRunes.toSet,
-      Map[Int, Vector[Vector[Rune]]](),
-      Map[Rune, Conclusion]())
-  }
-
-  object Solver {
-    def apply[Rule, Rune, Conclusion](
-        sanityCheck: Boolean,
-        useOptimizedSolver: Boolean,
-        ruleToPuzzles: Rule => Vector[Vector[Rune]],
-        ruleToRunes: Rule => Iterable[Rune],
-        initialRules: IndexedSeq[Rule],
-        initiallyKnownRunes: Map[Rune, Conclusion],
-        allRunes: Vector[Rune]
-    ): SimpleSolverState[Rule, Rune, Conclusion] = {
-      val solverState =
-        if (useOptimizedSolver) {
-          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
-          // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
-        } else {
-          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
-        }
-
-      if (sanityCheck) {
-        initialRules.flatMap(ruleToRunes).foreach(rune => vassert(allRunes.contains(rune)))
-        initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
-        vassert(allRunes == allRunes.distinct)
-      }
-
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
-
-      solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
-
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
-      solverState
-    }
-  }
-
-}
-
 case class SimpleSolverState[Rule, Rune, Conclusion](
   private val ruleToPuzzles_ : (Rule) => Vector[Vector[Rune]],
 
@@ -175,5 +123,56 @@ case class SimpleSolverState[Rule, Rune, Conclusion](
 
   def ruleIsSolved(solvingRuleIndex: Int): Boolean = {
     !openRuleToPuzzleToRunes.contains(solvingRuleIndex)
+  }
+}
+
+object SimpleSolverState {
+  def apply[Rule, Rune, Conclusion](ruleToPuzzles: Rule => Vector[Vector[Rune]], allRunes: Vector[Rune]): SimpleSolverState[Rule, Rune, Conclusion] = {
+    SimpleSolverState[Rule, Rune, Conclusion](
+      ruleToPuzzles,
+      Vector(),
+//      Map[Rune, Int](),
+//      Map[Int, Rune](),
+      Vector[Rule](),
+      allRunes.toSet,
+      Map[Int, Vector[Vector[Rune]]](),
+      Map[Rune, Conclusion]())
+  }
+
+  object Solver {
+    def apply[Rule, Rune, Conclusion](
+        sanityCheck: Boolean,
+        useOptimizedSolver: Boolean,
+        ruleToPuzzles: Rule => Vector[Vector[Rune]],
+        ruleToRunes: Rule => Iterable[Rune],
+        initialRules: IndexedSeq[Rule],
+        initiallyKnownRunes: Map[Rune, Conclusion],
+        allRunes: Vector[Rune]
+    ): SimpleSolverState[Rule, Rune, Conclusion] = {
+      val solverState =
+        if (useOptimizedSolver) {
+          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+          // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+        } else {
+          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+        }
+
+      if (sanityCheck) {
+        initialRules.flatMap(ruleToRunes).foreach(rune => vassert(allRunes.contains(rune)))
+        initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
+        vassert(allRunes == allRunes.distinct)
+      }
+
+      if (sanityCheck) {
+        solverState.sanityCheck()
+      }
+
+      solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
+
+      if (sanityCheck) {
+        solverState.sanityCheck()
+      }
+      solverState
+    }
   }
 }

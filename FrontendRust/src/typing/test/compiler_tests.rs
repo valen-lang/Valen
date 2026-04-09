@@ -1704,8 +1704,8 @@ class CompilerTests extends FunSuite with Matchers {
   }
 
   test("Downcast function, RRBFS") {
-    // Here we had something interesting happen: the complex solve had a race with the thing that
-    // populates identifying runes.
+    // Here we had something interesting happen: the complex solve (see @CSCDSRZ) had a race with
+    // the thing that populates identifying runes.
     // Populating identifying runes only happens after the solver has done as much as it possibly
     // can... but the solver sometimes takes a leap (as part of CSALR, SMCMST) to figure out the best type
     // to meet some requirements.

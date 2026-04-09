@@ -476,7 +476,7 @@ class RuneTypeSolver(interner: Interner) {
           }
           val stepsAfter = solverState.getSteps().size
           vassert(stepsAfter == stepsBefore + 1)
-          vassert(solverState.ruleIsSolved(solvingRuleIndex))
+          vassert(solverState.ruleIsSolved(solvingRuleIndex)) // Per @CSCDSRZ, only true after simple solve.
           solverState.sanityCheck()
           true // continue
         }

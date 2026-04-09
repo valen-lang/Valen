@@ -149,7 +149,7 @@ class InferCompiler(
     includeReachableBoundsForRunes: Vector[IRuneS]):
   Result[CompleteDefineSolve, IDefiningError] = {
     val solver =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     continue(envs, coutputs, solver) match {
       case Ok(()) =>
       case Err(e) => return Err(DefiningSolveFailedOrIncomplete(e))
@@ -179,7 +179,7 @@ class InferCompiler(
       initialSends: Vector[InitialSend]):
   Result[CompleteResolveSolve, IResolvingError] = {
     val solver =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     continue(envs, coutputs, solver) match {
       case Ok(()) =>
       case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(e))
@@ -198,8 +198,7 @@ class InferCompiler(
       initialSends: Vector[InitialSend]):
   Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     val solverState =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
-    // DO NOT SUBMIT rename makeSolver to makeSolverState
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     continue(envs, coutputs, solverState) match {
       case Ok(()) =>
       case Err(e) => return Err(e)
@@ -208,7 +207,7 @@ class InferCompiler(
   }
 
 
-  def makeSolver(
+  def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
     initialRules: Vector[IRulexSR],
@@ -243,7 +242,7 @@ class InferCompiler(
           })
 
       val solver =
-        compilerSolver.makeSolver(invocationRange, envs, state, rules, runeToType, alreadyKnown)
+        compilerSolver.makeSolverState(invocationRange, envs, state, rules, runeToType, alreadyKnown)
       solver
     })
   }

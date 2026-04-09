@@ -261,7 +261,7 @@ class CompilerSolver(
     }
   }
 
-  def makeSolver(
+  def makeSolverState(
     range: List[RangeS],
     env: InferEnv,
     state: CompilerOutputs,
@@ -328,7 +328,7 @@ class CompilerSolver(
         }
         val stepsAfter = solverState.getSteps().size
         vassert(stepsAfter == stepsBefore + 1)
-        vassert(solverState.ruleIsSolved(solvingRuleIndex))
+        vassert(solverState.ruleIsSolved(solvingRuleIndex)) // Per @CSCDSRZ, only true after simple solve.
         solverState.sanityCheck()
         // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
         // it'll start doing a complex solve if available, or just finish.
@@ -336,6 +336,7 @@ class CompilerSolver(
       }
     }
     // Stage 2: Do a complex solve if available.
+    // Per @CSCDSRZ, complex solve only adds conclusions — we check conclusion count for progress.
     if (solverState.getUnsolvedRules().nonEmpty) {
       val conclusionsBefore = solverState.getConclusions().toMap.size
       CompilerRuleSolver.complexSolve(delegate, state, env, solverState) match {
@@ -344,10 +345,11 @@ class CompilerSolver(
       }
       solverState.sanityCheck()
       val conclusionsAfter = solverState.getConclusions().toMap.size
+      // Per @CSCDSRZ, check conclusion count (not rules solved) for progress.
       if (conclusionsAfter == conclusionsBefore) {
         // There's nothing more to be done. Let's continue on to stage 3.
       } else {
-        return Ok(true) // Go back to stage 1
+        return Ok(true) // Go back to stage 1 where the new conclusions may unblock simple solves.
       }
     } else {
       // No more rules to solve, so continue to the wrapping up stages of the solve.
@@ -383,6 +385,7 @@ object CompilerRuleSolver {
     delegate.sanityCheckConclusion(env, state, rune, conclusion)
   }
 
+  // Per @CSCDSRZ, complex solve infers conclusions from unsolved rules but doesn't solve them.
   def complexSolve(
       delegate: IInfererDelegate,
       state: CompilerOutputs,
@@ -476,7 +479,7 @@ object CompilerRuleSolver {
         }
       }).toMap
 
-    // DO NOT SUBMIT: its odd that we're not handing in any new rules or solved rules here
+    // Per @CSCDSRZ, complex solve only produces conclusions — empty solvedRules and newRules is correct.
     solverState.commitStep[ITypingPassSolverError](true, Vector(), newConclusions, Vector()) match {
       case Ok(_) =>
       case Err(e) => return Err(e)

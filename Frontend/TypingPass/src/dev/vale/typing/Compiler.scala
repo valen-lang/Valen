@@ -884,7 +884,7 @@ class Compiler(
             val packageEnv = PackageEnvironmentT.makeTopLevelEnvironment(globalEnv, packageId)
             // This makes it so anything starting with an underscore is compiled in the order
             // of their names.
-            // DO NOT SUBMIT better solution? order always?
+            // AFTERM: is there a better solution here? should we always order things?
             val (orderableEntries, unorderedEntries) =
                 U.filterOut[(INameT, IEnvEntry), (CitizenTemplateNameT, IEnvEntry)](
                   templatas.entriesByNameT.toArray,

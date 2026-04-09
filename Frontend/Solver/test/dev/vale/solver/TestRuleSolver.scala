@@ -1,14 +1,13 @@
 package dev.vale.solver
 
-import dev.vale.solver.TestRuleSolver.{complexSolveInner, sanityCheckConclusionInner, solveInner}
-import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
-import org.scalatest._
+import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
 
 import scala.collection.immutable.Map
 
 object TestRuleSolver {
   def sanityCheckConclusionInner(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
 
+  // Per @CSCDSRZ, this only concludes runes — it doesn't mark any rules as solved.
   def complexSolveInner(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
     val unsolvedRules = solverState.getUnsolvedRules()
     val receiverRunes = unsolvedRules.collect({ case Send(_, receiverRune) => receiverRune })
@@ -208,9 +207,3 @@ object TestRuleSolver {
   }
 }
 
-// DO NOT SUBMIT remove this
-class TestRuleSolver(interner: Interner) {
-  def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = sanityCheckConclusionInner(env, state, rune, conclusion)
-  def complexSolve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = complexSolveInner(state, env, solverState)
-  def solve(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = solveInner(state, env, solverState, ruleIndex, rule)
-}

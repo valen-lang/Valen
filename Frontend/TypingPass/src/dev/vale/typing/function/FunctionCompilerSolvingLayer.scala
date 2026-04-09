@@ -356,7 +356,7 @@ class FunctionCompilerSolvingLayer(
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 
     val solver =
-      inferCompiler.makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      inferCompiler.makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 
     var loopCheck = function.genericParameters.size + 1
 
@@ -455,7 +455,7 @@ class FunctionCompilerSolvingLayer(
     //   func map<F>(self Opt<$0>, f F, t $0) { ... }
     val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT())
     val preliminarySolverState =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         preliminaryEnvs,
         coutputs,
         functionDefinitionRules,
@@ -554,7 +554,7 @@ class FunctionCompilerSolvingLayer(
 
     val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT())
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, definitionRules, function.runeToType, range, Vector(), Vector())
     // Incrementally solve and add placeholders, see IRAGP.
     inferCompiler.incrementallySolve(

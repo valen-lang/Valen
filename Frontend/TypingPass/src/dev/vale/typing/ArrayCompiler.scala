@@ -189,7 +189,7 @@ class ArrayCompiler(
 
     val envs = InferEnv(callingEnv, parentRanges, callLocation,callingEnv, region)
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 
     // Incrementally solve and add default generic parameters (and context region).
@@ -379,7 +379,7 @@ class ArrayCompiler(
 
     val envs = InferEnv(callingEnv, parentRanges, callLocation,callingEnv, region)
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     // Incrementally solve and add default generic parameters (and context region).
     inferCompiler.incrementallySolve(

@@ -37,6 +37,22 @@ For each piece of information, identify:
 - Which feature/directory it's closest to (determines which `docs/` directory it goes in)
 - Whether it extends an existing doc or needs a new one
 
+## Step 3b: Extract enforceable rules
+
+After categorizing, actively ask: **"Is any part of this wisdom concrete and enforceable?"** Shields are the most durable form of documentation — they can't drift because Guardian checks them. Any time you learn something that could be a rule, propose it as a candidate shield.
+
+Present to the user:
+- What the candidate shield would enforce (one sentence)
+- A proposed title and ID
+- Whether it's checkable by Guardian (pattern in code reviews) or only by the compiler/tests
+
+The user decides which candidates are worth making into shields. Don't silently categorize something as "just background" when it could also be an enforceable rule.
+
+Examples of wisdom → shield extraction:
+- "We learned that stringly-typed errors are hard to test" → Shield: `NoStringlyTypedData-NSTDX` — error types must use structured data, not string messages
+- "Arena types shouldn't clone" → Shield: `ArenaTypesDontClone-ATDCX` — already exists
+- "The compiler now requires explicit drop bounds" → Not a shield (enforced by compiler itself), just background/usage docs
+
 ## Step 4: Check for existing docs
 
 Before creating new files, check whether relevant docs already exist in the target `docs/` directories. Prefer extending existing docs over creating new ones.

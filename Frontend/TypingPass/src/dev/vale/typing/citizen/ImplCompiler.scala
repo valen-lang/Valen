@@ -85,7 +85,7 @@ class ImplCompiler(
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
 
     inferCompiler.continue(envs, coutputs, solver) match {
@@ -150,7 +150,7 @@ class ImplCompiler(
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
     val solverState =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
     inferCompiler.continue(envs, coutputs, solverState) match {
       case Ok(()) =>

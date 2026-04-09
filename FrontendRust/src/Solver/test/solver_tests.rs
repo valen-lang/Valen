@@ -8,6 +8,8 @@ import scala.collection.immutable.Map
 
 class SolverTests extends FunSuite with Matchers with Collector {
 */
+use crate::solver::{SimpleSolverState, FailedSolve, ISolverError, make_solver_state};
+use super::test_rules::TestRule;
 // mig: const complex_rule_set
 const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
 /*
@@ -37,6 +39,109 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
   def testSimpleAndOptimized(testName: String, testTags : org.scalatest.Tag*)(testFun : Boolean => scala.Any)(implicit pos : org.scalactic.source.Position) : scala.Unit = {
     test(testName + " (simple solver)", testTags: _*){ testFun(false) }(pos)
     test(testName + " (optimized solver)", testTags: _*){ testFun(true) }(pos)
+  }
+
+*/
+// Local advance helper, inlined from the former generic Solver.advance.
+// Returns true if there's more to be done, false if we've gotten as far as we can.
+fn advance(
+    solver_state: &mut SimpleSolverState<TestRule, i64, String>,
+    solve_rule: &super::test_rule_solver::TestRuleSolver,
+) -> Result<bool, FailedSolve<TestRule, i64, String, String>> {
+    solver_state.sanity_check();
+    // Stage 1: simple solve
+    match solver_state.get_next_solvable() {
+        None => {} // continue onto complex solve
+        Some(rule_index) => {
+            let rule = solver_state.get_rule(rule_index).clone();
+            let steps_before = solver_state.get_steps().len();
+            match solve_rule.solve_impl(&(), &(), solver_state, rule_index, &rule) {
+                Ok(()) => {}
+                Err(e) => return Err(FailedSolve {
+                    steps: solver_state.get_steps(),
+                    conclusions: solver_state.get_conclusions().into_iter().collect(),
+                    unsolved_rules: solver_state.get_unsolved_rules(),
+                    unsolved_runes: solver_state.get_unsolved_runes(),
+                    error: e,
+                }),
+            }
+            let steps_after = solver_state.get_steps().len();
+            assert!(steps_after == steps_before + 1);
+            assert!(solver_state.rule_is_solved(rule_index));
+            solver_state.sanity_check();
+            return Ok(true);
+        }
+    }
+    // Stage 2: complex solve
+    if !solver_state.get_unsolved_rules().is_empty() {
+        let conclusions_before = solver_state.get_conclusions().len();
+        match solve_rule.complex_solve_impl(&(), &(), solver_state) {
+            Ok(()) => {}
+            Err(e) => return Err(FailedSolve {
+                steps: solver_state.get_steps(),
+                conclusions: solver_state.get_conclusions().into_iter().collect(),
+                unsolved_rules: solver_state.get_unsolved_rules(),
+                unsolved_runes: solver_state.get_unsolved_runes(),
+                error: e,
+            }),
+        }
+        solver_state.sanity_check();
+        let conclusions_after = solver_state.get_conclusions().len();
+        if conclusions_after > conclusions_before {
+            return Ok(true);
+        }
+    }
+    Ok(false)
+}
+/*
+  // Local advance helper, inlined from the former generic Solver.advance.
+  // Returns true if there's more to be done, false if we've gotten as far as we can.
+  def advance(
+      solverState: SimpleSolverState[IRule, Long, String]):
+  Result[Boolean, FailedSolve[IRule, Long, String, String]] = {
+    solverState.sanityCheck()
+    solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
+      TestRuleSolver.sanityCheckConclusionInner(Unit, Unit, rune, conclusion)
+    })
+    // Stage 1: Do simple solves
+    solverState.getNextSolvable() match {
+      case None => // continue onto the next stage
+      case Some(solvingRuleIndex) => {
+        val rule = solverState.getRule(solvingRuleIndex)
+        val stepsBefore = solverState.getSteps().size
+        TestRuleSolver.solveInner(Unit, Unit, solverState, solvingRuleIndex, rule) match {
+          case Ok(()) => {}
+          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
+        }
+        val stepsAfter = solverState.getSteps().size
+        vassert(stepsAfter == stepsBefore + 1)
+        vassert(solverState.ruleIsSolved(solvingRuleIndex))
+        solverState.sanityCheck()
+        // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
+        // it'll start doing a complex solve if available, or just finish.
+        return Ok(true)
+      }
+    }
+    // Stage 2: Do a complex solve if available.
+    if (solverState.getUnsolvedRules().nonEmpty) {
+      val conclusionsBefore = solverState.getConclusions().toMap.size
+      TestRuleSolver.complexSolveInner(Unit, Unit, solverState) match {
+        case Ok(()) =>
+        case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), e))
+      }
+      solverState.sanityCheck()
+      val conclusionsAfter = solverState.getConclusions().toMap.size
+      if (conclusionsAfter == conclusionsBefore) {
+        // There's nothing more to be done. Let's continue on to stage 3.
+      } else {
+        return Ok(true) // Go back to stage 1
+      }
+    } else {
+      // No more rules to solve, so continue to the wrapping up stages of the solve.
+    }
+    // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
+    // and they can even add more rules if they want.
+    Ok(false)
   }
 */
 // mig: fn simple_int_rule
@@ -469,7 +574,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
     #[test]
     fn test_receive_struct_from_sent_interface() {
         use super::test_rules::{Literal, Send, TestRule};
-        use crate::solver::ISolverError;
+
         use std::collections::HashSet;
 
         let rules: Vec<TestRule> = vec![
@@ -488,10 +593,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         ];
         let failed = expect_solve_failure(rules);
 
-        // MIGALLOW: Rust's immediate-commit design means FailedSolve.steps differs from Scala.
-        // The step that produced the conflicting conclusion is never recorded. Steps contain
-        // only (-1, "Firefly") and (-2, "ISpaceship"). Scala would also have (-2, "Firefly").
-        // The conflicting conclusion is captured in error (SolverConflict).
+        // commitStep appends the step before checking conflicts, so the conflicting step
+        // is captured in the audit trail (matching Scala behavior).
         let conclusions_set: HashSet<(i64, String)> = failed
             .steps
             .iter()
@@ -504,6 +607,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         let expected_conclusions: HashSet<(i64, String)> = [
             (-1, "Firefly".to_string()),
             (-2, "ISpaceship".to_string()),
+            (-2, "Firefly".to_string()),
         ]
         .into_iter()
         .collect();
@@ -593,6 +697,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
   }
 */
 // mig: fn test_complex_solve_most_specific_ancestor
+    // Tests @CSCDSRZ: complex solve infers the receiver kind from senders.
     #[test]
     fn test_complex_solve_most_specific_ancestor() {
         use super::test_rules::{Literal, Send, TestRule};
@@ -629,6 +734,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
   }
 */
 // mig: fn test_complex_solve_calculate_common_ancestor
+    // Tests @CSCDSRZ: complex solve finds the common ancestor of multiple senders.
     #[test]
     fn test_complex_solve_calculate_common_ancestor() {
         use super::test_rules::{Literal, Send, TestRule};
@@ -676,6 +782,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
   }
 */
 // mig: fn test_complex_solve_descendant_satisfying_call
+    // Tests @CSCDSRZ: complex solve picks a descendant that satisfies a call constraint.
     #[test]
     fn test_complex_solve_descendant_satisfying_call() {
         use super::test_rules::{Call, Literal, Send, TestRule};
@@ -732,7 +839,6 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
     #[test]
     fn partial_solve() {
         use super::test_rules::{Call, Literal, TestRule};
-        use crate::solver::Solver;
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
@@ -752,33 +858,33 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v.dedup();
             v
         };
-        let delegate = super::test_rule_solver::TestRuleSolver {
+        let test_solver = super::test_rule_solver::TestRuleSolver {
             scout_arena: &scout_arena,
         };
-        let mut solver = Solver::new(
+        let mut solver_state = make_solver_state(
             true,
-            delegate,
-            vec![RangeS::test_zero(&scout_arena)],
+            false,
+            Box::new(super::test_rule_solver::rule_to_puzzles),
+            &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
             std::collections::HashMap::new(),
             all_runes,
         );
 
-        while solver.advance(&(), &()).expect("advance") {}
+        while advance(&mut solver_state, &test_solver).expect("advance") {}
         let first_conclusions: std::collections::HashMap<i64, String> =
-            solver.userify_conclusions().into_iter().collect();
+            solver_state.userify_conclusions().into_iter().collect();
         assert_eq!(first_conclusions.get(&-2), Some(&"A".to_string()));
 
-        let canonical_1 = solver.get_canonical_rune(&-1i64);
         let mut new_conclusions = std::collections::HashMap::new();
-        new_conclusions.insert(canonical_1, "Firefly".to_string());
-        solver
-            .mark_rules_solved(vec![], new_conclusions)
-            .expect("mark_rules_solved");
+        new_conclusions.insert(-1i64, "Firefly".to_string());
+        solver_state
+            .commit_step::<String>(false, vec![], new_conclusions, vec![])
+            .expect("commit_step");
 
-        while solver.advance(&(), &()).expect("advance") {}
+        while advance(&mut solver_state, &test_solver).expect("advance") {}
         let second_conclusions: std::collections::HashMap<i64, String> =
-            solver.userify_conclusions().into_iter().collect();
+            solver_state.userify_conclusions().into_iter().collect();
         assert_eq!(second_conclusions.get(&-1), Some(&"Firefly".to_string()));
         assert_eq!(second_conclusions.get(&-2), Some(&"A".to_string()));
         assert_eq!(
@@ -841,14 +947,14 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         use super::test_rules::TestRule;
         use std::collections::HashMap;
 
-        let predictions = solve_with_puzzler(|rule: &TestRule| match rule {
+        let predictions = solve_with_puzzler(Box::new(|rule: &TestRule| match rule {
             TestRule::Lookup(_) => vec![],
             other => other.all_puzzles(),
-        });
+        }));
         assert_eq!(predictions.len(), 1, "predicting mode should solve only rune -2");
         assert_eq!(predictions.get(&-2), Some(&"1337".to_string()));
 
-        let conclusions = solve_with_puzzler(|rule: &TestRule| rule.all_puzzles());
+        let conclusions = solve_with_puzzler(Box::new(|rule: &TestRule| rule.all_puzzles()));
         let expected: HashMap<i64, String> = [
             (-1, "Firefly".to_string()),
             (-2, "1337".to_string()),
@@ -885,10 +991,10 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
 */
 // mig: fn solve_with_puzzler
     fn solve_with_puzzler(
-        puzzler: impl Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>,
+        puzzler: Box<dyn Fn(&super::test_rules::TestRule) -> Vec<Vec<i64>>>,
     ) -> std::collections::HashMap<i64, String> {
         use super::test_rules::{Call, Lookup, Literal, TestRule};
-        use crate::solver::Solver;
+
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
@@ -915,20 +1021,18 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v.dedup();
             v
         };
-        let delegate = super::test_rule_solver::CustomPuzzlerDelegate {
-            base: super::test_rule_solver::TestRuleSolver { scout_arena: &scout_arena },
-            puzzler,
-        };
-        let mut solver = Solver::new(
+        let test_solver = super::test_rule_solver::TestRuleSolver { scout_arena: &scout_arena };
+        let mut solver_state = make_solver_state(
             true,
-            delegate,
-            vec![RangeS::test_zero(&scout_arena)],
+            false,
+            puzzler,
+            &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
             std::collections::HashMap::new(),
             all_runes,
         );
-        while solver.advance(&(), &()).expect("advance") {}
-        solver.userify_conclusions().into_iter().collect()
+        while advance(&mut solver_state, &test_solver).expect("advance") {}
+        solver_state.userify_conclusions().into_iter().collect()
     }
 /*
     def solveWithPuzzler(puzzler: IRule => Vector[Vector[Long]]) = {
@@ -984,7 +1088,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
     #[test]
     fn test_conflict() {
         use super::test_rules::{Literal, TestRule};
-        use crate::solver::ISolverError;
+
 
         let rules: Vec<TestRule> = vec![
             TestRule::Literal(Literal {
@@ -1023,8 +1127,8 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
 // mig: fn expect_solve_failure
     fn expect_solve_failure(
         rules: Vec<super::test_rules::TestRule>,
-    ) -> crate::solver::FailedSolve<super::test_rules::TestRule, i64, String, String> {
-        use crate::solver::Solver;
+    ) -> FailedSolve<TestRule, i64, String, String> {
+
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
         use std::collections::HashMap;
@@ -1037,20 +1141,21 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v.dedup();
             v
         };
-        let delegate = super::test_rule_solver::TestRuleSolver {
+        let test_solver = super::test_rule_solver::TestRuleSolver {
             scout_arena: &scout_arena,
         };
-        let mut solver = Solver::new(
+        let mut solver_state = make_solver_state(
             true,
-            delegate,
-            vec![RangeS::test_zero(&scout_arena)],
+            false,
+            Box::new(super::test_rule_solver::rule_to_puzzles),
+            &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
             HashMap::new(),
             all_runes,
         );
 
         loop {
-            match solver.advance(&(), &()) {
+            match advance(&mut solver_state, &test_solver) {
                 Ok(continue_flag) => {
                     if !continue_flag {
                         break;
@@ -1094,7 +1199,7 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
         expect_complete_solve: bool,
         initially_known_runes: std::collections::HashMap<i64, String>,
     ) -> std::collections::HashMap<i64, String> {
-        use crate::solver::Solver;
+
         use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
@@ -1112,22 +1217,23 @@ const COMPLEX_RULE_SET_EQUALS_RULES: Vec<i32> = vec![];
             v.dedup();
             v
         };
-        let delegate = super::test_rule_solver::TestRuleSolver {
+        let test_solver = super::test_rule_solver::TestRuleSolver {
             scout_arena: &scout_arena,
         };
-        let mut solver = Solver::new(
+        let mut solver_state = make_solver_state(
             true,
-            delegate,
-            vec![RangeS::test_zero(&scout_arena)],
+            false,
+            Box::new(super::test_rule_solver::rule_to_puzzles),
+            &|rule: &super::test_rules::TestRule| rule.all_runes(),
             rules,
             initially_known_runes,
             all_runes,
         );
 
-        while solver.advance(&(), &()).expect("advance") {}
+        while advance(&mut solver_state, &test_solver).expect("advance") {}
 
         let conclusions: std::collections::HashMap<i64, String> =
-            solver.userify_conclusions().into_iter().collect();
+            solver_state.userify_conclusions().into_iter().collect();
         let conclusions_keys: std::collections::HashSet<i64> =
             conclusions.keys().cloned().collect();
         assert_eq!(expect_complete_solve, conclusions_keys == all_runes_from_rules);

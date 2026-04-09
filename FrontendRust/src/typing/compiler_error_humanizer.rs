@@ -775,7 +775,7 @@ object CompilerErrorHumanizer {
       }
       case StructTemplateNameT(humanName) => humanName.str
       case InterfaceTemplateNameT(humanName) => humanName.str
-      case p @ NonKindNonRegionPlaceholderNameT(index, rune) => p.toString // DO NOT SUBMIT
+      case NonKindNonRegionPlaceholderNameT(index, rune) => humanizeRune(rune)
     }
   }
 

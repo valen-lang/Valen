@@ -385,6 +385,7 @@ fn check_file_pair(rust_content: &str, rust_path: &Path, scala_path: &Path) -> O
     let extracted = comments.join("\n");
     let extracted = filter_migration_annotations(&extracted);
 
+    let scala_content = filter_migration_annotations(&scala_content);
     let scala_lines = normalize(&scala_content);
     let extracted_lines = normalize(&extracted);
 

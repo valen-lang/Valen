@@ -1,96 +1,21 @@
 /*
 package dev.vale.solver
 
-import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
-import org.scalatest._
+import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
 
 import scala.collection.immutable.Map
 
 */
 use super::test_rules::*;
-use crate::solver::{ISolverError, SolverDelegate};
-use crate::utils::range::RangeS;
+use crate::solver::{ISolverError, RuleError, SimpleSolverState};
 
 // mig: struct TestRuleSolver
 pub struct TestRuleSolver<'ctx, 's> {
     pub scout_arena: &'ctx crate::scout_arena::ScoutArena<'s>,
 }
-
-// MIGALLOW: Scala passed ruleToPuzzles as a Solver constructor closure; Rust stores it in the delegate.
-pub struct CustomPuzzlerDelegate<'ctx, 's, F: Fn(&TestRule) -> Vec<Vec<i64>>> {
-    pub base: TestRuleSolver<'ctx, 's>,
-    pub puzzler: F,
-}
-// mig: impl SolverDelegate for TestRuleSolver
-impl<'ctx, 's> SolverDelegate<TestRule, i64, (), (), String, String> for TestRuleSolver<'ctx, 's> {
-  /*
-  class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
-  */
-    fn rule_to_puzzles(&self, rule: &TestRule) -> Vec<Vec<i64>> {
-        rule.all_puzzles()
-    }
-
-    fn rule_to_runes(&self, rule: &TestRule) -> Vec<i64> {
-        rule.all_runes()
-    }
-
-    fn solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
-        &self,
-        state: &(),
-        env: &(),
-        rule_index: i32,
-        rule: &TestRule,
-        solver_state: &mut S,
-    ) -> Result<(), ISolverError<i64, String, String>> {
-        self.solve_impl(state, env, rule_index, rule, solver_state)
-    }
-
-    fn complex_solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
-        &self,
-        state: &(),
-        env: &(),
-        solver_state: &mut S,
-    ) -> Result<(), ISolverError<i64, String, String>> {
-        self.complex_solve_impl(state, env, solver_state)
-    }
-
-    fn sanity_check_conclusion(&self, _env: &(), _state: &(), _rune: &i64, _conclusion: &String) {
-    }
-}
-
-impl<'ctx, 's, F: Fn(&TestRule) -> Vec<Vec<i64>>> SolverDelegate<TestRule, i64, (), (), String, String> for CustomPuzzlerDelegate<'ctx, 's, F> {
-    fn rule_to_puzzles(&self, rule: &TestRule) -> Vec<Vec<i64>> {
-        (self.puzzler)(rule)
-    }
-
-    fn rule_to_runes(&self, rule: &TestRule) -> Vec<i64> {
-        self.base.rule_to_runes(rule)
-    }
-
-    fn solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
-        &self,
-        state: &(),
-        env: &(),
-        rule_index: i32,
-        rule: &TestRule,
-        solver_state: &mut S,
-    ) -> Result<(), ISolverError<i64, String, String>> {
-        self.base.solve(state, env, rule_index, rule, solver_state)
-    }
-
-    fn complex_solve<S: crate::solver::ISolverState<TestRule, i64, String>>(
-        &self,
-        state: &(),
-        env: &(),
-        solver_state: &mut S,
-    ) -> Result<(), ISolverError<i64, String, String>> {
-        self.base.complex_solve(state, env, solver_state)
-    }
-
-    fn sanity_check_conclusion(&self, env: &(), state: &(), rune: &i64, conclusion: &String) {
-        self.base.sanity_check_conclusion(env, state, rune, conclusion)
-    }
-}
+/*
+object TestRuleSolver {
+*/
 
 // mig: impl TestRuleSolver
 impl<'ctx, 's> TestRuleSolver<'ctx, 's> {
@@ -176,13 +101,12 @@ fn get_template(&self, tyype: &str) -> String {
 
 */
 // mig: fn complex_solve_impl
-fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
+pub fn complex_solve_impl(
     &self,
     _state: &(),
     _env: &(),
-    solver_state: &mut S,
+    solver_state: &mut SimpleSolverState<TestRule, i64, String>,
 ) -> Result<(), ISolverError<i64, String, String>> {
-    let range_s = vec![RangeS::test_zero(self.scout_arena)];
     let unsolved_rules = solver_state.get_unsolved_rules();
     let receiver_runes: Vec<i64> = {
         let mut v: Vec<i64> = unsolved_rules
@@ -199,6 +123,7 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
         v.dedup();
         v
     };
+    let mut new_conclusions: std::collections::HashMap<i64, String> = std::collections::HashMap::new();
     for receiver in receiver_runes {
         let receive_rules: Vec<&TestRule> = unsolved_rules
             .iter()
@@ -224,7 +149,7 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             .iter()
             .filter_map(|r| {
                 if let TestRule::Send(s) = r {
-                    solver_state.get_conclusion(s.sender_rune)
+                    solver_state.get_conclusion(&s.sender_rune)
                 } else {
                     None
                 }
@@ -234,7 +159,7 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             .iter()
             .filter_map(|r| {
                 if let TestRule::Call(c) = r {
-                    solver_state.get_conclusion(c.name_rune)
+                    solver_state.get_conclusion(&c.name_rune)
                 } else {
                     None
                 }
@@ -248,13 +173,11 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             any_unknown_constraints,
         )
         {
-            solver_state.step_conclude_rune(
-                range_s.clone(),
-                receiver,
-                receiver_instantiation,
-            )?;
+            new_conclusions.insert(receiver, receiver_instantiation);
         }
     }
+    // Complex solve only produces conclusions, not solved/new rules.
+    solver_state.commit_step::<String>(true, vec![], new_conclusions, vec![])?;
     Ok(())
 }
 /*
@@ -281,74 +204,66 @@ fn complex_solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
 
 */
 // mig: fn solve_impl
-fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
+pub fn solve_impl(
   &self,
   _state: &(),
   _env: &(),
-  _rule_index: i32,
+  solver_state: &mut SimpleSolverState<TestRule, i64, String>,
+  rule_index: i32,
   rule: &TestRule,
-  solver_state: &mut S,
 ) -> Result<(), ISolverError<i64, String, String>> {
-    let range_s = vec![RangeS::test_zero(self.scout_arena)];
     match rule {
         TestRule::Equals(Equals { left_rune, right_rune }) => {
-            match solver_state.get_conclusion(*left_rune) {
+            match solver_state.get_conclusion(left_rune) {
                 Some(left) => {
-                    solver_state.step_conclude_rune(range_s, *right_rune, left)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*right_rune, left)].into_iter().collect(), vec![])
                 }
                 None => {
                     let right = solver_state
-                        .get_conclusion(*right_rune)
+                        .get_conclusion(right_rune)
                         .expect("right rune must have conclusion");
-                    solver_state.step_conclude_rune(range_s, *left_rune, right)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*left_rune, right)].into_iter().collect(), vec![])
                 }
             }
         }
         TestRule::Lookup(Lookup { rune, name }) => {
-            solver_state.step_conclude_rune(range_s, *rune, name.clone())?;
-            Ok(())
+            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, name.clone())].into_iter().collect(), vec![])
         }
         TestRule::Literal(Literal { rune, value }) => {
-            solver_state.step_conclude_rune(range_s, *rune, value.clone())?;
-            Ok(())
+            solver_state.commit_step::<String>(false, vec![rule_index],[(*rune, value.clone())].into_iter().collect(), vec![])
         }
         TestRule::OneOf(OneOf { coord_rune, possible_values }) => {
             let literal = solver_state
-                .get_conclusion(*coord_rune)
+                .get_conclusion(coord_rune)
                 .expect("OneOf rune must have conclusion");
             if !possible_values.contains(&literal) {
-                return Err(ISolverError::RuleError(crate::solver::RuleError {
+                return Err(ISolverError::RuleError(RuleError {
                     err: "conflict!".to_string(),
                     _phantom: std::marker::PhantomData,
                 }));
             }
-            Ok(())
+            solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![])
         }
         TestRule::CoordComponents(CoordComponents {
             coord_rune,
             ownership_rune,
             kind_rune,
         }) => {
-            match solver_state.get_conclusion(*coord_rune) {
+            match solver_state.get_conclusion(coord_rune) {
                 Some(combined) => {
                     let parts: Vec<&str> = combined.split('/').collect();
                     let (ownership, kind) = (parts[0].to_string(), parts[1].to_string());
-                    solver_state.step_conclude_rune(range_s.clone(), *ownership_rune, ownership)?;
-                    solver_state.step_conclude_rune(range_s, *kind_rune, kind)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*ownership_rune, ownership), (*kind_rune, kind)].into_iter().collect(), vec![])
                 }
                 None => {
                     let ownership = solver_state
-                        .get_conclusion(*ownership_rune)
+                        .get_conclusion(ownership_rune)
                         .expect("ownership required");
                     let kind = solver_state
-                        .get_conclusion(*kind_rune)
+                        .get_conclusion(kind_rune)
                         .expect("kind required");
                     let combined = format!("{}/{}", ownership, kind);
-                    solver_state.step_conclude_rune(range_s, *coord_rune, combined)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*coord_rune, combined)].into_iter().collect(), vec![])
                 }
             }
         }
@@ -356,27 +271,25 @@ fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             result_rune,
             member_runes,
         }) => {
-            match solver_state.get_conclusion(*result_rune) {
+            match solver_state.get_conclusion(result_rune) {
                 Some(result) => {
                     let parts: Vec<&str> = result.split(',').collect();
-                    for (rune, part) in member_runes.iter().zip(parts.iter()) {
-                        solver_state
-                            .step_conclude_rune(range_s.clone(), *rune, (*part).to_string())?;
-                    }
-                    Ok(())
+                    let conclusions: std::collections::HashMap<i64, String> = member_runes.iter().zip(parts.iter())
+                        .map(|(rune, part)| (*rune, (*part).to_string()))
+                        .collect();
+                    solver_state.commit_step::<String>(false, vec![rule_index],conclusions, vec![])
                 }
                 None => {
                     let result: String = member_runes
                         .iter()
                         .map(|r| {
                             solver_state
-                                .get_conclusion(*r)
+                                .get_conclusion(r)
                                 .expect("member rune must have conclusion")
                         })
                         .collect::<Vec<_>>()
                         .join(",");
-                    solver_state.step_conclude_rune(range_s, *result_rune, result)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![])
                 }
             }
         }
@@ -385,21 +298,19 @@ fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             name_rune,
             arg_rune,
         }) => {
-            let maybe_result = solver_state.get_conclusion(*result_rune);
-            let maybe_name = solver_state.get_conclusion(*name_rune);
-            let maybe_arg = solver_state.get_conclusion(*arg_rune);
+            let maybe_result = solver_state.get_conclusion(result_rune);
+            let maybe_name = solver_state.get_conclusion(name_rune);
+            let maybe_arg = solver_state.get_conclusion(arg_rune);
             match (maybe_result, maybe_name, maybe_arg) {
                 (Some(result), Some(template_name), _) => {
                     let prefix = format!("{}:", template_name);
                     assert!(result.starts_with(&prefix));
                     let arg = result[prefix.len()..].to_string();
-                    solver_state.step_conclude_rune(range_s, *arg_rune, arg)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*arg_rune, arg)].into_iter().collect(), vec![])
                 }
                 (_, Some(template_name), Some(arg)) => {
                     let result = format!("{}:{}", template_name, arg);
-                    solver_state.step_conclude_rune(range_s, *result_rune, result)?;
-                    Ok(())
+                    solver_state.commit_step::<String>(false, vec![rule_index],[(*result_rune, result)].into_iter().collect(), vec![])
                 }
                 _ => panic!("Call rule needs name+arg or result+name"),
             }
@@ -409,35 +320,33 @@ fn solve_impl<S: crate::solver::ISolverState<TestRule, i64, String>>(
             receiver_rune,
         }) => {
             let receiver = solver_state
-                .get_conclusion(*receiver_rune)
+                .get_conclusion(receiver_rune)
                 .expect("receiver must have conclusion");
             if receiver == "ISpaceship" || receiver == "IWeapon:int" {
                 let new_rule = TestRule::Implements(Implements {
                     sub_rune: *sender_rune,
                     super_rune: *receiver_rune,
                 });
-                let puzzles = self.rule_to_puzzles(&new_rule);
-                solver_state.step_add_rule(new_rule, puzzles);
-                Ok(())
+                solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![new_rule])
             } else {
-                solver_state.step_conclude_rune(range_s, *sender_rune, receiver)?;
-                Ok(())
+                solver_state.commit_step::<String>(false, vec![rule_index],[(*sender_rune, receiver)].into_iter().collect(), vec![])
             }
         }
         TestRule::Implements(Implements { sub_rune, super_rune }) => {
             let sub = solver_state
-                .get_conclusion(*sub_rune)
+                .get_conclusion(sub_rune)
                 .expect("sub must have conclusion");
             let suuper = solver_state
-                .get_conclusion(*super_rune)
+                .get_conclusion(super_rune)
                 .expect("super must have conclusion");
             match (sub.as_str(), suuper.as_str()) {
-                (x, y) if x == y => Ok(()),
-                ("Firefly", "ISpaceship") => Ok(()),
-                ("Serenity", "ISpaceship") => Ok(()),
-                ("Flamethrower:int", "IWeapon:int") => Ok(()),
+                (x, y) if x == y => {},
+                ("Firefly", "ISpaceship") => {},
+                ("Serenity", "ISpaceship") => {},
+                ("Flamethrower:int", "IWeapon:int") => {},
                 _ => panic!("Unimplemented Implements case: {} -> {}", sub, suuper),
             }
+            solver_state.commit_step::<String>(false, vec![rule_index],std::collections::HashMap::new(), vec![])
         }
     }
 }
@@ -664,4 +573,9 @@ fn narrow(
 
 }
 */
+}
+
+// mig: fn rule_to_puzzles (free function for use with make_solver_state)
+pub fn rule_to_puzzles(rule: &TestRule) -> Vec<Vec<i64>> {
+    rule.all_puzzles()
 }
