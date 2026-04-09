@@ -1,8 +1,4 @@
 /*
-Guardian: disable-all
-*/
-
-/*
 package dev.vale.solver
 
 import dev.vale.{Err, Interner, Ok, Profiler, RangeS, Result, vassert, vfail, vimpl, vpass}
@@ -36,6 +32,16 @@ where
 }
 /*
 case class Step[Rule, Rune, Conclusion](complex: Boolean, solvedRules: Vector[(Int, Rule)], addedRules: Vector[Rule], conclusions: Map[Rune, Conclusion])
+
+
+case class FailedSolve[Rule, Rune, Conclusion, ErrType](
+  steps: Stream[Step[Rule, Rune, Conclusion]],
+  conclusions: Map[Rune, Conclusion],
+  unsolvedRules: Vector[Rule],
+  unsolvedRunes: Vector[Rune],
+  error: ISolverError[Rune, Conclusion, ErrType]
+)
+
 */
 #[derive(Clone, Debug, PartialEq)]
 pub enum SolverOutcome<Rule, Rune, Conclusion, ErrType>
@@ -75,11 +81,6 @@ where
     }
 }
 
-/*
-sealed trait ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  def getOrDie(): Map[Rune, Conclusion]
-}
-*/
 #[derive(Clone, Debug, PartialEq)]
 pub enum IncompleteOrFailedSolve<Rule, Rune, Conclusion, ErrType>
 where
@@ -132,13 +133,7 @@ where
         panic!("get_or_die called on IncompleteOrFailedSolve")
     }
 }
-/*
-sealed trait IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  def unsolvedRules: Vector[Rule]
-  def unsolvedRunes: Vector[Rune]
-  def steps: Stream[Step[Rule, Rune, Conclusion]]
-}
-*/
+
 // mig: struct CompleteSolve
 #[derive(Clone, Debug, PartialEq)]
 pub struct CompleteSolve<Rule, Rune, Conclusion, ErrType>
@@ -155,14 +150,7 @@ where
     Rune: Eq + std::hash::Hash,
 {
 }
-/*
-case class CompleteSolve[Rule, Rune, Conclusion, ErrType](
-  steps: Stream[Step[Rule, Rune, Conclusion]],
-  conclusions: Map[Rune, Conclusion]
-) extends ISolverOutcome[Rule, Rune, Conclusion, ErrType] {
-  override def getOrDie(): Map[Rune, Conclusion] = conclusions
-}
-*/
+
 // mig: struct IncompleteSolve
 #[derive(Clone, Debug, PartialEq)]
 pub struct IncompleteSolve<Rule, Rune, Conclusion, ErrType>
@@ -182,19 +170,6 @@ where
 {
 }
 
-/*
-case class IncompleteSolve[Rule, Rune, Conclusion, ErrType](
-  steps: Stream[Step[Rule, Rune, Conclusion]],
-  unsolvedRules: Vector[Rule],
-  unknownRunes: Set[Rune],
-  incompleteConclusions: Map[Rune, Conclusion]
-) extends IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] {
-  vassert(unknownRunes.nonEmpty)
-  vpass()
-  override def getOrDie(): Map[Rune, Conclusion] = vfail()
-  override def unsolvedRunes: Vector[Rune] = unknownRunes.toVector
-}
-*/
 // mig: struct FailedSolve
 #[derive(Clone, Debug, PartialEq)]
 pub struct FailedSolve<Rule, Rune, Conclusion, ErrType>
@@ -211,17 +186,7 @@ where
     Rune: Eq + std::hash::Hash,
 {
 }
-/*
-case class FailedSolve[Rule, Rune, Conclusion, ErrType](
-  steps: Stream[Step[Rule, Rune, Conclusion]],
-  unsolvedRules: Vector[Rule],
-  error: ISolverError[Rune, Conclusion, ErrType]
-) extends IIncompleteOrFailedSolve[Rule, Rune, Conclusion, ErrType] {
-  override def getOrDie(): Map[Rune, Conclusion] = vfail()
-  vpass()
-  override def unsolvedRunes: Vector[Rune] = Vector()
-}
-*/
+
 // mig: trait ISolverError
 #[derive(Clone, Debug, PartialEq)]
 pub enum ISolverError<Rune, Conclusion, ErrType> {
@@ -230,6 +195,7 @@ pub enum ISolverError<Rune, Conclusion, ErrType> {
 }
 /*
 sealed trait ISolverError[Rune, Conclusion, ErrType]
+case class SolveIncomplete[Rune, Conclusion, ErrType]() extends ISolverError[Rune, Conclusion, ErrType]
 */
 // mig: struct SolverConflict
 #[derive(Clone, Debug, PartialEq)]
@@ -246,9 +212,7 @@ case class SolverConflict[Rune, Conclusion, ErrType](
   rune: Rune,
   previousConclusion: Conclusion,
   newConclusion: Conclusion
-) extends ISolverError[Rune, Conclusion, ErrType] {
-  vpass()
-}
+) extends ISolverError[Rune, Conclusion, ErrType]
 */
 // mig: struct RuleError
 #[derive(Clone, Debug, PartialEq)]
@@ -263,6 +227,33 @@ case class RuleError[Rune, Conclusion, ErrType](
 //  ruleIndex: Int,
   err: ErrType
 ) extends ISolverError[Rune, Conclusion, ErrType]
+
+// Given enough user specified template params and param inputs, we should be able to
+// infer everything.
+// This class's purpose is to take those things, and see if it can figure out as many
+// inferences as possible.
+
+//trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
+//  def solve(
+//    state: State,
+//    env: Env,
+//    solverState: SimpleSolverState[Rule, Rune, Conclusion],
+//    ruleIndex: Int,
+//    rule: Rule):
+//  Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
+//
+//  // Called when we can't do any regular solves, we don't have enough
+//  // runes. This is where we do more interesting rules, like SMCMST.
+//  // See CSALR for more.
+//  def complexSolve(
+//    state: State,
+//    env: Env,
+//    solverState: SimpleSolverState[Rule, Rune, Conclusion]
+//  ): Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
+//
+//  def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
+//}
+
 */
 pub trait SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>
 where
@@ -271,16 +262,7 @@ where
   // SPORK
   fn rule_to_puzzles(&self, rule: &Rule) -> Vec<Vec<Rune>>;
   fn rule_to_runes(&self, rule: &Rule) -> Vec<Rune>;
-/*
-// Given enough user specified template params and param inputs, we should be able to
-// infer everything.
-// This class's purpose is to take those things, and see if it can figure out as many
-// inferences as possible.
 
-// MIGALLOW: ISolveRule -> SolverDelegate
-// SPORK
-trait ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType] {
-*/
 // mig: fn solve
 fn solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
   &self,
@@ -290,17 +272,7 @@ fn solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
   rule: &Rule,
   solver_state: &mut S,
 ) -> Result<(), ISolverError<Rune, Conclusion, ErrType>>;
-/*
-  def solve(
-    state: State,
-    env: Env,
-    solverState: ISolverState[Rule, Rune, Conclusion],
-    ruleIndex: Int,
-    rule: Rule,
-    stepState: IStepState[Rule, Rune, Conclusion]):
-  Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
 
-*/
 // mig: fn complex_solve
 
 fn complex_solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
@@ -309,30 +281,24 @@ fn complex_solve<S: super::ISolverState<Rule, Rune, Conclusion>>(
   env: &Env,
   solver_state: &mut S,
 ) -> Result<(), ISolverError<Rune, Conclusion, ErrType>>;
-/*
-  // Called when we can't do any regular solves, we don't have enough
-  // runes. This is where we do more interesting rules, like SMCMST.
-  // See CSALR for more.
-  def complexSolve(
-    state: State,
-    env: Env,
-    solverState: ISolverState[Rule, Rune, Conclusion],
-    stepState: IStepState[Rule, Rune, Conclusion]
-  ): Result[Unit, ISolverError[Rune, Conclusion, ErrType]]
 
-*/
 // mig: fn sanity_check_conclusion
 fn sanity_check_conclusion(&self, env: &Env, state: &State, rune: &Rune, conclusion: &Conclusion);
-/*
-  def sanityCheckConclusion(env: Env, state: State, rune: Rune, conclusion: Conclusion): Unit
-}
-*/
 }
 
 // SPORK
 type SolverStateImpl<Rule, Rune, Conclusion> = SimpleSolverState<Rule, Rune, Conclusion>;
 /*
-
+object Solver {
+  def makeSolverState[Rule, Rune, Conclusion](
+      sanityCheck: Boolean,
+      useOptimizedSolver: Boolean,
+      ruleToPuzzles: Rule => Vector[Vector[Rune]],
+      ruleToRunes: Rule => Iterable[Rune],
+      initialRules: IndexedSeq[Rule],
+      initiallyKnownRunes: Map[Rune, Conclusion],
+      allRunes: Vector[Rune]
+  ): SimpleSolverState[Rule, Rune, Conclusion] = {
 */
 // mig: struct Solver
 pub struct Solver<'a, Rule, Rune, Env, State, Conclusion, ErrType, D>
@@ -354,19 +320,6 @@ where
     Conclusion: Clone + PartialEq,
     D: SolverDelegate<Rule, Rune, Env, State, Conclusion, ErrType>,
 {
-    /*
-class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
-    sanityCheck: Boolean,
-    useOptimizedSolver: Boolean,
-    interner: Interner,
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    ruleToRunes: Rule => Iterable[Rune],
-    solveRule: ISolveRule[Rule, Rune, Env, State, Conclusion, ErrType],
-    setupRange: List[RangeS],
-    initialRules: IndexedSeq[Rule],
-    initiallyKnownRunes: Map[Rune, Conclusion],
-    allRunes: Vector[Rune]) {
-  */
   pub fn new(
     sanity_check: bool,
     delegate: D,
@@ -417,63 +370,45 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     }
   }
   /*
-  private val solverState =
-    if (useOptimizedSolver) {
-      OptimizedSolverState[Rule, Rune, Conclusion]()
-    } else {
-      SimpleSolverState[Rule, Rune, Conclusion]()
-    }
+    val solverState =
+      if (useOptimizedSolver) {
+        SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+        // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+      } else {
+        SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+      }
 
-  Profiler.frame(() => {
     if (sanityCheck) {
       initialRules.flatMap(ruleToRunes).foreach(rune => vassert(allRunes.contains(rune)))
       initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
       vassert(allRunes == allRunes.distinct)
     }
 
-    allRunes.foreach(solverState.addRune)
-
     if (sanityCheck) {
       solverState.sanityCheck()
     }
 
-    manualStep(initiallyKnownRunes).getOrDie()
-
-    if (sanityCheck) {
-      solverState.sanityCheck()
-    }
-
-    addRules(initialRules.toVector)
+    solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
 
     if (sanityCheck) {
       solverState.sanityCheck()
     }
     solverState
-  })
-
+  }
+}
 */
     // mig: fn get_all_rules
     pub fn get_all_rules(&self) -> Vec<Rule> {
         self.solver_state.get_all_rules()
     }
-/*
-  def getAllRules(): Vector[Rule] = {
-    solverState.getAllRules()
-  }
 
-*/
     // mig: fn add_rules
     pub fn add_rules(&mut self, rules: Vec<Rule>) {
         for rule in rules {
             self.add_rule(rule);
         }
     }
-/*
-  def addRules(rules: Vector[Rule]): Unit = {
-    rules.foreach(rule => addRule(rule))
-  }
 
-*/
     // mig: fn add_rule
     pub fn add_rule(&mut self, rule: Rule) {
         let rule_index = self.solver_state.add_rule(rule.clone());
@@ -489,21 +424,7 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
             self.solver_state.sanity_check();
         }
     }
-/*
-  def addRule(rule: Rule): Unit = {
-      val ruleIndex = solverState.addRule(rule)
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
-      ruleToPuzzles(rule).foreach(puzzleRunes => {
-        solverState.addPuzzle(ruleIndex, puzzleRunes.map(solverState.getCanonicalRune).distinct)
-      })
-      if (sanityCheck) {
-        solverState.sanityCheck()
-      }
-  }
 
-*/
     // mig: fn manual_step
     pub fn manual_step(
         &mut self,
@@ -511,57 +432,22 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
     ) -> Result<(), ISolverError<Rune, Conclusion, std::convert::Infallible>> {
         panic!("Unimplemented: manual_step");
     }
-/*
-  def manualStep(newConclusions: Map[Rune, Conclusion]):
-  Result[Unit, ISolverError[Rune, Conclusion, Nothing]] = {
-    solverState.initialStep(ruleToPuzzles, (stepState: IStepState[Rule, Rune, Conclusion]) => {
-      newConclusions.foreach({ case (rune, conclusion) =>
-        stepState.concludeRune(RangeS.internal(interner, -6434324) :: setupRange, rune, conclusion)
-      })
-      Ok(())
-    }) match {
-      case Ok(step) => {
-        step.conclusions.foreach({ case (rune, conclusion) =>
-          solverState.concludeRune(solverState.getCanonicalRune(rune), conclusion)
-        })
-        Ok(Unit)
-      }
-      case Err(e) => Err(e)
-    }
-  }
 
-*/
     // mig: fn userify_conclusions
     pub fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.solver_state.userify_conclusions()
     }
-/*
-  def userifyConclusions(): Stream[(Rune, Conclusion)] = {
-    solverState.userifyConclusions()
-  }
 
-*/
     // mig: fn get_conclusion
     pub fn get_conclusion(&self, rune: &Rune) -> Option<Conclusion> {
         self.solver_state.get_conclusion(rune.clone())
     }
-/*
-  def getConclusion(rune: Rune): Option[Conclusion] = {
-    solverState.getConclusion(rune)
-  }
 
-*/
     // mig: fn is_complete
     pub fn is_complete(&self) -> bool {
         self.solver_state.userify_conclusions().len() == self.all_runes.len()
     }
-/*
-  def isComplete(): Boolean = {
-    // TODO(optimize): There has to be a faster way to do this...
-    solverState.userifyConclusions().size == allRunes.size
-  }
 
-*/
     // mig: fn mark_rules_solved
     pub fn mark_rules_solved(
         &mut self,
@@ -571,63 +457,32 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
         self.solver_state
             .mark_rules_solved(rule_indices, new_conclusions)
     }
-/*
-  def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
-  Result[Int, ISolverError[Rune, Conclusion, ErrType]] = {
-    solverState.markRulesSolved(ruleIndices, newConclusions)
-  }
 
-*/
     // mig: fn get_canonical_rune
     pub fn get_canonical_rune(&self, rune: &Rune) -> i32 {
         self.solver_state.get_canonical_rune(rune.clone())
     }
-/*
-  def getCanonicalRune(rune: Rune): Int = {
-    solverState.getCanonicalRune(rune)
-  }
 
-*/
     // mig: fn get_steps
     pub fn get_steps(&self) -> Vec<Step<Rule, Rune, Conclusion>> {
         self.solver_state.get_steps()
     }
-/*
-  def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = {
-    solverState.getSteps()
-  }
 
-*/
     // mig: fn get_all_runes
     pub fn get_all_runes(&self) -> std::collections::HashSet<i32> {
         self.solver_state.get_all_runes()
     }
-/*
-  def getAllRunes(): Set[Int] = {
-    solverState.getAllRunes()
-  }
 
-*/
     // mig: fn get_user_rune
     pub fn get_user_rune(&self, rune: i32) -> Rune {
         self.solver_state.get_user_rune(rune)
     }
-/*
-  def getUserRune(rune: Int): Rune = {
-    solverState.getUserRune(rune)
-  }
 
-*/
     // mig: fn get_unsolved_rules
     pub fn get_unsolved_rules(&self) -> Vec<Rule> {
         self.solver_state.get_unsolved_rules()
     }
-/*
-  def getUnsolvedRules(): Vector[Rule] = {
-    solverState.getUnsolvedRules()
-  }
 
-*/
     // mig: fn advance
     pub fn advance(
         &mut self,
@@ -700,87 +555,4 @@ class Solver[Rule, Rune, Env, State, Conclusion, ErrType](
         // Stage 3: done
         Ok(false)
     }
-/*
-  // Returns true if there's more to be done, false if we've gotten as far as we can.
-  def advance(env: Env, state: State):
-  Result[Boolean, FailedSolve[Rule, Rune, Conclusion, ErrType]] = {
-    Profiler.frame(() => {
-
-      if (sanityCheck) {
-        solverState.sanityCheck()
-
-        solverState.userifyConclusions().foreach({ case (rune, conclusion) =>
-          solveRule.sanityCheckConclusion(env, state, rune, conclusion)
-        })
-      }
-
-      // Stage 1: Do simple solves
-
-      solverState.getNextSolvable() match {
-        case None => // continue onto the next stage
-        case Some(solvingRuleIndex) => {
-          val rule = solverState.getRule(solvingRuleIndex)
-          val step =
-            solverState.simpleStep[ErrType](ruleToPuzzles, solvingRuleIndex, rule, solveRule.solve(state, env, solverState, solvingRuleIndex, rule, _)) match {
-              case Ok(step) => step
-              case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-            }
-
-          val canonicalConclusions =
-            step.conclusions.map({ case (userRune, conclusion) => solverState.getCanonicalRune(userRune) -> conclusion }).toMap
-
-          solverState.markRulesSolved[ErrType](Vector(solvingRuleIndex), canonicalConclusions) match {
-            case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-            case Ok(_) =>
-          }
-
-          if (sanityCheck) {
-            step.conclusions.foreach({ case (rune, conclusion) =>
-              solveRule.sanityCheckConclusion(env, state, rune, conclusion)
-            })
-            solverState.sanityCheck()
-          }
-          // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
-          // it'll start doing a complex solve if available, or just finish.
-          return Ok(true)
-        }
-      }
-
-      // Stage 2: Do a complex solve if available.
-
-      if (solverState.getUnsolvedRules().nonEmpty) {
-        val step =
-          solverState.complexStep(ruleToPuzzles, solveRule.complexSolve(state, env, solverState, _)) match {
-            case Ok(step) => step
-            case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-          }
-        val canonicalConclusions =
-          step.conclusions.map({ case (userRune, conclusion) => solverState.getCanonicalRune(userRune) -> conclusion }).toMap
-        solverState.markRulesSolved[ErrType](step.solvedRules.map(_._1).toVector, canonicalConclusions) match {
-          case Ok(0) => {
-            if (sanityCheck) {
-              solverState.sanityCheck()
-            }
-            // There's nothing more to be done. Let's continue on to stage 3.
-          }
-          case Ok(_) => {
-            if (sanityCheck) {
-              solverState.sanityCheck()
-            }
-            return Ok(true) // Go back to stage 1
-          }
-          case Err(e) => return Err(FailedSolve(solverState.getSteps(), solverState.getUnsolvedRules(), e))
-        }
-      } else {
-        // No more rules to solve, so continue to the wrapping up stages of the solve.
-      }
-
-      // Stage 3: We're done! The user should look at the conclusions to see if they're all solved,
-      // and they can even add more rules if they want.
-
-      return Ok(false)
-    })
-  }
-}
-*/
 }

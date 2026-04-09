@@ -3,7 +3,7 @@ package dev.vale.typing
 
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.IIncompleteOrFailedSolve
+import dev.vale.solver.FailedSolve
 import dev.vale.typing.infer.ITypingPassSolverError
 import dev.vale.typing.templata.ITemplataT
 import dev.vale.{PackageCoordinate, RangeS, vbreak, vcurious, vfail, vpass}
@@ -48,7 +48,7 @@ case class CantReconcileBranchesResults(range: List[RangeS], thenResult: CoordT,
 }
 case class IndexedArrayWithNonInteger(range: List[RangeS], types: CoordT) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class WrongNumberOfDestructuresError(range: List[RangeS], actualNum: Int, expectedNum: Int) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CantDowncastUnrelatedTypes(range: List[RangeS], sourceKind: KindT, targetKind: KindT, candidates: Vector[IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]]) extends ICompileErrorT {
+case class CantDowncastUnrelatedTypes(range: List[RangeS], sourceKind: KindT, targetKind: KindT, candidates: Vector[FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }
@@ -82,15 +82,15 @@ case class CouldntFindFunctionToCallT(range: List[RangeS], fff: FindFunctionFail
   vpass()
 }
 case class CouldntEvaluateFunction(range: List[RangeS], eff: IDefiningError) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class CouldntEvaluatImpl(range: List[RangeS], eff: IIncompleteOrFailedCompilerSolve) extends ICompileErrorT {
+case class CouldntEvaluatImpl(range: List[RangeS], eff: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }
-case class CouldntEvaluateStruct(range: List[RangeS], eff: IIncompleteOrFailedCompilerSolve) extends ICompileErrorT {
+case class CouldntEvaluateStruct(range: List[RangeS], eff: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }
-case class CouldntEvaluateInterface(range: List[RangeS], eff: IIncompleteOrFailedCompilerSolve) extends ICompileErrorT {
+case class CouldntEvaluateInterface(range: List[RangeS], eff: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }
@@ -125,7 +125,7 @@ case class CantMoveFromGlobal(range: List[RangeS], name: String) extends ICompil
 case class HigherTypingInferError(range: List[RangeS], err: RuneTypeSolveError) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 case class AbstractMethodOutsideOpenInterface(range: List[RangeS]) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
 //case class NotEnoughToSolveError(range: List[RangeS], conclusions: Map[IRuneS, ITemplata[ITemplataType]], unknownRunes: Iterable[IRuneS]) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TypingPassSolverError(range: List[RangeS], failedSolve: IIncompleteOrFailedCompilerSolve) extends ICompileErrorT {
+case class TypingPassSolverError(range: List[RangeS], failedSolve: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
   vpass()
 }

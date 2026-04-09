@@ -6,7 +6,7 @@ import dev.vale.parsing.ast.ShareP
 import dev.vale.postparsing.rules._
 import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vimpl, vwat}
 import dev.vale.postparsing._
-import dev.vale.solver.{CompleteSolve, FailedSolve, ISolveRule, ISolverError, ISolverOutcome, ISolverState, IStepState, IncompleteSolve, RuleError, Solver, SolverConflict}
+import dev.vale.solver.{CompleteSolve, FailedSolve, ISolverError, RuleError, SimpleSolverState, SolveIncomplete, SolverConflict}
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.ast.PrototypeT
 import dev.vale.typing.names._
@@ -309,12 +309,12 @@ class CompilerSolver(
   def continue(
     env: InferEnv,
     state: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+    solver: SimpleSolverState[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
   Result[Unit, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     while ( {
       solver.advance(env, state) match {
         case Ok(continue) => continue
-        case Err(f@FailedSolve(_, _, _)) => return Err(f)
+        case Err(f@FailedSolve(_, _, _, _, _)) => return Err(f)
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
@@ -323,8 +323,8 @@ class CompilerSolver(
 
   def interpretResults(
     runeToType: Map[IRuneS, ITemplataType],
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
-  ISolverOutcome[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError] = {
+    solver: SimpleSolverState[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+  CompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError] | FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError] = {
     val stepsStream = solver.getSteps().toStream
     val conclusionsStream = solver.userifyConclusions().toMap
 
@@ -334,11 +334,12 @@ class CompilerSolver(
     // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
     // Caller should remember to do that!
     if ((allRunes -- conclusions.keySet).nonEmpty) {
-      IncompleteSolve(
+      FailedSolve(
         stepsStream,
+        conclusions,
         solver.getUnsolvedRules(),
         allRunes -- conclusions.keySet,
-        conclusions)
+        SolveIncomplete())
     } else {
       CompleteSolve(stepsStream, conclusions)
     }

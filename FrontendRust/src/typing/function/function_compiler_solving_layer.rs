@@ -14,7 +14,7 @@ import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
 import dev.vale.typing.function._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Solver}
+import dev.vale.solver.{CompleteSolve, FailedSolve, SimpleSolverState}
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -391,7 +391,7 @@ class FunctionCompilerSolvingLayer(
           }
         }
       }) match {
-      case Err(f@FailedCompilerSolve(_, _, _)) => {
+      case Err(f@FailedSolve(_, _, _, _, _)) => {
         return (ResolveFunctionFailure(ResolvingSolveFailedOrIncomplete(f)))
       }
       case Ok(true) =>
@@ -576,7 +576,7 @@ class FunctionCompilerSolvingLayer(
           }
         }
       }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(function.range :: parentRanges, f))
         }
         case Ok(true) =>

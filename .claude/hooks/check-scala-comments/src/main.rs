@@ -457,7 +457,81 @@ macro_rules! log {
     };
 }
 
-fn main() {
+fn find_project_dir() -> PathBuf {
+    // Try CLAUDE_PROJECT_DIR first
+    if let Ok(dir) = std::env::var("CLAUDE_PROJECT_DIR") {
+        return PathBuf::from(dir);
+    }
+    // Walk up from cwd looking for FrontendRust/ + Frontend/
+    let mut dir = std::env::current_dir().expect("Failed to get current directory");
+    loop {
+        if dir.join("FrontendRust").is_dir() && dir.join("Frontend").is_dir() {
+            return dir;
+        }
+        if !dir.pop() {
+            panic!(
+                "Could not find project root (directory containing FrontendRust/ and Frontend/). \
+                 Set CLAUDE_PROJECT_DIR or run from within the project tree."
+            );
+        }
+    }
+}
+
+fn run_check_all() {
+    let project_dir = find_project_dir();
+    let frontend_rust = project_dir.join("FrontendRust");
+    let frontend = project_dir.join("Frontend");
+
+    let mut checked = 0;
+    let mut skipped = 0;
+    let mut failures: Vec<(String, String)> = Vec::new();
+
+    for &(rust_rel, scala_rel) in FILE_MAP {
+        let rust_path = frontend_rust.join(rust_rel);
+        let scala_path = frontend.join(scala_rel);
+
+        if !rust_path.exists() {
+            skipped += 1;
+            continue;
+        }
+        if !scala_path.exists() {
+            eprintln!("WARNING: Scala file missing: {}", scala_path.display());
+            skipped += 1;
+            continue;
+        }
+
+        let rust_content = fs::read_to_string(&rust_path)
+            .unwrap_or_else(|e| panic!("Failed to read {}: {}", rust_path.display(), e));
+
+        match check_file_pair(&rust_content, &rust_path, &scala_path) {
+            None => {
+                checked += 1;
+            }
+            Some(diff) => {
+                checked += 1;
+                failures.push((rust_rel.to_string(), diff));
+            }
+        }
+    }
+
+    if failures.is_empty() {
+        println!("All {} files OK ({} skipped)", checked, skipped);
+        process::exit(0);
+    } else {
+        for (rust_rel, diff) in &failures {
+            eprintln!("MISMATCH: {}\n{}\n", rust_rel, diff);
+        }
+        eprintln!(
+            "{} of {} files have mismatches ({} skipped)",
+            failures.len(),
+            checked,
+            skipped
+        );
+        process::exit(1);
+    }
+}
+
+fn run_hook() {
     let mut log = open_log();
 
     let mut input = String::new();
@@ -539,5 +613,14 @@ fn main() {
             println!("{}", response);
             process::exit(2);
         }
+    }
+}
+
+fn main() {
+    let args: Vec<String> = std::env::args().collect();
+    if args.iter().any(|a| a == "--check-all") {
+        run_check_all();
+    } else {
+        run_hook();
     }
 }

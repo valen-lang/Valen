@@ -6,16 +6,6 @@
         "hooks": [
           {
             "type": "command",
-            "command": "/Volumes/V/Sylvan/.claude/hooks/check-scala-comments/target/release/check-scala-comments",
-            "timeout": 10000
-          }
-        ]
-      },
-      {
-        "matcher": "Edit|Write",
-        "hooks": [
-          {
-            "type": "command",
             "command": "/Volumes/V/Sylvan/.claude/hooks/guardian-client.sh || exit 2"
           }
         ]

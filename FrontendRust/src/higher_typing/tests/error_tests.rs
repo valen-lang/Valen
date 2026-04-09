@@ -23,7 +23,7 @@ class ErrorTests extends FunSuite with Matchers  {
 
 
     compileProgramForError(compilation) match {
-      case e @ CouldntSolveRulesA(_,RuneTypeSolveError(_,FailedSolve(_,_,RuleError(RuneTypingCouldntFindType(_,CodeNameS(StrI("Bork"))))))) => {
+      case e @ CouldntSolveRulesA(_,RuneTypeSolveError(_,FailedSolve(_,_,_,_,RuleError(RuneTypingCouldntFindType(_,CodeNameS(StrI("Bork"))))))) => {
         val codeMap = compilation.getCodeMap().getOrDie()
         val errorText =
           HigherTypingErrorHumanizer.humanize(

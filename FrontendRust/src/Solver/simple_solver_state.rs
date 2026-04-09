@@ -1,29 +1,62 @@
 /*
-Guardian: disable-all
-*/
-
-/*
 package dev.vale.solver
 
-import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vcurious, vfail}
+import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vcurious, vfail, vimpl}
 
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 
 object SimpleSolverState {
-*/
-// mig: fn apply
-/*
-  def apply[Rule, Rune, Conclusion](): SimpleSolverState[Rule, Rune, Conclusion] = {
+  def apply[Rule, Rune, Conclusion](ruleToPuzzles: Rule => Vector[Vector[Rune]], allRunes: Vector[Rune]): SimpleSolverState[Rule, Rune, Conclusion] = {
     SimpleSolverState[Rule, Rune, Conclusion](
+      ruleToPuzzles,
       Vector(),
-      Map[Rune, Int](),
-      Map[Int, Rune](),
+//      Map[Rune, Int](),
+//      Map[Int, Rune](),
       Vector[Rule](),
-      Map[Int, Vector[Vector[Int]]](),
-      Map[Int, Conclusion]())
+      allRunes.toSet,
+      Map[Int, Vector[Vector[Rune]]](),
+      Map[Rune, Conclusion]())
   }
+
+  object Solver {
+    def apply[Rule, Rune, Conclusion](
+        sanityCheck: Boolean,
+        useOptimizedSolver: Boolean,
+        ruleToPuzzles: Rule => Vector[Vector[Rune]],
+        ruleToRunes: Rule => Iterable[Rune],
+        initialRules: IndexedSeq[Rule],
+        initiallyKnownRunes: Map[Rune, Conclusion],
+        allRunes: Vector[Rune]
+    ): SimpleSolverState[Rule, Rune, Conclusion] = {
+      val solverState =
+        if (useOptimizedSolver) {
+          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+          // One day, after Rust migration: OptimizedSolverState[Rule, Rune, Conclusion](ruleToPuzzles)
+        } else {
+          SimpleSolverState[Rule, Rune, Conclusion](ruleToPuzzles, allRunes)
+        }
+
+      if (sanityCheck) {
+        initialRules.flatMap(ruleToRunes).foreach(rune => vassert(allRunes.contains(rune)))
+        initiallyKnownRunes.keys.foreach(rune => vassert(allRunes.contains(rune)))
+        vassert(allRunes == allRunes.distinct)
+      }
+
+      if (sanityCheck) {
+        solverState.sanityCheck()
+      }
+
+      solverState.commitStep(false, Vector(), initiallyKnownRunes, initialRules.toVector).getOrDie()
+
+      if (sanityCheck) {
+        solverState.sanityCheck()
+      }
+      solverState
+    }
+  }
+
 }
 
 */
@@ -35,6 +68,23 @@ where
     num_new_conclusions: i32,
 }
 /*
+case class SimpleSolverState[Rule, Rune, Conclusion](
+  private val ruleToPuzzles_ : (Rule) => Vector[Vector[Rune]],
+
+  private var steps: Vector[Step[Rule, Rune, Conclusion]],
+//
+//  private var userRuneToCanonicalRune: Map[Rune, Int],
+//  private var canonicalRuneToUserRune: Map[Int, Rune],
+
+  private var rules: Vector[Rule],
+
+  private var allRunes: Set[Rune],
+
+    private var openRuleToPuzzleToRunes: Map[Int, Vector[Vector[Rune]]],
+
+  private var runeToConclusion: Map[Rune, Conclusion]
+) {
+
 */
 // mig: struct SimpleSolverState
 pub struct SimpleSolverState<Rule, Rune, Conclusion>
@@ -49,21 +99,7 @@ where
     canonical_rune_to_conclusion: std::collections::HashMap<i32, Conclusion>,
     current_step: Option<CurrentStep<Rule, Rune, Conclusion>>,
 }
-/*
-case class SimpleSolverState[Rule, Rune, Conclusion](
-  private var steps: Vector[Step[Rule, Rune, Conclusion]],
 
-  private var userRuneToCanonicalRune: Map[Rune, Int],
-  private var canonicalRuneToUserRune: Map[Int, Rune],
-
-  private var rules: Vector[Rule],
-
-  private var openRuleToPuzzleToRunes: Map[Int, Vector[Vector[Int]]],
-
-  private var canonicalRuneToConclusion: Map[Int, Conclusion]
-) extends ISolverState[Rule, Rune, Conclusion] {
-
-*/
 // mig: impl SimpleSolverState
 impl<Rule, Rune, Conclusion> SimpleSolverState<Rule, Rune, Conclusion>
 where
@@ -98,7 +134,8 @@ where
     Conclusion: Clone + PartialEq,
 {
 /*
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // is mutable, should never be hashed
+  override def equals(obj: Any): Boolean = vcurious()
+  override def hashCode(): Int = vfail() // is mutable, should never be hashed
 
 */
     fn new() -> Self {
@@ -120,25 +157,13 @@ where
             current_step: None,
         }
     }
-/*
-  def deepClone(): SimpleSolverState[Rule, Rune, Conclusion] = {
-    vcurious()
-    SimpleSolverState(
-      steps,
-      userRuneToCanonicalRune,
-      canonicalRuneToUserRune,
-      rules,
-      openRuleToPuzzleToRunes,
-      canonicalRuneToConclusion)
-  }
 
-*/
 // mig: fn sanity_check
     fn sanity_check(&self) {
         // vassert(rules == rules.distinct)
     }
 /*
-  override def sanityCheck(): Unit = {
+  def sanityCheck(): Unit = {
 //    vassert(rules == rules.distinct)
   }
 
@@ -148,7 +173,7 @@ where
         &self.rules[rule_index as usize]
     }
 /*
-  override def getRule(ruleIndex: Int): Rule = rules(ruleIndex)
+  def getRule(ruleIndex: Int): Rule = rules(ruleIndex)
 
 */
 // mig: fn get_conclusion
@@ -157,7 +182,13 @@ where
         self.canonical_rune_to_conclusion.get(&canonical).cloned()
     }
 /*
-  override def getConclusion(rune: Rune): Option[Conclusion] = canonicalRuneToConclusion.get(getCanonicalRune(rune))
+  def getConclusion(rune: Rune): Option[Conclusion] = runeToConclusion.get(rune)
+
+//  def getUserRune(rune: Int): Rune = canonicalRuneToUserRune(rune)
+
+  def getConclusions(): Stream[(Rune, Conclusion)] = {
+    runeToConclusion.toStream
+  }
 
 */
 // mig: fn get_user_rune
@@ -167,10 +198,7 @@ where
             .expect("rune must exist")
             .clone()
     }
-/*
-  override def getUserRune(rune: Int): Rune = canonicalRuneToUserRune(rune)
 
-*/
 // mig: fn get_conclusions
     fn get_conclusions(&self) -> Vec<(i32, Conclusion)> {
         self.canonical_rune_to_conclusion
@@ -178,12 +206,7 @@ where
             .map(|(k, v)| (*k, v.clone()))
             .collect()
     }
-/*
-  override def getConclusions(): Stream[(Int, Conclusion)] = {
-    canonicalRuneToConclusion.toStream
-  }
 
-*/
 // mig: fn userify_conclusions
     fn userify_conclusions(&self) -> Vec<(Rune, Conclusion)> {
         self.canonical_rune_to_conclusion
@@ -197,10 +220,65 @@ where
             .collect()
     }
 /*
-  override def userifyConclusions(): Stream[(Rune, Conclusion)] = {
-    canonicalRuneToConclusion
-      .toStream
-      .map({ case (canonicalRune, conclusion) => (canonicalRuneToUserRune(canonicalRune), conclusion) })
+  def userifyConclusions(): Stream[(Rune, Conclusion)] = {
+    runeToConclusion.toStream
+  }
+
+  def getAllRunes(): Set[Rune] = {
+    allRunes
+  }
+
+  def isComplete(): Boolean = {
+    userifyConclusions().size == getAllRunes().size
+  }
+
+//  def addRune(rune: Rune): Int = {
+//    vassert(!allRunes.contains(rune))
+//    val index = allRunes.size
+//    allRunes += rune
+//    index
+//  }
+
+  def commitStep[ErrType](complex: Boolean, solvedRuleIndices: Vector[Int], conclusions: Map[Rune, Conclusion], newRules: Vector[Rule]):
+  Result[Unit, ISolverError[Rune, Conclusion, ErrType]] = {
+    val step = Step[Rule, Rune, Conclusion](complex, solvedRuleIndices.map(ruleIndex => (ruleIndex, rules(ruleIndex))), newRules, conclusions)
+    // Append step before checking for conflicts, so the audit trail captures
+    // the conflicting step even when we return an error below.
+    steps = steps :+ step
+    conclusions.foreach({ case (newlySolvedRune, newConclusion) =>
+      runeToConclusion.get(newlySolvedRune) match {
+        case Some(existingConclusion) => {
+          if (existingConclusion != newConclusion) {
+            return Err(
+              SolverConflict(
+                newlySolvedRune,
+                existingConclusion,
+                newConclusion))
+          }
+        }
+        case None =>
+      }
+      runeToConclusion = runeToConclusion + (newlySolvedRune -> newConclusion)
+    })
+    solvedRuleIndices.foreach(ruleIndex => openRuleToPuzzleToRunes = openRuleToPuzzleToRunes - ruleIndex)
+    newRules.foreach(rule => {
+      val ruleIndex = {
+        val newCanonicalRule = rules.size
+        rules = rules :+ rule
+        ruleToPuzzles_(rule).foreach(_.foreach(rune => vassert(allRunes.contains(rune))))
+        //    canonicalRuleToUserRule = canonicalRuleToUserRule + (newCanonicalRule -> rule)
+        newCanonicalRule
+      }
+      sanityCheck()
+      ruleToPuzzles_(rule).foreach(puzzle => {
+        {
+          val thisRulePuzzleToRunes = openRuleToPuzzleToRunes.getOrElse(ruleIndex, Vector())
+          openRuleToPuzzleToRunes = openRuleToPuzzleToRunes + (ruleIndex -> (thisRulePuzzleToRunes :+ puzzle.distinct))
+        } // TODO: is distinct necessary?
+      })
+      sanityCheck()
+    })
+    Ok(())
   }
 
 */
@@ -211,12 +289,7 @@ where
             .flat_map(|v| v.iter().flat_map(|r| r.iter().cloned()))
             .collect()
     }
-/*
-  override def getAllRunes(): Set[Int] = {
-    openRuleToPuzzleToRunes.values.flatten.flatten.toSet
-  }
 
-*/
 // mig: fn add_rune
     fn add_rune(&mut self, rune: Rune) -> i32 {
         assert!(
@@ -230,43 +303,21 @@ where
             .insert(new_canonical_rune, rune);
         new_canonical_rune
     }
-/*
-  override def addRune(rune: Rune): Int = {
-    vassert(!userRuneToCanonicalRune.contains(rune))
-    val newCanonicalRune = userRuneToCanonicalRune.size
-    userRuneToCanonicalRune = userRuneToCanonicalRune + (rune -> newCanonicalRune)
-    canonicalRuneToUserRune = canonicalRuneToUserRune + (newCanonicalRune -> rune)
-    newCanonicalRune
-  }
 
-*/
 // mig: fn get_all_rules
     fn get_all_rules(&self) -> Vec<Rule> {
         self.rules.clone()
     }
-/*
-  override def getAllRules(): Vector[Rule] = {
-    rules
-  }
 
-*/
 // mig: fn add_rule
     fn add_rule(&mut self, rule: Rule) -> i32 {
         let new_canonical_rule = self.rules.len() as i32;
         self.rules.push(rule);
         new_canonical_rule
     }
-/*
-  override def addRule(rule: Rule): Int = {
-    val newCanonicalRule = rules.size
-    rules = rules :+ rule
-//    canonicalRuleToUserRule = canonicalRuleToUserRule + (newCanonicalRule -> rule)
-    newCanonicalRule
-  }
 
-*/
 // mig: fn get_canonical_rune
-    
+
 
     fn get_canonical_rune(&self, rune: Rune) -> i32 {
         *self
@@ -274,12 +325,7 @@ where
             .get(&rune)
             .expect("vassertSome: rune must be registered")
     }
-/*
-  override def getCanonicalRune(rune: Rune): Int = {
-    vassertSome(userRuneToCanonicalRune.get(rune))
-  }
 
-*/
 // mig: fn add_puzzle
     fn add_puzzle(&mut self, rule_index: i32, runes: Vec<i32>) {
         let entry = self
@@ -288,13 +334,7 @@ where
             .or_insert_with(Vec::new);
         entry.push(runes);
     }
-/*
-  override def addPuzzle(ruleIndex: Int, runes: Vector[Int]): Unit = {
-    val thisRulePuzzleToRunes = openRuleToPuzzleToRunes.getOrElse(ruleIndex, Vector())
-    openRuleToPuzzleToRunes = openRuleToPuzzleToRunes + (ruleIndex -> (thisRulePuzzleToRunes :+ runes))
-  }
 
-*/
 // mig: fn get_next_solvable
     fn get_next_solvable(&self) -> Option<i32> {
         // Get rule with lowest ID, keep it deterministic (matches Scala)
@@ -311,11 +351,11 @@ where
             .min()
     }
 /*
-  override def getNextSolvable(): Option[Int] = {
+  def getNextSolvable(): Option[Int] = {
     openRuleToPuzzleToRunes
       .filter({ case (_, puzzleToRunes) =>
         puzzleToRunes.exists(runes => {
-          runes.forall(rune => canonicalRuneToConclusion.contains(rune))
+          runes.forall(rune => runeToConclusion.contains(rune))
         })
       })
       // Get rule with lowest ID, keep it deterministic
@@ -332,10 +372,19 @@ where
             .collect()
     }
 /*
-  override def getUnsolvedRules(): Vector[Rule] = {
+  def getUnsolvedRules(): Vector[Rule] = {
     openRuleToPuzzleToRunes.keySet.toVector.map(rules)
   }
+  def getUnsolvedRunes(): Vector[Rune] = {
+    (getAllRunes() -- getConclusions().map(_._1)).toVector
+  }
 
+  def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream
+
+  def ruleIsSolved(solvingRuleIndex: Int): Boolean = {
+    !openRuleToPuzzleToRunes.contains(solvingRuleIndex)
+  }
+}
 */
 // mig: fn conclude_rune
     fn conclude_rune<ErrType>(
@@ -363,29 +412,7 @@ where
             .insert(newly_solved_rune, new_conclusion);
         Ok(is_new)
     }
-/*
-  // Returns whether it's a new conclusion
-  def concludeRune[ErrType](newlySolvedRune: Int, newConclusion: Conclusion):
-  Result[Boolean, ISolverError[Rune, Conclusion, ErrType]] = {
-    val isNew =
-      canonicalRuneToConclusion.get(newlySolvedRune) match {
-        case Some(existingConclusion) => {
-          if (existingConclusion != newConclusion) {
-            return Err(
-              SolverConflict(
-                canonicalRuneToUserRune(newlySolvedRune),
-                existingConclusion,
-                newConclusion))
-          }
-          false
-        }
-        case None => true
-      }
-    canonicalRuneToConclusion = canonicalRuneToConclusion + (newlySolvedRune -> newConclusion)
-    Ok(isNew)
-  }
 
-*/
 // mig: fn mark_rules_solved
     fn mark_rules_solved<ErrType>(
         &mut self,
@@ -404,24 +431,6 @@ where
         }
         Ok(num_new_conclusions)
     }
-/*
-  // Success returns number of new conclusions
-  override def markRulesSolved[ErrType](ruleIndices: Vector[Int], newConclusions: Map[Int, Conclusion]):
-  Result[Int, ISolverError[Rune, Conclusion, ErrType]] = {
-    val numNewConclusions =
-      newConclusions.map({ case (newlySolvedRune, newConclusion) =>
-        concludeRune[ErrType](newlySolvedRune, newConclusion) match {
-          case Err(e) => return Err(e)
-          case Ok(isNew) => isNew
-        }
-      }).count(_ == true)
-
-    ruleIndices.foreach(removeRule)
-
-    Ok(numNewConclusions)
-  }
-
-*/
 
     // MIGALLOW: Rust commits immediately; Scala buffered in StepState then committed in markRulesSolved.
     fn step_conclude_rune<ErrType>(
@@ -490,110 +499,3 @@ where
         self.steps.clone()
     }
 }
-
-/*
-  private def removeRule(ruleIndex: Int) = {
-    openRuleToPuzzleToRunes = openRuleToPuzzleToRunes - ruleIndex
-  }
-
-
-  // MIGALLOW: No SimpleStepState in Rust
-  class SimpleStepState(
-  ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    complex: Boolean,
-    rules: Vector[(Int, Rule)]
-  ) extends IStepState[Rule, Rune, Conclusion] {
-    private var alive = true
-    private var tentativeStep: Step[Rule, Rune, Conclusion] = Step(complex, rules, Vector(), Map())
-
-    def close(): Step[Rule, Rune, Conclusion] = {
-      vassert(alive)
-      alive = false
-      tentativeStep
-    }
-
-    override def getConclusion(requestedUserRune: Rune): Option[Conclusion] = {
-      vassert(alive)
-      SimpleSolverState.this.getConclusion(requestedUserRune)
-    }
-
-    override def addRule(rule: Rule): Unit = {
-      vassert(alive)
-      val ruleIndex = SimpleSolverState.this.addRule(rule)
-      tentativeStep = tentativeStep.copy(addedRules = tentativeStep.addedRules :+ rule)
-      ruleToPuzzles(rule).foreach(puzzleUserRunes => {
-        val puzzleCanonicalRunes = puzzleUserRunes.map(SimpleSolverState.this.getCanonicalRune)
-        SimpleSolverState.this.addPuzzle(ruleIndex, puzzleCanonicalRunes)
-      })
-    }
-
-    override def getUnsolvedRules(): Vector[Rule] = {
-      vassert(alive)
-      SimpleSolverState.this.getUnsolvedRules()
-    }
-
-    override def concludeRune[ErrType](rangeS: List[RangeS], newlySolvedUserRune: Rune, conclusion: Conclusion): Unit = {
-      vassert(alive)
-      tentativeStep = tentativeStep.copy(conclusions = tentativeStep.conclusions + (newlySolvedUserRune -> conclusion))
-    }
-  }
-
-  override def initialStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, false, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
-  override def simpleStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    ruleIndex: Int,
-    rule: Rule,
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, false, Vector((ruleIndex, rule)))
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
-  override def complexStep[ErrType](
-    ruleToPuzzles: Rule => Vector[Vector[Rune]],
-    step: IStepState[Rule, Rune, Conclusion] => Result[Unit, ISolverError[Rune, Conclusion, ErrType]]):
-  Result[Step[Rule, Rune, Conclusion], ISolverError[Rune, Conclusion, ErrType]] = {
-    val stepState = new SimpleStepState(ruleToPuzzles, true, Vector())
-    step(stepState) match {
-      case Ok(()) => {
-        val step = stepState.close()
-        steps = steps :+ step
-        Ok(step)
-      }
-      case Err(e) => {
-        stepState.close()
-        Err(e)
-      }
-    }
-  }
-
-  override def getSteps(): Stream[Step[Rule, Rune, Conclusion]] = steps.toStream
-}
-*/

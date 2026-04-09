@@ -12,7 +12,7 @@ import dev.vale.typing.templata._
 import dev.vale.typing.types._
 import dev.vale.{Accumulator, Err, Interner, Keywords, Ok, Profiler, RangeS, typing, vassert, vassertSome, vcurious, vfail, vimpl, vregionmut, vwat}
 import dev.vale.highertyping._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve}
+import dev.vale.solver.{CompleteSolve, FailedSolve, SimpleSolverState}
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing._
@@ -341,7 +341,7 @@ class StructCompilerGenericArgsLayer(
             }
           }
         }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(structA.range :: parentRanges, f))
         }
         case Ok(true) =>
@@ -436,7 +436,7 @@ class StructCompilerGenericArgsLayer(
             }
           }
         }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(interfaceA.range :: parentRanges, f))
         }
         case Ok(true) =>
