@@ -3,6 +3,7 @@ package dev.vale.typing
 import dev.vale.typing.infer._
 import dev.vale.solver.{FailedSolve, RuleError}
 import dev.vale.typing.OverloadResolver.InferFailure
+import dev.vale.typing.ResolvingSolveFailedOrIncomplete
 import dev.vale.typing.ast.{SignatureT, _}
 import dev.vale.typing.infer.SendingNonCitizen
 import dev.vale.typing.names._
@@ -299,6 +300,7 @@ class AfterRegionsTests extends FunSuite with Matchers {
         fff.rejectedCalleeToReason.size shouldEqual 1
         val reason = fff.rejectedCalleeToReason.head._2
         reason match {
+          case FindFunctionResolveFailure(ResolvingSolveFailedOrIncomplete(FailedSolve(_, _, _, _, RuleError(OwnershipDidntMatch(CoordT(OwnT, _, _), BorrowT))))) =>
           case InferFailure(FailedSolve(_, _, _, _, RuleError(OwnershipDidntMatch(CoordT(OwnT, _, _), BorrowT)))) =>
           //          case SpecificParamDoesntSend(0, _, _) =>
           case other => vfail(other)

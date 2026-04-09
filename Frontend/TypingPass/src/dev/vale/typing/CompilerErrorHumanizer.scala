@@ -3,7 +3,7 @@ package dev.vale.typing
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverErrorHumanizer}
+import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverConflict, SolverErrorHumanizer}
 import dev.vale.typing.types._
 import dev.vale.SourceCodeUtils.{humanizePos, lineBegin, lineContaining, lineRangeContaining, linesBetween}
 import dev.vale.highertyping.FunctionA
@@ -514,6 +514,40 @@ object CompilerErrorHumanizer {
             humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
           }).mkString(", ")
       }
+      case KindIsNotStruct(kind) => {
+        "Expected kind to be struct, but was not. Kind: " + humanizeKind(codeMap, kind)
+      }
+      case CouldntFindImpl(range, fail) => {
+        "Couldn't find impl: " + fail
+      }
+      case CantSharePlaceholder(kind) => {
+        "Can't share a placeholder kind: " + humanizeTemplata(codeMap, KindTemplataT(kind))
+      }
+      case NoCommonAncestors(params) => {
+        "No common ancestors: " +
+          params.map({ case (rune, coord) =>
+            humanizeRune(rune) + " = " + humanizeTemplata(codeMap, CoordTemplataT(coord))
+          }).mkString(", ")
+      }
+      case CantDetermineNarrowestKind(kinds) => {
+        "Can't determine narrowest kind among: " + kinds.map(humanizeKind(codeMap, _)).mkString(", ")
+      }
+      case FunctionDoesntHaveName(range, name) => {
+        "Function doesn't have name: " + humanizeName(codeMap, name)
+      }
+      case InternalSolverError(range, err) => {
+        err match {
+          case SolverConflict(rune, previousConclusion, newConclusion) => {
+            "Solver conflict on rune " + humanizeRune(rune) + ": was " + humanizeTemplata(codeMap, previousConclusion) + " but now concluding " + humanizeTemplata(codeMap, newConclusion)
+          }
+          case RuleError(innerErr) => {
+            humanizeRuleError(codeMap, linesBetween, lineRangeContaining, lineContaining, innerErr)
+          }
+          case SolveIncomplete() => {
+            "Solve incomplete"
+          }
+        }
+      }
     }
   }
 
@@ -727,6 +761,12 @@ object CompilerErrorHumanizer {
           "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
       }
       case FunctionBoundNameT(template, templateArgs, parameters) => {
+        humanizeName(codeMap, template) +
+          humanizeGenericArgs(codeMap, templateArgs, None) +
+          "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"
+      }
+      case PredictedFunctionTemplateNameT(humanName) => humanName.str
+      case PredictedFunctionNameT(template, templateArgs, parameters) => {
         humanizeName(codeMap, template) +
           humanizeGenericArgs(codeMap, templateArgs, None) +
           "(" + parameters.map(CoordTemplataT).map(humanizeTemplata(codeMap, _)).mkString(", ") + ")"

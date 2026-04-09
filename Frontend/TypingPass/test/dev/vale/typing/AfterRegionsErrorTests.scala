@@ -1,9 +1,10 @@
 package dev.vale.typing
 
 import dev.vale.solver.{FailedSolve, RuleError}
-import dev.vale.typing.OverloadResolver.InferFailure
+import dev.vale.typing.OverloadResolver.{FindFunctionResolveFailure, InferFailure}
+import dev.vale.typing.ResolvingSolveFailedOrIncomplete
 import dev.vale.typing.ast._
-import dev.vale.typing.infer.SendingNonCitizen
+import dev.vale.typing.infer.{BadIsaSubKind, SendingNonCitizen}
 import dev.vale.typing.names._
 import dev.vale.typing.templata._
 import dev.vale.typing.types._
@@ -222,7 +223,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |
         |interface MyInterface {}
         |func moo<T>(a T)
-        |where implements(T, MyInterface)
+        |where implements(T, MyInterface), func drop(T)void
         |{ }
         |exported func main() {
         |  moo(7);
@@ -232,12 +233,9 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     compile.getCompilerOutputs() match {
       case Err(CouldntFindFunctionToCallT(range, fff)) => {
         fff.rejectedCalleeToReason.map(_._2).head match {
-          case InferFailure(reason) => {
-            reason match {
-              case FailedSolve(_, _, _, _, RuleError(SendingNonCitizen(IntT(32)))) =>
-              case other => vfail(other)
-            }
-          }
+          case FindFunctionResolveFailure(ResolvingSolveFailedOrIncomplete(FailedSolve(_, _, _, _, RuleError(BadIsaSubKind(IntT(32)))))) =>
+          case InferFailure(FailedSolve(_, _, _, _, RuleError(SendingNonCitizen(IntT(32))))) =>
+          case other => vfail(other)
         }
       }
     }
