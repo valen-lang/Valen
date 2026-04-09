@@ -1517,7 +1517,7 @@ class CompilerTests extends FunSuite with Matchers {
         |import panicutils.*;
         |import printutils.*;
         |
-        |struct Base {
+        |weakable struct Base {
         |  name str;
         |}
         |struct Spaceship {

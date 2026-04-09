@@ -600,6 +600,11 @@ class Parser(interner: Interner, keywords: Keywords, opts: GlobalOptions) {
             None
           }
         })
+      maybeReturnTypeP match {
+        case Some(FuncPT(range, _, _, _, _)) =>
+          return Err(FuncBoundWithoutWhere(range.begin))
+        case _ =>
+      }
       val returnP = FunctionReturnP(RangeL(returnBeginPos, returnEndPos), maybeReturnTypeP)
 
       val maybeRulesP =

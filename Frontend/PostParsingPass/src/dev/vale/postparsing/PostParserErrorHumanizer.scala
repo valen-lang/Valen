@@ -63,6 +63,7 @@ object PostParserErrorHumanizer {
         }
         case VariableNameAlreadyExists(range, name) => s"Local named " + humanizeName(name) + " already exists!\n(If you meant to modify the variable, use the `set` keyword beforehand.)"
         case InterfaceMethodNeedsSelf(range) => s"Interface's method needs a virtual param of interface's type!"
+        case VirtualAndAbstractGoTogether(range) => s"Abstract function needs a `virtual` parameter."
         case ForgotSetKeywordError(range) => s"Changing a struct's member must start with the `set` keyword."
         case ExternHasBody(range) => s"Extern function can't have a body too."
 //        case CantInitializeIndividualElementsOfRuntimeSizedArray(range) => s"Can't initialize individual elements of a runtime-sized array."

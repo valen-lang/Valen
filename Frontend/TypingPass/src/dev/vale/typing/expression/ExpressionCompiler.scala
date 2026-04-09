@@ -148,7 +148,14 @@ class ExpressionCompiler(
   Option[ExpressionT] = {
     evaluateAddressibleLookup(coutputs, nenv, range, region, name) match {
       case Some(x) => {
-        val thing = localHelper.softLoad(nenv, range, x, targetOwnership, region)
+        val thing =
+          targetOwnership match {
+            case LoadAsWeakP if x.result.coord.ownership != WeakT => {
+              val borrowExpr = localHelper.softLoad(nenv, range, x, LoadAsBorrowP, region)
+              weakAlias(coutputs, borrowExpr)
+            }
+            case _ => localHelper.softLoad(nenv, range, x, targetOwnership, region)
+          }
         Some(thing)
       }
       case None => {
@@ -1027,6 +1034,9 @@ class ExpressionCompiler(
                 newGlobalFunctionGroupExpression(
                   tinyEnv, coutputs, RegionT(), interner.intern(ArbitraryNameS()))
               (expr, Set())
+            }
+            case _ => {
+              throw CompileErrorExceptionT(CantUseRuneValueAsExpression(range :: parentRanges, runeA))
             }
           }
         }

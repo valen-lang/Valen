@@ -175,7 +175,7 @@ class WeakTests extends FunSuite with Matchers {
   test("Weak yonder member") {
     val compile = RunCompilation.test(
         """
-          |struct Base {
+          |weakable struct Base {
           |  hp int;
           |}
           |struct Spaceship {

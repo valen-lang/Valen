@@ -56,6 +56,17 @@ class AfterRegionsErrorTests extends FunSuite with Matchers with Collector {
     }
   }
 
+  test("Abstract func without virtual") {
+    val err = compileForError(
+      """
+        |sealed interface ISpaceship<X Ref, Y Ref, Z Ref> { }
+        |abstract func launch<X, Y, Z>(self &ISpaceship<X, Y, Z>, bork X) where func drop(X)void;
+        |""".stripMargin)
+    err match {
+      case VirtualAndAbstractGoTogether(_) =>
+    }
+  }
+
   test("Test one-anonymous-param lambda identifying runes") {
     val bork = compile(
       """

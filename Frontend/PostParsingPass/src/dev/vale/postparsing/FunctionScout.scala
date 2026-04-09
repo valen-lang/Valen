@@ -118,7 +118,18 @@ class FunctionScout(
     val lidb = new LocationInDenizenBuilder(Vector())
 
     maybeParent match {
-      case FunctionNoParent() =>
+      case FunctionNoParent() => {
+        if (attrsP.collectFirst({ case AbstractAttributeP(_) => }).nonEmpty) {
+          maybeParamsP match {
+            case None =>
+              throw CompileErrorExceptionS(VirtualAndAbstractGoTogether(rangeS))
+            case Some(paramsP) =>
+              if (!paramsP.params.exists(_.virtuality match { case Some(AbstractP(_)) => true case _ => false })) {
+                throw CompileErrorExceptionS(VirtualAndAbstractGoTogether(rangeS))
+              }
+          }
+        }
+      }
       case ParentFunction(_) =>
       case ParentInterface(_, _, _, _) => {
         maybeParamsP match {

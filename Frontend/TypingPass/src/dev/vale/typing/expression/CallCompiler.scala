@@ -4,10 +4,12 @@ import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
 import dev.vale.postparsing.GlobalFunctionFamilyNameS
-import dev.vale.typing.OverloadResolver.FindFunctionFailure
+import dev.vale.solver.{FailedSolve, RuleError}
+import dev.vale.typing.OverloadResolver.{FindFunctionFailure, InferFailure, FindFunctionResolveFailure}
 import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
+import dev.vale.typing.infer.IsaFailed
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing.function._
@@ -67,6 +69,24 @@ class CallCompiler(
             unconvertedArgsPointerTypes2,
             Vector.empty,
             false) match {
+            case Err(e @ FindFunctionFailure(CodeNameS(asName), _, _)) if asName == keywords.as => {
+              val isaFailures = e.rejectedCalleeToReason.flatMap { case (_, reason) =>
+                reason match {
+                  case InferFailure(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper)))) =>
+                    Some((sub, suuper, fs))
+                  case FindFunctionResolveFailure(ResolvingSolveFailedOrIncomplete(fs @ FailedSolve(_, _, _, _, RuleError(IsaFailed(sub, suuper))))) =>
+                    Some((sub, suuper, fs))
+                  case _ => None
+                }
+              }
+              if (isaFailures.nonEmpty) {
+                val (sub, suuper, _) = isaFailures.head
+                val failedSolves = isaFailures.map(_._3).toVector
+                throw CompileErrorExceptionT(CantDowncastUnrelatedTypes(range, suuper, sub, failedSolves))
+              } else {
+                throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
+              }
+            }
             case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(range, e))
             case Ok(x) => x
           }

@@ -14,7 +14,7 @@ import dev.vale.{Accumulator, Err, Interner, Ok, Profiler, RangeS, Result, U, po
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 import dev.vale.typing._
-import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT}
+import dev.vale.typing.ast.{CitizenDefinitionT, ImplT, InterfaceDefinitionT, StructDefinitionT}
 import dev.vale.typing.env._
 import dev.vale.typing.function._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -252,6 +252,15 @@ class ImplCompiler(
     val superInterfaceTemplateId =
       TemplataCompiler.getInterfaceTemplate(superInterface.id)
 
+    val subCitizenWeakable =
+      coutputs.lookupCitizen(subCitizen) match {
+        case s: StructDefinitionT => s.weakable
+        case i: InterfaceDefinitionT => i.weakable
+      }
+    val superInterfaceWeakable = coutputs.lookupInterface(superInterface).weakable
+    if (subCitizenWeakable != superInterfaceWeakable) {
+      throw WeakableImplingMismatch(subCitizenWeakable, superInterfaceWeakable)
+    }
 
     val templateArgs = implA.genericParams.map(_.rune.rune).map(inferences)
     val instantiatedId = assembleImplName(implTemplateId, templateArgs, subCitizen)

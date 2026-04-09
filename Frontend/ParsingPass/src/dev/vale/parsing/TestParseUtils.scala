@@ -1,6 +1,6 @@
 package dev.vale.parsing
 
-import dev.vale.lexing.{FailedParse, IParseError, Lexer, LexingIterator}
+import dev.vale.lexing.{BadStartOfStatementError, FailedParse, IParseError, Lexer, LexingIterator}
 import dev.vale.{Err, FileCoordinate, FileCoordinateMap, IPackageResolver, Interner, Keywords, Ok, PackageCoordinate, PackageCoordinateMap, Result, SourceCodeUtils, U, vassertOne, vassertSome, vfail, vimpl}
 import dev.vale.options.GlobalOptions
 import dev.vale.parsing.ast.{FileP, IDenizenP, IExpressionPE, IRulexPR, ITemplexPT, PatternPP}
@@ -208,6 +208,11 @@ trait TestParseUtils {
     val node =
       lexer.lexScramble(iter, false, false, false)
         .getOrDie()
+    // Detect stray ) or ] left unconsumed by lexScramble, matching lexCurlied's check
+    iter.consumeCommentsAndWhitespace()
+    if (!iter.atEnd()) {
+      return Err(BadStartOfStatementError(iter.getPos()))
+    }
     val parser = new Parser(interner, keywords, opts)
     parser.expressionParser.parseBlockContents(new ScrambleIterator(node), false)
   }

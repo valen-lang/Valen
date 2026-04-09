@@ -177,6 +177,8 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
     iter.consumeCommentsAndWhitespace()
 
+    val interfaceOwnershipSymbols = lexImplOwnershipPrefix(iter)
+
     val interfaceName =
       lexIdentifier(iter) match {
         case None => return Err(BadImplInterface(iter.getPos()))
@@ -191,15 +193,12 @@ class Lexer(interner: Interner, keywords: Keywords) {
         case Ok(x) => x
       }
 
-    val interface =
-      maybeInterfaceGenericArgs match {
-        case None => ScrambleLE(interfaceName.range, Vector(interfaceName))
-        case Some(interfaceGenericArgs) => {
-          ScrambleLE(
-            RangeL(interfaceName.range.begin, interfaceGenericArgs.range.end),
-            Vector(interfaceName, interfaceGenericArgs))
-        }
-      }
+    val interface = {
+      val elements = interfaceOwnershipSymbols ++ Vector(interfaceName) ++ maybeInterfaceGenericArgs.toVector
+      val begin = elements.head.range.begin
+      val end = elements.last.range.end
+      ScrambleLE(RangeL(begin, end), elements)
+    }
 
     iter.consumeCommentsAndWhitespace()
 
@@ -208,6 +207,8 @@ class Lexer(interner: Interner, keywords: Keywords) {
     }
 
     iter.consumeCommentsAndWhitespace()
+
+    val structOwnershipSymbols = lexImplOwnershipPrefix(iter)
 
     val structName =
       lexIdentifier(iter) match {
@@ -223,15 +224,12 @@ class Lexer(interner: Interner, keywords: Keywords) {
         case Ok(x) => x
       }
 
-    val struct =
-      maybeStructGenericArgs match {
-        case None => ScrambleLE(structName.range, Vector(structName))
-        case Some(structGenericArgs) => {
-          ScrambleLE(
-            RangeL(structName.range.begin, structGenericArgs.range.end),
-            Vector(structName, structGenericArgs))
-        }
-      }
+    val struct = {
+      val elements = structOwnershipSymbols ++ Vector(structName) ++ maybeStructGenericArgs.toVector
+      val begin = elements.head.range.begin
+      val end = elements.last.range.end
+      ScrambleLE(RangeL(begin, end), elements)
+    }
 
     iter.consumeCommentsAndWhitespace()
 
@@ -951,6 +949,19 @@ class Lexer(interner: Interner, keywords: Keywords) {
       iter.advance()
       Ok(SymbolLE(RangeL(begin, iter.getPos()), iter.code.charAt(begin)))
     }
+  }
+
+  // Lex optional ownership prefix symbols (&, &&, ^) for impl interface/struct positions.
+  // Returns SymbolLE nodes for each prefix character, e.g. && becomes two SymbolLE('&').
+  private def lexImplOwnershipPrefix(iter: LexingIterator): Vector[SymbolLE] = {
+    var symbols = Vector[SymbolLE]()
+    while (!iter.atEnd() && (iter.peek() == '&' || iter.peek() == '^')) {
+      val begin = iter.getPos()
+      val c = iter.peek()
+      iter.advance()
+      symbols = symbols :+ SymbolLE(RangeL(begin, iter.getPos()), c)
+    }
+    symbols
   }
 
   def lexIdentifier(iter: LexingIterator): Option[WordLE] = {

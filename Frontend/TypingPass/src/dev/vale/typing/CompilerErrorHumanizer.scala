@@ -109,15 +109,18 @@ object CompilerErrorHumanizer {
         case CouldntFindIdentifierToLoadT(range, name) => {
           "Couldn't find anything named `" + PostParserErrorHumanizer.humanizeImpreciseName(name) + "`!"
         }
+        case CantUseRuneValueAsExpression(range, rune) => {
+          "Can't use rune `" + humanizeRune(rune) + "` as a value expression. Did you mean a local variable with a similar name?"
+        }
         case NonReadonlyReferenceFoundInPureFunctionParameter(range, name) => {
           "Parameter `" + name + "` should be readonly, because it's in a pure function."
         }
         case CouldntFindTypeT(range, name) => {
           "Couldn't find any type named `" + name + "`!"
         }
-        case CouldntNarrowDownCandidates(range, candidateRanges) => {
+        case CouldntNarrowDownCandidates(range, candidates) => {
           "Multiple candidates for call:" +
-            candidateRanges.map(range => "\n" + codeMap(range.begin) + ":\n  " + lineContaining(range.begin)).mkString("")
+            candidates.map(proto => "\n  " + humanizeId(codeMap, proto.id)).mkString("")
         }
         case ImmStructCantHaveVaryingMember(range, structName, memberName) => {
           "Immutable struct (\"" + printableName(codeMap, structName) + "\") cannot have varying member (\"" + memberName + "\")."
