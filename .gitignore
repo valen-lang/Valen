@@ -26,3 +26,6 @@ FrontendRust/zen/logs
 Luz
 Guardian
 guardian-cache
+target
+Frontend/lib/scala-reflect-2.12.8.jar
+Frontend/lib/scala-xml_2.12-2.2.0.jar
