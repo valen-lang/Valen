@@ -15,8 +15,7 @@ Type these directly in Claude Code.
 | Command | What it does |
 |---|---|
 | `/migration-drive` | Make minimal, iterative parity-only changes. Adds `panic!` placeholders liberally. No novel logic. |
-| `/migration-test-fixer` | Run a failing test, diagnose what's missing, migrate Scala code until it passes. Stops after 5 consecutive failures. |
-| `/migration-test-fixer-2` | Like above but uses `migrate-director` for smarter orchestration. |
+| `/migration-test-fixer` | Run a failing test, use `migrate-director` to diagnose and scope, migrate Scala code until it passes. Stops after 5 consecutive failures. |
 | `/slice-pipeline` | Run the full slice pipeline on a file: start → rustify → placehold → reconcile (mark/copy/delete). |
 
 ### Migration — Reviewing & Checking
@@ -123,7 +122,7 @@ See `/guardian-add` skill. Summary:
 3. `/migration-check-correct-loop` on specific definitions that need fixing
 
 ### "I want to get a test passing"
-1. `/migration-test-fixer-2` with the test name
+1. `/migration-test-fixer` with the test name
 2. It will diagnose, migrate, and iterate until the test passes
 
 ### "I want to check if my migration is correct"
