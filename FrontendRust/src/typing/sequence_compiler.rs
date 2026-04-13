@@ -16,12 +16,37 @@ import dev.vale.typing.citizen.StructCompilerCore
 import dev.vale.typing.env.PackageEnvironmentT
 import dev.vale.typing.function.FunctionCompiler
 
+*/
+// mig: struct SequenceCompiler
+pub struct SequenceCompiler {
+    pub opts: TypingPassOptions,
+    pub interner: Interner,
+    pub keywords: Keywords,
+    pub struct_compiler: StructCompiler,
+    pub templata_compiler: TemplataCompiler,
+}
+// mig: impl SequenceCompiler
+impl SequenceCompiler {}
+/*
 class SequenceCompiler(
   opts: TypingPassOptions,
   interner: Interner,
   keywords: Keywords,
     structCompiler: StructCompiler,
     templataCompiler: TemplataCompiler) {
+*/
+// mig: fn resolve_tuple
+fn resolve_tuple(
+    &self,
+    env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    exprs: Vec<ReferenceExpressionTE>,
+) -> ReferenceExpressionTE {
+    panic!("Unimplemented: resolve_tuple");
+}
+/*
   def resolveTuple(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -34,7 +59,19 @@ class SequenceCompiler(
     val finalExpr = TupleTE(exprs2, makeTupleCoord(env, coutputs, parentRanges, callLocation, region, types2))
     (finalExpr)
   }
-
+*/
+// mig: fn make_tuple_kind
+fn make_tuple_kind(
+    &self,
+    env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    types: Vec<CoordT>,
+) -> StructTT {
+    panic!("Unimplemented: make_tuple_kind");
+}
+/*
   def makeTupleKind(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -55,7 +92,20 @@ class SequenceCompiler(
 //      Vector(CoordListTemplata(types2))).kind
       types2.map(CoordTemplataT)).expect().kind
   }
-
+*/
+// mig: fn make_tuple_coord
+fn make_tuple_coord(
+    &self,
+    env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    region: RegionT,
+    types: Vec<CoordT>,
+) -> CoordT {
+    panic!("Unimplemented: make_tuple_coord");
+}
+/*
   def makeTupleCoord(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,

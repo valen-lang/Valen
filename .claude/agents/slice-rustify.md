@@ -49,6 +49,7 @@ For `test("Regular variable")`, translate to `fn regular_variable` (snake_case f
 
  * Your job is *not* to make it build. Do not run `cargo build`, `cargo run`, or `cargo test`.
  * You cannot reorder the old scala comments relative to each other. They must be in the same order as they were before.
+ * DO NOT use sed -i or other scripts to do this for you. Do it manually.
 
 # When done
 

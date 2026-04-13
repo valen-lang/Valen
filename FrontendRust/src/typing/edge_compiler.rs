@@ -20,18 +20,63 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 
+*/
+// mig: enum IMethod
+pub enum IMethod {
+    NeededOverride(NeededOverride),
+    FoundFunction(FoundFunction),
+}
+/*
 sealed trait IMethod
+*/
+// mig: struct NeededOverride
+pub struct NeededOverride {
+    pub name: IImpreciseNameS,
+    pub param_filters: Vec<CoordT>,
+}
+// mig: impl NeededOverride
+impl NeededOverride {}
+/*
 case class NeededOverride(
   name: IImpreciseNameS,
   paramFilters: Vector[CoordT]
 ) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+*/
+// mig: struct FoundFunction
+pub struct FoundFunction {
+    pub prototype: PrototypeT<IFunctionNameT>,
+}
+// mig: impl FoundFunction
+impl FoundFunction {}
+/*
 case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
-
+*/
+// mig: struct PartialEdgeT
+pub struct PartialEdgeT {
+    pub struct_tt: StructTT,
+    pub interface: InterfaceTT,
+    pub methods: Vec<IMethod>,
+}
+// mig: impl PartialEdgeT
+impl PartialEdgeT {}
+/*
 case class PartialEdgeT(
   struct: StructTT,
   interface: InterfaceTT,
   methods: Vector[IMethod]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
-
+*/
+// mig: struct EdgeCompiler
+pub struct EdgeCompiler {
+    pub opts: TypingPassOptions,
+    pub interner: Interner,
+    pub keywords: Keywords,
+    pub function_compiler: FunctionCompiler,
+    pub overload_compiler: OverloadResolver,
+    pub impl_compiler: ImplCompiler,
+}
+// mig: impl EdgeCompiler
+impl EdgeCompiler {}
+/*
 class EdgeCompiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -39,6 +84,15 @@ class EdgeCompiler(
     functionCompiler: FunctionCompiler,
     overloadCompiler: OverloadResolver,
     implCompiler: ImplCompiler) {
+*/
+// mig: fn compile_i_tables
+fn compile_i_tables(
+    &self,
+    coutputs: &mut CompilerOutputs,
+) -> (Vec<InterfaceEdgeBlueprintT>, HashMap<IdT<IInterfaceNameT>, HashMap<IdT<ICitizenNameT>, EdgeT>>) {
+    panic!("Unimplemented: compile_i_tables");
+}
+/*
   def compileITables(coutputs: CompilerOutputs):
   (
     Vector[InterfaceEdgeBlueprintT],
@@ -96,7 +150,15 @@ class EdgeCompiler(
       }).toMap
     (interfaceEdgeBlueprints, itables)
   }
-
+*/
+// mig: fn make_interface_edge_blueprints
+fn make_interface_edge_blueprints(
+    &self,
+    coutputs: &CompilerOutputs,
+) -> Vec<InterfaceEdgeBlueprintT> {
+    panic!("Unimplemented: make_interface_edge_blueprints");
+}
+/*
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
     val x1 =
       coutputs.getAllFunctions().flatMap({ case function =>
@@ -149,7 +211,19 @@ class EdgeCompiler(
         })
     interfaceEdgeBlueprints.toVector
   }
-
+*/
+// mig: fn create_override_placeholder_mimicking
+fn create_override_placeholder_mimicking(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    original_templata_to_mimic: ITemplataT<ITemplataType>,
+    dispatcher_outer_env: &IInDenizenEnvironmentT,
+    index: i32,
+    rune: IRuneS,
+) -> ITemplataT<ITemplataType> {
+    panic!("Unimplemented: create_override_placeholder_mimicking");
+}
+/*
   def createOverridePlaceholderMimicking(
     coutputs: CompilerOutputs,
     originalTemplataToMimic: ITemplataT[ITemplataType],
@@ -227,7 +301,21 @@ class EdgeCompiler(
       }
     result
   }
-
+*/
+// mig: fn look_for_override
+fn look_for_override(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    call_location: LocationInDenizen,
+    impl_t: &ImplT,
+    interface_template_id: IdT<IInterfaceTemplateNameT>,
+    sub_citizen_template_id: IdT<ICitizenTemplateNameT>,
+    abstract_function_prototype: PrototypeT<IFunctionNameT>,
+    abstract_index: i32,
+) -> OverrideT {
+    panic!("Unimplemented: look_for_override");
+}
+/*
   private def lookForOverride(
     coutputs: CompilerOutputs,
     callLocation: LocationInDenizen,

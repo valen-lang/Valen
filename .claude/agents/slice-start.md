@@ -278,6 +278,7 @@ Rule of thumb: No two Scala functions/types should be next to each other; No Sca
 
  * Your job is *not* to make it build, so please do not build it. Do not run `cargo build`, do not run `cargo run`, do not run `cargo test`.
  * You cannot reorder the old scala comments relative to each other. They must be in the same order as they were before.
+ * DO NOT use sed -i or other scripts to do this for you. Do it manually.
 
 # When done
 

@@ -13,6 +13,20 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 
+*/
+// mig: struct Reachables
+pub struct Reachables {
+    pub functions: std::collections::HashSet<SignatureT>,
+    pub structs: std::collections::HashSet<StructTT>,
+    pub static_sized_arrays: std::collections::HashSet<StaticSizedArrayTT>,
+    pub runtime_sized_arrays: std::collections::HashSet<RuntimeSizedArrayTT>,
+    pub interfaces: std::collections::HashSet<InterfaceTT>,
+    pub edges: std::collections::HashSet<EdgeT>,
+}
+
+// mig: impl Reachables
+impl Reachables {
+/*
 //class Reachables(
 //  val functions: mutable.Set[SignatureT],
 //  val structs: mutable.Set[StructTT],
@@ -21,10 +35,23 @@ import scala.collection.mutable
 //  val interfaces: mutable.Set[InterfaceTT],
 //  val edges: mutable.Set[EdgeT]
 //) {
+*/
+// mig: fn size
+pub fn size(&self) -> usize {
+    panic!("Unimplemented: size");
+}
+/*
 //  def size = functions.size + structs.size + staticSizedArrays.size + runtimeSizedArrays.size + interfaces.size + edges.size
 //}
 //
 //object Reachability {
+*/
+}
+// mig: fn find_reachables
+pub fn find_reachables(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>) -> Reachables {
+    panic!("Unimplemented: find_reachables");
+}
+/*
 //  def findReachables(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]]): Reachables = {
 //    val structs = program.getAllStructs()
 //    val interfaces = program.getAllInterfaces()
@@ -53,6 +80,12 @@ import scala.collection.mutable
 //    } while (reachables.size != sizeBefore)
 //    reachables
 //  }
+*/
+// mig: fn visit_function
+fn visit_function(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, callee_signature: SignatureT) {
+    panic!("Unimplemented: visit_function");
+}
+/*
 //  def visitFunction(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, calleeSignature: SignatureT): Unit = {
 //    if (reachables.functions.contains(calleeSignature)) {
 //      return
@@ -84,6 +117,12 @@ import scala.collection.mutable
 //    })
 //  }
 //
+*/
+// mig: fn visit_struct
+fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, struct_tt: StructTT) {
+    panic!("Unimplemented: visit_struct");
+}
+/*
 //  def visitStruct(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, structTT: StructTT): Unit = {
 //    if (reachables.structs.contains(structTT)) {
 //      return
@@ -124,6 +163,12 @@ import scala.collection.mutable
 //    }
 //  }
 //
+*/
+// mig: fn visit_interface
+fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT) {
+    panic!("Unimplemented: visit_interface");
+}
+/*
 //  def visitInterface(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, interfaceTT: InterfaceTT): Unit = {
 //    if (reachables.interfaces.contains(interfaceTT)) {
 //      return
@@ -164,6 +209,12 @@ import scala.collection.mutable
 //    }
 //  }
 //
+*/
+// mig: fn visit_impl
+fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT, struct_tt: StructTT, methods: &[PrototypeT]) {
+    panic!("Unimplemented: visit_impl");
+}
+/*
 //  def visitImpl(
 //      program: CompilerOutputs,
 //      edgeBlueprints: Vector[InterfaceEdgeBlueprint],
@@ -185,6 +236,12 @@ import scala.collection.mutable
 //    })
 //  }
 //
+*/
+// mig: fn visit_static_sized_array
+fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, ssa: StaticSizedArrayTT) {
+    panic!("Unimplemented: visit_static_sized_array");
+}
+/*
 //  def visitStaticSizedArray(
 //    program: CompilerOutputs,
 //    edgeBlueprints: Vector[InterfaceEdgeBlueprint],
@@ -214,6 +271,12 @@ import scala.collection.mutable
 //    }
 //  }
 //
+*/
+// mig: fn visit_runtime_sized_array
+fn visit_runtime_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, rsa: RuntimeSizedArrayTT) {
+    panic!("Unimplemented: visit_runtime_sized_array");
+}
+/*
 //  def visitRuntimeSizedArray(
 //    program: CompilerOutputs,
 //    edgeBlueprints: Vector[InterfaceEdgeBlueprint],

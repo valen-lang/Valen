@@ -22,7 +22,24 @@ import scala.collection.immutable.List
 //import dev.vale.carpenter.CovarianceCarpenter
 import dev.vale.postparsing._
 
+*/
+// mig: trait IConvertHelperDelegate
+pub trait IConvertHelperDelegate {
+    fn is_parent(
+        &self,
+        coutputs: &CompilerOutputs,
+        calling_env: &IInDenizenEnvironmentT,
+        parent_ranges: &[RangeS],
+        call_location: LocationInDenizen,
+        descendant_citizen_ref: ISubKindTT,
+        ancestor_interface_ref: ISuperKindTT,
+    ) -> IsParentResult;
+}
+/*
 trait IConvertHelperDelegate {
+*/
+// mig: fn is_parent
+/*
   def isParent(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -34,9 +51,32 @@ trait IConvertHelperDelegate {
 }
 
 
+*/
+// mig: struct ConvertHelper
+pub struct ConvertHelper {
+    pub opts: TypingPassOptions,
+    pub delegate: Box<dyn IConvertHelperDelegate>,
+}
+// mig: impl ConvertHelper
+impl ConvertHelper {}
+/*
 class ConvertHelper(
     opts: TypingPassOptions,
     delegate: IConvertHelperDelegate) {
+*/
+// mig: fn convert_exprs
+fn convert_exprs(
+    &self,
+    env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    range: &[RangeS],
+    call_location: LocationInDenizen,
+    source_exprs: Vec<ReferenceExpressionTE>,
+    target_pointer_types: Vec<CoordT>,
+) -> Vec<ReferenceExpressionTE> {
+    panic!("Unimplemented: convert_exprs");
+}
+/*
   def convertExprs(
       env: IInDenizenEnvironmentT,
       coutputs: CompilerOutputs,
@@ -60,6 +100,20 @@ class ConvertHelper(
   }
 
 
+*/
+// mig: fn convert
+fn convert(
+    &self,
+    env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    range: &[RangeS],
+    call_location: LocationInDenizen,
+    source_expr: ReferenceExpressionTE,
+    target_pointer_type: CoordT,
+) -> ReferenceExpressionTE {
+    panic!("Unimplemented: convert");
+}
+/*
   def convert(
       env: IInDenizenEnvironmentT,
       coutputs: CompilerOutputs,
@@ -131,6 +185,21 @@ class ConvertHelper(
   }
 
 
+*/
+// mig: fn convert
+fn convert(
+    &self,
+    calling_env: &IInDenizenEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    range: &[RangeS],
+    call_location: LocationInDenizen,
+    source_expr: ReferenceExpressionTE,
+    source_sub_kind: ISubKindTT,
+    target_super_kind: ISuperKindTT,
+) -> ReferenceExpressionTE {
+    panic!("Unimplemented: convert");
+}
+/*
   def convert(
     callingEnv: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,

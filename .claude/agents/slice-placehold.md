@@ -21,7 +21,7 @@ Generate a `pub struct` with members guessed from the Scala `case class` / `clas
 
 ## `// mig: impl Foo`
 
-Generate just the opening of an `impl` block: `impl<...> Foo<...> {`. Try to guess the correct generic parameters from the Scala class. The closing `}` goes after the last function belonging to this impl (right before the Scala closing `}`).
+Generate just the opening of an `impl` block: `impl<...> Foo<...> {}`. Try to guess the correct generic parameters from the Scala class.
 
 ## `// mig: trait Foo`
 
@@ -49,6 +49,7 @@ Generate a `const` with a placeholder value.
 
  * Do not build or test. Do not run `cargo build`, `cargo run`, or `cargo test`.
  * Do not reorder Scala comments. They must stay in their original order.
+ * DO NOT use sed -i or other scripts to do this for you. Do it manually.
 
 # When done
 

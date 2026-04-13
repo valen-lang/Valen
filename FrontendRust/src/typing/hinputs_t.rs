@@ -12,12 +12,17 @@ import dev.vale.typing.names._
 import dev.vale.typing.types._
 
 import scala.collection.mutable
-
+*/
+// mig: case class InstantiationReachableBoundArgumentsT
+/*
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
   citizenRuneToReachablePrototype: Map[IRuneS, PrototypeT[R]]
 )
 
 object InstantiationBoundArgumentsT {
+*/
+// mig: def make
+/*
   def make[BF <: IFunctionNameT, BI <: IImplNameT](
       runeToBoundPrototype: Map[IRuneS, PrototypeT[BF]],
       runeToCitizenRuneToReachablePrototype: Map[IRuneS, InstantiationReachableBoundArgumentsT[BF]],
@@ -29,7 +34,9 @@ object InstantiationBoundArgumentsT {
           (scala.collection.immutable.HashMap.newBuilder ++= runeToBoundImpl).result())
   }
 }
-
+*/
+// mig: case class InstantiationBoundArgumentsT
+/*
 case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
   // This is the callee's rune to the prototype that satisfies it.
   // If this is at the call site, then this might be a real function like func drop(int)void.
@@ -48,7 +55,9 @@ case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
 
   vassert(!runeToCitizenRuneToReachablePrototype.exists(_._2.citizenRuneToReachablePrototype.isEmpty))
 }
-
+*/
+// mig: case class HinputsT
+/*
 case class HinputsT(
   interfaces: Vector[InterfaceDefinitionT],
   structs: Vector[StructDefinitionT],
@@ -78,44 +87,71 @@ case class HinputsT(
   val subCitizenToInterfaceToEdge: Map[IdT[ICitizenNameT], Map[IdT[IInterfaceNameT], EdgeT]] =
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-
+*/
+// mig: def equals
+/*
+  override def equals(obj: Any): Boolean = vcurious()
+*/
+// mig: def hashCode
+/*
+  override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+*/
+// mig: def lookupStruct
+/*
   def lookupStruct(structId: IdT[IStructNameT]): StructDefinitionT = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))
   }
-
+*/
+// mig: def lookupStructByTemplate
+/*
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameT): StructDefinitionT = {
     vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
   }
-
+*/
+// mig: def lookupInterfaceByTemplate
+/*
   def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameT): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
   }
-
+*/
+// mig: def lookupImplByTemplate
+/*
   def lookupImplByTemplate(implTemplateName: IImplTemplateNameT): EdgeT = {
     vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
   }
-
+*/
+// mig: def lookupInterface
+/*
   def lookupInterface(interfaceId: IdT[IInterfaceNameT]): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
   }
-
+*/
+// mig: def lookupEdge
+/*
   def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
     vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
   }
-
+*/
+// mig: def getInstantiationBoundArgs
+/*
   def getInstantiationBoundArgs(instantiationName: IdT[IInstantiationNameT]): InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT] = {
     vassertSome(instantiationNameToInstantiationBounds.get(instantiationName))
   }
-
+*/
+// mig: def lookupStructByTemplateId
+/*
   def lookupStructByTemplateId(structTemplateId: IdT[IStructTemplateNameT]): StructDefinitionT = {
     vassertSome(structs.find(_.templateName == structTemplateId))
   }
-
+*/
+// mig: def lookupInterfaceByTemplateId
+/*
   def lookupInterfaceByTemplateId(interfaceTemplateId: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.templateName == interfaceTemplateId))
   }
-
+*/
+// mig: def lookupCitizenByTemplateId
+/*
   def lookupCitizenByTemplateId(interfaceTemplateId: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
     interfaceTemplateId match {
       case IdT(packageCoord, initSteps, t: IStructTemplateNameT) => {

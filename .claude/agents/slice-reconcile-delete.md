@@ -39,6 +39,7 @@ For each `// old, obsolete` comment in the file:
 # Restrictions
 
  * Do not build or test. Do not run `cargo build`, `cargo run`, or `cargo test`.
+ * DO NOT use sed -i or other scripts to do this for you. Do it manually.
 
 # When done
 

@@ -23,6 +23,8 @@ exclude_shields = [
 [slice_mode]
 include_shields = [
   { name = "SliceInTheRightPlaces-SITRPX.md" },
+  { name = "MigImplsMustBeEmpty-MIMBEX.md" },
+    { name = "NoModificationsToShieldFiles-NMSFX.md" },
 ]
 
 [guard_mode]
@@ -43,6 +45,7 @@ include_shields = [
     { name = "NeverHaveConditionalsInTests-NHCITX.md" },
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "OutputAndLoggingZenDiscipline-OALZDX.md" },
+    { name = "NoModificationsToShieldFiles-NMSFX.md" },
 ]
 
 [review_mode]
@@ -67,4 +70,5 @@ include_shields = [
   { name = "PreferSingleMatchOverNestedMatches-PSMONMX.md" },
   { name = "ArenaTypesDontClone-ATDCX.md" },
   { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
+    { name = "NoModificationsToShieldFiles-NMSFX.md" },
 ]
