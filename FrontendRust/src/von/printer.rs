@@ -18,7 +18,10 @@ case class VonSyntax(
   squareBracesForArrays: Boolean = true,
   includeEmptyParams: Boolean = true,
   includeEmptyArrayMembersAtEnd: Boolean = true,
-) extends ISyntax { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) extends ISyntax {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 case object JsonSyntax extends ISyntax
 
 */

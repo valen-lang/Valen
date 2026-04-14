@@ -80,7 +80,8 @@ pub(crate) struct LocalLookupResultS<'s> {
 /*
 // Will contain the address of a local.
 case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResult[IExpressionSE] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -98,7 +99,8 @@ case class OutsideLookupResult(
   name: StrI,
   templateArgs: Option[Vector[ITemplexPT]]
 ) extends IScoutResult[IExpressionSE] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -111,7 +113,8 @@ pub(crate) struct NormalResultS<'s> {
 // - Result of a function call
 // - Address inside a struct
 case class NormalResult[+T <: IExpressionSE](expr: T) extends IScoutResult[T] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   def range: RangeS = expr.range
 }
 */

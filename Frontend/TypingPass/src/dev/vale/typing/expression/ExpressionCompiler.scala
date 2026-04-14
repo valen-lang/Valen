@@ -32,7 +32,10 @@ import scala.collection.immutable.{List, Nil, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
-case class TookWeakRefOfNonWeakableError() extends Throwable { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+case class TookWeakRefOfNonWeakableError() extends Throwable {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(

@@ -30,7 +30,8 @@ trait IExpressionScoutDelegate {
 sealed trait IScoutResult[+T <: IExpressionSE]
 // Will contain the address of a local.
 case class LocalLookupResult(range: RangeS, name: IVarNameS) extends IScoutResult[IExpressionSE] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 // Looks up something that's not a local.
 // Should be just a function, but its also super likely that the user just forgot
@@ -40,13 +41,15 @@ case class OutsideLookupResult(
   name: StrI,
   templateArgs: Option[Vector[ITemplexPT]]
 ) extends IScoutResult[IExpressionSE] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 // Anything else, such as:
 // - Result of a function call
 // - Address inside a struct
 case class NormalResult[+T <: IExpressionSE](expr: T) extends IScoutResult[T] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   def range: RangeS = expr.range
 }
 

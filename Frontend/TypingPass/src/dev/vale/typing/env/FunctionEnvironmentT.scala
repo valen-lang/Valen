@@ -30,7 +30,8 @@ case class BuildingFunctionEnvironmentWithClosuredsT(
   override def denizenTemplateId: IdT[ITemplateNameT] = id
   override def denizenId: IdT[INameT] = id
 
-  val hash = runtime.ScalaRunTime._hashCode(id); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(id);
+override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[IInDenizenEnvironmentT]) {
       return false
@@ -92,7 +93,8 @@ case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
   override def denizenTemplateId: IdT[ITemplateNameT] = id
   override def denizenId: IdT[INameT] = id
 
-  val hash = runtime.ScalaRunTime._hashCode(id); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(id);
+override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[IInDenizenEnvironmentT]) {
       return false
@@ -432,7 +434,8 @@ case class NodeEnvironmentT(
 }
 
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   def snapshot: NodeEnvironmentT = nodeEnvironment
   def defaultRegion: RegionT = nodeEnvironment.defaultRegion
@@ -544,7 +547,8 @@ case class FunctionEnvironmentT(
   // Eventually we might have a list of imported environments here, pointing at the
   // environments in the global environment.
 ) extends IInDenizenEnvironmentT {
-  val hash = runtime.ScalaRunTime._hashCode(id); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(id);
+override def hashCode(): Int = hash;
 
   override def denizenTemplateId: IdT[ITemplateNameT] = templateId
   override def denizenId: IdT[INameT] = templateId
@@ -666,7 +670,8 @@ case class FunctionEnvironmentT(
 }
 
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   override def denizenTemplateId: IdT[ITemplateNameT] = functionEnvironment.denizenTemplateId
   override def denizenId: IdT[INameT] = functionEnvironment.denizenId
@@ -749,7 +754,9 @@ case class AddressibleLocalVariableT(
   variability: VariabilityT,
   coord: CoordT
 ) extends ILocalVariableT {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 
 }
 case class ReferenceLocalVariableT(
@@ -757,7 +764,9 @@ case class ReferenceLocalVariableT(
   variability: VariabilityT,
   coord: CoordT
 ) extends ILocalVariableT {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 case class AddressibleClosureVariableT(
@@ -774,7 +783,9 @@ case class ReferenceClosureVariableT(
   variability: VariabilityT,
   coord: CoordT
 ) extends IVariableT {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 
 }
 

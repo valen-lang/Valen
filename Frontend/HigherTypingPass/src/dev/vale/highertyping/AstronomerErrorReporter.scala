@@ -29,10 +29,13 @@ case class CouldntSolveRulesA(range: RangeS, error: RuneTypeSolveError) extends 
   override def equals(obj: Any): Boolean = vcurious();
   override def hashCode(): Int = vcurious()
 }
-case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class WrongNumArgsForTemplateA(range: RangeS, expectedNumArgs: Int, actualNumArgs: Int) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class WrongNumArgsForTemplateA(range: RangeS, expectedNumArgs: Int, actualNumArgs: Int) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 
-case class RangedInternalErrorA(range: RangeS, message: String) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class RangedInternalErrorA(range: RangeS, message: String) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 
 object ErrorReporter {
   def report(err: ICompileErrorA): Nothing = {

@@ -90,7 +90,7 @@ case class HinputsT(
 */
 // mig: def equals
 /*
-  override def equals(obj: Any): Boolean = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: def hashCode
 /*

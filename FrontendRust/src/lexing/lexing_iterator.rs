@@ -9,7 +9,8 @@ import scala.util.matching.Regex
 
   /*
   case class LexingIterator(code: String, var position: Int = 0) {
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
   */
 
 /// Lexing iterator for traversing source code

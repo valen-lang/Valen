@@ -23,7 +23,8 @@ case class LetAndLendIE(
   targetOwnership: OwnershipI,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vassert(variable.collapsedCoord == expr.result)
 
   (expr.result.ownership, targetOwnership) match {
@@ -59,7 +60,8 @@ case class LockWeakIE(
 
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe: CoordI[cI] = resultOptBorrowType
 }
 
@@ -74,7 +76,8 @@ case class BorrowToWeakIE(
     innerExpr.result.ownership == ImmutableBorrowI ||
       innerExpr.result.ownership == MutableBorrowI)
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   innerExpr.result.ownership match {
     case MutableBorrowI | ImmutableBorrowI =>
   }
@@ -90,7 +93,8 @@ case class LetNormalIE(
   expr: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   expr.result.kind match {
     case NeverIT(_) => // then we can put it into whatever type we want
@@ -113,7 +117,8 @@ case class RestackifyIE(
   expr: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   expr.result.kind match {
     case NeverIT(_) => // then we can put it into whatever type we want
@@ -136,7 +141,8 @@ case class UnletIE(
   variable: ILocalVariableI,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = variable.collapsedCoord
 
   vpass()
@@ -153,7 +159,8 @@ case class UnletIE(
 case class DiscardIE(
   expr: ReferenceExpressionIE
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 
   expr.result.ownership match {
@@ -180,7 +187,8 @@ case class DeferIE(
   deferredExpr: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 //  override def resultRemoveMe = ReferenceResultI(innerExpr.result)
 
@@ -197,7 +205,8 @@ case class IfIE(
   elseCall: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   private val conditionResultCoord = condition.result
   private val thenResultCoord = thenCall.result
   private val elseResultCoord = elseCall.result
@@ -229,7 +238,8 @@ case class WhileIE(
   block: BlockIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResultI(resultCoord)
   vpass()
 }
@@ -239,7 +249,8 @@ case class MutateIE(
   sourceExpr: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResultI(destinationExpr.result)
 }
 
@@ -247,13 +258,15 @@ case class MutateIE(
 case class ReturnIE(
   sourceExpr: ReferenceExpressionIE
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(false))
 }
 
 case class BreakIE() extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, NeverIT(true))
 }
 
@@ -269,7 +282,8 @@ case class BlockIE(
 ) extends ReferenceExpressionIE {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = inner.result
 }
 
@@ -287,7 +301,8 @@ case class MutabilifyIE(
   vpass()
   vassert(inner.result.kind == result.kind)
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 
 // See NPFCASTN
@@ -308,7 +323,8 @@ case class ImmutabilifyIE(
     case _ =>
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 
 case class PreCheckBorrowIE(
@@ -318,14 +334,16 @@ case class PreCheckBorrowIE(
   vassert(inner.result.ownership == MutableBorrowI)
 
   override def result: CoordI[cI] = inner.result
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 
 case class ConsecutorIE(
   exprs: Vector[ReferenceExpressionIE],
   result: CoordI[cI]
   ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   // There shouldn't be a 0-element consecutor.
   // If we want a consecutor that returns nothing, put a VoidLiteralIE in it.
   vassert(exprs.nonEmpty)
@@ -335,7 +353,8 @@ case class TupleIE(
   elements: Vector[ReferenceExpressionIE],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResultI(resultReference)
 }
 
@@ -348,7 +367,8 @@ case class TupleIE(
 ////     println("hi");
 ////   }
 //case class UnreachableMootIE(innerExpr: ReferenceExpressionIE) extends ReferenceExpressionIE {
-//  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+//  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResulIT(CoordI[cI](MutableShareI, NeverI()))
 //}
 
@@ -357,7 +377,8 @@ case class StaticArrayFromValuesIE(
   resultReference: CoordI[cI],
   arrayType: StaticSizedArrayIT[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   override def result: CoordI[cI] = resultReference
 }
@@ -366,7 +387,8 @@ case class ArraySizeIE(
   array: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResultI(CoordI[cI](MutableShareI, IntIT.i32))
 }
 
@@ -375,7 +397,8 @@ case class IsSameInstanceIE(
   left: ReferenceExpressionIE,
   right: ReferenceExpressionIE
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vassert(left.result == right.result)
 
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, BoolIT())
@@ -405,32 +428,38 @@ case class AsSubtypeIE(
 ) extends ReferenceExpressionIE {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResultI(resultResultType)
 }
 
 case class VoidLiteralIE() extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 
 case class ConstantIntIE(value: Long, bits: Int) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result = CoordI[cI](MutableShareI, IntIT(bits))
 }
 
 case class ConstantBoolIE(value: Boolean) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result = CoordI[cI](MutableShareI, BoolIT())
 }
 
 case class ConstantStrIE(value: String) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result = CoordI[cI](MutableShareI, StrIT())
 }
 
 case class ConstantFloatIE(value: Double) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result = CoordI[cI](MutableShareI, FloatIT())
 }
 
@@ -447,7 +476,8 @@ case class LocalLookupIE(
   //  variability: VariabilityI
   result: CoordI[cI]
 ) extends AddressExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def variability: VariabilityI = localVariable.variability
 }
 
@@ -455,7 +485,8 @@ case class ArgLookupIE(
   paramIndex: Int,
   coord: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = coord
 }
 
@@ -468,7 +499,8 @@ case class StaticSizedArrayLookupIE(
   // See RMLRMO for why we dont have a targetOwnership field here.
   variability: VariabilityI
 ) extends AddressExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   // See RMLRMO why we just return the element type.
   override def result: CoordI[cI] = elementType
@@ -483,7 +515,8 @@ case class RuntimeSizedArrayLookupIE(
   // See RMLRMO for why we dont have a targetOwnership field here.
   variability: VariabilityI
 ) extends AddressExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  vassert(arrayExpr.result.kind == arrayType)
 
   // See RMLRMO why we just return the element type.
@@ -491,7 +524,8 @@ case class RuntimeSizedArrayLookupIE(
 }
 
 case class ArrayLengthIE(arrayExpr: ReferenceExpressionIE) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, IntIT(32))
 }
 
@@ -506,7 +540,8 @@ case class ReferenceMemberLookupIE(
 ) extends AddressExpressionIE {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   // See RMLRMO why we just return the member type.
   override def result: CoordI[cI] = memberReference
@@ -518,7 +553,8 @@ case class AddressMemberLookupIE(
   memberReference: CoordI[cI],
   variability: VariabilityI
 ) extends AddressExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   // See RMLRMO why we just return the member type.
   override def result: CoordI[cI] = memberReference
@@ -530,7 +566,8 @@ case class InterfaceFunctionCallIE(
   args: Vector[ReferenceExpressionIE],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe: CoordI[cI] = ReferenceResultI(resultReference)
 }
 
@@ -539,7 +576,8 @@ case class ExternFunctionCallIE(
   args: Vector[ReferenceExpressionIE],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   // We dont:
   //   vassert(prototype2.fullName.last.templateArgs.isEmpty)
   // because we totally can have extern templates.
@@ -561,7 +599,8 @@ case class FunctionCallIE(
   args: Vector[ReferenceExpressionIE],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(callable.paramTypes.size == args.size)
   args.map(_.result).zip(callable.paramTypes).foreach({
@@ -584,7 +623,8 @@ case class ReinterpretIE(
   resultReference: CoordI[cI],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vassert(expr.result != resultReference)
 
 //  override def resultRemoveMe = ReferenceResultI(resultReference)
@@ -606,7 +646,8 @@ case class ConstructIE(
   result: CoordI[cI],
   args: Vector[ExpressionI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vpass()
 
 //  override def resultRemoveMe = ReferenceResultI(resultReference)
@@ -619,7 +660,8 @@ case class NewMutRuntimeSizedArrayIE(
   capacityExpr: ReferenceExpressionIE,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe: CoordI[cI] = {
 //    ReferenceResultI(
 //      CoordI[cI](
@@ -637,7 +679,8 @@ case class StaticArrayFromCallableIE(
   generatorMethod: PrototypeI[cI],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe: CoordI[cI] = {
 //    ReferenceResultI(
 //      CoordI[cI](
@@ -659,7 +702,8 @@ case class DestroyStaticSizedArrayIntoFunctionIE(
   consumer: ReferenceExpressionIE,
   consumerMethod: PrototypeI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vassert(consumerMethod.paramTypes.size == 2)
 //  vassert(consumerMethod.paramTypes(0) == consumer.result)
   vassert(consumerMethod.paramTypes(1) == arrayType.elementType.coord)
@@ -684,7 +728,8 @@ case class DestroyStaticSizedArrayIntoLocalsIE(
   staticSizedArray: StaticSizedArrayIT[cI],
   destinationReferenceVariables: Vector[ReferenceLocalVariableI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 
   vassert(expr.result.kind == staticSizedArray)
@@ -729,7 +774,8 @@ case class InterfaceToInterfaceUpcastIE(
   targetInterface: InterfaceIT[cI],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  def result: ReferenceResultI = {
 //    ReferenceResultI(
 //      CoordI[cI](
@@ -751,7 +797,8 @@ case class UpcastIE(
   implName: IdI[cI, IImplNameI[cI]],
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  def result: ReferenceResultI = {
 //    ReferenceResultI(
 //      CoordI[cI](
@@ -770,7 +817,8 @@ case class SoftLoadIE(
   targetOwnership: OwnershipI,
   result: CoordI[cI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(targetOwnership == result.ownership)
 
@@ -803,7 +851,8 @@ case class DestroyIE(
   structTT: StructIT[cI],
   destinationReferenceVariables: Vector[ReferenceLocalVariableI]
 ) extends ReferenceExpressionIE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def result: CoordI[cI] = CoordI[cI](MutableShareI, VoidIT())
 }
 
@@ -818,7 +867,8 @@ case class DestroyImmRuntimeSizedArrayIE(
     case _ => vwat()
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vassert(consumerMethod.paramTypes.size == 2)
   vassert(consumerMethod.paramTypes(0) == consumer.result)
   //  vassert(consumerMethod.paramTypes(1) == Program2.intType)
@@ -855,7 +905,8 @@ case class NewImmRuntimeSizedArrayIE(
     case other => vwat(other)
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe: CoordI[cI] = {
 //    ReferenceResultI(
 //      CoordI[cI](

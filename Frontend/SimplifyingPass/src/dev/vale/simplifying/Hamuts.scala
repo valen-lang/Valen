@@ -7,7 +7,8 @@ import dev.vale.von.IVonData
 
 
 case class HamutsBox(var inner: Hamuts) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   def packageCoordToExportNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]] = inner.packageCoordToExportNameToFunction
   def packageCoordToExportNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]] = inner.packageCoordToExportNameToKind
@@ -104,7 +105,8 @@ case class Hamuts(
     packageCoordToExportNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]],
     packageCoordToExternNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]],
     packageCoordToExternNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 
   vassert(functionDefs.values.map(_.id).toVector.distinct.size == functionDefs.values.size)
   vassert(structDefs.map(_.id).distinct.size == structDefs.size)

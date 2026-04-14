@@ -40,7 +40,10 @@ impl NeededOverride {}
 case class NeededOverride(
   name: IImpreciseNameS,
   paramFilters: Vector[CoordT]
-) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) extends IMethod {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct FoundFunction
 pub struct FoundFunction {
@@ -49,7 +52,10 @@ pub struct FoundFunction {
 // mig: impl FoundFunction
 impl FoundFunction {}
 /*
-case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct PartialEdgeT
 pub struct PartialEdgeT {
@@ -63,7 +69,10 @@ impl PartialEdgeT {}
 case class PartialEdgeT(
   struct: StructTT,
   interface: InterfaceTT,
-  methods: Vector[IMethod]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+  methods: Vector[IMethod]) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct EdgeCompiler
 pub struct EdgeCompiler {

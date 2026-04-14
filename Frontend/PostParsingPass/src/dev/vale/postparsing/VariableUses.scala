@@ -9,16 +9,19 @@ case class VariableUse(
     borrowed: Option[IVariableUseCertainty],
     moved: Option[IVariableUseCertainty],
     mutated: Option[IVariableUseCertainty]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 
 case class VariableDeclaration(
     name: IVarNameS) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 
 case class VariableDeclarations(vars: Vector[VariableDeclaration]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(vars.distinct == vars)
 
@@ -44,7 +47,8 @@ case class VariableDeclarations(vars: Vector[VariableDeclaration]) {
 }
 
 case class VariableUses(uses: Vector[VariableUse]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(uses.map(_.name).distinct == uses.map(_.name))
 

@@ -170,7 +170,8 @@ pub struct CircularModuleDependency<'s> {
     pub modules: std::collections::HashSet<String>,
 }
 /*
-case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CircularModuleDependency(range: RangeS, modules: Set[String]) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 // mig: impl CircularModuleDependency
 impl<'s> CircularModuleDependency<'s> {}
@@ -181,7 +182,8 @@ pub struct WrongNumArgsForTemplateA<'s> {
     pub actual_num_args: i32,
 }
 /*
-case class WrongNumArgsForTemplateA(range: RangeS, expectedNumArgs: Int, actualNumArgs: Int) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class WrongNumArgsForTemplateA(range: RangeS, expectedNumArgs: Int, actualNumArgs: Int) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 // mig: impl WrongNumArgsForTemplateA
 impl<'s> WrongNumArgsForTemplateA<'s> {}
@@ -191,7 +193,8 @@ pub struct RangedInternalErrorA<'s> {
     pub message: String,
 }
 /*
-case class RangedInternalErrorA(range: RangeS, message: String) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class RangedInternalErrorA(range: RangeS, message: String) extends ICompileErrorA { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 
 object ErrorReporter {
 */

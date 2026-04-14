@@ -48,7 +48,8 @@ case class FileL(
   denizens: Vector[IDenizenL],
   commentRanges: Vector[RangeL]
 ) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -64,12 +65,18 @@ pub enum IDenizenL<'p> {
 }
 /*
 sealed trait IDenizenL
-case class TopLevelFunctionL(function: FunctionL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TopLevelStructL(struct: StructL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TopLevelInterfaceL(interface: InterfaceL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TopLevelImplL(impl: ImplL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TopLevelExportAsL(export: ExportAsL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class TopLevelImportL(imporrt: ImportL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelFunctionL(function: FunctionL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class TopLevelStructL(struct: StructL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class TopLevelInterfaceL(interface: InterfaceL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class TopLevelImplL(impl: ImplL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class TopLevelExportAsL(export: ExportAsL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class TopLevelImportL(imporrt: ImportL) extends IDenizenL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Impl block
@@ -91,7 +98,8 @@ case class ImplL(
   struct: Option[ScrambleLE],
   interface: ScrambleLE,
   attributes: Vector[IAttributeL]
-) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Export as declaration
@@ -103,7 +111,8 @@ pub struct ExportAsL<'p> {
 /*
 case class ExportAsL(
   range: RangeL,
-  contents: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  contents: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Import declaration
@@ -119,7 +128,8 @@ case class ImportL(
   range: RangeL,
   moduleName: WordLE,
   packageSteps: Vector[WordLE],
-  importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  importeeName: WordLE) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Struct definition
@@ -141,7 +151,8 @@ case class StructL(
   mutability: Option[ScrambleLE],
   identifyingRunes: Option[AngledLE],
   templateRules: Option[ScrambleLE],
-  members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Interface definition
@@ -165,7 +176,8 @@ case class InterfaceL(
   maybeIdentifyingRunes: Option[AngledLE],
   templateRules: Option[ScrambleLE],
   bodyRange: RangeL,
-  members: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  members: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Attributes on declarations
@@ -190,14 +202,22 @@ pub enum IAttributeL<'p> {
 }
 /*
 sealed trait IAttributeL
-case class AbstractAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class ExportAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class PureAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class AdditiveAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class ExternAttributeL(range: RangeL, maybeCustomName: Option[ParendLE]) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class LinearAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class WeakableAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-case class SealedAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class AbstractAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class ExportAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class PureAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class AdditiveAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class ExternAttributeL(range: RangeL, maybeCustomName: Option[ParendLE]) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class LinearAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class WeakableAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+case class SealedAttributeL(range: RangeL) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Macro inclusion type
@@ -210,7 +230,8 @@ pub enum IMacroInclusionL {
 sealed trait IMacroInclusionL
 case object CallMacroL extends IMacroInclusionL
 case object DontCallMacroL extends IMacroInclusionL
-case class MacroCallL(range: RangeL, inclusion: IMacroInclusionL, name: WordLE) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class MacroCallL(range: RangeL, inclusion: IMacroInclusionL, name: WordLE) extends IAttributeL { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Function definition
@@ -224,7 +245,8 @@ pub struct FunctionL<'p> {
 case class FunctionL(
   range: RangeL,
   header: FunctionHeaderL,
-  body: Option[FunctionBodyL]) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  body: Option[FunctionBodyL]) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Function body
@@ -235,7 +257,8 @@ pub struct FunctionBodyL<'p> {
 /*
 case class FunctionBodyL(
   body: CurliedLE
-) { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+) { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /// Function header
@@ -269,7 +292,8 @@ case class FunctionHeaderL(
 ) {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -301,7 +325,8 @@ case class ScrambleLE(
 ) extends INodeLE {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 
   U.foreach[INodeLE](elements, {
     case ScrambleLE(_, _) => vwat()
@@ -355,7 +380,8 @@ impl INodeLE for ParendLE<'_> {
 }
 /*
 case class ParendLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -372,7 +398,8 @@ impl INodeLE for AngledLE<'_> {
 }
 /*
 case class AngledLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -390,7 +417,8 @@ impl INodeLE for SquaredLE<'_> {
 }
 /*
 case class SquaredLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -408,7 +436,8 @@ impl INodeLE for CurliedLE<'_> {
 }
 /*
 case class CurliedLE(range: RangeL, contents: ScrambleLE) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -425,7 +454,8 @@ impl INodeLE for WordLE<'_> {
 }
 /*
 case class WordLE(range: RangeL, str: StrI) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -450,7 +480,8 @@ impl INodeLE for SymbolLE {
 }
 /*
 case class SymbolLE(range: RangeL, c: Char) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 
@@ -468,7 +499,8 @@ impl INodeLE for StringLE<'_> {
 }
 /*
 case class StringLE(range: RangeL, parts: Vector[StringPart]) extends INodeLE {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious();
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious();
 }
 */
 

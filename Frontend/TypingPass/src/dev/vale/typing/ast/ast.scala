@@ -58,7 +58,8 @@ case class KindExportT(
   id: IdT[ExportNameT],
   exportedName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 }
 
@@ -68,7 +69,8 @@ case class FunctionExportT(
   exportId: IdT[ExportNameT],
   exportedName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vpass()
 }
 
@@ -77,7 +79,8 @@ case class KindExternT(
   packageCoordinate: PackageCoordinate,
   externName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 }
 
@@ -87,14 +90,18 @@ case class FunctionExternT(
   prototype: PrototypeT[IFunctionNameT],
   externName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 }
 
 case class InterfaceEdgeBlueprintT(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
   interface: IdT[IInterfaceNameT],
-  superFamilyRootHeaders: Vector[(PrototypeT[IFunctionNameT], Int)]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+  superFamilyRootHeaders: Vector[(PrototypeT[IFunctionNameT], Int)]) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 case class OverrideT(
   // This is the name of the conceptual function called by the abstract function.
@@ -149,7 +156,9 @@ case class EdgeT(
 ) {
   vpass()
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
 
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -169,7 +178,8 @@ case class FunctionDefinitionT(
   instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT],
   body: ReferenceExpressionTE)  {
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   // We always end a function with a ret, whose result is a Never.
   vassert(body.result.kind == NeverT(false))
@@ -183,7 +193,8 @@ object getFunctionLastName {
 
 // A unique location in a function. Environment is in the name so it spells LIFE!
 case class LocationInFunctionEnvironmentT(path: Vector[Int]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {
     LocationInFunctionEnvironmentT(path :+ subLocation)
@@ -199,7 +210,8 @@ case class ParameterT(
   virtuality: Option[AbstractT],
   preChecked: Boolean,
   tyype: CoordT)  {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   // Use same instead, see EHCFBD for why we dont like equals.
   override def equals(obj: Any): Boolean = vcurious();
@@ -214,16 +226,19 @@ case class ParameterT(
 sealed trait ICalleeCandidate
 
 case class FunctionCalleeCandidate(ft: FunctionTemplataT) extends ICalleeCandidate {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 case class HeaderCalleeCandidate(header: FunctionHeaderT) extends ICalleeCandidate {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 case class PrototypeTemplataCalleeCandidate(
   // We don't want a range because we want to merge all sorts of different bound functions, see MFBFDP.
   //   range: RangeS,
   prototypeT: PrototypeT[IFunctionNameT]) extends ICalleeCandidate {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 
 //sealed trait IValidCalleeCandidate {
@@ -233,7 +248,9 @@ case class PrototypeTemplataCalleeCandidate(
 //case class ValidHeaderCalleeCandidate(
 //  header: FunctionHeaderT
 //) extends IValidCalleeCandidate {
-//  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+//  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 //
 //  override def range: Option[RangeS] = header.maybeOriginFunctionTemplata.map(_.function.range)
 //  override def paramTypes: Vector[CoordT] = header.paramTypes.toVector
@@ -241,7 +258,8 @@ case class PrototypeTemplataCalleeCandidate(
 //case class ValidPrototypeTemplataCalleeCandidate(
 //  prototype: PrototypeTemplataT[IFunctionNameT]
 //) extends IValidCalleeCandidate {
-//  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+//  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
 //  override def equals(obj: Any): Boolean = {
 //    val that = obj.asInstanceOf[ValidPrototypeTemplataCalleeCandidate]
 //    if (that == null) {
@@ -258,7 +276,9 @@ case class PrototypeTemplataCalleeCandidate(
 ////  templateArgs: Vector[ITemplataT[ITemplataType]],
 ////  function: FunctionTemplataT
 ////) extends IValidCalleeCandidate {
-////  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+////  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 ////
 ////  override def range: Option[RangeS] = banner.maybeOriginFunctionTemplata.map(_.function.range)
 ////  override def paramTypes: Vector[CoordT] = banner.paramTypes.toVector
@@ -277,14 +297,16 @@ case class PrototypeTemplataCalleeCandidate(
 // it takes a complete typingpass evaluate to deduce a function's return type.
 
 case class SignatureT(id: IdT[IFunctionNameT]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   def paramTypes: Vector[CoordT] = id.localName.parameters
 }
 
 case class FunctionBannerT(
   originFunctionTemplata: Option[FunctionTemplataT],
   name: IdT[IFunctionNameT])   {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   // Use same instead, see EHCFBD for why we dont like equals.
   override def equals(obj: Any): Boolean = vcurious();
@@ -310,7 +332,8 @@ case class FunctionBannerT(
 sealed trait IFunctionAttributeT
 sealed trait ICitizenAttributeT
 case class ExternT(packageCoord: PackageCoordinate) extends IFunctionAttributeT with ICitizenAttributeT { // For optimization later
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 // There's no Export2 here, we use separate KindExport and FunctionExport constructs.
 //case class Export2(packageCoord: PackageCoordinate) extends IFunctionAttribute2 with ICitizenAttribute2
@@ -326,7 +349,8 @@ case class FunctionHeaderT(
   params: Vector[ParameterT],
   returnType: CoordT,
   maybeOriginFunctionTemplata: Option[FunctionTemplataT]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   vassert({
     maybeOriginFunctionTemplata match {
@@ -464,7 +488,8 @@ case class FunctionHeaderT(
 case class PrototypeT[+T <: IFunctionNameT](
     id: IdT[T],
     returnType: CoordT) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   def paramTypes: Vector[CoordT] = id.localName.parameters
   def toSignature: SignatureT = SignatureT(id)
 }

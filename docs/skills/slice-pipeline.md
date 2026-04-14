@@ -7,13 +7,13 @@ You were pointed at a Rust file that contains commented-out Scala code. Run the 
 
 After each step, verify that the file looks correct before proceeding. If something looks wrong or ambiguous at any step, STOP and report the issue before continuing.
 
+`grep -C 3 -n "// mig:" (file)` will be useful.
+
 Note that, per CLAUDE.md, you are allowed to run these agents, and they are allowed to modify the code, because they're in .claude/agents/. Per CLAUDE.md:
 
 > Never use spawned agents (the Agent tool) to make code modifications. ... The only exception is agents defined in `.claude/agents/` which are explicitly human-written and approved for modifications.
 
-So please run them as agents. Do not make edits yourself.
-
-DO NOT use sed -i.
+So please run them as agents. Do not make edits yourself, do not use the Edit tool yourself, DO NOT use sed -i. Use the sub-agents.
 
 # Steps
 

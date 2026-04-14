@@ -105,7 +105,8 @@ sealed trait ITemplataT[+T <: ITemplataType]  {
 }
 
 case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: CoordTemplataType = CoordTemplataType()
 
   vpass()
@@ -119,18 +120,22 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
     case KindTemplataType() => vwat()
     case _ =>
   }
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: KindTemplataType = KindTemplataType()
 }
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: TemplateTemplataType = TemplateTemplataType(Vector(MutabilityTemplataType(), CoordTemplataType()), KindTemplataType())
 }
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: TemplateTemplataType = TemplateTemplataType(Vector(IntegerTemplataType(), MutabilityTemplataType(), VariabilityTemplataType(), CoordTemplataType()), KindTemplataType())
 }
 
@@ -150,7 +155,9 @@ case class FunctionTemplataT(
 ) extends ITemplataT[TemplateTemplataType] {
   vassert(outerEnv.id.packageCoord == function.name.packageCoordinate)
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
 
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -200,7 +207,9 @@ case class StructDefinitionTemplataT(
 
   vassert(declaringEnv.id.packageCoord == originStruct.name.range.file.packageCoordinate)
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
   override def tyype: TemplateTemplataType = {
     // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
     // In Compiler, StructTemplatas are templates, even if they have zero arguments.
@@ -226,10 +235,18 @@ case class StructDefinitionTemplataT(
 }
 
 sealed trait IContainer
-case class ContainerInterface(interface: InterfaceA) extends IContainer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
-case class ContainerStruct(struct: StructA) extends IContainer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
-case class ContainerFunction(function: FunctionA) extends IContainer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
-case class ContainerImpl(impl: ImplA) extends IContainer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
+case class ContainerInterface(interface: InterfaceA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+case class ContainerStruct(struct: StructA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+case class ContainerFunction(function: FunctionA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+case class ContainerImpl(impl: ImplA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
 
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
   def declaringEnv: IEnvironmentT
@@ -259,7 +276,8 @@ case class InterfaceDefinitionTemplataT(
   vassert(declaringEnv.id.packageCoord == originInterface.name.range.file.packageCoordinate)
 
   vpass()
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: TemplateTemplataType = {
     // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
     // In Compiler, StructTemplatas are templates, even if they have zero arguments.
@@ -302,37 +320,45 @@ case class ImplDefinitionTemplataT(
   // structs and interfaces. See NTKPRR for more.
   impl: ImplA
 ) extends ITemplataT[ImplTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: ImplTemplataType = ImplTemplataType()
 }
 
 case class OwnershipTemplataT(ownership: OwnershipT) extends ITemplataT[OwnershipTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: OwnershipTemplataType = OwnershipTemplataType()
 }
 case class VariabilityTemplataT(variability: VariabilityT) extends ITemplataT[VariabilityTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: VariabilityTemplataType = VariabilityTemplataType()
 }
 case class MutabilityTemplataT(mutability: MutabilityT) extends ITemplataT[MutabilityTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: MutabilityTemplataType = MutabilityTemplataType()
 }
 case class LocationTemplataT(location: LocationT) extends ITemplataT[LocationTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: LocationTemplataType = LocationTemplataType()
 }
 
 case class BooleanTemplataT(value: Boolean) extends ITemplataT[BooleanTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: BooleanTemplataType = BooleanTemplataType()
 }
 case class IntegerTemplataT(value: Long) extends ITemplataT[IntegerTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: IntegerTemplataType = IntegerTemplataType()
 }
 case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: StringTemplataType = StringTemplataType()
 }
 case class PrototypeTemplataT[+T <: IFunctionNameT](
@@ -341,15 +367,18 @@ case class PrototypeTemplataT[+T <: IFunctionNameT](
     prototype: PrototypeT[T]
 ) extends ITemplataT[PrototypeTemplataType] {
   vpass()
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: PrototypeTemplataType = PrototypeTemplataType()
 }
 case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], subKind: KindT, superKind: KindT) extends ITemplataT[ImplTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: ImplTemplataType = ImplTemplataType()
 }
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: PackTemplataType = PackTemplataType(CoordTemplataType())
   vpass()
 
@@ -363,7 +392,8 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 // by plugins, but theyre also used internally.
 
 case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[ITemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def tyype: ITemplataType = vfail()
 }
 */

@@ -43,7 +43,10 @@ case class TypingPassOptions(
   globalOptions: GlobalOptions = GlobalOptions(),
   debugOut: (=> String) => Unit = DefaultPrintyThing.print,
   treeShakingEnabled: Boolean = true
-) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct TypingPassCompilation
 pub struct TypingPassCompilation<'s, 'ctx, 'p> {

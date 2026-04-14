@@ -158,7 +158,9 @@ class BodyCompiler(
   }
 
   case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
-    val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+    val hash = runtime.ScalaRunTime._hashCode(this)
+    override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
     vpass()
   }
 

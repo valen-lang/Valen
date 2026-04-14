@@ -32,7 +32,8 @@ pub struct EqualsPR<'p> {
   pub right: &'p IRulexPR<'p>,
 }
 /*
-case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class EqualsPR(range: RangeL, left: IRulexPR, right: IRulexPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -41,7 +42,8 @@ pub struct OrPR<'p> {
   pub possibilities: &'p [IRulexPR<'p>],
 }
 /*
-case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class OrPR(range: RangeL, possibilities: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -51,7 +53,8 @@ pub struct DotPR<'p> {
   pub member_name: NameP<'p>,
 }
 /*
-case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class DotPR(range: RangeL, container: IRulexPR, memberName: NameP) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -65,7 +68,8 @@ case class ComponentsPR(
   range: RangeL,
   container: ITypePR,
   components: Vector[IRulexPR]
-) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -75,7 +79,8 @@ pub struct TypedPR<'p> {
   pub tyype: ITypePR,
 }
 /*
-case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TypedPR(range: RangeL, rune: Option[NameP], tyype: ITypePR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
   def range = templex.range
 }
@@ -89,8 +94,10 @@ pub struct BuiltinCallPR<'p> {
   pub args: &'p [IRulexPR<'p>],
 }
 /*
-case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-//case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+//case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -99,7 +106,8 @@ pub struct PackPR<'p> {
   pub elements: &'p [IRulexPR<'p>],
 }
 /*
-case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 impl IRulexPR<'_> {

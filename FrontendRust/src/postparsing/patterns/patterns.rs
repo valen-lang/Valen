@@ -22,7 +22,8 @@ pub struct CaptureS<'s> {
 case class CaptureS(
     name: IVarNameS,
     mutate: Boolean) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -45,7 +46,8 @@ case class AtomSP(
   name: Option[CaptureS],
   coordRune: Option[RuneUsage],
   destructure: Option[Vector[AtomSP]]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vpass()
 
   name match {

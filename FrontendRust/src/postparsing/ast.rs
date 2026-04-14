@@ -53,7 +53,8 @@ case class ProgramS(
     implementedFunctions: Vector[FunctionS],
     exports: Vector[ExportAsS],
     imports: Vector[ImportS]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 */
 // V: lets make sure equals and hashCode are mentioned in the shields as exceptions.
 // V: lets combine the various "must match scala" shields
@@ -156,7 +157,8 @@ pub struct ExternS<'s> {
 }
 /*
 case class ExternS(packageCoord: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 
@@ -186,7 +188,8 @@ pub struct BuiltinS<'s> {
 }
 /*
 case class BuiltinS(generatorName: StrI) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 
@@ -198,7 +201,8 @@ pub struct MacroCallS<'s> {
 }
 /*
 case class MacroCallS(range: RangeS, include: IMacroInclusionP, macroName: StrI) extends ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 
@@ -208,7 +212,8 @@ pub struct ExportS<'s> {
 }
 /*
 case class ExportS(packageCoordinate: PackageCoordinate) extends IFunctionAttributeS with ICitizenAttributeS {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 
@@ -358,7 +363,8 @@ impl<'s> StructS<'s> {
       }
     }))
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 //  vassert(isTemplate == identifyingRunes.nonEmpty)
 }
@@ -417,7 +423,8 @@ case class NormalStructMemberS(
     name: StrI,
     variability: VariabilityP,
     typeRune: RuneUsage) extends IStructMemberS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
   */
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -432,7 +439,8 @@ case class VariadicStructMemberS(
   range: RangeS,
   variability: VariabilityP,
   typeRune: RuneUsage) extends IStructMemberS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
@@ -526,7 +534,8 @@ case class InterfaceS(
       }
     }))
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   internalMethods.foreach(internalMethod => {
     vregionmut() // Put this back in when we have regions
@@ -565,7 +574,8 @@ case class ImplS(
     subCitizenImpreciseName: IImpreciseNameS,
     interfaceKindRune: RuneUsage,
     superInterfaceImpreciseName: IImpreciseNameS) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
@@ -584,7 +594,8 @@ case class ExportAsS(
   exportName: ExportAsNameS,
   rune: RuneUsage,
   exportedName: StrI) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Debug, PartialEq)]
@@ -601,7 +612,8 @@ case class ImportS(
   moduleName: StrI,
   packageNames: Vector[StrI],
   importeeName: StrI) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 pub fn interface_s_name<'s>(interface_s: &InterfaceS<'s>) -> TopLevelCitizenDeclarationNameS<'s> {
@@ -662,7 +674,8 @@ case class ParameterS(
   preChecked: Boolean,
   pattern: AtomSP) {
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(pattern.coordRune.nonEmpty)
 }
@@ -694,7 +707,8 @@ case class SimpleParameterS(
     name: String,
     virtuality: Option[AbstractSP],
     tyype: IRulexSR) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -728,7 +742,8 @@ pub struct GeneratedBodyS<'s> {
 }
 /*
 case class GeneratedBodyS(generatorId: StrI) extends IBodyS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -738,7 +753,8 @@ pub struct CodeBodyS<'s> {
 }
 /*
 case class CodeBodyS(body: BodySE) extends IBodyS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -1014,7 +1030,8 @@ case class FunctionS(
     }
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 */
 impl<'s> FunctionS<'s> {
   pub fn is_light(&self) -> bool {
@@ -1053,7 +1070,9 @@ class LocationInDenizenBuilder(path: Vector[Int]) {
   private var nextChild: Int = 1
 
   // Note how this is hashing `path`, not `this` like usual.
-  val hash = runtime.ScalaRunTime._hashCode(path.toList); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(path.toList);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 */
 
 impl LocationInDenizenBuilder {
@@ -1152,7 +1171,8 @@ pub struct LocationInDenizen<'x> {
 
 /*
 case class LocationInDenizen(path: Vector[Int]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     obj match {
       case LocationInDenizen(thatPath) => path == thatPath
@@ -1253,7 +1273,8 @@ pub struct TopLevelFunctionS<'s> {
 }
 
 /*
-case class TopLevelFunctionS(function: FunctionS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelFunctionS(function: FunctionS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -1261,7 +1282,8 @@ pub struct TopLevelImplS<'s> {
   pub impl_: ImplS<'s>,
 }
 /*
-case class TopLevelImplS(impl: ImplS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImplS(impl: ImplS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -1269,7 +1291,8 @@ pub struct TopLevelExportAsS<'s> {
   pub export: ExportAsS<'s>,
 }
 /*
-case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelExportAsS(export: ExportAsS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]
@@ -1277,7 +1300,8 @@ pub struct TopLevelImportS<'s> {
   pub imporrt: ImportS<'s>,
 }
 /*
-case class TopLevelImportS(imporrt: ImportS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class TopLevelImportS(imporrt: ImportS) extends IDenizenS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /*
@@ -1327,7 +1351,8 @@ pub struct TopLevelStructS<'s> {
 }
 /*
 case class TopLevelStructS(struct: StructS) extends ICitizenDenizenS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def citizen: ICitizenS = struct
 }
 */
@@ -1338,7 +1363,8 @@ pub struct TopLevelInterfaceS<'s> {
 }
 /*
 case class TopLevelInterfaceS(interface: InterfaceS) extends ICitizenDenizenS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   override def citizen: ICitizenS = interface
 }
 */

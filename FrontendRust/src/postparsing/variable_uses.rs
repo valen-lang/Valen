@@ -23,7 +23,8 @@ case class VariableUse(
     borrowed: Option[IVariableUseCertainty],
     moved: Option[IVariableUseCertainty],
     mutated: Option[IVariableUseCertainty]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
@@ -33,7 +34,8 @@ pub struct VariableDeclarationS<'s> {
 /*
 case class VariableDeclaration(
     name: IVarNameS) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 */
 #[derive(Clone, Debug, PartialEq, Eq, Hash)]
@@ -49,7 +51,8 @@ impl<'s> VariableDeclarations<'s> {
 
 /*
 case class VariableDeclarations(vars: Vector[VariableDeclaration]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(vars.distinct == vars)
 */
@@ -129,7 +132,8 @@ pub struct VariableUses<'s> {
 }
 /*
 case class VariableUses(uses: Vector[VariableUse]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   vassert(uses.map(_.name).distinct == uses.map(_.name))
 */

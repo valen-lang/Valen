@@ -22,16 +22,51 @@ import dev.vale.typing.infer.ITypingPassSolverError
 
 import scala.collection.immutable.Set
 
+*/
+// mig: trait IsParentResult
+pub trait IsParentResult {}
+/*
 sealed trait IsParentResult
+*/
+// mig: struct IsParent
+pub struct IsParent<'s> {
+    pub templata: ITemplataT,
+    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT>,
+    pub impl_id: IdT,
+}
+// mig: impl IsParent
+impl<'s> IsParent<'s> {}
+/*
 case class IsParent(
   templata: ITemplataT[ImplTemplataType],
   conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
   implId: IdT[IImplNameT]
 ) extends IsParentResult
+*/
+// mig: struct IsntParent
+pub struct IsntParent {
+    pub candidates: Vec<IResolvingError>,
+}
+// mig: impl IsntParent
+impl IsntParent {}
+/*
 case class IsntParent(
   candidates: Vector[IResolvingError]
 ) extends IsParentResult
 
+*/
+// mig: struct ImplCompiler
+pub struct ImplCompiler {
+    pub opts: TypingPassOptions,
+    pub interner: Interner,
+    pub name_translator: NameTranslator,
+    pub struct_compiler: StructCompiler,
+    pub templata_compiler: TemplataCompiler,
+    pub infer_compiler: InferCompiler,
+}
+// mig: impl ImplCompiler
+impl ImplCompiler {}
+/*
 class ImplCompiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -41,7 +76,12 @@ class ImplCompiler(
     inferCompiler: InferCompiler) {
 
   // We don't have an isAncestor call, see REMUIDDA.
-
+*/
+// mig: fn resolve_impl
+fn resolve_impl() {
+    panic!("Unimplemented: resolve_impl");
+}
+/*
   def resolveImpl(
       coutputs: CompilerOutputs,
       parentRanges: List[RangeS],
@@ -107,6 +147,12 @@ class ImplCompiler(
       solver)
   }
 
+*/
+// mig: fn partial_resolve_impl
+fn partial_resolve_impl() {
+    panic!("Unimplemented: partial_resolve_impl");
+}
+/*
   // WARNING: Doesn't verify conclusions to make sure that any bounds are satisfied!
   def partialResolveImpl(
     coutputs: CompilerOutputs,
@@ -160,6 +206,12 @@ class ImplCompiler(
     Ok(solverState.userifyConclusions().toMap)
   }
 
+*/
+// mig: fn compile_impl
+fn compile_impl() {
+    panic!("Unimplemented: compile_impl");
+}
+/*
   // This will just figure out the struct template and interface template,
   // so we can add it to the temputs.
   def compileImpl(coutputs: CompilerOutputs, callLocation: LocationInDenizen, implTemplata: ImplDefinitionTemplataT): Unit = {
@@ -297,6 +349,12 @@ class ImplCompiler(
     coutputs.addImpl(implT)
   }
 
+*/
+// mig: fn calculate_runes_independence
+fn calculate_runes_independence() {
+    panic!("Unimplemented: calculate_runes_independence");
+}
+/*
   def calculateRunesIndependence(
     coutputs: CompilerOutputs,
     callLocation: LocationInDenizen,
@@ -339,6 +397,12 @@ class ImplCompiler(
     runeToIndependence
   }
 
+*/
+// mig: fn assemble_impl_name
+fn assemble_impl_name() {
+    panic!("Unimplemented: assemble_impl_name");
+}
+/*
   def assembleImplName(
     templateName: IdT[IImplTemplateNameT],
     templateArgs: Vector[ITemplataT[ITemplataType]],
@@ -505,6 +569,12 @@ class ImplCompiler(
   //  }
   //
 
+*/
+// mig: fn is_descendant
+fn is_descendant() {
+    panic!("Unimplemented: is_descendant");
+}
+/*
   def isDescendant(
     coutputs: CompilerOutputs,
     parentRanges: List[RangeS],
@@ -540,6 +610,12 @@ class ImplCompiler(
   //   }
   // }
 
+*/
+// mig: fn get_impl_parent_given_sub_citizen
+fn get_impl_parent_given_sub_citizen() {
+    panic!("Unimplemented: get_impl_parent_given_sub_citizen");
+}
+/*
   def getImplParentGivenSubCitizen(
     coutputs: CompilerOutputs,
     parentRanges: List[RangeS],
@@ -567,6 +643,12 @@ class ImplCompiler(
     }
   }
 
+*/
+// mig: fn get_parents
+fn get_parents() {
+    panic!("Unimplemented: get_parents");
+}
+/*
   def getParents(
     coutputs: CompilerOutputs,
     parentRanges: List[RangeS],
@@ -627,6 +709,12 @@ class ImplCompiler(
     parentsFromImplDefs ++ parentsFromImplTemplatas
   }
 
+*/
+// mig: fn is_parent
+fn is_parent() {
+    panic!("Unimplemented: is_parent");
+}
+/*
   def isParent(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,

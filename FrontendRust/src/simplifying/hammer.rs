@@ -10,13 +10,16 @@ import dev.vale.postparsing.ICompileErrorS
 import scala.collection.immutable.List
 
 case class FunctionRefH(prototype: PrototypeH) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
   //  def functionType = prototype.functionType
   def fullName = prototype.id
 }
 
 case class LocalsBox(var inner: Locals) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   def snapshot = inner
 
@@ -78,7 +81,8 @@ case class Locals(
      locals: Map[VariableIdH, Local],
 
      nextLocalIdNumber: Int) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   def addCompilerLocal(
     varId2: IVarNameI[cI],

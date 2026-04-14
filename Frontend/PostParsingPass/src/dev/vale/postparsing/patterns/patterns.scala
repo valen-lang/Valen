@@ -10,7 +10,8 @@ import scala.collection.immutable.List
 case class CaptureS(
     name: IVarNameS,
     mutate: Boolean) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 
 case class AtomSP(
@@ -24,7 +25,8 @@ case class AtomSP(
   name: Option[CaptureS],
   coordRune: Option[RuneUsage],
   destructure: Option[Vector[AtomSP]]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vpass()
 
   name match {

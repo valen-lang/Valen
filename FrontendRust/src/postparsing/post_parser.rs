@@ -72,7 +72,8 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
 /*
-case class CompileErrorExceptionS(err: ICompileErrorS) extends RuntimeException { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CompileErrorExceptionS(err: ICompileErrorS) extends RuntimeException { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 #[derive(Debug, PartialEq)]
 pub struct CompileErrorExceptionS<'s> {
@@ -134,19 +135,23 @@ Guardian: disable-all
 */
 
 /*
-case class UnknownRuleFunctionS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class UnknownRuleFunctionS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 /*
 case class BadRuneAttributeErrorS(range: RangeS, attr: IRuneAttributeP) extends ICompileErrorS {
   vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 /*
-case class CantHaveMultipleMutabilitiesS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CantHaveMultipleMutabilitiesS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 /*
-case class UnimplementedExpression(range: RangeS, expressionName: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class UnimplementedExpression(range: RangeS, expressionName: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct CouldntFindVarToMutateS<'s> {
@@ -154,7 +159,8 @@ pub struct CouldntFindVarToMutateS<'s> {
   pub name: String,
 }
 /*
-case class CouldntFindVarToMutateS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CouldntFindVarToMutateS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -163,7 +169,8 @@ pub struct CouldntFindRuneS<'s> {
   pub name: String,
 }
 /*
-case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CouldntFindRuneS(range: RangeS, name: String) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -171,16 +178,19 @@ pub struct StatementAfterReturnS<'s> {
   pub range: RangeS<'s>,
 }
 /*
-case class StatementAfterReturnS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class StatementAfterReturnS(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /*
-case class ForgotSetKeywordError(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class ForgotSetKeywordError(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 /*
 case class UnknownRegionError(range: RangeS, name: String) extends ICompileErrorS {
   vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
@@ -189,7 +199,8 @@ pub struct ExternHasBodyS<'s> {
   pub range: RangeS<'s>,
 }
 /*
-case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class ExternHasBody(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -197,7 +208,8 @@ pub struct InitializingRuntimeSizedArrayRequiresSizeAndCallable<'s> {
   pub range: RangeS<'s>,
 }
 /*
-case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class InitializingRuntimeSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -205,17 +217,21 @@ pub struct InitializingStaticSizedArrayRequiresSizeAndCallable<'s> {
   pub range: RangeS<'s>,
 }
 /*
-case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class InitializingStaticSizedArrayRequiresSizeAndCallable(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /*
-case class CantOwnershipInterfaceInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CantOwnershipInterfaceInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 /*
-case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CantOwnershipStructInImpl(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 /*
-case class CantOverrideOwnershipped(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CantOverrideOwnershipped(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 #[derive(Copy, Clone, Debug, PartialEq)]
 pub struct VariableNameAlreadyExists<'s> {
@@ -223,7 +239,8 @@ pub struct VariableNameAlreadyExists<'s> {
   pub name: IVarNameS<'s>,
 }
 /*
-case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class VariableNameAlreadyExists(range: RangeS, name: IVarNameS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Copy, Clone, Debug, PartialEq)]
@@ -233,16 +250,19 @@ pub struct InterfaceMethodNeedsSelf<'s> {
 /*
 case class InterfaceMethodNeedsSelf(range: RangeS) extends ICompileErrorS {
   vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 
 /*
-case class VirtualAndAbstractGoTogether(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class VirtualAndAbstractGoTogether(range: RangeS) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 /*
-case class CouldntSolveRulesS(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class CouldntSolveRulesS(range: RangeS, error: RuneTypeSolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -252,7 +272,8 @@ pub struct RuneExplicitTypeConflictS<'s> {
   pub types: Vec<ITemplataType<'s>>,
 }
 /*
-case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class RuneExplicitTypeConflictS(range: RangeS, rune: IRuneS, types: Vector[ITemplataType]) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Clone, Debug, PartialEq)]
@@ -261,7 +282,8 @@ pub struct IdentifyingRunesIncompleteS<'s> {
   pub error: crate::postparsing::identifiability_solver::IdentifiabilitySolveError<'s>,
 }
 /*
-case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+case class IdentifyingRunesIncompleteS(range: RangeS, error: IdentifiabilitySolveError) extends ICompileErrorS { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 */
 #[derive(Clone, Debug, PartialEq)]
 pub struct RangedInternalErrorS<'s> {
@@ -271,7 +293,8 @@ pub struct RangedInternalErrorS<'s> {
 /*
 case class RangedInternalErrorS(range: RangeS, message: String) extends ICompileErrorS {
   vpass()
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 }
 */
 #[derive(Clone, Debug, PartialEq)]
@@ -342,7 +365,8 @@ case class EnvironmentS(
 */
 impl<'s> EnvironmentS<'s> {
 /*
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 */
 
   pub fn local_declared_runes(&self) -> IndexSet<IRuneS<'s>> {
@@ -399,7 +423,8 @@ case class FunctionEnvironmentS(
   // (Maybe we can instead determine this by looking at parentEnv?)
   isInterfaceInternalMethod: Boolean
 ) extends IEnvironmentS {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 */
 
 impl<'s> FunctionEnvironmentS<'s> {
@@ -467,7 +492,8 @@ case class StackFrame(
 */
 impl<'s> StackFrame<'s> {
 /*
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 */
 // MIGALLOW: ++ -> plus
 pub fn plus(&self, new_vars: &VariableDeclarations<'s>) -> StackFrame<'s> {

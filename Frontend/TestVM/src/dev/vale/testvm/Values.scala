@@ -7,8 +7,12 @@ import dev.vale.vimpl
 
 // RR = Runtime Result. Don't use these to determine behavior, just use
 // these to check that things are as we expect.
-case class RRReference(hamut: CoordH[KindHT]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class RRKind(hamut: KindHT) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; }
+case class RRReference(hamut: CoordH[KindHT]) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class RRKind(hamut: KindHT) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
 
 class Allocation(
     val reference: ReferenceV, // note that this cannot change
@@ -228,14 +232,28 @@ case class ReferenceV(
 sealed trait IObjectReferrer {
   def ownership: OwnershipH
 }
-case class VariableToObjectReferrer(varAddr: VariableAddressV, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class MemberToObjectReferrer(memberAddr: MemberAddressV, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class ElementToObjectReferrer(elementAddr: ElementAddressV, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class RegisterToObjectReferrer(callId: CallId, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
+case class VariableToObjectReferrer(varAddr: VariableAddressV, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class MemberToObjectReferrer(memberAddr: MemberAddressV, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class ElementToObjectReferrer(elementAddr: ElementAddressV, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class RegisterToObjectReferrer(callId: CallId, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
 // This is us holding onto something during a while loop or array generator call, so the called functions dont eat them and deallocate them
-case class RegisterHoldToObjectReferrer(expressionId: ExpressionId, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-//case class ResultToObjectReferrer(callId: CallId) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class ArgumentToObjectReferrer(argumentId: ArgumentId, ownership: OwnershipH) extends IObjectReferrer { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
+case class RegisterHoldToObjectReferrer(expressionId: ExpressionId, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+//case class ResultToObjectReferrer(callId: CallId) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class ArgumentToObjectReferrer(argumentId: ArgumentId, ownership: OwnershipH) extends IObjectReferrer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
 
 case class VariableAddressV(callId: CallId, local: Local) {
   override def toString: String = "*v:" + callId + "#v" + local.id.number
@@ -260,8 +278,12 @@ case class CallId(callDepth: Int, function: PrototypeH) {
   override def toString: String = "ƒ" + callDepth + "/" + (function.id.shortenedName)
   override def hashCode(): Int = callDepth + function.id.shortenedName.hashCode
 }
-//case class RegisterId(blockId: BlockId, lineInBlock: Int) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
-case class ArgumentId(callId: CallId, index: Int) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
+//case class RegisterId(blockId: BlockId, lineInBlock: Int) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
+case class ArgumentId(callId: CallId, index: Int) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
 case class VariableV(
     id: VariableAddressV,
     var reference: ReferenceV,
@@ -284,7 +306,9 @@ sealed trait RegisterV {
     }
   }
 }
-case class ReferenceRegisterV(reference: ReferenceV) extends RegisterV { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;  }
+case class ReferenceRegisterV(reference: ReferenceV) extends RegisterV {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;  }
 
 
 case class VivemPanic(message: String) extends Exception

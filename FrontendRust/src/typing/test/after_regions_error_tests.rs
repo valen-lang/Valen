@@ -115,7 +115,8 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |	func foo(virtual a &A) int;
         |}
         |
-        |struct B imm { val int; }
+        |struct B imm {
+  val int; }
         |impl A for B;
         |
         |func foo(b &B) int { return b.val; }

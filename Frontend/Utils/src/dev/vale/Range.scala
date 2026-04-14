@@ -38,7 +38,8 @@ case class CodeLocationS(
   // If negative, it means it came from some internal non-file code.
   file: FileCoordinate,
   offset: Int) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   // Just for debug purposes
   override def toString: String = {
@@ -51,7 +52,8 @@ case class CodeLocationS(
 }
 
 case class RangeS(begin: CodeLocationS, end: CodeLocationS) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   vassert(begin.file == end.file)
   vassert(begin.offset <= end.offset)
   def file: FileCoordinate = begin.file

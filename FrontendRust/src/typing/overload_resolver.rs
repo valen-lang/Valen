@@ -42,24 +42,35 @@ object OverloadResolver {
   case class WrongNumberOfArguments(supplied: Int, expected: Int) extends IFindFunctionFailureReason {
     vpass()
 
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   }
-  case class WrongNumberOfTemplateArguments(supplied: Int, expected: Int) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class SpecificParamDoesntSend(index: Int, argument: CoordT, parameter: CoordT) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  case class WrongNumberOfTemplateArguments(supplied: Int, expected: Int) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class SpecificParamDoesntSend(index: Int, argument: CoordT, parameter: CoordT) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
   case class SpecificParamDoesntMatchExactly(index: Int, argument: CoordT, parameter: CoordT) extends IFindFunctionFailureReason {
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
     vpass()
   }
   case class SpecificParamRegionDoesntMatch(rune: IRuneS, suppliedMutability: IRegionMutabilityS, calleeMutability: IRegionMutabilityS) extends IFindFunctionFailureReason {
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
     vpass()
   }
-  case class SpecificParamVirtualityDoesntMatch(index: Int) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class Outscored() extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class RuleTypeSolveFailure(reason: RuneTypeSolveError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class InferFailure(reason: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class FindFunctionResolveFailure(reason: IResolvingError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
-  case class CouldntEvaluateTemplateError(reason: IDefiningError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious() }
+  case class SpecificParamVirtualityDoesntMatch(index: Int) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class Outscored() extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class RuleTypeSolveFailure(reason: RuneTypeSolveError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class InferFailure(reason: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class FindFunctionResolveFailure(reason: IResolvingError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
+  case class CouldntEvaluateTemplateError(reason: IDefiningError) extends IFindFunctionFailureReason { override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious() }
 
 
   case class FindFunctionFailure(
@@ -69,7 +80,8 @@ object OverloadResolver {
     rejectedCalleeToReason: Iterable[(ICalleeCandidate, IFindFunctionFailureReason)]
   ) {
     vpass()
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   }
 
   case class EvaluateFunctionFailure2(
@@ -79,7 +91,8 @@ object OverloadResolver {
     rejectedCalleeToReason: Iterable[(PrototypeT[IFunctionNameT], IFindFunctionFailureReason)]
   ) {
     vpass()
-    override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+    override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   }
 }
 
