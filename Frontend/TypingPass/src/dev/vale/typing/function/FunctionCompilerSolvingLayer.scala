@@ -67,8 +67,7 @@ class FunctionCompilerSolvingLayer(
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) =
@@ -135,8 +134,7 @@ class FunctionCompilerSolvingLayer(
     checkClosureConcernsHandled(declaringEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, 0)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val CompleteDefineSolve(inferredTemplatas, instantiationBoundParams) = {
@@ -208,8 +206,7 @@ class FunctionCompilerSolvingLayer(
     }
 
     val callSiteRules =
-      TemplataCompiler.assembleCallSiteRules(
-        function.rules, function.genericParameters, explicitTemplateArgs.size)
+      TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args.map(Some(_)))
     val initialKnowns = assembleKnownTemplatas(function, explicitTemplateArgs)
@@ -341,8 +338,7 @@ class FunctionCompilerSolvingLayer(
     checkClosureConcernsHandled(outerEnv)
 
     val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-            function.rules, function.genericParameters, explicitTemplateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(function.rules)
 
     val initialSends = assembleInitialSendsFromArgs(callRange.head, function, args)
 
@@ -360,7 +356,8 @@ class FunctionCompilerSolvingLayer(
 
     var loopCheck = function.genericParameters.size + 1
 
-    // Incrementally solve and add default generic parameters (and context region).
+    // Per @DRSINI, defaults are added here incrementally as a fallback, only for runes
+    // that remain unsolved after argument inference.
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
       (solverState) => {

@@ -331,6 +331,9 @@ object PostParser {
       maybeDefault.map(defaultPT => {
         val uncategorizedRules = ArrayBuffer[IRulexSR]()
         val resultRune = templexScout.translateTemplex(env, lidb, uncategorizedRules, contextRegion, defaultPT)
+        // Per @DRSINI, this EqualsSR is hoisted into main rules below. It just aliases the
+        // param rune and the default result rune — harmless until LiteralSR gives the result
+        // rune a value. LiteralSR is added incrementally (not eagerly) by solveForResolving.
         uncategorizedRules += EqualsSR(genericParamRangeS, runeS, resultRune)
 
         val rulesToLeaveInDefaultArgument = new Accumulator[IRulexSR]()
@@ -339,6 +342,8 @@ object PostParser {
           case r @ LiteralSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ MaybeCoercingLookupSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ ResolveSR(_, _, _, _, _) => rulesToLeaveInDefaultArgument.add(r)
+          // Per @DRSINI, this hoisted EqualsSR just aliases two runes in the parent's rules.
+          // Harmless on its own — only fires when LiteralSR is added incrementally.
           case r @ EqualsSR(_, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case r @ CallSiteFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case r @ DefinitionFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules

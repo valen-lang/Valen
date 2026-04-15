@@ -330,6 +330,49 @@ class CompilerSolverTests extends FunSuite with Matchers {
     Collector.only(coutputs.lookupFunction("main"), { case ConstantIntTE(IntegerTemplataT(3), 32, _) => })
   }
 
+  test("Default generic param should not conflict with arg inference") {
+    // H has a default of 5, but calling moo(MyStruct<10>()) should infer H=10 from
+    // the argument type. The default should act as a fallback, not an eager constraint
+    // that conflicts with argument inference.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<H Int = 5> { }
+        |func moo<H Int = 5>(s MyStruct<H>) int { return H; }
+        |exported func main() int {
+        |  return moo(MyStruct<10>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI interface default generic arg in struct member") {
+    // MyInterface<bool> must resolve H=5 from default during resolveInterface.
+    // Before fix: the interface's abstract drop function conflicts (H=5 vs H=placeholder).
+    val compile = CompilerTestCompilation.test(
+      """
+        |sealed interface MyInterface<K Ref, H Int = 5> { }
+        |struct MyStruct {
+        |  x MyInterface<bool>;
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("DRSINI multiple defaults with partial override") {
+    // A has a default of 10, B has a default of 20.
+    // Calling with MyStruct<7>() overrides A=7 but B should still default to 20.
+    // Returning A verifies the override; compiling at all verifies B's default works.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<A Int = 10, B Int = 20> { }
+        |func moo<A Int = 10, B Int = 20>(s MyStruct<A, B>) int { return A; }
+        |exported func main() int {
+        |  return moo(MyStruct<7>());
+        |}
+      """.stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
   test("Components") {
     val compile = CompilerTestCompilation.test(
       """

@@ -52,36 +52,21 @@ class StructCompilerGenericArgsLayer(
         })
 
       val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-          structA.headerRules.toVector, structA.genericParameters, templateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(structA.headerRules.toVector)
 
       val contextRegion = RegionT()
 
-      // Check if its a valid use of this template
-      val envs = InferEnv(originalCallingEnv, callRange, callLocation, declaringEnv, contextRegion)
-      val solver =
-        inferCompiler.makeSolverState(
-          envs,
+      val CompleteResolveSolve(inferences, runeToFunctionBound) =
+        inferCompiler.solveForResolving(
+          InferEnv(originalCallingEnv, callRange, callLocation, declaringEnv, contextRegion),
           coutputs,
           callSiteRules,
           structA.headerRuneToType,
-          callRange,
-          initialKnowns,
-          Vector())
-      inferCompiler.continue(envs, coutputs, solver) match {
-        case Ok(()) =>
-        case Err(x) => return ResolveFailure(callRange, ResolvingSolveFailedOrIncomplete(x))
-      }
-      val CompleteResolveSolve(inferences, runeToFunctionBound) =
-        inferCompiler.checkResolvingConclusionsAndResolve(
-          envs,
-          coutputs,
           callRange,
           callLocation,
-          structA.headerRuneToType,
-          callSiteRules,
-          Vector(),
-          solver) match {
+          structA.genericParameters,
+          initialKnowns,
+          Vector()) match {
           case Ok(ccs) => ccs
           case Err(x) => return ResolveFailure(callRange, x)
         }
@@ -261,8 +246,7 @@ class StructCompilerGenericArgsLayer(
         })
 
       val callSiteRules =
-        TemplataCompiler.assembleCallSiteRules(
-          interfaceA.rules.toVector, interfaceA.genericParameters, templateArgs.size)
+        TemplataCompiler.assembleCallSiteRules(interfaceA.rules.toVector)
 
       val contextRegion = RegionT()
 
@@ -275,6 +259,7 @@ class StructCompilerGenericArgsLayer(
           interfaceA.runeToType,
           callRange,
         callLocation,
+          interfaceA.genericParameters,
           initialKnowns,
           Vector()) match {
           case Ok(ccs) => ccs

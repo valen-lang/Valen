@@ -168,6 +168,7 @@ class InferCompiler(
 
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
+  // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -175,14 +176,35 @@ class InferCompiler(
       runeToType: Map[IRuneS, ITemplataType],
       invocationRange: List[RangeS],
       callLocation: LocationInDenizen,
+      genericParameters: Vector[GenericParameterS],
       initialKnowns: Vector[InitialKnown],
       initialSends: Vector[InitialSend]):
   Result[CompleteResolveSolve, IResolvingError] = {
     val solver =
       makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
-    continue(envs, coutputs, solver) match {
-      case Ok(()) =>
-      case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(e))
+    incrementallySolve(
+      envs, coutputs, solver,
+      (solverState) => {
+        TemplataCompiler.getFirstUnsolvedIdentifyingRune(
+          genericParameters,
+          (rune) => solverState.getConclusion(rune).nonEmpty) match {
+          case None => false
+          case Some((genericParam, _)) => {
+            genericParam.default match {
+              case Some(defaultRules) => {
+                solverState.commitStep[ITypingPassSolverError](
+                  false, Vector(), Map(), defaultRules.rules).getOrDie()
+                true
+              }
+              case None => false
+            }
+          }
+        }
+      }) match {
+      case Err(f @ FailedSolve(_, _, _, _, _)) =>
+        return Err(ResolvingSolveFailedOrIncomplete(f))
+      case Ok(true) =>
+      case Ok(false) =>
     }
     checkResolvingConclusionsAndResolve(
       envs, coutputs, invocationRange, callLocation, runeToType, rules, Vector(), solver)
@@ -691,6 +713,8 @@ class InferCompiler(
         Ok(())
       }
       case it @ StructDefinitionTemplataT(_, _) => {
+        // Per @DRSINI, passes partial args (only written template args, not defaults).
+        // resolveStruct adds defaults incrementally via solveForResolving for unsolved runes.
         delegate.resolveStruct(callingEnv, state, range :: ranges, callLocation, it, args.toVector) match {
           case ResolveSuccess(kind) => kind
           case rf @ ResolveFailure(_, _) => return Err(rf)
@@ -698,6 +722,8 @@ class InferCompiler(
         Ok(())
       }
       case it @ InterfaceDefinitionTemplataT(_, _) => {
+        // Per @DRSINI, passes partial args (only written template args, not defaults).
+        // resolveInterface adds defaults incrementally via solveForResolving for unsolved runes.
         delegate.resolveInterface(callingEnv, state, range :: ranges, callLocation, it, args.toVector) match {
           case ResolveSuccess(kind) => kind
           case rf @ ResolveFailure(_, _) => return Err(rf)

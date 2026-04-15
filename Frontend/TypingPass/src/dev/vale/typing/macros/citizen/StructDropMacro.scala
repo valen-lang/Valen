@@ -41,6 +41,7 @@ class StructDropMacro(
 
     val rules = new Accumulator[IRulexSR]()
     // Use the same rules as the original struct, see MDSFONARFO.
+    // Per @DRSINI, this copies the hoisted EqualsSR from default generic params.
     structA.headerRules.foreach(r => rules.add(r))
     val runeToType = mutable.HashMap[IRuneS, ITemplataType]()
     // Use the same runes as the original struct, see MDSFONARFO.
@@ -79,7 +80,9 @@ class StructDropMacro(
         RuneUsage(structA.name.range, selfKindRune)))
 
 
-    // Use the same generic parameters as the struct
+    // Use the same generic parameters as the struct.
+    // Per @DRSINI, defaults are harmless here because they're only added incrementally
+    // for unsolved runes during solveForResolving, not eagerly.
     val functionGenericParameters = structA.genericParameters
 
     val functionTemplataType =

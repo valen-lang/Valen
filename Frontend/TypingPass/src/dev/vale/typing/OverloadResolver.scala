@@ -349,6 +349,7 @@ class OverloadResolver(
                 explicitTemplateArgRuneToType ++ runeAToType,
                 callRange,
                 callLocation,
+                Vector(),
                 initialKnowns,
                 Vector()) match {
                 case (Err(e)) => {

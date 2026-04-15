@@ -94,7 +94,9 @@ object TemplataCompiler {
     }
   }
 
-  // See SFWPRL
+  // See SFWPRL. Per @DRSINI, this is the only place that eagerly adds default rules
+  // (both x.rules and a connecting EqualsSR). Safe because prediction has no argument
+  // inference to conflict with.
   def assemblePredictRules(genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
     genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
       if (index >= numExplicitTemplateArgs) {
@@ -111,18 +113,11 @@ object TemplataCompiler {
     })
   }
 
-  def assembleCallSiteRules(rules: Vector[IRulexSR], genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
-    rules.filter(InferCompiler.includeRuleInCallSiteSolve) ++
-      (genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
-        if (index >= numExplicitTemplateArgs) {
-          genericParam.default match {
-            case Some(x) => x.rules
-            case None => Vector()
-          }
-        } else {
-          Vector()
-        }
-      }))
+  // Per @DRSINI, default rules are no longer added eagerly here. They're added
+  // incrementally by solveForResolving and evaluateGenericFunctionFromCallForPrototype
+  // only for runes that remain unsolved after argument inference.
+  def assembleCallSiteRules(rules: Vector[IRulexSR]): Vector[IRulexSR] = {
+    rules.filter(InferCompiler.includeRuleInCallSiteSolve)
   }
 
   def getFunctionTemplate(id: IdT[IFunctionNameT]): IdT[IFunctionTemplateNameT] = {

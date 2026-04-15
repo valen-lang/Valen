@@ -101,6 +101,7 @@ class ArrayCompiler(
         parentRanges,
         callLocation,
         Vector(),
+        Vector(),
         Vector()) match {
         case Err(e) => throw CompileErrorExceptionT(TypingPassResolvingError(parentRanges, e))
         case Ok(c) => c

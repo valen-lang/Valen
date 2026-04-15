@@ -346,9 +346,11 @@ case class GenericParameterS(
 //case class ReadWriteRuneAttributeS(range: RangeS) extends IRuneAttributeS
 //case class ReadOnlyRuneAttributeS(range: RangeS) extends IRuneAttributeS
 
+// Per @DRSINI, these rules are added incrementally (not in the initial rule set) by
+// solveForResolving and evaluateGenericFunctionFromCallForPrototype for unsolved runes.
+// The connecting EqualsSR(paramRune, resultRune) is hoisted into the parent's main rules
+// and fires automatically once these rules give resultRune a value.
 case class GenericParameterDefaultS(
-  // One day, when we want more rules in here, we might need to have a runeToType map
-  // and other things to make it its own little world.
   resultRune: IRuneS,
   rules: Vector[IRulexSR])
 

@@ -39,6 +39,9 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
     // Find self, but instead of calling it like a regular function call, call it like an interface.
     // We do this instead of grabbing the prototype out of the environment because we want to get its
     // instantiation bounds too (well, we want them to be added to the coutputs).
+    // Per @DRSINI, this triggers overload resolution with 0 explicit template args and
+    // placeholder-typed self arg. Defaults must not be in the initial rules or they'd
+    // conflict with arg-inferred placeholders.
     val prototype =
       overloadResolver.findFunction(
         env,
