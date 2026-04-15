@@ -35,7 +35,7 @@ import scala.collection.mutable.ArrayBuffer
 
 */
 // mig: struct TookWeakRefOfNonWeakableError
-pub struct TookWeakRefOfNonWeakableError;
+pub struct TookWeakRefOfNonWeakableError<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 
 /*
 case class TookWeakRefOfNonWeakableError() extends Throwable {
@@ -45,7 +45,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 
 */
 // mig: trait IExpressionCompilerDelegate
-pub trait IExpressionCompilerDelegate {}
+pub trait IExpressionCompilerDelegate<'s, 't> {}
 
 /*
 trait IExpressionCompilerDelegate {
@@ -83,11 +83,11 @@ trait IExpressionCompilerDelegate {
 
 */
 // mig: struct ExpressionCompiler
-pub struct ExpressionCompiler<'s> {
-    pub delegate: Box<dyn IExpressionCompilerDelegate>,
+pub struct ExpressionCompiler<'s, 'ctx, 't> {
+    pub delegate: Box<dyn IExpressionCompilerDelegate<'s, 't>>,
 }
 // mig: impl ExpressionCompiler
-impl<'s> ExpressionCompiler<'s> {}
+impl<'s, 'ctx, 't> ExpressionCompiler<'s, 'ctx, 't> {}
 
 /*
 class ExpressionCompiler(

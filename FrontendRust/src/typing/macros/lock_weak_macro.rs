@@ -17,12 +17,12 @@ import dev.vale.typing.ast
 
 */
 // mig: struct LockWeakMacro
-pub struct LockWeakMacro {
-    pub keywords: Keywords,
-    pub expression_compiler: ExpressionCompiler,
+pub struct LockWeakMacro<'s, 'ctx, 't> {
+    pub keywords: Keywords<'s>,
+    pub expression_compiler: ExpressionCompiler<'s, 't>,
 }
 // mig: impl LockWeakMacro
-impl LockWeakMacro {}
+impl<'s, 'ctx, 't> LockWeakMacro<'s, 'ctx, 't> {}
 /*
 class LockWeakMacro(
   keywords: Keywords,

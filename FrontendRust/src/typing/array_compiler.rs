@@ -28,17 +28,17 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
 // mig: struct ArrayCompiler
-pub struct ArrayCompiler<'p, 's> {
-    pub opts: TypingPassOptions<'p>,
-    pub interner: &'p Interner<'p>,
-    pub keywords: &'p Keywords<'p>,
-    pub infer_compiler: InferCompiler<'p, 's>,
-    pub overload_resolver: OverloadResolver<'p, 's>,
-    pub destructor_compiler: DestructorCompiler<'p, 's>,
-    pub templata_compiler: TemplataCompiler<'p, 's>,
+pub struct ArrayCompiler<'s, 'ctx, 't> {
+    pub opts: TypingPassOptions,
+    pub interner: &'ctx Interner,
+    pub keywords: &'ctx Keywords,
+    pub infer_compiler: InferCompiler<'s, 't>,
+    pub overload_resolver: OverloadResolver<'s, 't>,
+    pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 't>,
 }
 // mig: impl ArrayCompiler
-impl<'p, 's> ArrayCompiler<'p, 's> {}
+impl<'s, 'ctx, 't> ArrayCompiler<'s, 'ctx, 't> {}
 /*
 class ArrayCompiler(
     opts: TypingPassOptions,

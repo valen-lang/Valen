@@ -13,7 +13,7 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 */
 // mig: trait IExpressionResultT
-pub trait IExpressionResultT {}
+pub trait IExpressionResultT<'s, 't> {}
 /*
 trait IExpressionResultT  {
 */
@@ -49,9 +49,9 @@ fn kind(&self) -> KindT { panic!("Unimplemented: kind"); }
 }
 */
 // mig: struct AddressResultT
-pub struct AddressResultT { pub coord: CoordT }
+pub struct AddressResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 // mig: impl AddressResultT
-impl AddressResultT {}
+impl<'s, 't> AddressResultT<'s, 't> {}
 /*
 case class AddressResultT(coord: CoordT) extends IExpressionResultT {
 */
@@ -77,9 +77,9 @@ fn kind(&self) -> KindT { panic!("Unimplemented: kind"); }
 }
 */
 // mig: struct ReferenceResultT
-pub struct ReferenceResultT { pub coord: CoordT }
+pub struct ReferenceResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 // mig: impl ReferenceResultT
-impl ReferenceResultT {}
+impl<'s, 't> ReferenceResultT<'s, 't> {}
 /*
 case class ReferenceResultT(coord: CoordT) extends IExpressionResultT {
 */
@@ -105,7 +105,7 @@ fn kind(&self) -> KindT { panic!("Unimplemented: kind"); }
 }
 */
 // mig: trait ExpressionT
-pub trait ExpressionT {}
+pub trait ExpressionT<'s, 't> {}
 /*
 trait ExpressionT  {
 */
@@ -121,7 +121,7 @@ fn kind(&self) -> KindT { panic!("Unimplemented: kind"); }
 }
 */
 // mig: trait ReferenceExpressionTE
-pub trait ReferenceExpressionTE {}
+pub trait ReferenceExpressionTE<'s, 't> {}
 /*
 trait ReferenceExpressionTE extends ExpressionT {
 */
@@ -137,7 +137,7 @@ fn kind(&self) -> KindT { panic!("Unimplemented: kind"); }
 }
 */
 // mig: trait AddressExpressionTE
-pub trait AddressExpressionTE {}
+pub trait AddressExpressionTE<'s, 't> {}
 /*
 // This is an Expression2 because we sometimes take an address and throw it
 // directly into a struct (closures!), which can have addressible members.
@@ -167,9 +167,9 @@ fn variability(&self) -> VariabilityT { panic!("Unimplemented: variability"); }
 
 */
 // mig: struct LetAndLendTE
-pub struct LetAndLendTE { pub variable: ILocalVariableT, pub expr: ReferenceExpressionTE, pub target_ownership: OwnershipT }
+pub struct LetAndLendTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub expr: ReferenceExpressionTE<'s, 't>, pub target_ownership: OwnershipT }
 // mig: impl LetAndLendTE
-impl LetAndLendTE {}
+impl<'s, 't> LetAndLendTE<'s, 't> {}
 /*
 case class LetAndLendTE(
     variable: ILocalVariableT,
@@ -210,9 +210,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct LockWeakTE
-pub struct LockWeakTE { pub inner_expr: ReferenceExpressionTE, pub result_opt_borrow_type: CoordT, pub some_constructor: PrototypeT, pub none_constructor: PrototypeT, pub some_impl_name: IdT, pub none_impl_name: IdT }
+pub struct LockWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub result_opt_borrow_type: CoordT<'s, 't>, pub some_constructor: PrototypeT<'s, 't>, pub none_constructor: PrototypeT<'s, 't>, pub some_impl_name: IdT<'s, 't>, pub none_impl_name: IdT<'s, 't> }
 // mig: impl LockWeakTE
-impl LockWeakTE {}
+impl<'s, 't> LockWeakTE<'s, 't> {}
 /*
 case class LockWeakTE(
   innerExpr: ReferenceExpressionTE,
@@ -253,9 +253,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct BorrowToWeakTE
-pub struct BorrowToWeakTE { pub inner_expr: ReferenceExpressionTE }
+pub struct BorrowToWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl BorrowToWeakTE
-impl BorrowToWeakTE {}
+impl<'s, 't> BorrowToWeakTE<'s, 't> {}
 /*
 // Turns a borrow ref into a weak ref
 // Note that we can also get a weak ref from LocalLoad2'ing a
@@ -290,9 +290,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct LetNormalTE
-pub struct LetNormalTE { pub variable: ILocalVariableT, pub expr: ReferenceExpressionTE }
+pub struct LetNormalTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl LetNormalTE
-impl LetNormalTE {}
+impl<'s, 't> LetNormalTE<'s, 't> {}
 /*
 case class LetNormalTE(
     variable: ILocalVariableT,
@@ -334,9 +334,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct UnletTE
-pub struct UnletTE { pub variable: ILocalVariableT }
+pub struct UnletTE<'s, 't> { pub variable: ILocalVariableT<'s, 't> }
 // mig: impl UnletTE
-impl UnletTE {}
+impl<'s, 't> UnletTE<'s, 't> {}
 /*
 // Only ExpressionCompiler.unletLocal should make these
 case class UnletTE(variable: ILocalVariableT) extends ReferenceExpressionTE {
@@ -361,9 +361,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DiscardTE
-pub struct DiscardTE { pub expr: ReferenceExpressionTE }
+pub struct DiscardTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl DiscardTE
-impl DiscardTE {}
+impl<'s, 't> DiscardTE<'s, 't> {}
 /*
 // Throws away a reference.
 // Unless given to an instruction which consumes it, all borrow and share
@@ -413,9 +413,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DeferTE
-pub struct DeferTE { pub inner_expr: ReferenceExpressionTE, pub deferred_expr: ReferenceExpressionTE }
+pub struct DeferTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub deferred_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl DeferTE
-impl DeferTE {}
+impl<'s, 't> DeferTE<'s, 't> {}
 /*
 case class DeferTE(
   innerExpr: ReferenceExpressionTE,
@@ -444,9 +444,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct IfTE
-pub struct IfTE { pub condition: ReferenceExpressionTE, pub then_call: ReferenceExpressionTE, pub else_call: ReferenceExpressionTE }
+pub struct IfTE<'s, 't> { pub condition: ReferenceExpressionTE<'s, 't>, pub then_call: ReferenceExpressionTE<'s, 't>, pub else_call: ReferenceExpressionTE<'s, 't> }
 // mig: impl IfTE
-impl IfTE {}
+impl<'s, 't> IfTE<'s, 't> {}
 /*
 // Eventually, when we want to do if-let, we'll have a different construct
 // entirely. See comment below If2.
@@ -496,9 +496,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct WhileTE
-pub struct WhileTE { pub block: BlockTE }
+pub struct WhileTE<'s, 't> { pub block: BlockTE<'s, 't> }
 // mig: impl WhileTE
-impl WhileTE {}
+impl<'s, 't> WhileTE<'s, 't> {}
 /*
 // The block is expected to return a boolean (false = stop, true = keep going).
 // The block will probably contain an If2(the condition, the body, false)
@@ -534,9 +534,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct MutateTE
-pub struct MutateTE { pub destination_expr: AddressExpressionTE, pub source_expr: ReferenceExpressionTE }
+pub struct MutateTE<'s, 't> { pub destination_expr: AddressExpressionTE<'s, 't>, pub source_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl MutateTE
-impl MutateTE {}
+impl<'s, 't> MutateTE<'s, 't> {}
 /*
 case class MutateTE(
   destinationExpr: AddressExpressionTE,
@@ -561,9 +561,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct RestackifyTE
-pub struct RestackifyTE { pub variable: ILocalVariableT, pub source_expr: ReferenceExpressionTE }
+pub struct RestackifyTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub source_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl RestackifyTE
-impl RestackifyTE {}
+impl<'s, 't> RestackifyTE<'s, 't> {}
 /*
 case class RestackifyTE(
   variable: ILocalVariableT,
@@ -588,9 +588,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct TransmigrateTE
-pub struct TransmigrateTE { pub source_expr: ReferenceExpressionTE, pub target_region: RegionT }
+pub struct TransmigrateTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_region: RegionT }
 // mig: impl TransmigrateTE
-impl TransmigrateTE {}
+impl<'s, 't> TransmigrateTE<'s, 't> {}
 /*
 case class TransmigrateTE(
   sourceExpr: ReferenceExpressionTE,
@@ -617,9 +617,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ReturnTE
-pub struct ReturnTE { pub source_expr: ReferenceExpressionTE }
+pub struct ReturnTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl ReturnTE
-impl ReturnTE {}
+impl<'s, 't> ReturnTE<'s, 't> {}
 /*
 case class ReturnTE(
   sourceExpr: ReferenceExpressionTE
@@ -645,9 +645,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct BreakTE
-pub struct BreakTE { pub region: RegionT }
+pub struct BreakTE<'s, 't> { pub region: RegionT }
 // mig: impl BreakTE
-impl BreakTE {}
+impl<'s, 't> BreakTE<'s, 't> {}
 /*
 case class BreakTE(region: RegionT) extends ReferenceExpressionTE {
 */
@@ -671,9 +671,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct BlockTE
-pub struct BlockTE { pub inner: ReferenceExpressionTE }
+pub struct BlockTE<'s, 't> { pub inner: ReferenceExpressionTE<'s, 't> }
 // mig: impl BlockTE
-impl BlockTE {}
+impl<'s, 't> BlockTE<'s, 't> {}
 /*
 // when we make a closure, we make a struct full of pointers to all our variables
 // and the first element is our parent closure
@@ -703,9 +703,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct PureTE
-pub struct PureTE { pub newdefault_region: RegionT, pub inner: ReferenceExpressionTE, pub result_type: CoordT }
+pub struct PureTE<'s, 't> { pub newdefault_region: RegionT, pub inner: ReferenceExpressionTE<'s, 't>, pub result_type: CoordT<'s, 't> }
 // mig: impl PureTE
-impl PureTE {}
+impl<'s, 't> PureTE<'s, 't> {}
 /*
 // A pure block will:
 // 1. Create a new region (someday possibly with an allocator)
@@ -743,9 +743,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConsecutorTE
-pub struct ConsecutorTE { pub exprs: Vec<ReferenceExpressionTE> }
+pub struct ConsecutorTE<'s, 't> { pub exprs: Vec<ReferenceExpressionTE<'s, 't>> }
 // mig: impl ConsecutorTE
-impl ConsecutorTE {}
+impl<'s, 't> ConsecutorTE<'s, 't> {}
 /*
 case class ConsecutorTE(exprs: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
@@ -816,9 +816,9 @@ fn last_reference_expr(&self) -> &ReferenceExpressionTE { panic!("Unimplemented:
 
 */
 // mig: struct TupleTE
-pub struct TupleTE { pub elements: Vec<ReferenceExpressionTE>, pub result_reference: CoordT }
+pub struct TupleTE<'s, 't> { pub elements: Vec<ReferenceExpressionTE<'s, 't>>, pub result_reference: CoordT<'s, 't> }
 // mig: impl TupleTE
-impl TupleTE {}
+impl<'s, 't> TupleTE<'s, 't> {}
 /*
 case class TupleTE(
     elements: Vector[ReferenceExpressionTE],
@@ -855,9 +855,9 @@ override def hashCode(): Int = vcurious()
 //}
 */
 // mig: struct StaticArrayFromValuesTE
-pub struct StaticArrayFromValuesTE { pub elements: Vec<ReferenceExpressionTE>, pub result_reference: CoordT, pub array_type: StaticSizedArrayTT }
+pub struct StaticArrayFromValuesTE<'s, 't> { pub elements: Vec<ReferenceExpressionTE<'s, 't>>, pub result_reference: CoordT<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't> }
 // mig: impl StaticArrayFromValuesTE
-impl StaticArrayFromValuesTE {}
+impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {}
 /*
 case class StaticArrayFromValuesTE(
   elements: Vector[ReferenceExpressionTE],
@@ -883,9 +883,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ArraySizeTE
-pub struct ArraySizeTE { pub array: ReferenceExpressionTE }
+pub struct ArraySizeTE<'s, 't> { pub array: ReferenceExpressionTE<'s, 't> }
 // mig: impl ArraySizeTE
-impl ArraySizeTE {}
+impl<'s, 't> ArraySizeTE<'s, 't> {}
 /*
 case class ArraySizeTE(array: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
@@ -907,9 +907,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct IsSameInstanceTE
-pub struct IsSameInstanceTE { pub left: ReferenceExpressionTE, pub right: ReferenceExpressionTE }
+pub struct IsSameInstanceTE<'s, 't> { pub left: ReferenceExpressionTE<'s, 't>, pub right: ReferenceExpressionTE<'s, 't> }
 // mig: impl IsSameInstanceTE
-impl IsSameInstanceTE {}
+impl<'s, 't> IsSameInstanceTE<'s, 't> {}
 /*
 // Can we do an === of objects in two regions? It could be pretty useful.
 case class IsSameInstanceTE(left: ReferenceExpressionTE, right: ReferenceExpressionTE) extends ReferenceExpressionTE {
@@ -934,9 +934,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct AsSubtypeTE
-pub struct AsSubtypeTE { pub source_expr: ReferenceExpressionTE, pub target_type: CoordT, pub result_result_type: CoordT, pub ok_constructor: PrototypeT, pub err_constructor: PrototypeT, pub impl_name: IdT, pub ok_impl_name: IdT, pub err_impl_name: IdT }
+pub struct AsSubtypeTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_type: CoordT<'s, 't>, pub result_result_type: CoordT<'s, 't>, pub ok_constructor: PrototypeT<'s, 't>, pub err_constructor: PrototypeT<'s, 't>, pub impl_name: IdT<'s, 't>, pub ok_impl_name: IdT<'s, 't>, pub err_impl_name: IdT<'s, 't> }
 // mig: impl AsSubtypeTE
-impl AsSubtypeTE {}
+impl<'s, 't> AsSubtypeTE<'s, 't> {}
 /*
 case class AsSubtypeTE(
     sourceExpr: ReferenceExpressionTE,
@@ -980,9 +980,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct VoidLiteralTE
-pub struct VoidLiteralTE { pub region: RegionT }
+pub struct VoidLiteralTE<'s, 't> { pub region: RegionT }
 // mig: impl VoidLiteralTE
-impl VoidLiteralTE {}
+impl<'s, 't> VoidLiteralTE<'s, 't> {}
 /*
 case class VoidLiteralTE(region: RegionT) extends ReferenceExpressionTE {
 */
@@ -1004,9 +1004,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConstantIntTE
-pub struct ConstantIntTE { pub value: ITemplataT, pub bits: i32, pub region: RegionT }
+pub struct ConstantIntTE<'s, 't> { pub value: ITemplataT<'s, 't>, pub bits: i32, pub region: RegionT }
 // mig: impl ConstantIntTE
-impl ConstantIntTE {}
+impl<'s, 't> ConstantIntTE<'s, 't> {}
 /*
 case class ConstantIntTE(value: ITemplataT[IntegerTemplataType], bits: Int, region: RegionT) extends ReferenceExpressionTE {
 */
@@ -1030,9 +1030,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConstantBoolTE
-pub struct ConstantBoolTE { pub value: bool, pub region: RegionT }
+pub struct ConstantBoolTE<'s, 't> { pub value: bool, pub region: RegionT }
 // mig: impl ConstantBoolTE
-impl ConstantBoolTE {}
+impl<'s, 't> ConstantBoolTE<'s, 't> {}
 /*
 case class ConstantBoolTE(value: Boolean, region: RegionT) extends ReferenceExpressionTE {
 */
@@ -1054,9 +1054,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConstantStrTE
-pub struct ConstantStrTE { pub value: String, pub region: RegionT }
+pub struct ConstantStrTE<'s, 't> { pub value: String, pub region: RegionT }
 // mig: impl ConstantStrTE
-impl ConstantStrTE {}
+impl<'s, 't> ConstantStrTE<'s, 't> {}
 /*
 case class ConstantStrTE(value: String, region: RegionT) extends ReferenceExpressionTE {
 */
@@ -1078,9 +1078,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConstantFloatTE
-pub struct ConstantFloatTE { pub value: f64, pub region: RegionT }
+pub struct ConstantFloatTE<'s, 't> { pub value: f64, pub region: RegionT }
 // mig: impl ConstantFloatTE
-impl ConstantFloatTE {}
+impl<'s, 't> ConstantFloatTE<'s, 't> {}
 /*
 case class ConstantFloatTE(value: Double, region: RegionT) extends ReferenceExpressionTE {
 */
@@ -1102,9 +1102,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct LocalLookupTE
-pub struct LocalLookupTE { pub range: RangeS, pub local_variable: ILocalVariableT }
+pub struct LocalLookupTE<'s, 't> { pub range: RangeS<'s>, pub local_variable: ILocalVariableT<'s, 't> }
 // mig: impl LocalLookupTE
-impl LocalLookupTE {}
+impl<'s, 't> LocalLookupTE<'s, 't> {}
 /*
 case class LocalLookupTE(
   range: RangeS,
@@ -1135,9 +1135,9 @@ fn variability(&self) -> VariabilityT { panic!("Unimplemented: variability"); }
 
 */
 // mig: struct ArgLookupTE
-pub struct ArgLookupTE { pub param_index: i32, pub coord: CoordT }
+pub struct ArgLookupTE<'s, 't> { pub param_index: i32, pub coord: CoordT<'s, 't> }
 // mig: impl ArgLookupTE
-impl ArgLookupTE {}
+impl<'s, 't> ArgLookupTE<'s, 't> {}
 /*
 case class ArgLookupTE(
     paramIndex: Int,
@@ -1162,9 +1162,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct StaticSizedArrayLookupTE
-pub struct StaticSizedArrayLookupTE { pub range: RangeS, pub array_expr: ReferenceExpressionTE, pub array_type: StaticSizedArrayTT, pub index_expr: ReferenceExpressionTE, pub element_type: CoordT, pub variability: VariabilityT }
+pub struct StaticSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub element_type: CoordT<'s, 't>, pub variability: VariabilityT }
 // mig: impl StaticSizedArrayLookupTE
-impl StaticSizedArrayLookupTE {}
+impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {}
 /*
 case class StaticSizedArrayLookupTE(
   range: RangeS,
@@ -1198,9 +1198,9 @@ fn result(&self) -> AddressResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct RuntimeSizedArrayLookupTE
-pub struct RuntimeSizedArrayLookupTE { pub range: RangeS, pub array_expr: ReferenceExpressionTE, pub array_type: RuntimeSizedArrayTT, pub index_expr: ReferenceExpressionTE, pub variability: VariabilityT }
+pub struct RuntimeSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub variability: VariabilityT }
 // mig: impl RuntimeSizedArrayLookupTE
-impl RuntimeSizedArrayLookupTE {}
+impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {}
 /*
 case class RuntimeSizedArrayLookupTE(
   range: RangeS,
@@ -1234,9 +1234,9 @@ fn result(&self) -> AddressResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ArrayLengthTE
-pub struct ArrayLengthTE { pub array_expr: ReferenceExpressionTE }
+pub struct ArrayLengthTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl ArrayLengthTE
-impl ArrayLengthTE {}
+impl<'s, 't> ArrayLengthTE<'s, 't> {}
 /*
 case class ArrayLengthTE(arrayExpr: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
@@ -1258,9 +1258,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ReferenceMemberLookupTE
-pub struct ReferenceMemberLookupTE { pub range: RangeS, pub struct_expr: ReferenceExpressionTE, pub member_name: IVarNameT, pub member_reference: CoordT, pub variability: VariabilityT }
+pub struct ReferenceMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub member_reference: CoordT<'s, 't>, pub variability: VariabilityT }
 // mig: impl ReferenceMemberLookupTE
-impl ReferenceMemberLookupTE {}
+impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {}
 /*
 case class ReferenceMemberLookupTE(
     range: RangeS,
@@ -1293,9 +1293,9 @@ fn result(&self) -> AddressResultT { panic!("Unimplemented: result"); }
 }
 */
 // mig: struct AddressMemberLookupTE
-pub struct AddressMemberLookupTE { pub range: RangeS, pub struct_expr: ReferenceExpressionTE, pub member_name: IVarNameT, pub result_type2: CoordT, pub variability: VariabilityT }
+pub struct AddressMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub result_type2: CoordT<'s, 't>, pub variability: VariabilityT }
 // mig: impl AddressMemberLookupTE
-impl AddressMemberLookupTE {}
+impl<'s, 't> AddressMemberLookupTE<'s, 't> {}
 /*
 case class AddressMemberLookupTE(
     range: RangeS,
@@ -1322,9 +1322,9 @@ fn result(&self) -> AddressResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct InterfaceFunctionCallTE
-pub struct InterfaceFunctionCallTE { pub super_function_prototype: PrototypeT, pub virtual_param_index: i32, pub result_reference: CoordT, pub args: Vec<ReferenceExpressionTE> }
+pub struct InterfaceFunctionCallTE<'s, 't> { pub super_function_prototype: PrototypeT<'s, 't>, pub virtual_param_index: i32, pub result_reference: CoordT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>> }
 // mig: impl InterfaceFunctionCallTE
-impl InterfaceFunctionCallTE {}
+impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {}
 /*
 case class InterfaceFunctionCallTE(
     superFunctionPrototype: PrototypeT[IFunctionNameT],
@@ -1350,9 +1350,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ExternFunctionCallTE
-pub struct ExternFunctionCallTE { pub prototype2: PrototypeT, pub args: Vec<ReferenceExpressionTE> }
+pub struct ExternFunctionCallTE<'s, 't> { pub prototype2: PrototypeT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>> }
 // mig: impl ExternFunctionCallTE
-impl ExternFunctionCallTE {}
+impl<'s, 't> ExternFunctionCallTE<'s, 't> {}
 /*
 case class ExternFunctionCallTE(
     prototype2: PrototypeT[ExternFunctionNameT],
@@ -1389,9 +1389,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct FunctionCallTE
-pub struct FunctionCallTE { pub callable: PrototypeT, pub args: Vec<ReferenceExpressionTE>, pub return_type: CoordT }
+pub struct FunctionCallTE<'s, 't> { pub callable: PrototypeT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>>, pub return_type: CoordT<'s, 't> }
 // mig: impl FunctionCallTE
-impl FunctionCallTE {}
+impl<'s, 't> FunctionCallTE<'s, 't> {}
 /*
 case class FunctionCallTE(
   callable: PrototypeT[IFunctionNameT],
@@ -1425,9 +1425,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ReinterpretTE
-pub struct ReinterpretTE { pub expr: ReferenceExpressionTE, pub result_reference: CoordT }
+pub struct ReinterpretTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub result_reference: CoordT<'s, 't> }
 // mig: impl ReinterpretTE
-impl ReinterpretTE {}
+impl<'s, 't> ReinterpretTE<'s, 't> {}
 /*
 // A typingpass reinterpret is interpreting a type as a different one which is hammer-equivalent.
 // For example, a pack and a struct are the same thing to hammer.
@@ -1469,9 +1469,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct ConstructTE
-pub struct ConstructTE { pub struct_tt: StructTT, pub result_reference: CoordT, pub args: Vec<ExpressionT> }
+pub struct ConstructTE<'s, 't> { pub struct_tt: StructTT<'s, 't>, pub result_reference: CoordT<'s, 't>, pub args: Vec<ExpressionT<'s, 't>> }
 // mig: impl ConstructTE
-impl ConstructTE {}
+impl<'s, 't> ConstructTE<'s, 't> {}
 /*
 case class ConstructTE(
     structTT: StructTT,
@@ -1499,9 +1499,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct NewMutRuntimeSizedArrayTE
-pub struct NewMutRuntimeSizedArrayTE { pub array_type: RuntimeSizedArrayTT, pub region: RegionT, pub capacity_expr: ReferenceExpressionTE }
+pub struct NewMutRuntimeSizedArrayTE<'s, 't> { pub array_type: RuntimeSizedArrayTT<'s, 't>, pub region: RegionT, pub capacity_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl NewMutRuntimeSizedArrayTE
-impl NewMutRuntimeSizedArrayTE {}
+impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
 // it's up to later stages to replace that with an actual index
@@ -1539,9 +1539,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct StaticArrayFromCallableTE
-pub struct StaticArrayFromCallableTE { pub array_type: StaticSizedArrayTT, pub region: RegionT, pub generator: ReferenceExpressionTE, pub generator_method: PrototypeT }
+pub struct StaticArrayFromCallableTE<'s, 't> { pub array_type: StaticSizedArrayTT<'s, 't>, pub region: RegionT, pub generator: ReferenceExpressionTE<'s, 't>, pub generator_method: PrototypeT<'s, 't> }
 // mig: impl StaticArrayFromCallableTE
-impl StaticArrayFromCallableTE {}
+impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {}
 /*
 case class StaticArrayFromCallableTE(
   arrayType: StaticSizedArrayTT,
@@ -1578,9 +1578,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DestroyStaticSizedArrayIntoFunctionTE
-pub struct DestroyStaticSizedArrayIntoFunctionTE { pub array_expr: ReferenceExpressionTE, pub array_type: StaticSizedArrayTT, pub consumer: ReferenceExpressionTE, pub consumer_method: PrototypeT }
+pub struct DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub consumer: ReferenceExpressionTE<'s, 't>, pub consumer_method: PrototypeT<'s, 't> }
 // mig: impl DestroyStaticSizedArrayIntoFunctionTE
-impl DestroyStaticSizedArrayIntoFunctionTE {}
+impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
 // it's up to later stages to replace that with an actual index
@@ -1623,9 +1623,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DestroyStaticSizedArrayIntoLocalsTE
-pub struct DestroyStaticSizedArrayIntoLocalsTE { pub expr: ReferenceExpressionTE, pub static_sized_array: StaticSizedArrayTT, pub destination_reference_variables: Vec<ReferenceLocalVariableT> }
+pub struct DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub static_sized_array: StaticSizedArrayTT<'s, 't>, pub destination_reference_variables: Vec<ReferenceLocalVariableT<'s, 't>> }
 // mig: impl DestroyStaticSizedArrayIntoLocalsTE
-impl DestroyStaticSizedArrayIntoLocalsTE {}
+impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {}
 /*
 // We destroy both Share and Own things
 // If the struct contains any addressibles, those die immediately and aren't stored
@@ -1659,9 +1659,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DestroyMutRuntimeSizedArrayTE
-pub struct DestroyMutRuntimeSizedArrayTE { pub array_expr: ReferenceExpressionTE }
+pub struct DestroyMutRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl DestroyMutRuntimeSizedArrayTE
-impl DestroyMutRuntimeSizedArrayTE {}
+impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class DestroyMutRuntimeSizedArrayTE(
   arrayExpr: ReferenceExpressionTE,
@@ -1677,9 +1677,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct RuntimeSizedArrayCapacityTE
-pub struct RuntimeSizedArrayCapacityTE { pub array_expr: ReferenceExpressionTE }
+pub struct RuntimeSizedArrayCapacityTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl RuntimeSizedArrayCapacityTE
-impl RuntimeSizedArrayCapacityTE {}
+impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {}
 /*
 case class RuntimeSizedArrayCapacityTE(
   arrayExpr: ReferenceExpressionTE
@@ -1693,9 +1693,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct PushRuntimeSizedArrayTE
-pub struct PushRuntimeSizedArrayTE { pub array_expr: ReferenceExpressionTE, pub new_element_expr: ReferenceExpressionTE }
+pub struct PushRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub new_element_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl PushRuntimeSizedArrayTE
-impl PushRuntimeSizedArrayTE {}
+impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class PushRuntimeSizedArrayTE(
   arrayExpr: ReferenceExpressionTE,
@@ -1712,9 +1712,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct PopRuntimeSizedArrayTE
-pub struct PopRuntimeSizedArrayTE { pub array_expr: ReferenceExpressionTE }
+pub struct PopRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
 // mig: impl PopRuntimeSizedArrayTE
-impl PopRuntimeSizedArrayTE {}
+impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class PopRuntimeSizedArrayTE(
   arrayExpr: ReferenceExpressionTE
@@ -1733,9 +1733,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct InterfaceToInterfaceUpcastTE
-pub struct InterfaceToInterfaceUpcastTE { pub inner_expr: ReferenceExpressionTE, pub target_interface: InterfaceTT }
+pub struct InterfaceToInterfaceUpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_interface: InterfaceTT<'s, 't> }
 // mig: impl InterfaceToInterfaceUpcastTE
-impl InterfaceToInterfaceUpcastTE {}
+impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {}
 /*
 case class InterfaceToInterfaceUpcastTE(
     innerExpr: ReferenceExpressionTE,
@@ -1765,9 +1765,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct UpcastTE
-pub struct UpcastTE { pub inner_expr: ReferenceExpressionTE, pub target_super_kind: ISuperKindTT, pub impl_name: IdT }
+pub struct UpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_super_kind: ISuperKindTT<'s, 't>, pub impl_name: IdT<'s, 't> }
 // mig: impl UpcastTE
-impl UpcastTE {}
+impl<'s, 't> UpcastTE<'s, 't> {}
 /*
 // This used to be StructToInterfaceUpcastTE, and then we added generics.
 // Now, it could be that we're upcasting a placeholder to an interface, or a
@@ -1806,9 +1806,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct SoftLoadTE
-pub struct SoftLoadTE { pub expr: AddressExpressionTE, pub target_ownership: OwnershipT }
+pub struct SoftLoadTE<'s, 't> { pub expr: AddressExpressionTE<'s, 't>, pub target_ownership: OwnershipT }
 // mig: impl SoftLoadTE
-impl SoftLoadTE {}
+impl<'s, 't> SoftLoadTE<'s, 't> {}
 /*
 // A soft load is one that turns an int&& into an int*. a hard load turns an int* into an int.
 // Turns an Addressible(Pointer) into an OwningPointer. Makes the source owning pointer into null
@@ -1845,9 +1845,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DestroyTE
-pub struct DestroyTE { pub expr: ReferenceExpressionTE, pub struct_tt: StructTT, pub destination_reference_variables: Vec<ReferenceLocalVariableT> }
+pub struct DestroyTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub struct_tt: StructTT<'s, 't>, pub destination_reference_variables: Vec<ReferenceLocalVariableT<'s, 't>> }
 // mig: impl DestroyTE
-impl DestroyTE {}
+impl<'s, 't> DestroyTE<'s, 't> {}
 /*
 // Destroy an object.
 // If the struct contains any addressibles, those die immediately and aren't stored
@@ -1884,9 +1884,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct DestroyImmRuntimeSizedArrayTE
-pub struct DestroyImmRuntimeSizedArrayTE { pub array_expr: ReferenceExpressionTE, pub array_type: RuntimeSizedArrayTT, pub consumer: ReferenceExpressionTE, pub consumer_method: PrototypeT }
+pub struct DestroyImmRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub consumer: ReferenceExpressionTE<'s, 't>, pub consumer_method: PrototypeT<'s, 't> }
 // mig: impl DestroyImmRuntimeSizedArrayTE
-impl DestroyImmRuntimeSizedArrayTE {}
+impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class DestroyImmRuntimeSizedArrayTE(
   arrayExpr: ReferenceExpressionTE,
@@ -1928,9 +1928,9 @@ fn result(&self) -> ReferenceResultT { panic!("Unimplemented: result"); }
 
 */
 // mig: struct NewImmRuntimeSizedArrayTE
-pub struct NewImmRuntimeSizedArrayTE { pub array_type: RuntimeSizedArrayTT, pub region: RegionT, pub size_expr: ReferenceExpressionTE, pub generator: ReferenceExpressionTE, pub generator_method: PrototypeT }
+pub struct NewImmRuntimeSizedArrayTE<'s, 't> { pub array_type: RuntimeSizedArrayTT<'s, 't>, pub region: RegionT, pub size_expr: ReferenceExpressionTE<'s, 't>, pub generator: ReferenceExpressionTE<'s, 't>, pub generator_method: PrototypeT<'s, 't> }
 // mig: impl NewImmRuntimeSizedArrayTE
-impl NewImmRuntimeSizedArrayTE {}
+impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
 // it's up to later stages to replace that with an actual index

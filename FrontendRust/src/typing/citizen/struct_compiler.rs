@@ -53,15 +53,15 @@ override def equals(obj: Any): Boolean = vcurious(); }
 // See ODMFRC.
 */
 // mig: struct UncheckedDefiningConclusions
-pub struct UncheckedDefiningConclusions<'s> {
+pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s>,
     pub ranges: Vec<RangeS<'s>>,
     pub call_location: LocationInDenizen<'s>,
     pub definition_rules: Vec<IRulexSR<'s>>,
-    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s>>,
+    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
 // mig: impl UncheckedDefiningConclusions
-impl<'s> UncheckedDefiningConclusions<'s> {}
+impl<'s, 't> UncheckedDefiningConclusions<'s, 't> {}
 /*
 case class UncheckedDefiningConclusions(
     envs: InferEnv,
@@ -71,18 +71,18 @@ case class UncheckedDefiningConclusions(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]])
 */
 // mig: trait IStructCompilerDelegate
-pub trait IStructCompilerDelegate<'s> {
+pub trait IStructCompilerDelegate<'s, 't> {
 /*
 trait IStructCompilerDelegate {
 */
 // mig: fn evaluate_generic_function_from_non_call_for_header
 fn evaluate_generic_function_from_non_call_for_header(
     &self,
-    coutputs: &CompilerOutputs<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     function_templata: FunctionTemplataT<'s>,
-) -> FunctionHeaderT<'s> {
+) -> FunctionHeaderT<'s, 't> {
     panic!("Unimplemented: evaluate_generic_function_from_non_call_for_header");
 }
 /*
@@ -96,18 +96,18 @@ fn evaluate_generic_function_from_non_call_for_header(
 // mig: fn scout_expected_function_for_prototype
 fn scout_expected_function_for_prototype(
     &self,
-    env: &dyn IInDenizenEnvironmentT<'s>,
-    coutputs: &CompilerOutputs<'s>,
+    env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    coutputs: &CompilerOutputs<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     function_name: IImpreciseNameS<'s>,
     explicit_template_arg_rules_s: &[IRulexSR<'s>],
     explicit_template_arg_runes_s: &[IRuneS<'s>],
-    context_region: RegionT<'s>,
-    args: &[CoordT<'s>],
-    extra_envs_to_look_in: &[&dyn IInDenizenEnvironmentT<'s>],
+    context_region: RegionT<'s, 't>,
+    args: &[CoordT<'s, 't>],
+    extra_envs_to_look_in: &[&dyn IInDenizenEnvironmentT<'s, 't>],
     exact: bool,
-) -> StampFunctionSuccess<'s> {
+) -> StampFunctionSuccess<'s, 't> {
     panic!("Unimplemented: scout_expected_function_for_prototype");
 }
 /*
@@ -129,12 +129,12 @@ fn scout_expected_function_for_prototype(
 }
 
 // mig: enum IResolveOutcome
-pub enum IResolveOutcome<'s, T: KindT> {
+pub enum IResolveOutcome<'s, 't, T: KindT<'s, 't>> {
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
 */
 // mig: fn expect
-fn expect(self) -> ResolveSuccess<'s, T>;
+fn expect(self) -> ResolveSuccess<'s, 't, T>;
 /*
   def expect(): ResolveSuccess[T]
 }
@@ -142,13 +142,13 @@ fn expect(self) -> ResolveSuccess<'s, T>;
 }
 
 // mig: struct ResolveSuccess
-pub struct ResolveSuccess<'s, T: KindT> {
+pub struct ResolveSuccess<'s, 't, T: KindT<'s, 't>> {
     pub kind: T,
 }
 // mig: impl ResolveSuccess
-impl<'s, T: KindT> ResolveSuccess<'s, T> {
+impl<'s, 't, T: KindT<'s, 't>> ResolveSuccess<'s, 't, T> {
 // mig: fn expect
-fn expect(self) -> ResolveSuccess<'s, T> {
+fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
 }
 /*
@@ -160,14 +160,14 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
 }
 */
 // mig: struct ResolveFailure
-pub struct ResolveFailure<'s, T: KindT> {
+pub struct ResolveFailure<'s, 't, T: KindT<'s, 't>> {
     pub range: Vec<RangeS<'s>>,
-    pub x: IResolvingError<'s>,
+    pub x: IResolvingError<'s, 't>,
 }
 // mig: impl ResolveFailure
-impl<'s, T: KindT> ResolveFailure<'s, T> {
+impl<'s, 't, T: KindT<'s, 't>> ResolveFailure<'s, 't, T> {
 // mig: fn expect
-fn expect(self) -> ResolveSuccess<'s, T> {
+fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
 }
 /*
@@ -181,18 +181,18 @@ case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) 
 }
 */
 // mig: struct StructCompiler
-pub struct StructCompiler<'s> {
+pub struct StructCompiler<'s, 'ctx, 't> {
     pub opts: TypingPassOptions<'s>,
-    pub interner: &'s Interner<'s>,
-    pub keywords: &'s Keywords<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
     pub name_translator: NameTranslator<'s>,
-    pub templata_compiler: TemplataCompiler<'s>,
-    pub infer_compiler: InferCompiler<'s>,
-    pub delegate: Box<dyn IStructCompilerDelegate<'s>>,
-    pub template_args_layer: StructCompilerGenericArgsLayer<'s>,
+    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
+    pub infer_compiler: InferCompiler<'s, 't>,
+    pub delegate: Box<dyn IStructCompilerDelegate<'s, 't>>,
+    pub template_args_layer: StructCompilerGenericArgsLayer<'s, 'ctx, 't>,
 }
 // mig: impl StructCompiler
-impl<'s> StructCompiler<'s> {
+impl<'s, 'ctx, 't> StructCompiler<'s, 'ctx, 't> {
 /*
 class StructCompiler(
     opts: TypingPassOptions,
@@ -236,7 +236,7 @@ fn resolve_struct(
 // mig: fn precompile_struct
 fn precompile_struct(
     &self,
-    coutputs: &CompilerOutputs<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
     struct_templata: StructDefinitionTemplataT<'s>,
 ) -> () {
     panic!("Unimplemented: precompile_struct");
@@ -284,7 +284,7 @@ fn precompile_struct(
 // mig: fn precompile_interface
 fn precompile_interface(
     &self,
-    coutputs: &CompilerOutputs<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,
 ) -> () {
     panic!("Unimplemented: precompile_interface");
@@ -344,11 +344,11 @@ fn precompile_interface(
 // mig: fn compile_struct
 fn compile_struct(
     &self,
-    coutputs: &CompilerOutputs<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     struct_templata: StructDefinitionTemplataT<'s>,
-) -> UncheckedDefiningConclusions<'s> {
+) -> UncheckedDefiningConclusions<'s, 't> {
     panic!("Unimplemented: compile_struct");
 }
 /*
@@ -368,13 +368,13 @@ fn compile_struct(
 // mig: fn predict_interface
 fn predict_interface(
     &self,
-    coutputs: &CompilerOutputs<'s>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
+    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,
-    uncoerced_template_args: &[ITemplataT<'s>],
-) -> InterfaceTT<'s> {
+    uncoerced_template_args: &[ITemplataT<'s, 't>],
+) -> InterfaceTT<'s, 't> {
     panic!("Unimplemented: predict_interface");
 }
 /*
@@ -397,13 +397,13 @@ fn predict_interface(
 // mig: fn predict_struct
 fn predict_struct(
     &self,
-    coutputs: &CompilerOutputs<'s>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
+    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     struct_templata: StructDefinitionTemplataT<'s>,
-    uncoerced_template_args: &[ITemplataT<'s>],
-) -> StructTT<'s> {
+    uncoerced_template_args: &[ITemplataT<'s, 't>],
+) -> StructTT<'s, 't> {
     panic!("Unimplemented: predict_struct");
 }
 /*
@@ -424,13 +424,13 @@ fn predict_struct(
 // mig: fn resolve_interface
 fn resolve_interface(
     &self,
-    coutputs: &CompilerOutputs<'s>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
+    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,
-    uncoerced_template_args: &[ITemplataT<'s>],
-) -> IResolveOutcome<'s, InterfaceTT<'s>> {
+    uncoerced_template_args: &[ITemplataT<'s, 't>],
+) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
     panic!("Unimplemented: resolve_interface");
 }
 /*
@@ -454,11 +454,11 @@ fn resolve_interface(
 // mig: fn compile_interface
 fn compile_interface(
     &self,
-    coutputs: &CompilerOutputs<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,
-) -> UncheckedDefiningConclusions<'s> {
+) -> UncheckedDefiningConclusions<'s, 't> {
     panic!("Unimplemented: compile_interface");
 }
 /*
@@ -479,14 +479,14 @@ fn compile_interface(
 // mig: fn make_closure_understruct
 fn make_closure_understruct(
     &self,
-    containing_function_env: NodeEnvironmentT<'s>,
-    coutputs: &CompilerOutputs<'s>,
+    containing_function_env: NodeEnvironmentT<'s, 't>,
+    coutputs: &CompilerOutputs<'s, 't>,
     parent_ranges: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     name: IFunctionDeclarationNameS<'s>,
     function_s: &FunctionA<'s>,
-    members: &[NormalStructMemberT<'s>],
-) -> (StructTT<'s>, MutabilityT, FunctionTemplataT<'s>) {
+    members: &[NormalStructMemberT<'s, 't>],
+) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s>) {
     panic!("Unimplemented: make_closure_understruct");
 }
 /*
@@ -524,7 +524,7 @@ pub mod StructCompiler {
 object StructCompiler {
 */
 // mig: fn get_compound_type_mutability
-pub fn get_compound_type_mutability(member_types: &[CoordT]) -> MutabilityT {
+pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> MutabilityT {
     panic!("Unimplemented: get_compound_type_mutability");
 }
 /*
@@ -540,12 +540,12 @@ pub fn get_mutability(
     sanity_check: bool,
     interner: &Interner,
     keywords: &Keywords,
-    coutputs: &CompilerOutputs,
+    coutputs: &CompilerOutputs<'_, '_>,
     original_calling_denizen_id: IdT,
-    region: RegionT,
-    struct_tt: StructTT,
-    bound_arguments_source: &dyn IBoundArgumentsSource,
-) -> ITemplataT {
+    region: RegionT<'_, '_>,
+    struct_tt: StructTT<'_, '_>,
+    bound_arguments_source: &dyn IBoundArgumentsSource<'_, '_>,
+) -> ITemplataT<'_, '_> {
     panic!("Unimplemented: get_mutability");
 }
 /*

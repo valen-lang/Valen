@@ -14,11 +14,11 @@ import dev.vale.typing.ast._
 import dev.vale.typing.function.FunctionCompilerCore
 */
 // mig: struct SameInstanceMacro
-pub struct SameInstanceMacro {
-    pub generator_id: StrI,
+pub struct SameInstanceMacro<'s, 'ctx, 't> {
+    pub generator_id: StrI<'s>,
 }
 // mig: impl SameInstanceMacro
-impl SameInstanceMacro {}
+impl<'s, 'ctx, 't> SameInstanceMacro<'s, 'ctx, 't> {}
 /*
 class SameInstanceMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_same_instance

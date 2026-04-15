@@ -17,13 +17,13 @@ import dev.vale.typing.ast
 
 */
 // mig: struct RSADropIntoMacro
-pub struct RSADropIntoMacro {
-    pub keywords: Keywords,
-    pub array_compiler: ArrayCompiler,
+pub struct RSADropIntoMacro<'s, 'ctx, 't> {
+    pub keywords: Keywords<'s>,
+    pub array_compiler: ArrayCompiler<'s, 't>,
 }
 
 // mig: impl RSADropIntoMacro
-impl RSADropIntoMacro {}
+impl<'s, 'ctx, 't> RSADropIntoMacro<'s, 'ctx, 't> {}
 /*
 class RSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_drop_into

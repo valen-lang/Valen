@@ -15,10 +15,11 @@ import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
 */
 // mig: struct RSALenMacro
-pub struct RSALenMacro;
+pub struct RSALenMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 
 // mig: impl RSALenMacro
-impl RSALenMacro {}
+impl<'s, 'ctx, 't> RSALenMacro<'s, 'ctx, 't> {}
 /*
 class RSALenMacro() extends IFunctionBodyMacro {
   val generatorId: String = "vale_runtime_sized_array_len"

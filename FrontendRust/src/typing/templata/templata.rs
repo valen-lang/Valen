@@ -19,7 +19,7 @@ import scala.collection.immutable.List
 object ITemplataT {
 */
 // mig: fn expect_mutability
-fn expect_mutability(templata: ITemplataT) -> ITemplataT {
+fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_mutability");
 }
 /*
@@ -33,7 +33,7 @@ fn expect_mutability(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_variability
-fn expect_variability(templata: ITemplataT) -> ITemplataT {
+fn expect_variability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_variability");
 }
 /*
@@ -47,7 +47,7 @@ fn expect_variability(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_integer
-fn expect_integer(templata: ITemplataT) -> ITemplataT {
+fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_integer");
 }
 /*
@@ -61,7 +61,7 @@ fn expect_integer(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_coord
-fn expect_coord(templata: ITemplataT) -> ITemplataT {
+fn expect_coord<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_coord");
 }
 /*
@@ -75,7 +75,7 @@ fn expect_coord(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_coord_templata
-fn expect_coord_templata(templata: ITemplataT) -> CoordTemplataT {
+fn expect_coord_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> CoordTemplataT<'s, 't> {
   panic!("Unimplemented: expect_coord_templata");
 }
 /*
@@ -88,7 +88,7 @@ fn expect_coord_templata(templata: ITemplataT) -> CoordTemplataT {
 
 */
 // mig: fn expect_prototype_templata
-fn expect_prototype_templata(templata: ITemplataT) -> PrototypeTemplataT {
+fn expect_prototype_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> PrototypeTemplataT<'s, 't> {
   panic!("Unimplemented: expect_prototype_templata");
 }
 /*
@@ -101,7 +101,7 @@ fn expect_prototype_templata(templata: ITemplataT) -> PrototypeTemplataT {
 
 */
 // mig: fn expect_integer_templata
-fn expect_integer_templata(templata: ITemplataT) -> IntegerTemplataT {
+fn expect_integer_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> IntegerTemplataT {
   panic!("Unimplemented: expect_integer_templata");
 }
 /*
@@ -114,7 +114,7 @@ fn expect_integer_templata(templata: ITemplataT) -> IntegerTemplataT {
 
 */
 // mig: fn expect_mutability_templata
-fn expect_mutability_templata(templata: ITemplataT) -> MutabilityTemplataT {
+fn expect_mutability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> MutabilityTemplataT {
   panic!("Unimplemented: expect_mutability_templata");
 }
 /*
@@ -127,7 +127,7 @@ fn expect_mutability_templata(templata: ITemplataT) -> MutabilityTemplataT {
 
 */
 // mig: fn expect_variability_templata
-fn expect_variability_templata(templata: ITemplataT) -> ITemplataT {
+fn expect_variability_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_variability_templata");
 }
 /*
@@ -140,7 +140,7 @@ fn expect_variability_templata(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_kind
-fn expect_kind(templata: ITemplataT) -> ITemplataT {
+fn expect_kind<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind");
 }
 /*
@@ -154,7 +154,7 @@ fn expect_kind(templata: ITemplataT) -> ITemplataT {
 
 */
 // mig: fn expect_kind_templata
-fn expect_kind_templata(templata: ITemplataT) -> KindTemplataT {
+fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'s, 't> {
   panic!("Unimplemented: expect_kind_templata");
 }
 /*
@@ -167,7 +167,7 @@ fn expect_kind_templata(templata: ITemplataT) -> KindTemplataT {
 }
 */
 // mig: enum ITemplataT
-pub enum ITemplataT {}
+pub enum ITemplataT<'s, 't> {}
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {
   def tyype: T
@@ -175,9 +175,10 @@ sealed trait ITemplataT[+T <: ITemplataType]  {
 
 */
 // mig: struct CoordTemplataT
-pub struct CoordTemplataT;
+pub struct CoordTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl CoordTemplataT
-impl CoordTemplataT {}
+impl<'s, 't> CoordTemplataT<'s, 't> {}
 /*
 case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -188,9 +189,10 @@ case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
 }
 */
 // mig: struct PlaceholderTemplataT
-pub struct PlaceholderTemplataT;
+pub struct PlaceholderTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl PlaceholderTemplataT
-impl PlaceholderTemplataT {}
+impl<'s, 't> PlaceholderTemplataT<'s, 't> {}
 /*
 case class PlaceholderTemplataT[+T <: ITemplataType](
   idT: IdT[IPlaceholderNameT],
@@ -206,9 +208,10 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
 }
 */
 // mig: struct KindTemplataT
-pub struct KindTemplataT;
+pub struct KindTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl KindTemplataT
-impl KindTemplataT {}
+impl<'s, 't> KindTemplataT<'s, 't> {}
 /*
 case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -217,9 +220,10 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
 }
 */
 // mig: struct RuntimeSizedArrayTemplateTemplataT
-pub struct RuntimeSizedArrayTemplateTemplataT;
+pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl RuntimeSizedArrayTemplateTemplataT
-impl RuntimeSizedArrayTemplateTemplataT {}
+impl<'s, 't> RuntimeSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -228,9 +232,10 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
 }
 */
 // mig: struct StaticSizedArrayTemplateTemplataT
-pub struct StaticSizedArrayTemplateTemplataT;
+pub struct StaticSizedArrayTemplateTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl StaticSizedArrayTemplateTemplataT
-impl StaticSizedArrayTemplateTemplataT {}
+impl<'s, 't> StaticSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -242,9 +247,10 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 */
 // mig: struct FunctionTemplataT
-pub struct FunctionTemplataT;
+pub struct FunctionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl FunctionTemplataT
-impl FunctionTemplataT {}
+impl<'s, 't> FunctionTemplataT<'s, 't> {}
 /*
 case class FunctionTemplataT(
   // The environment this function was declared in.
@@ -300,9 +306,10 @@ case class FunctionTemplataT(
 
 */
 // mig: struct StructDefinitionTemplataT
-pub struct StructDefinitionTemplataT;
+pub struct StructDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl StructDefinitionTemplataT
-impl StructDefinitionTemplataT {}
+impl<'s, 't> StructDefinitionTemplataT<'s, 't> {}
 /*
 case class StructDefinitionTemplataT(
   // The paackage this struct was declared in.
@@ -347,41 +354,45 @@ case class StructDefinitionTemplataT(
 
 */
 // mig: enum IContainer
-pub enum IContainer {}
+pub enum IContainer<'s, 't> {}
 /*
 sealed trait IContainer
 */
 // mig: struct ContainerInterface
-pub struct ContainerInterface;
+pub struct ContainerInterface<'s>(pub std::marker::PhantomData<&'s ()>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ContainerInterface
-impl ContainerInterface {}
+impl<'s> ContainerInterface<'s> {}
 /*
 case class ContainerInterface(interface: InterfaceA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
 // mig: struct ContainerStruct
-pub struct ContainerStruct;
+pub struct ContainerStruct<'s>(pub std::marker::PhantomData<&'s ()>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ContainerStruct
-impl ContainerStruct {}
+impl<'s> ContainerStruct<'s> {}
 /*
 case class ContainerStruct(struct: StructA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
 // mig: struct ContainerFunction
-pub struct ContainerFunction;
+pub struct ContainerFunction<'s>(pub std::marker::PhantomData<&'s ()>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ContainerFunction
-impl ContainerFunction {}
+impl<'s> ContainerFunction<'s> {}
 /*
 case class ContainerFunction(function: FunctionA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
 // mig: struct ContainerImpl
-pub struct ContainerImpl;
+pub struct ContainerImpl<'s>(pub std::marker::PhantomData<&'s ()>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ContainerImpl
-impl ContainerImpl {}
+impl<'s> ContainerImpl<'s> {}
 /*
 case class ContainerImpl(impl: ImplA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
@@ -389,9 +400,9 @@ override def hashCode(): Int = hash; }
 
 */
 // mig: enum CitizenDefinitionTemplataT
-pub enum CitizenDefinitionTemplataT {}
+pub enum CitizenDefinitionTemplataT<'s, 't> {}
 // mig: impl CitizenDefinitionTemplataT
-impl CitizenDefinitionTemplataT {}
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> {}
 /*
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
   def declaringEnv: IEnvironmentT
@@ -400,7 +411,7 @@ sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType]
 object CitizenDefinitionTemplataT {
 */
 // mig: fn unapply
-fn unapply(c: CitizenDefinitionTemplataT) -> Option<(IEnvironmentT, CitizenA)> {
+fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmentT<'s, 't>, CitizenA<'s>)> {
   panic!("Unimplemented: unapply");
 }
 /*
@@ -414,9 +425,10 @@ fn unapply(c: CitizenDefinitionTemplataT) -> Option<(IEnvironmentT, CitizenA)> {
 
 */
 // mig: struct InterfaceDefinitionTemplataT
-pub struct InterfaceDefinitionTemplataT;
+pub struct InterfaceDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl InterfaceDefinitionTemplataT
-impl InterfaceDefinitionTemplataT {}
+impl<'s, 't> InterfaceDefinitionTemplataT<'s, 't> {}
 /*
 case class InterfaceDefinitionTemplataT(
   // The paackage this interface was declared in.
@@ -464,9 +476,10 @@ case class InterfaceDefinitionTemplataT(
 
 */
 // mig: struct ImplDefinitionTemplataT
-pub struct ImplDefinitionTemplataT;
+pub struct ImplDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ImplDefinitionTemplataT
-impl ImplDefinitionTemplataT {}
+impl<'s, 't> ImplDefinitionTemplataT<'s, 't> {}
 /*
 case class ImplDefinitionTemplataT(
   // The paackage this interface was declared in.
@@ -568,9 +581,10 @@ case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType]
 }
 */
 // mig: struct PrototypeTemplataT
-pub struct PrototypeTemplataT;
+pub struct PrototypeTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl PrototypeTemplataT
-impl PrototypeTemplataT {}
+impl<'s, 't> PrototypeTemplataT<'s, 't> {}
 /*
 case class PrototypeTemplataT[+T <: IFunctionNameT](
     // Removed this because we want to merge different bound functions from different places, see MFBFDP.
@@ -584,9 +598,10 @@ case class PrototypeTemplataT[+T <: IFunctionNameT](
 }
 */
 // mig: struct IsaTemplataT
-pub struct IsaTemplataT;
+pub struct IsaTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl IsaTemplataT
-impl IsaTemplataT {}
+impl<'s, 't> IsaTemplataT<'s, 't> {}
 /*
 case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], subKind: KindT, superKind: KindT) extends ITemplataT[ImplTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -595,9 +610,10 @@ case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], sub
 }
 */
 // mig: struct CoordListTemplataT
-pub struct CoordListTemplataT;
+pub struct CoordListTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl CoordListTemplataT
-impl CoordListTemplataT {}
+impl<'s, 't> CoordListTemplataT<'s, 't> {}
 /*
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -616,9 +632,10 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 
 */
 // mig: struct ExternFunctionTemplataT
-pub struct ExternFunctionTemplataT;
+pub struct ExternFunctionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ExternFunctionTemplataT
-impl ExternFunctionTemplataT {}
+impl<'s, 't> ExternFunctionTemplataT<'s, 't> {}
 /*
 case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[ITemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)

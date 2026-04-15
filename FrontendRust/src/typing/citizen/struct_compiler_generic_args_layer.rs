@@ -1,16 +1,16 @@
 // mig: struct StructCompilerGenericArgsLayer
-pub struct StructCompilerGenericArgsLayer<'a> {
-    pub opts: &'a TypingPassOptions,
-    pub interner: &'a Interner,
-    pub keywords: &'a Keywords,
-    pub name_translator: &'a NameTranslator,
-    pub templata_compiler: &'a TemplataCompiler,
-    pub infer_compiler: &'a InferCompiler,
-    pub delegate: &'a dyn IStructCompilerDelegate,
+pub struct StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub opts: &'ctx TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub name_translator: &'ctx NameTranslator<'s>,
+    pub templata_compiler: &'ctx TemplataCompiler<'s, 'ctx, 't>,
+    pub infer_compiler: &'ctx InferCompiler<'s, 't>,
+    pub delegate: &'ctx dyn IStructCompilerDelegate<'s, 't>,
 }
 
 // mig: impl StructCompilerGenericArgsLayer
-impl<'a> StructCompilerGenericArgsLayer<'a> {
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
 }
 
 /*
@@ -49,13 +49,13 @@ class StructCompilerGenericArgsLayer(
 // mig: fn resolve_struct
 pub fn resolve_struct(
     &self,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    struct_templata: StructDefinitionTemplataT,
-    template_args: &[ITemplataT<ITemplataType>],
-) -> IResolveOutcome<StructTT> {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    struct_templata: StructDefinitionTemplataT<'s>,
+    template_args: &[ITemplataT<'s, 't>],
+) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
     panic!("Unimplemented: resolve_struct");
 }
 
@@ -137,13 +137,13 @@ pub fn resolve_struct(
 // mig: fn predict_interface
 pub fn predict_interface(
     &self,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    interface_templata: InterfaceDefinitionTemplataT,
-    template_args: &[ITemplataT<ITemplataType>],
-) -> InterfaceTT {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    interface_templata: InterfaceDefinitionTemplataT<'s>,
+    template_args: &[ITemplataT<'s, 't>],
+) -> InterfaceTT<'s, 't> {
     panic!("Unimplemented: predict_interface");
 }
 
@@ -219,13 +219,13 @@ pub fn predict_interface(
 // mig: fn predict_struct
 pub fn predict_struct(
     &self,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    struct_templata: StructDefinitionTemplataT,
-    template_args: &[ITemplataT<ITemplataType>],
-) -> StructTT {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    struct_templata: StructDefinitionTemplataT<'s>,
+    template_args: &[ITemplataT<'s, 't>],
+) -> StructTT<'s, 't> {
     panic!("Unimplemented: predict_struct");
 }
 
@@ -303,13 +303,13 @@ pub fn predict_struct(
 // mig: fn resolve_interface
 pub fn resolve_interface(
     &self,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    interface_templata: InterfaceDefinitionTemplataT,
-    template_args: &[ITemplataT<ITemplataType>],
-) -> IResolveOutcome<InterfaceTT> {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    interface_templata: InterfaceDefinitionTemplataT<'s>,
+    template_args: &[ITemplataT<'s, 't>],
+) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
     panic!("Unimplemented: resolve_interface");
 }
 
@@ -377,11 +377,11 @@ pub fn resolve_interface(
 // mig: fn compile_struct
 pub fn compile_struct(
     &self,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    struct_templata: StructDefinitionTemplataT,
-) -> UncheckedDefiningConclusions {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    struct_templata: StructDefinitionTemplataT<'s>,
+) -> UncheckedDefiningConclusions<'s, 't> {
     panic!("Unimplemented: compile_struct");
 }
 
@@ -492,11 +492,11 @@ pub fn compile_struct(
 // mig: fn compile_interface
 pub fn compile_interface(
     &self,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    interface_templata: InterfaceDefinitionTemplataT,
-) -> UncheckedDefiningConclusions {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    interface_templata: InterfaceDefinitionTemplataT<'s>,
+) -> UncheckedDefiningConclusions<'s, 't> {
     panic!("Unimplemented: compile_interface");
 }
 
@@ -600,14 +600,14 @@ pub fn compile_interface(
 // mig: fn make_closure_understruct
 pub fn make_closure_understruct(
     &self,
-    containing_function_env: &dyn NodeEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    name: IFunctionDeclarationNameS,
-    function_s: &FunctionA,
-    members: &[NormalStructMemberT],
-) -> (StructTT, MutabilityT, FunctionTemplataT) {
+    containing_function_env: &dyn NodeEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    name: IFunctionDeclarationNameS<'s>,
+    function_s: &FunctionA<'s>,
+    members: &[NormalStructMemberT<'s, 't>],
+) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s>) {
     panic!("Unimplemented: make_closure_understruct");
 }
 
@@ -631,7 +631,7 @@ pub fn make_closure_understruct(
 pub fn assemble_struct_name(
     &self,
     template_name: IdT<IStructTemplateNameT>,
-    template_args: &[ITemplataT<ITemplataType>],
+    template_args: &[ITemplataT<'s, 't>],
 ) -> IdT<IStructNameT> {
     panic!("Unimplemented: assemble_struct_name");
 }
@@ -650,7 +650,7 @@ pub fn assemble_struct_name(
 pub fn assemble_interface_name(
     &self,
     template_name: IdT<IInterfaceTemplateNameT>,
-    template_args: &[ITemplataT<ITemplataType>],
+    template_args: &[ITemplataT<'s, 't>],
 ) -> IdT<IInterfaceNameT> {
     panic!("Unimplemented: assemble_interface_name");
 }

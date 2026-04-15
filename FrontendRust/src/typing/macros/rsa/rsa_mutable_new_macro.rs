@@ -22,14 +22,14 @@ import dev.vale.typing.types.RuntimeSizedArrayTT
 
 */
 // mig: struct RSAMutableNewMacro
-pub struct RSAMutableNewMacro<'p, 's> {
-    pub interner: &'p Interner<'p>,
-    pub keywords: &'p Keywords<'p>,
-    pub array_compiler: &'s ArrayCompiler<'p, 's>,
-    pub destructor_compiler: &'s DestructorCompiler<'p, 's>,
+pub struct RSAMutableNewMacro<'s, 'ctx, 't> {
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub array_compiler: &'ctx ArrayCompiler<'s, 't>,
+    pub destructor_compiler: &'ctx DestructorCompiler<'s, 't>,
 }
 // mig: impl RSAMutableNewMacro
-impl<'p, 's> RSAMutableNewMacro<'p, 's> {
+impl<'s, 'ctx, 't> RSAMutableNewMacro<'s, 'ctx, 't> {
 }
 /*
 class RSAMutableNewMacro(

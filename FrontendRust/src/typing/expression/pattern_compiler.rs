@@ -29,11 +29,12 @@ import scala.collection.immutable.{List, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct PatternCompiler
-pub struct PatternCompiler;
+pub struct PatternCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 
 // mig: impl PatternCompiler
-impl PatternCompiler {}
+impl<'s, 'ctx, 't> PatternCompiler<'s, 'ctx, 't> {}
 /*
 class PatternCompiler(
     opts: TypingPassOptions,

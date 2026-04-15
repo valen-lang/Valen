@@ -43,7 +43,7 @@ import scala.util.control.Breaks._
 
 */
 // mig: trait IFunctionGenerator
-pub trait IFunctionGenerator {
+pub trait IFunctionGenerator<'s, 't> {
 /*
 trait IFunctionGenerator {
 */
@@ -88,8 +88,9 @@ fn generate(
 */
 }
 
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct DefaultPrintyThing
-pub struct DefaultPrintyThing;
+pub struct DefaultPrintyThing<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 object DefaultPrintyThing {
 */
@@ -106,11 +107,11 @@ pub fn print(x: ()) {
 
 
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct Compiler
-pub struct Compiler {
-}
+pub struct Compiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl Compiler
-impl Compiler {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
 /*
 class Compiler(
     opts: TypingPassOptions,

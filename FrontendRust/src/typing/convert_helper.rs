@@ -24,15 +24,15 @@ import dev.vale.postparsing._
 
 */
 // mig: trait IConvertHelperDelegate
-pub trait IConvertHelperDelegate {
+pub trait IConvertHelperDelegate<'s, 't> {
     fn is_parent(
         &self,
         coutputs: &CompilerOutputs,
-        calling_env: &IInDenizenEnvironmentT,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS],
         call_location: LocationInDenizen,
-        descendant_citizen_ref: ISubKindTT,
-        ancestor_interface_ref: ISuperKindTT,
+        descendant_citizen_ref: ISubKindTT<'s, 't>,
+        ancestor_interface_ref: ISuperKindTT<'s, 't>,
     ) -> IsParentResult;
 }
 /*
@@ -53,27 +53,27 @@ trait IConvertHelperDelegate {
 
 */
 // mig: struct ConvertHelper
-pub struct ConvertHelper {
+pub struct ConvertHelper<'s, 't> {
     pub opts: TypingPassOptions,
-    pub delegate: Box<dyn IConvertHelperDelegate>,
+    pub delegate: Box<dyn IConvertHelperDelegate<'s, 't>>,
 }
 // mig: impl ConvertHelper
-impl ConvertHelper {}
+impl<'s, 't> ConvertHelper<'s, 't> {}
 /*
 class ConvertHelper(
     opts: TypingPassOptions,
     delegate: IConvertHelperDelegate) {
 */
 // mig: fn convert_exprs
-fn convert_exprs(
+fn convert_exprs<'s, 't>(
     &self,
-    env: &IInDenizenEnvironmentT,
+    env: &IInDenizenEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs,
     range: &[RangeS],
     call_location: LocationInDenizen,
-    source_exprs: Vec<ReferenceExpressionTE>,
-    target_pointer_types: Vec<CoordT>,
-) -> Vec<ReferenceExpressionTE> {
+    source_exprs: Vec<ReferenceExpressionTE<'s, 't>>,
+    target_pointer_types: Vec<CoordT<'s, 't>>,
+) -> Vec<ReferenceExpressionTE<'s, 't>> {
     panic!("Unimplemented: convert_exprs");
 }
 /*

@@ -24,7 +24,7 @@ import dev.vale.typing.env._
 import scala.collection.immutable.{List, Set}
 */
 // mig: trait IBodyCompilerDelegate
-pub trait IBodyCompilerDelegate {}
+pub trait IBodyCompilerDelegate<'s, 't> {}
 /*
 trait IBodyCompilerDelegate {
   def evaluateBlockStatements(
@@ -51,9 +51,10 @@ trait IBodyCompilerDelegate {
 }
 */
 // mig: struct BodyCompiler
-pub struct BodyCompiler;
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub struct BodyCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl BodyCompiler
-impl BodyCompiler {}
+impl<'s, 'ctx, 't> BodyCompiler<'s, 'ctx, 't> {}
 /*
 class BodyCompiler(
   opts: TypingPassOptions,

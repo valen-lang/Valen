@@ -29,19 +29,19 @@ import scala.collection.immutable.{List, Map}
 // This file is the outer layer, which spawns a local environment for the function.
 */
 // mig: struct FunctionCompilerClosureOrLightLayer
-pub struct FunctionCompilerClosureOrLightLayer<'s, 'p> {
+pub struct FunctionCompilerClosureOrLightLayer<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,
-    pub interner: &'p Interner,
-    pub keywords: &'p Keywords,
+    pub interner: &'ctx Interner,
+    pub keywords: &'ctx Keywords,
     pub name_translator: NameTranslator,
-    pub templata_compiler: TemplataCompiler,
-    pub infer_compiler: InferCompiler,
-    pub convert_helper: ConvertHelper,
-    pub struct_compiler: StructCompiler,
-    pub delegate: IFunctionCompilerDelegate,
+    pub templata_compiler: TemplataCompiler<'s, 't>,
+    pub infer_compiler: InferCompiler<'s, 't>,
+    pub convert_helper: ConvertHelper<'s, 't>,
+    pub struct_compiler: StructCompiler<'s, 't>,
+    pub delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
 }
 // mig: impl FunctionCompilerClosureOrLightLayer
-impl<'s, 'p> FunctionCompilerClosureOrLightLayer<'s, 'p> {}
+impl<'s, 'ctx, 't> FunctionCompilerClosureOrLightLayer<'s, 'ctx, 't> {}
 /*
 class FunctionCompilerClosureOrLightLayer(
     opts: TypingPassOptions,

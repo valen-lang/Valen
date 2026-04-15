@@ -31,7 +31,7 @@ import scala.collection.immutable.{List, Set}
 
 */
 // mig: trait IFunctionCompilerDelegate
-pub trait IFunctionCompilerDelegate {}
+pub trait IFunctionCompilerDelegate<'s, 't> {}
 /*
 trait IFunctionCompilerDelegate {
   def evaluateBlockStatements(
@@ -76,13 +76,13 @@ trait IFunctionCompilerDelegate {
 
 */
 // mig: trait IEvaluateFunctionResult
-pub trait IEvaluateFunctionResult {}
+pub trait IEvaluateFunctionResult<'s, 't> {}
 /*
 trait IEvaluateFunctionResult
 
 */
 // mig: struct EvaluateFunctionSuccess
-pub struct EvaluateFunctionSuccess;
+pub struct EvaluateFunctionSuccess<'s, 't>;
 /*
 case class EvaluateFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -92,7 +92,7 @@ case class EvaluateFunctionSuccess(
 
 */
 // mig: struct EvaluateFunctionFailure
-pub struct EvaluateFunctionFailure;
+pub struct EvaluateFunctionFailure<'s, 't>;
 /*
 case class EvaluateFunctionFailure(
     reason: IDefiningError
@@ -100,13 +100,13 @@ case class EvaluateFunctionFailure(
 
 */
 // mig: trait IDefineFunctionResult
-pub trait IDefineFunctionResult {}
+pub trait IDefineFunctionResult<'s, 't> {}
 /*
 trait IDefineFunctionResult
 
 */
 // mig: struct DefineFunctionSuccess
-pub struct DefineFunctionSuccess;
+pub struct DefineFunctionSuccess<'s, 't>;
 /*
 case class DefineFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -116,7 +116,7 @@ case class DefineFunctionSuccess(
 
 */
 // mig: struct DefineFunctionFailure
-pub struct DefineFunctionFailure;
+pub struct DefineFunctionFailure<'s, 't>;
 /*
 case class DefineFunctionFailure(
     reason: IDefiningError
@@ -125,13 +125,13 @@ case class DefineFunctionFailure(
 
 */
 // mig: trait IResolveFunctionResult
-pub trait IResolveFunctionResult {}
+pub trait IResolveFunctionResult<'s, 't> {}
 /*
 trait IResolveFunctionResult
 
 */
 // mig: struct ResolveFunctionSuccess
-pub struct ResolveFunctionSuccess;
+pub struct ResolveFunctionSuccess<'s, 't>;
 /*
 case class ResolveFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -140,7 +140,7 @@ case class ResolveFunctionSuccess(
 
 */
 // mig: struct ResolveFunctionFailure
-pub struct ResolveFunctionFailure;
+pub struct ResolveFunctionFailure<'s, 't>;
 /*
 case class ResolveFunctionFailure(
     reason: IResolvingError
@@ -149,13 +149,13 @@ case class ResolveFunctionFailure(
 
 */
 // mig: trait IStampFunctionResult
-pub trait IStampFunctionResult {}
+pub trait IStampFunctionResult<'s, 't> {}
 /*
 trait IStampFunctionResult
 
 */
 // mig: struct StampFunctionSuccess
-pub struct StampFunctionSuccess;
+pub struct StampFunctionSuccess<'s, 't>;
 /*
 case class StampFunctionSuccess(
   prototype: PrototypeT[IFunctionNameT],
@@ -164,7 +164,7 @@ case class StampFunctionSuccess(
 
 */
 // mig: struct StampFunctionFailure
-pub struct StampFunctionFailure;
+pub struct StampFunctionFailure<'s, 't>;
 /*
 case class StampFunctionFailure(
   reason: IFindFunctionFailureReason
@@ -173,9 +173,10 @@ case class StampFunctionFailure(
 
 */
 // mig: struct FunctionCompiler
-pub struct FunctionCompiler;
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub struct FunctionCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl FunctionCompiler
-impl FunctionCompiler {}
+impl<'s, 'ctx, 't> FunctionCompiler<'s, 'ctx, 't> {}
 /*
 // When typingpassing a function, these things need to happen:
 // - Spawn a local environment for the function

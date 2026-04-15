@@ -29,13 +29,13 @@ pub trait IsParentResult {}
 sealed trait IsParentResult
 */
 // mig: struct IsParent
-pub struct IsParent<'s> {
-    pub templata: ITemplataT,
-    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT>,
+pub struct IsParent<'s, 't> {
+    pub templata: ITemplataT<'s, 't>,
+    pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub impl_id: IdT,
 }
 // mig: impl IsParent
-impl<'s> IsParent<'s> {}
+impl<'s, 't> IsParent<'s, 't> {}
 /*
 case class IsParent(
   templata: ITemplataT[ImplTemplataType],
@@ -44,11 +44,11 @@ case class IsParent(
 ) extends IsParentResult
 */
 // mig: struct IsntParent
-pub struct IsntParent {
-    pub candidates: Vec<IResolvingError>,
+pub struct IsntParent<'s, 't> {
+    pub candidates: Vec<IResolvingError<'s, 't>>,
 }
 // mig: impl IsntParent
-impl IsntParent {}
+impl<'s, 't> IsntParent<'s, 't> {}
 /*
 case class IsntParent(
   candidates: Vector[IResolvingError]
@@ -56,16 +56,16 @@ case class IsntParent(
 
 */
 // mig: struct ImplCompiler
-pub struct ImplCompiler {
-    pub opts: TypingPassOptions,
-    pub interner: Interner,
-    pub name_translator: NameTranslator,
-    pub struct_compiler: StructCompiler,
-    pub templata_compiler: TemplataCompiler,
-    pub infer_compiler: InferCompiler,
+pub struct ImplCompiler<'s, 'ctx, 't> {
+    pub opts: TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub name_translator: NameTranslator<'s>,
+    pub struct_compiler: StructCompiler<'s, 'ctx, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
+    pub infer_compiler: InferCompiler<'s, 't>,
 }
 // mig: impl ImplCompiler
-impl ImplCompiler {}
+impl<'s, 'ctx, 't> ImplCompiler<'s, 'ctx, 't> {}
 /*
 class ImplCompiler(
     opts: TypingPassOptions,

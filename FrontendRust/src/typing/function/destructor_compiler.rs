@@ -28,9 +28,10 @@ import scala.collection.immutable.List
 
 */
 // mig: struct DestructorCompiler
-pub struct DestructorCompiler;
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub struct DestructorCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl DestructorCompiler
-impl DestructorCompiler {}
+impl<'s, 'ctx, 't> DestructorCompiler<'s, 'ctx, 't> {}
 /*
 class DestructorCompiler(
     opts: TypingPassOptions,

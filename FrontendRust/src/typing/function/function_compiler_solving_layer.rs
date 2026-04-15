@@ -36,20 +36,20 @@ import scala.collection.immutable.{List, Set}
 // This file is the outer layer, which spawns a local environment for the function.
 */
 // mig: struct FunctionCompilerSolvingLayer
-pub struct FunctionCompilerSolvingLayer {
+pub struct FunctionCompilerSolvingLayer<'s, 'ctx, 't> {
     opts: TypingPassOptions,
-    interner: Interner,
-    keywords: Keywords,
+    interner: &'ctx Interner,
+    keywords: &'ctx Keywords,
     name_translator: NameTranslator,
-    templata_compiler: TemplataCompiler,
-    infer_compiler: InferCompiler,
-    convert_helper: ConvertHelper,
-    struct_compiler: StructCompiler,
-    delegate: Box<dyn IFunctionCompilerDelegate>,
+    templata_compiler: TemplataCompiler<'s, 't>,
+    infer_compiler: InferCompiler<'s, 't>,
+    convert_helper: ConvertHelper<'s, 't>,
+    struct_compiler: StructCompiler<'s, 't>,
+    delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
 }
 
 // mig: impl FunctionCompilerSolvingLayer
-impl FunctionCompilerSolvingLayer {}
+impl<'s, 'ctx, 't> FunctionCompilerSolvingLayer<'s, 'ctx, 't> {}
 
 /*
 class FunctionCompilerSolvingLayer(

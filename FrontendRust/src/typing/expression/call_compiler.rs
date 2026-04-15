@@ -19,10 +19,11 @@ import dev.vale.typing.names._
 
 import scala.collection.immutable.List
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct CallCompiler
-pub struct CallCompiler;
+pub struct CallCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl CallCompiler
-impl CallCompiler {}
+impl<'s, 'ctx, 't> CallCompiler<'s, 'ctx, 't> {}
 /*
 class CallCompiler(
     opts: TypingPassOptions,

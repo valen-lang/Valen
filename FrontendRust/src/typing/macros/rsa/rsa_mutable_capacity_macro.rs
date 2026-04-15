@@ -20,13 +20,13 @@ import dev.vale.typing.ast
 
 */
 // mig: struct RSAMutableCapacityMacro
-pub struct RSAMutableCapacityMacro {
-  pub interner: Interner,
-  pub keywords: Keywords,
-  pub generator_id: StrI,
+pub struct RSAMutableCapacityMacro<'s, 'ctx, 't> {
+  pub interner: Interner<'s>,
+  pub keywords: Keywords<'s>,
+  pub generator_id: StrI<'s>,
 }
 // mig: impl RSAMutableCapacityMacro
-impl RSAMutableCapacityMacro {}
+impl<'s, 'ctx, 't> RSAMutableCapacityMacro<'s, 'ctx, 't> {}
 /*
 class RSAMutableCapacityMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_capacity

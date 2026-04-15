@@ -18,10 +18,10 @@ import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types._
 */
 // mig: struct RSAImmutableNewMacro
-pub struct RSAImmutableNewMacro {
-}
+pub struct RSAImmutableNewMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl RSAImmutableNewMacro
-impl RSAImmutableNewMacro {
+impl<'s, 'ctx, 't> RSAImmutableNewMacro<'s, 'ctx, 't> {
 }
 /*
 class RSAImmutableNewMacro(

@@ -22,7 +22,7 @@ import scala.collection.immutable.{List, Set}
 
 */
 // mig: trait IBlockCompilerDelegate
-pub trait IBlockCompilerDelegate {}
+pub trait IBlockCompilerDelegate<'s, 't> {}
 /*
 trait IBlockCompilerDelegate {
   def evaluateAndCoerceToReferenceExpression(
@@ -47,10 +47,11 @@ trait IBlockCompilerDelegate {
   ReferenceExpressionTE
 }
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct BlockCompiler
-pub struct BlockCompiler;
+pub struct BlockCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl BlockCompiler
-impl BlockCompiler {}
+impl<'s, 'ctx, 't> BlockCompiler<'s, 'ctx, 't> {}
 /*
 class BlockCompiler(
     opts: TypingPassOptions,

@@ -17,12 +17,12 @@ import dev.vale.typing.ast
 
 */
 // mig: struct SSALenMacro
-pub struct SSALenMacro<'p> {
-    pub keywords: &'p Keywords<'p>,
+pub struct SSALenMacro<'s, 'ctx, 't> {
+    pub keywords: &'ctx Keywords<'s>,
 }
 
 // mig: impl SSALenMacro
-impl<'p> SSALenMacro<'p> {
+impl<'s, 'ctx, 't> SSALenMacro<'s, 'ctx, 't> {
 }
 /*
 class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {

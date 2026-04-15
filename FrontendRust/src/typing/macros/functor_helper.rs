@@ -19,13 +19,13 @@ import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types.CoordT
 */
 // mig: struct FunctorHelper
-pub struct FunctorHelper {
-    pub interner: Interner,
-    pub keywords: Keywords,
+pub struct FunctorHelper<'s, 'ctx, 't> {
+    pub interner: Interner<'s>,
+    pub keywords: Keywords<'s>,
 }
 
 // mig: impl FunctorHelper
-impl FunctorHelper {}
+impl<'s, 'ctx, 't> FunctorHelper<'s, 'ctx, 't> {}
 
 /*
 class FunctorHelper( interner: Interner, keywords: Keywords) {

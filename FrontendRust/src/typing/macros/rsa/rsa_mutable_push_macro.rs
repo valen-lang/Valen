@@ -20,9 +20,10 @@ import dev.vale.typing.ast
 
 */
 // mig: struct RSAMutablePushMacro
-pub struct RSAMutablePushMacro;
+pub struct RSAMutablePushMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl RSAMutablePushMacro
-impl RSAMutablePushMacro {}
+impl<'s, 'ctx, 't> RSAMutablePushMacro<'s, 'ctx, 't> {}
 /*
 class RSAMutablePushMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_push

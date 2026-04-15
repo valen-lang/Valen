@@ -23,15 +23,15 @@ import dev.vale.typing.templata._
 import scala.collection.mutable
 */
 // mig: struct StructDropMacro
-pub struct StructDropMacro<'p, 's> {
-  pub opts: TypingPassOptions<'p>,
-  pub interner: &'p Interner<'p>,
-  pub keywords: &'p Keywords<'p>,
-  pub name_translator: NameTranslator<'p, 's>,
-  pub destructor_compiler: DestructorCompiler<'p, 's>,
+pub struct StructDropMacro<'s, 'ctx, 't> {
+  pub opts: TypingPassOptions<'s>,
+  pub interner: &'ctx Interner<'s>,
+  pub keywords: &'ctx Keywords<'s>,
+  pub name_translator: NameTranslator<'s, 't>,
+  pub destructor_compiler: DestructorCompiler<'s, 't>,
 }
 // mig: impl StructDropMacro
-impl<'p, 's> StructDropMacro<'p, 's> {}
+impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {}
 /*
 class StructDropMacro(
   opts: TypingPassOptions,

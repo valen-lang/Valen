@@ -14,14 +14,14 @@ import dev.vale.typing.env.FunctionEnvironmentBoxT
 import dev.vale.typing.ast
 */
 // mig: struct SSADropIntoMacro
-pub struct SSADropIntoMacro<'p, 's> {
-    pub generator_id: StrI<'p>,
-    pub keywords: &'p Keywords<'p>,
-    pub array_compiler: &'s (), // placeholder for ArrayCompiler
+pub struct SSADropIntoMacro<'s, 'ctx, 't> {
+    pub generator_id: StrI<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub array_compiler: &'ctx (), // placeholder for ArrayCompiler
 }
 
 // mig: impl SSADropIntoMacro
-impl<'p, 's> SSADropIntoMacro<'p, 's> {
+impl<'s, 'ctx, 't> SSADropIntoMacro<'s, 'ctx, 't> {
 }
 /*
 class SSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends IFunctionBodyMacro {

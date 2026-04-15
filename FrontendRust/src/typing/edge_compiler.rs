@@ -22,20 +22,20 @@ import scala.collection.mutable
 
 */
 // mig: enum IMethod
-pub enum IMethod {
-    NeededOverride(NeededOverride),
-    FoundFunction(FoundFunction),
+pub enum IMethod<'s, 't> {
+    NeededOverride(NeededOverride<'s, 't>),
+    FoundFunction(FoundFunction<'s, 't>),
 }
 /*
 sealed trait IMethod
 */
 // mig: struct NeededOverride
-pub struct NeededOverride {
-    pub name: IImpreciseNameS,
-    pub param_filters: Vec<CoordT>,
+pub struct NeededOverride<'s, 't> {
+    pub name: IImpreciseNameS<'s>,
+    pub param_filters: Vec<CoordT<'s, 't>>,
 }
 // mig: impl NeededOverride
-impl NeededOverride {}
+impl<'s, 't> NeededOverride<'s, 't> {}
 /*
 case class NeededOverride(
   name: IImpreciseNameS,
@@ -46,11 +46,11 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct FoundFunction
-pub struct FoundFunction {
-    pub prototype: PrototypeT<IFunctionNameT>,
+pub struct FoundFunction<'s, 't> {
+    pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
 }
 // mig: impl FoundFunction
-impl FoundFunction {}
+impl<'s, 't> FoundFunction<'s, 't> {}
 /*
 case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod {
   val hash = runtime.ScalaRunTime._hashCode(this);
@@ -58,13 +58,13 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct PartialEdgeT
-pub struct PartialEdgeT {
-    pub struct_tt: StructTT,
-    pub interface: InterfaceTT,
-    pub methods: Vec<IMethod>,
+pub struct PartialEdgeT<'s, 't> {
+    pub struct_tt: StructTT<'s, 't>,
+    pub interface: InterfaceTT<'s, 't>,
+    pub methods: Vec<IMethod<'s, 't>>,
 }
 // mig: impl PartialEdgeT
-impl PartialEdgeT {}
+impl<'s, 't> PartialEdgeT<'s, 't> {}
 /*
 case class PartialEdgeT(
   struct: StructTT,
@@ -75,16 +75,16 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct EdgeCompiler
-pub struct EdgeCompiler {
+pub struct EdgeCompiler<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,
-    pub interner: Interner,
-    pub keywords: Keywords,
-    pub function_compiler: FunctionCompiler,
-    pub overload_compiler: OverloadResolver,
-    pub impl_compiler: ImplCompiler,
+    pub interner: &'ctx Interner,
+    pub keywords: &'ctx Keywords,
+    pub function_compiler: FunctionCompiler<'s, 'ctx, 't>,
+    pub overload_compiler: OverloadResolver<'s, 't>,
+    pub impl_compiler: ImplCompiler<'s, 't>,
 }
 // mig: impl EdgeCompiler
-impl EdgeCompiler {}
+impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {}
 /*
 class EdgeCompiler(
     opts: TypingPassOptions,

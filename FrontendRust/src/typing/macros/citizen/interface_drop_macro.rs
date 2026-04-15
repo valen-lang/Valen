@@ -23,11 +23,11 @@ import dev.vale.typing.OverloadResolver
 import scala.collection.mutable
 */
 // mig: struct InterfaceDropMacro
-pub struct InterfaceDropMacro {
-}
+pub struct InterfaceDropMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 
 // mig: impl InterfaceDropMacro
-impl InterfaceDropMacro {
+impl<'s, 'ctx, 't> InterfaceDropMacro<'s, 'ctx, 't> {
 }
 /*
 class InterfaceDropMacro(

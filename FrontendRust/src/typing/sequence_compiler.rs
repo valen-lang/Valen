@@ -18,15 +18,15 @@ import dev.vale.typing.function.FunctionCompiler
 
 */
 // mig: struct SequenceCompiler
-pub struct SequenceCompiler {
+pub struct SequenceCompiler<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,
-    pub interner: Interner,
-    pub keywords: Keywords,
-    pub struct_compiler: StructCompiler,
-    pub templata_compiler: TemplataCompiler,
+    pub interner: &'ctx Interner,
+    pub keywords: &'ctx Keywords,
+    pub struct_compiler: StructCompiler<'s, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 't>,
 }
 // mig: impl SequenceCompiler
-impl SequenceCompiler {}
+impl<'s, 'ctx, 't> SequenceCompiler<'s, 'ctx, 't> {}
 /*
 class SequenceCompiler(
   opts: TypingPassOptions,

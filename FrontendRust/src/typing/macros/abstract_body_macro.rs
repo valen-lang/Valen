@@ -14,15 +14,15 @@ import dev.vale.typing.function._
 import dev.vale.typing.templata._
 */
 // mig: struct AbstractBodyMacro
-pub struct AbstractBodyMacro<'p, 's> {
-    pub interner: &'p Keywords<'p>,
-    pub keywords: &'p Keywords<'p>,
-    pub overload_resolver: &'s (),
-    pub generator_id: StrI<'p>,
+pub struct AbstractBodyMacro<'s, 'ctx, 't> {
+    pub interner: &'ctx Keywords<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub overload_resolver: &'ctx (),
+    pub generator_id: StrI<'s>,
 }
 
 // mig: impl AbstractBodyMacro
-impl<'p, 's> AbstractBodyMacro<'p, 's> {}
+impl<'s, 'ctx, 't> AbstractBodyMacro<'s, 'ctx, 't> {}
 /*
 class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver: OverloadResolver) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.abstractBody

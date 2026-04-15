@@ -29,16 +29,16 @@ import scala.collection.mutable
 
 */
 // mig: struct StructConstructorMacro
-pub struct StructConstructorMacro<'p, 's> {
-  pub opts: TypingPassOptions,
-  pub interner: Interner<'p>,
-  pub keywords: Keywords<'p>,
-  pub name_translator: NameTranslator,
-  pub destructor_compiler: DestructorCompiler,
+pub struct StructConstructorMacro<'s, 'ctx, 't> {
+  pub opts: TypingPassOptions<'s>,
+  pub interner: Interner<'s>,
+  pub keywords: Keywords<'s>,
+  pub name_translator: NameTranslator<'s, 't>,
+  pub destructor_compiler: DestructorCompiler<'s, 't>,
 }
 
 // mig: impl StructConstructorMacro
-impl<'p, 's> StructConstructorMacro<'p, 's> {}
+impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {}
 
 /*
 class StructConstructorMacro(

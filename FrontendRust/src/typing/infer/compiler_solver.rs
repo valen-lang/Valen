@@ -27,7 +27,7 @@ import scala.collection.mutable
 
 */
 // mig: enum ITypingPassSolverError
-pub enum ITypingPassSolverError {}
+pub enum ITypingPassSolverError<'s, 't> {}
 /*
 sealed trait ITypingPassSolverError
 case class KindIsNotConcrete(kind: KindT) extends ITypingPassSolverError
@@ -73,7 +73,7 @@ case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, IT
 
 */
 // mig: trait IInfererDelegate
-pub trait IInfererDelegate {}
+pub trait IInfererDelegate<'s, 't> {}
 /*
 trait IInfererDelegate {
 //  def lookupMemberTypes(

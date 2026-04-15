@@ -13,13 +13,13 @@ import scala.collection.immutable.Map
 // A "citizen" is a struct or an interface.
 */
 // mig: trait CitizenDefinitionT
-pub trait CitizenDefinitionT {
+pub trait CitizenDefinitionT<'s, 't> {
 }
 /*
 trait CitizenDefinitionT {
 */
 // mig: fn template_name
-fn template_name(&self) -> IdT;
+fn template_name(&self) -> IdT<'s, 't>;
 /*
   def templateName: IdT[ICitizenTemplateNameT]
 */
@@ -29,29 +29,29 @@ fn generic_param_types(&self) -> Vec<ITemplataType>;
   def genericParamTypes: Vector[ITemplataType]
 */
 // mig: fn instantiated_citizen
-fn instantiated_citizen(&self) -> ICitizenTT;
+fn instantiated_citizen(&self) -> ICitizenTT<'s, 't>;
 /*
   def instantiatedCitizen: ICitizenTT
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT;
+fn default_region(&self) -> RegionT<'s, 't>;
 /*
   def defaultRegion: RegionT
 }
 */
 // mig: struct StructDefinitionT
-pub struct StructDefinitionT {
-    pub template_name: IdT,
-    pub instantiated_citizen: StructTT,
-    pub attributes: Vec<ICitizenAttributeT>,
+pub struct StructDefinitionT<'s, 't> {
+    pub template_name: IdT<'s, 't>,
+    pub instantiated_citizen: StructTT<'s, 't>,
+    pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
     pub weakable: bool,
-    pub mutability: ITemplataT,
-    pub members: Vec<IStructMemberT>,
+    pub mutability: ITemplataT<'s, 't>,
+    pub members: Vec<IStructMemberT<'s, 't>>,
     pub is_closure: bool,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT,
+    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
 }
 // mig: impl StructDefinitionT
-impl StructDefinitionT {}
+impl<'s, 't> StructDefinitionT<'s, 't> {}
 /*
 case class StructDefinitionT(
   templateName: IdT[IStructTemplateNameT],
@@ -66,7 +66,7 @@ case class StructDefinitionT(
 ) extends CitizenDefinitionT {
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT {
+fn default_region(&self) -> RegionT<'s, 't> {
     panic!("Unimplemented: default_region");
 }
 /*
@@ -106,7 +106,7 @@ override def hashCode(): Int = vcurious()
 //  }
 */
 // mig: fn get_member_and_index
-fn get_member_and_index(&self, needle_name: &IVarNameT) -> Option<(&NormalStructMemberT, usize)> {
+fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
     panic!("Unimplemented: get_member_and_index");
 }
 /*
@@ -123,25 +123,25 @@ fn get_member_and_index(&self, needle_name: &IVarNameT) -> Option<(&NormalStruct
 }
 */
 // mig: trait IStructMemberT
-pub trait IStructMemberT {
+pub trait IStructMemberT<'s, 't> {
 }
 /*
 sealed trait IStructMemberT {
 */
 // mig: fn name
-fn name(&self) -> &IVarNameT;
+fn name(&self) -> &IVarNameT<'s, 't>;
 /*
   def name: IVarNameT
 }
 */
 // mig: struct NormalStructMemberT
-pub struct NormalStructMemberT {
-    pub name: IVarNameT,
-    pub variability: VariabilityT,
-    pub tyype: IMemberTypeT,
+pub struct NormalStructMemberT<'s, 't> {
+    pub name: IVarNameT<'s, 't>,
+    pub variability: VariabilityT<'s, 't>,
+    pub tyype: IMemberTypeT<'s, 't>,
 }
 // mig: impl NormalStructMemberT
-impl NormalStructMemberT {
+impl<'s, 't> NormalStructMemberT<'s, 't> {
 }
 /*
 case class NormalStructMemberT(
@@ -154,12 +154,12 @@ case class NormalStructMemberT(
 }
 */
 // mig: struct VariadicStructMemberT
-pub struct VariadicStructMemberT {
-    pub name: IVarNameT,
-    pub tyype: PlaceholderTemplataT,
+pub struct VariadicStructMemberT<'s, 't> {
+    pub name: IVarNameT<'s, 't>,
+    pub tyype: PlaceholderTemplataT<'s, 't>,
 }
 // mig: impl VariadicStructMemberT
-impl VariadicStructMemberT {
+impl<'s, 't> VariadicStructMemberT<'s, 't> {
 }
 /*
 case class VariadicStructMemberT(
@@ -170,18 +170,18 @@ case class VariadicStructMemberT(
 }
 */
 // mig: trait IMemberTypeT
-pub trait IMemberTypeT {
+pub trait IMemberTypeT<'s, 't> {
 }
 /*
 sealed trait IMemberTypeT  {
 */
 // mig: fn reference
-fn reference(&self) -> CoordT;
+fn reference(&self) -> CoordT<'s, 't>;
 /*
   def reference: CoordT
 */
 // mig: fn expect_reference_member
-fn expect_reference_member(&self) -> ReferenceMemberTypeT {
+fn expect_reference_member(&self) -> ReferenceMemberTypeT<'s, 't> {
     panic!("Unimplemented: expect_reference_member");
 }
 /*
@@ -193,7 +193,7 @@ fn expect_reference_member(&self) -> ReferenceMemberTypeT {
   }
 */
 // mig: fn expect_address_member
-fn expect_address_member(&self) -> AddressMemberTypeT {
+fn expect_address_member(&self) -> AddressMemberTypeT<'s, 't> {
     panic!("Unimplemented: expect_address_member");
 }
 /*
@@ -206,38 +206,38 @@ fn expect_address_member(&self) -> AddressMemberTypeT {
 }
 */
 // mig: struct AddressMemberTypeT
-pub struct AddressMemberTypeT {
-    pub reference: CoordT,
+pub struct AddressMemberTypeT<'s, 't> {
+    pub reference: CoordT<'s, 't>,
 }
 // mig: impl AddressMemberTypeT
-impl AddressMemberTypeT {
+impl<'s, 't> AddressMemberTypeT<'s, 't> {
 }
 /*
 case class AddressMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
 // mig: struct ReferenceMemberTypeT
-pub struct ReferenceMemberTypeT {
-    pub reference: CoordT,
+pub struct ReferenceMemberTypeT<'s, 't> {
+    pub reference: CoordT<'s, 't>,
 }
 // mig: impl ReferenceMemberTypeT
-impl ReferenceMemberTypeT {
+impl<'s, 't> ReferenceMemberTypeT<'s, 't> {
 }
 /*
 case class ReferenceMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
 // mig: struct InterfaceDefinitionT
-pub struct InterfaceDefinitionT {
-    pub template_name: IdT,
-    pub instantiated_interface: InterfaceTT,
-    pub ref_: InterfaceTT,
-    pub attributes: Vec<ICitizenAttributeT>,
+pub struct InterfaceDefinitionT<'s, 't> {
+    pub template_name: IdT<'s, 't>,
+    pub instantiated_interface: InterfaceTT<'s, 't>,
+    pub ref_: InterfaceTT<'s, 't>,
+    pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
     pub weakable: bool,
-    pub mutability: ITemplataT,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT,
-    pub internal_methods: Vec<(PrototypeT, usize)>,
+    pub mutability: ITemplataT<'s, 't>,
+    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+    pub internal_methods: Vec<(PrototypeT<'s, 't>, usize)>,
 }
 // mig: impl InterfaceDefinitionT
-impl InterfaceDefinitionT {}
+impl<'s, 't> InterfaceDefinitionT<'s, 't> {}
 /*
 case class InterfaceDefinitionT(
   templateName: IdT[IInterfaceTemplateNameT],
@@ -254,7 +254,7 @@ case class InterfaceDefinitionT(
 ) extends CitizenDefinitionT {
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT {
+fn default_region(&self) -> RegionT<'s, 't> {
     panic!("Unimplemented: default_region");
 }
 /*
@@ -270,7 +270,7 @@ fn generic_param_types(&self) -> Vec<ITemplataType> {
   }
 */
 // mig: fn instantiated_citizen
-fn instantiated_citizen(&self) -> ICitizenTT {
+fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
     panic!("Unimplemented: instantiated_citizen");
 }
 /*

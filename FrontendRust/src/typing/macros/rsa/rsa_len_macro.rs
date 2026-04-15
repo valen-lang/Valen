@@ -17,11 +17,11 @@ import dev.vale.typing.ast
 
 */
 // mig: struct RSALenMacro
-pub struct RSALenMacro<'p> {
-    pub keywords: &'p Keywords<'p>,
+pub struct RSALenMacro<'s, 'ctx, 't> {
+    pub keywords: &'ctx Keywords<'s>,
 }
 // mig: impl RSALenMacro
-impl<'p> RSALenMacro<'p> {}
+impl<'s, 'ctx, 't> RSALenMacro<'s, 'ctx, 't> {}
 /*
 class RSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_len

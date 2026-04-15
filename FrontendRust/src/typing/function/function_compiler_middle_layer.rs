@@ -24,19 +24,19 @@ import scala.collection.immutable.{List, Set}
 
 */
 // mig: struct FunctionCompilerMiddleLayer
-pub struct FunctionCompilerMiddleLayer {
+pub struct FunctionCompilerMiddleLayer<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,
-    pub interner: Interner,
-    pub keywords: Keywords,
+    pub interner: &'ctx Interner,
+    pub keywords: &'ctx Keywords,
     pub name_translator: NameTranslator,
-    pub templata_compiler: TemplataCompiler,
-    pub convert_helper: ConvertHelper,
-    pub struct_compiler: StructCompiler,
-    pub delegate: IFunctionCompilerDelegate,
+    pub templata_compiler: TemplataCompiler<'s, 't>,
+    pub convert_helper: ConvertHelper<'s, 't>,
+    pub struct_compiler: StructCompiler<'s, 't>,
+    pub delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
 }
 
 // mig: impl FunctionCompilerMiddleLayer
-impl FunctionCompilerMiddleLayer {}
+impl<'s, 'ctx, 't> FunctionCompilerMiddleLayer<'s, 'ctx, 't> {}
 /*
 class FunctionCompilerMiddleLayer(
     opts: TypingPassOptions,

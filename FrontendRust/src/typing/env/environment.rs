@@ -23,7 +23,7 @@ import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
 // mig: trait IEnvironmentT
-pub trait IEnvironmentT {}
+pub trait IEnvironmentT<'s, 't> {}
 /*
 trait IEnvironmentT {
   override def toString: String = {
@@ -96,7 +96,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 }
 */
 // mig: trait IInDenizenEnvironmentT
-pub trait IInDenizenEnvironmentT {}
+pub trait IInDenizenEnvironmentT<'s, 't> {}
 /*
 trait IInDenizenEnvironmentT extends IEnvironmentT {
   // This is the denizen that we're currently compiling.
@@ -108,7 +108,7 @@ trait IInDenizenEnvironmentT extends IEnvironmentT {
 }
 */
 // mig: trait IDenizenEnvironmentBoxT
-pub trait IDenizenEnvironmentBoxT {}
+pub trait IDenizenEnvironmentBoxT<'s, 't> {}
 /*
 trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
   def snapshot: IInDenizenEnvironmentT
@@ -131,7 +131,8 @@ case object TemplataLookupContext extends ILookupContext
 case object ExpressionLookupContext extends ILookupContext
 */
 // mig: struct GlobalEnvironment
-pub struct GlobalEnvironment;
+pub struct GlobalEnvironment<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 /*
 case class GlobalEnvironment(
   functorHelper: FunctorHelper,
@@ -290,9 +291,10 @@ fn code_locations_match() {
 }
 */
 // mig: struct TemplatasStore
-pub struct TemplatasStore;
+pub struct TemplatasStore<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl TemplatasStore
-impl TemplatasStore {}
+impl<'s, 't> TemplatasStore<'s, 't> {}
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
 case class TemplatasStore(
@@ -434,9 +436,10 @@ object PackageEnvironmentT {
 }
 */
 // mig: struct PackageEnvironmentT
-pub struct PackageEnvironmentT;
+pub struct PackageEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl PackageEnvironmentT
-impl PackageEnvironmentT {}
+impl<'s, 't> PackageEnvironmentT<'s, 't> {}
 /*
 case class PackageEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
@@ -498,9 +501,10 @@ override def hashCode(): Int = hash;
 }
 */
 // mig: struct CitizenEnvironmentT
-pub struct CitizenEnvironmentT;
+pub struct CitizenEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl CitizenEnvironmentT
-impl CitizenEnvironmentT {}
+impl<'s, 't> CitizenEnvironmentT<'s, 't> {}
 /*
 case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   globalEnv: GlobalEnvironment,
@@ -596,9 +600,10 @@ object GeneralEnvironmentT {
 }
 */
 // mig: struct ExportEnvironmentT
-pub struct ExportEnvironmentT;
+pub struct ExportEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ExportEnvironmentT
-impl ExportEnvironmentT {}
+impl<'s, 't> ExportEnvironmentT<'s, 't> {}
 /*
 case class ExportEnvironmentT(
     globalEnv: GlobalEnvironment,
@@ -632,9 +637,10 @@ case class ExportEnvironmentT(
 }
 */
 // mig: struct ExternEnvironmentT
-pub struct ExternEnvironmentT;
+pub struct ExternEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl ExternEnvironmentT
-impl ExternEnvironmentT {}
+impl<'s, 't> ExternEnvironmentT<'s, 't> {}
 /*
 case class ExternEnvironmentT(
     globalEnv: GlobalEnvironment,
@@ -668,9 +674,10 @@ case class ExternEnvironmentT(
 }
 */
 // mig: struct GeneralEnvironmentT
-pub struct GeneralEnvironmentT;
+pub struct GeneralEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl GeneralEnvironmentT
-impl GeneralEnvironmentT {}
+impl<'s, 't> GeneralEnvironmentT<'s, 't> {}
 /*
 case class GeneralEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,

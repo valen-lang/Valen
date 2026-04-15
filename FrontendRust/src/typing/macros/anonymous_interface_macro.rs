@@ -30,9 +30,10 @@ import scala.collection.mutable
 
 */
 // mig: struct AnonymousInterfaceMacro
-pub struct AnonymousInterfaceMacro;
+pub struct AnonymousInterfaceMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl AnonymousInterfaceMacro
-impl AnonymousInterfaceMacro {}
+impl<'s, 'ctx, 't> AnonymousInterfaceMacro<'s, 'ctx, 't> {}
 /*
 class AnonymousInterfaceMacro(
     opts: TypingPassOptions,

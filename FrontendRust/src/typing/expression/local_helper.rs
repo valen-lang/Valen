@@ -22,10 +22,11 @@ import dev.vale.typing.names.TypingPassTemporaryVarNameT
 
 import scala.collection.immutable.List
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct LocalHelper
-pub struct LocalHelper;
+pub struct LocalHelper<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl LocalHelper
-impl LocalHelper {}
+impl<'s, 'ctx, 't> LocalHelper<'s, 'ctx, 't> {}
 /*
 class LocalHelper(
     opts: TypingPassOptions,

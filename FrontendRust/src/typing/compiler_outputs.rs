@@ -35,11 +35,11 @@ case class DeferredEvaluatingFunction(
   name: IdT[INameT],
   call: (CompilerOutputs) => Unit)
 */
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct CompilerOutputs
-pub struct CompilerOutputs {
-}
+pub struct CompilerOutputs<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl CompilerOutputs
-impl CompilerOutputs {
+impl<'s, 't> CompilerOutputs<'s, 't> {
 }
 /*
 case class CompilerOutputs() {

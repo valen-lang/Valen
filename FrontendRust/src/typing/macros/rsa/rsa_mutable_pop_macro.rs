@@ -19,13 +19,13 @@ import dev.vale.typing.types._
 import dev.vale.typing.ast
 */
 // mig: struct RSAMutablePopMacro
-pub struct RSAMutablePopMacro<'p, 's> {
-    pub interner: &'p Interner<'p>,
-    pub keywords: &'p Keywords<'p>,
-    pub generator_id: StrI<'p>,
+pub struct RSAMutablePopMacro<'s, 'ctx, 't> {
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub generator_id: StrI<'s>,
 }
 // mig: impl RSAMutablePopMacro
-impl<'p, 's> RSAMutablePopMacro<'p, 's> {}
+impl<'s, 'ctx, 't> RSAMutablePopMacro<'s, 'ctx, 't> {}
 /*
 class RSAMutablePopMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_pop

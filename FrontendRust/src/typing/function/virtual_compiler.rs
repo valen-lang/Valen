@@ -16,13 +16,13 @@ import dev.vale.Err
 import scala.collection.immutable.List
 */
 // mig: struct VirtualCompiler
-pub struct VirtualCompiler {
+pub struct VirtualCompiler<'s, 'ctx, 't> {
     opts: TypingPassOptions,
-    interner: Interner,
-    overload_compiler: OverloadResolver,
+    interner: &'ctx Interner,
+    overload_compiler: OverloadResolver<'s, 't>,
 }
 // mig: impl VirtualCompiler
-impl VirtualCompiler {}
+impl<'s, 'ctx, 't> VirtualCompiler<'s, 'ctx, 't> {}
 /*
 class VirtualCompiler(opts: TypingPassOptions, interner: Interner, overloadCompiler: OverloadResolver) {
 //  // See Virtuals doc for this function's purpose.

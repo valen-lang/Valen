@@ -17,7 +17,7 @@ import dev.vale.typing.templata.ITemplataT
 import dev.vale.typing.types.InterfaceTT
 */
 // mig: trait IFunctionBodyMacro
-pub trait IFunctionBodyMacro {}
+pub trait IFunctionBodyMacro<'s, 't> {}
 /*
 trait IFunctionBodyMacro {
 //  def generatorId: String
@@ -36,7 +36,7 @@ trait IFunctionBodyMacro {
 }
 */
 // mig: trait IOnStructDefinedMacro
-pub trait IOnStructDefinedMacro {}
+pub trait IOnStructDefinedMacro<'s, 't> {}
 /*
 trait IOnStructDefinedMacro {
   def getStructSiblingEntries(
@@ -45,7 +45,7 @@ trait IOnStructDefinedMacro {
 }
 */
 // mig: trait IOnInterfaceDefinedMacro
-pub trait IOnInterfaceDefinedMacro {}
+pub trait IOnInterfaceDefinedMacro<'s, 't> {}
 /*
 trait IOnInterfaceDefinedMacro {
   def getInterfaceSiblingEntries(
@@ -54,7 +54,7 @@ trait IOnInterfaceDefinedMacro {
 }
 */
 // mig: trait IOnImplDefinedMacro
-pub trait IOnImplDefinedMacro {}
+pub trait IOnImplDefinedMacro<'s, 't> {}
 /*
 trait IOnImplDefinedMacro {
   def getImplSiblingEntries(implName: IdT[INameT], implA: ImplA):

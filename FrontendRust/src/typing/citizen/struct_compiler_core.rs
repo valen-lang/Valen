@@ -34,10 +34,11 @@ class StructCompilerCore(
   delegate: IStructCompilerDelegate) {
 */
 // mig: struct StructCompilerCore
-pub struct StructCompilerCore;
+pub struct StructCompilerCore<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 
+// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl StructCompilerCore
-impl StructCompilerCore {}
+impl<'s, 'ctx, 't> StructCompilerCore<'s, 'ctx, 't> {}
 /*
 */
 // mig: fn compile_struct

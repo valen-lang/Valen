@@ -22,15 +22,15 @@ import dev.vale.typing.ast
 import dev.vale.typing.function.DestructorCompiler
 */
 // mig: struct AsSubtypeMacro
-pub struct AsSubtypeMacro<'p> {
-    pub keywords: &'p Keywords<'p>,
-    pub impl_compiler: ImplCompiler,
-    pub expression_compiler: ExpressionCompiler,
-    pub destructor_compiler: DestructorCompiler,
+pub struct AsSubtypeMacro<'s, 'ctx, 't> {
+    pub keywords: &'ctx Keywords<'s>,
+    pub impl_compiler: ImplCompiler<'s, 't>,
+    pub expression_compiler: ExpressionCompiler<'s, 't>,
+    pub destructor_compiler: DestructorCompiler<'s, 't>,
 }
 
 // mig: impl AsSubtypeMacro
-impl<'p> AsSubtypeMacro<'p> {
+impl<'s, 'ctx, 't> AsSubtypeMacro<'s, 'ctx, 't> {
 }
 /*
 class AsSubtypeMacro(
