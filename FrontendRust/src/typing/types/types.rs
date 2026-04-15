@@ -115,10 +115,11 @@ pub struct RegionT;
 case class RegionT()
 */
 // mig: struct CoordT
-pub struct CoordT {
+#[derive(Copy, Clone)]
+pub struct CoordT<'s, 't> {
   pub ownership: OwnershipT,
   pub region: RegionT,
-  pub kind: KindT,
+  pub kind: KindT<'s, 't>,
 }
 /*
 case class CoordT(
@@ -143,7 +144,10 @@ case class CoordT(
 }
 */
 // mig: enum KindT
-pub enum KindT {}
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub enum KindT<'s, 't> {
+  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait KindT {
   // Note, we don't have a mutability: Mutability in here because this Kind
@@ -252,8 +256,8 @@ object contentsStaticSizedArrayTT {
 }
 */
 // mig: struct StaticSizedArrayTT
-pub struct StaticSizedArrayTT {
-  pub name: IdT,
+pub struct StaticSizedArrayTT<'s, 't> {
+  pub name: IdT<'s, 't>,
 }
 /*
 case class StaticSizedArrayTT(
@@ -281,8 +285,8 @@ object contentsRuntimeSizedArrayTT {
 }
 */
 // mig: struct RuntimeSizedArrayTT
-pub struct RuntimeSizedArrayTT {
-  pub name: IdT,
+pub struct RuntimeSizedArrayTT<'s, 't> {
+  pub name: IdT<'s, 't>,
 }
 /*
 case class RuntimeSizedArrayTT(
@@ -305,7 +309,10 @@ object ICitizenTT {
 }
 */
 // mig: enum ISubKindTT
-pub enum ISubKindTT {}
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub enum ISubKindTT<'s, 't> {
+  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 // Structs, interfaces, and placeholders
 sealed trait ISubKindTT extends KindT {
@@ -313,7 +320,10 @@ sealed trait ISubKindTT extends KindT {
 }
 */
 // mig: enum ISuperKindTT
-pub enum ISuperKindTT {}
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub enum ISuperKindTT<'s, 't> {
+  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 // Interfaces and placeholders
 sealed trait ISuperKindTT extends KindT {
@@ -321,15 +331,18 @@ sealed trait ISuperKindTT extends KindT {
 }
 */
 // mig: enum ICitizenTT
-pub enum ICitizenTT {}
+// TODO: placeholder PhantomData — replace with real fields during body migration
+pub enum ICitizenTT<'s, 't> {
+  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait ICitizenTT extends ISubKindTT with IInterning {
   def id: IdT[ICitizenNameT]
 }
 */
 // mig: struct StructTT
-pub struct StructTT {
-  pub id: IdT,
+pub struct StructTT<'s, 't> {
+  pub id: IdT<'s, 't>,
 }
 /*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
@@ -342,8 +355,8 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
 }
 */
 // mig: struct InterfaceTT
-pub struct InterfaceTT {
-  pub id: IdT,
+pub struct InterfaceTT<'s, 't> {
+  pub id: IdT<'s, 't>,
 }
 /*
 case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperKindTT {
@@ -355,9 +368,9 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
 }
 */
 // mig: struct OverloadSetT
-pub struct OverloadSetT {
-  pub env: IInDenizenEnvironmentT,
-  pub name: IImpreciseNameS,
+pub struct OverloadSetT<'s, 't> {
+  pub env: &'s IInDenizenEnvironmentT<'s, 't>,
+  pub name: &'s IImpreciseNameS<'s>,
 }
 /*
 // Represents a bunch of functions that have the same name.
@@ -374,8 +387,8 @@ case class OverloadSetT(
 }
 */
 // mig: struct KindPlaceholderT
-pub struct KindPlaceholderT {
-  pub id: IdT,
+pub struct KindPlaceholderT<'s, 't> {
+  pub id: IdT<'s, 't>,
 }
 /*
 // At some point it'd be nice to make Coord.kind into a templata so we can directly have a
