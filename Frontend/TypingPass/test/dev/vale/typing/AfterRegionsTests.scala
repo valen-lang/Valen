@@ -358,15 +358,14 @@ class AfterRegionsTests extends FunSuite with Matchers {
   test("Bound-driven return rune cannot be inferred from lambda (MSAE general)") {
     val compile = CompilerTestCompilation.test(
       """
-        |import v.builtins.drop.*;
-        |
-        |func callAndReturn<E, G>(g G) E
-        |where func(&G)E, func drop(G)void {
+        |func callAndReturn<E, G>(g &G) E
+        |where func(&G)E {
         |  return g();
         |}
         |
         |exported func main() int {
-        |  return callAndReturn({ 7 });
+        |  f = { 7 };
+        |  return callAndReturn(&f);
         |}
         |""".stripMargin)
     // Should succeed with E inferred as int from the lambda's return type.
