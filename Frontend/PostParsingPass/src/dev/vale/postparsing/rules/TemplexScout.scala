@@ -10,6 +10,9 @@ import dev.vale.postparsing._
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+// Per @ECSIIOSZ, each call-site's templex tree (`Some<T>`, `&E`, `Array<imm, int>`, etc.) is
+// lowered here into a flat rule vector that later becomes the input to a per-call-site
+// solver instance.
 class TemplexScout(
     interner: Interner,
   keywords: Keywords) {

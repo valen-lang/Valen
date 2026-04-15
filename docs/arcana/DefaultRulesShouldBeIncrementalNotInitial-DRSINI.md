@@ -5,6 +5,9 @@ must not be in the solver's initial rule set. They are added incrementally — o
 that remain unsolved after argument inference — via the `solveForResolving` and
 `evaluateGenericFunctionFromCallForPrototype` incremental callbacks.
 
+Per @ECSIIOSZ, this is part of the per-call-site setup contract: defaults are added to the
+call-site's individual solver instance, not baked into the shared rule vector.
+
 ## Why
 
 The postparser hoists an `EqualsSR(H, _211)` into the parent type's main rules, connecting

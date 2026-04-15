@@ -92,16 +92,32 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
+    // We preprocess out the rune parent env lookups, see MKRFA.
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
+
     val CompleteResolveSolve(templatas, _) =
       inferCompiler.solveForResolving(
         InferEnv(callingEnv, parentRanges, callLocation, callingEnv, region),
         coutputs,
-        rulesA,
+        rulesWithoutRuneParentEnvLookups,
         runeAToType.toMap,
         parentRanges,
         callLocation,
         Vector(),
-        Vector(),
+        initialKnowns,
         Vector()) match {
         case Err(e) => throw CompileErrorExceptionT(TypingPassResolvingError(parentRanges, e))
         case Ok(c) => c
@@ -173,17 +189,28 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
-    // Elsewhere we do some incremental solving to fill in default generic param values like the
-    // context region, but here I think we can just feed it in directly. There's syntactically no
-    // way for the user to hand it in as a generic param.
-    val initialKnowns = Vector()
+    // We preprocess out the rune parent env lookups, see MKRFA.
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
 
 //    val CompleteCompilerSolve(_, templatas, _, Vector()) =
 //      inferCompiler.solveExpectComplete(
 //        InferEnv(callingEnv, parentRanges, callLocation, callingEnv, region),
 //        coutputs, rulesA, runeAToType.toMap, parentRanges,
 //        callLocation, initialKnowns, Vector(), true, true, Vector())
-    val rules = rulesA
+    val rules = rulesWithoutRuneParentEnvLookups
     val runeToType = runeAToType.toMap
     val invocationRange = parentRanges
     val initialSends = Vector()
@@ -366,14 +393,28 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
-    val initialKnowns = Vector()
+    // We preprocess out the rune parent env lookups, see MKRFA.
+    val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
+      rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
+        case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
+          val templata =
+            vassertSome(
+              callingEnv.lookupNearestWithImpreciseName(
+                interner.intern(RuneNameS(rune.rune)), Set(TemplataLookupContext)))
+          val newConclusions = previousConclusions :+ InitialKnown(rune, templata)
+          (newConclusions, remainingRules)
+        }
+        case ((previousConclusions, remainingRules), rule) => {
+          (previousConclusions, remainingRules :+ rule)
+        }
+      })
 
 //    val CompleteCompilerSolve(_, templatas, _, Vector()) =
 //      inferCompiler.solveExpectComplete(
 //        envs,
 //        coutputs, rulesA, runeAToType.toMap, parentRanges,
 //        callLocation, initialKnowns, Vector(), true, true, Vector())
-    val rules = rulesA
+    val rules = rulesWithoutRuneParentEnvLookups
     val runeToType = runeAToType.toMap
     val invocationRange = parentRanges
     val initialSends = Vector()

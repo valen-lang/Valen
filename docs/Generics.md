@@ -435,18 +435,9 @@ So, we need to recall the abstract function's inner environment when we do that 
 
 ## Must Know Runes From Above (MKRFA)
 
-When we start evaluating a function or struct or something, we don't know the values of its runes.
+We often think that runes are unknowns. That's not always true.
 
-For example:
-
-```
-fn add<T>(list &List<T>, elem T) { ... }
-```
-
-we don't know the value of T, we're figuring it out now.
-
-One would think that whenever we see a CodeRuneS("T"), it's an
-unknown.
+When a call-site inside a function body textually references a rune by name (e.g. `Some<T>(x)`), and that rune was declared by the enclosing function's template, the inner solve shouldn't treat it as a fresh unknown, it's already bound by the enclosing scope.
 
 **Case 1: Manually Specifying a Rune**
 
@@ -454,13 +445,13 @@ If we have this function:
 
 ```
 fn moo<T>(x T) Some<T> {
-  Some<T>(x)
+  Some<T>(x)   // <-- this call-site needs T's value, which came from moo's caller
 }
 ```
 
-We need to look up that T from the environment.
+At the inner `Some<T>(x)` call-site, the solver needs `T`. But `T` isn't something that inner solve infers, it's already supplied by moo's enclosing environment. Somehow the inner solve needs to inherit it. That's what MKRFA is about.
 
-For that reason, Scout's IEnvironment will track which runes are currently known.
+For MKRFA to work, Scout's IEnvironment will track which runes are currently known.
 
 **Case 2: Runes from Parent**
 
@@ -480,6 +471,8 @@ the first argument. So they can be regular runes.
 The PostParser will keep track of what runes are defined in parent environments. When it encounters one, it'll know it's a rune, and add a RuneParentEnvLookupSR rule for it. For Case 1, we'll just leave it in. For Case 2, we'll immediately strip it out.
 
 When compiling an expression (like case 1) we'll preprocess the RuneParentEnvLookupSR rule out, to populate its value from the environment.
+
+This preprocessing is part of the per-call-site setup contract described by @ECSIIOSZ — every site that instantiates a solver (OverloadResolver, ArrayCompiler, ImplCompiler, etc.) has to do it individually, because the solver's own RuneParentEnvLookupSR handler is a no-op.
 
 
 # Can't Get All Descendants Of Interface (CGADOI)

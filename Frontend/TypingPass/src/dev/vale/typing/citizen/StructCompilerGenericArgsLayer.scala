@@ -46,6 +46,9 @@ class StructCompilerGenericArgsLayer(
       //   vassert(templateArgs.size == structA.genericParameters.size)
       // because we have default generic arguments now.
 
+      // Per @ECSIIOSZ, this sets up a per-call-site solver for resolving Foo<X>-style struct
+      // instantiations; explicit template args become InitialKnowns, assembleCallSiteRules
+      // handles SROACSD filtering, and solveForResolving applies DRSINI defaults incrementally.
       val initialKnowns =
         structA.genericParameters.zip(templateArgs).map({ case (genericParam, templateArg) =>
           InitialKnown(RuneUsage(callRange.head, genericParam.rune.rune), templateArg)

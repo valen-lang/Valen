@@ -205,6 +205,9 @@ class FunctionCompilerSolvingLayer(
       case _ =>
     }
 
+    // Per @ECSIIOSZ, this is the per-call-site solver for function call resolution: argument
+    // types become InitialSends, explicit template args become InitialKnowns, and
+    // assembleCallSiteRules filters per SROACSD.
     val callSiteRules =
       TemplataCompiler.assembleCallSiteRules(function.rules)
 

@@ -84,6 +84,8 @@ class ImplCompiler(
     // to evaluate an override.
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
+    // Per @ECSIIOSZ, this is a per-call-site solver instantiation for impl resolution;
+    // initialKnowns come from the caller via solveImplForCall's preprocessing.
     val solver =
       inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())

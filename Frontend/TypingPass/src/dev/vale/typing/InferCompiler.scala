@@ -229,6 +229,9 @@ class InferCompiler(
   }
 
 
+  // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
+  // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
+  // filtering, CSSNCE env threading, DRSINI incremental defaults).
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,

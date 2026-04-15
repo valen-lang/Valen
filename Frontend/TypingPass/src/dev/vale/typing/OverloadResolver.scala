@@ -321,7 +321,9 @@ class OverloadResolver(
               }
               val rulesWithoutImplicitCoercionsA = ruleBuilder.toVector
 
-              // We preprocess out the rune parent env lookups, see MKRFA.
+              // We preprocess out the rune parent env lookups, see MKRFA. Per @ECSIIOSZ, this is
+              // the canonical per-call-site setup; other call-site solvers (ArrayCompiler etc.)
+              // should mirror this shape before calling makeSolver/solveForResolving.
               val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
                 rulesWithoutImplicitCoercionsA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
                   case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
