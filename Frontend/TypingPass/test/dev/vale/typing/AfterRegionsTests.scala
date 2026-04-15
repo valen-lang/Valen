@@ -343,6 +343,37 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin).expectCompilerOutputs()
   }
 
+  // Same root cause as "Make array without type" and "Call Array<> without element type"
+  // (see docs/Generics.md MSAE section) but with no arrays involved. The generic
+  // function `callAndReturn` has a bound `func(&G)E` where E is an identifying
+  // generic rune appearing only in the bound's return position. The caller supplies
+  // a lambda for G but does not (and syntactically cannot) write E. For E to be
+  // solved, the compiler has to resolve `__call(&closure)` and take its return type.
+  // The current solver has no rule-shape that does "given name + known params,
+  // look up the function and discover its return" — `CallSiteFuncSR` requires the
+  // prototype already known, `ResolveSR` requires the return already known. So E
+  // stalls and overload resolution rejects the only matching candidate. This is
+  // the same stall as in arrays.vale:51's `Array<M imm, E Ref imm, G>(n int, generator &G)`,
+  // just without the array-specific `#[]` syntax distracting from the mechanism.
+  test("Bound-driven return rune cannot be inferred from lambda (MSAE general)") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |import v.builtins.drop.*;
+        |
+        |func callAndReturn<E, G>(g G) E
+        |where func(&G)E, func drop(G)void {
+        |  return g();
+        |}
+        |
+        |exported func main() int {
+        |  return callAndReturn({ 7 });
+        |}
+        |""".stripMargin)
+    // Should succeed with E inferred as int from the lambda's return type.
+    // Currently fails: solver cannot solve identifying rune E.
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
   // Depends on IFunction1, and maybe Generic interface anonymous subclass
   test("Basic IFunction1 anonymous subclass") {
     val compile = CompilerTestCompilation.test(
