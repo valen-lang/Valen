@@ -183,17 +183,17 @@ fn make_implicit_drop_function(
 
 */
 // mig: fn generate_function_body
-fn generate_function_body(
-  env: &'p FunctionEnvironmentT<'p, 's>,
-  coutputs: &'p mut CompilerOutputs<'p, 's>,
-  generator_id: StrI<'p>,
-  life: LocationInFunctionEnvironmentT,
+fn generate_function_body<'s, 't>(
+  env: &FunctionEnvironmentT<'s, 't>,
+  coutputs: &mut CompilerOutputs<'s, 't>,
+  generator_id: StrI<'s>,
+  life: LocationInFunctionEnvironmentT<'s>,
   call_range: Vec<RangeS<'s>>,
   call_location: LocationInDenizen<'s>,
-  origin_function1: Option<&'s FunctionA<'p, 's>>,
-  params2: Vec<ParameterT<'p, 's>>,
-  maybe_ret_coord: Option<CoordT<'p, 's>>,
-) -> (FunctionHeaderT<'p, 's>, ReferenceExpressionTE<'p, 's>) {
+  origin_function1: Option<&'s FunctionA<'s>>,
+  params2: Vec<ParameterT<'s, 't>>,
+  maybe_ret_coord: Option<CoordT<'s, 't>>,
+) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
   panic!("Unimplemented: generate_function_body");
 }
 /*

@@ -139,18 +139,18 @@ pub fn get_struct_sibling_entries<'p, 's>(
 
 */
 // mig: fn generate_function_body
-pub fn generate_function_body<'p, 's>(
+pub fn generate_function_body<'s, 't>(
   &self,
-  env: FunctionEnvironmentT,
-  coutputs: CompilerOutputs,
-  generator_id: StrI<'p>,
-  life: LocationInFunctionEnvironmentT,
-  call_range: Vec<RangeS<'p>>,
-  call_location: LocationInDenizen<'p>,
+  env: FunctionEnvironmentT<'s, 't>,
+  coutputs: CompilerOutputs<'s, 't>,
+  generator_id: StrI<'s>,
+  life: LocationInFunctionEnvironmentT<'s>,
+  call_range: Vec<RangeS<'s>>,
+  call_location: LocationInDenizen<'s>,
   origin_function: Option<FunctionA<'s>>,
-  param_coords: Vec<ParameterT>,
-  maybe_ret_coord: Option<CoordT>,
-) -> (FunctionHeaderT, ReferenceExpressionTE) {
+  param_coords: Vec<ParameterT<'s, 't>>,
+  maybe_ret_coord: Option<CoordT<'s, 't>>,
+) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
   panic!("Unimplemented: generate_function_body");
 }
 

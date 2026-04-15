@@ -28,12 +28,12 @@ class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver
   val generatorId: StrI = keywords.abstractBody
 */
 // mig: fn generate_function_body
-fn generate_function_body(
+fn generate_function_body<'s, 't>(
     env: &'s (),
     coutputs: &'s (),
-    generator_id: StrI<'p>,
+    generator_id: StrI<'s>,
     life: &'s (),
-    call_range: &'s [RangeS<'p>],
+    call_range: &'s [RangeS<'s>],
     call_location: &'s (),
     origin_function: Option<&'s ()>,
     params2: &'s [()],

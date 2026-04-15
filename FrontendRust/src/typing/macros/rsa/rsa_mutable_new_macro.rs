@@ -42,18 +42,18 @@ class RSAMutableNewMacro(
 
 */
 // mig: fn generate_function_body
-pub fn generate_function_body(
+pub fn generate_function_body<'s, 't>(
     &self,
-    env: &FunctionEnvironmentT<'p, 's>,
-    coutputs: &mut CompilerOutputs<'p, 's>,
-    generator_id: StrI<'p>,
-    life: LocationInFunctionEnvironmentT<'p, 's>,
-    call_range: &[RangeS<'p>],
-    call_location: LocationInDenizen<'p>,
-    origin_function: Option<&FunctionA<'p>>,
-    param_coords: &[ParameterT<'p, 's>],
-    maybe_ret_coord: Option<CoordT<'p, 's>>,
-) -> (FunctionHeaderT<'p, 's>, ReferenceExpressionTE<'p, 's>) {
+    env: &FunctionEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    generator_id: StrI<'s>,
+    life: LocationInFunctionEnvironmentT<'s>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    origin_function: Option<&FunctionA<'s>>,
+    param_coords: &[ParameterT<'s, 't>],
+    maybe_ret_coord: Option<CoordT<'s, 't>>,
+) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
     panic!("Unimplemented: generate_function_body");
 }
 /*
