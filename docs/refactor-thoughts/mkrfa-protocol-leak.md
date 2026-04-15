@@ -1,5 +1,51 @@
 # Solver Refactor Thoughts: The MKRFA Protocol Leak
 
+## ⚠ URGENCY: RECURRING PATTERN WITH NO ENFORCEMENT — REFACTOR SOON
+
+**Status as of April 2026:** MKRFA is a **prose-enforced contract** between
+phases. There is no compile-time, runtime, or type-level mechanism preventing
+a new caller from violating it. The value solver's
+`RuneParentEnvLookupSR` handler is a silent no-op, so violations manifest as
+unrelated downstream "couldn't solve some runes" errors rather than clear
+faults at the point of the missed preprocessing.
+
+**Known violations discovered so far:**
+- `ArrayCompiler.evaluateRuntimeSizedArrayFromCallable` — fixed April 2026
+- `ArrayCompiler.evaluateStaticSizedArrayFromValues` — fixed April 2026
+- `ArrayCompiler.evaluateStaticSizedArrayFromCallable` — fixed April 2026
+
+All three sat in a single file, next to each other, for ~4 years without
+symptoms because the underlying category-G AfterRegions tests that exercise
+them were already failing for other reasons. The MKRFA missings only became
+visible once the test suite began to advance past the earlier failures.
+
+**Near-term risk:** every new expression-compilation site that spawns its own
+solver is a candidate to repeat this bug. Active/upcoming work that could
+introduce a violation includes:
+- Any new templex or expression handler in `ExpressionCompiler` or related
+  compilers that builds a nested rule set from postparser output.
+- Category-G and category-H fixes that touch `ArrayCompiler` or add sibling
+  expression compilers for other kinds (tuples, structs, lambdas…).
+- Any refactor that introduces a new `inferCompiler.makeSolver` /
+  `solveForResolving` call site.
+
+**Minimum next action (cheap and safe):** adopt **suggestion 2** below —
+extract the MKRFA fold from `OverloadResolver.scala:311-325` into a shared
+`InferCompiler.preprocessRuneParentEnvLookups(rules, callingEnv)` helper.
+Four call sites drop to one-liners; the contract becomes trivial to honor.
+
+**Strongly recommended second step:** adopt **suggestion 1** — replace the
+no-op handler in `CompilerSolver.scala:852` with a `vwat(...)` that names
+MKRFA and points at the helper. Any future caller that forgets preprocessing
+crashes immediately with a clear message rather than producing the
+impossible-to-diagnose "unsolved runes" failure this document traces through.
+
+Together, those two changes eliminate the recurring-bug class at negligible
+cost. They should be done the next time someone is already editing
+`CompilerSolver.scala` or `InferCompiler.scala`.
+
+---
+
 **Author context:** Written while investigating the failing `Borrowing toArray`
 AfterRegions integration test in April 2026. The investigation is captured in
 `investigations/borrowing_to_array.md` and discussed in the Category G solver
@@ -7,11 +53,12 @@ notes in `handoff.md` / `quest.md`. These thoughts are an after-the-fact
 reflection on what the bug hunt revealed about the *architecture*, not the bug
 itself.
 
-This document is **not a proposal to do any of these refactors now.** Most of
-them are scope-expanding and would touch files across the TypingPass and
-PostParsingPass. It's a capture of structural smells so that whoever next
-touches the solver plumbing has a head start on the "why" — and so the ideas
-don't evaporate back into tribal knowledge.
+This document is **not a proposal to do the deeper refactors (suggestions
+4-6) now.** Those are scope-expanding and would touch files across the
+TypingPass and PostParsingPass. It's a capture of structural smells so that
+whoever next touches the solver plumbing has a head start on the "why" — and
+so the ideas don't evaporate back into tribal knowledge. But suggestions 1
+and 2 should be treated as near-term follow-ups, not aspirations.
 
 ---
 

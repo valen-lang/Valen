@@ -92,7 +92,10 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
-    // We preprocess out the rune parent env lookups, see MKRFA.
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
     val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
       rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
         case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
@@ -189,7 +192,10 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
-    // We preprocess out the rune parent env lookups, see MKRFA.
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
     val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
       rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
         case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {
@@ -393,7 +399,10 @@ class ArrayCompiler(
     }
     val rulesA = ruleBuilder.toVector
 
-    // We preprocess out the rune parent env lookups, see MKRFA.
+    // We preprocess out the rune parent env lookups, see MKRFA. The fold here is duplicated
+    // from OverloadResolver.scala:311-325; when adding a new expression-scoped solver call
+    // site, copy this again (or, preferably, land the shared helper refactor queued in
+    // docs/refactor-thoughts/mkrfa-protocol-leak.md so neither copy is needed).
     val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
       rulesA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
         case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {

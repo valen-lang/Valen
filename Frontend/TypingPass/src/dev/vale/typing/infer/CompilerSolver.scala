@@ -853,11 +853,11 @@ object CompilerRuleSolver {
         solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(rune.rune -> result), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
       }
       case RuneParentEnvLookupSR(range, rune) => {
-        // This rule does nothing, it was actually preprocessed. Per @ECSIIOSZ, the per-call-site
-        // setup code (e.g. OverloadResolver.findFunction) is responsible for converting MKRFA
-        // rules to InitialKnowns before the solver runs; if it didn't, this no-op silently
-        // drops the rune on the floor and downstream rules will starve.
-        solverState.commitStep[ITypingPassSolverError](false, Vector(ruleIndex), Map(), Vector()) match { case Ok(_) => Ok(()) case Err(e) => Err(InternalSolverError(range :: env.parentRanges, e)) }
+        // This rule should never reach the solver — callers are required to preprocess
+        // it out (look up the rune in callingEnv, emit an InitialKnown, strip the rule).
+        // Canonical preprocessing fold: OverloadResolver.scala:311-325. See MKRFA /
+        // docs/refactor-thoughts/mkrfa-protocol-leak.md for the full contract.
+        vwat(rune)
       }
       case AugmentSR(range, outerCoordRune, maybeAugmentOwnership, innerRune) => {
         solverState.getConclusion(outerCoordRune.rune) match {

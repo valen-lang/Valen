@@ -474,6 +474,8 @@ When compiling an expression (like case 1) we'll preprocess the RuneParentEnvLoo
 
 This preprocessing is part of the per-call-site setup contract described by @ECSIIOSZ — every site that instantiates a solver (OverloadResolver, ArrayCompiler, ImplCompiler, etc.) has to do it individually, because the solver's own RuneParentEnvLookupSR handler is a no-op.
 
+**⚠ Known architectural smell — refactor soon.** MKRFA is a **recurring-bug pattern with no enforcement.** The contract lives in prose comments cross-referencing the "MKRFA" tag, not in types, and the value solver's handler for `RuneParentEnvLookupSR` is a silent no-op that conceals violations. Three `ArrayCompiler` methods sat in violation for ~4 years before the symptom surfaced (April 2026, via the `Borrowing toArray` AfterRegions test). Any new expression-compilation site that spawns its own solver is at risk of repeating the bug. A near-term fix — extract the preprocessing fold from `OverloadResolver.scala:311-325` into an `InferCompiler` helper and replace the no-op handler with `vwat()` — is queued in `docs/refactor-thoughts/mkrfa-protocol-leak.md`. Prefer honoring the contract via that helper over writing a new inline fold at every future site.
+
 
 # Can't Get All Descendants Of Interface (CGADOI)
 

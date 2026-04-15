@@ -354,6 +354,10 @@ class FunctionCompilerSolvingLayer(
     val includeReachableBoundsForRunes =
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 
+    // No MKRFA preprocessing needed: `function.rules` is declaration-scoped (same solver as
+    // the function's own generic params), so the postparser never emits RuneParentEnvLookupSR
+    // into it. If this site ever starts consuming expression-level rules, MKRFA preprocessing
+    // MUST be added — see OverloadResolver.scala:311 and docs/refactor-thoughts/mkrfa-protocol-leak.md.
     val solver =
       inferCompiler.makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 

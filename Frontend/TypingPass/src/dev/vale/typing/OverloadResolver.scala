@@ -324,6 +324,13 @@ class OverloadResolver(
               // We preprocess out the rune parent env lookups, see MKRFA. Per @ECSIIOSZ, this is
               // the canonical per-call-site setup; other call-site solvers (ArrayCompiler etc.)
               // should mirror this shape before calling makeSolver/solveForResolving.
+              //
+              // ⚠ This fold is a recurring-bug pattern. MKRFA is unenforced; the value
+              // solver's RuneParentEnvLookupSR handler is a silent no-op, so forgetting to
+              // run this produces unrelated "couldn't solve" errors elsewhere. ArrayCompiler
+              // sat in violation for ~4 years until April 2026. When adding a new
+              // expression-scoped solver caller, either copy this fold verbatim OR (preferably)
+              // land the shared-helper refactor in docs/refactor-thoughts/mkrfa-protocol-leak.md.
               val (initialKnowns, rulesWithoutRuneParentEnvLookups) =
                 rulesWithoutImplicitCoercionsA.foldLeft((Vector[InitialKnown](), Vector[IRulexSR]()))({
                   case ((previousConclusions, remainingRules), RuneParentEnvLookupSR(_, rune)) => {

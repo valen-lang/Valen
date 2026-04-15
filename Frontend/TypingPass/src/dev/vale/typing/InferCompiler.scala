@@ -169,6 +169,10 @@ class InferCompiler(
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
   // Per @DRSINI, defaults are added incrementally for unsolved runes rather than eagerly.
+  //
+  // ⚠ Same MKRFA caller contract as makeSolver above. Expression-level `rules` must have
+  // RuneParentEnvLookupSR preprocessed into `initialKnowns` before this call (see
+  // OverloadResolver.scala:311-325). Unenforced; violations are silent.
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -232,6 +236,13 @@ class InferCompiler(
   // Per @ECSIIOSZ, each call-site in source is resolved by a fresh SimpleSolverState built here;
   // the caller is responsible for the per-call-site setup contract (MKRFA preprocessing, SROACSD
   // filtering, CSSNCE env threading, DRSINI incremental defaults).
+  // ⚠ CALLER CONTRACT: if `initialRules` come from an expression-level postparser output,
+  // they must have had RuneParentEnvLookupSR rules stripped into `initialKnowns` before
+  // being passed here (the MKRFA contract — see OverloadResolver.scala:311-325 for the
+  // canonical fold). This is NOT enforced at the type level; violations produce silent
+  // "couldn't solve" errors at dependent rules rather than faulting at the MKRFA rule.
+  // See docs/refactor-thoughts/mkrfa-protocol-leak.md for the queued enforcement work
+  // (extract shared helper + replace the no-op handler with vwat).
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
