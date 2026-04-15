@@ -1,3 +1,18 @@
+// mig: struct StructCompilerGenericArgsLayer
+pub struct StructCompilerGenericArgsLayer<'a> {
+    pub opts: &'a TypingPassOptions,
+    pub interner: &'a Interner,
+    pub keywords: &'a Keywords,
+    pub name_translator: &'a NameTranslator,
+    pub templata_compiler: &'a TemplataCompiler,
+    pub infer_compiler: &'a InferCompiler,
+    pub delegate: &'a dyn IStructCompilerDelegate,
+}
+
+// mig: impl StructCompilerGenericArgsLayer
+impl<'a> StructCompilerGenericArgsLayer<'a> {
+}
+
 /*
 package dev.vale.typing.citizen
 
@@ -30,7 +45,21 @@ class StructCompilerGenericArgsLayer(
     inferCompiler: InferCompiler,
     delegate: IStructCompilerDelegate) {
   val core = new StructCompilerCore(opts, interner, keywords, nameTranslator, delegate)
+*/
+// mig: fn resolve_struct
+pub fn resolve_struct(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    struct_templata: StructDefinitionTemplataT,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> IResolveOutcome<StructTT> {
+    panic!("Unimplemented: resolve_struct");
+}
 
+/*
   def resolveStruct(
     coutputs: CompilerOutputs,
     originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -104,6 +133,21 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn predict_interface
+pub fn predict_interface(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    interface_templata: InterfaceDefinitionTemplataT,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> InterfaceTT {
+    panic!("Unimplemented: predict_interface");
+}
+
+/*
   // See SFWPRL for how this is different from resolveInterface.
   def predictInterface(
     coutputs: CompilerOutputs,
@@ -171,6 +215,21 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn predict_struct
+pub fn predict_struct(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    struct_templata: StructDefinitionTemplataT,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> StructTT {
+    panic!("Unimplemented: predict_struct");
+}
+
+/*
   // See SFWPRL for how this is different from resolveStruct.
   def predictStruct(
     coutputs: CompilerOutputs,
@@ -240,6 +299,21 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn resolve_interface
+pub fn resolve_interface(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    interface_templata: InterfaceDefinitionTemplataT,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> IResolveOutcome<InterfaceTT> {
+    panic!("Unimplemented: resolve_interface");
+}
+
+/*
   def resolveInterface(
     coutputs: CompilerOutputs,
     originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -299,6 +373,19 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn compile_struct
+pub fn compile_struct(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    struct_templata: StructDefinitionTemplataT,
+) -> UncheckedDefiningConclusions {
+    panic!("Unimplemented: compile_struct");
+}
+
+/*
   def compileStruct(
     coutputs: CompilerOutputs,
     parentRanges: List[RangeS],
@@ -401,6 +488,19 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn compile_interface
+pub fn compile_interface(
+    &self,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    interface_templata: InterfaceDefinitionTemplataT,
+) -> UncheckedDefiningConclusions {
+    panic!("Unimplemented: compile_interface");
+}
+
+/*
   def compileInterface(
     coutputs: CompilerOutputs,
     parentRanges: List[RangeS],
@@ -496,6 +596,22 @@ class StructCompilerGenericArgsLayer(
     })
   }
 
+*/
+// mig: fn make_closure_understruct
+pub fn make_closure_understruct(
+    &self,
+    containing_function_env: &dyn NodeEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+    name: IFunctionDeclarationNameS,
+    function_s: &FunctionA,
+    members: &[NormalStructMemberT],
+) -> (StructTT, MutabilityT, FunctionTemplataT) {
+    panic!("Unimplemented: make_closure_understruct");
+}
+
+/*
   // Makes a struct to back a closure
   def makeClosureUnderstruct(
     containingFunctionEnv: NodeEnvironmentT,
@@ -510,6 +626,17 @@ class StructCompilerGenericArgsLayer(
       containingFunctionEnv, coutputs, parentRanges, callLocation, name, functionS, members)
   }
 
+*/
+// mig: fn assemble_struct_name
+pub fn assemble_struct_name(
+    &self,
+    template_name: IdT<IStructTemplateNameT>,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> IdT<IStructNameT> {
+    panic!("Unimplemented: assemble_struct_name");
+}
+
+/*
   def assembleStructName(
     templateName: IdT[IStructTemplateNameT],
     templateArgs: Vector[ITemplataT[ITemplataType]]):
@@ -518,6 +645,17 @@ class StructCompilerGenericArgsLayer(
       localName = templateName.localName.makeStructName(interner, templateArgs))
   }
 
+*/
+// mig: fn assemble_interface_name
+pub fn assemble_interface_name(
+    &self,
+    template_name: IdT<IInterfaceTemplateNameT>,
+    template_args: &[ITemplataT<ITemplataType>],
+) -> IdT<IInterfaceNameT> {
+    panic!("Unimplemented: assemble_interface_name");
+}
+
+/*
   def assembleInterfaceName(
     templateName: IdT[IInterfaceTemplateNameT],
     templateArgs: Vector[ITemplataT[ITemplataType]]):

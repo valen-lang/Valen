@@ -21,8 +21,10 @@ import dev.vale.typing.types.{InterfaceTT, KindPlaceholderT, StructTT}
 
 import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
-
-
+*/
+// mig: trait IEnvironmentT
+pub trait IEnvironmentT {}
+/*
 trait IEnvironmentT {
   override def toString: String = {
     "#Environment:" + id
@@ -92,7 +94,10 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 
   def id: IdT[INameT]
 }
-
+*/
+// mig: trait IInDenizenEnvironmentT
+pub trait IInDenizenEnvironmentT {}
+/*
 trait IInDenizenEnvironmentT extends IEnvironmentT {
   // This is the denizen that we're currently compiling.
   // If we're compiling a generic, it's the denizen that currently has placeholders defined.
@@ -101,7 +106,10 @@ trait IInDenizenEnvironmentT extends IEnvironmentT {
   def denizenId: IdT[INameT]
   def denizenTemplateId: IdT[ITemplateNameT]
 }
-
+*/
+// mig: trait IDenizenEnvironmentBoxT
+pub trait IDenizenEnvironmentBoxT {}
+/*
 trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
   def snapshot: IInDenizenEnvironmentT
   override def toString: String = {
@@ -111,11 +119,20 @@ trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
 
   def id: IdT[INameT]
 }
-
+*/
+// mig: enum ILookupContext
+pub enum ILookupContext {
+  TemplataLookupContext,
+  ExpressionLookupContext,
+}
+/*
 sealed trait ILookupContext
 case object TemplataLookupContext extends ILookupContext
 case object ExpressionLookupContext extends ILookupContext
-
+*/
+// mig: struct GlobalEnvironment
+pub struct GlobalEnvironment;
+/*
 case class GlobalEnvironment(
   functorHelper: FunctorHelper,
   structConstructorMacro: StructConstructorMacro,
@@ -138,7 +155,12 @@ case class GlobalEnvironment(
   // Primitives and other builtins
   builtins: TemplatasStore
 )
-
+*/
+// mig: fn entry_matches_filter
+fn entry_matches_filter() {
+  panic!("Unimplemented: entry_matches_filter");
+}
+/*
 object TemplatasStore {
   def entryMatchesFilter(entry: IEnvEntry, contexts: Set[ILookupContext]): Boolean = {
     entry match {
@@ -174,7 +196,12 @@ object TemplatasStore {
       }
     }
   }
-
+*/
+// mig: fn entry_to_templata
+fn entry_to_templata() {
+  panic!("Unimplemented: entry_to_templata");
+}
+/*
   def entryToTemplata(definingEnv: IEnvironmentT, entry: IEnvEntry): ITemplataT[ITemplataType] = {
     //    vassert(env.fullName != FullName2(PackageCoordinate.BUILTIN, Vector.empty, PackageTopLevelName2()))
     entry match {
@@ -185,7 +212,12 @@ object TemplatasStore {
       case TemplataEnvEntry(templata) => templata
     }
   }
-
+*/
+// mig: fn get_imprecise_name
+fn get_imprecise_name() {
+  panic!("Unimplemented: get_imprecise_name");
+}
+/*
   def getImpreciseName(interner: Interner, name2: INameT): Option[IImpreciseNameS] = {
     name2 match {
       case StructTemplateNameT(humanName) => Some(interner.intern(CodeNameS(humanName)))
@@ -244,14 +276,24 @@ object TemplatasStore {
       case other => vimpl(other.toString)
     }
   }
-
+*/
+// mig: fn code_locations_match
+fn code_locations_match() {
+  panic!("Unimplemented: code_locations_match");
+}
+/*
   def codeLocationsMatch(codeLocationA: CodeLocationS, codeLocation2: CodeLocationS): Boolean = {
     val CodeLocationS(lineS, charS) = codeLocationA
     val CodeLocationS(line2, char2) = codeLocation2
     lineS == line2 && charS == char2
   }
 }
-
+*/
+// mig: struct TemplatasStore
+pub struct TemplatasStore;
+// mig: impl TemplatasStore
+impl TemplatasStore {}
+/*
 // See DBTSAE for difference between TemplatasStore and Environment.
 case class TemplatasStore(
   templatasStoreName: IdT[INameT],
@@ -374,7 +416,12 @@ override def hashCode(): Int = vcurious()
     a3.toArray
   }
 }
-
+*/
+// mig: fn make_top_level_environment
+fn make_top_level_environment() {
+  panic!("Unimplemented: make_top_level_environment");
+}
+/*
 object PackageEnvironmentT {
   // THIS IS TEMPORARY, it pulls in all global namespaces!
   // See https://github.com/ValeLang/Vale/issues/356
@@ -385,7 +432,12 @@ object PackageEnvironmentT {
       globalEnv.nameToTopLevelEnvironment.values.toVector)
   }
 }
-
+*/
+// mig: struct PackageEnvironmentT
+pub struct PackageEnvironmentT;
+// mig: impl PackageEnvironmentT
+impl PackageEnvironmentT {}
+/*
 case class PackageEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
   id: IdT[T],
@@ -444,8 +496,12 @@ override def hashCode(): Int = hash;
     result.toArray
   }
 }
-
-
+*/
+// mig: struct CitizenEnvironmentT
+pub struct CitizenEnvironmentT;
+// mig: impl CitizenEnvironmentT
+impl CitizenEnvironmentT {}
+/*
 case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   globalEnv: GlobalEnvironment,
   parentEnv: IEnvironmentT,
@@ -515,7 +571,12 @@ override def hashCode(): Int = hash;
     }
   }
 }
-
+*/
+// mig: fn child_of
+fn child_of() {
+  panic!("Unimplemented: child_of");
+}
+/*
 object GeneralEnvironmentT {
   def childOf[Y <: INameT](
     interner: Interner,
@@ -533,7 +594,12 @@ object GeneralEnvironmentT {
         .addEntries(interner, newEntriesList))
   }
 }
-
+*/
+// mig: struct ExportEnvironmentT
+pub struct ExportEnvironmentT;
+// mig: impl ExportEnvironmentT
+impl ExportEnvironmentT {}
+/*
 case class ExportEnvironmentT(
     globalEnv: GlobalEnvironment,
     parentEnv: PackageEnvironmentT[INameT],
@@ -564,7 +630,12 @@ case class ExportEnvironmentT(
       this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
 }
-
+*/
+// mig: struct ExternEnvironmentT
+pub struct ExternEnvironmentT;
+// mig: impl ExternEnvironmentT
+impl ExternEnvironmentT {}
+/*
 case class ExternEnvironmentT(
     globalEnv: GlobalEnvironment,
     parentEnv: PackageEnvironmentT[INameT],
@@ -595,7 +666,12 @@ case class ExternEnvironmentT(
       this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
   }
 }
-
+*/
+// mig: struct GeneralEnvironmentT
+pub struct GeneralEnvironmentT;
+// mig: impl GeneralEnvironmentT
+impl GeneralEnvironmentT {}
+/*
 case class GeneralEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
   parentEnv: IInDenizenEnvironmentT,

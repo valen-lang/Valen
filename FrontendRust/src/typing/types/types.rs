@@ -14,51 +14,113 @@ import dev.vale.typing.templata._
 import dev.vale.typing.types._
 
 import scala.collection.immutable.List
-
+*/
+// mig: enum OwnershipT
+pub enum OwnershipT {}
+/*
 sealed trait OwnershipT  {
 }
+*/
+// mig: struct ShareT
+pub struct ShareT;
+/*
 case object ShareT extends OwnershipT {
   override def toString: String = "share"
 }
+*/
+// mig: struct OwnT
+pub struct OwnT;
+/*
 case object OwnT extends OwnershipT {
   override def toString: String = "own"
 }
+*/
+// mig: struct BorrowT
+pub struct BorrowT;
+/*
 case object BorrowT extends OwnershipT {
   override def toString: String = "borrow"
 }
+*/
+// mig: struct WeakT
+pub struct WeakT;
+/*
 case object WeakT extends OwnershipT {
   override def toString: String = "weak"
 }
-
+*/
+// mig: enum MutabilityT
+pub enum MutabilityT {}
+/*
 sealed trait MutabilityT  {
 }
+*/
+// mig: struct MutableT
+pub struct MutableT;
+/*
 case object MutableT extends MutabilityT {
   override def toString: String = "mut"
 }
+*/
+// mig: struct ImmutableT
+pub struct ImmutableT;
+/*
 case object ImmutableT extends MutabilityT {
   override def toString: String = "imm"
 }
-
+*/
+// mig: enum VariabilityT
+pub enum VariabilityT {}
+/*
 sealed trait VariabilityT  {
 }
+*/
+// mig: struct FinalT
+pub struct FinalT;
+/*
 case object FinalT extends VariabilityT {
   override def toString: String = "final"
 }
+*/
+// mig: struct VaryingT
+pub struct VaryingT;
+/*
 case object VaryingT extends VariabilityT {
   override def toString: String = "vary"
 }
-
+*/
+// mig: enum LocationT
+pub enum LocationT {}
+/*
 sealed trait LocationT  {
 }
+*/
+// mig: struct InlineT
+pub struct InlineT;
+/*
 case object InlineT extends LocationT {
   override def toString: String = "inl"
 }
+*/
+// mig: struct YonderT
+pub struct YonderT;
+/*
 case object YonderT extends LocationT {
   override def toString: String = "heap"
 }
-
+*/
+// mig: struct RegionT
+pub struct RegionT;
+/*
 case class RegionT()
-
+*/
+// mig: struct CoordT
+pub struct CoordT {
+  pub ownership: OwnershipT,
+  pub region: RegionT,
+  pub kind: KindT,
+}
+/*
 case class CoordT(
   ownership: OwnershipT,
   // TODO(regions): Replace with an actual region.
@@ -79,7 +141,10 @@ case class CoordT(
     // vassert(permission == Readwrite)
   }
 }
-
+*/
+// mig: enum KindT
+pub enum KindT {}
+/*
 sealed trait KindT {
   // Note, we don't have a mutability: Mutability in here because this Kind
   // should be enough to uniquely identify a type, and no more.
@@ -108,7 +173,12 @@ sealed trait KindT {
 
   def isPrimitive: Boolean
 }
-
+*/
+// mig: struct NeverT
+pub struct NeverT {
+  pub from_break: bool,
+}
+/*
 // like Scala's Nothing. No instance of this can ever happen.
 case class NeverT(
   // True if this Never came from a break.
@@ -119,34 +189,60 @@ case class NeverT(
 ) extends KindT {
   override def isPrimitive: Boolean = true
 }
-
+*/
+// mig: struct VoidT
+pub struct VoidT;
+/*
 // Mostly for interoperability with extern functions
 case class VoidT() extends KindT {
   override def isPrimitive: Boolean = true
 }
-
+*/
+// mig: impl IntT
+impl IntT {}
+/*
 object IntT {
   val i32: IntT = IntT(32)
   val i64: IntT = IntT(64)
 }
+*/
+// mig: struct IntT
+pub struct IntT {
+  pub bits: i32,
+}
+/*
 case class IntT(bits: Int) extends KindT {
   override def isPrimitive: Boolean = true
 }
-
+*/
+// mig: struct BoolT
+pub struct BoolT;
+/*
 case class BoolT() extends KindT {
   override def isPrimitive: Boolean = true
 
 }
-
+*/
+// mig: struct StrT
+pub struct StrT;
+/*
 case class StrT() extends KindT {
   override def isPrimitive: Boolean = false
 
 }
-
+*/
+// mig: struct FloatT
+pub struct FloatT;
+/*
 case class FloatT() extends KindT {
   override def isPrimitive: Boolean = true
 }
-
+*/
+// mig: fn unapply
+fn unapply_contents_static_sized_array_tt() {
+  panic!("Unimplemented: unapply_contents_static_sized_array_tt");
+}
+/*
 object contentsStaticSizedArrayTT {
   def unapply(ssa: StaticSizedArrayTT):
   Option[(ITemplataT[IntegerTemplataType], ITemplataT[MutabilityTemplataType], ITemplataT[VariabilityTemplataType], CoordT, RegionT)] = {
@@ -154,6 +250,12 @@ object contentsStaticSizedArrayTT {
     Some((size, mutability, variability, coord, selfRegion))
   }
 }
+*/
+// mig: struct StaticSizedArrayTT
+pub struct StaticSizedArrayTT {
+  pub name: IdT,
+}
+/*
 case class StaticSizedArrayTT(
   name: IdT[StaticSizedArrayNameT]
 ) extends KindT with IInterning {
@@ -164,7 +266,12 @@ case class StaticSizedArrayTT(
   def size = name.localName.size
   def variability = name.localName.variability
 }
-
+*/
+// mig: fn unapply
+fn unapply_contents_runtime_sized_array_tt() {
+  panic!("Unimplemented: unapply_contents_runtime_sized_array_tt");
+}
+/*
 object contentsRuntimeSizedArrayTT {
   def unapply(rsa: RuntimeSizedArrayTT):
   Option[(ITemplataT[MutabilityTemplataType], CoordT, RegionT)] = {
@@ -172,6 +279,12 @@ object contentsRuntimeSizedArrayTT {
     Some((mutability, coord, selfRegion))
   }
 }
+*/
+// mig: struct RuntimeSizedArrayTT
+pub struct RuntimeSizedArrayTT {
+  pub name: IdT,
+}
+/*
 case class RuntimeSizedArrayTT(
   name: IdT[RuntimeSizedArrayNameT]
 ) extends KindT with IInterning {
@@ -179,26 +292,46 @@ case class RuntimeSizedArrayTT(
   def mutability = name.localName.arr.mutability
   def elementType = name.localName.arr.elementType
 }
-
+*/
+// mig: fn unapply
+fn unapply_i_citizen_tt() {
+  panic!("Unimplemented: unapply_i_citizen_tt");
+}
+/*
 object ICitizenTT {
   def unapply(self: ICitizenTT): Option[IdT[ICitizenNameT]] = {
     Some(self.id)
   }
 }
-
+*/
+// mig: enum ISubKindTT
+pub enum ISubKindTT {}
+/*
 // Structs, interfaces, and placeholders
 sealed trait ISubKindTT extends KindT {
   def id: IdT[ISubKindNameT]
 }
+*/
+// mig: enum ISuperKindTT
+pub enum ISuperKindTT {}
+/*
 // Interfaces and placeholders
 sealed trait ISuperKindTT extends KindT {
   def id: IdT[ISuperKindNameT]
 }
-
+*/
+// mig: enum ICitizenTT
+pub enum ICitizenTT {}
+/*
 sealed trait ICitizenTT extends ISubKindTT with IInterning {
   def id: IdT[ICitizenNameT]
 }
-
+*/
+// mig: struct StructTT
+pub struct StructTT {
+  pub id: IdT,
+}
+/*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
 case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
   override def isPrimitive: Boolean = false
@@ -207,7 +340,12 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
     case _ =>
   }
 }
-
+*/
+// mig: struct InterfaceTT
+pub struct InterfaceTT {
+  pub id: IdT,
+}
+/*
 case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperKindTT {
   override def isPrimitive: Boolean = false
   (id.initSteps.lastOption, id.localName) match {
@@ -215,7 +353,13 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
     case _ =>
   }
 }
-
+*/
+// mig: struct OverloadSetT
+pub struct OverloadSetT {
+  pub env: IInDenizenEnvironmentT,
+  pub name: IImpreciseNameS,
+}
+/*
 // Represents a bunch of functions that have the same name.
 // See ROS.
 // Lowers to an empty struct.
@@ -228,7 +372,12 @@ case class OverloadSetT(
   vpass()
 
 }
-
+*/
+// mig: struct KindPlaceholderT
+pub struct KindPlaceholderT {
+  pub id: IdT,
+}
+/*
 // At some point it'd be nice to make Coord.kind into a templata so we can directly have a
 // placeholder templata instead of needing this special kind.
 case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT with ISuperKindTT {

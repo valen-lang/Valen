@@ -14,17 +14,34 @@ import dev.vale.typing.types.InterfaceTT
 
 import scala.collection.immutable.{List, Map}
 import scala.collection.mutable
-
-
+*/
+// mig: struct DeferredEvaluatingFunctionBody
+pub struct DeferredEvaluatingFunctionBody {
+    prototype_t: PrototypeT,
+    call: fn(),
+}
+/*
 case class DeferredEvaluatingFunctionBody(
   prototypeT: PrototypeT[IFunctionNameT],
   call: (CompilerOutputs) => Unit)
-
+*/
+// mig: struct DeferredEvaluatingFunction
+pub struct DeferredEvaluatingFunction {
+    name: IdT,
+    call: fn(),
+}
+/*
 case class DeferredEvaluatingFunction(
   name: IdT[INameT],
   call: (CompilerOutputs) => Unit)
-
-
+*/
+// mig: struct CompilerOutputs
+pub struct CompilerOutputs {
+}
+// mig: impl CompilerOutputs
+impl CompilerOutputs {
+}
+/*
 case class CompilerOutputs() {
   // Not all signatures/banners will have a return type here, it might not have been processed yet.
   private val returnTypesBySignature: mutable.HashMap[SignatureT, CoordT] = mutable.HashMap()
@@ -103,7 +120,10 @@ case class CompilerOutputs() {
 
   private val deferredFunctionCompiles: mutable.LinkedHashMap[IdT[INameT], DeferredEvaluatingFunction] = mutable.LinkedHashMap()
   private val finishedDeferredFunctionCompiles: mutable.LinkedHashSet[IdT[INameT]] = mutable.LinkedHashSet()
-
+*/
+// mig: fn count_denizens
+fn count_denizens() -> i32 { panic!("Unimplemented: count_denizens"); }
+/*
   def countDenizens(): Int = {
 //    staticSizedArrayTypes.size +
 //      runtimeSizedArrayTypes.size +
@@ -111,39 +131,65 @@ case class CompilerOutputs() {
       structTemplateNameToDefinition.size +
       interfaceTemplateNameToDefinition.size
   }
-
+*/
+// mig: fn peek_next_deferred_function_body_compile
+fn peek_next_deferred_function_body_compile() -> Option<DeferredEvaluatingFunctionBody> { panic!("Unimplemented: peek_next_deferred_function_body_compile"); }
+/*
   def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
     deferredFunctionBodyCompiles.headOption.map(_._2)
   }
+*/
+// mig: fn mark_deferred_function_body_compiled
+fn mark_deferred_function_body_compiled(prototype_t: PrototypeT) { panic!("Unimplemented: mark_deferred_function_body_compiled"); }
+/*
   def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
     vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
     finishedDeferredFunctionBodyCompiles += prototypeT
     deferredFunctionBodyCompiles -= prototypeT
   }
-
+*/
+// mig: fn peek_next_deferred_function_compile
+fn peek_next_deferred_function_compile() -> Option<DeferredEvaluatingFunction> { panic!("Unimplemented: peek_next_deferred_function_compile"); }
+/*
   def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
     deferredFunctionCompiles.headOption.map(_._2)
   }
+*/
+// mig: fn mark_deferred_function_compiled
+fn mark_deferred_function_compiled(name: IdT) { panic!("Unimplemented: mark_deferred_function_compiled"); }
+/*
   def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
     vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
     finishedDeferredFunctionCompiles += name
     deferredFunctionCompiles -= name
   }
-
+*/
+// mig: fn get_instantiation_name_to_function_bound_to_rune
+fn get_instantiation_name_to_function_bound_to_rune() -> HashMap<IdT, InstantiationBoundArgumentsT> { panic!("Unimplemented: get_instantiation_name_to_function_bound_to_rune"); }
+/*
   def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
     instantiationNameToInstantiationBounds.toMap
   }
-
+*/
+// mig: fn lookup_function
+fn lookup_function(signature: SignatureT) -> Option<FunctionDefinitionT> { panic!("Unimplemented: lookup_function"); }
+/*
   def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
     signatureToFunction.get(signature)
   }
-
+*/
+// mig: fn get_instantiation_bounds
+fn get_instantiation_bounds(instantiation_id: IdT) -> Option<InstantiationBoundArgumentsT> { panic!("Unimplemented: get_instantiation_bounds"); }
+/*
   def getInstantiationBounds(
     instantiationId: IdT[IInstantiationNameT]):
   Option[InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
     instantiationNameToInstantiationBounds.get(instantiationId)
   }
-
+*/
+// mig: fn add_instantiation_bounds
+fn add_instantiation_bounds(sanity_check: bool, interner: Interner, original_calling_template_id: IdT, instantiation_id: IdT, instantiation_bound_args: InstantiationBoundArgumentsT) { panic!("Unimplemented: add_instantiation_bounds"); }
+/*
   def addInstantiationBounds(
     sanityCheck: Boolean,
     interner: Interner,
@@ -267,7 +313,10 @@ case class CompilerOutputs() {
 //    envByFunctionSignature ++= maybeEnv.map(env => Map(signature -> env)).getOrElse(Map())
 //    this
 //  }
-
+*/
+// mig: fn declare_function_return_type
+fn declare_function_return_type(signature: SignatureT, return_type_2: CoordT) { panic!("Unimplemented: declare_function_return_type"); }
+/*
   def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
     returnTypesBySignature.get(signature) match {
       case None =>
@@ -278,7 +327,10 @@ case class CompilerOutputs() {
 //    }
     returnTypesBySignature += (signature -> returnType2)
   }
-
+*/
+// mig: fn add_function
+fn add_function(function: FunctionDefinitionT) { panic!("Unimplemented: add_function"); }
+/*
   def addFunction(function: FunctionDefinitionT): Unit = {
 //    vassert(declaredSignatures.contains(function.header.toSignature))
     vassert(
@@ -305,7 +357,10 @@ case class CompilerOutputs() {
     signatureToFunction.put(function.header.toSignature, function)
 //    functionsByPrototype.put(function.header.toPrototype, function)
   }
-
+*/
+// mig: fn declare_function
+fn declare_function(call_ranges: Vec<RangeS>, name: IdT) { panic!("Unimplemented: declare_function"); }
+/*
   def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
     functionDeclaredNames.get(name) match {
       case Some(oldFunctionRange) => {
@@ -315,14 +370,20 @@ case class CompilerOutputs() {
     }
     functionDeclaredNames.put(name, callRanges.head)
   }
-
+*/
+// mig: fn declare_type
+fn declare_type(template_name: IdT) { panic!("Unimplemented: declare_type"); }
+/*
   // We can't declare the struct at the same time as we declare its mutability or environment,
   // see MFDBRE.
   def declareType(templateName: IdT[ITemplateNameT]): Unit = {
     vassert(!typeDeclaredNames.contains(templateName))
     typeDeclaredNames += templateName
   }
-
+*/
+// mig: fn declare_type_mutability
+fn declare_type_mutability(template_name: IdT, mutability: ITemplataT) { panic!("Unimplemented: declare_type_mutability"); }
+/*
   def declareTypeMutability(
     templateName: IdT[ITemplateNameT],
     mutability: ITemplataT[MutabilityTemplataType]
@@ -331,7 +392,10 @@ case class CompilerOutputs() {
     vassert(!typeNameToMutability.contains(templateName))
     typeNameToMutability += (templateName -> mutability)
   }
-
+*/
+// mig: fn declare_type_sealed
+fn declare_type_sealed(template_name: IdT, sealed: bool) { panic!("Unimplemented: declare_type_sealed"); }
+/*
   def declareTypeSealed(
     templateName: IdT[IInterfaceTemplateNameT],
     seealed: Boolean
@@ -340,7 +404,10 @@ case class CompilerOutputs() {
     vassert(!interfaceNameToSealed.contains(templateName))
     interfaceNameToSealed += (templateName -> seealed)
   }
-
+*/
+// mig: fn declare_function_inner_env
+fn declare_function_inner_env(name_t: IdT, env: IInDenizenEnvironmentT) { panic!("Unimplemented: declare_function_inner_env"); }
+/*
   def declareFunctionInnerEnv(
     nameT: IdT[IFunctionNameT],
     env: IInDenizenEnvironmentT,
@@ -351,7 +418,10 @@ case class CompilerOutputs() {
 //    vassert(nameT == env.fullName)
     functionNameToInnerEnv += (nameT -> env)
   }
-
+*/
+// mig: fn declare_function_outer_env
+fn declare_function_outer_env(name_t: IdT, env: IInDenizenEnvironmentT) { panic!("Unimplemented: declare_function_outer_env"); }
+/*
   def declareFunctionOuterEnv(
     nameT: IdT[IFunctionTemplateNameT],
     env: IInDenizenEnvironmentT,
@@ -360,7 +430,10 @@ case class CompilerOutputs() {
     //    vassert(nameT == env.fullName)
     functionNameToOuterEnv += (nameT -> env)
   }
-
+*/
+// mig: fn declare_type_outer_env
+fn declare_type_outer_env(name_t: IdT, env: IInDenizenEnvironmentT) { panic!("Unimplemented: declare_type_outer_env"); }
+/*
   def declareTypeOuterEnv(
     nameT: IdT[ITemplateNameT],
     env: IInDenizenEnvironmentT,
@@ -370,7 +443,10 @@ case class CompilerOutputs() {
     vassert(nameT == env.id)
     typeNameToOuterEnv += (nameT -> env)
   }
-
+*/
+// mig: fn declare_type_inner_env
+fn declare_type_inner_env(template_id: IdT, env: IInDenizenEnvironmentT) { panic!("Unimplemented: declare_type_inner_env"); }
+/*
   def declareTypeInnerEnv(
     templateId: IdT[ITemplateNameT],
     env: IInDenizenEnvironmentT,
@@ -383,7 +459,10 @@ case class CompilerOutputs() {
     //    vassert(nameT == env.fullName)
     typeNameToInnerEnv += (templateId -> env)
   }
-
+*/
+// mig: fn add_struct
+fn add_struct(struct_def: StructDefinitionT) { panic!("Unimplemented: add_struct"); }
+/*
   def addStruct(structDef: StructDefinitionT): Unit = {
     if (structDef.mutability == MutabilityTemplataT(ImmutableT)) {
       structDef.members.foreach({
@@ -404,7 +483,10 @@ case class CompilerOutputs() {
     vassert(!structTemplateNameToDefinition.contains(structDef.templateName))
     structTemplateNameToDefinition += (structDef.templateName -> structDef)
   }
-
+*/
+// mig: fn add_interface
+fn add_interface(interface_def: InterfaceDefinitionT) { panic!("Unimplemented: add_interface"); }
+/*
   def addInterface(interfaceDef: InterfaceDefinitionT): Unit = {
     vassert(typeNameToMutability.contains(interfaceDef.templateName))
     vassert(interfaceNameToSealed.contains(interfaceDef.templateName))
@@ -421,7 +503,10 @@ case class CompilerOutputs() {
 //    val contentsRuntimeSizedArrayTT(elementType, mutability) = rsaTT
 //    runtimeSizedArrayTypes += ((elementType, mutability) -> rsaTT)
 //  }
-
+*/
+// mig: fn add_impl
+fn add_impl(impl_t: ImplT) { panic!("Unimplemented: add_impl"); }
+/*
   def addImpl(impl: ImplT): Unit = {
     vassert(!allImpls.contains(impl.templateId))
     allImpls.put(impl.templateId, impl)
@@ -432,39 +517,67 @@ case class CompilerOutputs() {
       impl.superInterfaceTemplateId,
       superInterfaceTemplateToImpls.getOrElse(impl.superInterfaceTemplateId, Vector()) :+ impl)
   }
-
+*/
+// mig: fn get_parent_impls_for_sub_citizen_template
+fn get_parent_impls_for_sub_citizen_template(sub_citizen_template: IdT) -> Vec<ImplT> { panic!("Unimplemented: get_parent_impls_for_sub_citizen_template"); }
+/*
   def getParentImplsForSubCitizenTemplate(subCitizenTemplate: IdT[ICitizenTemplateNameT]): Vector[ImplT] = {
     subCitizenTemplateToImpls.getOrElse(subCitizenTemplate, Vector[ImplT]())
   }
+*/
+// mig: fn get_child_impls_for_super_interface_template
+fn get_child_impls_for_super_interface_template(super_interface_template: IdT) -> Vec<ImplT> { panic!("Unimplemented: get_child_impls_for_super_interface_template"); }
+/*
   def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
     superInterfaceTemplateToImpls.getOrElse(superInterfaceTemplate, Vector[ImplT]())
   }
-
+*/
+// mig: fn add_kind_export
+fn add_kind_export(range: RangeS, kind: KindT, id: IdT, exported_name: StrI) { panic!("Unimplemented: add_kind_export"); }
+/*
   def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {
     kindExports += KindExportT(range, kind, id, exportedName)
   }
-
+*/
+// mig: fn add_function_export
+fn add_function_export(range: RangeS, function: PrototypeT, export_id: IdT, exported_name: StrI) { panic!("Unimplemented: add_function_export"); }
+/*
   def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
     vassert(getInstantiationBounds(function.id).nonEmpty)
     functionExports += FunctionExportT(range, function, exportId, exportedName)
   }
-
+*/
+// mig: fn add_kind_extern
+fn add_kind_extern(kind: KindT, package_coord: PackageCoordinate, exported_name: StrI) { panic!("Unimplemented: add_kind_extern"); }
+/*
   def addKindExtern(kind: KindT, packageCoord: PackageCoordinate, exportedName: StrI): Unit = {
     kindExterns += KindExternT(kind, packageCoord, exportedName)
   }
-
+*/
+// mig: fn add_function_extern
+fn add_function_extern(range: RangeS, extern_placeholdered_id: IdT, function: PrototypeT, exported_name: StrI) { panic!("Unimplemented: add_function_extern"); }
+/*
   def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
     functionExterns += FunctionExternT(range, externPlaceholderedId, function, exportedName)
   }
-
+*/
+// mig: fn defer_evaluating_function_body
+fn defer_evaluating_function_body(devf: DeferredEvaluatingFunctionBody) { panic!("Unimplemented: defer_evaluating_function_body"); }
+/*
   def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
     deferredFunctionBodyCompiles.put(devf.prototypeT, devf)
   }
-
+*/
+// mig: fn defer_evaluating_function
+fn defer_evaluating_function(devf: DeferredEvaluatingFunction) { panic!("Unimplemented: defer_evaluating_function"); }
+/*
   def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {
     deferredFunctionCompiles.put(devf.name, devf)
   }
-
+*/
+// mig: fn struct_declared
+fn struct_declared(template_name: IdT) -> bool { panic!("Unimplemented: struct_declared"); }
+/*
   def structDeclared(templateName: IdT[IStructTemplateNameT]): Boolean = {
     // This is the only place besides StructDefinition2 and declareStruct thats allowed to make one of these
 //    val templateName = StructTT(fullName)
@@ -482,7 +595,10 @@ case class CompilerOutputs() {
 //      }
 //    }
 //  }
-
+*/
+// mig: fn lookup_mutability
+fn lookup_mutability(template_name: IdT) -> ITemplataT { panic!("Unimplemented: lookup_mutability"); }
+/*
   def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
     // If it has a structTT, then we've at least started to evaluate this citizen
     typeNameToMutability.get(templateName) match {
@@ -490,7 +606,10 @@ case class CompilerOutputs() {
       case Some(m) => m
     }
   }
-
+*/
+// mig: fn lookup_sealed
+fn lookup_sealed(template_name: IdT) -> bool { panic!("Unimplemented: lookup_sealed"); }
+/*
   def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
     // If it has a structTT, then we've at least started to evaluate this citizen
     interfaceNameToSealed.get(templateName) match {
@@ -505,24 +624,46 @@ case class CompilerOutputs() {
 //      case i @ InterfaceTT(_) => lookupInterface(i)
 //    }
 //  }
-
+*/
+// mig: fn interface_declared
+fn interface_declared(template_name: IdT) -> bool { panic!("Unimplemented: interface_declared"); }
+/*
   def interfaceDeclared(templateName: IdT[ITemplateNameT]): Boolean = {
     // This is the only place besides InterfaceDefinition2 and declareInterface thats allowed to make one of these
     typeDeclaredNames.contains(templateName)
   }
-
+*/
+// mig: fn lookup_struct
+fn lookup_struct(struct_tt: IdT) -> StructDefinitionT { panic!("Unimplemented: lookup_struct"); }
+/*
   def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
     lookupStructTemplate(TemplataCompiler.getStructTemplate(structTT))
   }
+*/
+// mig: fn lookup_struct_template
+fn lookup_struct_template(template_name: IdT) -> StructDefinitionT { panic!("Unimplemented: lookup_struct_template"); }
+/*
   def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
     vassertSome(structTemplateNameToDefinition.get(templateName))
   }
+*/
+// mig: fn lookup_interface
+fn lookup_interface(interface_tt: InterfaceTT) -> InterfaceDefinitionT { panic!("Unimplemented: lookup_interface"); }
+/*
   def lookupInterface(interfaceTT: InterfaceTT): InterfaceDefinitionT = {
     lookupInterface(TemplataCompiler.getInterfaceTemplate(interfaceTT.id))
   }
+*/
+// mig: fn lookup_interface
+fn lookup_interface(template_name: IdT) -> InterfaceDefinitionT { panic!("Unimplemented: lookup_interface"); }
+/*
   def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
     vassertSome(interfaceTemplateNameToDefinition.get(templateName))
   }
+*/
+// mig: fn lookup_citizen
+fn lookup_citizen(template_name: IdT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
+/*
   def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
     val IdT(packageCoord, initSteps, last) = templateName
     last match {
@@ -531,16 +672,35 @@ case class CompilerOutputs() {
       case s @ InterfaceTemplateNameT(_) => lookupInterface(IdT(packageCoord, initSteps, s))
     }
   }
+*/
+// mig: fn lookup_citizen
+fn lookup_citizen(citizen_tt: ICitizenTT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
+/*
   def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
     citizenTT match {
       case s @ StructTT(_) => lookupStruct(s.id)
       case s @ InterfaceTT(_) => lookupInterface(s)
     }
   }
-
+*/
+// mig: fn get_all_structs
+fn get_all_structs() -> Vec<StructDefinitionT> { panic!("Unimplemented: get_all_structs"); }
+/*
   def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
+*/
+// mig: fn get_all_interfaces
+fn get_all_interfaces() -> Vec<InterfaceDefinitionT> { panic!("Unimplemented: get_all_interfaces"); }
+/*
   def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
+*/
+// mig: fn get_all_functions
+fn get_all_functions() -> Vec<FunctionDefinitionT> { panic!("Unimplemented: get_all_functions"); }
+/*
   def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
+*/
+// mig: fn get_all_impls
+fn get_all_impls() -> Vec<ImplT> { panic!("Unimplemented: get_all_impls"); }
+/*
   def getAllImpls(): Iterable[ImplT] = allImpls.values
 //  def getAllStaticSizedArrays(): Iterable[StaticSizedArrayTT] = staticSizedArrayTypes.values
 //  def getAllRuntimeSizedArrays(): Iterable[RuntimeSizedArrayTT] = runtimeSizedArrayTypes.values
@@ -549,9 +709,17 @@ case class CompilerOutputs() {
 //  def getStaticSizedArrayType(size: ITemplata[IntegerTemplataType], mutability: ITemplata[MutabilityTemplataType], variability: ITemplata[VariabilityTemplataType], elementType: CoordT): Option[StaticSizedArrayTT] = {
 //    staticSizedArrayTypes.get((size, mutability, variability, elementType))
 //  }
+*/
+// mig: fn get_env_for_function_signature
+fn get_env_for_function_signature(sig: SignatureT) -> FunctionEnvironmentT { panic!("Unimplemented: get_env_for_function_signature"); }
+/*
   def getEnvForFunctionSignature(sig: SignatureT): FunctionEnvironmentT = {
     vassertSome(envByFunctionSignature.get(sig))
   }
+*/
+// mig: fn get_outer_env_for_type
+fn get_outer_env_for_type(range: Vec<RangeS>, name: IdT) -> IInDenizenEnvironmentT { panic!("Unimplemented: get_outer_env_for_type"); }
+/*
   def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
     typeNameToOuterEnv.get(name) match {
       case None => {
@@ -560,15 +728,31 @@ case class CompilerOutputs() {
       case Some(x) => x
     }
   }
+*/
+// mig: fn get_inner_env_for_type
+fn get_inner_env_for_type(name: IdT) -> IInDenizenEnvironmentT { panic!("Unimplemented: get_inner_env_for_type"); }
+/*
   def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
     vassertSome(typeNameToInnerEnv.get(name))
   }
+*/
+// mig: fn get_inner_env_for_function
+fn get_inner_env_for_function(name: IdT) -> IInDenizenEnvironmentT { panic!("Unimplemented: get_inner_env_for_function"); }
+/*
   def getInnerEnvForFunction(name: IdT[INameT]): IInDenizenEnvironmentT = {
     vassertSome(functionNameToInnerEnv.get(name))
   }
+*/
+// mig: fn get_outer_env_for_function
+fn get_outer_env_for_function(name: IdT) -> IInDenizenEnvironmentT { panic!("Unimplemented: get_outer_env_for_function"); }
+/*
   def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {
     vassertSome(functionNameToOuterEnv.get(name))
   }
+*/
+// mig: fn get_return_type_for_signature
+fn get_return_type_for_signature(sig: SignatureT) -> Option<CoordT> { panic!("Unimplemented: get_return_type_for_signature"); }
+/*
   def getReturnTypeForSignature(sig: SignatureT): Option[CoordT] = {
     returnTypesBySignature.get(sig)
   }
@@ -581,15 +765,31 @@ case class CompilerOutputs() {
 //  def getRuntimeSizedArray(mutabilityT: ITemplata[MutabilityTemplataType], elementType: CoordT): Option[RuntimeSizedArrayTT] = {
 //    runtimeSizedArrayTypes.get((mutabilityT, elementType))
 //  }
+*/
+// mig: fn get_kind_exports
+fn get_kind_exports() -> Vec<KindExportT> { panic!("Unimplemented: get_kind_exports"); }
+/*
   def getKindExports: Vector[KindExportT] = {
     kindExports.toVector
   }
+*/
+// mig: fn get_function_exports
+fn get_function_exports() -> Vec<FunctionExportT> { panic!("Unimplemented: get_function_exports"); }
+/*
   def getFunctionExports: Vector[FunctionExportT] = {
     functionExports.toVector
   }
+*/
+// mig: fn get_kind_externs
+fn get_kind_externs() -> Vec<KindExternT> { panic!("Unimplemented: get_kind_externs"); }
+/*
   def getKindExterns: Vector[KindExternT] = {
     kindExterns.toVector
   }
+*/
+// mig: fn get_function_externs
+fn get_function_externs() -> Vec<FunctionExternT> { panic!("Unimplemented: get_function_externs"); }
+/*
   def getFunctionExterns: Vector[FunctionExternT] = {
     functionExterns.toVector
   }

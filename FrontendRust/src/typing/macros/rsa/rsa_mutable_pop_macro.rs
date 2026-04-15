@@ -17,10 +17,24 @@ import dev.vale.typing.ast._
 import dev.vale.typing.env.TemplataLookupContext
 import dev.vale.typing.types._
 import dev.vale.typing.ast
-
+*/
+// mig: struct RSAMutablePopMacro
+pub struct RSAMutablePopMacro<'p, 's> {
+    pub interner: &'p Interner<'p>,
+    pub keywords: &'p Keywords<'p>,
+    pub generator_id: StrI<'p>,
+}
+// mig: impl RSAMutablePopMacro
+impl<'p, 's> RSAMutablePopMacro<'p, 's> {}
+/*
 class RSAMutablePopMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_pop
-
+*/
+// mig: fn generate_function_body
+pub fn generate_function_body() {
+    panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

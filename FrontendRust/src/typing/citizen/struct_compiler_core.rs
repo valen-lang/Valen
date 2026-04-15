@@ -32,7 +32,19 @@ class StructCompilerCore(
   keywords: Keywords,
   nameTranslator: NameTranslator,
   delegate: IStructCompilerDelegate) {
+*/
+// mig: struct StructCompilerCore
+pub struct StructCompilerCore;
 
+// mig: impl StructCompilerCore
+impl StructCompilerCore {}
+/*
+*/
+// mig: fn compile_struct
+fn compile_struct() {
+  panic!("Unimplemented: compile_struct");
+}
+/*
   def compileStruct(
     outerEnv: IInDenizenEnvironmentT,
     structRunesEnv: CitizenEnvironmentT[IStructNameT, IStructTemplateNameT],
@@ -161,6 +173,12 @@ class StructCompilerCore(
     coutputs.addStruct(structDefT);
   }
 
+*/
+// mig: fn translate_citizen_attributes
+fn translate_citizen_attributes() {
+  panic!("Unimplemented: translate_citizen_attributes");
+}
+/*
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
     attrs.map({
       case SealedS => SealedT
@@ -170,6 +188,12 @@ class StructCompilerCore(
   }
 
 
+*/
+// mig: fn compile_interface
+fn compile_interface() {
+  panic!("Unimplemented: compile_interface");
+}
+/*
   // Takes a IEnvironment because we might be inside a:
   // struct<T> Thing<T> {
   //   t: T;
@@ -241,6 +265,12 @@ class StructCompilerCore(
     (interfaceDef2)
   }
 
+*/
+// mig: fn make_struct_members
+fn make_struct_members() {
+  panic!("Unimplemented: make_struct_members");
+}
+/*
   private def makeStructMembers(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -249,6 +279,12 @@ class StructCompilerCore(
     members.map(makeStructMember(env, coutputs, _))
   }
 
+*/
+// mig: fn make_struct_member
+fn make_struct_member() {
+  panic!("Unimplemented: make_struct_member");
+}
+/*
   private def makeStructMember(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -282,6 +318,12 @@ class StructCompilerCore(
     }
   }
 
+*/
+// mig: fn make_closure_understruct
+fn make_closure_understruct() {
+  panic!("Unimplemented: make_closure_understruct");
+}
+/*
   // Makes a struct to back a closure
   def makeClosureUnderstruct(
     containingFunctionEnv: NodeEnvironmentT,

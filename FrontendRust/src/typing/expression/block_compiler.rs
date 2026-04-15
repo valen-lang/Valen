@@ -20,6 +20,10 @@ import dev.vale.typing.templata._
 
 import scala.collection.immutable.{List, Set}
 
+*/
+// mig: trait IBlockCompilerDelegate
+pub trait IBlockCompilerDelegate {}
+/*
 trait IBlockCompilerDelegate {
   def evaluateAndCoerceToReferenceExpression(
     coutputs: CompilerOutputs,
@@ -42,7 +46,12 @@ trait IBlockCompilerDelegate {
     unresultifiedUndestructedExpressions: ReferenceExpressionTE):
   ReferenceExpressionTE
 }
-
+*/
+// mig: struct BlockCompiler
+pub struct BlockCompiler;
+// mig: impl BlockCompiler
+impl BlockCompiler {}
+/*
 class BlockCompiler(
     opts: TypingPassOptions,
 
@@ -50,6 +59,12 @@ class BlockCompiler(
     localHelper: LocalHelper,
     delegate: IBlockCompilerDelegate) {
 
+*/
+// mig: fn evaluate_block
+fn evaluate_block() {
+  panic!("Unimplemented: evaluate_block");
+}
+/*
   // This is NOT USED FOR EVERY BLOCK!
   // This is just for the simplest kind of block.
   // This can serve as an example for how we can use together all the tools provided by BlockCompiler.
@@ -80,8 +95,12 @@ class BlockCompiler(
     val (unstackifiedAncestorLocals, restackifiedAncestorLocals) = nenv.snapshot.getEffectsSince(startingNenv)
     (block2, unstackifiedAncestorLocals, restackifiedAncestorLocals, returnsFromExprs)
   }
-
-
+*/
+// mig: fn evaluate_block_statements
+fn evaluate_block_statements() {
+  panic!("Unimplemented: evaluate_block_statements");
+}
+/*
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
     startingNenv: NodeEnvironmentT,

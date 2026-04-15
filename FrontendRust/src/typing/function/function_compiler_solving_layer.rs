@@ -34,6 +34,24 @@ import scala.collection.immutable.{List, Set}
 // - Incorporate any template arguments into the environment
 // There's a layer to take care of each of these things.
 // This file is the outer layer, which spawns a local environment for the function.
+*/
+// mig: struct FunctionCompilerSolvingLayer
+pub struct FunctionCompilerSolvingLayer {
+    opts: TypingPassOptions,
+    interner: Interner,
+    keywords: Keywords,
+    name_translator: NameTranslator,
+    templata_compiler: TemplataCompiler,
+    infer_compiler: InferCompiler,
+    convert_helper: ConvertHelper,
+    struct_compiler: StructCompiler,
+    delegate: Box<dyn IFunctionCompilerDelegate>,
+}
+
+// mig: impl FunctionCompilerSolvingLayer
+impl FunctionCompilerSolvingLayer {}
+
+/*
 class FunctionCompilerSolvingLayer(
     opts: TypingPassOptions,
     interner: Interner,
@@ -52,6 +70,22 @@ class FunctionCompilerSolvingLayer(
   // Preconditions:
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
+*/
+// mig: fn evaluate_templated_function_from_call_for_prototype
+fn evaluate_templated_function_from_call_for_prototype(
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    explicit_template_args: &[ITemplataT],
+    context_region: RegionT,
+    args: &[CoordT],
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
+}
+
+/*
   def evaluateTemplatedFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -120,6 +154,22 @@ class FunctionCompilerSolvingLayer(
   // Preconditions:
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
+*/
+// mig: fn evaluate_templated_function_from_call_for_banner
+fn evaluate_templated_function_from_call_for_banner(
+    declaring_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    already_specified_template_args: &[ITemplataT],
+    context_region: RegionT,
+    args: &[CoordT],
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
+}
+
+/*
   def evaluateTemplatedFunctionFromCallForBanner(
       // The environment the function was defined in.
       declaringEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -190,6 +240,22 @@ class FunctionCompilerSolvingLayer(
   // This is called while we're trying to figure out what functionSs to call when there
   // are a lot of overloads available.
   // This assumes it met any type bound restrictions (or, will; not implemented yet)
+*/
+// mig: fn evaluate_templated_light_banner_from_call
+fn evaluate_templated_light_banner_from_call(
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    coutputs: &mut CompilerOutputs,
+    original_calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    explicit_template_args: &[ITemplataT],
+    context_region: RegionT,
+    args: &[CoordT],
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_light_banner_from_call");
+}
+
+/*
   def evaluateTemplatedLightBannerFromCall(
       // The environment the function was defined in.
       nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -260,6 +326,16 @@ class FunctionCompilerSolvingLayer(
     EvaluateFunctionSuccess(prototypeTemplata, inferences, instantiationBoundArgs)
   }
 
+*/
+// mig: fn assemble_known_templatas
+fn assemble_known_templatas(
+    function: &FunctionA,
+    explicit_template_args: &[ITemplataT],
+) -> Vec<InitialKnown> {
+    panic!("Unimplemented: assemble_known_templatas");
+}
+
+/*
   private def assembleKnownTemplatas(
     function: FunctionA,
     explicitTemplateArgs: Vector[ITemplataT[ITemplataType]]):
@@ -271,6 +347,15 @@ class FunctionCompilerSolvingLayer(
     })
   }
 
+*/
+// mig: fn check_closure_concerns_handled
+fn check_closure_concerns_handled(
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+) {
+    panic!("Unimplemented: check_closure_concerns_handled");
+}
+
+/*
   private def checkClosureConcernsHandled(
     // The environment the function was defined in.
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT
@@ -287,6 +372,18 @@ class FunctionCompilerSolvingLayer(
   }
 
   // IOW, add the necessary data to turn the near env into the runed env.
+*/
+// mig: fn add_runed_data_to_near_env
+fn add_runed_data_to_near_env(
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    identifying_runes: &[IRuneS],
+    templatas_by_rune: &std::collections::HashMap<IRuneS, ITemplataT>,
+    reachable_bounds_from_params_and_return: &[PrototypeTemplataT],
+) -> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
+    panic!("Unimplemented: add_runed_data_to_near_env");
+}
+
+/*
   private def addRunedDataToNearEnv(
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
     identifyingRunes: Vector[IRuneS],
@@ -326,6 +423,22 @@ class FunctionCompilerSolvingLayer(
   // Preconditions:
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
+*/
+// mig: fn evaluate_generic_function_from_call_for_prototype
+fn evaluate_generic_function_from_call_for_prototype(
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    coutputs: &mut CompilerOutputs,
+    calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    explicit_template_args: &[ITemplataT],
+    context_region: RegionT,
+    args: &[Option<CoordT>],
+) -> IResolveFunctionResult {
+    panic!("Unimplemented: evaluate_generic_function_from_call_for_prototype");
+}
+
+/*
   def evaluateGenericFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -431,6 +544,20 @@ class FunctionCompilerSolvingLayer(
     ResolveFunctionSuccess(PrototypeTemplataT(prototype), inferredTemplatas)
   }
 
+*/
+// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
+fn evaluate_generic_virtual_dispatcher_function_for_prototype(
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    coutputs: &mut CompilerOutputs,
+    calling_env: &dyn IInDenizenEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    args: &[Option<CoordT>],
+) -> IDefineFunctionResult {
+    panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
+}
+
+/*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     // The environment the function was defined in.
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -532,6 +659,18 @@ class FunctionCompilerSolvingLayer(
 
   // Preconditions:
   // - either no closured vars, or they were already added to the env.
+*/
+// mig: fn evaluate_generic_function_from_non_call
+fn evaluate_generic_function_from_non_call(
+    coutputs: &mut CompilerOutputs,
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    parent_ranges: &[RangeS],
+    call_location: LocationInDenizen,
+) -> FunctionHeaderT {
+    panic!("Unimplemented: evaluate_generic_function_from_non_call");
+}
+
+/*
   def evaluateGenericFunctionFromNonCall(
     coutputs: CompilerOutputs,
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -625,6 +764,17 @@ class FunctionCompilerSolvingLayer(
     header
   }
 
+*/
+// mig: fn assemble_initial_sends_from_args
+fn assemble_initial_sends_from_args(
+    call_range: RangeS,
+    function: &FunctionA,
+    args: &[Option<CoordT>],
+) -> Vec<InitialSend> {
+    panic!("Unimplemented: assemble_initial_sends_from_args");
+}
+
+/*
   private def assembleInitialSendsFromArgs(callRange: RangeS, function: FunctionA, args: Vector[Option[CoordT]]):
   Vector[InitialSend] = {
     function.params.map(_.pattern.coordRune.get).zip(args).zipWithIndex

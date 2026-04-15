@@ -33,11 +33,21 @@ import scala.collection.immutable.{List, Nil, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
+*/
+// mig: struct TookWeakRefOfNonWeakableError
+pub struct TookWeakRefOfNonWeakableError;
+
+/*
 case class TookWeakRefOfNonWeakableError() extends Throwable {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 
+*/
+// mig: trait IExpressionCompilerDelegate
+pub trait IExpressionCompilerDelegate {}
+
+/*
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -71,6 +81,15 @@ trait IExpressionCompilerDelegate {
   StructTT
 }
 
+*/
+// mig: struct ExpressionCompiler
+pub struct ExpressionCompiler<'s> {
+    pub delegate: Box<dyn IExpressionCompilerDelegate>,
+}
+// mig: impl ExpressionCompiler
+impl<'s> ExpressionCompiler<'s> {}
+
+/*
 class ExpressionCompiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -121,6 +140,13 @@ class ExpressionCompiler(
     }
   })
 
+*/
+// mig: fn evaluate_and_coerce_to_reference_expressions
+fn evaluate_and_coerce_to_reference_expressions() {
+    panic!("Unimplemented: evaluate_and_coerce_to_reference_expressions");
+}
+
+/*
   def evaluateAndCoerceToReferenceExpressions(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -138,6 +164,13 @@ class ExpressionCompiler(
     (things.map(_._1), things.map(_._2).flatten.toSet)
   }
 
+*/
+// mig: fn evaluate_lookup_for_load
+fn evaluate_lookup_for_load() {
+    panic!("Unimplemented: evaluate_lookup_for_load");
+}
+
+/*
   private def evaluateLookupForLoad(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -162,6 +195,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn evaluate_addressible_lookup_for_mutate
+fn evaluate_addressible_lookup_for_mutate() {
+    panic!("Unimplemented: evaluate_addressible_lookup_for_mutate");
+}
+
+/*
   private def evaluateAddressibleLookupForMutate(
       coutputs: CompilerOutputs,
       nenv: NodeEnvironmentBox,
@@ -245,6 +285,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn evaluate_addressible_lookup
+fn evaluate_addressible_lookup() {
+    panic!("Unimplemented: evaluate_addressible_lookup");
+}
+
+/*
   private def evaluateAddressibleLookup(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -333,6 +380,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn make_closure_struct_construct_expression
+fn make_closure_struct_construct_expression() {
+    panic!("Unimplemented: make_closure_struct_construct_expression");
+}
+
+/*
   private def makeClosureStructConstructExpression(
       coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -397,6 +451,13 @@ class ExpressionCompiler(
     (constructExpr2)
   }
 
+*/
+// mig: fn evaluate_and_coerce_to_reference_expression
+fn evaluate_and_coerce_to_reference_expression() {
+    panic!("Unimplemented: evaluate_and_coerce_to_reference_expression");
+}
+
+/*
   def evaluateAndCoerceToReferenceExpression(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -420,6 +481,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn coerce_to_reference_expression
+fn coerce_to_reference_expression() {
+    panic!("Unimplemented: coerce_to_reference_expression");
+}
+
+/*
   def coerceToReferenceExpression(
     nenv: NodeEnvironmentBox,
     parentRanges: List[RangeS],
@@ -435,6 +503,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn evaluate_expected_address_expression
+fn evaluate_expected_address_expression() {
+    panic!("Unimplemented: evaluate_expected_address_expression");
+}
+
+/*
   private def evaluateExpectedAddressExpression(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -455,6 +530,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn evaluate
+fn evaluate() {
+    panic!("Unimplemented: evaluate");
+}
+
+/*
   // returns:
   // - resulting expression
   // - all the types that are returned from inside the body via return
@@ -1527,6 +1609,13 @@ class ExpressionCompiler(
     })
   }
 
+*/
+// mig: fn check_array
+fn check_array() {
+    panic!("Unimplemented: check_array");
+}
+
+/*
   private def checkArray(
       coutputs: CompilerOutputs,
       range: List[RangeS],
@@ -1557,6 +1646,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn get_option
+fn get_option() {
+    panic!("Unimplemented: get_option");
+}
+
+/*
   def getOption(
     coutputs: CompilerOutputs,
     nenv: FunctionEnvironmentT,
@@ -1625,6 +1721,13 @@ class ExpressionCompiler(
     (ownOptCoord, someConstructor, noneConstructor, someImplId, noneImplId)
   }
 
+*/
+// mig: fn get_result
+fn get_result() {
+    panic!("Unimplemented: get_result");
+}
+
+/*
   def getResult(
     coutputs: CompilerOutputs,
     nenv: FunctionEnvironmentT,
@@ -1712,6 +1815,13 @@ class ExpressionCompiler(
     (ownResultCoord, okConstructor, okResultImpl, errConstructor, errResultImpl)
   }
 
+*/
+// mig: fn weak_alias
+fn weak_alias() {
+    panic!("Unimplemented: weak_alias");
+}
+
+/*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
     expr.kind match {
       case sr @ StructTT(_) => {
@@ -1731,6 +1841,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn dot_borrow
+fn dot_borrow() {
+    panic!("Unimplemented: dot_borrow");
+}
+
+/*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.
   // If it receives an owning address, that's fine, just borrowsoftload from it.
   // Rename this someday.
@@ -1767,6 +1884,13 @@ class ExpressionCompiler(
     }
   }
 
+*/
+// mig: fn evaluate_closure
+fn evaluate_closure() {
+    panic!("Unimplemented: evaluate_closure");
+}
+
+/*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
   // returns:
   // - coutputs
@@ -1810,6 +1934,13 @@ class ExpressionCompiler(
     constructExpr2
   }
 
+*/
+// mig: fn new_global_function_group_expression
+fn new_global_function_group_expression() {
+    panic!("Unimplemented: new_global_function_group_expression");
+}
+
+/*
   private def newGlobalFunctionGroupExpression(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -1825,6 +1956,13 @@ class ExpressionCompiler(
         interner.intern(OverloadSetT(env, name))))
   }
 
+*/
+// mig: fn evaluate_block_statements
+fn evaluate_block_statements() {
+    panic!("Unimplemented: evaluate_block_statements");
+}
+
+/*
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
     startingNenv: NodeEnvironmentT,
@@ -1839,6 +1977,13 @@ class ExpressionCompiler(
       coutputs, startingNenv, nenv, parentRanges, callLocation, life, region, block)
   }
 
+*/
+// mig: fn translate_pattern_list
+fn translate_pattern_list() {
+    panic!("Unimplemented: translate_pattern_list");
+}
+
+/*
   def translatePatternList(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -1854,6 +1999,13 @@ class ExpressionCompiler(
       (coutputs, nenv, liveCaptureLocals) => VoidLiteralTE(nenv.defaultRegion))
   }
 
+*/
+// mig: fn astronomize_lambda
+fn astronomize_lambda() {
+    panic!("Unimplemented: astronomize_lambda");
+}
+
+/*
   def astronomizeLambda(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -1924,6 +2076,13 @@ class ExpressionCompiler(
       bodyS)
   }
 
+*/
+// mig: fn drop_since
+fn drop_since() {
+    panic!("Unimplemented: drop_since");
+}
+
+/*
   def dropSince(
     coutputs: CompilerOutputs,
     startingNenv: NodeEnvironmentT,
@@ -1989,6 +2148,13 @@ class ExpressionCompiler(
     newExpr
   }
 
+*/
+// mig: fn resultify_expressions
+fn resultify_expressions() {
+    panic!("Unimplemented: resultify_expressions");
+}
+
+/*
   // Makes the last expression stored in a variable.
   // Dont call this for void or never or no expressions.
   // Maybe someday we can do this even for Never and Void, for consistency and so

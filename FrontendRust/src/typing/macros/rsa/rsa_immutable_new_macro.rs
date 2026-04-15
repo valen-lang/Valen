@@ -16,8 +16,14 @@ import dev.vale.typing.env.TemplataLookupContext
 import dev.vale.typing.function.DestructorCompiler
 import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types._
-
-
+*/
+// mig: struct RSAImmutableNewMacro
+pub struct RSAImmutableNewMacro {
+}
+// mig: impl RSAImmutableNewMacro
+impl RSAImmutableNewMacro {
+}
+/*
 class RSAImmutableNewMacro(
   interner: Interner,
   keywords: Keywords,
@@ -26,7 +32,12 @@ class RSAImmutableNewMacro(
   destructorCompiler: DestructorCompiler
 ) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_imm_new
-
+*/
+// mig: fn generate_function_body
+fn generate_function_body() {
+    panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

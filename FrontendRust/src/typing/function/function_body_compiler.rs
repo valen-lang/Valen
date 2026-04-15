@@ -22,7 +22,10 @@ import dev.vale.typing.ast._
 import dev.vale.typing.env._
 
 import scala.collection.immutable.{List, Set}
-
+*/
+// mig: trait IBodyCompilerDelegate
+pub trait IBodyCompilerDelegate {}
+/*
 trait IBodyCompilerDelegate {
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
@@ -46,7 +49,12 @@ trait IBodyCompilerDelegate {
     patternInputExprs2: Vector[ReferenceExpressionTE]):
   ReferenceExpressionTE
 }
-
+*/
+// mig: struct BodyCompiler
+pub struct BodyCompiler;
+// mig: impl BodyCompiler
+impl BodyCompiler {}
+/*
 class BodyCompiler(
   opts: TypingPassOptions,
 
@@ -56,6 +64,12 @@ class BodyCompiler(
     convertHelper: ConvertHelper,
     delegate: IBodyCompilerDelegate) {
 
+*/
+// mig: fn declare_and_evaluate_function_body
+fn declare_and_evaluate_function_body() {
+  panic!("Unimplemented: declare_and_evaluate_function_body");
+}
+/*
   // Returns:
   // - IF we had to infer it, the return type.
   // - The body.
@@ -158,6 +172,10 @@ class BodyCompiler(
       }
   }
 
+*/
+// mig: struct ResultTypeMismatchError
+pub struct ResultTypeMismatchError;
+/*
   case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
     val hash = runtime.ScalaRunTime._hashCode(this)
     override def hashCode(): Int = hash;
@@ -165,6 +183,12 @@ override def equals(obj: Any): Boolean = vcurious();
     vpass()
   }
 
+*/
+// mig: fn evaluate_function_body
+fn evaluate_function_body() {
+  panic!("Unimplemented: evaluate_function_body");
+}
+/*
   private def evaluateFunctionBody(
     funcOuterEnv: FunctionEnvironmentBoxT,
     coutputs: CompilerOutputs,
@@ -251,6 +275,12 @@ override def equals(obj: Any): Boolean = vcurious();
     Ok((ast.BlockTE(convertedBodyWithReturn), returns))
   }
 
+*/
+// mig: fn evaluate_lets
+fn evaluate_lets() {
+  panic!("Unimplemented: evaluate_lets");
+}
+/*
   // Produce the lets at the start of a function.
   private def evaluateLets(
       nenv: NodeEnvironmentBox,

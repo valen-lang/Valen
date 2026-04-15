@@ -22,29 +22,53 @@ import scala.collection.immutable._
 
 //ISolverOutcome[IRulexSR, IRuneS, ITemplata[ITemplataType], ITypingPassSolverError]
 
+*/
+// mig: struct CompleteResolveSolve
+pub struct CompleteResolveSolve;
+/*
 case class CompleteResolveSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
     runeToBound: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 )
 
+*/
+// mig: struct CompleteDefineSolve
+pub struct CompleteDefineSolve;
+/*
 case class CompleteDefineSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
     runeToBound: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT])
 
+*/
+// mig: enum IConclusionResolveError
+pub enum IConclusionResolveError {}
+/*
 sealed trait IConclusionResolveError
 case class CouldntFindImplForConclusionResolve(range: List[RangeS], fail: IsntParent) extends IConclusionResolveError
 case class CouldntFindKindForConclusionResolve(inner: ResolveFailure[KindT]) extends IConclusionResolveError
 case class CouldntFindFunctionForConclusionResolve(range: List[RangeS], fff: FindFunctionFailure) extends IConclusionResolveError
 case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends IConclusionResolveError
 
+*/
+// mig: enum IResolvingError
+pub enum IResolvingError {}
+/*
 sealed trait IResolvingError
 case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IResolvingError
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
+*/
+// mig: enum IDefiningError
+pub enum IDefiningError {}
+/*
 sealed trait IDefiningError
 case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IDefiningError
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
+*/
+// mig: struct InferEnv
+pub struct InferEnv;
+/*
 case class InferEnv(
   // This is the only one that matters when checking template instantiations.
   // This is also the one that the placeholders come from.
@@ -62,15 +86,27 @@ case class InferEnv(
   contextRegion: RegionT
 )
 
+*/
+// mig: struct InitialSend
+pub struct InitialSend;
+/*
 case class InitialSend(
   senderRune: RuneUsage,
   receiverRune: RuneUsage,
   sendTemplata: ITemplataT[ITemplataType])
 
+*/
+// mig: struct InitialKnown
+pub struct InitialKnown;
+/*
 case class InitialKnown(
   rune: RuneUsage,
   templata: ITemplataT[ITemplataType])
 
+*/
+// mig: trait IInferCompilerDelegate
+pub trait IInferCompilerDelegate {}
+/*
 trait IInferCompilerDelegate {
   def resolveStruct(
     callingEnv: IInDenizenEnvironmentT,
@@ -127,6 +163,12 @@ trait IInferCompilerDelegate {
   IsParentResult
 }
 
+*/
+// mig: struct InferCompiler
+pub struct InferCompiler;
+// mig: impl InferCompiler
+impl InferCompiler {}
+/*
 class InferCompiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -138,6 +180,10 @@ class InferCompiler(
 
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
+*/
+// mig: fn solve_for_defining
+fn solve_for_defining() { panic!("Unimplemented: solve_for_defining"); }
+/*
   def solveForDefining(
     envs: InferEnv, // See CSSNCE
     coutputs: CompilerOutputs,
@@ -169,6 +215,10 @@ class InferCompiler(
 
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
+*/
+// mig: fn solve_for_resolving
+fn solve_for_resolving() { panic!("Unimplemented: solve_for_resolving"); }
+/*
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -189,6 +239,10 @@ class InferCompiler(
       envs, coutputs, invocationRange, callLocation, runeToType, rules, Vector(), solver)
   }
 
+*/
+// mig: fn partial_solve
+fn partial_solve() { panic!("Unimplemented: partial_solve"); }
+/*
   def partialSolve(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -207,7 +261,10 @@ class InferCompiler(
     Ok(solverState.userifyConclusions().toMap)
   }
 
-
+*/
+// mig: fn make_solver_state
+fn make_solver_state() { panic!("Unimplemented: make_solver_state"); }
+/*
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
@@ -248,6 +305,10 @@ class InferCompiler(
     })
   }
 
+*/
+// mig: fn r#continue
+fn r#continue() { panic!("Unimplemented: r#continue"); }
+/*
   def continue(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
@@ -256,6 +317,10 @@ class InferCompiler(
     compilerSolver.continue(envs, state, solver)
   }
 
+*/
+// mig: fn check_resolving_conclusions_and_resolve
+fn check_resolving_conclusions_and_resolve() { panic!("Unimplemented: check_resolving_conclusions_and_resolve"); }
+/*
   def checkResolvingConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,
@@ -379,6 +444,10 @@ class InferCompiler(
     Ok(CompleteResolveSolve(conclusions, instantiationBoundArgs))
   }
 
+*/
+// mig: fn interpret_results
+fn interpret_results() { panic!("Unimplemented: interpret_results"); }
+/*
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
       solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
@@ -396,6 +465,10 @@ class InferCompiler(
     }
   }
 
+*/
+// mig: fn check_defining_conclusions_and_resolve
+fn check_defining_conclusions_and_resolve() { panic!("Unimplemented: check_defining_conclusions_and_resolve"); }
+/*
   def checkDefiningConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,
@@ -471,6 +544,10 @@ class InferCompiler(
     Ok(instantiationBoundArgs)
   }
 
+*/
+// mig: fn import_reachable_bounds
+fn import_reachable_bounds() { panic!("Unimplemented: import_reachable_bounds"); }
+/*
   def importReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
       reachableBounds: Map[IRuneS, InstantiationReachableBoundArgumentsT[IFunctionNameT]]):
@@ -487,6 +564,10 @@ class InferCompiler(
   }
 
   // This includes putting newly defined bound functions in.
+*/
+// mig: fn import_conclusions_and_reachable_bounds
+fn import_conclusions_and_reachable_bounds() { panic!("Unimplemented: import_conclusions_and_reachable_bounds"); }
+/*
   def importConclusionsAndReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
       conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
@@ -509,6 +590,10 @@ class InferCompiler(
           }))
   }
 
+*/
+// mig: fn resolve_conclusions_for_define
+fn resolve_conclusions_for_define() { panic!("Unimplemented: resolve_conclusions_for_define"); }
+/*
   private def resolveConclusionsForDefine(
     env: IInDenizenEnvironmentT, // See CSSNCE
     state: CompilerOutputs,
@@ -575,6 +660,10 @@ class InferCompiler(
 
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
+*/
+// mig: fn resolve_function_call_conclusion
+fn resolve_function_call_conclusion() { panic!("Unimplemented: resolve_function_call_conclusion"); }
+/*
   def resolveFunctionCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
     state: CompilerOutputs,
@@ -613,6 +702,10 @@ class InferCompiler(
 
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
+*/
+// mig: fn resolve_impl_conclusion
+fn resolve_impl_conclusion() { panic!("Unimplemented: resolve_impl_conclusion"); }
+/*
   def resolveImplConclusion(
     callingEnv: IInDenizenEnvironmentT,
     state: CompilerOutputs,
@@ -649,6 +742,10 @@ class InferCompiler(
 
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
+*/
+// mig: fn resolve_template_call_conclusion
+fn resolve_template_call_conclusion() { panic!("Unimplemented: resolve_template_call_conclusion"); }
+/*
   def resolveTemplateCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
     state: CompilerOutputs,
@@ -712,6 +809,10 @@ class InferCompiler(
     }
   }
 
+*/
+// mig: fn incrementally_solve
+fn incrementally_solve() { panic!("Unimplemented: incrementally_solve"); }
+/*
   def incrementallySolve(
     envs: InferEnv,
     coutputs: CompilerOutputs,
@@ -744,6 +845,10 @@ class InferCompiler(
 
 object InferCompiler {
   // Some rules should be excluded from the call site, see SROACSD.
+*/
+// mig: fn include_rule_in_call_site_solve
+fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_in_call_site_solve"); }
+/*
   def includeRuleInCallSiteSolve(rule: IRulexSR): Boolean = {
     rule match {
       case DefinitionFuncSR(_, _, _, _, _) => false
@@ -753,6 +858,10 @@ object InferCompiler {
   }
 
   // Some rules should be excluded from the call site, see SROACSD.
+*/
+// mig: fn include_rule_in_definition_solve
+fn include_rule_in_definition_solve() { panic!("Unimplemented: include_rule_in_definition_solve"); }
+/*
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
     rule match {
       case CallSiteCoordIsaSR(_, _, _, _) => false

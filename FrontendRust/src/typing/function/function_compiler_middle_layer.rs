@@ -22,6 +22,22 @@ import dev.vale.typing.env._
 
 import scala.collection.immutable.{List, Set}
 
+*/
+// mig: struct FunctionCompilerMiddleLayer
+pub struct FunctionCompilerMiddleLayer {
+    pub opts: TypingPassOptions,
+    pub interner: Interner,
+    pub keywords: Keywords,
+    pub name_translator: NameTranslator,
+    pub templata_compiler: TemplataCompiler,
+    pub convert_helper: ConvertHelper,
+    pub struct_compiler: StructCompiler,
+    pub delegate: IFunctionCompilerDelegate,
+}
+
+// mig: impl FunctionCompilerMiddleLayer
+impl FunctionCompilerMiddleLayer {}
+/*
 class FunctionCompilerMiddleLayer(
     opts: TypingPassOptions,
     interner: Interner,
@@ -62,6 +78,19 @@ class FunctionCompilerMiddleLayer(
 //    banner
 //  }
 
+*/
+// mig: fn evaluate_maybe_virtuality
+fn evaluate_maybe_virtuality(
+    env: &IInDenizenEnvironmentT,
+    coutputs: &CompilerOutputs,
+    parent_ranges: &[RangeS],
+    param_kind: &KindT,
+    maybe_virtuality: Option<&AbstractSP>,
+) -> Option<AbstractT> {
+    panic!("Unimplemented: evaluate_maybe_virtuality");
+}
+
+/*
   private def evaluateMaybeVirtuality(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -108,6 +137,21 @@ class FunctionCompilerMiddleLayer(
     }
   }
 
+*/
+// mig: fn get_or_evaluate_templated_function_for_banner
+fn get_or_evaluate_templated_function_for_banner(
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    coutputs: &CompilerOutputs,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    function1: &FunctionA,
+    instantiation_bound_params: &InstantiationBoundArgumentsT<FunctionBoundNameT, ImplBoundNameT>,
+) -> PrototypeTemplataT<IFunctionNameT> {
+    panic!("Unimplemented: get_or_evaluate_templated_function_for_banner");
+}
+
+/*
   // Preconditions:
   // - already spawned local env
   // - either no template args, or they were already added to the env.
@@ -155,6 +199,21 @@ class FunctionCompilerMiddleLayer(
     }
   }
 
+*/
+// mig: fn get_or_evaluate_function_for_header
+fn get_or_evaluate_function_for_header(
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
+    rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    coutputs: &CompilerOutputs,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    function1: &FunctionA,
+    instantiation_bound_params: &InstantiationBoundArgumentsT<FunctionBoundNameT, ImplBoundNameT>,
+) -> FunctionHeaderT {
+    panic!("Unimplemented: get_or_evaluate_function_for_header");
+}
+
+/*
   // Preconditions:
   // - already spawned local env
   // - either no template args, or they were already added to the env.
@@ -274,6 +333,16 @@ class FunctionCompilerMiddleLayer(
 
 
 
+*/
+// mig: fn evaluate_function_param_types
+fn evaluate_function_param_types(
+    env: &IInDenizenEnvironmentT,
+    params1: &[ParameterS],
+) -> Vec<CoordT> {
+    panic!("Unimplemented: evaluate_function_param_types");
+}
+
+/*
   private def evaluateFunctionParamTypes(
     env: IInDenizenEnvironmentT,
     params1: Vector[ParameterS]):
@@ -289,6 +358,18 @@ class FunctionCompilerMiddleLayer(
     })
   }
 
+*/
+// mig: fn assemble_function_params
+fn assemble_function_params(
+    env: &IInDenizenEnvironmentT,
+    coutputs: &CompilerOutputs,
+    parent_ranges: &[RangeS],
+    params1: &[ParameterS],
+) -> Vec<ParameterT> {
+    panic!("Unimplemented: assemble_function_params");
+}
+
+/*
   def assembleFunctionParams(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -315,6 +396,16 @@ class FunctionCompilerMiddleLayer(
       })
   }
 
+*/
+// mig: fn get_maybe_return_type
+fn get_maybe_return_type(
+    near_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    maybe_ret_coord_rune: Option<&IRuneS>,
+) -> Option<CoordT> {
+    panic!("Unimplemented: get_maybe_return_type");
+}
+
+/*
   private def getMaybeReturnType(
     nearEnv: BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
     maybeRetCoordRune: Option[IRuneS]
@@ -328,6 +419,18 @@ class FunctionCompilerMiddleLayer(
     })
   }
 
+*/
+// mig: fn get_generic_function_banner_from_call
+fn get_generic_function_banner_from_call(
+    rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    coutputs: &CompilerOutputs,
+    call_range: &[RangeS],
+    function_templata: &FunctionTemplataT,
+) -> FunctionBannerT {
+    panic!("Unimplemented: get_generic_function_banner_from_call");
+}
+
+/*
   // Preconditions:
   // - already spawned local env
   // - either no template args, or they were already added to the env.
@@ -353,6 +456,18 @@ class FunctionCompilerMiddleLayer(
     banner
   }
 
+*/
+// mig: fn get_generic_function_prototype_from_call
+fn get_generic_function_prototype_from_call(
+    rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    coutputs: &CompilerOutputs,
+    call_range: &[RangeS],
+    function1: &FunctionA,
+) -> PrototypeT<IFunctionNameT> {
+    panic!("Unimplemented: get_generic_function_prototype_from_call");
+}
+
+/*
   def getGenericFunctionPrototypeFromCall(
     runedEnv: BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
     coutputs: CompilerOutputs,
@@ -447,6 +562,17 @@ class FunctionCompilerMiddleLayer(
 //    vimpl()
 //  }
 
+*/
+// mig: fn assemble_name
+fn assemble_name(
+    template_name: &IdT<IFunctionTemplateNameT>,
+    template_args: &[ITemplataT<ITemplataType>],
+    param_types: &[CoordT],
+) -> IdT<IFunctionNameT> {
+    panic!("Unimplemented: assemble_name");
+}
+
+/*
   def assembleName(
       templateName: IdT[IFunctionTemplateNameT],
       templateArgs: Vector[ITemplataT[ITemplataType]],
@@ -456,6 +582,17 @@ class FunctionCompilerMiddleLayer(
       localName = templateName.localName.makeFunctionName(interner, keywords, templateArgs, paramTypes))
   }
 
+*/
+// mig: fn make_named_env
+fn make_named_env(
+    rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+    param_types: &[CoordT],
+    maybe_return_type: Option<CoordT>,
+) -> FunctionEnvironmentT {
+    panic!("Unimplemented: make_named_env");
+}
+
+/*
   def makeNamedEnv(
     runedEnv: BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
     paramTypes: Vector[CoordT],

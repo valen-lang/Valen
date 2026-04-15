@@ -15,9 +15,36 @@ import dev.vale.typing.ast._
 import dev.vale.typing.env.FunctionEnvironmentBoxT
 import dev.vale.typing.ast
 
+*/
+// mig: struct RSADropIntoMacro
+pub struct RSADropIntoMacro {
+    pub keywords: Keywords,
+    pub array_compiler: ArrayCompiler,
+}
+
+// mig: impl RSADropIntoMacro
+impl RSADropIntoMacro {}
+/*
 class RSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_drop_into
 
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: FunctionEnvironmentT,
+    coutputs: CompilerOutputs,
+    generator_id: StrI,
+    life: LocationInFunctionEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    origin_function: Option<FunctionA>,
+    param_coords: Vec<ParameterT>,
+    maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
+
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

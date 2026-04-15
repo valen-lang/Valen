@@ -18,7 +18,12 @@ import dev.vale.typing.ast._
 import dev.vale.typing.names._
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct CallCompiler
+pub struct CallCompiler;
+// mig: impl CallCompiler
+impl CallCompiler {}
+/*
 class CallCompiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -27,7 +32,10 @@ class CallCompiler(
     convertHelper: ConvertHelper,
     localHelper: LocalHelper,
     overloadCompiler: OverloadResolver) {
-
+*/
+// mig: fn evaluate_call
+fn evaluate_call() { panic!("Unimplemented: evaluate_call"); }
+/*
   private def evaluateCall(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -120,6 +128,10 @@ class CallCompiler(
   // also, the given callable is f, but the actual callable is f.__function.
 
   // By "custom call" we mean calling __call.
+*/
+// mig: fn evaluate_custom_call
+fn evaluate_custom_call() { panic!("Unimplemented: evaluate_custom_call"); }
+/*
   private def evaluateCustomCall(
     nenv: NodeEnvironmentBox,
     coutputs: CompilerOutputs,
@@ -206,6 +218,10 @@ class CallCompiler(
   }
 
 
+*/
+// mig: fn check_types
+fn check_types() { panic!("Unimplemented: check_types"); }
+/*
   def checkTypes(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -252,6 +268,10 @@ class CallCompiler(
 //    vassert(argTypes == callableType.paramTypes, "arg param type mismatch. params: " + callableType.paramTypes + " args: " + argTypes)
   }
 
+*/
+// mig: fn evaluate_prefix_call
+fn evaluate_prefix_call() { panic!("Unimplemented: evaluate_prefix_call"); }
+/*
   def evaluatePrefixCall(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,

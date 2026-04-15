@@ -12,10 +12,32 @@ import dev.vale.postparsing.LocationInDenizen
 import dev.vale.typing.ast
 import dev.vale.typing.ast._
 import dev.vale.typing.function.FunctionCompilerCore
-
+*/
+// mig: struct SameInstanceMacro
+pub struct SameInstanceMacro {
+    pub generator_id: StrI,
+}
+// mig: impl SameInstanceMacro
+impl SameInstanceMacro {}
+/*
 class SameInstanceMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_same_instance
-
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: &FunctionEnvironmentT,
+    coutputs: &CompilerOutputs,
+    generator_id: StrI,
+    life: LocationInFunctionEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    origin_function: Option<&FunctionA>,
+    param_coords: &[ParameterT],
+    maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

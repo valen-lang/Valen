@@ -24,6 +24,12 @@ import dev.vale.typing.types.CoordT
 import dev.vale.typing.citizen.ResolveFailure
 
 object CompilerErrorHumanizer {
+*/
+// mig: fn humanize
+pub fn humanize(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT) -> String {
+  panic!("Unimplemented: humanize");
+}
+/*
   def humanize(
       verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -212,7 +218,12 @@ object CompilerErrorHumanizer {
     }).mkString("") +
     errorStrBody + "\n"
   }
-
+*/
+// mig: fn humanize_defining_error
+pub fn humanize_defining_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError) -> String {
+  panic!("Unimplemented: humanize_defining_error");
+}
+/*
   def humanizeDefiningError(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -230,7 +241,12 @@ object CompilerErrorHumanizer {
       }
     }
   }
-
+*/
+// mig: fn humanize_resolve_failure
+pub fn humanize_resolve_failure(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, fff: ResolveFailure<KindT>) -> String {
+  panic!("Unimplemented: humanize_resolve_failure");
+}
+/*
   def humanizeResolveFailure(
     verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -242,7 +258,12 @@ object CompilerErrorHumanizer {
     val ResolveFailure(range, reason) = fff
     humanizeResolvingError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
   }
-
+*/
+// mig: fn humanize_resolving_error
+pub fn humanize_resolving_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: IResolvingError) -> String {
+  panic!("Unimplemented: humanize_resolving_error");
+}
+/*
   def humanizeResolvingError(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -261,7 +282,12 @@ object CompilerErrorHumanizer {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn humanize_failed_solve
+pub fn humanize_failed_solve(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>) -> String {
+  panic!("Unimplemented: humanize_failed_solve");
+}
+/*
   def humanizeFailedSolve(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -272,7 +298,12 @@ object CompilerErrorHumanizer {
   String = {
     humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, error)
   }
-
+*/
+// mig: fn humanize_conclusion_resolve_error
+pub fn humanize_conclusion_resolve_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: IConclusionResolveError) -> String {
+  panic!("Unimplemented: humanize_conclusion_resolve_error");
+}
+/*
   def humanizeConclusionResolveError(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
@@ -294,7 +325,12 @@ object CompilerErrorHumanizer {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn humanize_find_function_failure
+pub fn humanize_find_function_failure(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS>, fff: FindFunctionFailure) -> String {
+  panic!("Unimplemented: humanize_find_function_failure");
+}
+/*
   def humanizeFindFunctionFailure(
     verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -323,7 +359,12 @@ object CompilerErrorHumanizer {
         }).mkString("")
       })
   }
-
+*/
+// mig: fn humanize_banner
+pub fn humanize_banner(code_map: &dyn Fn(CodeLocationS) -> String, banner: FunctionBannerT) -> String {
+  panic!("Unimplemented: humanize_banner");
+}
+/*
   def humanizeBanner(
     codeMap: CodeLocationS => String,
     banner: FunctionBannerT):
@@ -333,7 +374,12 @@ object CompilerErrorHumanizer {
       case Some(x) => printableName(codeMap, x.function.name)
     }
   }
-
+*/
+// mig: fn printable_name
+fn printable_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameS) -> String {
+  panic!("Unimplemented: printable_name");
+}
+/*
   private def printableName(
     codeMap: CodeLocationS => String,
     name: INameS):
@@ -349,7 +395,12 @@ object CompilerErrorHumanizer {
 //      case DropNameS(_) => vimpl()
     }
   }
-
+*/
+// mig: fn printable_kind_name
+fn printable_kind_name(kind: KindT) -> String {
+  panic!("Unimplemented: printable_kind_name");
+}
+/*
   private def printableKindName(kind: KindT): String = {
     kind match {
       case IntT(bits) => "i" + bits
@@ -359,13 +410,24 @@ object CompilerErrorHumanizer {
       case StructTT(f) => printableId(f)
     }
   }
+*/
+// mig: fn printable_id
+fn printable_id(id: IdT<INameT>) -> String {
+  panic!("Unimplemented: printable_id");
+}
+/*
   private def printableId(id: IdT[INameT]): String = {
     id.localName match {
       case CitizenNameT(humanName, templateArgs) => humanName + (if (templateArgs.isEmpty) "" else "<" + templateArgs.map(_.toString.mkString) + ">")
       case x => x.toString
     }
   }
-
+*/
+// mig: fn printable_var_name
+fn printable_var_name(name: IVarNameT) -> String {
+  panic!("Unimplemented: printable_var_name");
+}
+/*
   private def printableVarName(
     name: IVarNameT):
   String = {
@@ -373,11 +435,21 @@ object CompilerErrorHumanizer {
       case CodeVarNameT(n) => n.str
     }
   }
-
+*/
+// mig: fn get_file
+fn get_file(function_a: FunctionA) -> FileCoordinate {
+  panic!("Unimplemented: get_file");
+}
+/*
   private def getFile(functionA: FunctionA): FileCoordinate = {
     functionA.range.file
   }
-
+*/
+// mig: fn humanize_rejection_reason
+fn humanize_rejection_reason(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS>, reason: IFindFunctionFailureReason) -> String {
+  panic!("Unimplemented: humanize_rejection_reason");
+}
+/*
   private def humanizeRejectionReason(
       verbose: Boolean,
     codeMap: CodeLocationS => String,
@@ -432,7 +504,12 @@ object CompilerErrorHumanizer {
       }
     })
   }
-
+*/
+// mig: fn humanize_rule_error
+pub fn humanize_rule_error(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: ITypingPassSolverError) -> String {
+  panic!("Unimplemented: humanize_rule_error");
+}
+/*
   def humanizeRuleError(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
@@ -516,7 +593,12 @@ object CompilerErrorHumanizer {
       }
     }
   }
-
+*/
+// mig: fn humanize_candidate_and_failed_solve
+pub fn humanize_candidate_and_failed_solve(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>) -> String {
+  panic!("Unimplemented: humanize_candidate_and_failed_solve");
+}
+/*
   def humanizeCandidateAndFailedSolve(
     codeMap: CodeLocationS => String,
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
@@ -540,7 +622,12 @@ object CompilerErrorHumanizer {
         result)
     text
   }
-
+*/
+// mig: fn humanize_candidate
+pub fn humanize_candidate(code_map: &dyn Fn(CodeLocationS) -> String, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, candidate: ICalleeCandidate) -> String {
+  panic!("Unimplemented: humanize_candidate");
+}
+/*
   def humanizeCandidate(
     codeMap: CodeLocationS => String,
     lineRangeContaining: (CodeLocationS) => RangeS,
@@ -563,7 +650,12 @@ object CompilerErrorHumanizer {
       }
     }
   }
-
+*/
+// mig: fn humanize_templata
+pub fn humanize_templata(code_map: &dyn Fn(CodeLocationS) -> String, templata: ITemplataT<ITemplataType>) -> String {
+  panic!("Unimplemented: humanize_templata");
+}
+/*
   def humanizeTemplata(
     codeMap: CodeLocationS => String,
     templata: ITemplataT[ITemplataType]):
@@ -616,7 +708,12 @@ object CompilerErrorHumanizer {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn humanize_coord
+fn humanize_coord(code_map: &dyn Fn(CodeLocationS) -> String, coord: CoordT) -> String {
+  panic!("Unimplemented: humanize_coord");
+}
+/*
   private def humanizeCoord(
       codeMap: CodeLocationS => String,
       coord: CoordT
@@ -633,7 +730,12 @@ object CompilerErrorHumanizer {
     val kindStr = humanizeKind(codeMap, kind, Some(region))
     ownershipStr + kindStr
   }
-
+*/
+// mig: fn humanize_kind
+fn humanize_kind(code_map: &dyn Fn(CodeLocationS) -> String, kind: KindT, containing_region: Option<RegionT>) -> String {
+  panic!("Unimplemented: humanize_kind");
+}
+/*
   private def humanizeKind(
       codeMap: CodeLocationS => String,
       kind: KindT,
@@ -671,7 +773,12 @@ object CompilerErrorHumanizer {
       }
     }
   }
-
+*/
+// mig: fn humanize_id
+pub fn humanize_id<T: NameT>(code_map: &dyn Fn(CodeLocationS) -> String, name: IdT<T>, containing_region: Option<RegionT>) -> String {
+  panic!("Unimplemented: humanize_id");
+}
+/*
   def humanizeId[T <: INameT](
     codeMap: CodeLocationS => String,
     name: IdT[T],
@@ -684,7 +791,12 @@ object CompilerErrorHumanizer {
     }) +
       humanizeName(codeMap, name.localName, containingRegion)
   }
-
+*/
+// mig: fn humanize_name
+pub fn humanize_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameT, containing_region: Option<RegionT>) -> String {
+  panic!("Unimplemented: humanize_name");
+}
+/*
   def humanizeName(
     codeMap: CodeLocationS => String,
     name: INameT,
@@ -778,7 +890,12 @@ object CompilerErrorHumanizer {
       case NonKindNonRegionPlaceholderNameT(index, rune) => humanizeRune(rune)
     }
   }
-
+*/
+// mig: fn humanize_generic_args
+fn humanize_generic_args(code_map: &dyn Fn(CodeLocationS) -> String, template_args: Vec<ITemplataT<ITemplataType>>, containing_region: Option<RegionT>) -> String {
+  panic!("Unimplemented: humanize_generic_args");
+}
+/*
   private def humanizeGenericArgs(
     codeMap: CodeLocationS => String,
     templateArgs: Vector[ITemplataT[ITemplataType]],
@@ -799,7 +916,12 @@ object CompilerErrorHumanizer {
         ""
       })
   }
-
+*/
+// mig: fn humanize_signature
+pub fn humanize_signature(code_map: &dyn Fn(CodeLocationS) -> String, signature: SignatureT) -> String {
+  panic!("Unimplemented: humanize_signature");
+}
+/*
   def humanizeSignature(codeMap: CodeLocationS => String, signature: SignatureT): String = {
     humanizeId(codeMap, signature.id)
   }

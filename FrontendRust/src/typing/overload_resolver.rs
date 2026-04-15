@@ -38,6 +38,10 @@ import scala.collection.immutable.List
 
 object OverloadResolver {
 
+*/
+// mig: enum IFindFunctionFailureReason
+pub enum IFindFunctionFailureReason {}
+/*
   sealed trait IFindFunctionFailureReason
   case class WrongNumberOfArguments(supplied: Int, expected: Int) extends IFindFunctionFailureReason {
     vpass()
@@ -73,6 +77,10 @@ override def hashCode(): Int = vcurious() }
 override def hashCode(): Int = vcurious() }
 
 
+*/
+// mig: struct FindFunctionFailure
+pub struct FindFunctionFailure;
+/*
   case class FindFunctionFailure(
     name: IImpreciseNameS,
     args: Vector[CoordT],
@@ -84,6 +92,10 @@ override def hashCode(): Int = vcurious() }
 override def hashCode(): Int = vcurious()
   }
 
+*/
+// mig: struct EvaluateFunctionFailure2
+pub struct EvaluateFunctionFailure2;
+/*
   case class EvaluateFunctionFailure2(
     name: IImpreciseNameS,
     args: Vector[CoordT],
@@ -96,6 +108,12 @@ override def hashCode(): Int = vcurious()
   }
 }
 
+*/
+// mig: struct OverloadResolver
+pub struct OverloadResolver;
+// mig: impl OverloadResolver
+impl OverloadResolver {}
+/*
 class OverloadResolver(
     opts: TypingPassOptions,
     interner: Interner,
@@ -105,6 +123,10 @@ class OverloadResolver(
     functionCompiler: FunctionCompiler) {
   val runeTypeSolver = new RuneTypeSolver(interner)
 
+*/
+// mig: fn find_function
+fn find_function() { panic!("Unimplemented: find_function"); }
+/*
   def findFunction(
     callingEnv: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -142,6 +164,10 @@ class OverloadResolver(
     })
   }
 
+*/
+// mig: fn params_match
+fn params_match() { panic!("Unimplemented: params_match"); }
+/*
   private def paramsMatch(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -174,11 +200,19 @@ class OverloadResolver(
     Ok(())
   }
 
+*/
+// mig: struct SearchedEnvironment
+pub struct SearchedEnvironment;
+/*
   case class SearchedEnvironment(
     needle: IImpreciseNameS,
     environment: IInDenizenEnvironmentT,
     matchingTemplatas: Vector[ITemplataT[ITemplataType]])
 
+*/
+// mig: fn get_candidate_banners
+fn get_candidate_banners() { panic!("Unimplemented: get_candidate_banners"); }
+/*
   private def getCandidateBanners(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -196,6 +230,10 @@ class OverloadResolver(
       .foreach(e => getCandidateBannersInner(env, coutputs, range, functionName, searchedEnvs, results))
   }
 
+*/
+// mig: fn get_candidate_banners_inner
+fn get_candidate_banners_inner() { panic!("Unimplemented: get_candidate_banners_inner"); }
+/*
   private def getCandidateBannersInner(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -235,11 +273,19 @@ class OverloadResolver(
     })
   }
 
+*/
+// mig: struct AttemptedCandidate
+pub struct AttemptedCandidate;
+/*
   case class AttemptedCandidate(
       // Pure and region will go here
       prototype: PrototypeT[IFunctionNameT]
   )
 
+*/
+// mig: fn attempt_candidate_banner
+fn attempt_candidate_banner() { panic!("Unimplemented: attempt_candidate_banner"); }
+/*
   private def attemptCandidateBanner(
     callingEnv: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -439,6 +485,10 @@ class OverloadResolver(
     }
   }
 
+*/
+// mig: fn get_param_environments
+fn get_param_environments() { panic!("Unimplemented: get_param_environments"); }
+/*
   // Gets all the environments for all the arguments.
   private def getParamEnvironments(coutputs: CompilerOutputs, range: List[RangeS], paramFilters: Vector[CoordT]):
   Vector[IInDenizenEnvironmentT] = {
@@ -452,6 +502,10 @@ class OverloadResolver(
     })
   }
 
+*/
+// mig: fn find_potential_function
+fn find_potential_function() { panic!("Unimplemented: find_potential_function"); }
+/*
   // Checks to see if there's a function that *could*
   // exist that takes in these parameter types, and returns what the signature *would* look like.
   // Only considers when arguments match exactly.
@@ -498,6 +552,10 @@ class OverloadResolver(
     }
   }
 
+*/
+// mig: fn get_banner_param_scores
+fn get_banner_param_scores() { panic!("Unimplemented: get_banner_param_scores"); }
+/*
   // Returns either:
   // - None if banners incompatible
   // - Some(param to needs-conversion)
@@ -533,6 +591,10 @@ class OverloadResolver(
     result
   }
 
+*/
+// mig: fn narrow_down_callable_overloads
+fn narrow_down_callable_overloads() { panic!("Unimplemented: narrow_down_callable_overloads"); }
+/*
   private def narrowDownCallableOverloads(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -737,6 +799,10 @@ class OverloadResolver(
 //    }
 //  }
 
+*/
+// mig: fn get_array_generator_prototype
+fn get_array_generator_prototype() { panic!("Unimplemented: get_array_generator_prototype"); }
+/*
   def getArrayGeneratorPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -758,6 +824,10 @@ class OverloadResolver(
       }
   }
 
+*/
+// mig: fn get_array_consumer_prototype
+fn get_array_consumer_prototype() { panic!("Unimplemented: get_array_consumer_prototype"); }
+/*
   def getArrayConsumerPrototype(
     coutputs: CompilerOutputs,
     fate: FunctionEnvironmentBoxT,

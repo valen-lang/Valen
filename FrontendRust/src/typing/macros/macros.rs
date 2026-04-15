@@ -15,7 +15,10 @@ import dev.vale.typing.env.IEnvEntry
 import dev.vale.typing.names.CitizenTemplateNameT
 import dev.vale.typing.templata.ITemplataT
 import dev.vale.typing.types.InterfaceTT
-
+*/
+// mig: trait IFunctionBodyMacro
+pub trait IFunctionBodyMacro {}
+/*
 trait IFunctionBodyMacro {
 //  def generatorId: String
 
@@ -31,19 +34,28 @@ trait IFunctionBodyMacro {
     maybeRetCoord: Option[CoordT]):
   (FunctionHeaderT, ReferenceExpressionTE)
 }
-
+*/
+// mig: trait IOnStructDefinedMacro
+pub trait IOnStructDefinedMacro {}
+/*
 trait IOnStructDefinedMacro {
   def getStructSiblingEntries(
     structName: IdT[INameT], structA: StructA):
   Vector[(IdT[INameT], IEnvEntry)]
 }
-
+*/
+// mig: trait IOnInterfaceDefinedMacro
+pub trait IOnInterfaceDefinedMacro {}
+/*
 trait IOnInterfaceDefinedMacro {
   def getInterfaceSiblingEntries(
     interfaceName: IdT[INameT], interfaceA: InterfaceA):
   Vector[(IdT[INameT], IEnvEntry)]
 }
-
+*/
+// mig: trait IOnImplDefinedMacro
+pub trait IOnImplDefinedMacro {}
+/*
 trait IOnImplDefinedMacro {
   def getImplSiblingEntries(implName: IdT[INameT], implA: ImplA):
   Vector[(IdT[INameT], IEnvEntry)]

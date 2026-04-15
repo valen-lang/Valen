@@ -14,7 +14,16 @@ import dev.vale.typing.env.TemplatasStore
 import dev.vale.Err
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct VirtualCompiler
+pub struct VirtualCompiler {
+    opts: TypingPassOptions,
+    interner: Interner,
+    overload_compiler: OverloadResolver,
+}
+// mig: impl VirtualCompiler
+impl VirtualCompiler {}
+/*
 class VirtualCompiler(opts: TypingPassOptions, interner: Interner, overloadCompiler: OverloadResolver) {
 //  // See Virtuals doc for this function's purpose.
 //  // For the "Templated parent case"

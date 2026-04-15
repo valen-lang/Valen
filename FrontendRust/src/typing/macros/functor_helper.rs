@@ -17,8 +17,29 @@ import dev.vale.typing.function._
 import dev.vale.typing.names.{IFunctionNameT, RuneNameT}
 import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types.CoordT
+*/
+// mig: struct FunctorHelper
+pub struct FunctorHelper {
+    pub interner: Interner,
+    pub keywords: Keywords,
+}
 
+// mig: impl FunctorHelper
+impl FunctorHelper {}
+
+/*
 class FunctorHelper( interner: Interner, keywords: Keywords) {
+*/
+// mig: fn get_functor_for_prototype
+fn get_functor_for_prototype(
+    env: FunctionEnvironmentT,
+    coutputs: CompilerOutputs,
+    call_range: Vec<RangeS>,
+    drop_function: PrototypeTemplataT<IFunctionNameT>,
+) -> ReinterpretTE {
+    panic!("Unimplemented: get_functor_for_prototype");
+}
+/*
   def getFunctorForPrototype(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

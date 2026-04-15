@@ -28,7 +28,13 @@ import dev.vale.typing.ast._
 import scala.collection.immutable.{List, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
+*/
+// mig: struct PatternCompiler
+pub struct PatternCompiler;
 
+// mig: impl PatternCompiler
+impl PatternCompiler {}
+/*
 class PatternCompiler(
     opts: TypingPassOptions,
 
@@ -40,6 +46,12 @@ class PatternCompiler(
     nameTranslator: NameTranslator,
     destructorCompiler: DestructorCompiler,
     localHelper: LocalHelper) {
+*/
+// mig: fn translate_pattern_list
+fn translate_pattern_list() {
+    panic!("Unimplemented: translate_pattern_list");
+}
+/*
   // Note: This will unlet/drop the input expressions. Be warned.
   // patternInputsTE is a list of reference expression because they're coming in from
   // god knows where... arguments, the right side of a let, a variable, don't know!
@@ -69,6 +81,12 @@ class PatternCompiler(
     })
   }
 
+*/
+// mig: fn iterate_translate_list_and_maybe_continue
+fn iterate_translate_list_and_maybe_continue() {
+    panic!("Unimplemented: iterate_translate_list_and_maybe_continue");
+}
+/*
   def iterateTranslateListAndMaybeContinue(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -105,6 +123,12 @@ class PatternCompiler(
     }
   }
 
+*/
+// mig: fn infer_and_translate_pattern
+fn infer_and_translate_pattern() {
+    panic!("Unimplemented: infer_and_translate_pattern");
+}
+/*
   // Note: This will unlet/drop the input expression. Be warned.
   def inferAndTranslatePattern(
     coutputs: CompilerOutputs,
@@ -189,6 +213,12 @@ class PatternCompiler(
     })
   }
 
+*/
+// mig: fn inner_translate_sub_pattern_and_maybe_continue
+fn inner_translate_sub_pattern_and_maybe_continue() {
+    panic!("Unimplemented: inner_translate_sub_pattern_and_maybe_continue");
+}
+/*
   private def innerTranslateSubPatternAndMaybeContinue(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -294,6 +324,12 @@ class PatternCompiler(
         }))
   }
 
+*/
+// mig: fn destructure_owning
+fn destructure_owning() {
+    panic!("Unimplemented: destructure_owning");
+}
+/*
   private def destructureOwning(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -358,6 +394,12 @@ class PatternCompiler(
     }
   }
 
+*/
+// mig: fn destructure_non_owning_and_maybe_continue
+fn destructure_non_owning_and_maybe_continue() {
+    panic!("Unimplemented: destructure_non_owning_and_maybe_continue");
+}
+/*
   private def destructureNonOwningAndMaybeContinue(
       coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -384,6 +426,12 @@ class PatternCompiler(
           coutputs, nenv, life + 1, range, callLocation, liveCaptureLocals, containerTE.result.coord, containerAliasingExprTE, 0, listOfMaybeDestructureMemberPatterns.toList, region, afterDestructureSuccessContinuation)))
   }
 
+*/
+// mig: fn iterate_destructure_non_owning_and_maybe_continue
+fn iterate_destructure_non_owning_and_maybe_continue() {
+    panic!("Unimplemented: iterate_destructure_non_owning_and_maybe_continue");
+}
+/*
   private def iterateDestructureNonOwningAndMaybeContinue(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -462,6 +510,12 @@ class PatternCompiler(
     }
   }
 
+*/
+// mig: fn translate_destroy_struct_inner_and_maybe_continue
+fn translate_destroy_struct_inner_and_maybe_continue() {
+    panic!("Unimplemented: translate_destroy_struct_inner_and_maybe_continue");
+}
+/*
   private def translateDestroyStructInnerAndMaybeContinue(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -522,6 +576,12 @@ class PatternCompiler(
     Compiler.consecutive(Vector(destroyTE, restTE))
   }
 
+*/
+// mig: fn make_lets_for_own_and_maybe_continue
+fn make_lets_for_own_and_maybe_continue() {
+    panic!("Unimplemented: make_lets_for_own_and_maybe_continue");
+}
+/*
   private def makeLetsForOwnAndMaybeContinue(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -560,6 +620,12 @@ class PatternCompiler(
     }
   }
 
+*/
+// mig: fn load_result_ownership
+fn load_result_ownership() {
+    panic!("Unimplemented: load_result_ownership");
+}
+/*
   private def loadResultOwnership(memberOwnershipInStruct: OwnershipT): OwnershipT = {
     memberOwnershipInStruct match {
       case OwnT => BorrowT
@@ -569,6 +635,12 @@ class PatternCompiler(
     }
   }
 
+*/
+// mig: fn load_from_struct
+fn load_from_struct() {
+    panic!("Unimplemented: load_from_struct");
+}
+/*
   private def loadFromStruct(
     coutputs: CompilerOutputs,
     env: IInDenizenEnvironmentT,
@@ -609,6 +681,12 @@ class PatternCompiler(
       variability)
   }
 
+*/
+// mig: fn load_from_static_sized_array
+fn load_from_static_sized_array() {
+    panic!("Unimplemented: load_from_static_sized_array");
+}
+/*
   private def loadFromStaticSizedArray(
       range: RangeS,
       staticSizedArrayT: StaticSizedArrayTT,

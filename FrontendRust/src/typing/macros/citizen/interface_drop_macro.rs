@@ -21,7 +21,15 @@ import dev.vale.typing.types._
 import dev.vale.typing.OverloadResolver
 
 import scala.collection.mutable
+*/
+// mig: struct InterfaceDropMacro
+pub struct InterfaceDropMacro {
+}
 
+// mig: impl InterfaceDropMacro
+impl InterfaceDropMacro {
+}
+/*
 class InterfaceDropMacro(
   interner: Interner,
   keywords: Keywords,
@@ -29,7 +37,13 @@ class InterfaceDropMacro(
 ) extends IOnInterfaceDefinedMacro {
 
   val macroName: StrI = keywords.DeriveInterfaceDrop
+*/
+// mig: fn get_interface_sibling_entries
+fn get_interface_sibling_entries() {
+    panic!("Unimplemented: get_interface_sibling_entries");
+}
 
+/*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], FunctionEnvEntry)] = {
     def range(n: Int) = RangeS.internal(interner, n)
     def use(n: Int, rune: IRuneS) = RuneUsage(range(n), rune)

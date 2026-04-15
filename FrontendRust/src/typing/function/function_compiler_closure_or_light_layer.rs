@@ -27,6 +27,22 @@ import scala.collection.immutable.{List, Map}
 // - Incorporate any template arguments into the environment
 // There's a layer to take care of each of these things.
 // This file is the outer layer, which spawns a local environment for the function.
+*/
+// mig: struct FunctionCompilerClosureOrLightLayer
+pub struct FunctionCompilerClosureOrLightLayer<'s, 'p> {
+    pub opts: TypingPassOptions,
+    pub interner: &'p Interner,
+    pub keywords: &'p Keywords,
+    pub name_translator: NameTranslator,
+    pub templata_compiler: TemplataCompiler,
+    pub infer_compiler: InferCompiler,
+    pub convert_helper: ConvertHelper,
+    pub struct_compiler: StructCompiler,
+    pub delegate: IFunctionCompilerDelegate,
+}
+// mig: impl FunctionCompilerClosureOrLightLayer
+impl<'s, 'p> FunctionCompilerClosureOrLightLayer<'s, 'p> {}
+/*
 class FunctionCompilerClosureOrLightLayer(
     opts: TypingPassOptions,
     interner: Interner,
@@ -78,6 +94,24 @@ class FunctionCompilerClosureOrLightLayer(
 //      newEnv, coutputs, callRange, verifyConclusions)
 //  }
 
+*/
+// mig: fn evaluate_templated_closure_function_from_call_for_banner
+pub fn evaluate_templated_closure_function_from_call_for_banner(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    closure_struct_ref: StructTT,
+    function: FunctionA,
+    already_specified_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    arg_types: Vec<CoordT>,
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_banner");
+}
+/*
   def evaluateTemplatedClosureFunctionFromCallForBanner(
       parentEnv: IEnvironmentT,
       coutputs: CompilerOutputs,
@@ -108,6 +142,24 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
   }
 
+*/
+// mig: fn evaluate_templated_closure_function_from_call_for_prototype
+pub fn evaluate_templated_closure_function_from_call_for_prototype(
+    &self,
+    outer_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    closure_struct_ref: StructTT,
+    function: FunctionA,
+    already_specified_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    arg_types: Vec<CoordT>,
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_prototype");
+}
+/*
   def evaluateTemplatedClosureFunctionFromCallForPrototype(
     outerEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -135,6 +187,23 @@ class FunctionCompilerClosureOrLightLayer(
       newEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
   }
 
+*/
+// mig: fn evaluate_templated_light_function_from_call_for_prototype2
+pub fn evaluate_templated_light_function_from_call_for_prototype2(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    function: FunctionA,
+    explicit_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    arg_types: Vec<CoordT>,
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype2");
+}
+/*
   def evaluateTemplatedLightFunctionFromCallForPrototype2(
       parentEnv: IEnvironmentT,
       coutputs: CompilerOutputs,
@@ -154,6 +223,23 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, argTypes)
   }
 
+*/
+// mig: fn evaluate_generic_light_function_from_call_for_prototype2
+pub fn evaluate_generic_light_function_from_call_for_prototype2(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    function: FunctionA,
+    explicit_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    args: Vec<Option<CoordT>>,
+) -> IResolveFunctionResult {
+    panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype2");
+}
+/*
   def evaluateGenericLightFunctionFromCallForPrototype2(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -173,6 +259,21 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, args)
   }
 
+*/
+// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
+pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    function: FunctionA,
+    args: Vec<Option<CoordT>>,
+) -> IDefineFunctionResult {
+    panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
+}
+/*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -206,6 +307,19 @@ class FunctionCompilerClosureOrLightLayer(
 //      newEnv, coutputs, parentRanges, verifyConclusions)
 //  }
 
+*/
+// mig: fn evaluate_generic_light_function_from_non_call
+pub fn evaluate_generic_light_function_from_non_call(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    parent_ranges: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    function: FunctionA,
+) -> FunctionHeaderT {
+    panic!("Unimplemented: evaluate_generic_light_function_from_non_call");
+}
+/*
   def evaluateGenericLightFunctionFromNonCall(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -375,6 +489,23 @@ class FunctionCompilerClosureOrLightLayer(
   // This is called while we're trying to figure out what function1s to call when there
   // are a lot of overloads available.
   // This assumes it met any type bound restrictions (or, will; not implemented yet)
+*/
+// mig: fn evaluate_templated_light_banner_from_call
+pub fn evaluate_templated_light_banner_from_call(
+    &self,
+    parent_env: IEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    function: FunctionA,
+    explicit_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    arg_types: Vec<CoordT>,
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_light_banner_from_call");
+}
+/*
   def evaluateTemplatedLightBannerFromCall(
       parentEnv: IEnvironmentT,
       coutputs: CompilerOutputs,
@@ -394,6 +525,23 @@ class FunctionCompilerClosureOrLightLayer(
         outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, argTypes)
   }
 
+*/
+// mig: fn evaluate_templated_function_from_call_for_banner
+pub fn evaluate_templated_function_from_call_for_banner(
+    &self,
+    parent_env: IInDenizenEnvironmentT,
+    coutputs: CompilerOutputs,
+    calling_env: IInDenizenEnvironmentT,
+    function: FunctionA,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    already_specified_template_args: Vec<ITemplataT>,
+    context_region: RegionT,
+    arg_types: Vec<CoordT>,
+) -> IEvaluateFunctionResult {
+    panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
+}
+/*
   def evaluateTemplatedFunctionFromCallForBanner(
       parentEnv: IInDenizenEnvironmentT,
       coutputs: CompilerOutputs,
@@ -411,6 +559,18 @@ class FunctionCompilerClosureOrLightLayer(
         outerEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
   }
 
+*/
+// mig: fn make_env_without_closure_stuff
+fn make_env_without_closure_stuff(
+    &self,
+    outer_env: IEnvironmentT,
+    function: FunctionA,
+    template_id: IdT,
+    is_root_compiling_denizen: bool,
+) -> BuildingFunctionEnvironmentWithClosuredsT {
+    panic!("Unimplemented: make_env_without_closure_stuff");
+}
+/*
   private def makeEnvWithoutClosureStuff(
     outerEnv: IEnvironmentT,
     function: FunctionA,
@@ -427,6 +587,12 @@ class FunctionCompilerClosureOrLightLayer(
       isRootCompilingDenizen)
   }
 
+*/
+// mig: fn check_not_closure
+fn check_not_closure(&self, function: FunctionA) {
+    panic!("Unimplemented: check_not_closure");
+}
+/*
   private def checkNotClosure(function: FunctionA) = {
     function.body match {
       case CodeBodyS(body1) => vassert(body1.closuredNames.isEmpty)
@@ -437,6 +603,17 @@ class FunctionCompilerClosureOrLightLayer(
     }
   }
 
+*/
+// mig: fn make_closure_variables_and_entries
+fn make_closure_variables_and_entries(
+    &self,
+    coutputs: CompilerOutputs,
+    original_calling_denizen_id: IdT,
+    closure_struct_ref: StructTT,
+) -> (Vec<IVariableT>, Vec<(INameT, IEnvEntry)>) {
+    panic!("Unimplemented: make_closure_variables_and_entries");
+}
+/*
   private def makeClosureVariablesAndEntries(
       coutputs: CompilerOutputs,
       originalCallingDenizenId: IdT[ITemplateNameT],

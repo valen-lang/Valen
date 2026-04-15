@@ -26,12 +26,24 @@ import dev.vale.typing.names.PackageTopLevelNameT
 
 import scala.collection.immutable.List
 
+*/
+// mig: struct DestructorCompiler
+pub struct DestructorCompiler;
+// mig: impl DestructorCompiler
+impl DestructorCompiler {}
+/*
 class DestructorCompiler(
     opts: TypingPassOptions,
     interner: Interner,
     keywords: Keywords,
     structCompiler: StructCompiler,
     overloadCompiler: OverloadResolver) {
+*/
+// mig: fn get_drop_function
+fn get_drop_function() {
+  panic!("Unimplemented: get_drop_function");
+}
+/*
   def getDropFunction(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -48,7 +60,12 @@ class DestructorCompiler(
       case Ok(x) => x
     }
   }
-
+*/
+// mig: fn drop
+fn drop() {
+  panic!("Unimplemented: drop");
+}
+/*
   def drop(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,

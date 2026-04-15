@@ -29,6 +29,10 @@ import scala.collection.immutable.{List, Set}
 
 
 
+*/
+// mig: trait IFunctionCompilerDelegate
+pub trait IFunctionCompilerDelegate {}
+/*
 trait IFunctionCompilerDelegate {
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
@@ -70,55 +74,109 @@ trait IFunctionCompilerDelegate {
   FunctionHeaderT
 }
 
+*/
+// mig: trait IEvaluateFunctionResult
+pub trait IEvaluateFunctionResult {}
+/*
 trait IEvaluateFunctionResult
 
+*/
+// mig: struct EvaluateFunctionSuccess
+pub struct EvaluateFunctionSuccess;
+/*
 case class EvaluateFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
     inferences: Map[IRuneS, ITemplataT[ITemplataType]],
     instantiationBoundArgs: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 ) extends IEvaluateFunctionResult
 
+*/
+// mig: struct EvaluateFunctionFailure
+pub struct EvaluateFunctionFailure;
+/*
 case class EvaluateFunctionFailure(
     reason: IDefiningError
 ) extends IEvaluateFunctionResult
 
+*/
+// mig: trait IDefineFunctionResult
+pub trait IDefineFunctionResult {}
+/*
 trait IDefineFunctionResult
 
+*/
+// mig: struct DefineFunctionSuccess
+pub struct DefineFunctionSuccess;
+/*
 case class DefineFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
     inferences: Map[IRuneS, ITemplataT[ITemplataType]],
     instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT]
 ) extends IDefineFunctionResult
 
+*/
+// mig: struct DefineFunctionFailure
+pub struct DefineFunctionFailure;
+/*
 case class DefineFunctionFailure(
     reason: IDefiningError
 ) extends IDefineFunctionResult
 
 
+*/
+// mig: trait IResolveFunctionResult
+pub trait IResolveFunctionResult {}
+/*
 trait IResolveFunctionResult
 
+*/
+// mig: struct ResolveFunctionSuccess
+pub struct ResolveFunctionSuccess;
+/*
 case class ResolveFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
     inferences: Map[IRuneS, ITemplataT[ITemplataType]]
 ) extends IResolveFunctionResult
 
+*/
+// mig: struct ResolveFunctionFailure
+pub struct ResolveFunctionFailure;
+/*
 case class ResolveFunctionFailure(
     reason: IResolvingError
 ) extends IResolveFunctionResult
 
 
+*/
+// mig: trait IStampFunctionResult
+pub trait IStampFunctionResult {}
+/*
 trait IStampFunctionResult
 
+*/
+// mig: struct StampFunctionSuccess
+pub struct StampFunctionSuccess;
+/*
 case class StampFunctionSuccess(
   prototype: PrototypeT[IFunctionNameT],
   inferences: Map[IRuneS, ITemplataT[ITemplataType]]
 ) extends IStampFunctionResult
 
+*/
+// mig: struct StampFunctionFailure
+pub struct StampFunctionFailure;
+/*
 case class StampFunctionFailure(
   reason: IFindFunctionFailureReason
 ) extends IStampFunctionResult
 
 
+*/
+// mig: struct FunctionCompiler
+pub struct FunctionCompiler;
+// mig: impl FunctionCompiler
+impl FunctionCompiler {}
+/*
 // When typingpassing a function, these things need to happen:
 // - Spawn a local environment for the function
 // - Add any closure args to the environment
@@ -139,6 +197,12 @@ class FunctionCompiler(
     new FunctionCompilerClosureOrLightLayer(
       opts, interner, keywords, nameTranslator, templataCompiler, inferCompiler, convertHelper, structCompiler, delegate)
 
+*/
+// mig: fn evaluate_generic_function_from_non_call
+fn evaluate_generic_function_from_non_call() {
+  panic!("Unimplemented: evaluate_generic_function_from_non_call");
+}
+/*
   // We would want only the prototype instead of the entire header if, for example,
   // we were calling the function. This is necessary for a recursive function like
   // func main():Int{main()}
@@ -160,6 +224,12 @@ class FunctionCompiler(
 
   }
 
+*/
+// mig: fn evaluate_templated_light_function_from_call_for_prototype
+fn evaluate_templated_light_function_from_call_for_prototype() {
+  panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype");
+}
+/*
   def evaluateTemplatedLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -180,6 +250,12 @@ class FunctionCompiler(
     })
   }
 
+*/
+// mig: fn evaluate_templated_function_from_call_for_prototype
+fn evaluate_templated_function_from_call_for_prototype() {
+  panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
+}
+/*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -220,6 +296,12 @@ class FunctionCompiler(
 
   }
 
+*/
+// mig: fn evaluate_templated_function_from_call_for_prototype
+fn evaluate_templated_function_from_call_for_prototype() {
+  panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
+}
+/*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callRange: List[RangeS],
@@ -254,6 +336,12 @@ class FunctionCompiler(
 
   }
 
+*/
+// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
+fn evaluate_generic_virtual_dispatcher_function_for_prototype() {
+  panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
+}
+/*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     coutputs: CompilerOutputs,
     callRange: List[RangeS],
@@ -269,6 +357,12 @@ class FunctionCompiler(
     })
   }
 
+*/
+// mig: fn evaluate_generic_light_function_from_call_for_prototype
+fn evaluate_generic_light_function_from_call_for_prototype() {
+  panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype");
+}
+/*
   def evaluateGenericLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callRange: List[RangeS],
@@ -287,6 +381,12 @@ class FunctionCompiler(
     })
   }
 
+*/
+// mig: fn evaluate_closure_struct
+fn evaluate_closure_struct() {
+  panic!("Unimplemented: evaluate_closure_struct");
+}
+/*
   def evaluateClosureStruct(
     coutputs: CompilerOutputs,
     containingNodeEnv: NodeEnvironmentT,
@@ -312,6 +412,12 @@ class FunctionCompiler(
     (structTT)
   }
 
+*/
+// mig: fn determine_closure_variable_member
+fn determine_closure_variable_member() {
+  panic!("Unimplemented: determine_closure_variable_member");
+}
+/*
   private def determineClosureVariableMember(
     env: NodeEnvironmentT,
     coutputs: CompilerOutputs,

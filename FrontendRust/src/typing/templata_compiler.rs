@@ -23,15 +23,33 @@ import scala.collection.immutable.{List, Map, Set}
 
 // See SBITAFD, we need to register bounds for these new instantiations. This instructs us where
 // to get those new bounds from.
+*/
+// mig: enum IBoundArgumentsSource
+pub enum IBoundArgumentsSource {}
+/*
 sealed trait IBoundArgumentsSource
+*/
+// mig: struct InheritBoundsFromTypeItself
+pub struct InheritBoundsFromTypeItself;
+/*
 case object InheritBoundsFromTypeItself extends IBoundArgumentsSource
+*/
+// mig: struct UseBoundsFromContainer
+pub struct UseBoundsFromContainer;
+/*
 case class UseBoundsFromContainer(
   instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT],
   instantiationBoundArguments: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 ) extends IBoundArgumentsSource
-
+*/
+// mig: trait ITemplataCompilerDelegate
+pub trait ITemplataCompilerDelegate {}
+/*
 trait ITemplataCompilerDelegate {
-
+*/
+// mig: fn is_parent
+fn is_parent() { panic!("Unimplemented: is_parent"); }
+/*
   def isParent(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -40,7 +58,10 @@ trait ITemplataCompilerDelegate {
     subKindTT: ISubKindTT,
     superKindTT: ISuperKindTT):
   IsParentResult
-
+*/
+// mig: fn resolve_struct
+fn resolve_struct() { panic!("Unimplemented: resolve_struct"); }
+/*
   def resolveStruct(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -50,7 +71,10 @@ trait ITemplataCompilerDelegate {
     uncoercedTemplateArgs: Vector[ITemplataT[ITemplataType]]
   ):
   IResolveOutcome[StructTT]
-
+*/
+// mig: fn resolve_interface
+fn resolve_interface() { panic!("Unimplemented: resolve_interface"); }
+/*
   def resolveInterface(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -65,6 +89,10 @@ trait ITemplataCompilerDelegate {
 }
 
 object TemplataCompiler {
+*/
+// mig: fn get_top_level_denizen_id
+fn get_top_level_denizen_id() { panic!("Unimplemented: get_top_level_denizen_id"); }
+/*
   def getTopLevelDenizenId(
     id: IdT[INameT],
   ): IdT[IInstantiationNameT] = {
@@ -85,7 +113,10 @@ object TemplataCompiler {
       }
     IdT(id.packageCoord, initSteps, lastStep)
   }
-
+*/
+// mig: fn get_placeholder_templata_id
+fn get_placeholder_templata_id() { panic!("Unimplemented: get_placeholder_templata_id"); }
+/*
   def getPlaceholderTemplataId(implPlaceholder: ITemplataT[ITemplataType]): IdT[IPlaceholderNameT] = {
     implPlaceholder match {
       case PlaceholderTemplataT(n, _) => n
@@ -94,7 +125,10 @@ object TemplataCompiler {
       case other => vwat(other)
     }
   }
-
+*/
+// mig: fn assemble_predict_rules
+fn assemble_predict_rules() { panic!("Unimplemented: assemble_predict_rules"); }
+/*
   // See SFWPRL
   def assemblePredictRules(genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
     genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
@@ -111,7 +145,10 @@ object TemplataCompiler {
       }
     })
   }
-
+*/
+// mig: fn assemble_call_site_rules
+fn assemble_call_site_rules() { panic!("Unimplemented: assemble_call_site_rules"); }
+/*
   def assembleCallSiteRules(rules: Vector[IRulexSR], genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
     rules.filter(InferCompiler.includeRuleInCallSiteSolve) ++
       (genericParameters.zipWithIndex.flatMap({ case (genericParam, index) =>
@@ -125,7 +162,10 @@ object TemplataCompiler {
         }
       }))
   }
-
+*/
+// mig: fn get_function_template
+fn get_function_template() { panic!("Unimplemented: get_function_template"); }
+/*
   def getFunctionTemplate(id: IdT[IFunctionNameT]): IdT[IFunctionTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -133,7 +173,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_citizen_template
+fn get_citizen_template() { panic!("Unimplemented: get_citizen_template"); }
+/*
   def getCitizenTemplate(id: IdT[ICitizenNameT]): IdT[ICitizenTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -141,14 +184,20 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_name_template
+fn get_name_template() { panic!("Unimplemented: get_name_template"); }
+/*
   def getNameTemplate(name: INameT): INameT = {
     name match {
       case x : IInstantiationNameT => x.template
       case _ => name
     }
   }
-
+*/
+// mig: fn get_super_template
+fn get_super_template() { panic!("Unimplemented: get_super_template"); }
+/*
   def getSuperTemplate(id: IdT[INameT]): IdT[INameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -156,7 +205,10 @@ object TemplataCompiler {
       initSteps.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       getNameTemplate(last))
   }
-
+*/
+// mig: fn get_root_super_template
+fn get_root_super_template() { panic!("Unimplemented: get_root_super_template"); }
+/*
   // Removes lambda citizens / lambda calls from the end, so we get the root function.
   def getRootSuperTemplate(interner: Interner, id: IdT[INameT]): IdT[INameT] = {
     @tailrec
@@ -177,7 +229,10 @@ object TemplataCompiler {
     }
     removeTrailingLambdas(getSuperTemplate(id))
   }
-
+*/
+// mig: fn get_template
+fn get_template() { panic!("Unimplemented: get_template"); }
+/*
   def getTemplate(id: IdT[IInstantiationNameT]): IdT[ITemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -185,7 +240,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_sub_kind_template
+fn get_sub_kind_template() { panic!("Unimplemented: get_sub_kind_template"); }
+/*
   def getSubKindTemplate(id: IdT[ISubKindNameT]): IdT[ISubKindTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -193,7 +251,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_super_kind_template
+fn get_super_kind_template() { panic!("Unimplemented: get_super_kind_template"); }
+/*
   def getSuperKindTemplate(id: IdT[ISuperKindNameT]): IdT[ISuperKindTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -201,7 +262,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_struct_template
+fn get_struct_template() { panic!("Unimplemented: get_struct_template"); }
+/*
   def getStructTemplate(id: IdT[IStructNameT]): IdT[IStructTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -209,7 +273,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_interface_template
+fn get_interface_template() { panic!("Unimplemented: get_interface_template"); }
+/*
   def getInterfaceTemplate(id: IdT[IInterfaceNameT]): IdT[IInterfaceTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -217,7 +284,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_export_template
+fn get_export_template() { panic!("Unimplemented: get_export_template"); }
+/*
   def getExportTemplate(id: IdT[ExportNameT]): IdT[ExportTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -225,7 +295,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_extern_template
+fn get_extern_template() { panic!("Unimplemented: get_extern_template"); }
+/*
   def getExternTemplate(id: IdT[ExternNameT]): IdT[ExternTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -233,7 +306,10 @@ object TemplataCompiler {
       initSteps, //.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_impl_template
+fn get_impl_template() { panic!("Unimplemented: get_impl_template"); }
+/*
   def getImplTemplate(id: IdT[IImplNameT]): IdT[IImplTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -241,7 +317,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn get_placeholder_template
+fn get_placeholder_template() { panic!("Unimplemented: get_placeholder_template"); }
+/*
   def getPlaceholderTemplate(id: IdT[KindPlaceholderNameT]): IdT[KindPlaceholderTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -249,7 +328,10 @@ object TemplataCompiler {
       initSteps,//.map(getNameTemplate), // See GLIOGN for why we map the initSteps names too
       last.template)
   }
-
+*/
+// mig: fn assemble_rune_to_function_bound
+fn assemble_rune_to_function_bound() { panic!("Unimplemented: assemble_rune_to_function_bound"); }
+/*
   def assembleRuneToFunctionBound(templatas: TemplatasStore): Map[IRuneS, PrototypeT[FunctionBoundNameT]] = {
     templatas.entriesByNameT.toIterable.flatMap({
       case (RuneNameT(rune), TemplataEnvEntry(PrototypeTemplataT(PrototypeT(IdT(packageCoord, initSteps, name @ FunctionBoundNameT(_, _, _)), returnType)))) => {
@@ -258,7 +340,10 @@ object TemplataCompiler {
       case _ => None
     }).toMap
   }
-
+*/
+// mig: fn assemble_rune_to_impl_bound
+fn assemble_rune_to_impl_bound() { panic!("Unimplemented: assemble_rune_to_impl_bound"); }
+/*
   def assembleRuneToImplBound(templatas: TemplatasStore): Map[IRuneS, IdT[ImplBoundNameT]] = {
     templatas.entriesByNameT.toIterable.flatMap({
       case (RuneNameT(rune), TemplataEnvEntry(IsaTemplataT(_, IdT(packageCoord, initSteps, name @ ImplBoundNameT(_, _)), _, _))) => {
@@ -267,7 +352,10 @@ object TemplataCompiler {
       case _ => None
     }).toMap
   }
-
+*/
+// mig: fn substitute_templatas_in_coord
+fn substitute_templatas_in_coord() { panic!("Unimplemented: substitute_templatas_in_coord"); }
+/*
   def substituteTemplatasInCoord(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -299,7 +387,10 @@ object TemplataCompiler {
     }
 
   }
-
+*/
+// mig: fn substitute_templatas_in_kind
+fn substitute_templatas_in_kind() { panic!("Unimplemented: substitute_templatas_in_kind"); }
+/*
   // This returns an ITemplata because...
   // Let's say we have a parameter that's a Coord(own, $_0).
   // $_0 is a PlaceholderT(0), which means it's a standing for whatever the first template arg is.
@@ -366,7 +457,10 @@ object TemplataCompiler {
       case s @ InterfaceTT(_) => KindTemplataT(substituteTemplatasInInterface(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, s))
     }
   }
-
+*/
+// mig: fn substitute_templatas_in_struct
+fn substitute_templatas_in_struct() { panic!("Unimplemented: substitute_templatas_in_struct"); }
+/*
   def substituteTemplatasInStruct(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -411,7 +505,10 @@ object TemplataCompiler {
         coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, instantiationBoundArgs))
     newStruct
   }
-
+*/
+// mig: fn translate_instantiation_bounds
+fn translate_instantiation_bounds() { panic!("Unimplemented: translate_instantiation_bounds"); }
+/*
   private def translateInstantiationBounds(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -508,7 +605,10 @@ object TemplataCompiler {
       }
     }
   }
-
+*/
+// mig: fn substitute_templatas_in_impl_id
+fn substitute_templatas_in_impl_id() { panic!("Unimplemented: substitute_templatas_in_impl_id"); }
+/*
   def substituteTemplatasInImplId[T <: IImplNameT](
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -551,7 +651,10 @@ object TemplataCompiler {
     assert(result != null)
     return result
   }
-
+*/
+// mig: fn substitute_templatas_in_bounds
+fn substitute_templatas_in_bounds() { panic!("Unimplemented: substitute_templatas_in_bounds"); }
+/*
   def substituteTemplatasInBounds(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -583,7 +686,10 @@ object TemplataCompiler {
           coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, implBoundArg)
       }))
   }
-
+*/
+// mig: fn substitute_templatas_in_interface
+fn substitute_templatas_in_interface() { panic!("Unimplemented: substitute_templatas_in_interface"); }
+/*
   def substituteTemplatasInInterface(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -620,7 +726,10 @@ object TemplataCompiler {
       translateInstantiationBounds(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, instantiationBoundArgs))
     newInterface
   }
-
+*/
+// mig: fn substitute_templatas_in_templata
+fn substitute_templatas_in_templata() { panic!("Unimplemented: substitute_templatas_in_templata"); }
+/*
   def substituteTemplatasInTemplata(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -654,7 +763,10 @@ object TemplataCompiler {
       case other => vimpl(other)
     }
   }
-
+*/
+// mig: fn substitute_templatas_in_prototype
+fn substitute_templatas_in_prototype() { panic!("Unimplemented: substitute_templatas_in_prototype"); }
+/*
   def substituteTemplatasInPrototype[T <: IFunctionNameT](
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -700,7 +812,10 @@ object TemplataCompiler {
     assert(result != null)
     return result
   }
-
+*/
+// mig: fn substitute_templatas_in_function_bound_id
+fn substitute_templatas_in_function_bound_id() { panic!("Unimplemented: substitute_templatas_in_function_bound_id"); }
+/*
   def substituteTemplatasInFunctionBoundId(
     coutputs: CompilerOutputs,
     sanityCheck: Boolean, interner: Interner,
@@ -757,14 +872,41 @@ object TemplataCompiler {
   //
   //   newId
   // }
-
+*/
+// mig: trait IPlaceholderSubstituter
+pub trait IPlaceholderSubstituter {}
+/*
   trait IPlaceholderSubstituter {
+*/
+// mig: fn substitute_for_coord
+fn substitute_for_coord() { panic!("Unimplemented: substitute_for_coord"); }
+/*
     def substituteForCoord(coutputs: CompilerOutputs, coordT: CoordT): CoordT
+*/
+// mig: fn substitute_for_interface
+fn substitute_for_interface() { panic!("Unimplemented: substitute_for_interface"); }
+/*
     def substituteForInterface(coutputs: CompilerOutputs, interfaceTT: InterfaceTT): InterfaceTT
+*/
+// mig: fn substitute_for_templata
+fn substitute_for_templata() { panic!("Unimplemented: substitute_for_templata"); }
+/*
     def substituteForTemplata(coutputs: CompilerOutputs, coordT: ITemplataT[ITemplataType]): ITemplataT[ITemplataType]
+*/
+// mig: fn substitute_for_prototype
+fn substitute_for_prototype() { panic!("Unimplemented: substitute_for_prototype"); }
+/*
     def substituteForPrototype[T <: IFunctionNameT](coutputs: CompilerOutputs, proto: PrototypeT[T]): PrototypeT[T]
+*/
+// mig: fn substitute_for_impl_id
+fn substitute_for_impl_id() { panic!("Unimplemented: substitute_for_impl_id"); }
+/*
     def substituteForImplId[T <: IImplNameT](coutputs: CompilerOutputs, implId: IdT[T]): IdT[T]
   }
+*/
+// mig: fn get_placeholder_substituter
+fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substituter"); }
+/*
   def getPlaceholderSubstituter(
     sanityCheck: Boolean, interner: Interner,
     keywords: Keywords,
@@ -788,7 +930,10 @@ object TemplataCompiler {
       templateArgs,
       boundArgumentsSource)
   }
-
+*/
+// mig: fn get_placeholder_substituter
+fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substituter"); }
+/*
   // Let's say you have the line:
   //   myShip.engine
   // You need to somehow combine these two bits of knowledge:
@@ -848,7 +993,10 @@ object TemplataCompiler {
 //    }
 //  }
 
-
+*/
+// mig: fn get_reachable_bounds
+fn get_reachable_bounds() { panic!("Unimplemented: get_reachable_bounds"); }
+/*
   def getReachableBounds(
     sanityCheck: Boolean, interner: Interner,
     keywords: Keywords,
@@ -877,7 +1025,10 @@ object TemplataCompiler {
           })
           .toMap)
   }
-
+*/
+// mig: fn get_first_unsolved_identifying_rune
+fn get_first_unsolved_identifying_rune() { panic!("Unimplemented: get_first_unsolved_identifying_rune"); }
+/*
   def getFirstUnsolvedIdentifyingRune(
     genericParameters: Vector[GenericParameterS],
     isSolved: IRuneS => Boolean):
@@ -891,7 +1042,10 @@ object TemplataCompiler {
       .map({ case (genericParam, index, false) => (genericParam, index) })
       .headOption
   }
-
+*/
+// mig: fn create_rune_type_solver_env
+fn create_rune_type_solver_env() { panic!("Unimplemented: create_rune_type_solver_env"); }
+/*
   def createRuneTypeSolverEnv(parentEnv: IInDenizenEnvironmentT): IRuneTypeSolverEnv = {
     new IRuneTypeSolverEnv {
       override def lookup(
@@ -919,14 +1073,22 @@ object TemplataCompiler {
     }
   }
 }
-
+*/
+// mig: struct TemplataCompiler
+pub struct TemplataCompiler;
+// mig: impl TemplataCompiler
+impl TemplataCompiler {}
+/*
 class TemplataCompiler(
   interner: Interner,
   opts: TypingPassOptions,
 
   nameTranslator: NameTranslator,
   delegate: ITemplataCompilerDelegate) {
-
+*/
+// mig: fn is_type_convertible
+fn is_type_convertible() { panic!("Unimplemented: is_type_convertible"); }
+/*
   def isTypeConvertible(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT,
@@ -998,7 +1160,10 @@ class TemplataCompiler(
 
     true
   }
-
+*/
+// mig: fn pointify_kind
+fn pointify_kind() { panic!("Unimplemented: pointify_kind"); }
+/*
   def pointifyKind(
     coutputs: CompilerOutputs,
     kind: KindT,
@@ -1089,7 +1254,10 @@ class TemplataCompiler(
 //      coerce(coutputs, callingEnv, callRange, KindTemplata(uncoercedTemplata), expectedType)
 //    (templata)
 //  }
-
+*/
+// mig: fn lookup_templata
+fn lookup_templata() { panic!("Unimplemented: lookup_templata"); }
+/*
   def lookupTemplata(
     env: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -1101,7 +1269,10 @@ class TemplataCompiler(
     // We could instead pipe a lookup context through, if this proves problematic.
     vassertOne(env.lookupNearestWithName(name, Set(TemplataLookupContext)))
   }
-
+*/
+// mig: fn lookup_templata
+fn lookup_templata() { panic!("Unimplemented: lookup_templata"); }
+/*
   def lookupTemplata(
     env: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -1117,7 +1288,10 @@ class TemplataCompiler(
     }
     results.headOption
   }
-
+*/
+// mig: fn coerce_kind_to_coord
+fn coerce_kind_to_coord() { panic!("Unimplemented: coerce_kind_to_coord"); }
+/*
   def coerceKindToCoord(coutputs: CompilerOutputs, kind: KindT, region: RegionT):
   CoordT = {
     val mutability = Compiler.getMutability(coutputs, kind)
@@ -1130,7 +1304,10 @@ class TemplataCompiler(
       region,
       kind)
   }
-
+*/
+// mig: fn coerce_to_coord
+fn coerce_to_coord() { panic!("Unimplemented: coerce_to_coord"); }
+/*
   def coerceToCoord(
     coutputs: CompilerOutputs,
     env: IInDenizenEnvironmentT,
@@ -1190,24 +1367,36 @@ class TemplataCompiler(
       }
     }
   }
-
+*/
+// mig: fn resolve_struct_template
+fn resolve_struct_template() { panic!("Unimplemented: resolve_struct_template"); }
+/*
   def resolveStructTemplate(structTemplata: StructDefinitionTemplataT): IdT[IStructTemplateNameT] = {
     val StructDefinitionTemplataT(declaringEnv, structA) = structTemplata
     declaringEnv.id.addStep(nameTranslator.translateStructName(structA.name))
   }
-
+*/
+// mig: fn resolve_interface_template
+fn resolve_interface_template() { panic!("Unimplemented: resolve_interface_template"); }
+/*
   def resolveInterfaceTemplate(interfaceTemplata: InterfaceDefinitionTemplataT): IdT[IInterfaceTemplateNameT] = {
     val InterfaceDefinitionTemplataT(declaringEnv, interfaceA) = interfaceTemplata
     declaringEnv.id.addStep(nameTranslator.translateInterfaceName(interfaceA.name))
   }
-
+*/
+// mig: fn resolve_citizen_template
+fn resolve_citizen_template() { panic!("Unimplemented: resolve_citizen_template"); }
+/*
   def resolveCitizenTemplate(citizenTemplata: CitizenDefinitionTemplataT): IdT[ICitizenTemplateNameT] = {
     citizenTemplata match {
       case st @ StructDefinitionTemplataT(_, _) => resolveStructTemplate(st)
       case it @ InterfaceDefinitionTemplataT(_, _) => resolveInterfaceTemplate(it)
     }
   }
-
+*/
+// mig: fn citizen_is_from_template
+fn citizen_is_from_template() { panic!("Unimplemented: citizen_is_from_template"); }
+/*
   def citizenIsFromTemplate(actualCitizenRef: ICitizenTT, expectedCitizenTemplata: ITemplataT[ITemplataType]): Boolean = {
     val citizenTemplateId =
       expectedCitizenTemplata match {
@@ -1219,7 +1408,10 @@ class TemplataCompiler(
       }
     TemplataCompiler.getCitizenTemplate(actualCitizenRef.id) == citizenTemplateId
   }
-
+*/
+// mig: fn create_placeholder
+fn create_placeholder() { panic!("Unimplemented: create_placeholder"); }
+/*
   def createPlaceholder(
       coutputs: CompilerOutputs,
       env: IInDenizenEnvironmentT,
@@ -1270,7 +1462,10 @@ class TemplataCompiler(
       }
     }
   }
-
+*/
+// mig: fn create_coord_placeholder_inner
+fn create_coord_placeholder_inner() { panic!("Unimplemented: create_coord_placeholder_inner"); }
+/*
   def createCoordPlaceholderInner(
       coutputs: CompilerOutputs,
       env: IInDenizenEnvironmentT,
@@ -1290,7 +1485,10 @@ class TemplataCompiler(
 
     CoordTemplataT(CoordT(kindOwnership, regionPlaceholderTemplata, kindPlaceholderT.kind))
   }
-
+*/
+// mig: fn create_kind_placeholder_inner
+fn create_kind_placeholder_inner() { panic!("Unimplemented: create_kind_placeholder_inner"); }
+/*
   def createKindPlaceholderInner(
       coutputs: CompilerOutputs,
       env: IInDenizenEnvironmentT,
@@ -1325,7 +1523,10 @@ class TemplataCompiler(
 
     KindTemplataT(KindPlaceholderT(kindPlaceholderId))
   }
-
+*/
+// mig: fn create_non_kind_non_region_placeholder_inner
+fn create_non_kind_non_region_placeholder_inner() { panic!("Unimplemented: create_non_kind_non_region_placeholder_inner"); }
+/*
   def createNonKindNonRegionPlaceholderInner[T <: ITemplataType](
       namePrefix: IdT[INameT],
       index: Int,

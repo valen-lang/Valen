@@ -9,8 +9,19 @@ import dev.vale.postparsing._
 
 import scala.collection.mutable
 
-
+*/
+// mig: struct NameTranslator
+pub struct NameTranslator;
+// mig: impl NameTranslator
+impl NameTranslator {}
+/*
 class NameTranslator(interner: Interner) {
+*/
+// mig: fn translate_generic_template_function_name
+fn translate_generic_template_function_name(function_name: IFunctionDeclarationNameS, params: Vec<CoordT>) -> IFunctionTemplateNameT {
+    panic!("Unimplemented: translate_generic_template_function_name");
+}
+/*
   def translateGenericTemplateFunctionName(
     functionName: IFunctionDeclarationNameS,
     params: Vector[CoordT]):
@@ -22,7 +33,12 @@ class NameTranslator(interner: Interner) {
       case other => vwat(other) // Only templates should call this
     }
   }
-
+*/
+// mig: fn translate_generic_function_name
+fn translate_generic_function_name(function_name: IFunctionDeclarationNameS) -> IFunctionTemplateNameT {
+    panic!("Unimplemented: translate_generic_function_name");
+}
+/*
   def translateGenericFunctionName(functionName: IFunctionDeclarationNameS): IFunctionTemplateNameT = {
     functionName match {
       case LambdaDeclarationNameS(codeLocation) => {
@@ -42,7 +58,12 @@ class NameTranslator(interner: Interner) {
       }
     }
   }
-
+*/
+// mig: fn translate_struct_name
+fn translate_struct_name(name: IStructDeclarationNameS) -> IStructTemplateNameT {
+    panic!("Unimplemented: translate_struct_name");
+}
+/*
   def translateStructName(name: IStructDeclarationNameS): IStructTemplateNameT = {
     name match {
       case TopLevelCitizenDeclarationNameS(humanName, codeLocation) => {
@@ -54,7 +75,12 @@ class NameTranslator(interner: Interner) {
       }
     }
   }
-
+*/
+// mig: fn translate_interface_name
+fn translate_interface_name(name: IInterfaceDeclarationNameS) -> IInterfaceTemplateNameT {
+    panic!("Unimplemented: translate_interface_name");
+}
+/*
   def translateInterfaceName(name: IInterfaceDeclarationNameS): IInterfaceTemplateNameT = {
     name match {
       case TopLevelCitizenDeclarationNameS(humanName, codeLocation) => {
@@ -62,7 +88,12 @@ class NameTranslator(interner: Interner) {
       }
     }
   }
-
+*/
+// mig: fn translate_citizen_name
+fn translate_citizen_name(name: ICitizenDeclarationNameS) -> ICitizenTemplateNameT {
+    panic!("Unimplemented: translate_citizen_name");
+}
+/*
   def translateCitizenName(name: ICitizenDeclarationNameS): ICitizenTemplateNameT = {
     name match {
       case TopLevelCitizenDeclarationNameS(humanName, codeLocation) => {
@@ -77,7 +108,12 @@ class NameTranslator(interner: Interner) {
       }
     }
   }
-
+*/
+// mig: fn translate_name_step
+fn translate_name_step(name: INameS) -> INameT {
+    panic!("Unimplemented: translate_name_step");
+}
+/*
   def translateNameStep(name: INameS): INameT = {
     name match {
       case LambdaStructDeclarationNameS(LambdaDeclarationNameS(codeLocation)) => interner.intern(LambdaCitizenNameT(interner.intern(LambdaCitizenTemplateNameT(translateCodeLocation(codeLocation)))))
@@ -117,12 +153,22 @@ class NameTranslator(interner: Interner) {
       case _ => vimpl(name.toString)
     }
   }
-
+*/
+// mig: fn translate_code_location
+fn translate_code_location(s: CodeLocationS) -> CodeLocationS {
+    panic!("Unimplemented: translate_code_location");
+}
+/*
   def translateCodeLocation(s: CodeLocationS): CodeLocationS = {
     val CodeLocationS(line, col) = s
     CodeLocationS(line, col)
   }
-
+*/
+// mig: fn translate_var_name_step
+fn translate_var_name_step(name: IVarNameS) -> IVarNameT {
+    panic!("Unimplemented: translate_var_name_step");
+}
+/*
   def translateVarNameStep(name: IVarNameS): IVarNameT = {
     name match {
       //      case UnnamedLocalNameS(codeLocation) => UnnamedLocalNameT(translateCodeLocation(codeLocation))
@@ -138,7 +184,12 @@ class NameTranslator(interner: Interner) {
       case AnonymousSubstructMemberNameS(index) => interner.intern(AnonymousSubstructMemberNameT(index))
     }
   }
-
+*/
+// mig: fn translate_impl_name
+fn translate_impl_name(n: IImplDeclarationNameS) -> IImplTemplateNameT {
+    panic!("Unimplemented: translate_impl_name");
+}
+/*
   def translateImplName(n: IImplDeclarationNameS): IImplTemplateNameT = {
     n match {
       case ImplDeclarationNameS(l) => {

@@ -13,11 +13,22 @@ import dev.vale.typing.env.FunctionEnvironmentBoxT
 import dev.vale.typing.ast
 import dev.vale.highertyping.FunctionA
 import dev.vale.postparsing.LocationInDenizen
+*/
+// mig: struct RSALenMacro
+pub struct RSALenMacro;
 
-
+// mig: impl RSALenMacro
+impl RSALenMacro {}
+/*
 class RSALenMacro() extends IFunctionBodyMacro {
   val generatorId: String = "vale_runtime_sized_array_len"
+*/
+// mig: fn generate_function_body
+pub fn generate_function_body(env: FunctionEnvironmentT, coutputs: CompilerOutputs, generatorId: StrI, life: LocationInFunctionEnvironmentT, callRange: Vec<RangeS>, callLocation: LocationInDenizen, originFunction: Option<FunctionA>, paramCoords: Vec<ParameterT>, maybeRetCoord: Option<CoordT>) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
 
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

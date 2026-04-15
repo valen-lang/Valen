@@ -15,10 +15,36 @@ import dev.vale.typing.ast._
 import dev.vale.typing.types.StaticSizedArrayTT
 import dev.vale.typing.ast
 
+*/
+// mig: struct SSALenMacro
+pub struct SSALenMacro<'p> {
+    pub keywords: &'p Keywords<'p>,
+}
 
+// mig: impl SSALenMacro
+impl<'p> SSALenMacro<'p> {
+}
+/*
 class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_static_sized_array_len
 
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: &FunctionEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    generator_id: StrI,
+    life: LocationInFunctionEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    origin_function: Option<&FunctionA>,
+    param_coords: &[ParameterT],
+    maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
+
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

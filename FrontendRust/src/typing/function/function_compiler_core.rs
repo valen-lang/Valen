@@ -22,11 +22,32 @@ import dev.vale.typing.env._
 
 import scala.collection.immutable.{List, Set}
 
+*/
+// mig: struct ResultTypeMismatchError
+pub struct ResultTypeMismatchError {
+    pub expected_type: CoordT,
+    pub actual_type: CoordT,
+}
+/*
 case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 
+*/
+// mig: struct FunctionCompilerCore
+pub struct FunctionCompilerCore {
+    pub opts: TypingPassOptions,
+    pub interner: Interner,
+    pub keywords: Keywords,
+    pub name_translator: NameTranslator,
+    pub templata_compiler: TemplataCompiler,
+    pub convert_helper: ConvertHelper,
+    pub delegate: IFunctionCompilerDelegate,
+}
+// mig: impl FunctionCompilerCore
+impl FunctionCompilerCore {}
+/*
 class FunctionCompilerCore(
     opts: TypingPassOptions,
     interner: Interner,
@@ -65,6 +86,12 @@ class FunctionCompilerCore(
     }
   })
 
+*/
+// mig: fn evaluate_function_for_header
+fn evaluate_function_for_header() -> FunctionHeaderT {
+    panic!("Unimplemented: evaluate_function_for_header");
+}
+/*
   // Preconditions:
   // - already spawned local env
   // - either no template args, or they were already added to the env.
@@ -241,6 +268,12 @@ class FunctionCompilerCore(
     header
   }
 
+*/
+// mig: fn get_function_prototype_for_call
+fn get_function_prototype_for_call() -> PrototypeT {
+    panic!("Unimplemented: get_function_prototype_for_call");
+}
+/*
   // Preconditions:
   // - already spawned local env
   // - either no template args, or they were already added to the env.
@@ -255,6 +288,12 @@ class FunctionCompilerCore(
       fullEnv, fullEnv.id)
   }
 
+*/
+// mig: fn get_function_prototype_inner_for_call
+fn get_function_prototype_inner_for_call() -> PrototypeT {
+    panic!("Unimplemented: get_function_prototype_inner_for_call");
+}
+/*
   def getFunctionPrototypeInnerForCall(
     fullEnv: FunctionEnvironmentT,
     id: IdT[IFunctionNameT]):
@@ -270,6 +309,12 @@ class FunctionCompilerCore(
     PrototypeT(id, returnCoord)
   }
 
+*/
+// mig: fn finalize_header
+fn finalize_header() -> FunctionHeaderT {
+    panic!("Unimplemented: finalize_header");
+}
+/*
   def finalizeHeader(
       fullEnv: FunctionEnvironmentT,
       coutputs: CompilerOutputs,
@@ -289,6 +334,12 @@ class FunctionCompilerCore(
     header
   }
 
+*/
+// mig: fn finish_function_maybe_deferred
+fn finish_function_maybe_deferred() -> FunctionHeaderT {
+    panic!("Unimplemented: finish_function_maybe_deferred");
+}
+/*
   // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.
   private def finishFunctionMaybeDeferred(
       coutputs: CompilerOutputs,
@@ -342,6 +393,12 @@ class FunctionCompilerCore(
     header
   }
 
+*/
+// mig: fn translate_attributes
+fn translate_attributes() -> Vec<IFunctionAttributeT> {
+    panic!("Unimplemented: translate_attributes");
+}
+/*
   def translateAttributes(attributesA: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {
     attributesA.map({
       //      case ExportA(packageCoord) => Export2(packageCoord)
@@ -351,6 +408,12 @@ class FunctionCompilerCore(
     })
   }
 
+*/
+// mig: fn make_extern_function
+fn make_extern_function() -> FunctionHeaderT {
+    panic!("Unimplemented: make_extern_function");
+}
+/*
   def makeExternFunction(
       coutputs: CompilerOutputs,
       env: FunctionEnvironmentT,
@@ -399,6 +462,12 @@ class FunctionCompilerCore(
     }
   }
 
+*/
+// mig: fn translate_function_attributes
+fn translate_function_attributes() -> Vec<IFunctionAttributeT> {
+    panic!("Unimplemented: translate_function_attributes");
+}
+/*
   def translateFunctionAttributes(a: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {
     U.map[IFunctionAttributeS, IFunctionAttributeT](a, {
       case UserFunctionS => UserFunctionT

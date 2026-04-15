@@ -20,14 +20,42 @@ import dev.vale.typing.env.FunctionEnvironmentBoxT
 import dev.vale.typing.types.InterfaceTT
 import dev.vale.typing.ast
 import dev.vale.typing.function.DestructorCompiler
+*/
+// mig: struct AsSubtypeMacro
+pub struct AsSubtypeMacro<'p> {
+    pub keywords: &'p Keywords<'p>,
+    pub impl_compiler: ImplCompiler,
+    pub expression_compiler: ExpressionCompiler,
+    pub destructor_compiler: DestructorCompiler,
+}
 
+// mig: impl AsSubtypeMacro
+impl<'p> AsSubtypeMacro<'p> {
+}
+/*
 class AsSubtypeMacro(
   keywords: Keywords,
   implCompiler: ImplCompiler,
   expressionCompiler: ExpressionCompiler,
   destructorCompiler: DestructorCompiler) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_as_subtype
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: &FunctionEnvironmentT,
+    coutputs: &mut CompilerOutputs,
+    generator_id: StrI,
+    life: LocationInFunctionEnvironmentT,
+    call_range: &[RangeS],
+    call_location: LocationInDenizen,
+    origin_function: Option<&FunctionA>,
+    param_coords: &[ParameterT],
+    maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
 
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

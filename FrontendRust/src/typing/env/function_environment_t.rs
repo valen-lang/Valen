@@ -16,6 +16,12 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 
 import scala.collection.immutable.{List, Map, Set}
 
+*/
+// mig: struct BuildingFunctionEnvironmentWithClosuredsT
+pub struct BuildingFunctionEnvironmentWithClosuredsT;
+// mig: impl BuildingFunctionEnvironmentWithClosuredsT
+impl BuildingFunctionEnvironmentWithClosuredsT {}
+/*
 case class BuildingFunctionEnvironmentWithClosuredsT(
   globalEnv: GlobalEnvironment,
   parentEnv: IEnvironmentT,
@@ -79,6 +85,12 @@ override def hashCode(): Int = hash;
   }
 }
 
+*/
+// mig: struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT
+pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT;
+// mig: impl BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT
+impl BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {}
+/*
 case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
   globalEnv: GlobalEnvironment,
   parentEnv: IEnvironmentT,
@@ -143,6 +155,12 @@ override def hashCode(): Int = hash;
 
 }
 
+*/
+// mig: struct NodeEnvironmentT
+pub struct NodeEnvironmentT;
+// mig: impl NodeEnvironmentT
+impl NodeEnvironmentT {}
+/*
 case class NodeEnvironmentT(
   parentFunctionEnv: FunctionEnvironmentT,
   parentNodeEnv: Option[NodeEnvironmentT],
@@ -434,6 +452,12 @@ case class NodeEnvironmentT(
   }
 }
 
+*/
+// mig: struct NodeEnvironmentBox
+pub struct NodeEnvironmentBox;
+// mig: impl NodeEnvironmentBox
+impl NodeEnvironmentBox {}
+/*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
@@ -526,6 +550,12 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 }
 
+*/
+// mig: struct FunctionEnvironmentT
+pub struct FunctionEnvironmentT;
+// mig: impl FunctionEnvironmentT
+impl FunctionEnvironmentT {}
+/*
 case class FunctionEnvironmentT(
   // These things are the "environment"; they are the same for every line in a function.
   globalEnv: GlobalEnvironment,
@@ -670,6 +700,12 @@ override def hashCode(): Int = hash;
   // No particular reason we don't have an addFunction like PackageEnvironment does
 }
 
+*/
+// mig: struct FunctionEnvironmentBoxT
+pub struct FunctionEnvironmentBoxT;
+// mig: impl FunctionEnvironmentBoxT
+impl FunctionEnvironmentBoxT {}
+/*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
@@ -735,11 +771,19 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   // No particular reason we don't have an addFunction like PackageEnvironment does
 }
 
+*/
+// mig: enum IVariableT
+pub enum IVariableT {}
+/*
 sealed trait IVariableT  {
   def name: IVarNameT
   def variability: VariabilityT
   def coord: CoordT
 }
+*/
+// mig: enum ILocalVariableT
+pub enum ILocalVariableT {}
+/*
 sealed trait ILocalVariableT extends IVariableT {
   def name: IVarNameT
   def coord: CoordT
@@ -750,6 +794,10 @@ sealed trait ILocalVariableT extends IVariableT {
 // mutate/move, then we could just put a regular reference in the struct.
 // Lucky for us, the parser figured out if any of our child closures did
 // any mutates/moves/borrows.
+*/
+// mig: struct AddressibleLocalVariableT
+pub struct AddressibleLocalVariableT;
+/*
 case class AddressibleLocalVariableT(
   name: IVarNameT,
   variability: VariabilityT,
@@ -760,6 +808,10 @@ case class AddressibleLocalVariableT(
 override def equals(obj: Any): Boolean = vcurious();
 
 }
+*/
+// mig: struct ReferenceLocalVariableT
+pub struct ReferenceLocalVariableT;
+/*
 case class ReferenceLocalVariableT(
   name: IVarNameT,
   variability: VariabilityT,
@@ -770,6 +822,10 @@ case class ReferenceLocalVariableT(
 override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
+*/
+// mig: struct AddressibleClosureVariableT
+pub struct AddressibleClosureVariableT;
+/*
 case class AddressibleClosureVariableT(
   name: IVarNameT,
   closuredVarsStructType: StructTT,
@@ -778,6 +834,10 @@ case class AddressibleClosureVariableT(
 ) extends IVariableT {
   vpass()
 }
+*/
+// mig: struct ReferenceClosureVariableT
+pub struct ReferenceClosureVariableT;
+/*
 case class ReferenceClosureVariableT(
   name: IVarNameT,
   closuredVarsStructType: StructTT,
@@ -791,6 +851,12 @@ override def equals(obj: Any): Boolean = vcurious();
 }
 
 object EnvironmentHelper {
+*/
+// mig: fn lookup_with_name_inner
+fn lookup_with_name_inner() {
+  panic!("Unimplemented: lookup_with_name_inner");
+}
+/*
   def lookupWithNameInner(
     requestingEnv: IEnvironmentT,
     templatas: TemplatasStore,
@@ -808,6 +874,12 @@ object EnvironmentHelper {
     }
   }
 
+*/
+// mig: fn lookup_with_imprecise_name_inner
+fn lookup_with_imprecise_name_inner() {
+  panic!("Unimplemented: lookup_with_imprecise_name_inner");
+}
+/*
   def lookupWithImpreciseNameInner(
     requestingEnv: IEnvironmentT,
     templatas: TemplatasStore,

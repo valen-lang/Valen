@@ -21,7 +21,18 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 
 import scala.collection.mutable
-
+*/
+// mig: struct StructDropMacro
+pub struct StructDropMacro<'p, 's> {
+  pub opts: TypingPassOptions<'p>,
+  pub interner: &'p Interner<'p>,
+  pub keywords: &'p Keywords<'p>,
+  pub name_translator: NameTranslator<'p, 's>,
+  pub destructor_compiler: DestructorCompiler<'p, 's>,
+}
+// mig: impl StructDropMacro
+impl<'p, 's> StructDropMacro<'p, 's> {}
+/*
 class StructDropMacro(
   opts: TypingPassOptions,
   interner: Interner,
@@ -33,7 +44,15 @@ class StructDropMacro(
   val macroName: StrI = keywords.DeriveStructDrop
 
   val dropGeneratorId: StrI = keywords.dropGenerator
-
+*/
+// mig: fn get_struct_sibling_entries
+fn get_struct_sibling_entries(
+  struct_name: IdT<'p, 's>,
+  struct_a: &'s StructA<'p, 's>,
+) -> Vec<(IdT<'p, 's>, FunctionEnvEntry<'p, 's>)> {
+  panic!("Unimplemented: get_struct_sibling_entries");
+}
+/*
   override def getStructSiblingEntries(
     structName: IdT[INameT], structA: StructA):
   Vector[(IdT[INameT], FunctionEnvEntry)] = {
@@ -116,6 +135,15 @@ class StructDropMacro(
 
   // Implicit drop is one made for closures, arrays, or anything else that's not explicitly
   // defined by the user.
+*/
+// mig: fn make_implicit_drop_function
+fn make_implicit_drop_function(
+  drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
+  struct_range: RangeS<'s>,
+) -> FunctionA<'p, 's> {
+  panic!("Unimplemented: make_implicit_drop_function");
+}
+/*
   def makeImplicitDropFunction(
     dropOrFreeFunctionNameS: IFunctionDeclarationNameS,
     structRange: RangeS):
@@ -153,6 +181,22 @@ class StructDropMacro(
       GeneratedBodyS(dropGeneratorId))
   }
 
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+  env: &'p FunctionEnvironmentT<'p, 's>,
+  coutputs: &'p mut CompilerOutputs<'p, 's>,
+  generator_id: StrI<'p>,
+  life: LocationInFunctionEnvironmentT,
+  call_range: Vec<RangeS<'s>>,
+  call_location: LocationInDenizen<'s>,
+  origin_function1: Option<&'s FunctionA<'p, 's>>,
+  params2: Vec<ParameterT<'p, 's>>,
+  maybe_ret_coord: Option<CoordT<'p, 's>>,
+) -> (FunctionHeaderT<'p, 's>, ReferenceExpressionTE<'p, 's>) {
+  panic!("Unimplemented: generate_function_body");
+}
+/*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

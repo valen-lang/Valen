@@ -12,10 +12,37 @@ import dev.vale.typing.types._
 import dev.vale.typing.ast._
 import dev.vale.typing.function._
 import dev.vale.typing.templata._
+*/
+// mig: struct AbstractBodyMacro
+pub struct AbstractBodyMacro<'p, 's> {
+    pub interner: &'p Keywords<'p>,
+    pub keywords: &'p Keywords<'p>,
+    pub overload_resolver: &'s (),
+    pub generator_id: StrI<'p>,
+}
 
+// mig: impl AbstractBodyMacro
+impl<'p, 's> AbstractBodyMacro<'p, 's> {}
+/*
 class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver: OverloadResolver) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.abstractBody
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: &'s (),
+    coutputs: &'s (),
+    generator_id: StrI<'p>,
+    life: &'s (),
+    call_range: &'s [RangeS<'p>],
+    call_location: &'s (),
+    origin_function: Option<&'s ()>,
+    params2: &'s [()],
+    maybe_ret_coord: Option<()>,
+) -> ((), ()) {
+    panic!("Unimplemented: generate_function_body");
+}
 
+/*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

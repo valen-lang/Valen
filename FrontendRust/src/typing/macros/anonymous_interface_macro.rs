@@ -28,6 +28,12 @@ import dev.vale.typing.types.CoordT
 import scala.collection.immutable.List
 import scala.collection.mutable
 
+*/
+// mig: struct AnonymousInterfaceMacro
+pub struct AnonymousInterfaceMacro;
+// mig: impl AnonymousInterfaceMacro
+impl AnonymousInterfaceMacro {}
+/*
 class AnonymousInterfaceMacro(
     opts: TypingPassOptions,
     interner: Interner,
@@ -47,6 +53,12 @@ class AnonymousInterfaceMacro(
 //    vimpl()
 //  }
 
+*/
+// mig: fn get_interface_sibling_entries
+fn get_interface_sibling_entries() {
+    panic!("Unimplemented: get_interface_sibling_entries");
+}
+/*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], IEnvEntry)] = {
     if (interfaceA.attributes.contains(SealedS)) {
       return Vector()
@@ -140,6 +152,12 @@ class AnonymousInterfaceMacro(
       forwarderMethods
   }
 
+*/
+// mig: fn map_runes
+fn map_runes() {
+    panic!("Unimplemented: map_runes");
+}
+/*
   private def mapRunes(rule: IRulexSR, func: IRuneS => IRuneS): IRulexSR = {
     rule match {
       case LookupSR(range, RuneUsage(a, rune), name) => LookupSR(range, RuneUsage(a, func(rune)), name)
@@ -177,6 +195,12 @@ class AnonymousInterfaceMacro(
     }
   }
 
+*/
+// mig: fn inherited_method_rune
+fn inherited_method_rune() {
+    panic!("Unimplemented: inherited_method_rune");
+}
+/*
   // These are how the forwarder function refers to runes from the abstract function it's overriding. After all, the
   // forwarder function copies all the runes and rules from the abstract function, so we rename them here to avoid any
   // weird collisions.
@@ -184,6 +208,12 @@ class AnonymousInterfaceMacro(
     AnonymousSubstructMethodInheritedRuneS(interfaceA.name, method.name, rune)
   }
 
+*/
+// mig: fn make_struct
+fn make_struct() {
+    panic!("Unimplemented: make_struct");
+}
+/*
   private def makeStruct(interfaceA: InterfaceA, memberRunes: Vector[RuneUsage], members: Vector[NormalStructMemberS], structTemplateNameS: AnonymousSubstructTemplateNameS) = {
     def range(n: Int) = RangeS.internal(interner, n)
     def use(n: Int, rune: IRuneS) = RuneUsage(range(n), rune)
@@ -389,6 +419,12 @@ class AnonymousInterfaceMacro(
       members)
   }
 
+*/
+// mig: fn make_forwarder_function
+fn make_forwarder_function() {
+    panic!("Unimplemented: make_forwarder_function");
+}
+/*
   private def makeForwarderFunction(
     structNameS: AnonymousSubstructTemplateNameS,
     interface: InterfaceA,

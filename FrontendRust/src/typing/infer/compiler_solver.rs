@@ -25,6 +25,10 @@ import dev.vale.typing.types._
 import scala.collection.immutable.{HashSet, Map}
 import scala.collection.mutable
 
+*/
+// mig: enum ITypingPassSolverError
+pub enum ITypingPassSolverError {}
+/*
 sealed trait ITypingPassSolverError
 case class KindIsNotConcrete(kind: KindT) extends ITypingPassSolverError
 case class KindIsNotInterface(kind: KindT) extends ITypingPassSolverError
@@ -67,6 +71,10 @@ case class CantGetComponentsOfPlaceholderPrototype(range: List[RangeS]) extends 
 case class ReturnTypeConflict(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends ITypingPassSolverError
 case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ITypingPassSolverError
 
+*/
+// mig: trait IInfererDelegate
+pub trait IInfererDelegate {}
+/*
 trait IInfererDelegate {
 //  def lookupMemberTypes(
 //    state: CompilerOutputs,
@@ -175,12 +183,23 @@ trait IInfererDelegate {
   IsaTemplataT
 }
 
+*/
+// mig: struct CompilerSolver
+pub struct CompilerSolver;
+// mig: impl CompilerSolver
+impl CompilerSolver {}
+/*
 class CompilerSolver(
   globalOptions: GlobalOptions,
   interner: Interner,
   delegate: IInfererDelegate
 ) {
-
+*/
+// mig: fn get_runes
+fn get_runes(rule: IRulexSR) -> Vec<IRuneS> {
+    panic!("Unimplemented: get_runes");
+}
+/*
   def getRunes(rule: IRulexSR): Vector[IRuneS] = {
     val result = rule.runeUsages.map(_.rune)
 
@@ -221,6 +240,12 @@ class CompilerSolver(
     result
   }
 
+*/
+// mig: fn get_puzzles
+fn get_puzzles(rule: IRulexSR) -> Vec<Vec<IRuneS>> {
+    panic!("Unimplemented: get_puzzles");
+}
+/*
   def getPuzzles(rule: IRulexSR): Vector[Vector[IRuneS]] = {
     rule match {
       // This means we can solve this puzzle and dont need anything to do it.
@@ -262,6 +287,19 @@ class CompilerSolver(
     }
   }
 
+*/
+// mig: fn make_solver_state
+fn make_solver_state(
+    range: Vec<RangeS>,
+    env: InferEnv,
+    state: CompilerOutputs,
+    rules: Vec<IRulexSR>,
+    initial_rune_to_type: HashMap<IRuneS, ITemplataType>,
+    initially_known_rune_to_templata: HashMap<IRuneS, ITemplataT<ITemplataType>>,
+) -> SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>> {
+    panic!("Unimplemented: make_solver_state");
+}
+/*
   def makeSolverState(
     range: List[RangeS],
     env: InferEnv,
@@ -306,6 +344,17 @@ class CompilerSolver(
   }
 
 
+*/
+// mig: fn advance_infer
+fn advance_infer(
+    env: InferEnv,
+    state: CompilerOutputs,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    delegate: IInfererDelegate,
+) -> Result<bool, FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    panic!("Unimplemented: advance_infer");
+}
+/*
   // Returns true if there's more to be done, false if we've gotten as far as we can.
   def advanceInfer(
       env: InferEnv,
@@ -360,6 +409,16 @@ class CompilerSolver(
     Ok(false)
   }
 
+*/
+// mig: fn r#continue
+fn r#continue(
+    env: InferEnv,
+    state: CompilerOutputs,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+) -> Result<(), FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    panic!("Unimplemented: continue");
+}
+/*
   // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
   // Caller should remember to do that!
   def continue(
@@ -381,11 +440,33 @@ class CompilerSolver(
 }
 
 object CompilerRuleSolver {
-
+*/
+// mig: fn sanity_check_conclusion
+fn sanity_check_conclusion(
+    delegate: IInfererDelegate,
+    env: InferEnv,
+    state: CompilerOutputs,
+    rune: IRuneS,
+    conclusion: ITemplataT<ITemplataType>,
+) {
+    panic!("Unimplemented: sanity_check_conclusion");
+}
+/*
   def sanityCheckConclusion(delegate: IInfererDelegate, env: InferEnv, state: CompilerOutputs, rune: IRuneS, conclusion: ITemplataT[ITemplataType]): Unit = {
     delegate.sanityCheckConclusion(env, state, rune, conclusion)
   }
 
+*/
+// mig: fn complex_solve
+fn complex_solve(
+    delegate: IInfererDelegate,
+    state: CompilerOutputs,
+    env: InferEnv,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    panic!("Unimplemented: complex_solve");
+}
+/*
   // Per @CSCDSRZ, complex solve infers conclusions from unsolved rules but doesn't solve them.
   def complexSolve(
       delegate: IInfererDelegate,
@@ -396,6 +477,17 @@ object CompilerRuleSolver {
     complexSolveInner(delegate, state, env, solverState)
   }
 
+*/
+// mig: fn complex_solve_inner
+fn complex_solve_inner(
+    delegate: IInfererDelegate,
+    state: CompilerOutputs,
+    env: InferEnv,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    panic!("Unimplemented: complex_solve_inner");
+}
+/*
   private def complexSolveInner(delegate: IInfererDelegate, state: CompilerOutputs, env: InferEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]): Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     val equivalencies = new Equivalencies(solverState.getUnsolvedRules())
 
@@ -494,6 +586,20 @@ object CompilerRuleSolver {
     Ok(())
   }
 
+*/
+// mig: fn solve_receives
+fn solve_receives(
+    delegate: IInfererDelegate,
+    env: InferEnv,
+    state: CompilerOutputs,
+    senders: Vec<(IRuneS, CoordT)>,
+    call_templates: Vec<ITemplataT<ITemplataType>>,
+    all_senders_known: bool,
+    all_calls_known: bool,
+) -> Result<Option<KindT>, ITypingPassSolverError> {
+    panic!("Unimplemented: solve_receives");
+}
+/*
   private def solveReceives(
     delegate: IInfererDelegate,
     env: InferEnv,
@@ -553,6 +659,17 @@ object CompilerRuleSolver {
     Ok(Some(narrowedCommonAncestor))
   }
 
+*/
+// mig: fn narrow
+fn narrow(
+    delegate: IInfererDelegate,
+    env: InferEnv,
+    state: CompilerOutputs,
+    kinds: HashSet<KindT>,
+) -> Result<KindT, ITypingPassSolverError> {
+    panic!("Unimplemented: narrow");
+}
+/*
   def narrow(
     delegate: IInfererDelegate,
     env: InferEnv,
@@ -575,6 +692,19 @@ object CompilerRuleSolver {
     }
   }
 
+*/
+// mig: fn solve
+fn solve(
+    delegate: IInfererDelegate,
+    state: CompilerOutputs,
+    env: InferEnv,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    rule_index: i32,
+    rule: IRulexSR,
+) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    panic!("Unimplemented: solve");
+}
+/*
   def solve(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
@@ -589,6 +719,19 @@ object CompilerRuleSolver {
     }
   }
 
+*/
+// mig: fn solve_rule
+fn solve_rule(
+    delegate: IInfererDelegate,
+    state: CompilerOutputs,
+    env: InferEnv,
+    rule_index: i32,
+    rule: IRulexSR,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+) -> Result<(), ITypingPassSolverError> {
+    panic!("Unimplemented: solve_rule");
+}
+/*
   private def solveRule(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
@@ -1007,6 +1150,22 @@ object CompilerRuleSolver {
     }
   }
 
+*/
+// mig: fn solve_call_rule
+fn solve_call_rule(
+    delegate: IInfererDelegate,
+    state: CompilerOutputs,
+    env: InferEnv,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    rule_index: i32,
+    range: RangeS,
+    result_rune: RuneUsage,
+    template_rune: RuneUsage,
+    arg_runes: Vec<RuneUsage>,
+) -> Result<(), ITypingPassSolverError> {
+    panic!("Unimplemented: solve_call_rule");
+}
+/*
   private def solveCallRule(
       delegate: IInfererDelegate,
       state: CompilerOutputs,
@@ -1391,6 +1550,12 @@ object CompilerRuleSolver {
     }
   }
 
+*/
+// mig: fn literal_to_templata
+fn literal_to_templata(literal: ILiteralSL) -> ITemplataT<ITemplataType> {
+    panic!("Unimplemented: literal_to_templata");
+}
+/*
   private def literalToTemplata(literal: ILiteralSL) = {
     literal match {
       case MutabilityLiteralSL(mutability) => MutabilityTemplataT(Conversions.evaluateMutability(mutability))

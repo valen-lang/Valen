@@ -15,13 +15,37 @@ import dev.vale.typing.ast._
 import dev.vale.typing.types._
 import dev.vale.typing.ast
 
-
+*/
+// mig: struct LockWeakMacro
+pub struct LockWeakMacro {
+    pub keywords: Keywords,
+    pub expression_compiler: ExpressionCompiler,
+}
+// mig: impl LockWeakMacro
+impl LockWeakMacro {}
+/*
 class LockWeakMacro(
   keywords: Keywords,
   expressionCompiler: ExpressionCompiler
 ) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_lock_weak
 
+*/
+// mig: fn generate_function_body
+fn generate_function_body(
+    env: &FunctionEnvironmentT,
+    coutputs: &CompilerOutputs,
+    generator_id: StrI,
+    life: LocationInFunctionEnvironmentT,
+    call_range: Vec<RangeS>,
+    call_location: LocationInDenizen,
+    origin_function: Option<&FunctionA>,
+    param_coords: Vec<ParameterT>,
+    maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+    panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

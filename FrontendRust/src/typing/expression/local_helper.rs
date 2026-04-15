@@ -21,13 +21,23 @@ import dev.vale.typing.ast._
 import dev.vale.typing.names.TypingPassTemporaryVarNameT
 
 import scala.collection.immutable.List
-
+*/
+// mig: struct LocalHelper
+pub struct LocalHelper;
+// mig: impl LocalHelper
+impl LocalHelper {}
+/*
 class LocalHelper(
     opts: TypingPassOptions,
     interner: Interner,
     nameTranslator: NameTranslator,
     destructorCompiler: DestructorCompiler) {
-
+*/
+// mig: fn make_temporary_local
+fn make_temporary_local(nenv: &NodeEnvironmentBox, life: LocationInFunctionEnvironmentT, coord: CoordT) -> ReferenceLocalVariableT {
+  panic!("Unimplemented: make_temporary_local");
+}
+/*
   def makeTemporaryLocal(
     nenv: NodeEnvironmentBox,
     life: LocationInFunctionEnvironmentT,
@@ -39,6 +49,12 @@ class LocalHelper(
     rlv
   }
 
+*/
+// mig: fn make_temporary_local
+fn make_temporary_local(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, life: LocationInFunctionEnvironmentT, context_region: RegionT, r: ReferenceExpressionTE, target_ownership: OwnershipT) -> DeferTE {
+  panic!("Unimplemented: make_temporary_local");
+}
+/*
   // This makes a borrow ref, but can easily turn that into a weak
   // separately.
   def makeTemporaryLocal(
@@ -68,12 +84,24 @@ class LocalHelper(
     (DeferTE(letExpr2, destructExpr2))
   }
 
+*/
+// mig: fn unlet_local_without_dropping
+fn unlet_local_without_dropping(nenv: &NodeEnvironmentBox, local_var: &dyn ILocalVariableT) -> UnletTE {
+  panic!("Unimplemented: unlet_local_without_dropping");
+}
+/*
   def unletLocalWithoutDropping(nenv: NodeEnvironmentBox, localVar: ILocalVariableT):
   (UnletTE) = {
     nenv.markLocalUnstackified(localVar.name)
     UnletTE(localVar)
   }
 
+*/
+// mig: fn unlet_and_drop_all
+fn unlet_and_drop_all(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, context_region: RegionT, variables: &[&dyn ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
+  panic!("Unimplemented: unlet_and_drop_all");
+}
+/*
   def unletAndDropAll(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -90,6 +118,12 @@ class LocalHelper(
     })
   }
 
+*/
+// mig: fn unlet_all_without_dropping
+fn unlet_all_without_dropping(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], variables: &[&dyn ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
+  panic!("Unimplemented: unlet_all_without_dropping");
+}
+/*
   def unletAllWithoutDropping(
     coutputs: CompilerOutputs,
     nenv: NodeEnvironmentBox,
@@ -99,6 +133,12 @@ class LocalHelper(
     variables.map(variable => unletLocalWithoutDropping(nenv, variable))
   }
 
+*/
+// mig: fn make_user_local_variable
+fn make_user_local_variable(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], local_variable_a: &LocalS, reference_type2: CoordT) -> Box<dyn ILocalVariableT> {
+  panic!("Unimplemented: make_user_local_variable");
+}
+/*
   // A user local variable is one that the user can address inside their code.
   // Users never see the names of non-user local variables, so they can't be
   // looked up.
@@ -132,6 +172,12 @@ class LocalHelper(
     localVar
   }
 
+*/
+// mig: fn maybe_borrow_soft_load
+fn maybe_borrow_soft_load(coutputs: &CompilerOutputs, expr2: &ExpressionT) -> ReferenceExpressionTE {
+  panic!("Unimplemented: maybe_borrow_soft_load");
+}
+/*
   def maybeBorrowSoftLoad(
       coutputs: CompilerOutputs,
       expr2: ExpressionT):
@@ -142,6 +188,12 @@ class LocalHelper(
     }
   }
 
+*/
+// mig: fn soft_load
+fn soft_load(nenv: &NodeEnvironmentBox, load_range: &[RangeS], a: &AddressExpressionTE, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE {
+  panic!("Unimplemented: soft_load");
+}
+/*
   def softLoad(
       nenv: NodeEnvironmentBox,
       loadRange: List[RangeS],
@@ -205,12 +257,24 @@ class LocalHelper(
     }
   }
 
+*/
+// mig: fn borrow_soft_load
+fn borrow_soft_load(coutputs: &CompilerOutputs, expr2: &AddressExpressionTE) -> ReferenceExpressionTE {
+  panic!("Unimplemented: borrow_soft_load");
+}
+/*
   def borrowSoftLoad(coutputs: CompilerOutputs, expr2: AddressExpressionTE):
   ReferenceExpressionTE = {
     val ownership = getBorrowOwnership(coutputs, expr2.result.coord.kind)
     ast.SoftLoadTE(expr2, ownership)
   }
 
+*/
+// mig: fn get_borrow_ownership
+fn get_borrow_ownership(coutputs: &CompilerOutputs, kind: &KindT) -> OwnershipT {
+  panic!("Unimplemented: get_borrow_ownership");
+}
+/*
   def getBorrowOwnership(coutputs: CompilerOutputs, kind: KindT):
   OwnershipT = {
     kind match {
@@ -265,6 +329,12 @@ class LocalHelper(
 }
 
 object LocalHelper {
+*/
+// mig: fn determine_if_local_is_addressible
+fn determine_if_local_is_addressible(mutability: &dyn ITemplataT, local_a: &LocalS) -> bool {
+  panic!("Unimplemented: determine_if_local_is_addressible");
+}
+/*
   // See ClosureTests for requirements here
   def determineIfLocalIsAddressible(mutability: ITemplataT[MutabilityTemplataType], localA: LocalS): Boolean = {
     mutability match {
@@ -277,6 +347,12 @@ object LocalHelper {
     }
   }
 
+*/
+// mig: fn determine_local_variability
+fn determine_local_variability(local_a: &LocalS) -> VariabilityT {
+  panic!("Unimplemented: determine_local_variability");
+}
+/*
   def determineLocalVariability(localA: LocalS): VariabilityT = {
     if (localA.selfMutated != NotUsed || localA.childMutated != NotUsed) {
       VaryingT

@@ -41,7 +41,30 @@ import scala.collection.immutable.{List, ListMap, Map, Set}
 import scala.collection.mutable
 import scala.util.control.Breaks._
 
+*/
+// mig: trait IFunctionGenerator
+pub trait IFunctionGenerator {
+/*
 trait IFunctionGenerator {
+*/
+// mig: fn generate
+fn generate(
+    &self,
+    function_compiler_core: (), // FunctionCompilerCore
+    struct_compiler: (),
+    destructor_compiler: (),
+    array_compiler: (),
+    env: (),
+    coutputs: (),
+    life: (),
+    call_range: Vec<()>,
+    origin_function: Option<()>,
+    param_coords: Vec<()>,
+    maybe_ret_coord: Option<()>,
+) -> () {
+    panic!("Unimplemented: generate");
+}
+/*
   def generate(
     // These serve as the API that a function generator can use.
     // TODO: Give a trait with a reduced API.
@@ -62,7 +85,19 @@ trait IFunctionGenerator {
   (FunctionHeaderT)
 }
 
+*/
+}
+
+// mig: struct DefaultPrintyThing
+pub struct DefaultPrintyThing;
+/*
 object DefaultPrintyThing {
+*/
+// mig: fn print
+pub fn print(x: ()) {
+    panic!("Unimplemented: print");
+}
+/*
   def print(x: => Object) = {
     println("###: " + x)
   }
@@ -70,6 +105,13 @@ object DefaultPrintyThing {
 
 
 
+*/
+// mig: struct Compiler
+pub struct Compiler {
+}
+// mig: impl Compiler
+impl Compiler {
+/*
 class Compiler(
     opts: TypingPassOptions,
     interner: Interner,
@@ -731,6 +773,12 @@ class Compiler(
       opts, interner, keywords, nameTranslator, overloadResolver, structCompiler, structConstructorMacro, structDropMacro)
 
 
+*/
+// mig: fn evaluate
+fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
+    panic!("Unimplemented: evaluate");
+}
+/*
   def evaluate(
       codeMap: FileCoordinateMap[String],
       packageToProgramA: PackageCoordinateMap[ProgramA]):
@@ -1422,6 +1470,12 @@ class Compiler(
     }
   }
 
+*/
+// mig: fn preprocess_struct
+fn preprocess_struct(&self, name_to_struct_defined_macro: (), struct_name_t: (), struct_a: ()) -> Vec<()> {
+    panic!("Unimplemented: preprocess_struct");
+}
+/*
   private def preprocessStruct(
     nameToStructDefinedMacro: Map[StrI, IOnStructDefinedMacro],
     structNameT: IdT[INameT],
@@ -1436,6 +1490,12 @@ class Compiler(
       .flatMap(_.getStructSiblingEntries(structNameT, structA))
   }
 
+*/
+// mig: fn preprocess_interface
+fn preprocess_interface(&self, name_to_interface_defined_macro: (), interface_name_t: (), interface_a: ()) -> Vec<()> {
+    panic!("Unimplemented: preprocess_interface");
+}
+/*
   private def preprocessInterface(
     nameToInterfaceDefinedMacro: Map[StrI, IOnInterfaceDefinedMacro],
     interfaceNameT: IdT[INameT],
@@ -1455,6 +1515,12 @@ class Compiler(
     results
   }
 
+*/
+// mig: fn determine_macros_to_call
+fn determine_macros_to_call<T>(&self, name_to_macro: (), default_called_macros: Vec<()>, parent_ranges: Vec<()>, attributes: Vec<()>) -> Vec<T> {
+    panic!("Unimplemented: determine_macros_to_call");
+}
+/*
   private def determineMacrosToCall[T](
     nameToMacro: Map[StrI, T],
     defaultCalledMacros: Vector[MacroCallS],
@@ -1480,6 +1546,12 @@ class Compiler(
     })
   }
 
+*/
+// mig: fn ensure_deep_exports
+fn ensure_deep_exports(&self, coutputs: ()) {
+    panic!("Unimplemented: ensure_deep_exports");
+}
+/*
   def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
     val packageToKindToExport =
       coutputs.getKindExports
@@ -1576,6 +1648,12 @@ class Compiler(
     })
   }
 
+*/
+// mig: fn is_root_function
+fn is_root_function(&self, function_a: ()) -> bool {
+    panic!("Unimplemented: is_root_function");
+}
+/*
   // Returns whether we should eagerly compile this and anything it depends on.
   def isRootFunction(functionA: FunctionA): Boolean = {
     functionA.name match {
@@ -1589,11 +1667,26 @@ class Compiler(
     })
   }
 
+*/
+// mig: fn is_root_struct
+fn is_root_struct(&self, struct_a: ()) -> bool {
+    panic!("Unimplemented: is_root_struct");
+}
+/*
   // Returns whether we should eagerly compile this and anything it depends on.
   def isRootStruct(structA: StructA): Boolean = {
     structA.attributes.exists({ case ExportS(_) => true case _ => false })
   }
 
+*/
+// mig: fn is_root_interface
+fn is_root_interface(&self, interface_a: ()) -> bool {
+    panic!("Unimplemented: is_root_interface");
+}
+}
+
+
+/*
   // Returns whether we should eagerly compile this and anything it depends on.
   def isRootInterface(interfaceA: InterfaceA): Boolean = {
     interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
@@ -1602,6 +1695,12 @@ class Compiler(
 
 
 object Compiler {
+*/
+// mig: fn consecutive
+pub fn consecutive(exprs: Vec<()>) -> () {
+    panic!("Unimplemented: consecutive");
+}
+/*
   // Flattens any nested ConsecutorTEs
   def consecutive(exprs: Vector[ReferenceExpressionTE]): ReferenceExpressionTE = {
     exprs match {
@@ -1628,6 +1727,12 @@ object Compiler {
     }
   }
 
+*/
+// mig: fn is_primitive
+pub fn is_primitive(kind: ()) -> bool {
+    panic!("Unimplemented: is_primitive");
+}
+/*
   def isPrimitive(kind: KindT): Boolean = {
     kind match {
       case VoidT() | IntT(_) | BoolT() | StrT() | NeverT(_) | FloatT() => true
@@ -1640,11 +1745,23 @@ object Compiler {
     }
   }
 
+*/
+// mig: fn get_mutabilities
+pub fn get_mutabilities(coutputs: (), concrete_values2: Vec<()>) -> Vec<()> {
+    panic!("Unimplemented: get_mutabilities");
+}
+/*
   def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):
   Vector[ITemplataT[MutabilityTemplataType]] = {
     concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
   }
 
+*/
+// mig: fn get_mutability
+pub fn get_mutability(coutputs: (), concrete_value2: ()) -> () {
+    panic!("Unimplemented: get_mutability");
+}
+/*
   def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):
   ITemplataT[MutabilityTemplataType] = {
     concreteValue2 match {

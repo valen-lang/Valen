@@ -27,6 +27,20 @@ import dev.vale.typing.types.InterfaceTT
 
 import scala.collection.mutable
 
+*/
+// mig: struct StructConstructorMacro
+pub struct StructConstructorMacro<'p, 's> {
+  pub opts: TypingPassOptions,
+  pub interner: Interner<'p>,
+  pub keywords: Keywords<'p>,
+  pub name_translator: NameTranslator,
+  pub destructor_compiler: DestructorCompiler,
+}
+
+// mig: impl StructConstructorMacro
+impl<'p, 's> StructConstructorMacro<'p, 's> {}
+
+/*
 class StructConstructorMacro(
   opts: TypingPassOptions,
   interner: Interner,
@@ -39,6 +53,17 @@ class StructConstructorMacro(
 
   val macroName: StrI = keywords.DeriveStructConstructor
 
+*/
+// mig: fn get_struct_sibling_entries
+pub fn get_struct_sibling_entries<'p, 's>(
+  &self,
+  struct_name: IdT<INameT>,
+  struct_a: StructA<'s>,
+) -> Vec<(IdT<INameT>, FunctionEnvEntry)> {
+  panic!("Unimplemented: get_struct_sibling_entries");
+}
+
+/*
   override def getStructSiblingEntries(structName: IdT[INameT], structA: StructA):
   Vector[(IdT[INameT], FunctionEnvEntry)] = {
     if (structA.members.collect({ case VariadicStructMemberS(_, _, _) => }).nonEmpty) {
@@ -112,6 +137,24 @@ class StructConstructorMacro(
   }
 
 
+*/
+// mig: fn generate_function_body
+pub fn generate_function_body<'p, 's>(
+  &self,
+  env: FunctionEnvironmentT,
+  coutputs: CompilerOutputs,
+  generator_id: StrI<'p>,
+  life: LocationInFunctionEnvironmentT,
+  call_range: Vec<RangeS<'p>>,
+  call_location: LocationInDenizen<'p>,
+  origin_function: Option<FunctionA<'s>>,
+  param_coords: Vec<ParameterT>,
+  maybe_ret_coord: Option<CoordT>,
+) -> (FunctionHeaderT, ReferenceExpressionTE) {
+  panic!("Unimplemented: generate_function_body");
+}
+
+/*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

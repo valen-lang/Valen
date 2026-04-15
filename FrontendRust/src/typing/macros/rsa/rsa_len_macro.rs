@@ -15,9 +15,23 @@ import dev.vale.typing.ast._
 import dev.vale.typing.ast
 
 
+*/
+// mig: struct RSALenMacro
+pub struct RSALenMacro<'p> {
+    pub keywords: &'p Keywords<'p>,
+}
+// mig: impl RSALenMacro
+impl<'p> RSALenMacro<'p> {}
+/*
 class RSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_len
 
+*/
+// mig: fn generate_function_body
+pub fn generate_function_body() {
+    panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,

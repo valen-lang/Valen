@@ -18,10 +18,21 @@ import dev.vale.typing.env.TemplataLookupContext
 import dev.vale.typing.types._
 import dev.vale.typing.ast
 
-
+*/
+// mig: struct RSAMutablePushMacro
+pub struct RSAMutablePushMacro;
+// mig: impl RSAMutablePushMacro
+impl RSAMutablePushMacro {}
+/*
 class RSAMutablePushMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_push
 
+*/
+// mig: fn generate_function_body
+fn generate_function_body() {
+  panic!("Unimplemented: generate_function_body");
+}
+/*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
