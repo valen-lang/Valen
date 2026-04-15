@@ -264,20 +264,28 @@ class TemplexScout(
             }
             case TuplePT(rangeP, elements) => {
               val rangeS = evalRange(rangeP)
-              val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-              ruleBuilder +=
-                rules.MaybeCoercingLookupSR(
-                  rangeS,
-                  templateRuneS,
-                  interner.intern(CodeNameS(keywords.tupleHumanName(elements.length))))
-              ruleBuilder +=
-                rules.MaybeCoercingCallSR(
-                  rangeS,
-                  resultRuneS,
-                  templateRuneS,
-                  elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
-              resultRuneS
+              val tupleName = interner.intern(CodeNameS(keywords.tupleHumanName(elements.length)))
+              if (elements.isEmpty) {
+                // Zero-arg case: lower directly to a single MaybeCoercingLookupSR, matching
+                // how any other zero-arg kind template (e.g., `Spaceship`) is handled.
+                // Emitting a MaybeCoercingCallSR here would deadlock RuneTypeSolver, since
+                // its pre-processor declines to seed Tup0's ambiguous templata shape.
+                val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                ruleBuilder += rules.MaybeCoercingLookupSR(rangeS, resultRuneS, tupleName)
+                resultRuneS
+              } else {
+                val resultRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                val templateRuneS = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                ruleBuilder +=
+                  rules.MaybeCoercingLookupSR(rangeS, templateRuneS, tupleName)
+                ruleBuilder +=
+                  rules.MaybeCoercingCallSR(
+                    rangeS,
+                    resultRuneS,
+                    templateRuneS,
+                    elements.map(translateTemplex(env, lidb.child(), ruleBuilder, contextRegion, _)))
+                resultRuneS
+              }
             }
           }
         }
