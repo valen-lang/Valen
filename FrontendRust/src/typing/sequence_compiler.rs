@@ -48,8 +48,8 @@ pub struct SequenceCompiler<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,
     pub interner: &'ctx Interner,
     pub keywords: &'ctx Keywords,
-    pub struct_compiler: StructCompiler<'s, 't>,
-    pub templata_compiler: TemplataCompiler<'s, 't>,
+    pub struct_compiler: StructCompiler<'s, 'ctx, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
 }
 // mig: impl SequenceCompiler
 impl<'s, 'ctx, 't> SequenceCompiler<'s, 'ctx, 't> {}

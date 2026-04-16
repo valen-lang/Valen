@@ -72,10 +72,10 @@ pub struct FunctionCompilerSolvingLayer<'s, 'ctx, 't> {
     interner: &'ctx Interner,
     keywords: &'ctx Keywords,
     name_translator: NameTranslator,
-    templata_compiler: TemplataCompiler<'s, 't>,
+    templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
     infer_compiler: InferCompiler<'s, 't>,
     convert_helper: ConvertHelper<'s, 't>,
-    struct_compiler: StructCompiler<'s, 't>,
+    struct_compiler: StructCompiler<'s, 'ctx, 't>,
     delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
 }
 

@@ -55,7 +55,7 @@ pub struct StructDropMacro<'s, 'ctx, 't> {
   pub interner: &'ctx Interner<'s>,
   pub keywords: &'ctx Keywords<'s>,
   pub name_translator: NameTranslator<'s, 't>,
-  pub destructor_compiler: DestructorCompiler<'s, 't>,
+  pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
 }
 // mig: impl StructDropMacro
 impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {}

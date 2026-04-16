@@ -59,9 +59,9 @@ pub struct FunctionCompilerMiddleLayer<'s, 'ctx, 't> {
     pub interner: &'ctx Interner,
     pub keywords: &'ctx Keywords,
     pub name_translator: NameTranslator,
-    pub templata_compiler: TemplataCompiler<'s, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
     pub convert_helper: ConvertHelper<'s, 't>,
-    pub struct_compiler: StructCompiler<'s, 't>,
+    pub struct_compiler: StructCompiler<'s, 'ctx, 't>,
     pub delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
 }
 

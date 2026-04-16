@@ -65,7 +65,7 @@ pub struct ArrayCompiler<'s, 'ctx, 't> {
     pub infer_compiler: InferCompiler<'s, 't>,
     pub overload_resolver: OverloadResolver<'s, 't>,
     pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
-    pub templata_compiler: TemplataCompiler<'s, 't>,
+    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
 }
 // mig: impl ArrayCompiler
 impl<'s, 'ctx, 't> ArrayCompiler<'s, 'ctx, 't> {}

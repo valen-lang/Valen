@@ -42,7 +42,7 @@ use crate::postparsing::ast::LocationInDenizen;
 // mig: struct RSADropIntoMacro
 pub struct RSADropIntoMacro<'s, 'ctx, 't> {
     pub keywords: Keywords<'s>,
-    pub array_compiler: ArrayCompiler<'s, 't>,
+    pub array_compiler: ArrayCompiler<'s, 'ctx, 't>,
 }
 
 // mig: impl RSADropIntoMacro

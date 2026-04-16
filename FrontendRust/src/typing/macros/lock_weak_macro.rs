@@ -41,7 +41,7 @@ use crate::postparsing::ast::LocationInDenizen;
 // mig: struct LockWeakMacro
 pub struct LockWeakMacro<'s, 'ctx, 't> {
     pub keywords: Keywords<'s>,
-    pub expression_compiler: ExpressionCompiler<'s, 't>,
+    pub expression_compiler: ExpressionCompiler<'s, 'ctx, 't>,
 }
 // mig: impl LockWeakMacro
 impl<'s, 'ctx, 't> LockWeakMacro<'s, 'ctx, 't> {}

@@ -47,9 +47,9 @@ use crate::postparsing::ast::LocationInDenizen;
 // mig: struct AsSubtypeMacro
 pub struct AsSubtypeMacro<'s, 'ctx, 't> {
     pub keywords: &'ctx Keywords<'s>,
-    pub impl_compiler: ImplCompiler<'s, 't>,
-    pub expression_compiler: ExpressionCompiler<'s, 't>,
-    pub destructor_compiler: DestructorCompiler<'s, 't>,
+    pub impl_compiler: ImplCompiler<'s, 'ctx, 't>,
+    pub expression_compiler: ExpressionCompiler<'s, 'ctx, 't>,
+    pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
 }
 
 // mig: impl AsSubtypeMacro

@@ -50,8 +50,8 @@ use crate::postparsing::ast::LocationInDenizen;
 pub struct RSAMutableNewMacro<'s, 'ctx, 't> {
     pub interner: &'ctx Interner<'s>,
     pub keywords: &'ctx Keywords<'s>,
-    pub array_compiler: &'ctx ArrayCompiler<'s, 't>,
-    pub destructor_compiler: &'ctx DestructorCompiler<'s, 't>,
+    pub array_compiler: &'ctx ArrayCompiler<'s, 'ctx, 't>,
+    pub destructor_compiler: &'ctx DestructorCompiler<'s, 'ctx, 't>,
 }
 // mig: impl RSAMutableNewMacro
 impl<'s, 'ctx, 't> RSAMutableNewMacro<'s, 'ctx, 't> {

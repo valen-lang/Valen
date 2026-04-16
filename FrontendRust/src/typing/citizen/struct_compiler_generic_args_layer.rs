@@ -85,7 +85,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        struct_templata: StructDefinitionTemplataT<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
         panic!("Unimplemented: resolve_struct");
@@ -175,7 +175,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        interface_templata: InterfaceDefinitionTemplataT<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> InterfaceTT<'s, 't> {
         panic!("Unimplemented: predict_interface");
@@ -259,7 +259,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        struct_templata: StructDefinitionTemplataT<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> StructTT<'s, 't> {
         panic!("Unimplemented: predict_struct");
@@ -345,7 +345,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        interface_templata: InterfaceDefinitionTemplataT<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
         panic!("Unimplemented: resolve_interface");
@@ -420,7 +420,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        struct_templata: StructDefinitionTemplataT<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> UncheckedDefiningConclusions<'s, 't> {
         panic!("Unimplemented: compile_struct");
     }
@@ -537,7 +537,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        interface_templata: InterfaceDefinitionTemplataT<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> UncheckedDefiningConclusions<'s, 't> {
         panic!("Unimplemented: compile_interface");
     }
@@ -651,7 +651,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
         name: IFunctionDeclarationNameS<'s>,
         function_s: &FunctionA<'s>,
         members: &[NormalStructMemberT<'s, 't>],
-    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s>) {
+    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
         panic!("Unimplemented: make_closure_understruct");
     }
 }

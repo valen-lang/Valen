@@ -49,15 +49,16 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct TypingPassCompilation
-pub struct TypingPassCompilation<'s, 'ctx, 't> {
-  higher_typing_compilation: HigherTypingCompilation<'s, 'ctx>,
+pub struct TypingPassCompilation<'s, 'ctx, 't, 'p> {
+  higher_typing_compilation: HigherTypingCompilation<'s, 'ctx, 'p>,
   hinputs_cache: Option<()>,
+  _phantom: std::marker::PhantomData<&'t ()>,
 }
 // mig: impl TypingPassCompilation
-impl<'s, 'ctx, 't> TypingPassCompilation<'s, 'ctx, 't>
+impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where
 {
-  pub fn new<'p>(
+  pub fn new(
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,

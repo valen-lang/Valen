@@ -315,14 +315,14 @@ fn get_puzzles(rule: IRulexSR) -> Vec<Vec<IRuneS>> {
 
 */
 // mig: fn make_solver_state
-fn make_solver_state(
+fn make_solver_state<'s, 't>(
     range: Vec<RangeS>,
     env: InferEnv,
     state: CompilerOutputs,
     rules: Vec<IRulexSR>,
     initial_rune_to_type: HashMap<IRuneS, ITemplataType>,
-    initially_known_rune_to_templata: HashMap<IRuneS, ITemplataT<ITemplataType>>,
-) -> SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>> {
+    initially_known_rune_to_templata: HashMap<IRuneS, ITemplataT<'s, 't>>,
+) -> SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>> {
     panic!("Unimplemented: make_solver_state");
 }
 /*
@@ -372,12 +372,12 @@ fn make_solver_state(
 
 */
 // mig: fn advance_infer
-fn advance_infer(
+fn advance_infer<'s, 't>(
     env: InferEnv,
     state: CompilerOutputs,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
     delegate: IInfererDelegate,
-) -> Result<bool, FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+) -> Result<bool, FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>> {
     panic!("Unimplemented: advance_infer");
 }
 /*
@@ -440,8 +440,8 @@ fn advance_infer(
 fn r#continue(
     env: InferEnv,
     state: CompilerOutputs,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
-) -> Result<(), FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
+) -> Result<(), FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>> {
     panic!("Unimplemented: continue");
 }
 /*
@@ -468,12 +468,12 @@ fn r#continue(
 object CompilerRuleSolver {
 */
 // mig: fn sanity_check_conclusion
-fn sanity_check_conclusion(
+fn sanity_check_conclusion<'s, 't>(
     delegate: IInfererDelegate,
     env: InferEnv,
     state: CompilerOutputs,
     rune: IRuneS,
-    conclusion: ITemplataT<ITemplataType>,
+    conclusion: ITemplataT<'s, 't>,
 ) {
     panic!("Unimplemented: sanity_check_conclusion");
 }
@@ -484,12 +484,12 @@ fn sanity_check_conclusion(
 
 */
 // mig: fn complex_solve
-fn complex_solve(
+fn complex_solve<'s, 't>(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
-) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
+) -> Result<(), ISolverError<IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>> {
     panic!("Unimplemented: complex_solve");
 }
 /*
@@ -505,12 +505,12 @@ fn complex_solve(
 
 */
 // mig: fn complex_solve_inner
-fn complex_solve_inner(
+fn complex_solve_inner<'s, 't>(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
-) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
+) -> Result<(), ISolverError<IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>> {
     panic!("Unimplemented: complex_solve_inner");
 }
 /*
@@ -614,12 +614,12 @@ fn complex_solve_inner(
 
 */
 // mig: fn solve_receives
-fn solve_receives(
+fn solve_receives<'s, 't>(
     delegate: IInfererDelegate,
     env: InferEnv,
     state: CompilerOutputs,
     senders: Vec<(IRuneS, CoordT)>,
-    call_templates: Vec<ITemplataT<ITemplataType>>,
+    call_templates: Vec<ITemplataT<'s, 't>>,
     all_senders_known: bool,
     all_calls_known: bool,
 ) -> Result<Option<KindT>, ITypingPassSolverError> {
@@ -687,7 +687,7 @@ fn solve_receives(
 
 */
 // mig: fn narrow
-fn narrow(
+fn narrow<'s, 't>(
     delegate: IInfererDelegate,
     env: InferEnv,
     state: CompilerOutputs,
@@ -720,14 +720,14 @@ fn narrow(
 
 */
 // mig: fn solve
-fn solve(
+fn solve<'s, 't>(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
     rule_index: i32,
     rule: IRulexSR,
-) -> Result<(), ISolverError<IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>> {
+) -> Result<(), ISolverError<IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>> {
     panic!("Unimplemented: solve");
 }
 /*
@@ -747,13 +747,13 @@ fn solve(
 
 */
 // mig: fn solve_rule
-fn solve_rule(
+fn solve_rule<'s, 't>(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
     rule_index: i32,
     rule: IRulexSR,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
 ) -> Result<(), ITypingPassSolverError> {
     panic!("Unimplemented: solve_rule");
 }
@@ -1178,11 +1178,11 @@ fn solve_rule(
 
 */
 // mig: fn solve_call_rule
-fn solve_call_rule(
+fn solve_call_rule<'s, 't>(
     delegate: IInfererDelegate,
     state: CompilerOutputs,
     env: InferEnv,
-    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<ITemplataType>>,
+    solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,
     rule_index: i32,
     range: RangeS,
     result_rune: RuneUsage,
@@ -1578,7 +1578,7 @@ fn solve_call_rule(
 
 */
 // mig: fn literal_to_templata
-fn literal_to_templata(literal: ILiteralSL) -> ITemplataT<ITemplataType> {
+fn literal_to_templata<'s, 't>(literal: ILiteralSL) -> ITemplataT<'s, 't> {
     panic!("Unimplemented: literal_to_templata");
 }
 /*

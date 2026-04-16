@@ -313,7 +313,7 @@ pub fn humanize_resolving_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) 
   }
 */
 // mig: fn humanize_failed_solve
-pub fn humanize_failed_solve(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>) -> String {
+pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>) -> String {
   panic!("Unimplemented: humanize_failed_solve");
 }
 /*
@@ -624,7 +624,7 @@ pub fn humanize_rule_error(code_map: &dyn Fn(CodeLocationS) -> String, lines_bet
   }
 */
 // mig: fn humanize_candidate_and_failed_solve
-pub fn humanize_candidate_and_failed_solve(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR, IRuneS, ITemplataT<ITemplataType>, ITypingPassSolverError>) -> String {
+pub fn humanize_candidate_and_failed_solve<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>) -> String {
   panic!("Unimplemented: humanize_candidate_and_failed_solve");
 }
 /*
@@ -681,7 +681,7 @@ pub fn humanize_candidate(code_map: &dyn Fn(CodeLocationS) -> String, line_range
   }
 */
 // mig: fn humanize_templata
-pub fn humanize_templata(code_map: &dyn Fn(CodeLocationS) -> String, templata: ITemplataT<ITemplataType>) -> String {
+pub fn humanize_templata<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, templata: ITemplataT<'s, 't>) -> String {
   panic!("Unimplemented: humanize_templata");
 }
 /*
@@ -921,7 +921,7 @@ pub fn humanize_name(code_map: &dyn Fn(CodeLocationS) -> String, name: INameT, c
   }
 */
 // mig: fn humanize_generic_args
-fn humanize_generic_args(code_map: &dyn Fn(CodeLocationS) -> String, template_args: Vec<ITemplataT<ITemplataType>>, containing_region: Option<RegionT>) -> String {
+fn humanize_generic_args<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, template_args: Vec<ITemplataT<'s, 't>>, containing_region: Option<RegionT>) -> String {
   panic!("Unimplemented: humanize_generic_args");
 }
 /*

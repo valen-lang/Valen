@@ -67,7 +67,7 @@ pub struct StructConstructorMacro<'s, 'ctx, 't> {
   pub interner: Interner<'s>,
   pub keywords: Keywords<'s>,
   pub name_translator: NameTranslator<'s, 't>,
-  pub destructor_compiler: DestructorCompiler<'s, 't>,
+  pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
 }
 
 // mig: impl StructConstructorMacro
