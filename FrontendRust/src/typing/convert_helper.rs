@@ -30,6 +30,7 @@ use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
 use crate::higher_typing::ast::*;
+use crate::typing::citizen::impl_compiler::IsParentResult;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;

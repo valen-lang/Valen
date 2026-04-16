@@ -40,6 +40,7 @@ use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::macros::macros::*;
 use crate::interner::Interner;
+use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct RSAMutableCapacityMacro
 pub struct RSAMutableCapacityMacro<'s, 'ctx, 't> {

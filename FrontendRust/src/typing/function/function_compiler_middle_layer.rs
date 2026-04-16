@@ -49,6 +49,8 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::interner::Interner;
 use crate::typing::names::name_translator::*;
 use crate::typing::templata_compiler::*;
+use crate::postparsing::ast::AbstractSP;
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::convert_helper::*;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::expression::expression_compiler::*;

@@ -31,6 +31,8 @@ use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
 use crate::higher_typing::ast::*;
+use crate::typing::citizen::struct_compiler::*;
+use crate::typing::templata_compiler::*;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;

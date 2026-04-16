@@ -27,7 +27,9 @@ use crate::interner::StrI;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::higher_typing::ast::*;
+use crate::typing::overload_resolver::*;
 
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;

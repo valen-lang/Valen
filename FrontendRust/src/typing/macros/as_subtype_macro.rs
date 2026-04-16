@@ -41,6 +41,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::citizen::impl_compiler::*;
+use crate::typing::function::destructor_compiler::*;
 use crate::typing::expression::expression_compiler::*;
 use crate::postparsing::ast::LocationInDenizen;
 

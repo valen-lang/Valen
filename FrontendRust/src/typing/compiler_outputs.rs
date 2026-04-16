@@ -19,6 +19,7 @@ use std::collections::{HashMap, HashSet};
 
 use crate::interner::StrI;
 use crate::utils::range::RangeS;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 use crate::postparsing::names::*;
 use crate::higher_typing::ast::*;
@@ -568,7 +569,7 @@ fn add_function_export<'s, 't>(range: RangeS<'s>, function: PrototypeT<'s, 't, (
   }
 */
 // mig: fn add_kind_extern
-fn add_kind_extern<'s, 't>(kind: KindT<'s, 't>, package_coord: PackageCoordinate, exported_name: StrI<'s>) { panic!("Unimplemented: add_kind_extern"); }
+fn add_kind_extern<'s, 't>(kind: KindT<'s, 't>, package_coord: PackageCoordinate<'s>, exported_name: StrI<'s>) { panic!("Unimplemented: add_kind_extern"); }
 /*
   def addKindExtern(kind: KindT, packageCoord: PackageCoordinate, exportedName: StrI): Unit = {
     kindExterns += KindExternT(kind, packageCoord, exportedName)

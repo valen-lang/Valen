@@ -89,7 +89,7 @@ fn translate_struct_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IStructTe
   }
 */
 // mig: fn translate_interface_name
-fn translate_interface_name<'s, 't>(name: IInterfaceDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
+fn translate_interface_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_interface_name");
 }
 /*
@@ -102,7 +102,7 @@ fn translate_interface_name<'s, 't>(name: IInterfaceDeclarationNameS<'s>) -> IIn
   }
 */
 // mig: fn translate_citizen_name
-fn translate_citizen_name<'s, 't>(name: ICitizenDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
+fn translate_citizen_name<'s, 't>(name: IFunctionDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_citizen_name");
 }
 /*

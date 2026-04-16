@@ -53,6 +53,8 @@ use crate::higher_typing::ast::FunctionA;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::citizen::impl_compiler::*;
 use crate::typing::templata::conversions::*;
+use crate::typing::infer_compiler::*;
+use crate::utils::code_hierarchy::FileCoordinate;
 
 // mig: fn humanize
 pub fn humanize<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT<'s, 't>) -> String {
