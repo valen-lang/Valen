@@ -46,6 +46,9 @@ use std::collections::{HashMap, HashSet};
 
 use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::scout_arena::ScoutArena;
+use crate::typing::compilation::TypingPassOptions;
+use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
 
@@ -128,9 +131,31 @@ pub fn print(x: ()) {
 
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct Compiler
-pub struct Compiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
+pub struct Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub scout_arena: &'ctx ScoutArena<'s>,
+    pub typing_interner: &'ctx TypingInterner<'t>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub opts: &'ctx TypingPassOptions<'s>,
+}
+
+// mig: fn new
+// (no direct Scala counterpart — derived from `class Compiler(opts, interner, keywords)` in the Scala block below)
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn new(
+        scout_arena: &'ctx ScoutArena<'s>,
+        typing_interner: &'ctx TypingInterner<'t>,
+        keywords: &'ctx Keywords<'s>,
+        opts: &'ctx TypingPassOptions<'s>,
+    ) -> Self {
+        Compiler { scout_arena, typing_interner, keywords, opts }
+    }
+}
+
 // mig: impl Compiler
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
 /*

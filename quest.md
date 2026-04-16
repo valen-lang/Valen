@@ -125,7 +125,6 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - `CompilerOutputs<'s, 't>` — stack-owned accumulator, dies at pass end
 - `Compiler<'s, 'ctx, 't>` — stack god struct
 - `TemplatasStoreT` builders — `NodeEnvironmentBuilder`, etc., stack-local with heap `Vec`s until `build_in(scout_arena)` freezes into `'s`
-- `NameTranslator` — stack config
 - `DeferredActionT` entries in `VecDeque` — owned structs, not `Box<dyn>`
 
 ### 1.6 Mutual-Recursion Shape
@@ -152,16 +151,18 @@ All Scala sub-compilers collapse into a single `Compiler` struct:
 
 ```rust
 pub struct Compiler<'s, 'ctx, 't> {
-    pub typing_interner: &'ctx TypingInterner<'t>,
     pub scout_arena: &'ctx ScoutArena<'s>,
+    pub typing_interner: &'ctx TypingInterner<'t>,
     pub keywords: &'ctx Keywords<'s>,  // scout-interned keywords are fine
-    pub opts: &'ctx TypingPassOptions,
-    pub global_env: &'s IEnvironmentT<'s, 't>,  // top-level env, arena-allocated in 's
-    pub name_translator: NameTranslator,
+    pub opts: &'ctx TypingPassOptions<'s>,
 }
 ```
 
 Immutable configuration only. Mutable state threads through `&mut CompilerOutputs<'s, 't>` on every call.
+
+**Not on the god struct:**
+- `global_env` — Scala builds `globalEnv` as a local inside `compile()`, not as a constructor arg. We do the same: the top-level env is a method parameter on `compile_program` (and anything downstream that needs it), not a field.
+- `name_translator` — Scala's `NameTranslator` is a pure helper class with no state; its methods just translate postparser names through the interner. In Rust, every `Compiler` method already has `self.scout_arena` and `self.typing_interner`, so the helper adds nothing. Its ~6 translate methods move directly onto `impl Compiler` and the struct is deleted.
 
 ### 2.2 `&self` + `&mut coutputs` Enables Re-entrancy
 
@@ -758,7 +759,7 @@ pub fn run_typing_pass<'s, 'ctx, 't>(
     scout_arena: &'ctx ScoutArena<'s>,
     typing_interner: &'ctx TypingInterner<'t>,
     keywords: &'ctx Keywords<'s>,
-    opts: &'ctx TypingPassOptions,
+    opts: &'ctx TypingPassOptions<'s>,
     program_a: &'s ProgramA<'s>,
 ) -> Result<HinputsT<'s, 't>, CompileErrorT<'s, 't>>
 where 's: 't,

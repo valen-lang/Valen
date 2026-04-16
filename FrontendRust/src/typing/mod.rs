@@ -19,6 +19,7 @@ pub mod hinputs_t;
 
 // Top-level compiler orchestration
 pub mod compiler;
+pub mod typing_interner;
 
 // Error reporting
 pub mod compiler_error_humanizer;

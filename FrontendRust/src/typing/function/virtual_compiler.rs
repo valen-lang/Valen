@@ -38,13 +38,7 @@ use crate::typing::overload_resolver::*;
 use crate::postparsing::itemplatatype::ITemplataType;
 
 // mig: struct VirtualCompiler
-pub struct VirtualCompiler<'s, 'ctx, 't> {
-    opts: TypingPassOptions<'s>,
-    interner: &'ctx Interner<'s>,
-    overload_compiler: OverloadResolver<'s, 't>,
-}
 // mig: impl VirtualCompiler
-impl<'s, 'ctx, 't> VirtualCompiler<'s, 'ctx, 't> {}
 /*
 class VirtualCompiler(opts: TypingPassOptions, interner: Interner, overloadCompiler: OverloadResolver) {
 //  // See Virtuals doc for this function's purpose.
