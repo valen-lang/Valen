@@ -75,7 +75,7 @@ trait IConvertHelperDelegate {
 */
 // mig: struct ConvertHelper
 pub struct ConvertHelper<'s, 't> {
-    pub opts: TypingPassOptions,
+    pub opts: TypingPassOptions<'s>,
     pub delegate: Box<dyn IConvertHelperDelegate<'s, 't>>,
 }
 // mig: impl ConvertHelper

@@ -558,7 +558,8 @@ fn make_closure_understruct(
 */
 }
 
-pub mod StructCompiler {
+pub mod struct_compiler_module {
+use super::*;
 /*
 object StructCompiler {
 */
