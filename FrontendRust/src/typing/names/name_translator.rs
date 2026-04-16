@@ -30,7 +30,7 @@ impl<'s> NameTranslator<'s> {}
 class NameTranslator(interner: Interner) {
 */
 // mig: fn translate_generic_template_function_name
-fn translate_generic_template_function_name(function_name: IFunctionDeclarationNameS, params: Vec<CoordT>) -> IFunctionTemplateNameT {
+fn translate_generic_template_function_name<'s, 't>(function_name: IFunctionDeclarationNameS<'s>, params: Vec<CoordT<'s, 't>>) -> IFunctionTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_generic_template_function_name");
 }
 /*
@@ -47,7 +47,7 @@ fn translate_generic_template_function_name(function_name: IFunctionDeclarationN
   }
 */
 // mig: fn translate_generic_function_name
-fn translate_generic_function_name(function_name: IFunctionDeclarationNameS) -> IFunctionTemplateNameT {
+fn translate_generic_function_name<'s, 't>(function_name: IFunctionDeclarationNameS<'s>) -> IFunctionTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_generic_function_name");
 }
 /*
@@ -72,7 +72,7 @@ fn translate_generic_function_name(function_name: IFunctionDeclarationNameS) -> 
   }
 */
 // mig: fn translate_struct_name
-fn translate_struct_name(name: IStructDeclarationNameS) -> IStructTemplateNameT {
+fn translate_struct_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IStructTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_struct_name");
 }
 /*
@@ -89,7 +89,7 @@ fn translate_struct_name(name: IStructDeclarationNameS) -> IStructTemplateNameT 
   }
 */
 // mig: fn translate_interface_name
-fn translate_interface_name(name: IInterfaceDeclarationNameS) -> IInterfaceTemplateNameT {
+fn translate_interface_name<'s, 't>(name: IInterfaceDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_interface_name");
 }
 /*
@@ -102,7 +102,7 @@ fn translate_interface_name(name: IInterfaceDeclarationNameS) -> IInterfaceTempl
   }
 */
 // mig: fn translate_citizen_name
-fn translate_citizen_name(name: ICitizenDeclarationNameS) -> ICitizenTemplateNameT {
+fn translate_citizen_name<'s, 't>(name: ICitizenDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
     panic!("Unimplemented: translate_citizen_name");
 }
 /*

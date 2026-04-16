@@ -153,14 +153,14 @@ fn count_denizens() -> i32 { panic!("Unimplemented: count_denizens"); }
   }
 */
 // mig: fn peek_next_deferred_function_body_compile
-fn peek_next_deferred_function_body_compile() -> Option<DeferredEvaluatingFunctionBody> { panic!("Unimplemented: peek_next_deferred_function_body_compile"); }
+fn peek_next_deferred_function_body_compile<'s, 't>() -> Option<DeferredEvaluatingFunctionBody<'s, 't>> { panic!("Unimplemented: peek_next_deferred_function_body_compile"); }
 /*
   def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
     deferredFunctionBodyCompiles.headOption.map(_._2)
   }
 */
 // mig: fn mark_deferred_function_body_compiled
-fn mark_deferred_function_body_compiled(prototype_t: PrototypeT) { panic!("Unimplemented: mark_deferred_function_body_compiled"); }
+fn mark_deferred_function_body_compiled<'s, 't>(prototype_t: PrototypeT<'s, 't>) { panic!("Unimplemented: mark_deferred_function_body_compiled"); }
 /*
   def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
     vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
@@ -169,7 +169,7 @@ fn mark_deferred_function_body_compiled(prototype_t: PrototypeT) { panic!("Unimp
   }
 */
 // mig: fn peek_next_deferred_function_compile
-fn peek_next_deferred_function_compile() -> Option<DeferredEvaluatingFunction> { panic!("Unimplemented: peek_next_deferred_function_compile"); }
+fn peek_next_deferred_function_compile<'s, 't>() -> Option<DeferredEvaluatingFunction<'s, 't>> { panic!("Unimplemented: peek_next_deferred_function_compile"); }
 /*
   def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
     deferredFunctionCompiles.headOption.map(_._2)
@@ -719,7 +719,7 @@ fn get_all_functions<'s, 't>() -> Vec<FunctionDefinitionT<'s, 't>> { panic!("Uni
   def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
 */
 // mig: fn get_all_impls
-fn get_all_impls() -> Vec<ImplT> { panic!("Unimplemented: get_all_impls"); }
+fn get_all_impls<'s, 't>() -> Vec<ImplT<'s, 't>> { panic!("Unimplemented: get_all_impls"); }
 /*
   def getAllImpls(): Iterable[ImplT] = allImpls.values
 //  def getAllStaticSizedArrays(): Iterable[StaticSizedArrayTT] = staticSizedArrayTypes.values

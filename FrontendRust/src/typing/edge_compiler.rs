@@ -103,9 +103,9 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct EdgeCompiler
 pub struct EdgeCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions,
-    pub interner: &'ctx Interner,
-    pub keywords: &'ctx Keywords,
+    pub opts: TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
     pub function_compiler: FunctionCompiler<'s, 'ctx, 't>,
     pub overload_compiler: OverloadResolver<'s, 't>,
     pub impl_compiler: ImplCompiler<'s, 'ctx, 't>,

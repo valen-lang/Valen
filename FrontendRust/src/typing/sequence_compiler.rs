@@ -45,9 +45,9 @@ use crate::postparsing::itemplatatype::ITemplataType;
 
 // mig: struct SequenceCompiler
 pub struct SequenceCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions,
-    pub interner: &'ctx Interner,
-    pub keywords: &'ctx Keywords,
+    pub opts: TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
     pub struct_compiler: StructCompiler<'s, 'ctx, 't>,
     pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
 }
@@ -62,15 +62,17 @@ class SequenceCompiler(
     templataCompiler: TemplataCompiler) {
 */
 // mig: fn resolve_tuple
+impl<'s, 'ctx, 't> SequenceCompiler<'s, 'ctx, 't> {
 fn resolve_tuple(
     &self,
-    env: &IInDenizenEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    exprs: Vec<ReferenceExpressionTE>,
-) -> ReferenceExpressionTE {
+    env: &IInDenizenEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    exprs: Vec<ReferenceExpressionTE<'s, 't>>,
+) -> ReferenceExpressionTE<'s, 't> {
     panic!("Unimplemented: resolve_tuple");
+}
 }
 /*
   def resolveTuple(
@@ -87,15 +89,17 @@ fn resolve_tuple(
   }
 */
 // mig: fn make_tuple_kind
+impl<'s, 'ctx, 't> SequenceCompiler<'s, 'ctx, 't> {
 fn make_tuple_kind(
     &self,
-    env: &IInDenizenEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    types: Vec<CoordT>,
-) -> StructTT {
+    env: &IInDenizenEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    types: Vec<CoordT<'s, 't>>,
+) -> StructTT<'s, 't> {
     panic!("Unimplemented: make_tuple_kind");
+}
 }
 /*
   def makeTupleKind(
@@ -120,16 +124,18 @@ fn make_tuple_kind(
   }
 */
 // mig: fn make_tuple_coord
+impl<'s, 'ctx, 't> SequenceCompiler<'s, 'ctx, 't> {
 fn make_tuple_coord(
     &self,
-    env: &IInDenizenEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
+    env: &IInDenizenEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     region: RegionT,
-    types: Vec<CoordT>,
-) -> CoordT {
+    types: Vec<CoordT<'s, 't>>,
+) -> CoordT<'s, 't> {
     panic!("Unimplemented: make_tuple_coord");
+}
 }
 /*
   def makeTupleCoord(

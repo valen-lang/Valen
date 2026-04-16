@@ -188,15 +188,15 @@ fn evaluate_templated_function_from_call_for_prototype<'s, 't>(
 */
 // mig: fn evaluate_templated_function_from_call_for_banner
 fn evaluate_templated_function_from_call_for_banner<'s, 't>(
-    declaring_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    already_specified_template_args: &[ITemplataT],
+    declaring_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    already_specified_template_args: &[ITemplataT<'s, 't>],
     context_region: RegionT,
-    args: &[CoordT],
-) -> IEvaluateFunctionResult {
+    args: &[CoordT<'s, 't>],
+) -> IEvaluateFunctionResult<'s, 't> {
     panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
 }
 
@@ -274,15 +274,15 @@ fn evaluate_templated_function_from_call_for_banner<'s, 't>(
 */
 // mig: fn evaluate_templated_light_banner_from_call
 fn evaluate_templated_light_banner_from_call<'s, 't>(
-    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    explicit_template_args: &[ITemplataT],
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    explicit_template_args: &[ITemplataT<'s, 't>],
     context_region: RegionT,
-    args: &[CoordT],
-) -> IEvaluateFunctionResult {
+    args: &[CoordT<'s, 't>],
+) -> IEvaluateFunctionResult<'s, 't> {
     panic!("Unimplemented: evaluate_templated_light_banner_from_call");
 }
 
@@ -406,11 +406,11 @@ fn check_closure_concerns_handled<'s, 't>(
 */
 // mig: fn add_runed_data_to_near_env
 fn add_runed_data_to_near_env<'s, 't>(
-    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    identifying_runes: &[IRuneS],
-    templatas_by_rune: &std::collections::HashMap<IRuneS, ITemplataT>,
-    reachable_bounds_from_params_and_return: &[PrototypeTemplataT],
-) -> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    identifying_runes: &[IRuneS<'s>],
+    templatas_by_rune: &std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    reachable_bounds_from_params_and_return: &[PrototypeTemplataT<'s, 't>],
+) -> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {
     panic!("Unimplemented: add_runed_data_to_near_env");
 }
 
@@ -457,15 +457,15 @@ fn add_runed_data_to_near_env<'s, 't>(
 */
 // mig: fn evaluate_generic_function_from_call_for_prototype
 fn evaluate_generic_function_from_call_for_prototype<'s, 't>(
-    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    coutputs: &mut CompilerOutputs,
-    calling_env: &IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    explicit_template_args: &[ITemplataT],
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    explicit_template_args: &[ITemplataT<'s, 't>],
     context_region: RegionT,
-    args: &[Option<CoordT>],
-) -> IResolveFunctionResult {
+    args: &[Option<CoordT<'s, 't>>],
+) -> IResolveFunctionResult<'s, 't> {
     panic!("Unimplemented: evaluate_generic_function_from_call_for_prototype");
 }
 
@@ -578,13 +578,13 @@ fn evaluate_generic_function_from_call_for_prototype<'s, 't>(
 */
 // mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
 fn evaluate_generic_virtual_dispatcher_function_for_prototype<'s, 't>(
-    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    coutputs: &mut CompilerOutputs,
-    calling_env: &IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    args: &[Option<CoordT>],
-) -> IDefineFunctionResult {
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    args: &[Option<CoordT<'s, 't>>],
+) -> IDefineFunctionResult<'s, 't> {
     panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
 }
 
