@@ -343,18 +343,11 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin).expectCompilerOutputs()
   }
 
-  // Same root cause as "Make array without type" and "Call Array<> without element type"
-  // (see docs/Generics.md MSAE section) but with no arrays involved. The generic
-  // function `callAndReturn` has a bound `func(&G)E` where E is an identifying
-  // generic rune appearing only in the bound's return position. The caller supplies
-  // a lambda for G but does not (and syntactically cannot) write E. For E to be
-  // solved, the compiler has to resolve `__call(&closure)` and take its return type.
-  // The current solver has no rule-shape that does "given name + known params,
-  // look up the function and discover its return" — `CallSiteFuncSR` requires the
-  // prototype already known, `ResolveSR` requires the return already known. So E
-  // stalls and overload resolution rejects the only matching candidate. This is
-  // the same stall as in arrays.vale:51's `Array<M imm, E Ref imm, G>(n int, generator &G)`,
-  // just without the array-specific `#[]` syntax distracting from the mechanism.
+  // Canonical minimal repro for @BRRZ. The generic function `callAndReturn` has a
+  // bound `func(&G)E` where E is an identifying generic rune appearing only in the
+  // bound's return position. The caller supplies a lambda for G but does not (and
+  // syntactically cannot) write E. The relaxed ResolveSR (CompilerSolver.scala:636)
+  // resolves `__call(&closure)` and takes its return type as E.
   test("Bound-driven return rune cannot be inferred from lambda (MSAE general)") {
     val compile = CompilerTestCompilation.test(
       """
@@ -368,8 +361,46 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |  return callAndReturn(&f);
         |}
         |""".stripMargin)
-    // Should succeed with E inferred as int from the lambda's return type.
-    // Currently fails: solver cannot solve identifying rune E.
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  // Edge case for @BRRZ: the lambda body itself invokes another generic function
+  // with its own bound. Exercises stamping-during-solve recursing into a nested
+  // generic. The CompilerOutputs.signatureToFunction cache terminates recursion.
+  test("BRRZ: nested bound-return inference through a lambda body") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |func callAndReturn<E, G>(g &G) E
+        |where func(&G)E {
+        |  return g();
+        |}
+        |
+        |exported func main() int {
+        |  f = { 7 };
+        |  g = { callAndReturn(&f) };
+        |  return callAndReturn(&g);
+        |}
+        |""".stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  // Edge case for @BRRZ: two bounds on the same function, each resolving to a
+  // different lambda. Exercises multiple ResolveSR rules firing in the same solve
+  // under the relaxed puzzle.
+  test("BRRZ: two bound-return inferences in the same call") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |func applyTwo<E, F, G, H>(g &G, h &H) E
+        |where func(&G)E, func(&H)F {
+        |  return g();
+        |}
+        |
+        |exported func main() int {
+        |  a = { 7 };
+        |  b = { true };
+        |  return applyTwo(&a, &b);
+        |}
+        |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
 

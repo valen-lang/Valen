@@ -393,4 +393,31 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
 
   }
 
+  // Regression guard for @BRRZ. Reproduces the shape from docs/Generics.md:531-539
+  // that motivated removing return-type inference. With the relaxed ResolveSR puzzle
+  // the solver no longer stalls on K and V, but the post-solve bound-arg check
+  // (InferCompiler.checkResolvingConclusionsAndResolve:295) must still reject this
+  // because main doesn't supply enough to determine K and V. If this test ever
+  // passes, the safety property of BRRZ has drifted and needs immediate investigation.
+  test("HashMap-style return-type inference must not skip caller bound args") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyStruct<K, V, H> { }
+        |
+        |func make<K, V, H>(h H) MyStruct<K, V, H>
+        |where func drop(H)void {
+        |  return MyStruct<K, V, H>();
+        |}
+        |
+        |exported func main() int {
+        |  m = make(7);
+        |  return 0;
+        |}
+        |""".stripMargin)
+    compile.getCompilerOutputs() match {
+      case Err(_) => // expected — K and V cannot be inferred
+      case Ok(_) => vfail("Expected HashMap-style K/V inference from return type to fail, but compilation succeeded.")
+    }
+  }
+
 }

@@ -250,10 +250,12 @@ class ArrayCompiler(
 
 //    val variability = getArrayVariability(templatas, variabilityRune)
 
-    if (maybeElementTypeRune.isEmpty) {
-      // Temporary until we can figure out MSAE.
-      throw CompileErrorExceptionT(RangedInternalErrorT(parentRanges, "Must specify element for arrays."))
-    }
+    // MSAE guard removed per @BRRZ. When the user omits the element type,
+    // maybeElementTypeRune is None; the ImmutableT branch below handles that via
+    // `.foreach` (no-op on None, the element type comes directly from
+    // `getArrayGeneratorPrototype`), and the MutableT branch's `findFunction("Array",...)`
+    // goes through the stdlib Array<M,E,G>(n int, generator G) where func(&G,int)E
+    // bound, whose return rune E is now resolved via the relaxed ResolveSR.
 
     mutability match {
       case PlaceholderTemplataT(_, MutabilityTemplataType()) => vimpl()

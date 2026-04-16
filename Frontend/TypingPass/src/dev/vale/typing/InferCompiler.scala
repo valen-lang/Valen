@@ -782,7 +782,10 @@ class InferCompiler(
 }
 
 object InferCompiler {
-  // Some rules should be excluded from the call site, see SROACSD.
+  // Per @SROACSD, DefinitionFuncSR and DefinitionCoordIsaSR are excluded from
+  // call-site solves so that ResolveSR and its siblings can't see callee-internal
+  // prototype declarations. @BRRZ depends on this filter: the relaxed ResolveSR's
+  // real-lookup branch assumes no sibling DefinitionFuncSR in the same solve.
   def includeRuleInCallSiteSolve(rule: IRulexSR): Boolean = {
     rule match {
       case DefinitionFuncSR(_, _, _, _, _) => false
@@ -791,7 +794,9 @@ object InferCompiler {
     }
   }
 
-  // Some rules should be excluded from the call site, see SROACSD.
+  // Per @SROACSD, ResolveSR, CallSiteFuncSR, and CallSiteCoordIsaSR are excluded
+  // from definition solves — a function's own definition should not resolve
+  // its callers' prototypes.
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
     rule match {
       case CallSiteCoordIsaSR(_, _, _, _) => false

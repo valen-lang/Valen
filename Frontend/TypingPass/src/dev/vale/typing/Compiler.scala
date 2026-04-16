@@ -388,6 +388,31 @@ class Compiler(
               returnCoord))
         }
 
+        // Per @BRRZ, this is the real overload lookup invoked from inside the ResolveSR
+        // handler when the return rune isn't yet known. Mirrors the outer delegate's
+        // resolveFunction at line 455-477 below, but takes InferEnv so the solver-side
+        // delegate has a uniform shape with predictFunction/assemblePrototype.
+        override def resolveFunction(
+          envs: InferEnv,
+          state: CompilerOutputs,
+          range: List[RangeS],
+          name: StrI,
+          paramCoords: Vector[CoordT]):
+        Result[StampFunctionSuccess, FindFunctionFailure] = {
+          overloadResolver.findFunction(
+            envs.originalCallingEnv,
+            state,
+            range,
+            envs.callLocation,
+            interner.intern(CodeNameS(interner.intern(name))),
+            Vector.empty,
+            Vector.empty,
+            envs.contextRegion,
+            paramCoords,
+            Vector.empty,
+            true)
+        }
+
         override def assemblePrototype(
             envs: InferEnv,
           state: CompilerOutputs,

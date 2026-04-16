@@ -540,6 +540,8 @@ It failed because `main` wasn't passing any functions to satisfy the bounds whic
 
 Note from later: couldn't we leave it up to the call site to try to instantiate the return type? Then the definition could assume that everything exists and things will be fine. It seems that Rust allows a function definition to inherit bounds from its return value, so that hints that it might be fine.
 
+**Correction: this paragraph overstated the rule.** BRRZ (below) establishes that inferring from a `where func(...)R` bound's return rune is safe, regardless of whether we frame that as a "narrow exception" or as a correction to the framing above. The load-bearing safety invariant isn't "don't read return types" — it's "callers declare the bound args their callees need." That invariant is enforced by the post-solve bound-arg verification at `InferCompiler.checkResolvingConclusionsAndResolve:295`, not by the solver's stall. The HashMap regression is still caught there. See the BRRZ section below for the full safety argument.
+
 
 ### Monomorphizer
 
@@ -861,15 +863,52 @@ Moral of the story: It shouldn't replace placeholders in generic names, such as 
 
 # Must Specify Array Element (MSAE)
 
-We no longer support grabbing a prototype's return type, so we can no longer say:
+**Status: resolved by BRRZ (see below).** This section is preserved for historical context.
 
-`Array<mut>(5, x => x)`
+Historically we could not write `Array<mut>(5, x => x)` because the compiler could not infer the array element type from the generator lambda's return. Callers had to spell it out: `Array<mut, int>(5, x => x)`.
 
-It previously would look at the incoming lambda, send it an argument type, and grab the return value. We'll need to add that back in.
+The capability was originally present in the pre-2022 templates system (which had an imperative per-call-site evaluator that could reach into a lambda's `__call` and read its return). The templates-to-generics transition replaced that evaluator with a declarative rule system whose `ResolveSR` rule required the return rune already known, so lambda-return inference stopped working.
 
-For now, we have to specify the type:
+BRRZ restores the capability. The "we'd need to add that back in" aspiration from the MSAE paragraph above is now fulfilled — safety is preserved because it never lived in the solver's stall; it lives in the post-solve bound-arg check, and that check is unchanged.
 
-`Array<mut, int>(5, x => x)`
+# Bound Return Resolution (BRRZ)
+
+When a generic function has a `where func(...)R` bound and the caller supplies concrete values for the bound's parameter runes (via `InitialSend` from actual args), the compiler now resolves the bound function at call-site inference time and takes its return type as R.
+
+The mechanism is a relaxation of `ResolveSR`'s puzzle in `CompilerSolver.scala`:
+
+- **Existing path** (both `paramsListRune` and `returnRune` known): fire `predictFunction`, fabricate a placeholder prototype, postpone real resolution (see SFWPRL).
+- **New BRRZ path** (only `paramsListRune` known, `returnRune` unknown): call `delegate.resolveFunction` — the same real overload lookup the post-solve phase uses — and commit both the prototype and the discovered return rune.
+
+## Why this doesn't re-enable the regression at "...but not return types"
+
+The HashMap-style regression that original-MSAE was guarding against — a caller writing `func f<K,V,H,E>() HashMap<K,V,H,E>` and having K,V,H,E inferred from the annotated outer return type, silently skipping caller-supplied bound args — is still caught. Safety is carried by the existing post-solve `checkResolvingConclusionsAndResolve` (`InferCompiler.scala:295`), which verifies caller's bound args against the solved prototype. The solver's stall was redundant safety; the post-solve check is the real safety net.
+
+BRRZ only changes when the stall is lifted, not whether bounds are checked. If the caller fails to supply a bound arg the callee needs, the post-solve check still fails.
+
+## Scope of safety analysis
+
+Three independent lines of evidence confirmed BRRZ is safe to ship:
+
+1. **Codebase enumeration.** Every `where func(...)R` bound in stdlib and all tests was classified. All have either concrete literal returns (`void`, `int`, `bool`) or header-pinned runes (caller specifies). No existing impl, struct, or interface has the shape BRRZ triggers on.
+2. **Solver filter audit.** Every solver construction in the TypingPass applies either `includeRuleInCallSiteSolve` (excludes `DefinitionFuncSR`) or `includeRuleInDefinitionSolve` (excludes `ResolveSR`). `ResolveSR` and `DefinitionFuncSR` never coexist in the same rule set, so the relaxation cannot expose a rule-ordering hazard.
+3. **State-dependency trace.** Every read along `OverloadResolver.findFunction` → stamping → return prototype is from caller's snapshotted env, settled `CompilerOutputs` caches, or freshly-constructed inner solvers. The outer solver's in-flight state is never read.
+
+## Relationship to SFWPRL
+
+SFWPRL is still the governing pattern for the common case. The existing "predict now, resolve later" split is preserved: `ResolveSR`'s handler still calls `predictFunction` when both params and return are known. Only the narrow params-known-return-unknown case takes the real-lookup path — and that path reads only state that's already settled.
+
+The predict/resolve distinction also keeps its meaning: `predictFunction` remains a pure constructor with no verification; `resolveFunction` does real overload lookup and may trigger stamping, but its inputs are snapshotted and its outputs feed back into the solver uniformly.
+
+## Relationship to "...but not return types"
+
+The section "...but not return types" documented the HashMap regression and argued against inferring generic params from an annotated outer return type. That argument still stands. BRRZ is narrower: it infers only the return rune of a `func(...)R` bound, using caller-supplied arg values — not generic params from outer return annotations. The safety distinction is carried by the post-solve bound-arg check, not by the solver's stall.
+
+## Canonical tests
+
+- `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsTests.scala` — "Bound-driven return rune cannot be inferred from lambda (MSAE general)" (minimal repro), "BRRZ: nested bound-return inference through a lambda body", "BRRZ: two bound-return inferences in the same call".
+- `Frontend/IntegrationTests/test/dev/vale/AfterRegionsIntegrationTests.scala` — "Make array without type", "Call Array<> without element type".
+- `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsErrorTests.scala` — "HashMap-style return-type inference must not skip caller bound args" (regression guard; must continue to fail-to-compile).
 
 
 # Lambdas Can Call Parents' Generic Bounds (LCCPGB)
