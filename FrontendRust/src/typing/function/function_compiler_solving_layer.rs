@@ -68,10 +68,10 @@ use crate::typing::infer_compiler::*;
 use crate::typing::overload_resolver::*;
 // mig: struct FunctionCompilerSolvingLayer
 pub struct FunctionCompilerSolvingLayer<'s, 'ctx, 't> {
-    opts: TypingPassOptions,
-    interner: &'ctx Interner,
-    keywords: &'ctx Keywords,
-    name_translator: NameTranslator,
+    opts: TypingPassOptions<'s>,
+    interner: &'ctx Interner<'s>,
+    keywords: &'ctx Keywords<'s>,
+    name_translator: NameTranslator<'s>,
     templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
     infer_compiler: InferCompiler<'s, 't>,
     convert_helper: ConvertHelper<'s, 't>,
@@ -103,16 +103,16 @@ class FunctionCompilerSolvingLayer(
   // - env is the environment the templated function was made in
 */
 // mig: fn evaluate_templated_function_from_call_for_prototype
-fn evaluate_templated_function_from_call_for_prototype(
-    outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    coutputs: &mut CompilerOutputs,
-    original_calling_env: &IInDenizenEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    explicit_template_args: &[ITemplataT],
+fn evaluate_templated_function_from_call_for_prototype<'s, 't>(
+    outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    explicit_template_args: &[ITemplataT<'s, 't>],
     context_region: RegionT,
-    args: &[CoordT],
-) -> IEvaluateFunctionResult {
+    args: &[CoordT<'s, 't>],
+) -> IEvaluateFunctionResult<'s, 't> {
     panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
 }
 
@@ -187,7 +187,7 @@ fn evaluate_templated_function_from_call_for_prototype(
   // - env is the environment the templated function was made in
 */
 // mig: fn evaluate_templated_function_from_call_for_banner
-fn evaluate_templated_function_from_call_for_banner(
+fn evaluate_templated_function_from_call_for_banner<'s, 't>(
     declaring_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
     original_calling_env: &IInDenizenEnvironmentT,
@@ -273,7 +273,7 @@ fn evaluate_templated_function_from_call_for_banner(
   // This assumes it met any type bound restrictions (or, will; not implemented yet)
 */
 // mig: fn evaluate_templated_light_banner_from_call
-fn evaluate_templated_light_banner_from_call(
+fn evaluate_templated_light_banner_from_call<'s, 't>(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
     original_calling_env: &IInDenizenEnvironmentT,
@@ -359,7 +359,7 @@ fn evaluate_templated_light_banner_from_call(
 
 */
 // mig: fn assemble_known_templatas
-fn assemble_known_templatas(
+fn assemble_known_templatas<'s, 't>(
     function: &FunctionA,
     explicit_template_args: &[ITemplataT],
 ) -> Vec<InitialKnown> {
@@ -380,7 +380,7 @@ fn assemble_known_templatas(
 
 */
 // mig: fn check_closure_concerns_handled
-fn check_closure_concerns_handled(
+fn check_closure_concerns_handled<'s, 't>(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
 ) {
     panic!("Unimplemented: check_closure_concerns_handled");
@@ -405,7 +405,7 @@ fn check_closure_concerns_handled(
   // IOW, add the necessary data to turn the near env into the runed env.
 */
 // mig: fn add_runed_data_to_near_env
-fn add_runed_data_to_near_env(
+fn add_runed_data_to_near_env<'s, 't>(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     identifying_runes: &[IRuneS],
     templatas_by_rune: &std::collections::HashMap<IRuneS, ITemplataT>,
@@ -456,7 +456,7 @@ fn add_runed_data_to_near_env(
   // - env is the environment the templated function was made in
 */
 // mig: fn evaluate_generic_function_from_call_for_prototype
-fn evaluate_generic_function_from_call_for_prototype(
+fn evaluate_generic_function_from_call_for_prototype<'s, 't>(
     outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
     calling_env: &IInDenizenEnvironmentT,
@@ -577,7 +577,7 @@ fn evaluate_generic_function_from_call_for_prototype(
 
 */
 // mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
-fn evaluate_generic_virtual_dispatcher_function_for_prototype(
+fn evaluate_generic_virtual_dispatcher_function_for_prototype<'s, 't>(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
     calling_env: &IInDenizenEnvironmentT,
@@ -692,7 +692,7 @@ fn evaluate_generic_virtual_dispatcher_function_for_prototype(
   // - either no closured vars, or they were already added to the env.
 */
 // mig: fn evaluate_generic_function_from_non_call
-fn evaluate_generic_function_from_non_call(
+fn evaluate_generic_function_from_non_call<'s, 't>(
     coutputs: &mut CompilerOutputs,
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     parent_ranges: &[RangeS],
@@ -797,7 +797,7 @@ fn evaluate_generic_function_from_non_call(
 
 */
 // mig: fn assemble_initial_sends_from_args
-fn assemble_initial_sends_from_args(
+fn assemble_initial_sends_from_args<'s, 't>(
     call_range: RangeS,
     function: &FunctionA,
     args: &[Option<CoordT>],

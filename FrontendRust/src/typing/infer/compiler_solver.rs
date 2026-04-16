@@ -222,7 +222,7 @@ class CompilerSolver(
 ) {
 */
 // mig: fn get_runes
-fn get_runes(rule: IRulexSR) -> Vec<IRuneS> {
+fn get_runes<'s>(rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
     panic!("Unimplemented: get_runes");
 }
 /*
@@ -268,7 +268,7 @@ fn get_runes(rule: IRulexSR) -> Vec<IRuneS> {
 
 */
 // mig: fn get_puzzles
-fn get_puzzles(rule: IRulexSR) -> Vec<Vec<IRuneS>> {
+fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
     panic!("Unimplemented: get_puzzles");
 }
 /*
@@ -437,7 +437,7 @@ fn advance_infer<'s, 't>(
 
 */
 // mig: fn r#continue
-fn r#continue(
+fn r#continue<'s, 't>(
     env: InferEnv,
     state: CompilerOutputs,
     solver_state: SimpleSolverState<IRulexSR, IRuneS, ITemplataT<'s, 't>>,

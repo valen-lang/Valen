@@ -187,7 +187,7 @@ pub fn evaluate_static_sized_array_from_callable<'s, 't>(
   }
 */
 // mig: fn evaluate_runtime_sized_array_from_callable
-pub fn evaluate_runtime_sized_array_from_callable(
+pub fn evaluate_runtime_sized_array_from_callable<'s, 't>(
     coutputs: &mut CompilerOutputs,
     calling_env: &NodeEnvironmentT,
     parent_ranges: &[RangeS],
@@ -384,7 +384,7 @@ pub fn evaluate_runtime_sized_array_from_callable(
   }
 */
 // mig: fn evaluate_static_sized_array_from_values
-pub fn evaluate_static_sized_array_from_values(
+pub fn evaluate_static_sized_array_from_values<'s, 't>(
     coutputs: &mut CompilerOutputs,
     calling_env: &IInDenizenEnvironmentT,
     parent_ranges: &[RangeS],
@@ -524,7 +524,7 @@ pub fn evaluate_static_sized_array_from_values(
   }
 */
 // mig: fn evaluate_destroy_static_sized_array_into_callable
-pub fn evaluate_destroy_static_sized_array_into_callable(
+pub fn evaluate_destroy_static_sized_array_into_callable<'s, 't>(
     coutputs: &mut CompilerOutputs,
     fate: FunctionEnvironmentBoxT,
     range: &[RangeS],
@@ -565,7 +565,7 @@ pub fn evaluate_destroy_static_sized_array_into_callable(
   }
 */
 // mig: fn evaluate_destroy_runtime_sized_array_into_callable
-pub fn evaluate_destroy_runtime_sized_array_into_callable(
+pub fn evaluate_destroy_runtime_sized_array_into_callable<'s, 't>(
     coutputs: &mut CompilerOutputs,
     fate: FunctionEnvironmentBoxT,
     range: &[RangeS],
@@ -622,7 +622,7 @@ pub fn evaluate_destroy_runtime_sized_array_into_callable(
   }
 */
 // mig: fn compile_static_sized_array
-pub fn compile_static_sized_array(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs) {
+pub fn compile_static_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
     panic!("Unimplemented: compile_static_sized_array");
 }
 /*
@@ -674,7 +674,7 @@ pub fn compile_static_sized_array(global_env: &GlobalEnvironment, coutputs: &mut
   }
 */
 // mig: fn resolve_static_sized_array
-pub fn resolve_static_sized_array(
+pub fn resolve_static_sized_array<'s, 't>(
     mutability: ITemplataT,
     variability: ITemplataT,
     size: ITemplataT,
@@ -703,7 +703,7 @@ pub fn resolve_static_sized_array(
   }
 */
 // mig: fn compile_runtime_sized_array
-pub fn compile_runtime_sized_array(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs) {
+pub fn compile_runtime_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
     panic!("Unimplemented: compile_runtime_sized_array");
 }
 /*
@@ -749,7 +749,7 @@ pub fn compile_runtime_sized_array(global_env: &GlobalEnvironment, coutputs: &mu
   }
 */
 // mig: fn resolve_runtime_sized_array
-pub fn resolve_runtime_sized_array(
+pub fn resolve_runtime_sized_array<'s, 't>(
     type_2: CoordT,
     mutability: ITemplataT,
     region: RegionT,
@@ -772,7 +772,7 @@ pub fn resolve_runtime_sized_array(
   }
 */
 // mig: fn get_array_size
-fn get_array_size(templatas: &HashMap<IRuneS, ITemplataT>, size_rune_a: IRuneS) -> i32 {
+fn get_array_size<'s, 't>(templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
     panic!("Unimplemented: get_array_size");
 }
 /*
@@ -782,7 +782,7 @@ fn get_array_size(templatas: &HashMap<IRuneS, ITemplataT>, size_rune_a: IRuneS) 
   }
 */
 // mig: fn get_array_element_type
-fn get_array_element_type(templatas: &HashMap<IRuneS, ITemplataT>, type_rune_a: IRuneS) -> CoordT {
+fn get_array_element_type<'s, 't>(templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
     panic!("Unimplemented: get_array_element_type");
 }
 /*
@@ -792,7 +792,7 @@ fn get_array_element_type(templatas: &HashMap<IRuneS, ITemplataT>, type_rune_a: 
   }
 */
 // mig: fn lookup_in_static_sized_array
-pub fn lookup_in_static_sized_array(
+pub fn lookup_in_static_sized_array<'s, 't>(
     range: RangeS,
     container_expr_2: ReferenceExpressionTE,
     index_expr_2: ReferenceExpressionTE,
@@ -817,7 +817,7 @@ pub fn lookup_in_static_sized_array(
   }
 */
 // mig: fn lookup_in_unknown_sized_array
-pub fn lookup_in_unknown_sized_array(
+pub fn lookup_in_unknown_sized_array<'s, 't>(
     parent_ranges: &[RangeS],
     range: RangeS,
     container_expr_2: ReferenceExpressionTE,
