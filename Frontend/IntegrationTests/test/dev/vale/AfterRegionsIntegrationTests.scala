@@ -209,7 +209,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
         |  add(&l, 5);
         |  add(&l, 9);
         |  add(&l, 7);
-        |  return l.toArray().get(1);
+        |  return l.toArray()[1];
         |}
         |
         """.stripMargin)
