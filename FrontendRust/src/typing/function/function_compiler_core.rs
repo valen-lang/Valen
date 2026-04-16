@@ -66,10 +66,10 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct FunctionCompilerCore
 pub struct FunctionCompilerCore<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions,
-    pub interner: &'ctx Interner,
-    pub keywords: &'ctx Keywords,
-    pub name_translator: NameTranslator,
+    pub opts: TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub name_translator: NameTranslator<'s>,
     pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
     pub convert_helper: ConvertHelper<'s, 't>,
     pub delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,

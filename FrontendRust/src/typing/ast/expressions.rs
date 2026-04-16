@@ -198,7 +198,7 @@ fn address_expression_range<'s>() -> RangeS<'s> { panic!("Unimplemented: range")
   def range: RangeS
 */
 // mig: fn variability
-fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: variability"); }
+fn address_expression_variability<'s, 't>() -> VariabilityT<'s, 't> { panic!("Unimplemented: variability"); }
 /*
   // Whether or not we can change where this address points to
   def variability: VariabilityT
@@ -1329,7 +1329,7 @@ impl<'s, 't> ArgLookupTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> 
 
 */
 // mig: struct StaticSizedArrayLookupTE
-pub struct StaticSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub element_type: CoordT<'s, 't>, pub variability: VariabilityT }
+pub struct StaticSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub element_type: CoordT<'s, 't>, pub variability: VariabilityT<'s, 't> }
 // mig: impl StaticSizedArrayLookupTE
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {}
 /*
@@ -1365,7 +1365,7 @@ impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> { fn result(&self) -> AddressResul
 
 */
 // mig: struct RuntimeSizedArrayLookupTE
-pub struct RuntimeSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub variability: VariabilityT }
+pub struct RuntimeSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub variability: VariabilityT<'s, 't> }
 // mig: impl RuntimeSizedArrayLookupTE
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {}
 /*
@@ -1425,7 +1425,7 @@ impl<'s, 't> ArrayLengthTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 
 */
 // mig: struct ReferenceMemberLookupTE
-pub struct ReferenceMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub member_reference: CoordT<'s, 't>, pub variability: VariabilityT }
+pub struct ReferenceMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub member_reference: CoordT<'s, 't>, pub variability: VariabilityT<'s, 't> }
 // mig: impl ReferenceMemberLookupTE
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {}
 /*
@@ -1460,7 +1460,7 @@ impl<'s, 't> ReferenceMemberLookupTE<'s, 't> { fn result(&self) -> AddressResult
 }
 */
 // mig: struct AddressMemberLookupTE
-pub struct AddressMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub result_type2: CoordT<'s, 't>, pub variability: VariabilityT }
+pub struct AddressMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub result_type2: CoordT<'s, 't>, pub variability: VariabilityT<'s, 't> }
 // mig: impl AddressMemberLookupTE
 impl<'s, 't> AddressMemberLookupTE<'s, 't> {}
 /*

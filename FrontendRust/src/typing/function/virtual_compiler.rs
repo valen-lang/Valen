@@ -39,8 +39,8 @@ use crate::postparsing::itemplatatype::ITemplataType;
 
 // mig: struct VirtualCompiler
 pub struct VirtualCompiler<'s, 'ctx, 't> {
-    opts: TypingPassOptions,
-    interner: &'ctx Interner,
+    opts: TypingPassOptions<'s>,
+    interner: &'ctx Interner<'s>,
     overload_compiler: OverloadResolver<'s, 't>,
 }
 // mig: impl VirtualCompiler

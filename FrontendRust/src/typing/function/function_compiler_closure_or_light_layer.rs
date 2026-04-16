@@ -59,10 +59,10 @@ use crate::typing::citizen::struct_compiler::*;
 use crate::typing::infer_compiler::*;
 // mig: struct FunctionCompilerClosureOrLightLayer
 pub struct FunctionCompilerClosureOrLightLayer<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions,
-    pub interner: &'ctx Interner,
-    pub keywords: &'ctx Keywords,
-    pub name_translator: NameTranslator,
+    pub opts: TypingPassOptions<'s>,
+    pub interner: &'ctx Interner<'s>,
+    pub keywords: &'ctx Keywords<'s>,
+    pub name_translator: NameTranslator<'s>,
     pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
     pub infer_compiler: InferCompiler<'s, 't>,
     pub convert_helper: ConvertHelper<'s, 't>,

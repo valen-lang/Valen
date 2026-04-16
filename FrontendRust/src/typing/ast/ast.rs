@@ -149,7 +149,7 @@ impl<'s, 't> FunctionExportT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unim
 // mig: struct KindExternT
 pub struct KindExternT<'s, 't> {
     pub tyype: KindT<'s, 't>,
-    pub package_coordinate: PackageCoordinate,
+    pub package_coordinate: PackageCoordinate<'s>,
     pub extern_name: StrI<'s>,
 }
 // mig: impl KindExternT
@@ -361,7 +361,7 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> { fn is_pure(&self) -> bool { panic!("U
 object getFunctionLastName {
 */
 // mig: fn unapply
-fn get_function_last_name_unapply<'s, 't>(f: &FunctionDefinitionT<'s, 't>) -> Option<&IFunctionNameT<'s, 't>> { panic!("Unimplemented: unapply"); }
+fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) -> Option<&'t IFunctionNameT<'s, 't>> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(f: FunctionDefinitionT): Option[IFunctionNameT] = Some(f.header.id.localName)
 }
@@ -840,7 +840,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn param_types(&self) -> Vec<CoordT<'s, '
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
 // mig: fn unapply
-fn function_header_unapply<'s, 't>(arg: &FunctionHeaderT<'s, 't>) -> Option<(&IdT<'s, 't>, &Vec<ParameterT<'s, 't>>, &CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
+fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(arg: FunctionHeaderT): Option[(IdT[IFunctionNameT], Vector[ParameterT], CoordT)] = {
     Some(id, params, returnType)
