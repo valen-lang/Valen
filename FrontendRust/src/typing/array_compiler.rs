@@ -59,9 +59,9 @@ use crate::typing::citizen::struct_compiler::*;
 
 // mig: struct ArrayCompiler
 pub struct ArrayCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions,
+    pub opts: TypingPassOptions<'s>,
     pub interner: &'ctx Interner,
-    pub keywords: &'ctx Keywords,
+    pub keywords: &'ctx Keywords<'s>,
     pub infer_compiler: InferCompiler<'s, 't>,
     pub overload_resolver: OverloadResolver<'s, 't>,
     pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
@@ -84,19 +84,19 @@ class ArrayCompiler(
   vassert(overloadResolver != null)
 */
 // mig: fn evaluate_static_sized_array_from_callable
-pub fn evaluate_static_sized_array_from_callable(
-    coutputs: &mut CompilerOutputs,
-    calling_env: &IInDenizenEnvironmentT,
+pub fn evaluate_static_sized_array_from_callable<'s, 't>(
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
     region: RegionT,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR],
-    maybe_element_type_rune_a: Option<IRuneS>,
-    size_rune_a: IRuneS,
-    mutability_rune: IRuneS,
-    variability_rune: IRuneS,
-    callable_te: ReferenceExpressionTE,
-) -> StaticArrayFromCallableTE {
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+    maybe_element_type_rune_a: Option<IRuneS<'s>>,
+    size_rune_a: IRuneS<'s>,
+    mutability_rune: IRuneS<'s>,
+    variability_rune: IRuneS<'s>,
+    callable_te: ReferenceExpressionTE<'s, 't>,
+) -> StaticArrayFromCallableTE<'s, 't> {
     panic!("Unimplemented: evaluate_static_sized_array_from_callable");
 }
 /*

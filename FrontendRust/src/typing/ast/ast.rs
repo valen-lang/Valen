@@ -120,7 +120,7 @@ impl<'s, 't> KindExportT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplem
 // mig: struct FunctionExportT
 pub struct FunctionExportT<'s, 't> {
     pub range: RangeS<'s>,
-    pub prototype: PrototypeT<'s, 't, IFunctionNameT>,
+    pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
     pub export_id: IdT<'s, 't>,
     pub exported_name: StrI<'s>,
 }
@@ -177,7 +177,7 @@ impl<'s, 't> KindExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplem
 pub struct FunctionExternT<'s, 't> {
     pub range: RangeS<'s>,
     pub extern_placeholdered_id: IdT<'s, 't>,
-    pub prototype: PrototypeT<'s, 't, IFunctionNameT>,
+    pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
     pub extern_name: StrI<'s>,
 }
 // mig: impl FunctionExternT
@@ -205,7 +205,7 @@ impl<'s, 't> FunctionExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unim
 // mig: struct InterfaceEdgeBlueprintT
 pub struct InterfaceEdgeBlueprintT<'s, 't> {
     pub interface: IdT<'s, 't>,
-    pub super_family_root_headers: Vec<(PrototypeT<'s, 't, IFunctionNameT>, i32)>,
+    pub super_family_root_headers: Vec<(PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, i32)>,
 }
 // mig: impl InterfaceEdgeBlueprintT
 impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> {}
@@ -231,9 +231,9 @@ pub struct OverrideT<'s, 't> {
     pub dispatcher_call_id: IdT<'s, 't>,
     pub impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)>,
     pub impl_placeholder_to_case_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)>,
-    pub dispatcher_and_case_placeholdered_impl_reachable_prototypes: HashMap<IRuneS<'s>, HashMap<IRuneS<'s>, PrototypeT<'s, 't, FunctionBoundNameT>>>,
+    pub dispatcher_and_case_placeholdered_impl_reachable_prototypes: HashMap<IRuneS<'s>, HashMap<IRuneS<'s>, PrototypeT<'s, 't, FunctionBoundNameT<'s, 't>>>>,
     pub case_id: IdT<'s, 't>,
-    pub override_prototype: PrototypeT<'s, 't, IFunctionNameT>,
+    pub override_prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
     pub dispatcher_instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
 }
 // mig: impl OverrideT
@@ -404,7 +404,7 @@ case class AbstractT()
 */
 // mig: struct ParameterT
 pub struct ParameterT<'s, 't> {
-    pub name: IVarNameT,
+    pub name: IVarNameT<'s, 't>,
     pub virtuality: Option<AbstractT<'s, 't>>,
     pub pre_checked: bool,
     pub tyype: CoordT<'s, 't>,
@@ -482,7 +482,7 @@ impl<'s, 't> HeaderCalleeCandidate<'s, 't> { fn hash_code(&self) -> i32 { panic!
 */
 // mig: struct PrototypeTemplataCalleeCandidate
 pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
-    pub prototype_t: PrototypeT<'s, 't, IFunctionNameT>,
+    pub prototype_t: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
 }
 // mig: impl PrototypeTemplataCalleeCandidate
 impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {}

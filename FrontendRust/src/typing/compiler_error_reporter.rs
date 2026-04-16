@@ -42,6 +42,9 @@ override def hashCode(): Int = vcurious()
 }
 */
 // mig: enum ICompileErrorT
+pub enum ICompileErrorT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait ICompileErrorT { def range: List[RangeS] }
 */

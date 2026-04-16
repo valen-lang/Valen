@@ -55,7 +55,7 @@ use crate::typing::citizen::impl_compiler::*;
 use crate::typing::templata::conversions::*;
 
 // mig: fn humanize
-pub fn humanize(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT) -> String {
+pub fn humanize<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT<'s, 't>) -> String {
   panic!("Unimplemented: humanize");
 }
 /*
@@ -249,7 +249,7 @@ pub fn humanize(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines
   }
 */
 // mig: fn humanize_defining_error
-pub fn humanize_defining_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError) -> String {
+pub fn humanize_defining_error<'s>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError) -> String {
   panic!("Unimplemented: humanize_defining_error");
 }
 /*
@@ -272,7 +272,7 @@ pub fn humanize_defining_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -
   }
 */
 // mig: fn humanize_resolve_failure
-pub fn humanize_resolve_failure(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, fff: ResolveFailure<KindT>) -> String {
+pub fn humanize_resolve_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, fff: ResolveFailure<'s, 't, KindT<'s, 't>>) -> String {
   panic!("Unimplemented: humanize_resolve_failure");
 }
 /*
@@ -289,7 +289,7 @@ pub fn humanize_resolve_failure(verbose: bool, code_map: &dyn Fn(CodeLocationS) 
   }
 */
 // mig: fn humanize_resolving_error
-pub fn humanize_resolving_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: IResolvingError) -> String {
+pub fn humanize_resolving_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: IResolvingError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_resolving_error");
 }
 /*

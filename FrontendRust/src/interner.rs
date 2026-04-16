@@ -12,6 +12,11 @@ use std::ops::Deref;
 #[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct StrI<'a>(pub &'a str);
 
+/// Placeholder for Scala's `Interner`. Not actually used for interning in
+/// Rust (arenas replace it); only kept as a type alias so stale typing-pass
+/// stubs that mention `&'ctx Interner<'s>` continue to compile.
+pub struct Interner<'s>(pub std::marker::PhantomData<&'s ()>);
+
 impl<'a> StrI<'a> {
   pub fn as_str(&self) -> &'a str {
     self.0
