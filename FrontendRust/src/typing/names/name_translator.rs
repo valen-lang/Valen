@@ -21,18 +21,22 @@ use crate::higher_typing::ast::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::interner::Interner;
+use crate::typing::compiler::Compiler;
 
 // mig: struct NameTranslator
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `name_translator: NameTranslator<'s>` fields
 pub struct NameTranslator<'s>(pub std::marker::PhantomData<&'s ()>);
 // mig: impl NameTranslator
-impl<'s> NameTranslator<'s> {}
 /*
 class NameTranslator(interner: Interner) {
 */
 // mig: fn translate_generic_template_function_name
-fn translate_generic_template_function_name<'s, 't>(function_name: IFunctionDeclarationNameS<'s>, params: Vec<CoordT<'s, 't>>) -> IFunctionTemplateNameT<'s, 't> {
-    panic!("Unimplemented: translate_generic_template_function_name");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_generic_template_function_name(&self, function_name: IFunctionDeclarationNameS<'s>, params: Vec<CoordT<'s, 't>>) -> IFunctionTemplateNameT<'s, 't> {
+        panic!("Unimplemented: translate_generic_template_function_name");
+    }
 /*
   def translateGenericTemplateFunctionName(
     functionName: IFunctionDeclarationNameS,
@@ -46,10 +50,15 @@ fn translate_generic_template_function_name<'s, 't>(function_name: IFunctionDecl
     }
   }
 */
-// mig: fn translate_generic_function_name
-fn translate_generic_function_name<'s, 't>(function_name: IFunctionDeclarationNameS<'s>) -> IFunctionTemplateNameT<'s, 't> {
-    panic!("Unimplemented: translate_generic_function_name");
 }
+
+// mig: fn translate_generic_function_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_generic_function_name(&self, function_name: IFunctionDeclarationNameS<'s>) -> IFunctionTemplateNameT<'s, 't> {
+        panic!("Unimplemented: translate_generic_function_name");
+    }
 /*
   def translateGenericFunctionName(functionName: IFunctionDeclarationNameS): IFunctionTemplateNameT = {
     functionName match {
@@ -71,10 +80,15 @@ fn translate_generic_function_name<'s, 't>(function_name: IFunctionDeclarationNa
     }
   }
 */
-// mig: fn translate_struct_name
-fn translate_struct_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IStructTemplateNameT<'s, 't> {
-    panic!("Unimplemented: translate_struct_name");
 }
+
+// mig: fn translate_struct_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_struct_name(&self, name: IStructDeclarationNameS<'s>) -> IStructTemplateNameT<'s, 't> {
+        panic!("Unimplemented: translate_struct_name");
+    }
 /*
   def translateStructName(name: IStructDeclarationNameS): IStructTemplateNameT = {
     name match {
@@ -88,10 +102,15 @@ fn translate_struct_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IStructTe
     }
   }
 */
-// mig: fn translate_interface_name
-fn translate_interface_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
-    panic!("Unimplemented: translate_interface_name");
 }
+
+// mig: fn translate_interface_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_interface_name(&self, name: IStructDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
+        panic!("Unimplemented: translate_interface_name");
+    }
 /*
   def translateInterfaceName(name: IInterfaceDeclarationNameS): IInterfaceTemplateNameT = {
     name match {
@@ -101,10 +120,15 @@ fn translate_interface_name<'s, 't>(name: IStructDeclarationNameS<'s>) -> IInter
     }
   }
 */
-// mig: fn translate_citizen_name
-fn translate_citizen_name<'s, 't>(name: IFunctionDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
-    panic!("Unimplemented: translate_citizen_name");
 }
+
+// mig: fn translate_citizen_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_citizen_name(&self, name: IFunctionDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
+        panic!("Unimplemented: translate_citizen_name");
+    }
 /*
   def translateCitizenName(name: ICitizenDeclarationNameS): ICitizenTemplateNameT = {
     name match {
@@ -121,10 +145,15 @@ fn translate_citizen_name<'s, 't>(name: IFunctionDeclarationNameS<'s>) -> ICitiz
     }
   }
 */
-// mig: fn translate_name_step
-fn translate_name_step(name: INameS) -> INameT {
-    panic!("Unimplemented: translate_name_step");
 }
+
+// mig: fn translate_name_step
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_name_step(&self, name: INameS) -> INameT {
+        panic!("Unimplemented: translate_name_step");
+    }
 /*
   def translateNameStep(name: INameS): INameT = {
     name match {
@@ -166,20 +195,30 @@ fn translate_name_step(name: INameS) -> INameT {
     }
   }
 */
-// mig: fn translate_code_location
-fn translate_code_location(s: CodeLocationS) -> CodeLocationS {
-    panic!("Unimplemented: translate_code_location");
 }
+
+// mig: fn translate_code_location
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_code_location(&self, s: CodeLocationS) -> CodeLocationS {
+        panic!("Unimplemented: translate_code_location");
+    }
 /*
   def translateCodeLocation(s: CodeLocationS): CodeLocationS = {
     val CodeLocationS(line, col) = s
     CodeLocationS(line, col)
   }
 */
-// mig: fn translate_var_name_step
-fn translate_var_name_step(name: IVarNameS) -> IVarNameT {
-    panic!("Unimplemented: translate_var_name_step");
 }
+
+// mig: fn translate_var_name_step
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_var_name_step(&self, name: IVarNameS) -> IVarNameT {
+        panic!("Unimplemented: translate_var_name_step");
+    }
 /*
   def translateVarNameStep(name: IVarNameS): IVarNameT = {
     name match {
@@ -197,10 +236,15 @@ fn translate_var_name_step(name: IVarNameS) -> IVarNameT {
     }
   }
 */
-// mig: fn translate_impl_name
-fn translate_impl_name(n: IImplDeclarationNameS) -> IImplTemplateNameT {
-    panic!("Unimplemented: translate_impl_name");
 }
+
+// mig: fn translate_impl_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_impl_name(&self, n: IImplDeclarationNameS) -> IImplTemplateNameT {
+        panic!("Unimplemented: translate_impl_name");
+    }
 /*
   def translateImplName(n: IImplDeclarationNameS): IImplTemplateNameT = {
     n match {
@@ -214,3 +258,4 @@ fn translate_impl_name(n: IImplDeclarationNameS) -> IImplTemplateNameT {
   }
 }
 */
+}

@@ -48,12 +48,12 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct DestructorCompiler
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `destructor_compiler: DestructorCompiler<'s, 'ctx, 't>` fields
 pub struct DestructorCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl DestructorCompiler
-impl<'s, 'ctx, 't> DestructorCompiler<'s, 'ctx, 't> {}
 /*
 class DestructorCompiler(
     opts: TypingPassOptions,
@@ -63,9 +63,12 @@ class DestructorCompiler(
     overloadCompiler: OverloadResolver) {
 */
 // mig: fn get_drop_function
-fn get_drop_function() {
-  panic!("Unimplemented: get_drop_function");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_drop_function(&self) {
+        panic!("Unimplemented: get_drop_function");
+    }
 /*
   def getDropFunction(
     env: IInDenizenEnvironmentT,
@@ -84,10 +87,15 @@ fn get_drop_function() {
     }
   }
 */
-// mig: fn drop
-fn drop() {
-  panic!("Unimplemented: drop");
 }
+
+// mig: fn drop
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn drop(&self) {
+        panic!("Unimplemented: drop");
+    }
 /*
   def drop(
     env: IInDenizenEnvironmentT,
@@ -125,3 +133,4 @@ fn drop() {
   }
 }
 */
+}

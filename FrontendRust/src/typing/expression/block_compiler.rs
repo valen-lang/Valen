@@ -39,9 +39,10 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 
 // mig: trait IBlockCompilerDelegate
-pub trait IBlockCompilerDelegate<'s, 't> {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IBlockCompilerDelegate {
   def evaluateAndCoerceToReferenceExpression(
@@ -66,11 +67,8 @@ trait IBlockCompilerDelegate {
   ReferenceExpressionTE
 }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct BlockCompiler
-pub struct BlockCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl BlockCompiler
-impl<'s, 'ctx, 't> BlockCompiler<'s, 'ctx, 't> {}
 /*
 class BlockCompiler(
     opts: TypingPassOptions,
@@ -81,9 +79,12 @@ class BlockCompiler(
 
 */
 // mig: fn evaluate_block
-fn evaluate_block() {
-  panic!("Unimplemented: evaluate_block");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_block(&self) {
+        panic!("Unimplemented: evaluate_block");
+    }
 /*
   // This is NOT USED FOR EVERY BLOCK!
   // This is just for the simplest kind of block.
@@ -116,10 +117,15 @@ fn evaluate_block() {
     (block2, unstackifiedAncestorLocals, restackifiedAncestorLocals, returnsFromExprs)
   }
 */
-// mig: fn evaluate_block_statements
-fn evaluate_block_statements() {
-  panic!("Unimplemented: evaluate_block_statements");
 }
+
+// mig: fn evaluate_block_statements
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_block_statements(&self) {
+        panic!("Unimplemented: evaluate_block_statements");
+    }
 /*
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
@@ -211,3 +217,4 @@ fn evaluate_block_statements() {
 
 }
 */
+}

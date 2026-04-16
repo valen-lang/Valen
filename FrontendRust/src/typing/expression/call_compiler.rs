@@ -37,12 +37,10 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 
-// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct CallCompiler
-pub struct CallCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl CallCompiler
-impl<'s, 'ctx, 't> CallCompiler<'s, 'ctx, 't> {}
 /*
 class CallCompiler(
     opts: TypingPassOptions,
@@ -54,7 +52,10 @@ class CallCompiler(
     overloadCompiler: OverloadResolver) {
 */
 // mig: fn evaluate_call
-fn evaluate_call() { panic!("Unimplemented: evaluate_call"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_call(&self) { panic!("Unimplemented: evaluate_call"); }
 /*
   private def evaluateCall(
     coutputs: CompilerOutputs,
@@ -149,8 +150,13 @@ fn evaluate_call() { panic!("Unimplemented: evaluate_call"); }
 
   // By "custom call" we mean calling __call.
 */
+}
+
 // mig: fn evaluate_custom_call
-fn evaluate_custom_call() { panic!("Unimplemented: evaluate_custom_call"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_custom_call(&self) { panic!("Unimplemented: evaluate_custom_call"); }
 /*
   private def evaluateCustomCall(
     nenv: NodeEnvironmentBox,
@@ -239,8 +245,13 @@ fn evaluate_custom_call() { panic!("Unimplemented: evaluate_custom_call"); }
 
 
 */
+}
+
 // mig: fn check_types
-fn check_types() { panic!("Unimplemented: check_types"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn check_types(&self) { panic!("Unimplemented: check_types"); }
 /*
   def checkTypes(
     coutputs: CompilerOutputs,
@@ -289,8 +300,13 @@ fn check_types() { panic!("Unimplemented: check_types"); }
   }
 
 */
+}
+
 // mig: fn evaluate_prefix_call
-fn evaluate_prefix_call() { panic!("Unimplemented: evaluate_prefix_call"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_prefix_call(&self) { panic!("Unimplemented: evaluate_prefix_call"); }
 /*
   def evaluatePrefixCall(
     coutputs: CompilerOutputs,
@@ -321,3 +337,4 @@ fn evaluate_prefix_call() { panic!("Unimplemented: evaluate_prefix_call"); }
   }
 }
 */
+}

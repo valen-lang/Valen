@@ -50,13 +50,10 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 
-// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: struct PatternCompiler
-pub struct PatternCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
-
 // mig: impl PatternCompiler
-impl<'s, 'ctx, 't> PatternCompiler<'s, 'ctx, 't> {}
 /*
 class PatternCompiler(
     opts: TypingPassOptions,
@@ -71,9 +68,12 @@ class PatternCompiler(
     localHelper: LocalHelper) {
 */
 // mig: fn translate_pattern_list
-fn translate_pattern_list() {
-    panic!("Unimplemented: translate_pattern_list");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_pattern_list(&self) {
+        panic!("Unimplemented: translate_pattern_list");
+    }
 /*
   // Note: This will unlet/drop the input expressions. Be warned.
   // patternInputsTE is a list of reference expression because they're coming in from
@@ -105,10 +105,15 @@ fn translate_pattern_list() {
   }
 
 */
-// mig: fn iterate_translate_list_and_maybe_continue
-fn iterate_translate_list_and_maybe_continue() {
-    panic!("Unimplemented: iterate_translate_list_and_maybe_continue");
 }
+
+// mig: fn iterate_translate_list_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn iterate_translate_list_and_maybe_continue(&self) {
+        panic!("Unimplemented: iterate_translate_list_and_maybe_continue");
+    }
 /*
   def iterateTranslateListAndMaybeContinue(
     coutputs: CompilerOutputs,
@@ -147,10 +152,15 @@ fn iterate_translate_list_and_maybe_continue() {
   }
 
 */
-// mig: fn infer_and_translate_pattern
-fn infer_and_translate_pattern() {
-    panic!("Unimplemented: infer_and_translate_pattern");
 }
+
+// mig: fn infer_and_translate_pattern
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn infer_and_translate_pattern(&self) {
+        panic!("Unimplemented: infer_and_translate_pattern");
+    }
 /*
   // Note: This will unlet/drop the input expression. Be warned.
   def inferAndTranslatePattern(
@@ -237,10 +247,15 @@ fn infer_and_translate_pattern() {
   }
 
 */
-// mig: fn inner_translate_sub_pattern_and_maybe_continue
-fn inner_translate_sub_pattern_and_maybe_continue() {
-    panic!("Unimplemented: inner_translate_sub_pattern_and_maybe_continue");
 }
+
+// mig: fn inner_translate_sub_pattern_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn inner_translate_sub_pattern_and_maybe_continue(&self) {
+        panic!("Unimplemented: inner_translate_sub_pattern_and_maybe_continue");
+    }
 /*
   private def innerTranslateSubPatternAndMaybeContinue(
     coutputs: CompilerOutputs,
@@ -348,10 +363,15 @@ fn inner_translate_sub_pattern_and_maybe_continue() {
   }
 
 */
-// mig: fn destructure_owning
-fn destructure_owning() {
-    panic!("Unimplemented: destructure_owning");
 }
+
+// mig: fn destructure_owning
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn destructure_owning(&self) {
+        panic!("Unimplemented: destructure_owning");
+    }
 /*
   private def destructureOwning(
     coutputs: CompilerOutputs,
@@ -418,10 +438,15 @@ fn destructure_owning() {
   }
 
 */
-// mig: fn destructure_non_owning_and_maybe_continue
-fn destructure_non_owning_and_maybe_continue() {
-    panic!("Unimplemented: destructure_non_owning_and_maybe_continue");
 }
+
+// mig: fn destructure_non_owning_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn destructure_non_owning_and_maybe_continue(&self) {
+        panic!("Unimplemented: destructure_non_owning_and_maybe_continue");
+    }
 /*
   private def destructureNonOwningAndMaybeContinue(
       coutputs: CompilerOutputs,
@@ -450,10 +475,15 @@ fn destructure_non_owning_and_maybe_continue() {
   }
 
 */
-// mig: fn iterate_destructure_non_owning_and_maybe_continue
-fn iterate_destructure_non_owning_and_maybe_continue() {
-    panic!("Unimplemented: iterate_destructure_non_owning_and_maybe_continue");
 }
+
+// mig: fn iterate_destructure_non_owning_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn iterate_destructure_non_owning_and_maybe_continue(&self) {
+        panic!("Unimplemented: iterate_destructure_non_owning_and_maybe_continue");
+    }
 /*
   private def iterateDestructureNonOwningAndMaybeContinue(
     coutputs: CompilerOutputs,
@@ -534,10 +564,15 @@ fn iterate_destructure_non_owning_and_maybe_continue() {
   }
 
 */
-// mig: fn translate_destroy_struct_inner_and_maybe_continue
-fn translate_destroy_struct_inner_and_maybe_continue() {
-    panic!("Unimplemented: translate_destroy_struct_inner_and_maybe_continue");
 }
+
+// mig: fn translate_destroy_struct_inner_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_destroy_struct_inner_and_maybe_continue(&self) {
+        panic!("Unimplemented: translate_destroy_struct_inner_and_maybe_continue");
+    }
 /*
   private def translateDestroyStructInnerAndMaybeContinue(
     coutputs: CompilerOutputs,
@@ -600,10 +635,15 @@ fn translate_destroy_struct_inner_and_maybe_continue() {
   }
 
 */
-// mig: fn make_lets_for_own_and_maybe_continue
-fn make_lets_for_own_and_maybe_continue() {
-    panic!("Unimplemented: make_lets_for_own_and_maybe_continue");
 }
+
+// mig: fn make_lets_for_own_and_maybe_continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_lets_for_own_and_maybe_continue(&self) {
+        panic!("Unimplemented: make_lets_for_own_and_maybe_continue");
+    }
 /*
   private def makeLetsForOwnAndMaybeContinue(
     coutputs: CompilerOutputs,
@@ -644,10 +684,15 @@ fn make_lets_for_own_and_maybe_continue() {
   }
 
 */
-// mig: fn load_result_ownership
-fn load_result_ownership() {
-    panic!("Unimplemented: load_result_ownership");
 }
+
+// mig: fn load_result_ownership
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn load_result_ownership(&self) {
+        panic!("Unimplemented: load_result_ownership");
+    }
 /*
   private def loadResultOwnership(memberOwnershipInStruct: OwnershipT): OwnershipT = {
     memberOwnershipInStruct match {
@@ -659,10 +704,15 @@ fn load_result_ownership() {
   }
 
 */
-// mig: fn load_from_struct
-fn load_from_struct() {
-    panic!("Unimplemented: load_from_struct");
 }
+
+// mig: fn load_from_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn load_from_struct(&self) {
+        panic!("Unimplemented: load_from_struct");
+    }
 /*
   private def loadFromStruct(
     coutputs: CompilerOutputs,
@@ -705,10 +755,15 @@ fn load_from_struct() {
   }
 
 */
-// mig: fn load_from_static_sized_array
-fn load_from_static_sized_array() {
-    panic!("Unimplemented: load_from_static_sized_array");
 }
+
+// mig: fn load_from_static_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn load_from_static_sized_array(&self) {
+        panic!("Unimplemented: load_from_static_sized_array");
+    }
 /*
   private def loadFromStaticSizedArray(
       range: RangeS,
@@ -722,3 +777,4 @@ fn load_from_static_sized_array() {
   }
 }
 */
+}

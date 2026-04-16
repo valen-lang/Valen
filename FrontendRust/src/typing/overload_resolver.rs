@@ -57,6 +57,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 
 // mig: enum IFindFunctionFailureReason
 pub enum IFindFunctionFailureReason<'s, 't> {
@@ -131,9 +132,9 @@ override def hashCode(): Int = vcurious()
 
 */
 // mig: struct OverloadResolver
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `overload_resolver: OverloadResolver<'s, 't>` fields
 pub struct OverloadResolver<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl OverloadResolver
-impl<'s, 't> OverloadResolver<'s, 't> {}
 /*
 class OverloadResolver(
     opts: TypingPassOptions,
@@ -146,7 +147,10 @@ class OverloadResolver(
 
 */
 // mig: fn find_function
-fn find_function() { panic!("Unimplemented: find_function"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn find_function(&self) { panic!("Unimplemented: find_function"); }
 /*
   def findFunction(
     callingEnv: IInDenizenEnvironmentT,
@@ -186,8 +190,13 @@ fn find_function() { panic!("Unimplemented: find_function"); }
   }
 
 */
+}
+
 // mig: fn params_match
-fn params_match() { panic!("Unimplemented: params_match"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn params_match(&self) { panic!("Unimplemented: params_match"); }
 /*
   private def paramsMatch(
     coutputs: CompilerOutputs,
@@ -222,6 +231,8 @@ fn params_match() { panic!("Unimplemented: params_match"); }
   }
 
 */
+}
+
 // mig: struct SearchedEnvironment
 pub struct SearchedEnvironment;
 /*
@@ -232,7 +243,10 @@ pub struct SearchedEnvironment;
 
 */
 // mig: fn get_candidate_banners
-fn get_candidate_banners() { panic!("Unimplemented: get_candidate_banners"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_candidate_banners(&self) { panic!("Unimplemented: get_candidate_banners"); }
 /*
   private def getCandidateBanners(
     env: IInDenizenEnvironmentT,
@@ -252,8 +266,13 @@ fn get_candidate_banners() { panic!("Unimplemented: get_candidate_banners"); }
   }
 
 */
+}
+
 // mig: fn get_candidate_banners_inner
-fn get_candidate_banners_inner() { panic!("Unimplemented: get_candidate_banners_inner"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_candidate_banners_inner(&self) { panic!("Unimplemented: get_candidate_banners_inner"); }
 /*
   private def getCandidateBannersInner(
     env: IInDenizenEnvironmentT,
@@ -295,6 +314,8 @@ fn get_candidate_banners_inner() { panic!("Unimplemented: get_candidate_banners_
   }
 
 */
+}
+
 // mig: struct AttemptedCandidate
 pub struct AttemptedCandidate;
 /*
@@ -305,7 +326,10 @@ pub struct AttemptedCandidate;
 
 */
 // mig: fn attempt_candidate_banner
-fn attempt_candidate_banner() { panic!("Unimplemented: attempt_candidate_banner"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn attempt_candidate_banner(&self) { panic!("Unimplemented: attempt_candidate_banner"); }
 /*
   private def attemptCandidateBanner(
     callingEnv: IInDenizenEnvironmentT,
@@ -507,8 +531,13 @@ fn attempt_candidate_banner() { panic!("Unimplemented: attempt_candidate_banner"
   }
 
 */
+}
+
 // mig: fn get_param_environments
-fn get_param_environments() { panic!("Unimplemented: get_param_environments"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_param_environments(&self) { panic!("Unimplemented: get_param_environments"); }
 /*
   // Gets all the environments for all the arguments.
   private def getParamEnvironments(coutputs: CompilerOutputs, range: List[RangeS], paramFilters: Vector[CoordT]):
@@ -524,8 +553,13 @@ fn get_param_environments() { panic!("Unimplemented: get_param_environments"); }
   }
 
 */
+}
+
 // mig: fn find_potential_function
-fn find_potential_function() { panic!("Unimplemented: find_potential_function"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn find_potential_function(&self) { panic!("Unimplemented: find_potential_function"); }
 /*
   // Checks to see if there's a function that *could*
   // exist that takes in these parameter types, and returns what the signature *would* look like.
@@ -574,8 +608,13 @@ fn find_potential_function() { panic!("Unimplemented: find_potential_function");
   }
 
 */
+}
+
 // mig: fn get_banner_param_scores
-fn get_banner_param_scores() { panic!("Unimplemented: get_banner_param_scores"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_banner_param_scores(&self) { panic!("Unimplemented: get_banner_param_scores"); }
 /*
   // Returns either:
   // - None if banners incompatible
@@ -613,8 +652,13 @@ fn get_banner_param_scores() { panic!("Unimplemented: get_banner_param_scores");
   }
 
 */
+}
+
 // mig: fn narrow_down_callable_overloads
-fn narrow_down_callable_overloads() { panic!("Unimplemented: narrow_down_callable_overloads"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn narrow_down_callable_overloads(&self) { panic!("Unimplemented: narrow_down_callable_overloads"); }
 /*
   private def narrowDownCallableOverloads(
     coutputs: CompilerOutputs,
@@ -821,8 +865,13 @@ fn narrow_down_callable_overloads() { panic!("Unimplemented: narrow_down_callabl
 //  }
 
 */
+}
+
 // mig: fn get_array_generator_prototype
-fn get_array_generator_prototype() { panic!("Unimplemented: get_array_generator_prototype"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_array_generator_prototype(&self) { panic!("Unimplemented: get_array_generator_prototype"); }
 /*
   def getArrayGeneratorPrototype(
     coutputs: CompilerOutputs,
@@ -846,8 +895,13 @@ fn get_array_generator_prototype() { panic!("Unimplemented: get_array_generator_
   }
 
 */
+}
+
 // mig: fn get_array_consumer_prototype
-fn get_array_consumer_prototype() { panic!("Unimplemented: get_array_consumer_prototype"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_array_consumer_prototype(&self) { panic!("Unimplemented: get_array_consumer_prototype"); }
 /*
   def getArrayConsumerPrototype(
     coutputs: CompilerOutputs,
@@ -871,3 +925,4 @@ fn get_array_consumer_prototype() { panic!("Unimplemented: get_array_consumer_pr
   }
 }
 */
+}

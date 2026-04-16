@@ -45,18 +45,9 @@ use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 // mig: trait IConvertHelperDelegate
-pub trait IConvertHelperDelegate<'s, 't> {
-    fn is_parent(
-        &self,
-        coutputs: &CompilerOutputs,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS],
-        call_location: LocationInDenizen,
-        descendant_citizen_ref: ISubKindTT<'s, 't>,
-        ancestor_interface_ref: ISuperKindTT<'s, 't>,
-    ) -> IsParentResult;
-}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IConvertHelperDelegate {
 */
@@ -75,31 +66,29 @@ trait IConvertHelperDelegate {
 
 */
 // mig: struct ConvertHelper
-pub struct ConvertHelper<'s, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub delegate: Box<dyn IConvertHelperDelegate<'s, 't>>,
-}
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `convert_helper: ConvertHelper<'s, 't>` fields
+pub struct ConvertHelper<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl ConvertHelper
-impl<'s, 't> ConvertHelper<'s, 't> {}
 /*
 class ConvertHelper(
     opts: TypingPassOptions,
     delegate: IConvertHelperDelegate) {
 */
 // mig: fn convert_exprs
-impl<'s, 't> ConvertHelper<'s, 't> {
-fn convert_exprs(
-    &self,
-    env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    source_exprs: Vec<ReferenceExpressionTE<'s, 't>>,
-    target_pointer_types: Vec<CoordT<'s, 't>>,
-) -> Vec<ReferenceExpressionTE<'s, 't>> {
-    panic!("Unimplemented: convert_exprs");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn convert_exprs(
+        &self,
+        env: &IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        source_exprs: Vec<ReferenceExpressionTE<'s, 't>>,
+        target_pointer_types: Vec<CoordT<'s, 't>>,
+    ) -> Vec<ReferenceExpressionTE<'s, 't>> {
+        panic!("Unimplemented: convert_exprs");
+    }
 /*
   def convertExprs(
       env: IInDenizenEnvironmentT,
@@ -125,20 +114,23 @@ fn convert_exprs(
 
 
 */
+}
+
 // mig: fn convert
-impl<'s, 't> ConvertHelper<'s, 't> {
-fn convert(
-    &self,
-    env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    source_expr: ReferenceExpressionTE<'s, 't>,
-    target_pointer_type: CoordT<'s, 't>,
-) -> ReferenceExpressionTE<'s, 't> {
-    panic!("Unimplemented: convert");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn convert(
+        &self,
+        env: &IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        source_expr: ReferenceExpressionTE<'s, 't>,
+        target_pointer_type: CoordT<'s, 't>,
+    ) -> ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: convert");
+    }
 /*
   def convert(
       env: IInDenizenEnvironmentT,
@@ -212,19 +204,24 @@ fn convert(
 
 
 */
-// mig: fn convert
-fn convert_with_subkind(
-    &self,
-    calling_env: &IInDenizenEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    range: &[RangeS],
-    call_location: LocationInDenizen,
-    source_expr: ReferenceExpressionTE,
-    source_sub_kind: ISubKindTT,
-    target_super_kind: ISuperKindTT,
-) -> ReferenceExpressionTE {
-    panic!("Unimplemented: convert");
 }
+
+// mig: fn convert
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn convert_with_subkind(
+        &self,
+        calling_env: &IInDenizenEnvironmentT,
+        coutputs: &mut CompilerOutputs,
+        range: &[RangeS],
+        call_location: LocationInDenizen,
+        source_expr: ReferenceExpressionTE,
+        source_sub_kind: ISubKindTT,
+        target_super_kind: ISuperKindTT,
+    ) -> ReferenceExpressionTE {
+        panic!("Unimplemented: convert");
+    }
 /*
   def convert(
     callingEnv: IInDenizenEnvironmentT,
@@ -252,3 +249,4 @@ fn convert_with_subkind(
 
 }
 */
+}

@@ -313,7 +313,7 @@ The goal of this step is to get `Compiler` and `TypingInterner` into a shape whe
    ```
    `ScoutArena<'s>` already exists at `src/scout_arena.rs`. `Keywords<'s>` at `src/keywords.rs`. `TypingPassOptions<'s>` at `src/typing/compilation.rs`. All four are real — no placeholders needed.
 
-3. **Do NOT delete `Interner<'s>` yet.** Sub-compilers still reference it. Deletion happens in Step 7 cleanup.
+3. **Do NOT delete `Interner<'s>` yet.** Sub-compilers still reference it. Deletion happens in Step 8 cleanup (alongside `NameTranslator<'s>`, which is kept for the same reason during Step 3).
 
 4. Get a baseline:
    ```
@@ -370,9 +370,11 @@ Same workflow, `src/typing/expression/local_helper.rs`. Small. Deletes the struc
 
 ### Step 3: Merge leaf `NameTranslator`
 
-Same workflow, `src/typing/names/name_translator.rs`. ~6 `translate_*` methods. **Delete the struct entirely** — it was a stateless helper in Scala, it adds nothing in Rust once its methods are on `Compiler`. Preserve the `// mig: struct NameTranslator` marker and Scala block; remove the Rust struct definition line.
+Same workflow, `src/typing/names/name_translator.rs`. ~9 `translate_*` methods. The methods move onto `impl Compiler`; the struct adds nothing in Rust once its methods are on `Compiler`.
 
-Update call sites: `self.name_translator.translate_struct_name(foo)` → `self.translate_struct_name(foo)`.
+**But keep `pub struct NameTranslator<'s>(PhantomData<&'s ()>)` in place for now** — same reasoning as `Interner<'s>` in Step 0. ~9 sub-compilers and macros hold `pub name_translator: NameTranslator<'s>` fields; deleting the type here would break their build until each is merged. The struct is a vestigial placeholder until Step 8 cleanup, which deletes both `Interner<'s>` and `NameTranslator<'s>` once every sub-compiler that referenced them is gone.
+
+Update call sites: `self.name_translator.translate_struct_name(foo)` → `self.translate_struct_name(foo)`. (Anywhere that actually calls a translate method in Rust today — most call sites are inside Scala `/* */` blocks and don't need touching.)
 
 ### Step 4: Merge leaf `ConvertHelper`
 
@@ -430,12 +432,13 @@ Keep the `// mig:` marker matching whatever name you picked.
 After all sub-compilers and macros are merged:
 
 1. **Delete `pub struct Interner<'s>(...)` from `src/interner.rs`.** By this point, every sub-compiler that referenced it is gone, so there should be no more `&'ctx Interner<'s>` fields anywhere. Leave `pub struct StrI<'s>` — that's real. Leave `InternedSlice<'a, T>` — also real.
-2. Remove the dead `use crate::interner::Interner;` imports across the typing pass.
-3. Remove the dead `use crate::typing::*compiler::*` imports that referenced the deleted sub-compilers.
-4. Audit the `src/typing/mod.rs` — are there `pub mod foo_compiler;` entries for files that now only exist as `impl Compiler` wrappers? Those `mod` entries still need to exist (the files are still there), but may no longer be needed as `pub mod` if they don't export anything externally.
-5. Delete the delegate traits (`IExpressionCompilerDelegate`, etc.) — by this point they should have zero uses.
-6. Search for any `Box<dyn I*Delegate>` or `&dyn I*Delegate` that are leftover and fix.
-7. One final `cargo check`. Note the error count. Commit as a cleanup pass.
+2. **Delete `pub struct NameTranslator<'s>(...)` from `src/typing/names/name_translator.rs`.** Same reasoning as `Interner<'s>` — the struct was kept as a vestigial placeholder during Step 3 to avoid breaking sub-compilers that held `pub name_translator: NameTranslator<'s>` fields. Once every sub-compiler is merged, no such fields remain, and the struct can be removed. Leave the `// mig: struct NameTranslator` marker and the Scala `class NameTranslator(...)` block.
+3. Remove the dead `use crate::interner::Interner;` imports across the typing pass.
+4. Remove the dead `use crate::typing::*compiler::*` imports that referenced the deleted sub-compilers.
+5. Audit the `src/typing/mod.rs` — are there `pub mod foo_compiler;` entries for files that now only exist as `impl Compiler` wrappers? Those `mod` entries still need to exist (the files are still there), but may no longer be needed as `pub mod` if they don't export anything externally.
+6. Delete the delegate traits (`IExpressionCompilerDelegate`, etc.) — by this point they should have zero uses.
+7. Search for any `Box<dyn I*Delegate>` or `&dyn I*Delegate` that are leftover and fix.
+8. One final `cargo check`. Note the error count. Commit as a cleanup pass.
 
 ## Gotchas & watch-outs
 

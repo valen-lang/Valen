@@ -41,6 +41,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct CompleteResolveSolve
 pub struct CompleteResolveSolve;
@@ -128,7 +129,7 @@ case class InitialKnown(
 
 */
 // mig: trait IInferCompilerDelegate
-pub trait IInferCompilerDelegate {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IInferCompilerDelegate {
   def resolveStruct(
@@ -188,9 +189,9 @@ trait IInferCompilerDelegate {
 
 */
 // mig: struct InferCompiler
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `infer_compiler: InferCompiler<'s, 't>` fields
 pub struct InferCompiler<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl InferCompiler
-impl<'s, 't> InferCompiler<'s, 't> {}
 /*
 class InferCompiler(
     opts: TypingPassOptions,
@@ -205,7 +206,10 @@ class InferCompiler(
   // rules mention, see DBDAR.
 */
 // mig: fn solve_for_defining
-fn solve_for_defining() { panic!("Unimplemented: solve_for_defining"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn solve_for_defining(&self) { panic!("Unimplemented: solve_for_defining"); }
 /*
   def solveForDefining(
     envs: InferEnv, // See CSSNCE
@@ -239,8 +243,13 @@ fn solve_for_defining() { panic!("Unimplemented: solve_for_defining"); }
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
 */
+}
+
 // mig: fn solve_for_resolving
-fn solve_for_resolving() { panic!("Unimplemented: solve_for_resolving"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn solve_for_resolving(&self) { panic!("Unimplemented: solve_for_resolving"); }
 /*
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
@@ -263,8 +272,13 @@ fn solve_for_resolving() { panic!("Unimplemented: solve_for_resolving"); }
   }
 
 */
+}
+
 // mig: fn partial_solve
-fn partial_solve() { panic!("Unimplemented: partial_solve"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn partial_solve(&self) { panic!("Unimplemented: partial_solve"); }
 /*
   def partialSolve(
       envs: InferEnv, // See CSSNCE
@@ -285,8 +299,13 @@ fn partial_solve() { panic!("Unimplemented: partial_solve"); }
   }
 
 */
+}
+
 // mig: fn make_solver_state
-fn make_solver_state() { panic!("Unimplemented: make_solver_state"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_solver_state(&self) { panic!("Unimplemented: make_solver_state"); }
 /*
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
@@ -329,8 +348,13 @@ fn make_solver_state() { panic!("Unimplemented: make_solver_state"); }
   }
 
 */
+}
+
 // mig: fn r#continue
-fn r#continue() { panic!("Unimplemented: r#continue"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn r#continue(&self) { panic!("Unimplemented: r#continue"); }
 /*
   def continue(
     envs: InferEnv, // See CSSNCE
@@ -341,8 +365,13 @@ fn r#continue() { panic!("Unimplemented: r#continue"); }
   }
 
 */
+}
+
 // mig: fn check_resolving_conclusions_and_resolve
-fn check_resolving_conclusions_and_resolve() { panic!("Unimplemented: check_resolving_conclusions_and_resolve"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn check_resolving_conclusions_and_resolve(&self) { panic!("Unimplemented: check_resolving_conclusions_and_resolve"); }
 /*
   def checkResolvingConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
@@ -468,8 +497,13 @@ fn check_resolving_conclusions_and_resolve() { panic!("Unimplemented: check_reso
   }
 
 */
+}
+
 // mig: fn interpret_results
-fn interpret_results() { panic!("Unimplemented: interpret_results"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn interpret_results(&self) { panic!("Unimplemented: interpret_results"); }
 /*
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
@@ -489,8 +523,13 @@ fn interpret_results() { panic!("Unimplemented: interpret_results"); }
   }
 
 */
+}
+
 // mig: fn check_defining_conclusions_and_resolve
-fn check_defining_conclusions_and_resolve() { panic!("Unimplemented: check_defining_conclusions_and_resolve"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn check_defining_conclusions_and_resolve(&self) { panic!("Unimplemented: check_defining_conclusions_and_resolve"); }
 /*
   def checkDefiningConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
@@ -568,8 +607,13 @@ fn check_defining_conclusions_and_resolve() { panic!("Unimplemented: check_defin
   }
 
 */
+}
+
 // mig: fn import_reachable_bounds
-fn import_reachable_bounds() { panic!("Unimplemented: import_reachable_bounds"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn import_reachable_bounds(&self) { panic!("Unimplemented: import_reachable_bounds"); }
 /*
   def importReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -588,8 +632,13 @@ fn import_reachable_bounds() { panic!("Unimplemented: import_reachable_bounds");
 
   // This includes putting newly defined bound functions in.
 */
+}
+
 // mig: fn import_conclusions_and_reachable_bounds
-fn import_conclusions_and_reachable_bounds() { panic!("Unimplemented: import_conclusions_and_reachable_bounds"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn import_conclusions_and_reachable_bounds(&self) { panic!("Unimplemented: import_conclusions_and_reachable_bounds"); }
 /*
   def importConclusionsAndReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -614,8 +663,13 @@ fn import_conclusions_and_reachable_bounds() { panic!("Unimplemented: import_con
   }
 
 */
+}
+
 // mig: fn resolve_conclusions_for_define
-fn resolve_conclusions_for_define() { panic!("Unimplemented: resolve_conclusions_for_define"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_conclusions_for_define(&self) { panic!("Unimplemented: resolve_conclusions_for_define"); }
 /*
   private def resolveConclusionsForDefine(
     env: IInDenizenEnvironmentT, // See CSSNCE
@@ -684,8 +738,13 @@ fn resolve_conclusions_for_define() { panic!("Unimplemented: resolve_conclusions
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
+}
+
 // mig: fn resolve_function_call_conclusion
-fn resolve_function_call_conclusion() { panic!("Unimplemented: resolve_function_call_conclusion"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_function_call_conclusion(&self) { panic!("Unimplemented: resolve_function_call_conclusion"); }
 /*
   def resolveFunctionCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -726,8 +785,13 @@ fn resolve_function_call_conclusion() { panic!("Unimplemented: resolve_function_
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
+}
+
 // mig: fn resolve_impl_conclusion
-fn resolve_impl_conclusion() { panic!("Unimplemented: resolve_impl_conclusion"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_impl_conclusion(&self) { panic!("Unimplemented: resolve_impl_conclusion"); }
 /*
   def resolveImplConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -766,8 +830,13 @@ fn resolve_impl_conclusion() { panic!("Unimplemented: resolve_impl_conclusion");
   // Returns None for any call that we don't even have params for,
   // like in the case of an incomplete solve.
 */
+}
+
 // mig: fn resolve_template_call_conclusion
-fn resolve_template_call_conclusion() { panic!("Unimplemented: resolve_template_call_conclusion"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_template_call_conclusion(&self) { panic!("Unimplemented: resolve_template_call_conclusion"); }
 /*
   def resolveTemplateCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -833,8 +902,13 @@ fn resolve_template_call_conclusion() { panic!("Unimplemented: resolve_template_
   }
 
 */
+}
+
 // mig: fn incrementally_solve
-fn incrementally_solve() { panic!("Unimplemented: incrementally_solve"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn incrementally_solve(&self) { panic!("Unimplemented: incrementally_solve"); }
 /*
   def incrementallySolve(
     envs: InferEnv,
@@ -869,8 +943,10 @@ fn incrementally_solve() { panic!("Unimplemented: incrementally_solve"); }
 object InferCompiler {
   // Some rules should be excluded from the call site, see SROACSD.
 */
+}
+
 // mig: fn include_rule_in_call_site_solve
-fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_in_call_site_solve"); }
+pub fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_in_call_site_solve"); }
 /*
   def includeRuleInCallSiteSolve(rule: IRulexSR): Boolean = {
     rule match {
@@ -883,7 +959,7 @@ fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_in_ca
   // Some rules should be excluded from the call site, see SROACSD.
 */
 // mig: fn include_rule_in_definition_solve
-fn include_rule_in_definition_solve() { panic!("Unimplemented: include_rule_in_definition_solve"); }
+pub fn include_rule_in_definition_solve() { panic!("Unimplemented: include_rule_in_definition_solve"); }
 /*
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
     rule match {

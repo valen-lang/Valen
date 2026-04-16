@@ -51,6 +51,7 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::*;
 use crate::solver::solver::*;
 use crate::solver::simple_solver_state::*;
+use crate::typing::compiler::Compiler;
 
 // mig: enum ITypingPassSolverError
 pub enum ITypingPassSolverError<'s, 't> {}
@@ -99,6 +100,7 @@ case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, IT
 
 */
 // mig: trait IInfererDelegate
+// vestigial: kept until Step 8 cleanup because fn signatures still reference `IInfererDelegate<'s, 't>` as a param type
 pub trait IInfererDelegate<'s, 't> {}
 /*
 trait IInfererDelegate {
@@ -211,9 +213,9 @@ trait IInfererDelegate {
 
 */
 // mig: struct CompilerSolver
+// vestigial: kept as a placeholder type (no Rust code currently uses it)
 pub struct CompilerSolver;
 // mig: impl CompilerSolver
-impl CompilerSolver {}
 /*
 class CompilerSolver(
   globalOptions: GlobalOptions,
@@ -222,9 +224,12 @@ class CompilerSolver(
 ) {
 */
 // mig: fn get_runes
-fn get_runes<'s>(rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
-    panic!("Unimplemented: get_runes");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
+        panic!("Unimplemented: get_runes");
+    }
 /*
   def getRunes(rule: IRulexSR): Vector[IRuneS] = {
     val result = rule.runeUsages.map(_.rune)
@@ -267,10 +272,15 @@ fn get_runes<'s>(rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
   }
 
 */
-// mig: fn get_puzzles
-fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
-    panic!("Unimplemented: get_puzzles");
 }
+
+// mig: fn get_puzzles
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_puzzles(&self, rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
+        panic!("Unimplemented: get_puzzles");
+    }
 /*
   def getPuzzles(rule: IRulexSR): Vector[Vector[IRuneS]] = {
     rule match {
@@ -314,17 +324,23 @@ fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
   }
 
 */
-// mig: fn make_solver_state
-fn make_solver_state<'s, 't>(
-    range: Vec<RangeS<'s>>,
-    env: InferEnv<'s>,
-    state: CompilerOutputs<'s, 't>,
-    rules: Vec<IRulexSR<'s>>,
-    initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
-    initially_known_rune_to_templata: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-    panic!("Unimplemented: make_solver_state");
 }
+
+// mig: fn make_solver_state
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_solver_state(
+        &self,
+        range: Vec<RangeS<'s>>,
+        env: InferEnv<'s>,
+        state: CompilerOutputs<'s, 't>,
+        rules: Vec<IRulexSR<'s>>,
+        initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        initially_known_rune_to_templata: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
+        panic!("Unimplemented: make_solver_state");
+    }
 /*
   def makeSolverState(
     range: List[RangeS],
@@ -371,12 +387,18 @@ fn make_solver_state<'s, 't>(
 
 
 */
+}
+
 // mig: fn advance_infer
-fn advance_infer<'s, 't>(
-    env: InferEnv<'s>,
-    state: CompilerOutputs<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    delegate: IInfererDelegate<'s, 't>,
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn advance_infer(
+        &self,
+        env: InferEnv<'s>,
+        state: CompilerOutputs<'s, 't>,
+        solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        delegate: IInfererDelegate<'s, 't>,
 ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: advance_infer");
 }
@@ -436,14 +458,20 @@ fn advance_infer<'s, 't>(
   }
 
 */
-// mig: fn r#continue
-fn r#continue<'s, 't>(
-    env: InferEnv<'s>,
-    state: CompilerOutputs<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-    panic!("Unimplemented: continue");
 }
+
+// mig: fn r#continue
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn r#continue(
+        &self,
+        env: InferEnv<'s>,
+        state: CompilerOutputs<'s, 't>,
+        solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: continue");
+    }
 /*
   // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
   // Caller should remember to do that!
@@ -467,8 +495,10 @@ fn r#continue<'s, 't>(
 
 object CompilerRuleSolver {
 */
+}
+
 // mig: fn sanity_check_conclusion
-fn sanity_check_conclusion<'s, 't>(
+pub fn sanity_check_conclusion<'s, 't>(
     delegate: IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
