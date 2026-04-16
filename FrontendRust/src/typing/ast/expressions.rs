@@ -12,6 +12,21 @@ import dev.vale.typing.env.ReferenceLocalVariableT
 import dev.vale.typing.types._
 import dev.vale.typing.templata._
 */
+use std::collections::HashMap;
+
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+
 // mig: trait IExpressionResultT
 pub trait IExpressionResultT<'s, 't> {}
 /*

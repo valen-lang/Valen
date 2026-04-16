@@ -10,6 +10,12 @@ import dev.vale.typing.templata.IContainer
 import dev.vale.typing.types.InterfaceTT
 import dev.vale.vpass
 */
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+
 // mig: enum IEnvEntry
 pub enum IEnvEntry {}
 /*

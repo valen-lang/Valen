@@ -25,6 +25,26 @@ import scala.collection.immutable._
 //   type to avoid a cyclical definition.
 // - If not in declared banners, then tell FunctionCompiler to start evaluating it.
 */
+use std::collections::{HashMap, HashSet};
+
+use crate::interner::StrI;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::hinputs_t::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::itemplatatype::ITemplataType;
+
 // mig: struct ImplT
 pub struct ImplT<'s, 't> {
     pub templata: ImplDefinitionTemplataT<'s, 't>,

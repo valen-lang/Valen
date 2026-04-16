@@ -18,6 +18,21 @@ import scala.collection.immutable.List
 
 object ITemplataT {
 */
+use std::collections::HashMap;
+
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+
 // mig: fn expect_mutability
 fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_mutability");

@@ -25,6 +25,35 @@ import dev.vale.typing.citizen.ResolveFailure
 
 object CompilerErrorHumanizer {
 */
+use std::collections::{HashMap, HashSet};
+
+use crate::interner::StrI;
+use crate::utils::range::{RangeS, CodeLocationS};
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::*;
+use crate::typing::infer::compiler_solver::*;
+use crate::typing::overload_resolver::*;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::rules::rules::*;
+use crate::solver::solver::*;
+use crate::higher_typing::ast::FunctionA;
+use crate::typing::citizen::struct_compiler::*;
+use crate::typing::citizen::impl_compiler::*;
+use crate::typing::templata::conversions::*;
+
 // mig: fn humanize
 pub fn humanize(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, err: ICompileErrorT) -> String {
   panic!("Unimplemented: humanize");

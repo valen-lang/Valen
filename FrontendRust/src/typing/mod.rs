@@ -17,23 +17,29 @@ pub mod env;
 pub mod compiler_outputs;
 pub mod hinputs_t;
 
-// TODO: Files with nested block comment issues that need fixing:
-// - citizen/ (struct_compiler.rs has nested comments)
-// - compiler.rs
-// - compiler_error_humanizer.rs
-// - compiler_error_reporter.rs
-// - templata_compiler.rs
-// - infer_compiler.rs
-// - overload_resolver.rs
-// - array_compiler.rs
-// - sequence_compiler.rs
-// - edge_compiler.rs
-// - reachability.rs
-// - convert_helper.rs
-// - expression/
-// - function/
-// - infer/
-// - macros/
+// Top-level compiler orchestration
+pub mod compiler;
+
+// Error reporting
+pub mod compiler_error_humanizer;
+pub mod compiler_error_reporter;
+
+// Specific compilers
+pub mod array_compiler;
+pub mod convert_helper;
+pub mod edge_compiler;
+pub mod infer_compiler;
+pub mod overload_resolver;
+pub mod reachability;
+pub mod sequence_compiler;
+pub mod templata_compiler;
+
+// Sub-compilers grouped by concern
+pub mod citizen;
+pub mod expression;
+pub mod function;
+pub mod infer;
+pub mod macros;
 
 // Tests
 #[cfg(test)]

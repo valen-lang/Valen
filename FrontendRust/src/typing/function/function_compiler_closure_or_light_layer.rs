@@ -28,6 +28,35 @@ import scala.collection.immutable.{List, Map}
 // There's a layer to take care of each of these things.
 // This file is the outer layer, which spawns a local environment for the function.
 */
+use std::collections::{HashMap, HashSet};
+
+use crate::interner::StrI;
+use crate::keywords::Keywords;
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compilation::*;
+use crate::typing::function::function_compiler::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::interner::Interner;
+use crate::typing::names::name_translator::*;
+use crate::typing::templata_compiler::*;
+use crate::typing::convert_helper::*;
+use crate::typing::citizen::struct_compiler::*;
+use crate::typing::infer_compiler::*;
 // mig: struct FunctionCompilerClosureOrLightLayer
 pub struct FunctionCompilerClosureOrLightLayer<'s, 'ctx, 't> {
     pub opts: TypingPassOptions,

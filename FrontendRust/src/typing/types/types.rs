@@ -15,6 +15,10 @@ import dev.vale.typing.types._
 
 import scala.collection.immutable.List
 */
+use crate::postparsing::names::IImpreciseNameS;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+
 // mig: enum OwnershipT
 pub enum OwnershipT {}
 /*

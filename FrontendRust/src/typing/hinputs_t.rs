@@ -14,6 +14,17 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 */
 // mig: case class InstantiationReachableBoundArgumentsT
+// TODO: stub — replace Vec with arena slice during body migration. Scala's
+// R <: IFunctionNameT generic is gone (enum in Rust). The prototype slot below is
+// `()` because PrototypeT upstream declares T: IFunctionNameT as a trait bound on
+// an enum (broken); fix there first, then thread PrototypeT back in.
+pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
+    pub citizen_rune_to_reachable_prototype: Vec<(
+        crate::postparsing::names::IRuneS<'s>,
+        (),
+    )>,
+    _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
   citizenRuneToReachablePrototype: Map[IRuneS, PrototypeT[R]]
@@ -22,6 +33,14 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 object InstantiationBoundArgumentsT {
 */
 // mig: def make
+// TODO: stub — re-add PrototypeT arg once PrototypeT upstream is repaired.
+pub fn make<'s, 't>(
+    _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, ())>,
+    _rune_to_citizen_rune_to_reachable_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
+    _rune_to_bound_impl: Vec<(crate::postparsing::names::IRuneS<'s>, crate::typing::names::names::IdT<'s, 't>)>,
+) -> InstantiationBoundArgumentsT<'s, 't> {
+    panic!("Unimplemented: InstantiationBoundArgumentsT::make");
+}
 /*
   def make[BF <: IFunctionNameT, BI <: IImplNameT](
       runeToBoundPrototype: Map[IRuneS, PrototypeT[BF]],
@@ -36,6 +55,23 @@ object InstantiationBoundArgumentsT {
 }
 */
 // mig: case class InstantiationBoundArgumentsT
+// TODO: stub — Vec pairs stand in for Scala's HashMap; revisit (arena slice, sorted?) during body migration.
+// Also: Scala's [BF <: IFunctionNameT, BI <: IImplNameT] generics collapsed to the enums directly.
+// TODO: replace () with PrototypeT<'s,'t> once upstream T:IFunctionNameT bound is fixed.
+pub struct InstantiationBoundArgumentsT<'s, 't> {
+    pub rune_to_bound_prototype: Vec<(
+        crate::postparsing::names::IRuneS<'s>,
+        (),
+    )>,
+    pub rune_to_citizen_rune_to_reachable_prototype: Vec<(
+        crate::postparsing::names::IRuneS<'s>,
+        InstantiationReachableBoundArgumentsT<'s, 't>,
+    )>,
+    pub rune_to_bound_impl: Vec<(
+        crate::postparsing::names::IRuneS<'s>,
+        crate::typing::names::names::IdT<'s, 't>,
+    )>,
+}
 /*
 case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
   // This is the callee's rune to the prototype that satisfies it.
@@ -57,6 +93,39 @@ case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
 }
 */
 // mig: case class HinputsT
+// TODO: stub — Vec/HashMap fields mirror the Scala case class. Per quest.md §1.5
+// HinputsT is 't-arena-allocated, which per AASSNCMCX means these should later become
+// arena slices, not std Vec/HashMap. Keeping Vec/HashMap for now to match Scala shape;
+// revisit during body migration.
+pub struct HinputsT<'s, 't> {
+    pub interfaces: Vec<crate::typing::ast::citizens::InterfaceDefinitionT<'s, 't>>,
+    pub structs: Vec<crate::typing::ast::citizens::StructDefinitionT<'s, 't>>,
+    pub functions: Vec<crate::typing::ast::ast::FunctionDefinitionT<'s, 't>>,
+
+    pub interface_to_edge_blueprints: std::collections::HashMap<
+        crate::typing::names::names::IdT<'s, 't>,
+        crate::typing::ast::ast::InterfaceEdgeBlueprintT<'s, 't>,
+    >,
+    pub interface_to_sub_citizen_to_edge: std::collections::HashMap<
+        crate::typing::names::names::IdT<'s, 't>,
+        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+    >,
+
+    pub instantiation_name_to_instantiation_bounds: std::collections::HashMap<
+        crate::typing::names::names::IdT<'s, 't>,
+        InstantiationBoundArgumentsT<'s, 't>,
+    >,
+
+    pub kind_exports: Vec<crate::typing::ast::ast::KindExportT<'s, 't>>,
+    pub function_exports: Vec<crate::typing::ast::ast::FunctionExportT<'s, 't>>,
+    pub kind_externs: Vec<crate::typing::ast::ast::KindExternT<'s, 't>>,
+    pub function_externs: Vec<crate::typing::ast::ast::FunctionExternT<'s, 't>>,
+
+    pub sub_citizen_to_interface_to_edge: std::collections::HashMap<
+        crate::typing::names::names::IdT<'s, 't>,
+        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+    >,
+}
 /*
 case class HinputsT(
   interfaces: Vector[InterfaceDefinitionT],

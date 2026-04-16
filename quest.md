@@ -4,6 +4,25 @@ This document describes the architectural decisions for migrating `src/typing/` 
 
 The approach is **pragmatic arena retention**: scout data lives past the typing pass, so typing output can reference it directly. Output types carry `<'s, 't>` — they can hold `&'s` refs into the scout arena. Heavy templatas hold `&'s FunctionA` / `&'s StructA` directly. No re-interning, no side tables for origin data. Envs allocate into the scout arena.
 
+## Status (2026-04-15)
+
+Phase 1 — **lifetime-parameter correction across `src/typing/`** — complete. Every `pub struct`, `pub enum`, and `pub trait` in the typing pass now carries the correct generics per §1.5:
+
+- `<'s, 't>` on all output AST (HinputsT excepted — still only a `// mig:` marker with no Rust stub), names (IdT + ~95 name types), kinds (KindT + variants), envs (IEnvironmentT + 9 variants, function envs, variables), heavy templatas, citizen defs, expressions (~60), compiler outputs, macros (~20), and error/data types.
+- `<'s, 'ctx, 't>` on `Compiler`, `TypingPassCompilation`, and all `*Compiler` / `*Macro` structs.
+- `<'s>` only on `LocationInFunctionEnvironmentT` (scout-arena per §3.1).
+- No lifetimes on Ownership/Mutability/Variability/Location/Region enums + their singletons, and on the small Copy templata value variants (Mutability/Variability/Ownership/Location/Boolean/Integer/StringTemplataT).
+- Empty placeholder types (no real fields yet) use `PhantomData<(&'s (), ...)>` with a `// TODO: placeholder PhantomData — replace with real fields during body migration` comment above each site.
+- `<'p>` remains only at the parser boundary in `compilation.rs` and in `tests/typing_pass_tests.rs`.
+
+Known remaining issues (deferred, not about lifetimes):
+- Many files have unresolved imports / missing `mod.rs` re-exports.
+- Many function bodies still `panic!()`.
+- Free `fn equals`/`fn hash_code` stubs dangle outside `impl` blocks — leftover from slice pipeline, not migrated yet.
+- `HinputsT` (in `hinputs_t.rs`) was intentionally left unstubbed; only `// mig:` marker + Scala comment remain.
+
+Next phases: fix module wiring, then begin body migration (replace `PhantomData` stubs with real Scala-parity fields, one type family at a time).
+
 ### The Trade
 
 - **Cost:** scout arena memory (FunctionA/StructA/etc. plus envs) retained through instantiation. Rough estimate: hundreds of MB to a few GB for large programs. Fine for batch compilation; reconsider for long-running LSP-style use.
