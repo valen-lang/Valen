@@ -54,6 +54,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct TookWeakRefOfNonWeakableError
 pub struct TookWeakRefOfNonWeakableError<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
@@ -66,8 +67,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
 
 */
 // mig: trait IExpressionCompilerDelegate
-pub trait IExpressionCompilerDelegate<'s, 't> {}
-
 /*
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -104,12 +103,9 @@ trait IExpressionCompilerDelegate {
 
 */
 // mig: struct ExpressionCompiler
-pub struct ExpressionCompiler<'s, 'ctx, 't> {
-    pub delegate: Box<dyn IExpressionCompilerDelegate<'s, 't>>,
-}
+// vestigial: kept until Step 8 cleanup because as_subtype_macro and lock_weak_macro still hold `expression_compiler: ExpressionCompiler<'s, 'ctx, 't>` fields
+pub struct ExpressionCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ExpressionCompiler
-impl<'s, 'ctx, 't> ExpressionCompiler<'s, 'ctx, 't> {}
-
 /*
 class ExpressionCompiler(
     opts: TypingPassOptions,
@@ -163,9 +159,10 @@ class ExpressionCompiler(
 
 */
 // mig: fn evaluate_and_coerce_to_reference_expressions
-fn evaluate_and_coerce_to_reference_expressions() {
-    panic!("Unimplemented: evaluate_and_coerce_to_reference_expressions");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_and_coerce_to_reference_expressions(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expressions"); }
 
 /*
   def evaluateAndCoerceToReferenceExpressions(
@@ -186,10 +183,13 @@ fn evaluate_and_coerce_to_reference_expressions() {
   }
 
 */
-// mig: fn evaluate_lookup_for_load
-fn evaluate_lookup_for_load() {
-    panic!("Unimplemented: evaluate_lookup_for_load");
 }
+
+// mig: fn evaluate_lookup_for_load
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_lookup_for_load(&self) { panic!("Unimplemented: evaluate_lookup_for_load"); }
 
 /*
   private def evaluateLookupForLoad(
@@ -217,10 +217,13 @@ fn evaluate_lookup_for_load() {
   }
 
 */
-// mig: fn evaluate_addressible_lookup_for_mutate
-fn evaluate_addressible_lookup_for_mutate() {
-    panic!("Unimplemented: evaluate_addressible_lookup_for_mutate");
 }
+
+// mig: fn evaluate_addressible_lookup_for_mutate
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_addressible_lookup_for_mutate(&self) { panic!("Unimplemented: evaluate_addressible_lookup_for_mutate"); }
 
 /*
   private def evaluateAddressibleLookupForMutate(
@@ -307,10 +310,13 @@ fn evaluate_addressible_lookup_for_mutate() {
   }
 
 */
-// mig: fn evaluate_addressible_lookup
-fn evaluate_addressible_lookup() {
-    panic!("Unimplemented: evaluate_addressible_lookup");
 }
+
+// mig: fn evaluate_addressible_lookup
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_addressible_lookup(&self) { panic!("Unimplemented: evaluate_addressible_lookup"); }
 
 /*
   private def evaluateAddressibleLookup(
@@ -402,10 +408,13 @@ fn evaluate_addressible_lookup() {
   }
 
 */
-// mig: fn make_closure_struct_construct_expression
-fn make_closure_struct_construct_expression() {
-    panic!("Unimplemented: make_closure_struct_construct_expression");
 }
+
+// mig: fn make_closure_struct_construct_expression
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_closure_struct_construct_expression(&self) { panic!("Unimplemented: make_closure_struct_construct_expression"); }
 
 /*
   private def makeClosureStructConstructExpression(
@@ -473,10 +482,13 @@ fn make_closure_struct_construct_expression() {
   }
 
 */
-// mig: fn evaluate_and_coerce_to_reference_expression
-fn evaluate_and_coerce_to_reference_expression() {
-    panic!("Unimplemented: evaluate_and_coerce_to_reference_expression");
 }
+
+// mig: fn evaluate_and_coerce_to_reference_expression
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_and_coerce_to_reference_expression(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expression"); }
 
 /*
   def evaluateAndCoerceToReferenceExpression(
@@ -503,10 +515,13 @@ fn evaluate_and_coerce_to_reference_expression() {
   }
 
 */
-// mig: fn coerce_to_reference_expression
-fn coerce_to_reference_expression() {
-    panic!("Unimplemented: coerce_to_reference_expression");
 }
+
+// mig: fn coerce_to_reference_expression
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn coerce_to_reference_expression(&self) { panic!("Unimplemented: coerce_to_reference_expression"); }
 
 /*
   def coerceToReferenceExpression(
@@ -525,10 +540,13 @@ fn coerce_to_reference_expression() {
   }
 
 */
-// mig: fn evaluate_expected_address_expression
-fn evaluate_expected_address_expression() {
-    panic!("Unimplemented: evaluate_expected_address_expression");
 }
+
+// mig: fn evaluate_expected_address_expression
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_expected_address_expression(&self) { panic!("Unimplemented: evaluate_expected_address_expression"); }
 
 /*
   private def evaluateExpectedAddressExpression(
@@ -552,10 +570,13 @@ fn evaluate_expected_address_expression() {
   }
 
 */
-// mig: fn evaluate
-fn evaluate() {
-    panic!("Unimplemented: evaluate");
 }
+
+// mig: fn evaluate
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate(&self) { panic!("Unimplemented: evaluate"); }
 
 /*
   // returns:
@@ -1631,10 +1652,13 @@ fn evaluate() {
   }
 
 */
-// mig: fn check_array
-fn check_array() {
-    panic!("Unimplemented: check_array");
 }
+
+// mig: fn check_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn check_array(&self) { panic!("Unimplemented: check_array"); }
 
 /*
   private def checkArray(
@@ -1668,10 +1692,13 @@ fn check_array() {
   }
 
 */
-// mig: fn get_option
-fn get_option() {
-    panic!("Unimplemented: get_option");
 }
+
+// mig: fn get_option
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_option(&self) { panic!("Unimplemented: get_option"); }
 
 /*
   def getOption(
@@ -1743,10 +1770,13 @@ fn get_option() {
   }
 
 */
-// mig: fn get_result
-fn get_result() {
-    panic!("Unimplemented: get_result");
 }
+
+// mig: fn get_result
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_result(&self) { panic!("Unimplemented: get_result"); }
 
 /*
   def getResult(
@@ -1837,10 +1867,13 @@ fn get_result() {
   }
 
 */
-// mig: fn weak_alias
-fn weak_alias() {
-    panic!("Unimplemented: weak_alias");
 }
+
+// mig: fn weak_alias
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn weak_alias(&self) { panic!("Unimplemented: weak_alias"); }
 
 /*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
@@ -1863,10 +1896,13 @@ fn weak_alias() {
   }
 
 */
-// mig: fn dot_borrow
-fn dot_borrow() {
-    panic!("Unimplemented: dot_borrow");
 }
+
+// mig: fn dot_borrow
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn dot_borrow(&self) { panic!("Unimplemented: dot_borrow"); }
 
 /*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.
@@ -1906,10 +1942,13 @@ fn dot_borrow() {
   }
 
 */
-// mig: fn evaluate_closure
-fn evaluate_closure() {
-    panic!("Unimplemented: evaluate_closure");
 }
+
+// mig: fn evaluate_closure
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_closure(&self) { panic!("Unimplemented: evaluate_closure"); }
 
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
@@ -1956,10 +1995,13 @@ fn evaluate_closure() {
   }
 
 */
-// mig: fn new_global_function_group_expression
-fn new_global_function_group_expression() {
-    panic!("Unimplemented: new_global_function_group_expression");
 }
+
+// mig: fn new_global_function_group_expression
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn new_global_function_group_expression(&self) { panic!("Unimplemented: new_global_function_group_expression"); }
 
 /*
   private def newGlobalFunctionGroupExpression(
@@ -1978,10 +2020,13 @@ fn new_global_function_group_expression() {
   }
 
 */
-// mig: fn evaluate_block_statements
-fn evaluate_block_statements() {
-    panic!("Unimplemented: evaluate_block_statements");
 }
+
+// mig: fn evaluate_block_statements
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_block_statements(&self) { panic!("Unimplemented: evaluate_block_statements"); }
 
 /*
   def evaluateBlockStatements(
@@ -1999,10 +2044,13 @@ fn evaluate_block_statements() {
   }
 
 */
-// mig: fn translate_pattern_list
-fn translate_pattern_list() {
-    panic!("Unimplemented: translate_pattern_list");
 }
+
+// mig: fn translate_pattern_list
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_pattern_list(&self) { panic!("Unimplemented: translate_pattern_list"); }
 
 /*
   def translatePatternList(
@@ -2021,10 +2069,13 @@ fn translate_pattern_list() {
   }
 
 */
-// mig: fn astronomize_lambda
-fn astronomize_lambda() {
-    panic!("Unimplemented: astronomize_lambda");
 }
+
+// mig: fn astronomize_lambda
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn astronomize_lambda(&self) { panic!("Unimplemented: astronomize_lambda"); }
 
 /*
   def astronomizeLambda(
@@ -2098,10 +2149,13 @@ fn astronomize_lambda() {
   }
 
 */
-// mig: fn drop_since
-fn drop_since() {
-    panic!("Unimplemented: drop_since");
 }
+
+// mig: fn drop_since
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn drop_since(&self) { panic!("Unimplemented: drop_since"); }
 
 /*
   def dropSince(
@@ -2170,10 +2224,13 @@ fn drop_since() {
   }
 
 */
-// mig: fn resultify_expressions
-fn resultify_expressions() {
-    panic!("Unimplemented: resultify_expressions");
 }
+
+// mig: fn resultify_expressions
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resultify_expressions(&self) { panic!("Unimplemented: resultify_expressions"); }
 
 /*
   // Makes the last expression stored in a variable.
@@ -2203,3 +2260,4 @@ fn resultify_expressions() {
 //  }
 }
 */
+}

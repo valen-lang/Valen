@@ -4,7 +4,7 @@ This document describes the architectural decisions for migrating `src/typing/` 
 
 The approach is **pragmatic arena retention**: scout data lives past the typing pass, so typing output can reference it directly. Output types carry `<'s, 't>` — they can hold `&'s` refs into the scout arena. Heavy templatas hold `&'s FunctionA` / `&'s StructA` directly. No re-interning, no side tables for origin data. Envs allocate into the scout arena.
 
-## Status (2026-04-15)
+## Status (2026-04-16)
 
 Phase 1 — **lifetime-parameter correction across `src/typing/`** — complete. Every `pub struct`, `pub enum`, and `pub trait` in the typing pass now carries the correct generics per §1.5:
 
@@ -15,13 +15,24 @@ Phase 1 — **lifetime-parameter correction across `src/typing/`** — complete.
 - Empty placeholder types (no real fields yet) use `PhantomData<(&'s (), ...)>` with a `// TODO: placeholder PhantomData — replace with real fields during body migration` comment above each site.
 - `<'p>` remains only at the parser boundary in `compilation.rs` and in `tests/typing_pass_tests.rs`.
 
+Phase 2 — **god-struct refactor** — in progress. Collapsing ~20 sub-compilers into `Compiler<'s, 'ctx, 't>` per §2. Tracking at `FrontendRust/docs/migration/handoff-god-struct-refactor.md` (master plan) and `FrontendRust/docs/migration/handoff-god-struct-progress.md` (progress + continuation guide).
+
+Done so far (as of 2026-04-16, commit `8883ac08`):
+- **Step 0 prep**: `TypingInterner<'t>` created with six panic-bodied intern methods and six `*ValT` placeholder structs. `Compiler` filled in with its four fields (`scout_arena`, `typing_interner`, `keywords`, `opts`) and a `new` constructor.
+- **Leaf merges (4)**: `VirtualCompiler`, `LocalHelper`, `NameTranslator`, `ConvertHelper`.
+- **Mid-tier merges (4)**: `DestructorCompiler`, `SequenceCompiler`, `OverloadResolver`, `InferCompiler` (+ its `compiler_solver.rs` companion).
+- **Upper-tier in progress (3)**: `PatternCompiler`, `CallCompiler`, `BlockCompiler`.
+- Error count: 32 baseline → 30 (two "self outside impl" baseline errors fixed by wrapping).
+
+Upper-tier remaining: `ExpressionCompiler`, `TemplataCompiler`, `EdgeCompiler`, `ImplCompiler`, `StructCompiler` (+2 layers in one commit), `ArrayCompiler`, `BodyCompiler`, `FunctionCompiler` (+4 layers in one commit). Then macros (~20), then Step 8 cleanup (delete `Interner<'s>`, vestigial sub-compiler structs, dead imports).
+
 Known remaining issues (deferred, not about lifetimes):
 - Many files have unresolved imports / missing `mod.rs` re-exports.
 - Many function bodies still `panic!()`.
 - Free `fn equals`/`fn hash_code` stubs dangle outside `impl` blocks — leftover from slice pipeline, not migrated yet.
 - `HinputsT` (in `hinputs_t.rs`) was intentionally left unstubbed; only `// mig:` marker + Scala comment remain.
 
-Next phases: fix module wiring, then begin body migration (replace `PhantomData` stubs with real Scala-parity fields, one type family at a time).
+Next phases: finish Phase 2 god-struct refactor, then begin body migration (replace `PhantomData` stubs with real Scala-parity fields, one type family at a time).
 
 ### The Trade
 
