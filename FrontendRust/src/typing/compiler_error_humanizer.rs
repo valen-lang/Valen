@@ -313,7 +313,7 @@ pub fn humanize_resolving_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLoc
   }
 */
 // mig: fn humanize_failed_solve
-pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>) -> String {
+pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
   panic!("Unimplemented: humanize_failed_solve");
 }
 /*
@@ -329,7 +329,7 @@ pub fn humanize_failed_solve<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocati
   }
 */
 // mig: fn humanize_conclusion_resolve_error
-pub fn humanize_conclusion_resolve_error(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: IConclusionResolveError) -> String {
+pub fn humanize_conclusion_resolve_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: IConclusionResolveError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_conclusion_resolve_error");
 }
 /*
@@ -356,7 +356,7 @@ pub fn humanize_conclusion_resolve_error(verbose: bool, code_map: &dyn Fn(CodeLo
   }
 */
 // mig: fn humanize_find_function_failure
-pub fn humanize_find_function_failure(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS>, fff: FindFunctionFailure) -> String {
+pub fn humanize_find_function_failure<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS<'s>>, fff: FindFunctionFailure<'s, 't>) -> String {
   panic!("Unimplemented: humanize_find_function_failure");
 }
 /*
@@ -475,7 +475,7 @@ fn get_file(function_a: FunctionA) -> FileCoordinate {
   }
 */
 // mig: fn humanize_rejection_reason
-fn humanize_rejection_reason(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS>, reason: IFindFunctionFailureReason) -> String {
+fn humanize_rejection_reason<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, invocation_range: Vec<RangeS<'s>>, reason: IFindFunctionFailureReason<'s, 't>) -> String {
   panic!("Unimplemented: humanize_rejection_reason");
 }
 /*
@@ -535,7 +535,7 @@ fn humanize_rejection_reason(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> 
   }
 */
 // mig: fn humanize_rule_error
-pub fn humanize_rule_error(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, error: ITypingPassSolverError) -> String {
+pub fn humanize_rule_error<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, error: ITypingPassSolverError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_rule_error");
 }
 /*
@@ -624,7 +624,7 @@ pub fn humanize_rule_error(code_map: &dyn Fn(CodeLocationS) -> String, lines_bet
   }
 */
 // mig: fn humanize_candidate_and_failed_solve
-pub fn humanize_candidate_and_failed_solve<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR, IRuneS, ITemplataT<'s, 't>, ITypingPassSolverError>) -> String {
+pub fn humanize_candidate_and_failed_solve<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, result: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>) -> String {
   panic!("Unimplemented: humanize_candidate_and_failed_solve");
 }
 /*

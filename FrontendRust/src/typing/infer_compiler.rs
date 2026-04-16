@@ -60,7 +60,9 @@ case class CompleteDefineSolve(
 
 */
 // mig: enum IConclusionResolveError
-pub enum IConclusionResolveError {}
+pub enum IConclusionResolveError<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait IConclusionResolveError
 case class CouldntFindImplForConclusionResolve(range: List[RangeS], fail: IsntParent) extends IConclusionResolveError

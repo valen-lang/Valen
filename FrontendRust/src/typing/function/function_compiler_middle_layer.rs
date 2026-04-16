@@ -112,11 +112,11 @@ class FunctionCompilerMiddleLayer(
 // mig: fn evaluate_maybe_virtuality
 fn evaluate_maybe_virtuality<'s, 't>(
     env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    parent_ranges: &[RangeS],
-    param_kind: &KindT,
+    coutputs: &CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    param_kind: &KindT<'s, 't>,
     maybe_virtuality: Option<&AbstractSP<'s>>,
-) -> Option<AbstractT> {
+) -> Option<AbstractT<'s, 't>> {
     panic!("Unimplemented: evaluate_maybe_virtuality");
 }
 
@@ -172,10 +172,10 @@ fn evaluate_maybe_virtuality<'s, 't>(
 fn get_or_evaluate_templated_function_for_banner<'s, 't>(
     outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
     rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    function1: &FunctionA,
+    coutputs: &CompilerOutputs<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    function1: &FunctionA<'s>,
     instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
 ) -> PrototypeTemplataT<'s, 't> {
     panic!("Unimplemented: get_or_evaluate_templated_function_for_banner");
@@ -234,12 +234,12 @@ fn get_or_evaluate_templated_function_for_banner<'s, 't>(
 fn get_or_evaluate_function_for_header<'s, 't>(
     outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
     rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    function1: &FunctionA,
-    instantiation_bound_params: &InstantiationBoundArgumentsT<FunctionBoundNameT, ImplBoundNameT>,
-) -> FunctionHeaderT {
+    coutputs: &CompilerOutputs<'s, 't>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    function1: &FunctionA<'s>,
+    instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+) -> FunctionHeaderT<'s, 't> {
     panic!("Unimplemented: get_or_evaluate_function_for_header");
 }
 
@@ -367,8 +367,8 @@ fn get_or_evaluate_function_for_header<'s, 't>(
 // mig: fn evaluate_function_param_types
 fn evaluate_function_param_types<'s, 't>(
     env: &IInDenizenEnvironmentT<'s, 't>,
-    params1: &[ParameterS],
-) -> Vec<CoordT> {
+    params1: &[ParameterS<'s>],
+) -> Vec<CoordT<'s, 't>> {
     panic!("Unimplemented: evaluate_function_param_types");
 }
 
@@ -392,10 +392,10 @@ fn evaluate_function_param_types<'s, 't>(
 // mig: fn assemble_function_params
 fn assemble_function_params<'s, 't>(
     env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    parent_ranges: &[RangeS],
-    params1: &[ParameterS],
-) -> Vec<ParameterT> {
+    coutputs: &CompilerOutputs<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    params1: &[ParameterS<'s>],
+) -> Vec<ParameterT<'s, 't>> {
     panic!("Unimplemented: assemble_function_params");
 }
 
@@ -430,8 +430,8 @@ fn assemble_function_params<'s, 't>(
 // mig: fn get_maybe_return_type
 fn get_maybe_return_type<'s, 't>(
     near_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    maybe_ret_coord_rune: Option<&IRuneS>,
-) -> Option<CoordT> {
+    maybe_ret_coord_rune: Option<&IRuneS<'s>>,
+) -> Option<CoordT<'s, 't>> {
     panic!("Unimplemented: get_maybe_return_type");
 }
 
@@ -453,10 +453,10 @@ fn get_maybe_return_type<'s, 't>(
 // mig: fn get_generic_function_banner_from_call
 fn get_generic_function_banner_from_call<'s, 't>(
     rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    call_range: &[RangeS],
-    function_templata: &FunctionTemplataT,
-) -> FunctionBannerT {
+    coutputs: &CompilerOutputs<'s, 't>,
+    call_range: &[RangeS<'s>],
+    function_templata: &FunctionTemplataT<'s, 't>,
+) -> FunctionBannerT<'s, 't> {
     panic!("Unimplemented: get_generic_function_banner_from_call");
 }
 
@@ -490,10 +490,10 @@ fn get_generic_function_banner_from_call<'s, 't>(
 // mig: fn get_generic_function_prototype_from_call
 fn get_generic_function_prototype_from_call<'s, 't>(
     rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    coutputs: &CompilerOutputs,
-    call_range: &[RangeS],
-    function1: &FunctionA,
-) -> PrototypeT<IFunctionNameT> {
+    coutputs: &CompilerOutputs<'s, 't>,
+    call_range: &[RangeS<'s>],
+    function1: &FunctionA<'s>,
+) -> PrototypeT<'s, 't, IFunctionNameT<'s, 't>> {
     panic!("Unimplemented: get_generic_function_prototype_from_call");
 }
 
@@ -616,9 +616,9 @@ fn assemble_name<'s, 't>(
 // mig: fn make_named_env
 fn make_named_env<'s, 't>(
     rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-    param_types: &[CoordT],
-    maybe_return_type: Option<CoordT>,
-) -> FunctionEnvironmentT {
+    param_types: &[CoordT<'s, 't>],
+    maybe_return_type: Option<CoordT<'s, 't>>,
+) -> FunctionEnvironmentT<'s, 't> {
     panic!("Unimplemented: make_named_env");
 }
 

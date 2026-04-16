@@ -59,7 +59,9 @@ use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 
 // mig: enum IFindFunctionFailureReason
-pub enum IFindFunctionFailureReason {}
+pub enum IFindFunctionFailureReason<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
   sealed trait IFindFunctionFailureReason
   case class WrongNumberOfArguments(supplied: Int, expected: Int) extends IFindFunctionFailureReason {
@@ -98,7 +100,7 @@ override def hashCode(): Int = vcurious() }
 
 */
 // mig: struct FindFunctionFailure
-pub struct FindFunctionFailure;
+pub struct FindFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
   case class FindFunctionFailure(
     name: IImpreciseNameS,
