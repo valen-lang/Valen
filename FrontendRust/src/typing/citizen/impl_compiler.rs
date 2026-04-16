@@ -63,7 +63,7 @@ sealed trait IsParentResult
 pub struct IsParent<'s, 't> {
     pub templata: ITemplataT<'s, 't>,
     pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-    pub impl_id: IdT,
+    pub impl_id: IdT<'s, 't>,
 }
 // mig: impl IsParent
 impl<'s, 't> IsParent<'s, 't> {}

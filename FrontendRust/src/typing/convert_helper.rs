@@ -86,16 +86,18 @@ class ConvertHelper(
     delegate: IConvertHelperDelegate) {
 */
 // mig: fn convert_exprs
-fn convert_exprs<'s, 't>(
+impl<'s, 't> ConvertHelper<'s, 't> {
+fn convert_exprs(
     &self,
     env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs,
-    range: &[RangeS],
-    call_location: LocationInDenizen,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     source_exprs: Vec<ReferenceExpressionTE<'s, 't>>,
     target_pointer_types: Vec<CoordT<'s, 't>>,
 ) -> Vec<ReferenceExpressionTE<'s, 't>> {
     panic!("Unimplemented: convert_exprs");
+}
 }
 /*
   def convertExprs(
@@ -123,16 +125,18 @@ fn convert_exprs<'s, 't>(
 
 */
 // mig: fn convert
+impl<'s, 't> ConvertHelper<'s, 't> {
 fn convert(
     &self,
-    env: &IInDenizenEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    range: &[RangeS],
-    call_location: LocationInDenizen,
-    source_expr: ReferenceExpressionTE,
-    target_pointer_type: CoordT,
-) -> ReferenceExpressionTE {
+    env: &IInDenizenEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    source_expr: ReferenceExpressionTE<'s, 't>,
+    target_pointer_type: CoordT<'s, 't>,
+) -> ReferenceExpressionTE<'s, 't> {
     panic!("Unimplemented: convert");
+}
 }
 /*
   def convert(

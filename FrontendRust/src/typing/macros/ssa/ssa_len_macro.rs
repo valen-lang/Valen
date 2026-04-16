@@ -52,17 +52,17 @@ class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
 
 */
 // mig: fn generate_function_body
-fn generate_function_body(
-    env: &FunctionEnvironmentT,
-    coutputs: &mut CompilerOutputs,
-    generator_id: StrI,
-    life: LocationInFunctionEnvironmentT,
-    call_range: &[RangeS],
-    call_location: LocationInDenizen,
-    origin_function: Option<&FunctionA>,
-    param_coords: &[ParameterT],
-    maybe_ret_coord: Option<CoordT>,
-) -> (FunctionHeaderT, ReferenceExpressionTE) {
+fn generate_function_body<'s, 't>(
+    env: &FunctionEnvironmentT<'s, 't>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    generator_id: StrI<'s>,
+    life: LocationInFunctionEnvironmentT<'s>,
+    call_range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    origin_function: Option<&FunctionA<'s>>,
+    param_coords: &[ParameterT<'s, 't>],
+    maybe_ret_coord: Option<CoordT<'s, 't>>,
+) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
     panic!("Unimplemented: generate_function_body");
 }
 

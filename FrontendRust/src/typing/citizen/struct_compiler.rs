@@ -70,15 +70,19 @@ case class WeakableImplingMismatch(structWeakable: Boolean, interfaceWeakable: B
   val hash = runtime.ScalaRunTime._hashCode(this);
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
+impl WeakableImplingMismatch {
+    fn hash_code(&self) -> i32 {
+        panic!("Unimplemented: hash_code");
+    }
 }
 /*
 override def hashCode(): Int = hash;
 */
 // mig: fn equals
-fn equals(&self, obj: &dyn std::any::Any) -> bool {
-    panic!("Unimplemented: equals");
+impl WeakableImplingMismatch {
+    fn equals(&self, obj: &dyn std::any::Any) -> bool {
+        panic!("Unimplemented: equals");
+    }
 }
 /*
 override def equals(obj: Any): Boolean = vcurious(); }
@@ -571,16 +575,16 @@ pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> Mutabili
   }
 */
 // mig: fn get_mutability
-pub fn get_mutability(
+pub fn get_mutability<'s, 't>(
     sanity_check: bool,
-    interner: &Interner,
-    keywords: &Keywords,
-    coutputs: &CompilerOutputs<'_, '_>,
-    original_calling_denizen_id: IdT,
-    region: RegionT<'_, '_>,
-    struct_tt: StructTT<'_, '_>,
-    bound_arguments_source: &dyn IBoundArgumentsSource<'_, '_>,
-) -> ITemplataT<'_, '_> {
+    interner: &Interner<'s>,
+    keywords: &Keywords<'s>,
+    coutputs: &CompilerOutputs<'s, 't>,
+    original_calling_denizen_id: IdT<'s, 't>,
+    region: RegionT,
+    struct_tt: StructTT<'s, 't>,
+    bound_arguments_source: &dyn IBoundArgumentsSource<'s, 't>,
+) -> ITemplataT<'s, 't> {
     panic!("Unimplemented: get_mutability");
 }
 /*

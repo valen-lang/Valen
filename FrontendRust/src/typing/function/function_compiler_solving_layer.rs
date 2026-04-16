@@ -693,11 +693,11 @@ fn evaluate_generic_virtual_dispatcher_function_for_prototype<'s, 't>(
 */
 // mig: fn evaluate_generic_function_from_non_call
 fn evaluate_generic_function_from_non_call<'s, 't>(
-    coutputs: &mut CompilerOutputs,
-    near_env: &BuildingFunctionEnvironmentWithClosuredsT,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-) -> FunctionHeaderT {
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+) -> FunctionHeaderT<'s, 't> {
     panic!("Unimplemented: evaluate_generic_function_from_non_call");
 }
 
