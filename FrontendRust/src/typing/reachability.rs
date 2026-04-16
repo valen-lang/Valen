@@ -61,7 +61,7 @@ pub fn size(&self) -> usize {
 */
 }
 // mig: fn find_reachables
-pub fn find_reachables<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>) -> Reachables<'s, 't> {
+pub fn find_reachables<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>) -> Reachables<'s, 't> {
     panic!("Unimplemented: find_reachables");
 }
 /*
@@ -95,7 +95,7 @@ pub fn find_reachables<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[Int
 //  }
 */
 // mig: fn visit_function
-fn visit_function<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>, reachables: &mut Reachables<'s, 't>, callee_signature: SignatureT<'s, 't>) {
+fn visit_function<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>, reachables: &mut Reachables<'s, 't>, callee_signature: SignatureT<'s, 't>) {
     panic!("Unimplemented: visit_function");
 }
 /*
@@ -132,7 +132,7 @@ fn visit_function<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[Interfac
 //
 */
 // mig: fn visit_struct
-fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, struct_tt: StructTT) {
+fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, struct_tt: StructTT) {
     panic!("Unimplemented: visit_struct");
 }
 /*
@@ -178,7 +178,7 @@ fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBluep
 //
 */
 // mig: fn visit_interface
-fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT) {
+fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT) {
     panic!("Unimplemented: visit_interface");
 }
 /*
@@ -224,7 +224,7 @@ fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBl
 //
 */
 // mig: fn visit_impl
-fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT, struct_tt: StructTT, methods: &[PrototypeT]) {
+fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT, struct_tt: StructTT, methods: &[PrototypeT]) {
     panic!("Unimplemented: visit_impl");
 }
 /*
@@ -251,7 +251,7 @@ fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBluepri
 //
 */
 // mig: fn visit_static_sized_array
-fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, ssa: StaticSizedArrayTT) {
+fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, ssa: StaticSizedArrayTT) {
     panic!("Unimplemented: visit_static_sized_array");
 }
 /*
@@ -286,7 +286,7 @@ fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[Interf
 //
 */
 // mig: fn visit_runtime_sized_array
-fn visit_runtime_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprint], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, rsa: RuntimeSizedArrayTT) {
+fn visit_runtime_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, rsa: RuntimeSizedArrayTT) {
     panic!("Unimplemented: visit_runtime_sized_array");
 }
 /*

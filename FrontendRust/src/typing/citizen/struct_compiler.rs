@@ -45,6 +45,18 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::interner::Interner;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::typing::templata_compiler::*;
+use crate::typing::names::name_translator::*;
+use crate::typing::infer_compiler::*;
+use crate::typing::infer::compiler_solver::*;
+use crate::typing::overload_resolver::*;
+use crate::typing::citizen::struct_compiler_generic_args_layer::*;
+use crate::typing::function::function_compiler::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::rules::rules::*;
 
 // mig: struct WeakableImplingMismatch
 pub struct WeakableImplingMismatch {
@@ -151,16 +163,17 @@ fn scout_expected_function_for_prototype(
 
 // mig: enum IResolveOutcome
 pub enum IResolveOutcome<'s, 't, T: KindT<'s, 't>> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t (), T)>),
+}
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
 */
 // mig: fn expect
-fn expect(self) -> ResolveSuccess<'s, 't, T>;
+fn resolve_outcome_expect<'s, 't, T: KindT<'s, 't>>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> { panic!("Unimplemented: expect"); }
 /*
   def expect(): ResolveSuccess[T]
 }
 */
-}
 
 // mig: struct ResolveSuccess
 pub struct ResolveSuccess<'s, 't, T: KindT<'s, 't>> {
