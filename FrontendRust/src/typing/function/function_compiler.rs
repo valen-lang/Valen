@@ -320,7 +320,7 @@ fn evaluate_templated_function_from_call_for_prototype() {
 
 */
 // mig: fn evaluate_templated_function_from_call_for_prototype
-fn evaluate_templated_function_from_call_for_prototype() {
+fn evaluate_templated_function_from_call_for_prototype_ext() {
   panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
 }
 /*

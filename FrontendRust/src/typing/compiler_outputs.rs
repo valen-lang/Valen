@@ -675,14 +675,14 @@ fn lookup_interface(interface_tt: InterfaceTT) -> InterfaceDefinitionT { panic!(
   }
 */
 // mig: fn lookup_interface
-fn lookup_interface(template_name: IdT) -> InterfaceDefinitionT { panic!("Unimplemented: lookup_interface"); }
+fn lookup_interface_by_template_name(template_name: IdT) -> InterfaceDefinitionT { panic!("Unimplemented: lookup_interface"); }
 /*
   def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
     vassertSome(interfaceTemplateNameToDefinition.get(templateName))
   }
 */
 // mig: fn lookup_citizen
-fn lookup_citizen(template_name: IdT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
+fn lookup_citizen_by_template_name(template_name: IdT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
 /*
   def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
     val IdT(packageCoord, initSteps, last) = templateName
@@ -694,7 +694,7 @@ fn lookup_citizen(template_name: IdT) -> CitizenDefinitionT { panic!("Unimplemen
   }
 */
 // mig: fn lookup_citizen
-fn lookup_citizen(citizen_tt: ICitizenTT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
+fn lookup_citizen_by_tt(citizen_tt: ICitizenTT) -> CitizenDefinitionT { panic!("Unimplemented: lookup_citizen"); }
 /*
   def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
     citizenTT match {

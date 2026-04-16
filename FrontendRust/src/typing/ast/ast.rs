@@ -106,16 +106,12 @@ case class KindExportT(
 )  {
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &KindExportT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> KindExportT<'s, 't> { fn equals(&self, obj: &KindExportT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> KindExportT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = vcurious()
 
@@ -139,16 +135,12 @@ case class FunctionExportT(
 )  {
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &FunctionExportT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> FunctionExportT<'s, 't> { fn equals(&self, obj: &FunctionExportT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionExportT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = vcurious()
   vpass()
@@ -170,16 +162,12 @@ case class KindExternT(
 )  {
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &KindExternT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> KindExternT<'s, 't> { fn equals(&self, obj: &KindExternT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> KindExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = vcurious()
 
@@ -203,16 +191,12 @@ case class FunctionExternT(
 )  {
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &FunctionExternT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> FunctionExternT<'s, 't> { fn equals(&self, obj: &FunctionExternT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = vcurious()
 
@@ -233,16 +217,12 @@ case class InterfaceEdgeBlueprintT(
     val hash = runtime.ScalaRunTime._hashCode(this);
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &InterfaceEdgeBlueprintT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> { fn equals(&self, obj: &InterfaceEdgeBlueprintT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious(); }
 */
@@ -324,17 +304,13 @@ case class EdgeT(
   vpass()
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> EdgeT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &EdgeT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> EdgeT<'s, 't> { fn equals(&self, obj: &EdgeT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -364,16 +340,12 @@ case class FunctionDefinitionT(
   body: ReferenceExpressionTE)  {
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &FunctionDefinitionT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> FunctionDefinitionT<'s, 't> { fn equals(&self, obj: &FunctionDefinitionT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionDefinitionT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   override def hashCode(): Int = vcurious()
 
@@ -381,9 +353,7 @@ fn hash_code<'s, 't>(&self) -> i32 {
   vassert(body.result.kind == NeverT(false))
 */
 // mig: fn is_pure
-fn is_pure<'s, 't>(&self) -> bool {
-    panic!("Unimplemented: is_pure");
-}
+impl<'s, 't> FunctionDefinitionT<'s, 't> { fn is_pure(&self) -> bool { panic!("Unimplemented: is_pure"); } }
 /*
   def isPure: Boolean = header.isPure
 }
@@ -391,9 +361,7 @@ fn is_pure<'s, 't>(&self) -> bool {
 object getFunctionLastName {
 */
 // mig: fn unapply
-fn unapply<'s, 't>(f: &FunctionDefinitionT<'s, 't>) -> Option<&IFunctionNameT> {
-    panic!("Unimplemented: unapply");
-}
+fn get_function_last_name_unapply<'s, 't>(f: &FunctionDefinitionT<'s, 't>) -> Option<&IFunctionNameT<'s, 't>> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(f: FunctionDefinitionT): Option[IFunctionNameT] = Some(f.header.id.localName)
 }
@@ -409,26 +377,20 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {}
 case class LocationInFunctionEnvironmentT(path: Vector[Int]) {
 */
 // mig: fn hash_code
-fn hash_code<'s>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s> LocationInFunctionEnvironmentT<'s> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 // mig: fn add
-fn add<'s>(&self, sub_location: i32) -> LocationInFunctionEnvironmentT<'s> {
-    panic!("Unimplemented: add");
-}
+impl<'s> LocationInFunctionEnvironmentT<'s> { fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentT<'s> { panic!("Unimplemented: add"); } }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {
     LocationInFunctionEnvironmentT(path :+ subLocation)
   }
 */
 // mig: fn to_string
-fn to_string<'s>(&self) -> String {
-    panic!("Unimplemented: to_string");
-}
+impl<'s> LocationInFunctionEnvironmentT<'s> { fn to_string(&self) -> String { panic!("Unimplemented: to_string"); } }
 /*
   override def toString: String = path.mkString(".")
 }
@@ -457,9 +419,7 @@ case class ParameterT(
   tyype: CoordT)  {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> ParameterT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -467,16 +427,12 @@ fn hash_code<'s, 't>(&self) -> i32 {
   // Use same instead, see EHCFBD for why we dont like equals.
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &ParameterT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> ParameterT<'s, 't> { fn equals(&self, obj: &ParameterT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn same
-fn same<'s, 't>(&self, that: &ParameterT<'s, 't>) -> bool {
-    panic!("Unimplemented: same");
-}
+impl<'s, 't> ParameterT<'s, 't> { fn same(&self, that: &ParameterT<'s, 't>) -> bool { panic!("Unimplemented: same"); } }
 /*
   def same(that: ParameterT): Boolean = {
     name == that.name &&
@@ -500,9 +456,7 @@ impl<'s, 't> FunctionCalleeCandidate<'s, 't> {}
 case class FunctionCalleeCandidate(ft: FunctionTemplataT) extends ICalleeCandidate {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionCalleeCandidate<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -518,9 +472,7 @@ impl<'s, 't> HeaderCalleeCandidate<'s, 't> {}
 case class HeaderCalleeCandidate(header: FunctionHeaderT) extends ICalleeCandidate {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> HeaderCalleeCandidate<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -539,9 +491,7 @@ case class PrototypeTemplataCalleeCandidate(
   prototypeT: PrototypeT[IFunctionNameT]) extends ICalleeCandidate {
 */
 // mig: fn hash_code
-fn hash_code(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -613,17 +563,13 @@ impl<'s, 't> SignatureT<'s, 't> {}
 case class SignatureT(id: IdT[IFunctionNameT]) {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> SignatureT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-fn param_types<'s, 't>(&self) -> Vec<CoordT<'s, 't>> {
-    panic!("Unimplemented: param_types");
-}
+impl<'s, 't> SignatureT<'s, 't> { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 }
@@ -641,9 +587,7 @@ case class FunctionBannerT(
   name: IdT[IFunctionNameT])   {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionBannerT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -651,16 +595,12 @@ fn hash_code<'s, 't>(&self) -> i32 {
   // Use same instead, see EHCFBD for why we dont like equals.
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &FunctionBannerT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> FunctionBannerT<'s, 't> { fn equals(&self, obj: &FunctionBannerT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: fn same
-fn same<'s, 't>(&self, that: &FunctionBannerT<'s, 't>) -> bool {
-    panic!("Unimplemented: same");
-}
+impl<'s, 't> FunctionBannerT<'s, 't> { fn same(&self, that: &FunctionBannerT<'s, 't>) -> bool { panic!("Unimplemented: same"); } }
 /*
   def same(that: FunctionBannerT): Boolean = {
     originFunctionTemplata.map(_.function) == that.originFunctionTemplata.map(_.function) && name == that.name
@@ -673,9 +613,7 @@ fn same<'s, 't>(&self, that: &FunctionBannerT<'s, 't>) -> bool {
 //    Some(templateName, params)
 */
 // mig: fn to_string
-fn to_string<'s, 't>(&self) -> String {
-    panic!("Unimplemented: to_string");
-}
+impl<'s, 't> FunctionBannerT<'s, 't> { fn to_string(&self) -> String { panic!("Unimplemented: to_string"); } }
 /*
   override def toString: String = {
     // # is to signal that we override this
@@ -703,9 +641,7 @@ impl<'s, 't> ExternT<'s, 't> {}
 case class ExternT(packageCoord: PackageCoordinate) extends IFunctionAttributeT with ICitizenAttributeT { // For optimization later
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> ExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -737,9 +673,7 @@ case class FunctionHeaderT(
   maybeOriginFunctionTemplata: Option[FunctionTemplataT]) {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
@@ -802,9 +736,7 @@ fn hash_code<'s, 't>(&self) -> i32 {
 
 */
 // mig: fn equals
-fn equals<'s, 't>(&self, obj: &FunctionHeaderT<'s, 't>) -> bool {
-    panic!("Unimplemented: equals");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn equals(&self, obj: &FunctionHeaderT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -821,17 +753,13 @@ fn equals<'s, 't>(&self, obj: &FunctionHeaderT<'s, 't>) -> bool {
   vassert(id.localName.parameters == paramTypes)
 */
 // mig: fn is_extern
-fn is_extern<'s, 't>(&self) -> bool {
-    panic!("Unimplemented: is_extern");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_extern(&self) -> bool { panic!("Unimplemented: is_extern"); } }
 /*
   def isExtern = attributes.exists({ case ExternT(_) => true case _ => false })
   //  def isExport = attributes.exists({ case Export2(_) => true case _ => false })
 */
 // mig: fn is_user_function
-fn is_user_function<'s, 't>(&self) -> bool {
-    panic!("Unimplemented: is_user_function");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_user_function(&self) -> bool { panic!("Unimplemented: is_user_function"); } }
 /*
   def isUserFunction = attributes.contains(UserFunctionT)
 //  def getAbstractInterface: Option[InterfaceTT] = toBanner.getAbstractInterface
@@ -848,9 +776,7 @@ fn is_user_function<'s, 't>(&self) -> bool {
 //  def paramTypes: Vector[CoordT] = params.map(_.tyype)
 */
 // mig: fn get_abstract_interface
-fn get_abstract_interface<'s, 't>(&self) -> Option<&InterfaceTT<'s, 't>> {
-    panic!("Unimplemented: get_abstract_interface");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn get_abstract_interface(&self) -> Option<&InterfaceTT<'s, 't>> { panic!("Unimplemented: get_abstract_interface"); } }
 /*
   def getAbstractInterface: Option[InterfaceTT] = {
     val abstractInterfaces =
@@ -862,9 +788,7 @@ fn get_abstract_interface<'s, 't>(&self) -> Option<&InterfaceTT<'s, 't>> {
   }
 */
 // mig: fn get_virtual_index
-fn get_virtual_index<'s, 't>(&self) -> Option<i32> {
-    panic!("Unimplemented: get_virtual_index");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn get_virtual_index(&self) -> Option<i32> { panic!("Unimplemented: get_virtual_index"); } }
 /*
   def getVirtualIndex: Option[Int] = {
     val indices =
@@ -882,16 +806,12 @@ fn get_virtual_index<'s, 't>(&self) -> Option<i32> {
 //  })
 */
 // mig: fn to_banner
-fn to_banner<'s, 't>(&self) -> FunctionBannerT<'s, 't> {
-    panic!("Unimplemented: to_banner");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_banner(&self) -> FunctionBannerT<'s, 't> { panic!("Unimplemented: to_banner"); } }
 /*
   def toBanner: FunctionBannerT = FunctionBannerT(maybeOriginFunctionTemplata, id)
 */
 // mig: fn to_prototype
-fn to_prototype<'s, 't>(&self) -> PrototypeT<'s, 't, IFunctionNameT> {
-    panic!("Unimplemented: to_prototype");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_prototype(&self) -> PrototypeT<'s, 't, IFunctionNameT> { panic!("Unimplemented: to_prototype"); } }
 /*
   def toPrototype: PrototypeT[IFunctionNameT] = {
 //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
@@ -902,34 +822,26 @@ fn to_prototype<'s, 't>(&self) -> PrototypeT<'s, 't, IFunctionNameT> {
   }
 */
 // mig: fn to_signature
-fn to_signature<'s, 't>(&self) -> SignatureT<'s, 't> {
-    panic!("Unimplemented: to_signature");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
 /*
   def toSignature: SignatureT = {
     toPrototype.toSignature
   }
 */
 // mig: fn param_types
-fn param_types<'s, 't>(&self) -> Vec<CoordT<'s, 't>> {
-    panic!("Unimplemented: param_types");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
 // mig: fn unapply
-fn unapply<'s, 't>(arg: &FunctionHeaderT<'s, 't>) -> Option<(&IdT<'s, 't>, &Vec<ParameterT<'s, 't>>, &CoordT<'s, 't>)> {
-    panic!("Unimplemented: unapply");
-}
+fn function_header_unapply<'s, 't>(arg: &FunctionHeaderT<'s, 't>) -> Option<(&IdT<'s, 't>, &Vec<ParameterT<'s, 't>>, &CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(arg: FunctionHeaderT): Option[(IdT[IFunctionNameT], Vector[ParameterT], CoordT)] = {
     Some(id, params, returnType)
   }
 */
 // mig: fn is_pure
-fn is_pure<'s, 't>(&self) -> bool {
-    panic!("Unimplemented: is_pure");
-}
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_pure(&self) -> bool { panic!("Unimplemented: is_pure"); } }
 /*
   def isPure: Boolean = {
     attributes.collectFirst({ case PureT => }).nonEmpty
@@ -949,24 +861,18 @@ case class PrototypeT[+T <: IFunctionNameT](
     returnType: CoordT) {
 */
 // mig: fn hash_code
-fn hash_code<'s, 't, T: IFunctionNameT>(&self) -> i32 {
-    panic!("Unimplemented: hash_code");
-}
+impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-fn param_types<'s, 't, T: IFunctionNameT>(&self) -> Vec<CoordT<'s, 't>> {
-    panic!("Unimplemented: param_types");
-}
+impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
 // mig: fn to_signature
-fn to_signature<'s, 't, T: IFunctionNameT>(&self) -> SignatureT<'s, 't> {
-    panic!("Unimplemented: to_signature");
-}
+impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
 /*
   def toSignature: SignatureT = SignatureT(id)
 }

@@ -208,7 +208,7 @@ fn convert(
 
 */
 // mig: fn convert
-fn convert(
+fn convert_with_subkind(
     &self,
     calling_env: &IInDenizenEnvironmentT,
     coutputs: &mut CompilerOutputs,

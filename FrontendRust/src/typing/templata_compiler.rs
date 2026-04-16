@@ -952,7 +952,7 @@ fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substi
   }
 */
 // mig: fn get_placeholder_substituter
-fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substituter"); }
+fn get_placeholder_substituter_ext() { panic!("Unimplemented: get_placeholder_substituter"); }
 /*
   // Let's say you have the line:
   //   myShip.engine
@@ -1276,7 +1276,7 @@ fn pointify_kind() { panic!("Unimplemented: pointify_kind"); }
 //  }
 */
 // mig: fn lookup_templata
-fn lookup_templata() { panic!("Unimplemented: lookup_templata"); }
+fn lookup_templata_by_name() { panic!("Unimplemented: lookup_templata"); }
 /*
   def lookupTemplata(
     env: IEnvironmentT,
@@ -1291,7 +1291,7 @@ fn lookup_templata() { panic!("Unimplemented: lookup_templata"); }
   }
 */
 // mig: fn lookup_templata
-fn lookup_templata() { panic!("Unimplemented: lookup_templata"); }
+fn lookup_templata_by_rune() { panic!("Unimplemented: lookup_templata"); }
 /*
   def lookupTemplata(
     env: IEnvironmentT,

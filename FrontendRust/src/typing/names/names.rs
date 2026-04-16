@@ -937,7 +937,7 @@ sealed trait CitizenNameT extends ICitizenNameT {
 
 */
 // mig: fn unapply
-fn unapply() { panic!("Unmigrated unapply"); }
+fn citizen_name_unapply() { panic!("Unmigrated unapply"); }
 /*
 object CitizenNameT {
   def unapply(c: CitizenNameT): Option[(ICitizenTemplateNameT, Vector[ITemplataT[ITemplataType]])] = {
@@ -1019,7 +1019,7 @@ sealed trait CitizenTemplateNameT extends ICitizenTemplateNameT {
 
 */
 // mig: fn unapply
-fn unapply() { panic!("Unmigrated unapply"); }
+fn citizen_template_name_unapply() { panic!("Unmigrated unapply"); }
 /*
 object CitizenTemplateNameT {
   def unapply(x: CitizenTemplateNameT): Option[StrI] = {

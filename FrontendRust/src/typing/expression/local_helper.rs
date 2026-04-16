@@ -75,7 +75,7 @@ fn make_temporary_local(nenv: &NodeEnvironmentBox, life: LocationInFunctionEnvir
 
 */
 // mig: fn make_temporary_local
-fn make_temporary_local(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, life: LocationInFunctionEnvironmentT, context_region: RegionT, r: ReferenceExpressionTE, target_ownership: OwnershipT) -> DeferTE {
+fn make_temporary_local_defer(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, life: LocationInFunctionEnvironmentT, context_region: RegionT, r: ReferenceExpressionTE, target_ownership: OwnershipT) -> DeferTE {
   panic!("Unimplemented: make_temporary_local");
 }
 /*
