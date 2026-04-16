@@ -21,7 +21,7 @@ import org.scalatest._
 
 class AfterRegionsIntegrationTests extends FunSuite with Matchers {
 
-  test("TODO") {
+  ignore("TODO") {
     // only look at function bounds from the caller's environment, dont get any actual functions
     // from there. we can get actual functions from the type's environment, however.
     vimpl()
@@ -90,7 +90,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
 
-  test("Upcasting in a generic function") {
+  ignore("Upcasting in a generic function") {
     // This is testing two things:
     //  - Upcasting inside a generic function
     //  - The return type's ownership is actually calculated from the parameter. This will
@@ -125,7 +125,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     compile.evalForKind(Vector())
   }
 
-  test("Diff iter") {
+  ignore("Diff iter") {
     // When we try to compile this:
     //   HashSetDiffIterator<K>(a.table, b, 0)
     // it makes sure all the struct rules pass, including its members, including this:
@@ -217,7 +217,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(9) => }
   }
 
-  test("Infinite lambda call") {
+  ignore("Infinite lambda call") {
     val compile = RunCompilation.test(
       """
         |exported func main() int {

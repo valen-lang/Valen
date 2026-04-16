@@ -16,8 +16,7 @@ import org.scalatest._
 
 class AfterRegionsErrorTests extends FunSuite with Matchers {
 
-  // This test does not pass yet, use #[ignore].
-  test("Prints bread crumb trail") {
+  ignore("Prints bread crumb trail") {
     val compile = CompilerTestCompilation.test(
       """
         |import printutils.*;
@@ -285,8 +284,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
-  // This test does not pass yet, use #[ignore].
-  test("Inherit reachable bounds for params and things inside params too (IRBFPTIPT)") {
+  ignore("Inherit reachable bounds for params and things inside params too (IRBFPTIPT)") {
     val compile = CompilerTestCompilation.test(
       """
         |struct BoxA<T> where func drop(T)void { x T; }

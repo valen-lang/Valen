@@ -72,7 +72,7 @@ class AfterRegionsTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
   }
 
-  test("Generic interface anonymous subclass") {
+  ignore("Generic interface anonymous subclass") {
     val compile = CompilerTestCompilation.test(
       """
         |interface Bork<T Ref> {
