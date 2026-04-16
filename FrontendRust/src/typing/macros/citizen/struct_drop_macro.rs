@@ -73,11 +73,13 @@ class StructDropMacro(
   val dropGeneratorId: StrI = keywords.dropGenerator
 */
 // mig: fn get_struct_sibling_entries
-fn get_struct_sibling_entries(
-  struct_name: IdT<'p, 's>,
-  struct_a: &'s StructA<'p, 's>,
-) -> Vec<(IdT<'p, 's>, FunctionEnvEntry<'p, 's>)> {
-  panic!("Unimplemented: get_struct_sibling_entries");
+impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
+    fn get_struct_sibling_entries<'p>(
+      struct_name: IdT<'p, 's>,
+      struct_a: &'s StructA<'p, 's>,
+    ) -> Vec<(IdT<'p, 's>, FunctionEnvEntry<'p, 's>)> {
+      panic!("Unimplemented: get_struct_sibling_entries");
+    }
 }
 /*
   override def getStructSiblingEntries(
@@ -164,11 +166,13 @@ fn get_struct_sibling_entries(
   // defined by the user.
 */
 // mig: fn make_implicit_drop_function
-fn make_implicit_drop_function(
-  drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
-  struct_range: RangeS<'s>,
-) -> FunctionA<'p, 's> {
-  panic!("Unimplemented: make_implicit_drop_function");
+impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
+    fn make_implicit_drop_function<'p>(
+      drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
+      struct_range: RangeS<'s>,
+    ) -> FunctionA<'p, 's> {
+      panic!("Unimplemented: make_implicit_drop_function");
+    }
 }
 /*
   def makeImplicitDropFunction(
@@ -210,18 +214,21 @@ fn make_implicit_drop_function(
 
 */
 // mig: fn generate_function_body
-fn generate_function_body<'s, 't>(
-  env: &FunctionEnvironmentT<'s, 't>,
-  coutputs: &mut CompilerOutputs<'s, 't>,
-  generator_id: StrI<'s>,
-  life: LocationInFunctionEnvironmentT<'s>,
-  call_range: Vec<RangeS<'s>>,
-  call_location: LocationInDenizen<'s>,
-  origin_function1: Option<&'s FunctionA<'s>>,
-  params2: Vec<ParameterT<'s, 't>>,
-  maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-  panic!("Unimplemented: generate_function_body");
+impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
+    fn generate_function_body(
+      &self,
+      env: &FunctionEnvironmentT<'s, 't>,
+      coutputs: &mut CompilerOutputs<'s, 't>,
+      generator_id: StrI<'s>,
+      life: LocationInFunctionEnvironmentT<'s>,
+      call_range: Vec<RangeS<'s>>,
+      call_location: LocationInDenizen<'s>,
+      origin_function1: Option<&'s FunctionA<'s>>,
+      params2: Vec<ParameterT<'s, 't>>,
+      maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+      panic!("Unimplemented: generate_function_body");
+    }
 }
 /*
   override def generateFunctionBody(

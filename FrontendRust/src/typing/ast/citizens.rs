@@ -32,22 +32,30 @@ pub trait CitizenDefinitionT<'s, 't> {
 trait CitizenDefinitionT {
 */
 // mig: fn template_name
-fn template_name(&self) -> IdT<'s, 't>;
+fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't> {
+    panic!("Unimplemented: template_name");
+}
 /*
   def templateName: IdT[ICitizenTemplateNameT]
 */
 // mig: fn generic_param_types
-fn generic_param_types(&self) -> Vec<ITemplataType>;
+fn citizen_definition_generic_param_types<'s>() -> Vec<ITemplataType<'s>> {
+    panic!("Unimplemented: generic_param_types");
+}
 /*
   def genericParamTypes: Vector[ITemplataType]
 */
 // mig: fn instantiated_citizen
-fn instantiated_citizen(&self) -> ICitizenTT<'s, 't>;
+fn citizen_definition_instantiated_citizen<'s, 't>() -> ICitizenTT<'s, 't> {
+    panic!("Unimplemented: instantiated_citizen");
+}
 /*
   def instantiatedCitizen: ICitizenTT
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT<'s, 't>;
+fn citizen_definition_default_region() -> RegionT {
+    panic!("Unimplemented: default_region");
+}
 /*
   def defaultRegion: RegionT
 }
@@ -79,15 +87,19 @@ case class StructDefinitionT(
 ) extends CitizenDefinitionT {
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT<'s, 't> {
-    panic!("Unimplemented: default_region");
+impl<'s, 't> StructDefinitionT<'s, 't> {
+    fn default_region(&self) -> RegionT {
+        panic!("Unimplemented: default_region");
+    }
 }
 /*
   def defaultRegion: RegionT = RegionT()
 */
 // mig: fn generic_param_types
-fn generic_param_types(&self) -> Vec<ITemplataType> {
-    panic!("Unimplemented: generic_param_types");
+impl<'s, 't> StructDefinitionT<'s, 't> {
+    fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
+        panic!("Unimplemented: generic_param_types");
+    }
 }
 /*
   override def genericParamTypes: Vector[ITemplataType] = {
@@ -95,8 +107,10 @@ fn generic_param_types(&self) -> Vec<ITemplataType> {
   }
 */
 // mig: fn equals
-fn equals(&self, obj: &Self) -> bool {
-    panic!("Unimplemented: equals");
+impl<'s, 't> StructDefinitionT<'s, 't> {
+    fn equals(&self, obj: &Self) -> bool {
+        panic!("Unimplemented: equals");
+    }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
@@ -119,8 +133,10 @@ override def hashCode(): Int = vcurious()
 //  }
 */
 // mig: fn get_member_and_index
-fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
-    panic!("Unimplemented: get_member_and_index");
+impl<'s, 't> StructDefinitionT<'s, 't> {
+    fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
+        panic!("Unimplemented: get_member_and_index");
+    }
 }
 /*
   def getMemberAndIndex(needleName: IVarNameT): Option[(NormalStructMemberT, Int)] = {
@@ -142,7 +158,9 @@ pub trait IStructMemberT<'s, 't> {
 sealed trait IStructMemberT {
 */
 // mig: fn name
-fn name(&self) -> &IVarNameT<'s, 't>;
+fn struct_member_name<'s, 't>() -> IVarNameT<'s, 't> {
+    panic!("Unimplemented: struct_member_name");
+}
 /*
   def name: IVarNameT
 }
@@ -189,12 +207,14 @@ pub trait IMemberTypeT<'s, 't> {
 sealed trait IMemberTypeT  {
 */
 // mig: fn reference
-fn reference(&self) -> CoordT<'s, 't>;
+fn member_type_reference<'s, 't>() -> CoordT<'s, 't> {
+    panic!("Unimplemented: member_type_reference");
+}
 /*
   def reference: CoordT
 */
 // mig: fn expect_reference_member
-fn expect_reference_member(&self) -> ReferenceMemberTypeT<'s, 't> {
+fn member_type_expect_reference_member<'s, 't>() -> ReferenceMemberTypeT<'s, 't> {
     panic!("Unimplemented: expect_reference_member");
 }
 /*
@@ -206,7 +226,7 @@ fn expect_reference_member(&self) -> ReferenceMemberTypeT<'s, 't> {
   }
 */
 // mig: fn expect_address_member
-fn expect_address_member(&self) -> AddressMemberTypeT<'s, 't> {
+fn member_type_expect_address_member<'s, 't>() -> AddressMemberTypeT<'s, 't> {
     panic!("Unimplemented: expect_address_member");
 }
 /*
@@ -267,15 +287,19 @@ case class InterfaceDefinitionT(
 ) extends CitizenDefinitionT {
 */
 // mig: fn default_region
-fn default_region(&self) -> RegionT<'s, 't> {
-    panic!("Unimplemented: default_region");
+impl<'s, 't> InterfaceDefinitionT<'s, 't> {
+    fn default_region(&self) -> RegionT {
+        panic!("Unimplemented: default_region");
+    }
 }
 /*
   def defaultRegion: RegionT = RegionT()
 */
 // mig: fn generic_param_types
-fn generic_param_types(&self) -> Vec<ITemplataType> {
-    panic!("Unimplemented: generic_param_types");
+impl<'s, 't> InterfaceDefinitionT<'s, 't> {
+    fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
+        panic!("Unimplemented: generic_param_types");
+    }
 }
 /*
   override def genericParamTypes: Vector[ITemplataType] = {
@@ -283,15 +307,19 @@ fn generic_param_types(&self) -> Vec<ITemplataType> {
   }
 */
 // mig: fn instantiated_citizen
-fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
-    panic!("Unimplemented: instantiated_citizen");
+impl<'s, 't> InterfaceDefinitionT<'s, 't> {
+    fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
+        panic!("Unimplemented: instantiated_citizen");
+    }
 }
 /*
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface
 */
 // mig: fn equals
-fn equals(&self, obj: &Self) -> bool {
-    panic!("Unimplemented: equals");
+impl<'s, 't> InterfaceDefinitionT<'s, 't> {
+    fn equals(&self, obj: &Self) -> bool {
+        panic!("Unimplemented: equals");
+    }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();

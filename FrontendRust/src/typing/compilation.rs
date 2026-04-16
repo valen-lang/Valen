@@ -57,7 +57,7 @@ pub struct TypingPassCompilation<'s, 'ctx, 't> {
 impl<'s, 'ctx, 't> TypingPassCompilation<'s, 'ctx, 't>
 where
 {
-  pub fn new(
+  pub fn new<'p>(
     scout_arena: &'ctx ScoutArena<'s>,
     keywords: &'ctx Keywords<'s>,
     parser_keywords: &'ctx Keywords<'p>,
@@ -101,21 +101,21 @@ class TypingPassCompilation(
   var hinputsCache: Option[HinputsT] = None
 */
 // mig: fn get_code_map
-pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+pub fn get_code_map<'p>(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_code_map()
 }
 /*
   def getCodeMap(): Result[FileCoordinateMap[String], FailedParse] = higherTypingCompilation.getCodeMap()
 */
 // mig: fn get_parseds
-pub fn get_parseds(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
+pub fn get_parseds<'p>(&mut self) -> Result<FileCoordinateMap<'p, (FileP<'p>, Vec<RangeL>)>, FailedParse<'p>> {
   self.higher_typing_compilation.get_parseds()
 }
 /*
   def getParseds(): Result[FileCoordinateMap[(FileP, Vector[RangeL])], FailedParse] = higherTypingCompilation.getParseds()
 */
 // mig: fn get_vpst_map
-pub fn get_vpst_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
+pub fn get_vpst_map<'p>(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_vpst_map()
 }
 /*

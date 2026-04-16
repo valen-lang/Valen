@@ -78,16 +78,18 @@ class StructCompilerGenericArgsLayer(
   val core = new StructCompilerCore(opts, interner, keywords, nameTranslator, delegate)
 */
 // mig: fn resolve_struct
-pub fn resolve_struct(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
-    panic!("Unimplemented: resolve_struct");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn resolve_struct(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
+        panic!("Unimplemented: resolve_struct");
+    }
 }
 
 /*
@@ -166,16 +168,18 @@ pub fn resolve_struct(
 
 */
 // mig: fn predict_interface
-pub fn predict_interface(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> InterfaceTT<'s, 't> {
-    panic!("Unimplemented: predict_interface");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn predict_interface(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> InterfaceTT<'s, 't> {
+        panic!("Unimplemented: predict_interface");
+    }
 }
 
 /*
@@ -248,16 +252,18 @@ pub fn predict_interface(
 
 */
 // mig: fn predict_struct
-pub fn predict_struct(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> StructTT<'s, 't> {
-    panic!("Unimplemented: predict_struct");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn predict_struct(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> StructTT<'s, 't> {
+        panic!("Unimplemented: predict_struct");
+    }
 }
 
 /*
@@ -332,16 +338,18 @@ pub fn predict_struct(
 
 */
 // mig: fn resolve_interface
-pub fn resolve_interface(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
-    panic!("Unimplemented: resolve_interface");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn resolve_interface(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
+        panic!("Unimplemented: resolve_interface");
+    }
 }
 
 /*
@@ -406,14 +414,16 @@ pub fn resolve_interface(
 
 */
 // mig: fn compile_struct
-pub fn compile_struct(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s>,
-) -> UncheckedDefiningConclusions<'s, 't> {
-    panic!("Unimplemented: compile_struct");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn compile_struct(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s>,
+    ) -> UncheckedDefiningConclusions<'s, 't> {
+        panic!("Unimplemented: compile_struct");
+    }
 }
 
 /*
@@ -521,14 +531,16 @@ pub fn compile_struct(
 
 */
 // mig: fn compile_interface
-pub fn compile_interface(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s>,
-) -> UncheckedDefiningConclusions<'s, 't> {
-    panic!("Unimplemented: compile_interface");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn compile_interface(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s>,
+    ) -> UncheckedDefiningConclusions<'s, 't> {
+        panic!("Unimplemented: compile_interface");
+    }
 }
 
 /*
@@ -629,17 +641,19 @@ pub fn compile_interface(
 
 */
 // mig: fn make_closure_understruct
-pub fn make_closure_understruct(
-    &self,
-    containing_function_env: &dyn NodeEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    name: IFunctionDeclarationNameS<'s>,
-    function_s: &FunctionA<'s>,
-    members: &[NormalStructMemberT<'s, 't>],
-) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s>) {
-    panic!("Unimplemented: make_closure_understruct");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn make_closure_understruct(
+        &self,
+        containing_function_env: &dyn NodeEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        name: IFunctionDeclarationNameS<'s>,
+        function_s: &FunctionA<'s>,
+        members: &[NormalStructMemberT<'s, 't>],
+    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s>) {
+        panic!("Unimplemented: make_closure_understruct");
+    }
 }
 
 /*
@@ -659,12 +673,14 @@ pub fn make_closure_understruct(
 
 */
 // mig: fn assemble_struct_name
-pub fn assemble_struct_name(
-    &self,
-    template_name: IdT<IStructTemplateNameT>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> IdT<IStructNameT> {
-    panic!("Unimplemented: assemble_struct_name");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn assemble_struct_name(
+        &self,
+        template_name: IdT<IStructTemplateNameT>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> IdT<IStructNameT> {
+        panic!("Unimplemented: assemble_struct_name");
+    }
 }
 
 /*
@@ -678,12 +694,14 @@ pub fn assemble_struct_name(
 
 */
 // mig: fn assemble_interface_name
-pub fn assemble_interface_name(
-    &self,
-    template_name: IdT<IInterfaceTemplateNameT>,
-    template_args: &[ITemplataT<'s, 't>],
-) -> IdT<IInterfaceNameT> {
-    panic!("Unimplemented: assemble_interface_name");
+impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+    pub fn assemble_interface_name(
+        &self,
+        template_name: IdT<IInterfaceTemplateNameT>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> IdT<IInterfaceNameT> {
+        panic!("Unimplemented: assemble_interface_name");
+    }
 }
 
 /*
