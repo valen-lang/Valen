@@ -66,7 +66,7 @@ pub struct StructConstructorMacro<'s, 'ctx, 't> {
   pub opts: TypingPassOptions<'s>,
   pub interner: Interner<'s>,
   pub keywords: Keywords<'s>,
-  pub name_translator: NameTranslator<'s, 't>,
+  pub name_translator: NameTranslator<'s>,
   pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
 }
 
@@ -88,11 +88,11 @@ class StructConstructorMacro(
 
 */
 // mig: fn get_struct_sibling_entries
-pub fn get_struct_sibling_entries<'p, 's>(
+pub fn get_struct_sibling_entries<'p, 's, 't>(
   &self,
-  struct_name: IdT<INameT>,
+  struct_name: IdT<'s, 't>,
   struct_a: StructA<'s>,
-) -> Vec<(IdT<INameT>, FunctionEnvEntry)> {
+) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
   panic!("Unimplemented: get_struct_sibling_entries");
 }
 

@@ -55,12 +55,12 @@ impl<'s, 'ctx, 't> FunctorHelper<'s, 'ctx, 't> {}
 class FunctorHelper( interner: Interner, keywords: Keywords) {
 */
 // mig: fn get_functor_for_prototype
-fn get_functor_for_prototype(
-    env: FunctionEnvironmentT,
-    coutputs: CompilerOutputs,
-    call_range: Vec<RangeS>,
-    drop_function: PrototypeTemplataT<IFunctionNameT>,
-) -> ReinterpretTE {
+fn get_functor_for_prototype<'s, 't>(
+    env: FunctionEnvironmentT<'s, 't>,
+    coutputs: CompilerOutputs<'s, 't>,
+    call_range: Vec<RangeS<'s>>,
+    drop_function: PrototypeTemplataT<'s, 't>,
+) -> ReinterpretTE<'s, 't> {
     panic!("Unimplemented: get_functor_for_prototype");
 }
 /*

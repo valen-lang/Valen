@@ -129,9 +129,9 @@ override def hashCode(): Int = vcurious()
 
 */
 // mig: struct OverloadResolver
-pub struct OverloadResolver;
+pub struct OverloadResolver<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl OverloadResolver
-impl OverloadResolver {}
+impl<'s, 't> OverloadResolver<'s, 't> {}
 /*
 class OverloadResolver(
     opts: TypingPassOptions,

@@ -1095,9 +1095,9 @@ fn create_rune_type_solver_env() { panic!("Unimplemented: create_rune_type_solve
 }
 */
 // mig: struct TemplataCompiler
-pub struct TemplataCompiler;
+pub struct TemplataCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl TemplataCompiler
-impl TemplataCompiler {}
+impl<'s, 'ctx, 't> TemplataCompiler<'s, 'ctx, 't> {}
 /*
 class TemplataCompiler(
   interner: Interner,

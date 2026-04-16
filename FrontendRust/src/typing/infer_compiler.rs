@@ -70,7 +70,9 @@ case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedRe
 
 */
 // mig: enum IResolvingError
-pub enum IResolvingError {}
+pub enum IResolvingError<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait IResolvingError
 case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IResolvingError
@@ -86,7 +88,7 @@ case class DefiningResolveConclusionError(inner: IConclusionResolveError) extend
 
 */
 // mig: struct InferEnv
-pub struct InferEnv;
+pub struct InferEnv<'s>(pub std::marker::PhantomData<&'s ()>);
 /*
 case class InferEnv(
   // This is the only one that matters when checking template instantiations.
@@ -184,9 +186,9 @@ trait IInferCompilerDelegate {
 
 */
 // mig: struct InferCompiler
-pub struct InferCompiler;
+pub struct InferCompiler<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl InferCompiler
-impl InferCompiler {}
+impl<'s, 't> InferCompiler<'s, 't> {}
 /*
 class InferCompiler(
     opts: TypingPassOptions,

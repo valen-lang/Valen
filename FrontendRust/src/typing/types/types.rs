@@ -74,7 +74,9 @@ case object ImmutableT extends MutabilityT {
 }
 */
 // mig: enum VariabilityT
-pub enum VariabilityT {}
+pub enum VariabilityT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait VariabilityT  {
 }

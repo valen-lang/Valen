@@ -136,7 +136,7 @@ fn scout_expected_function_for_prototype(
     function_name: IImpreciseNameS<'s>,
     explicit_template_arg_rules_s: &[IRulexSR<'s>],
     explicit_template_arg_runes_s: &[IRuneS<'s>],
-    context_region: RegionT<'s, 't>,
+    context_region: RegionT,
     args: &[CoordT<'s, 't>],
     extra_envs_to_look_in: &[&IInDenizenEnvironmentT<'s, 't>],
     exact: bool,
@@ -244,12 +244,12 @@ class StructCompiler(
 fn resolve_struct(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     struct_templata: StructDefinitionTemplataT<'s, 't>,
-    uncoerced_template_args: &[ITemplataT<'s>],
-) -> IResolveOutcome<'s, StructTT<'s, 't>> {
+    uncoerced_template_args: &[ITemplataT<'s, 't>],
+) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
     panic!("Unimplemented: resolve_struct");
 }
 /*

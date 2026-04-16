@@ -22,7 +22,7 @@ pub enum IEnvEntry {}
 sealed trait IEnvEntry
 */
 // mig: struct FunctionEnvEntry
-pub struct FunctionEnvEntry;
+pub struct FunctionEnvEntry<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 // We dont have the unevaluatedContainers in here because see TMRE
 case class FunctionEnvEntry(function: FunctionA) extends IEnvEntry {

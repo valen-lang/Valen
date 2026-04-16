@@ -23,9 +23,9 @@ use crate::typing::types::types::*;
 use crate::interner::Interner;
 
 // mig: struct NameTranslator
-pub struct NameTranslator;
+pub struct NameTranslator<'s>(pub std::marker::PhantomData<&'s ()>);
 // mig: impl NameTranslator
-impl NameTranslator {}
+impl<'s> NameTranslator<'s> {}
 /*
 class NameTranslator(interner: Interner) {
 */

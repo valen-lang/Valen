@@ -31,13 +31,14 @@ import scala.collection.immutable.{List, ListMap, Map, Set}
 import scala.collection.mutable
 */
 // mig: struct TypingPassOptions
-pub struct TypingPassOptions {
+pub struct TypingPassOptions<'s> {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
   pub tree_shaking_enabled: bool,
+  pub _phantom: std::marker::PhantomData<&'s ()>,
 }
 // mig: impl TypingPassOptions
-impl TypingPassOptions {}
+impl<'s> TypingPassOptions<'s> {}
 /*
 case class TypingPassOptions(
   globalOptions: GlobalOptions = GlobalOptions(),

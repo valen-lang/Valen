@@ -20,7 +20,7 @@ pub struct InstantiatorCompilationOptions {
 
 // From InstantiatedCompilation.scala lines 19-56: InstantiatedCompilation class
 pub struct InstantiatedCompilation<'s, 'ctx, 'p> {
-  typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 'p>,
+  typing_pass_compilation: TypingPassCompilation<'s, 'ctx, 'p, 'p>,
   #[allow(dead_code)]
   monouts_cache: Option<()>, // HinputsI not yet ported
 }
