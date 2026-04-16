@@ -60,7 +60,7 @@ use crate::typing::citizen::struct_compiler::*;
 // mig: struct ArrayCompiler
 pub struct ArrayCompiler<'s, 'ctx, 't> {
     pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner,
+    pub interner: &'ctx Interner<'s>,
     pub keywords: &'ctx Keywords<'s>,
     pub infer_compiler: InferCompiler<'s, 't>,
     pub overload_resolver: OverloadResolver<'s, 't>,
@@ -188,17 +188,17 @@ pub fn evaluate_static_sized_array_from_callable<'s, 't>(
 */
 // mig: fn evaluate_runtime_sized_array_from_callable
 pub fn evaluate_runtime_sized_array_from_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs,
-    calling_env: &NodeEnvironmentT,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: &NodeEnvironmentT<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
     region: RegionT,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR],
-    maybe_element_type_rune: Option<IRuneS>,
-    mutability_rune: IRuneS,
-    size_te: ReferenceExpressionTE,
-    maybe_callable_te: Option<ReferenceExpressionTE>,
-) -> ReferenceExpressionTE {
+    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+    maybe_element_type_rune: Option<IRuneS<'s>>,
+    mutability_rune: IRuneS<'s>,
+    size_te: ReferenceExpressionTE<'s, 't>,
+    maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
+) -> ReferenceExpressionTE<'s, 't> {
     panic!("Unimplemented: evaluate_runtime_sized_array_from_callable");
 }
 /*
@@ -385,18 +385,18 @@ pub fn evaluate_runtime_sized_array_from_callable<'s, 't>(
 */
 // mig: fn evaluate_static_sized_array_from_values
 pub fn evaluate_static_sized_array_from_values<'s, 't>(
-    coutputs: &mut CompilerOutputs,
-    calling_env: &IInDenizenEnvironmentT,
-    parent_ranges: &[RangeS],
-    call_location: LocationInDenizen,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR],
-    maybe_element_type_rune_a: Option<IRuneS>,
-    size_rune_a: IRuneS,
-    mutability_rune_a: IRuneS,
-    variability_rune_a: IRuneS,
-    exprs_2: Vec<ReferenceExpressionTE>,
+    coutputs: &mut CompilerOutputs<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
+    parent_ranges: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+    maybe_element_type_rune_a: Option<IRuneS<'s>>,
+    size_rune_a: IRuneS<'s>,
+    mutability_rune_a: IRuneS<'s>,
+    variability_rune_a: IRuneS<'s>,
+    exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
     region: RegionT,
-) -> StaticArrayFromValuesTE {
+) -> StaticArrayFromValuesTE<'s, 't> {
     panic!("Unimplemented: evaluate_static_sized_array_from_values");
 }
 /*
@@ -525,14 +525,14 @@ pub fn evaluate_static_sized_array_from_values<'s, 't>(
 */
 // mig: fn evaluate_destroy_static_sized_array_into_callable
 pub fn evaluate_destroy_static_sized_array_into_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs,
+    coutputs: &mut CompilerOutputs<'s, 't>,
     fate: FunctionEnvironmentBoxT,
-    range: &[RangeS],
-    call_location: LocationInDenizen,
-    arr_te: ReferenceExpressionTE,
-    callable_te: ReferenceExpressionTE,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    arr_te: ReferenceExpressionTE<'s, 't>,
+    callable_te: ReferenceExpressionTE<'s, 't>,
     context_region: RegionT,
-) -> DestroyStaticSizedArrayIntoFunctionTE {
+) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
     panic!("Unimplemented: evaluate_destroy_static_sized_array_into_callable");
 }
 /*
@@ -566,14 +566,14 @@ pub fn evaluate_destroy_static_sized_array_into_callable<'s, 't>(
 */
 // mig: fn evaluate_destroy_runtime_sized_array_into_callable
 pub fn evaluate_destroy_runtime_sized_array_into_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs,
+    coutputs: &mut CompilerOutputs<'s, 't>,
     fate: FunctionEnvironmentBoxT,
-    range: &[RangeS],
-    call_location: LocationInDenizen,
-    arr_te: ReferenceExpressionTE,
-    callable_te: ReferenceExpressionTE,
+    range: &[RangeS<'s>],
+    call_location: LocationInDenizen<'s>,
+    arr_te: ReferenceExpressionTE<'s, 't>,
+    callable_te: ReferenceExpressionTE<'s, 't>,
     context_region: RegionT,
-) -> DestroyImmRuntimeSizedArrayTE {
+) -> DestroyImmRuntimeSizedArrayTE<'s, 't> {
     panic!("Unimplemented: evaluate_destroy_runtime_sized_array_into_callable");
 }
 /*
@@ -675,12 +675,12 @@ pub fn compile_static_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutpu
 */
 // mig: fn resolve_static_sized_array
 pub fn resolve_static_sized_array<'s, 't>(
-    mutability: ITemplataT,
-    variability: ITemplataT,
-    size: ITemplataT,
-    type_2: CoordT,
+    mutability: ITemplataT<'s, 't>,
+    variability: ITemplataT<'s, 't>,
+    size: ITemplataT<'s, 't>,
+    type_2: CoordT<'s, 't>,
     region: RegionT,
-) -> StaticSizedArrayTT {
+) -> StaticSizedArrayTT<'s, 't> {
     panic!("Unimplemented: resolve_static_sized_array");
 }
 /*
@@ -750,10 +750,10 @@ pub fn compile_runtime_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutp
 */
 // mig: fn resolve_runtime_sized_array
 pub fn resolve_runtime_sized_array<'s, 't>(
-    type_2: CoordT,
-    mutability: ITemplataT,
+    type_2: CoordT<'s, 't>,
+    mutability: ITemplataT<'s, 't>,
     region: RegionT,
-) -> RuntimeSizedArrayTT {
+) -> RuntimeSizedArrayTT<'s, 't> {
     panic!("Unimplemented: resolve_runtime_sized_array");
 }
 /*
@@ -793,11 +793,11 @@ fn get_array_element_type<'s, 't>(templatas: &HashMap<IRuneS<'s>, ITemplataT<'s,
 */
 // mig: fn lookup_in_static_sized_array
 pub fn lookup_in_static_sized_array<'s, 't>(
-    range: RangeS,
-    container_expr_2: ReferenceExpressionTE,
-    index_expr_2: ReferenceExpressionTE,
-    at: StaticSizedArrayTT,
-) -> StaticSizedArrayLookupTE {
+    range: RangeS<'s>,
+    container_expr_2: ReferenceExpressionTE<'s, 't>,
+    index_expr_2: ReferenceExpressionTE<'s, 't>,
+    at: StaticSizedArrayTT<'s, 't>,
+) -> StaticSizedArrayLookupTE<'s, 't> {
     panic!("Unimplemented: lookup_in_static_sized_array");
 }
 /*
@@ -818,12 +818,12 @@ pub fn lookup_in_static_sized_array<'s, 't>(
 */
 // mig: fn lookup_in_unknown_sized_array
 pub fn lookup_in_unknown_sized_array<'s, 't>(
-    parent_ranges: &[RangeS],
-    range: RangeS,
-    container_expr_2: ReferenceExpressionTE,
-    index_expr_2: ReferenceExpressionTE,
-    rsa: RuntimeSizedArrayTT,
-) -> RuntimeSizedArrayLookupTE {
+    parent_ranges: &[RangeS<'s>],
+    range: RangeS<'s>,
+    container_expr_2: ReferenceExpressionTE<'s, 't>,
+    index_expr_2: ReferenceExpressionTE<'s, 't>,
+    rsa: RuntimeSizedArrayTT<'s, 't>,
+) -> RuntimeSizedArrayLookupTE<'s, 't> {
     panic!("Unimplemented: lookup_in_unknown_sized_array");
 }
 /*
