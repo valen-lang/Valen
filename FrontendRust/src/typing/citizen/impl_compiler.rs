@@ -53,7 +53,9 @@ use crate::interner::Interner;
 use crate::typing::names::name_translator::*;
 
 // mig: trait IsParentResult
-pub trait IsParentResult {}
+pub enum IsParentResult {
+    _Phantom,
+}
 /*
 sealed trait IsParentResult
 */

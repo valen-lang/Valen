@@ -26,7 +26,8 @@ use crate::typing::ast::ast::*;
 use crate::postparsing::itemplatatype::ITemplataType;
 
 // mig: trait CitizenDefinitionT
-pub trait CitizenDefinitionT<'s, 't> {
+pub enum CitizenDefinitionT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 trait CitizenDefinitionT {
@@ -152,7 +153,8 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 }
 */
 // mig: trait IStructMemberT
-pub trait IStructMemberT<'s, 't> {
+pub enum IStructMemberT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 sealed trait IStructMemberT {
@@ -201,7 +203,8 @@ case class VariadicStructMemberT(
 }
 */
 // mig: trait IMemberTypeT
-pub trait IMemberTypeT<'s, 't> {
+pub enum IMemberTypeT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 sealed trait IMemberTypeT  {

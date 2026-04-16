@@ -38,7 +38,9 @@ use crate::typing::ast::citizens::*;
 use crate::typing::env::i_env_entry::*;
 
 // mig: trait IEnvironmentT
-pub trait IEnvironmentT<'s, 't> {}
+pub enum IEnvironmentT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IEnvironmentT {
   override def toString: String = {
@@ -111,7 +113,9 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 }
 */
 // mig: trait IInDenizenEnvironmentT
-pub trait IInDenizenEnvironmentT<'s, 't> {}
+pub enum IInDenizenEnvironmentT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IInDenizenEnvironmentT extends IEnvironmentT {
   // This is the denizen that we're currently compiling.

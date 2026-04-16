@@ -442,7 +442,9 @@ impl<'s, 't> ParameterT<'s, 't> { fn same(&self, that: &ParameterT<'s, 't>) -> b
 }
 */
 // mig: trait ICalleeCandidate
-pub trait ICalleeCandidate<'s, 't> {}
+pub enum ICalleeCandidate<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait ICalleeCandidate
 */
@@ -624,12 +626,16 @@ impl<'s, 't> FunctionBannerT<'s, 't> { fn to_string(&self) -> String { panic!("U
 }
 */
 // mig: trait IFunctionAttributeT
-pub trait IFunctionAttributeT<'s, 't> {}
+pub enum IFunctionAttributeT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait IFunctionAttributeT
 */
 // mig: trait ICitizenAttributeT
-pub trait ICitizenAttributeT<'s, 't> {}
+pub enum ICitizenAttributeT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 sealed trait ICitizenAttributeT
 */
@@ -656,7 +662,7 @@ case object UserFunctionT extends IFunctionAttributeT // Whether it was written 
 // mig: struct FunctionHeaderT
 pub struct FunctionHeaderT<'s, 't> {
     pub id: IdT<'s, 't>,
-    pub attributes: Vec<Box<dyn IFunctionAttributeT<'s, 't>>>,
+    pub attributes: Vec<IFunctionAttributeT<'s, 't>>,
     pub params: Vec<ParameterT<'s, 't>>,
     pub return_type: CoordT<'s, 't>,
     pub maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
@@ -849,30 +855,31 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_pure(&self) -> bool { panic!("Unimp
 }
 */
 // mig: struct PrototypeT
-pub struct PrototypeT<'s, 't, T: IFunctionNameT> {
+pub struct PrototypeT<'s, 't, T = ()> {
     pub id: IdT<'s, 't>,
     pub return_type: CoordT<'s, 't>,
+    pub _phantom: std::marker::PhantomData<T>,
 }
 // mig: impl PrototypeT
-impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> {}
+impl<'s, 't, T> PrototypeT<'s, 't, T> {}
 /*
 case class PrototypeT[+T <: IFunctionNameT](
     id: IdT[T],
     returnType: CoordT) {
 */
 // mig: fn hash_code
-impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
+impl<'s, 't, T> PrototypeT<'s, 't, T> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
 // mig: fn param_types
-impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
+impl<'s, 't, T> PrototypeT<'s, 't, T> { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
 // mig: fn to_signature
-impl<'s, 't, T: IFunctionNameT> PrototypeT<'s, 't, T> { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
+impl<'s, 't, T> PrototypeT<'s, 't, T> { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
 /*
   def toSignature: SignatureT = SignatureT(id)
 }

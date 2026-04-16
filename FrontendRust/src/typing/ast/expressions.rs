@@ -28,7 +28,9 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 
 // mig: trait IExpressionResultT
-pub trait IExpressionResultT<'s, 't> {}
+pub enum IExpressionResultT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IExpressionResultT  {
 */
@@ -136,7 +138,9 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 }
 */
 // mig: trait ExpressionT
-pub trait ExpressionT<'s, 't> {}
+pub enum ExpressionT<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait ExpressionT  {
 */
@@ -152,7 +156,9 @@ fn expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 }
 */
 // mig: trait ReferenceExpressionTE
-pub trait ReferenceExpressionTE<'s, 't> {}
+pub enum ReferenceExpressionTE<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait ReferenceExpressionTE extends ExpressionT {
 */
@@ -168,7 +174,9 @@ fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented:
 }
 */
 // mig: trait AddressExpressionTE
-pub trait AddressExpressionTE<'s, 't> {}
+pub enum AddressExpressionTE<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 // This is an Expression2 because we sometimes take an address and throw it
 // directly into a struct (closures!), which can have addressible members.

@@ -82,7 +82,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     pub fn resolve_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s>,
@@ -172,7 +172,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     pub fn predict_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s>,
@@ -256,7 +256,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     pub fn predict_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s>,
@@ -342,7 +342,7 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     pub fn resolve_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s>,

@@ -129,7 +129,7 @@ fn evaluate_generic_function_from_non_call_for_header(
 // mig: fn scout_expected_function_for_prototype
 fn scout_expected_function_for_prototype(
     &self,
-    env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    env: &IInDenizenEnvironmentT<'s, 't>,
     coutputs: &CompilerOutputs<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
@@ -138,7 +138,7 @@ fn scout_expected_function_for_prototype(
     explicit_template_arg_runes_s: &[IRuneS<'s>],
     context_region: RegionT<'s, 't>,
     args: &[CoordT<'s, 't>],
-    extra_envs_to_look_in: &[&dyn IInDenizenEnvironmentT<'s, 't>],
+    extra_envs_to_look_in: &[&IInDenizenEnvironmentT<'s, 't>],
     exact: bool,
 ) -> StampFunctionSuccess<'s, 't> {
     panic!("Unimplemented: scout_expected_function_for_prototype");
@@ -162,25 +162,25 @@ fn scout_expected_function_for_prototype(
 }
 
 // mig: enum IResolveOutcome
-pub enum IResolveOutcome<'s, 't, T: KindT<'s, 't>> {
+pub enum IResolveOutcome<'s, 't, T> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t (), T)>),
 }
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
 */
 // mig: fn expect
-fn resolve_outcome_expect<'s, 't, T: KindT<'s, 't>>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> { panic!("Unimplemented: expect"); }
+fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> { panic!("Unimplemented: expect"); }
 /*
   def expect(): ResolveSuccess[T]
 }
 */
 
 // mig: struct ResolveSuccess
-pub struct ResolveSuccess<'s, 't, T: KindT<'s, 't>> {
+pub struct ResolveSuccess<'s, 't, T> {
     pub kind: T,
 }
 // mig: impl ResolveSuccess
-impl<'s, 't, T: KindT<'s, 't>> ResolveSuccess<'s, 't, T> {
+impl<'s, 't, T> ResolveSuccess<'s, 't, T> {
 // mig: fn expect
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
@@ -194,12 +194,12 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
 }
 */
 // mig: struct ResolveFailure
-pub struct ResolveFailure<'s, 't, T: KindT<'s, 't>> {
+pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
     pub x: IResolvingError<'s, 't>,
 }
 // mig: impl ResolveFailure
-impl<'s, 't, T: KindT<'s, 't>> ResolveFailure<'s, 't, T> {
+impl<'s, 't, T> ResolveFailure<'s, 't, T> {
 // mig: fn expect
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
@@ -244,7 +244,7 @@ class StructCompiler(
 fn resolve_struct(
     &self,
     coutputs: &CompilerOutputs<'s>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s>,
+    calling_env: &IInDenizenEnvironmentT<'s>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     struct_templata: StructDefinitionTemplataT<'s>,
@@ -403,7 +403,7 @@ fn compile_struct(
 fn predict_interface(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,
@@ -432,7 +432,7 @@ fn predict_interface(
 fn predict_struct(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     struct_templata: StructDefinitionTemplataT<'s>,
@@ -459,7 +459,7 @@ fn predict_struct(
 fn resolve_interface(
     &self,
     coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &dyn IInDenizenEnvironmentT<'s, 't>,
+    calling_env: &IInDenizenEnvironmentT<'s, 't>,
     call_range: &[RangeS<'s>],
     call_location: LocationInDenizen<'s>,
     interface_templata: InterfaceDefinitionTemplataT<'s>,

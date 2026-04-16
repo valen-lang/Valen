@@ -106,7 +106,7 @@ class FunctionCompilerSolvingLayer(
 fn evaluate_templated_function_from_call_for_prototype(
     outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
+    original_calling_env: &IInDenizenEnvironmentT,
     call_range: &[RangeS],
     call_location: LocationInDenizen,
     explicit_template_args: &[ITemplataT],
@@ -190,7 +190,7 @@ fn evaluate_templated_function_from_call_for_prototype(
 fn evaluate_templated_function_from_call_for_banner(
     declaring_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
+    original_calling_env: &IInDenizenEnvironmentT,
     call_range: &[RangeS],
     call_location: LocationInDenizen,
     already_specified_template_args: &[ITemplataT],
@@ -276,7 +276,7 @@ fn evaluate_templated_function_from_call_for_banner(
 fn evaluate_templated_light_banner_from_call(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
-    original_calling_env: &dyn IInDenizenEnvironmentT,
+    original_calling_env: &IInDenizenEnvironmentT,
     call_range: &[RangeS],
     call_location: LocationInDenizen,
     explicit_template_args: &[ITemplataT],
@@ -459,7 +459,7 @@ fn add_runed_data_to_near_env(
 fn evaluate_generic_function_from_call_for_prototype(
     outer_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
-    calling_env: &dyn IInDenizenEnvironmentT,
+    calling_env: &IInDenizenEnvironmentT,
     call_range: &[RangeS],
     call_location: LocationInDenizen,
     explicit_template_args: &[ITemplataT],
@@ -580,7 +580,7 @@ fn evaluate_generic_function_from_call_for_prototype(
 fn evaluate_generic_virtual_dispatcher_function_for_prototype(
     near_env: &BuildingFunctionEnvironmentWithClosuredsT,
     coutputs: &mut CompilerOutputs,
-    calling_env: &dyn IInDenizenEnvironmentT,
+    calling_env: &IInDenizenEnvironmentT,
     call_range: &[RangeS],
     call_location: LocationInDenizen,
     args: &[Option<CoordT>],

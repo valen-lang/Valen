@@ -97,7 +97,9 @@ trait IFunctionCompilerDelegate {
 
 */
 // mig: trait IEvaluateFunctionResult
-pub trait IEvaluateFunctionResult<'s, 't> {}
+pub enum IEvaluateFunctionResult<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IEvaluateFunctionResult
 
@@ -121,7 +123,9 @@ case class EvaluateFunctionFailure(
 
 */
 // mig: trait IDefineFunctionResult
-pub trait IDefineFunctionResult<'s, 't> {}
+pub enum IDefineFunctionResult<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IDefineFunctionResult
 
@@ -146,7 +150,9 @@ case class DefineFunctionFailure(
 
 */
 // mig: trait IResolveFunctionResult
-pub trait IResolveFunctionResult<'s, 't> {}
+pub enum IResolveFunctionResult<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IResolveFunctionResult
 
@@ -170,7 +176,9 @@ case class ResolveFunctionFailure(
 
 */
 // mig: trait IStampFunctionResult
-pub trait IStampFunctionResult<'s, 't> {}
+pub enum IStampFunctionResult<'s, 't> {
+    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+}
 /*
 trait IStampFunctionResult
 

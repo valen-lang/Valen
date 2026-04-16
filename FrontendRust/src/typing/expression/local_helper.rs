@@ -110,7 +110,7 @@ fn make_temporary_local_defer(coutputs: &CompilerOutputs, nenv: &NodeEnvironment
 
 */
 // mig: fn unlet_local_without_dropping
-fn unlet_local_without_dropping(nenv: &NodeEnvironmentBox, local_var: &dyn ILocalVariableT) -> UnletTE {
+fn unlet_local_without_dropping(nenv: &NodeEnvironmentBox, local_var: &ILocalVariableT) -> UnletTE {
   panic!("Unimplemented: unlet_local_without_dropping");
 }
 /*
@@ -122,7 +122,7 @@ fn unlet_local_without_dropping(nenv: &NodeEnvironmentBox, local_var: &dyn ILoca
 
 */
 // mig: fn unlet_and_drop_all
-fn unlet_and_drop_all(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, context_region: RegionT, variables: &[&dyn ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
+fn unlet_and_drop_all(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], call_location: LocationInDenizen, context_region: RegionT, variables: &[&ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
   panic!("Unimplemented: unlet_and_drop_all");
 }
 /*
@@ -144,7 +144,7 @@ fn unlet_and_drop_all(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, ran
 
 */
 // mig: fn unlet_all_without_dropping
-fn unlet_all_without_dropping(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], variables: &[&dyn ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
+fn unlet_all_without_dropping(coutputs: &CompilerOutputs, nenv: &NodeEnvironmentBox, range: &[RangeS], variables: &[&ILocalVariableT]) -> Vec<ReferenceExpressionTE> {
   panic!("Unimplemented: unlet_all_without_dropping");
 }
 /*
@@ -355,7 +355,7 @@ fn get_borrow_ownership(coutputs: &CompilerOutputs, kind: &KindT) -> OwnershipT 
 object LocalHelper {
 */
 // mig: fn determine_if_local_is_addressible
-fn determine_if_local_is_addressible(mutability: &dyn ITemplataT, local_a: &LocalS) -> bool {
+fn determine_if_local_is_addressible(mutability: &ITemplataT, local_a: &LocalS) -> bool {
   panic!("Unimplemented: determine_if_local_is_addressible");
 }
 /*
