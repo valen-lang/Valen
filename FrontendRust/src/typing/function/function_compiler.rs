@@ -86,7 +86,7 @@ trait IEvaluateFunctionResult
 
 */
 // mig: struct EvaluateFunctionSuccess
-pub struct EvaluateFunctionSuccess<'s, 't>;
+pub struct EvaluateFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class EvaluateFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -96,7 +96,7 @@ case class EvaluateFunctionSuccess(
 
 */
 // mig: struct EvaluateFunctionFailure
-pub struct EvaluateFunctionFailure<'s, 't>;
+pub struct EvaluateFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class EvaluateFunctionFailure(
     reason: IDefiningError
@@ -112,7 +112,7 @@ trait IDefineFunctionResult
 
 */
 // mig: struct DefineFunctionSuccess
-pub struct DefineFunctionSuccess<'s, 't>;
+pub struct DefineFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class DefineFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -122,7 +122,7 @@ case class DefineFunctionSuccess(
 
 */
 // mig: struct DefineFunctionFailure
-pub struct DefineFunctionFailure<'s, 't>;
+pub struct DefineFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class DefineFunctionFailure(
     reason: IDefiningError
@@ -139,7 +139,7 @@ trait IResolveFunctionResult
 
 */
 // mig: struct ResolveFunctionSuccess
-pub struct ResolveFunctionSuccess<'s, 't>;
+pub struct ResolveFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class ResolveFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -148,7 +148,7 @@ case class ResolveFunctionSuccess(
 
 */
 // mig: struct ResolveFunctionFailure
-pub struct ResolveFunctionFailure<'s, 't>;
+pub struct ResolveFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class ResolveFunctionFailure(
     reason: IResolvingError
@@ -165,7 +165,7 @@ trait IStampFunctionResult
 
 */
 // mig: struct StampFunctionSuccess
-pub struct StampFunctionSuccess<'s, 't>;
+pub struct StampFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class StampFunctionSuccess(
   prototype: PrototypeT[IFunctionNameT],
@@ -174,7 +174,7 @@ case class StampFunctionSuccess(
 
 */
 // mig: struct StampFunctionFailure
-pub struct StampFunctionFailure<'s, 't>;
+pub struct StampFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class StampFunctionFailure(
   reason: IFindFunctionFailureReason

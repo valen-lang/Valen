@@ -73,6 +73,7 @@ where
       global_options,
       debug_out: instantiator_options.debug_out.clone(),
       tree_shaking_enabled: true,
+      _phantom: std::marker::PhantomData,
     };
 
     let higher_typing_compilation = HigherTypingCompilation::new(
@@ -88,6 +89,7 @@ where
     TypingPassCompilation {
       higher_typing_compilation,
       hinputs_cache: None,
+      _phantom: std::marker::PhantomData,
     }
   }
 /*

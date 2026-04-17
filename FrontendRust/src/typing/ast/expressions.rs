@@ -756,7 +756,7 @@ impl<'s, 't> ReturnTE<'s, 't> {
 
 */
 // mig: struct BreakTE
-pub struct BreakTE<'s, 't> { pub region: RegionT }
+pub struct BreakTE<'s, 't> { pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl BreakTE
 impl<'s, 't> BreakTE<'s, 't> {}
 /*
@@ -1141,7 +1141,7 @@ impl<'s, 't> AsSubtypeTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> 
 
 */
 // mig: struct VoidLiteralTE
-pub struct VoidLiteralTE<'s, 't> { pub region: RegionT }
+pub struct VoidLiteralTE<'s, 't> { pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl VoidLiteralTE
 impl<'s, 't> VoidLiteralTE<'s, 't> {}
 /*
@@ -1165,7 +1165,7 @@ impl<'s, 't> VoidLiteralTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 
 */
 // mig: struct ConstantIntTE
-pub struct ConstantIntTE<'s, 't> { pub value: ITemplataT<'s, 't>, pub bits: i32, pub region: RegionT }
+pub struct ConstantIntTE<'s, 't> { pub value: ITemplataT<'s, 't>, pub bits: i32, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl ConstantIntTE
 impl<'s, 't> ConstantIntTE<'s, 't> {}
 /*
@@ -1191,7 +1191,7 @@ impl<'s, 't> ConstantIntTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 
 */
 // mig: struct ConstantBoolTE
-pub struct ConstantBoolTE<'s, 't> { pub value: bool, pub region: RegionT }
+pub struct ConstantBoolTE<'s, 't> { pub value: bool, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl ConstantBoolTE
 impl<'s, 't> ConstantBoolTE<'s, 't> {}
 /*
@@ -1215,7 +1215,7 @@ impl<'s, 't> ConstantBoolTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, '
 
 */
 // mig: struct ConstantStrTE
-pub struct ConstantStrTE<'s, 't> { pub value: String, pub region: RegionT }
+pub struct ConstantStrTE<'s, 't> { pub value: String, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl ConstantStrTE
 impl<'s, 't> ConstantStrTE<'s, 't> {}
 /*
@@ -1239,7 +1239,7 @@ impl<'s, 't> ConstantStrTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 
 */
 // mig: struct ConstantFloatTE
-pub struct ConstantFloatTE<'s, 't> { pub value: f64, pub region: RegionT }
+pub struct ConstantFloatTE<'s, 't> { pub value: f64, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
 // mig: impl ConstantFloatTE
 impl<'s, 't> ConstantFloatTE<'s, 't> {}
 /*

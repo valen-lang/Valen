@@ -803,7 +803,7 @@ class Compiler(
 
 */
 // mig: fn evaluate
-fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
+pub fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
     panic!("Unimplemented: evaluate");
 }
 /*

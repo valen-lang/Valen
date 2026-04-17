@@ -668,9 +668,9 @@ where 's: 't,
 {
     pub fn assemble_struct_name(
         &self,
-        template_name: IdT<IStructTemplateNameT>,
+        template_name: IdT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
-    ) -> IdT<IStructNameT> {
+    ) -> IdT<'s, 't> {
         panic!("Unimplemented: assemble_struct_name");
     }
 /*
@@ -691,9 +691,9 @@ where 's: 't,
 {
     pub fn assemble_interface_name(
         &self,
-        template_name: IdT<IInterfaceTemplateNameT>,
+        template_name: IdT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
-    ) -> IdT<IInterfaceNameT> {
+    ) -> IdT<'s, 't> {
         panic!("Unimplemented: assemble_interface_name");
     }
 /*

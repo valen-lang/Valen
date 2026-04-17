@@ -170,7 +170,7 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 }
 */
 // mig: enum ITemplataT
-pub enum ITemplataT<'s, 't> {}
+pub enum ITemplataT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {
   def tyype: T
@@ -357,7 +357,7 @@ case class StructDefinitionTemplataT(
 
 */
 // mig: enum IContainer
-pub enum IContainer<'s, 't> {}
+pub enum IContainer<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait IContainer
 */
@@ -403,7 +403,7 @@ override def hashCode(): Int = hash; }
 
 */
 // mig: enum CitizenDefinitionTemplataT
-pub enum CitizenDefinitionTemplataT<'s, 't> {}
+pub enum CitizenDefinitionTemplataT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 // mig: impl CitizenDefinitionTemplataT
 impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> {}
 /*

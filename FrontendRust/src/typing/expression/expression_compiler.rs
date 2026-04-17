@@ -548,7 +548,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate(&self) { panic!("Unimplemented: evaluate"); }
+    pub fn evaluate_expression(&self) { panic!("Unimplemented: evaluate_expression"); }
 /*
   // returns:
   // - resulting expression

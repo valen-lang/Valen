@@ -50,8 +50,8 @@ class PatternCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_pattern_list(&self) {
-        panic!("Unimplemented: translate_pattern_list");
+    pub fn translate_pattern_list_pattern(&self) {
+        panic!("Unimplemented: translate_pattern_list_pattern");
     }
 /*
   // Note: This will unlet/drop the input expressions. Be warned.

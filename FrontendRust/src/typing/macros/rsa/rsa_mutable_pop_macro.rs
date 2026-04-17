@@ -26,6 +26,7 @@ pub struct RSAMutablePopMacro<'s, 'ctx, 't> {
     pub interner: &'ctx Interner<'s>,
     pub keywords: &'ctx Keywords<'s>,
     pub generator_id: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 // mig: impl RSAMutablePopMacro
 impl<'s, 'ctx, 't> RSAMutablePopMacro<'s, 'ctx, 't> {}

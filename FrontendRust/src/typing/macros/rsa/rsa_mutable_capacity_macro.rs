@@ -38,6 +38,7 @@ pub struct RSAMutableCapacityMacro<'s, 'ctx, 't> {
   pub interner: Interner<'s>,
   pub keywords: Keywords<'s>,
   pub generator_id: StrI<'s>,
+  pub _phantom: std::marker::PhantomData<(&'ctx (), &'t ())>,
 }
 // mig: impl RSAMutableCapacityMacro
 impl<'s, 'ctx, 't> RSAMutableCapacityMacro<'s, 'ctx, 't> {}

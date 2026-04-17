@@ -28,6 +28,7 @@ use crate::postparsing::ast::LocationInDenizen;
 // mig: struct SameInstanceMacro
 pub struct SameInstanceMacro<'s, 'ctx, 't> {
     pub generator_id: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<(&'ctx (), &'t ())>,
 }
 // mig: impl SameInstanceMacro
 impl<'s, 'ctx, 't> SameInstanceMacro<'s, 'ctx, 't> {}

@@ -52,7 +52,7 @@ use crate::keywords::Keywords;
 use crate::typing::infer_compiler::InferEnv;
 
 // mig: enum ITypingPassSolverError
-pub enum ITypingPassSolverError<'s, 't> {}
+pub enum ITypingPassSolverError<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait ITypingPassSolverError
 case class KindIsNotConcrete(kind: KindT) extends ITypingPassSolverError
@@ -328,7 +328,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_solver_state(
+    pub fn make_solver_state_solver(
         &self,
         range: Vec<RangeS<'s>>,
         env: InferEnv<'s>,
@@ -462,7 +462,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn r#continue(
+    pub fn continue_solver(
         &self,
         env: InferEnv<'s>,
         state: CompilerOutputs<'s, 't>,

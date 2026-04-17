@@ -143,6 +143,7 @@ fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> Resolv
 // mig: struct ResolveSuccess
 pub struct ResolveSuccess<'s, 't, T> {
     pub kind: T,
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
 }
 // mig: impl ResolveSuccess
 impl<'s, 't, T> ResolveSuccess<'s, 't, T> {
@@ -162,6 +163,7 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
 pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
     pub x: IResolvingError<'s, 't>,
+    pub _phantom: std::marker::PhantomData<T>,
 }
 // mig: impl ResolveFailure
 impl<'s, 't, T> ResolveFailure<'s, 't, T> {

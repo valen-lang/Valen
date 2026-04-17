@@ -363,6 +363,7 @@ fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) ->
 // mig: struct LocationInFunctionEnvironmentT
 pub struct LocationInFunctionEnvironmentT<'s> {
     pub path: Vec<i32>,
+    pub _phantom: std::marker::PhantomData<&'s ()>,
 }
 // mig: impl LocationInFunctionEnvironmentT
 impl<'s> LocationInFunctionEnvironmentT<'s> {}

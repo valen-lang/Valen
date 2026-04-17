@@ -69,10 +69,10 @@ class StructDropMacro(
 */
 // mig: fn get_struct_sibling_entries
 impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
-    fn get_struct_sibling_entries<'p>(
-      struct_name: IdT<'p, 's>,
-      struct_a: &'s StructA<'p, 's>,
-    ) -> Vec<(IdT<'p, 's>, FunctionEnvEntry<'p, 's>)> {
+    fn get_struct_sibling_entries(
+      struct_name: IdT<'s, 't>,
+      struct_a: &'s StructA<'s>,
+    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
       panic!("Unimplemented: get_struct_sibling_entries");
     }
 }
@@ -162,10 +162,10 @@ impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
 */
 // mig: fn make_implicit_drop_function
 impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
-    fn make_implicit_drop_function<'p>(
+    fn make_implicit_drop_function(
       drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
       struct_range: RangeS<'s>,
-    ) -> FunctionA<'p, 's> {
+    ) -> FunctionA<'s> {
       panic!("Unimplemented: make_implicit_drop_function");
     }
 }

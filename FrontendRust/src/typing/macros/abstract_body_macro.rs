@@ -23,6 +23,7 @@ pub struct AbstractBodyMacro<'s, 'ctx, 't> {
     pub keywords: &'ctx Keywords<'s>,
     pub overload_resolver: &'ctx (),
     pub generator_id: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 
 // mig: impl AbstractBodyMacro

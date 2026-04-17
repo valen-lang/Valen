@@ -32,6 +32,7 @@ use crate::keywords::Keywords;
 // mig: struct SSALenMacro
 pub struct SSALenMacro<'s, 'ctx, 't> {
     pub keywords: &'ctx Keywords<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 
 // mig: impl SSALenMacro

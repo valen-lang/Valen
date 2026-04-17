@@ -22,6 +22,7 @@ pub struct SSADropIntoMacro<'s, 'ctx, 't> {
     pub generator_id: StrI<'s>,
     pub keywords: &'ctx Keywords<'s>,
     pub array_compiler: &'ctx (), // placeholder for ArrayCompiler
+    pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 
 // mig: impl SSADropIntoMacro

@@ -30,6 +30,7 @@ use crate::interner::Interner;
 pub struct FunctorHelper<'s, 'ctx, 't> {
     pub interner: Interner<'s>,
     pub keywords: Keywords<'s>,
+    pub _phantom: std::marker::PhantomData<(&'ctx (), &'t ())>,
 }
 
 // mig: impl FunctorHelper

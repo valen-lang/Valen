@@ -105,8 +105,8 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_block_statements(&self) {
-        panic!("Unimplemented: evaluate_block_statements");
+    pub fn evaluate_block_statements_block(&self) {
+        panic!("Unimplemented: evaluate_block_statements_block");
     }
 /*
   def evaluateBlockStatements(
