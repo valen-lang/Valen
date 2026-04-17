@@ -51,6 +51,7 @@ use crate::typing::names::name_translator::*;
 use crate::typing::convert_helper::*;
 use crate::typing::templata_compiler::*;
 use crate::typing::citizen::impl_compiler::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct ResultTypeMismatchError
 pub struct ResultTypeMismatchError<'s, 't> {
@@ -65,17 +66,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 
 */
 // mig: struct FunctionCompilerCore
-pub struct FunctionCompilerCore<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub name_translator: NameTranslator<'s>,
-    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
-    pub convert_helper: ConvertHelper<'s, 't>,
-    pub delegate: Box<dyn IFunctionCompilerDelegate<'s, 't>>,
-}
 // mig: impl FunctionCompilerCore
-impl<'s, 'ctx, 't> FunctionCompilerCore<'s, 'ctx, 't> {}
 /*
 class FunctionCompilerCore(
     opts: TypingPassOptions,
@@ -117,9 +108,12 @@ class FunctionCompilerCore(
 
 */
 // mig: fn evaluate_function_for_header
-fn evaluate_function_for_header<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
-    panic!("Unimplemented: evaluate_function_for_header");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_function_for_header_core(&self) -> FunctionHeaderT<'s, 't> {
+        panic!("Unimplemented: evaluate_function_for_header");
+    }
 /*
   // Preconditions:
   // - already spawned local env
@@ -298,10 +292,15 @@ fn evaluate_function_for_header<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
   }
 
 */
-// mig: fn get_function_prototype_for_call
-fn get_function_prototype_for_call<'s, 'ctx, 't>() -> PrototypeT<'s, 't> {
-    panic!("Unimplemented: get_function_prototype_for_call");
 }
+
+// mig: fn get_function_prototype_for_call
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_function_prototype_for_call(&self) -> PrototypeT<'s, 't> {
+        panic!("Unimplemented: get_function_prototype_for_call");
+    }
 /*
   // Preconditions:
   // - already spawned local env
@@ -318,10 +317,15 @@ fn get_function_prototype_for_call<'s, 'ctx, 't>() -> PrototypeT<'s, 't> {
   }
 
 */
-// mig: fn get_function_prototype_inner_for_call
-fn get_function_prototype_inner_for_call<'s, 'ctx, 't>() -> PrototypeT<'s, 't> {
-    panic!("Unimplemented: get_function_prototype_inner_for_call");
 }
+
+// mig: fn get_function_prototype_inner_for_call
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_function_prototype_inner_for_call(&self) -> PrototypeT<'s, 't> {
+        panic!("Unimplemented: get_function_prototype_inner_for_call");
+    }
 /*
   def getFunctionPrototypeInnerForCall(
     fullEnv: FunctionEnvironmentT,
@@ -339,10 +343,15 @@ fn get_function_prototype_inner_for_call<'s, 'ctx, 't>() -> PrototypeT<'s, 't> {
   }
 
 */
-// mig: fn finalize_header
-fn finalize_header<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
-    panic!("Unimplemented: finalize_header");
 }
+
+// mig: fn finalize_header
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn finalize_header(&self) -> FunctionHeaderT<'s, 't> {
+        panic!("Unimplemented: finalize_header");
+    }
 /*
   def finalizeHeader(
       fullEnv: FunctionEnvironmentT,
@@ -364,8 +373,13 @@ fn finalize_header<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
   }
 
 */
+}
+
 // mig: fn finish_function_maybe_deferred
-fn finish_function_maybe_deferred<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn finish_function_maybe_deferred(&self) -> FunctionHeaderT<'s, 't> {
     panic!("Unimplemented: finish_function_maybe_deferred");
 }
 /*
@@ -423,10 +437,15 @@ fn finish_function_maybe_deferred<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
   }
 
 */
-// mig: fn translate_attributes
-fn translate_attributes<'s, 'ctx, 't>() -> Vec<IFunctionAttributeT<'s, 't>> {
-    panic!("Unimplemented: translate_attributes");
 }
+
+// mig: fn translate_attributes
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_attributes(&self) -> Vec<IFunctionAttributeT<'s, 't>> {
+        panic!("Unimplemented: translate_attributes");
+    }
 /*
   def translateAttributes(attributesA: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {
     attributesA.map({
@@ -438,10 +457,15 @@ fn translate_attributes<'s, 'ctx, 't>() -> Vec<IFunctionAttributeT<'s, 't>> {
   }
 
 */
-// mig: fn make_extern_function
-fn make_extern_function<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
-    panic!("Unimplemented: make_extern_function");
 }
+
+// mig: fn make_extern_function
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_extern_function(&self) -> FunctionHeaderT<'s, 't> {
+        panic!("Unimplemented: make_extern_function");
+    }
 /*
   def makeExternFunction(
       coutputs: CompilerOutputs,
@@ -492,8 +516,13 @@ fn make_extern_function<'s, 'ctx, 't>() -> FunctionHeaderT<'s, 't> {
   }
 
 */
+}
+
 // mig: fn translate_function_attributes
-fn translate_function_attributes<'s, 'ctx, 't>() -> Vec<IFunctionAttributeT<'s, 't>> {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_function_attributes(&self) -> Vec<IFunctionAttributeT<'s, 't>> {
     panic!("Unimplemented: translate_function_attributes");
 }
 /*
@@ -554,3 +583,4 @@ fn translate_function_attributes<'s, 'ctx, 't>() -> Vec<IFunctionAttributeT<'s, 
 //  }
 }
 */
+}
