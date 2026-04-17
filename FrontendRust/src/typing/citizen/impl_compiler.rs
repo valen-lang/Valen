@@ -48,6 +48,7 @@ use crate::typing::compilation::*;
 use crate::typing::infer_compiler::*;
 use crate::typing::overload_resolver::*;
 use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::*;
 use crate::solver::solver::*;
@@ -89,16 +90,9 @@ case class IsntParent(
 
 */
 // mig: struct ImplCompiler
-pub struct ImplCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub name_translator: NameTranslator<'s>,
-    pub struct_compiler: StructCompiler<'s, 'ctx, 't>,
-    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
-    pub infer_compiler: InferCompiler<'s, 't>,
-}
+// vestigial: kept until Step 8 cleanup because as_subtype_macro still holds `impl_compiler: ImplCompiler<'s, 'ctx, 't>` field
+pub struct ImplCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ImplCompiler
-impl<'s, 'ctx, 't> ImplCompiler<'s, 'ctx, 't> {}
 /*
 class ImplCompiler(
     opts: TypingPassOptions,
@@ -111,9 +105,10 @@ class ImplCompiler(
   // We don't have an isAncestor call, see REMUIDDA.
 */
 // mig: fn resolve_impl
-fn resolve_impl() {
-    panic!("Unimplemented: resolve_impl");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_impl(&self) { panic!("Unimplemented: resolve_impl"); }
 /*
   def resolveImpl(
       coutputs: CompilerOutputs,
@@ -181,10 +176,13 @@ fn resolve_impl() {
   }
 
 */
-// mig: fn partial_resolve_impl
-fn partial_resolve_impl() {
-    panic!("Unimplemented: partial_resolve_impl");
 }
+
+// mig: fn partial_resolve_impl
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn partial_resolve_impl(&self) { panic!("Unimplemented: partial_resolve_impl"); }
 /*
   // WARNING: Doesn't verify conclusions to make sure that any bounds are satisfied!
   def partialResolveImpl(
@@ -240,10 +238,13 @@ fn partial_resolve_impl() {
   }
 
 */
-// mig: fn compile_impl
-fn compile_impl() {
-    panic!("Unimplemented: compile_impl");
 }
+
+// mig: fn compile_impl
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_impl(&self) { panic!("Unimplemented: compile_impl"); }
 /*
   // This will just figure out the struct template and interface template,
   // so we can add it to the temputs.
@@ -383,10 +384,13 @@ fn compile_impl() {
   }
 
 */
-// mig: fn calculate_runes_independence
-fn calculate_runes_independence() {
-    panic!("Unimplemented: calculate_runes_independence");
 }
+
+// mig: fn calculate_runes_independence
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn calculate_runes_independence(&self) { panic!("Unimplemented: calculate_runes_independence"); }
 /*
   def calculateRunesIndependence(
     coutputs: CompilerOutputs,
@@ -431,10 +435,13 @@ fn calculate_runes_independence() {
   }
 
 */
-// mig: fn assemble_impl_name
-fn assemble_impl_name() {
-    panic!("Unimplemented: assemble_impl_name");
 }
+
+// mig: fn assemble_impl_name
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn assemble_impl_name(&self) { panic!("Unimplemented: assemble_impl_name"); }
 /*
   def assembleImplName(
     templateName: IdT[IImplTemplateNameT],
@@ -603,10 +610,13 @@ fn assemble_impl_name() {
   //
 
 */
-// mig: fn is_descendant
-fn is_descendant() {
-    panic!("Unimplemented: is_descendant");
 }
+
+// mig: fn is_descendant
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_descendant(&self) { panic!("Unimplemented: is_descendant"); }
 /*
   def isDescendant(
     coutputs: CompilerOutputs,
@@ -644,10 +654,13 @@ fn is_descendant() {
   // }
 
 */
-// mig: fn get_impl_parent_given_sub_citizen
-fn get_impl_parent_given_sub_citizen() {
-    panic!("Unimplemented: get_impl_parent_given_sub_citizen");
 }
+
+// mig: fn get_impl_parent_given_sub_citizen
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_impl_parent_given_sub_citizen(&self) { panic!("Unimplemented: get_impl_parent_given_sub_citizen"); }
 /*
   def getImplParentGivenSubCitizen(
     coutputs: CompilerOutputs,
@@ -677,10 +690,13 @@ fn get_impl_parent_given_sub_citizen() {
   }
 
 */
-// mig: fn get_parents
-fn get_parents() {
-    panic!("Unimplemented: get_parents");
 }
+
+// mig: fn get_parents
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_parents(&self) { panic!("Unimplemented: get_parents"); }
 /*
   def getParents(
     coutputs: CompilerOutputs,
@@ -743,10 +759,13 @@ fn get_parents() {
   }
 
 */
-// mig: fn is_parent
-fn is_parent() {
-    panic!("Unimplemented: is_parent");
 }
+
+// mig: fn is_parent
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_parent(&self) { panic!("Unimplemented: is_parent"); }
 /*
   def isParent(
     coutputs: CompilerOutputs,
@@ -836,3 +855,4 @@ fn is_parent() {
   }
 }
 */
+}

@@ -49,15 +49,15 @@ Commit `8883ac08` on branch `rustmigrate-z`. Error count in `cargo check --lib`:
 | Upper | `ExpressionCompiler` | Struct kept vestigial (held by `as_subtype_macro`/`lock_weak_macro`); `IExpressionCompilerDelegate` trait deleted; 21 stub methods wrapped |
 | Upper | `TemplataCompiler` | Struct kept vestigial (held by 8 sub-compilers); `ITemplataCompilerDelegate` + `IPlaceholderSubstituter` traits deleted along with 8 trait-abstract-method stubs; 14 instance methods wrapped; 35 `object TemplataCompiler` statics left as free fns |
 | Upper | `EdgeCompiler` | Struct deleted entirely (no external holders); 4 instance methods had existing `impl EdgeCompiler` wrappers re-targeted to `impl Compiler` |
+| Upper | `ImplCompiler` | Struct kept vestigial (held by `as_subtype_macro`); 9 stub methods wrapped |
 
 ### Remaining (in order)
 
 Upper-tier:
-1. `ImplCompiler` — `src/typing/citizen/impl_compiler.rs`
-2. `StructCompiler` + `StructCompilerCore` + `StructCompilerGenericArgsLayer` — **one commit**
-3. `ArrayCompiler` — `src/typing/array_compiler.rs`
-4. `BodyCompiler` — `src/typing/function/function_body_compiler.rs`
-5. `FunctionCompiler` + `FunctionCompilerCore` + `FunctionCompilerMiddleLayer` + `FunctionCompilerSolvingLayer` + `FunctionCompilerClosureOrLightLayer` — **one commit** (the beast)
+1. `StructCompiler` + `StructCompilerCore` + `StructCompilerGenericArgsLayer` — **one commit**
+2. `ArrayCompiler` — `src/typing/array_compiler.rs`
+3. `BodyCompiler` — `src/typing/function/function_body_compiler.rs`
+4. `FunctionCompiler` + `FunctionCompilerCore` + `FunctionCompilerMiddleLayer` + `FunctionCompilerSolvingLayer` + `FunctionCompilerClosureOrLightLayer` — **one commit** (the beast)
 
 Then macros (~20 files in `src/typing/macros/**` and subdirs). Then Step 8 cleanup (see master handoff).
 
