@@ -26,7 +26,7 @@ You're a junior engineer picking up an in-progress refactor partway through. A c
 
 ## Status as of last commit
 
-Commit `8883ac08` on branch `rustmigrate-z`. Error count in `cargo check --lib`: **30** (this is the baseline; see "Verification" below). 11 sub-compilers merged, 9 to go (plus layers), then macros, then cleanup.
+Commit `fd45b5a9` on branch `rustmigrate-z`. Error count in `cargo check --lib`: **19**. All 8 upper-tier sub-compilers merged. Next phase is macros (~20 files in `src/typing/macros/**`), then Step 8 cleanup.
 
 ### Done
 
@@ -53,13 +53,13 @@ Commit `8883ac08` on branch `rustmigrate-z`. Error count in `cargo check --lib`:
 | Upper | `StructCompiler` + `StructCompilerCore` + `StructCompilerGenericArgsLayer` | `StructCompiler` struct kept vestigial (held by 3 function-compiler layers); `StructCompilerCore` and `StructCompilerGenericArgsLayer` structs deleted (no external holders); `IStructCompilerDelegate` trait + 2 abstract method stubs deleted; 9+9+6=24 methods wrapped; collisions resolved by `_layer` (GenericArgsLayer) and `_core` (Core) suffixes |
 | Upper | `ArrayCompiler` | Struct kept vestigial (held by `rsa_mutable_new_macro`/`rsa_drop_into_macro`); 13 instance methods wrapped (11 pub, 2 private helpers) |
 | Upper | `BodyCompiler` | Struct deleted entirely (no external holders); `IBodyCompilerDelegate` trait deleted; 3 stub methods wrapped; had to move `ResultTypeMismatchError` data struct out of the impl block (Rust disallows nested structs in impls) |
+| Upper | `FunctionCompiler` + `FunctionCompilerCore` + `FunctionCompilerMiddleLayer` + `FunctionCompilerSolvingLayer` + `FunctionCompilerClosureOrLightLayer` | Shipped across 5 separate commits rather than one (the bundle is 3200 lines). All 5 structs deleted; `IFunctionCompilerDelegate` trait deleted; 8+8+10+10+11=47 methods wrapped; collisions resolved with `_core` / `_solving` / `_closure_or_light` suffixes. Wrapping closure_or_light_layer's fns fixed the 14 baseline "self outside impl" errors — error count dropped 30→19 |
 
 ### Remaining (in order)
 
-Upper-tier:
-1. `FunctionCompiler` + `FunctionCompilerCore` + `FunctionCompilerMiddleLayer` + `FunctionCompilerSolvingLayer` + `FunctionCompilerClosureOrLightLayer` — **one commit** (the beast)
+Upper-tier: **none, all done.**
 
-Then macros (~20 files in `src/typing/macros/**` and subdirs). Then Step 8 cleanup (see master handoff).
+Next phase: macros (~20 files in `src/typing/macros/**` and subdirs). Then Step 8 cleanup (see master handoff).
 
 ## The pattern — how to do one sub-compiler
 
