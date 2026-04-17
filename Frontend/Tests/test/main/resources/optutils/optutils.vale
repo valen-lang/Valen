@@ -1,10 +1,10 @@
 
-abstract func getOr<T>(virtual opt &Opt<T>, default T) T;
-func getOr<T>(opt &None<T>, default T) T {
+abstract func getOr<T>(virtual opt &Opt<T>, default &T) &T;
+func getOr<T>(opt &None<T>, default &T) &T {
   return default;
 }
-func getOr<T>(opt &Some<T>, default T) T {
-  return opt.value;
+func getOr<T>(opt &Some<T>, default &T) &T {
+  return &opt.value;
 }
 
 abstract func map<T, R>(virtual opt &Opt<T>, func &IFunction1<mut, &T, R>) Opt<R>;

@@ -489,12 +489,10 @@ class FunctionCompilerSolvingLayer(
           case Some(x) => Some(InitialKnown(genericParam.rune, x))
           case None => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
-//            val runeType = vassertSome(function.runeToType.get(genericParam.rune.rune))
-            vimpl()
             val placeholderPureHeight = vregionmut(None)
             val templata =
               templataCompiler.createPlaceholder(
-                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, false)
+                coutputs, callingEnv, callingEnv.id, genericParam, index, function.runeToType, placeholderPureHeight, true)
             Some(InitialKnown(genericParam.rune, templata))
           }
         }
