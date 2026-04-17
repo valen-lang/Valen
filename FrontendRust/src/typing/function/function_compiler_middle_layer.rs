@@ -23,10 +23,6 @@ import dev.vale.typing.env._
 import scala.collection.immutable.{List, Set}
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
@@ -36,24 +32,12 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::compilation::*;
-use crate::typing::function::function_compiler::*;
 use crate::postparsing::ast::{LocationInDenizen, ParameterS};
-use crate::postparsing::itemplatatype::ITemplataType;
-use crate::interner::Interner;
-use crate::typing::names::name_translator::*;
-use crate::typing::templata_compiler::*;
 use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
-use crate::typing::convert_helper::*;
-use crate::typing::citizen::struct_compiler::*;
-use crate::typing::expression::expression_compiler::*;
 use crate::typing::compiler::Compiler;
 
 // mig: struct FunctionCompilerMiddleLayer

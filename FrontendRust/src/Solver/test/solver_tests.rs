@@ -8,7 +8,7 @@ import scala.collection.immutable.Map
 
 class SolverTests extends FunSuite with Matchers with Collector {
 */
-use crate::solver::{SimpleSolverState, FailedSolve, ISolverError, make_solver_state};
+use crate::solver::{SimpleSolverState, FailedSolve, make_solver_state};
 use super::test_rules::TestRule;
 // mig: const complex_rule_set
 const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];
@@ -995,7 +995,6 @@ fn advance(
     ) -> std::collections::HashMap<i64, String> {
         use super::test_rules::{Call, Lookup, Literal, TestRule};
 
-        use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
         let scout_bump = Bump::new();
@@ -1129,7 +1128,6 @@ fn advance(
         rules: Vec<super::test_rules::TestRule>,
     ) -> FailedSolve<TestRule, i64, String, String> {
 
-        use crate::utils::range::RangeS;
         use bumpalo::Bump;
         use std::collections::HashMap;
 
@@ -1200,7 +1198,6 @@ fn advance(
         initially_known_runes: std::collections::HashMap<i64, String>,
     ) -> std::collections::HashMap<i64, String> {
 
-        use crate::utils::range::RangeS;
         use bumpalo::Bump;
 
         let scout_bump = Bump::new();

@@ -42,29 +42,10 @@ import scala.collection.mutable
 import scala.util.control.Breaks._
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::scout_arena::ScoutArena;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::typing_interner::TypingInterner;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::compiler_outputs::*;
 
 // mig: trait IFunctionGenerator
 pub trait IFunctionGenerator<'s, 't> {

@@ -15,26 +15,24 @@ import dev.vale.typing.types.InterfaceTT
 import scala.collection.immutable.{List, Map}
 import scala.collection.mutable
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
+use crate::interner::{Interner, StrI};
+use std::collections::HashMap;
 use crate::utils::range::RangeS;
-use crate::utils::code_hierarchy::PackageCoordinate;
-
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
+use crate::postparsing::*;
+use crate::typing::hinputs_t::*;
+use crate::typing::compilation::TypingPassOptions;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::typing::infer_compiler::{InitialKnown, InitialSend};
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
-use crate::typing::hinputs_t::*;
-use crate::interner::Interner;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
 
 // mig: struct DeferredEvaluatingFunctionBody
 pub struct DeferredEvaluatingFunctionBody<'s, 't> {

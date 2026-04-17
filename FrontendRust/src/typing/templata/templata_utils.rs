@@ -10,8 +10,6 @@ object simpleNameT {
 */
 use crate::typing::ast::ast::*;
 use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
 
 // mig: fn unapply
 pub fn unapply_simple_name(id: &IdT) -> Option<String> {

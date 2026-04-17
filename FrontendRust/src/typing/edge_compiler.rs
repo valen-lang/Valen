@@ -21,35 +21,23 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::higher_typing::ast::*;
-use crate::typing::overload_resolver::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
+use crate::typing::compiler::Compiler;
+use std::collections::HashMap;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
-use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::*;
-use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
 use crate::interner::Interner;
-use crate::keywords::Keywords;
-use crate::typing::compilation::*;
-use crate::typing::citizen::impl_compiler::*;
-use crate::typing::function::function_compiler::*;
-use crate::typing::compiler::Compiler;
 
 // mig: enum IMethod
 pub enum IMethod<'s, 't> {

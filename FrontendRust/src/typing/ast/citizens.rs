@@ -12,12 +12,6 @@ import scala.collection.immutable.Map
 
 // A "citizen" is a struct or an interface.
 */
-use std::collections::HashMap;
-
-use crate::interner::StrI;
-
-use crate::postparsing::names::*;
-
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;

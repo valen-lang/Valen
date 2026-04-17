@@ -22,29 +22,24 @@ import dev.vale.typing.names.TypingPassTemporaryVarNameT
 
 import scala.collection.immutable.List
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
-use crate::parsing::ast::ast::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler::Compiler;
 use crate::utils::range::RangeS;
-
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
+use crate::postparsing::expressions::*;
+use crate::postparsing::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::compilation::*;
-use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::expressions::LocalS;
+use crate::parsing::ast::*;
+use crate::interner::Interner;
 
 // mig: struct LocalHelper
 // mig: impl LocalHelper

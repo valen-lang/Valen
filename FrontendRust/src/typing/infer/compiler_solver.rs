@@ -28,30 +28,28 @@ import scala.collection.mutable
 */
 use std::collections::{HashMap, HashSet};
 
-use crate::interner::StrI;
-use crate::parsing::ast::ast::*;
 use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::infer_compiler::*;
-use crate::typing::overload_resolver::*;
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::*;
+use crate::postparsing::names::*;
+use crate::postparsing::*;
 use crate::solver::solver::*;
 use crate::solver::simple_solver_state::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::higher_typing::ast::*;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::typing::infer_compiler::InferEnv;
 
 // mig: enum ITypingPassSolverError
 pub enum ITypingPassSolverError<'s, 't> {}
@@ -398,7 +396,7 @@ where 's: 't,
         env: InferEnv<'s>,
         state: CompilerOutputs<'s, 't>,
         solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        delegate: IInfererDelegate<'s, 't>,
+        delegate: &dyn IInfererDelegate<'s, 't>,
 ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: advance_infer");
 }
@@ -499,7 +497,7 @@ object CompilerRuleSolver {
 
 // mig: fn sanity_check_conclusion
 pub fn sanity_check_conclusion<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     rune: IRuneS<'s>,
@@ -515,7 +513,7 @@ pub fn sanity_check_conclusion<'s, 't>(
 */
 // mig: fn complex_solve
 fn complex_solve<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -536,7 +534,7 @@ fn complex_solve<'s, 't>(
 */
 // mig: fn complex_solve_inner
 fn complex_solve_inner<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -645,7 +643,7 @@ fn complex_solve_inner<'s, 't>(
 */
 // mig: fn solve_receives
 fn solve_receives<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     senders: Vec<(IRuneS<'s>, CoordT<'s, 't>)>,
@@ -718,7 +716,7 @@ fn solve_receives<'s, 't>(
 */
 // mig: fn narrow
 fn narrow<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     kinds: HashSet<KindT<'s, 't>>,
@@ -751,7 +749,7 @@ fn narrow<'s, 't>(
 */
 // mig: fn solve
 fn solve<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -778,7 +776,7 @@ fn solve<'s, 't>(
 */
 // mig: fn solve_rule
 fn solve_rule<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     rule_index: i32,
@@ -1209,7 +1207,7 @@ fn solve_rule<'s, 't>(
 */
 // mig: fn solve_call_rule
 fn solve_call_rule<'s, 't>(
-    delegate: IInfererDelegate<'s, 't>,
+    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,

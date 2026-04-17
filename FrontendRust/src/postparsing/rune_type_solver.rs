@@ -10,14 +10,13 @@ import dev.vale.postparsing.rules._
 
 import scala.collection.immutable.Map
 */
-use crate::postparsing::itemplatatype::{self, ITemplataType, CoordTemplataType, KindTemplataType};
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::GenericParameterS;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
-use std::collections::HashMap;
 
 // Const ITemplataType values for use in solve_rule where no arena is available.
 // These are simple unit-struct variants with no 's data, so 'static works and coerces to any 's.

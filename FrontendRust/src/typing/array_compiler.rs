@@ -27,35 +27,20 @@ import scala.collection.immutable.{List, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
-use std::collections::{HashMap, HashSet};
+use std::collections::HashMap;
 
-use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
 
-use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::compilation::*;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::*;
-use crate::interner::Interner;
-use crate::typing::infer_compiler::*;
-use crate::typing::overload_resolver::*;
-use crate::typing::templata_compiler::*;
-use crate::typing::function::destructor_compiler::*;
-use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compiler::Compiler;
 
 // mig: struct ArrayCompiler

@@ -14,16 +14,8 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
-
-use crate::typing::names::names::*;
 use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
 

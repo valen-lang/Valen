@@ -21,26 +21,17 @@ import dev.vale.typing.templata.MutabilityTemplataT
 import dev.vale.typing.types.RuntimeSizedArrayTT
 
 */
-use std::collections::{HashMap, HashSet};
-
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
-use crate::postparsing::names::*;
 use crate::higher_typing::ast::*;
 
-use crate::typing::names::names::*;
 use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::macros::macros::*;
 use crate::typing::array_compiler::*;
 use crate::interner::Interner;
 use crate::typing::function::destructor_compiler::*;
@@ -67,7 +58,8 @@ class RSAMutableNewMacro(
 
 */
 // mig: fn generate_function_body
-pub fn generate_function_body<'s, 't>(
+impl<'s, 'ctx, 't> RSAMutableNewMacro<'s, 'ctx, 't> {
+pub fn generate_function_body(
     &self,
     env: &FunctionEnvironmentT<'s, 't>,
     coutputs: &mut CompilerOutputs<'s, 't>,
@@ -80,6 +72,7 @@ pub fn generate_function_body<'s, 't>(
     maybe_ret_coord: Option<CoordT<'s, 't>>,
 ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
     panic!("Unimplemented: generate_function_body");
+}
 }
 /*
   def generateFunctionBody(

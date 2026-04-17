@@ -17,22 +17,6 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 import scala.collection.immutable.{List, Map, Set}
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::i_env_entry::*;
-
 // mig: struct BuildingFunctionEnvironmentWithClosuredsT
 pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration

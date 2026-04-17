@@ -20,6 +20,7 @@ use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 
 // mig: enum OwnershipT
+#[derive(Copy, Clone)]
 pub enum OwnershipT {}
 /*
 sealed trait OwnershipT  {
@@ -116,6 +117,7 @@ case object YonderT extends LocationT {
 }
 */
 // mig: struct RegionT
+#[derive(Copy, Clone)]
 pub struct RegionT;
 /*
 case class RegionT()
@@ -151,6 +153,7 @@ case class CoordT(
 */
 // mig: enum KindT
 // TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone)]
 pub enum KindT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }

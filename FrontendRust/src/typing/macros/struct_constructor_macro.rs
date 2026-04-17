@@ -28,38 +28,29 @@ import dev.vale.typing.types.InterfaceTT
 import scala.collection.mutable
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::interner::StrI;
+use crate::interner::{StrI, Interner};
 use crate::keywords::Keywords;
-use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::RangeS;
-
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::typing::compilation::TypingPassOptions;
+use crate::typing::infer_compiler::{InitialKnown, InitialSend};
+use crate::typing::function::destructor_compiler::DestructorCompiler;
+use crate::typing::names::name_translator::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::*;
 use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
+use crate::postparsing::rules::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::compilation::*;
-use crate::interner::Interner;
-use crate::typing::array_compiler::*;
-use crate::typing::overload_resolver::*;
-use crate::typing::templata_compiler::*;
-use crate::typing::function::destructor_compiler::*;
-use crate::typing::citizen::struct_compiler::*;
-use crate::typing::names::name_translator::*;
-use crate::typing::infer::compiler_solver::*;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::*;
+use crate::higher_typing::ast::*;
 
 // mig: struct StructConstructorMacro
 pub struct StructConstructorMacro<'s, 'ctx, 't> {
@@ -88,12 +79,14 @@ class StructConstructorMacro(
 
 */
 // mig: fn get_struct_sibling_entries
-pub fn get_struct_sibling_entries<'p, 's, 't>(
+impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {
+pub fn get_struct_sibling_entries(
   &self,
   struct_name: IdT<'s, 't>,
   struct_a: StructA<'s>,
 ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
   panic!("Unimplemented: get_struct_sibling_entries");
+}
 }
 
 /*
@@ -172,7 +165,8 @@ pub fn get_struct_sibling_entries<'p, 's, 't>(
 
 */
 // mig: fn generate_function_body
-pub fn generate_function_body<'s, 't>(
+impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {
+pub fn generate_function_body(
   &self,
   env: FunctionEnvironmentT<'s, 't>,
   coutputs: CompilerOutputs<'s, 't>,
@@ -185,6 +179,7 @@ pub fn generate_function_body<'s, 't>(
   maybe_ret_coord: Option<CoordT<'s, 't>>,
 ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
   panic!("Unimplemented: generate_function_body");
+}
 }
 
 /*
