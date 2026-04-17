@@ -42,8 +42,9 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 // mig: trait IBodyCompilerDelegate
-pub trait IBodyCompilerDelegate<'s, 't> {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IBodyCompilerDelegate {
   def evaluateBlockStatements(
@@ -70,10 +71,7 @@ trait IBodyCompilerDelegate {
 }
 */
 // mig: struct BodyCompiler
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct BodyCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl BodyCompiler
-impl<'s, 'ctx, 't> BodyCompiler<'s, 'ctx, 't> {}
 /*
 class BodyCompiler(
   opts: TypingPassOptions,
@@ -86,9 +84,10 @@ class BodyCompiler(
 
 */
 // mig: fn declare_and_evaluate_function_body
-fn declare_and_evaluate_function_body() {
-  panic!("Unimplemented: declare_and_evaluate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn declare_and_evaluate_function_body(&self) { panic!("Unimplemented: declare_and_evaluate_function_body"); }
 /*
   // Returns:
   // - IF we had to infer it, the return type.
@@ -193,6 +192,8 @@ fn declare_and_evaluate_function_body() {
   }
 
 */
+}
+
 // mig: struct ResultTypeMismatchError
 pub struct ResultTypeMismatchError;
 /*
@@ -204,10 +205,12 @@ override def equals(obj: Any): Boolean = vcurious();
   }
 
 */
+
 // mig: fn evaluate_function_body
-fn evaluate_function_body() {
-  panic!("Unimplemented: evaluate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_function_body(&self) { panic!("Unimplemented: evaluate_function_body"); }
 /*
   private def evaluateFunctionBody(
     funcOuterEnv: FunctionEnvironmentBoxT,
@@ -296,10 +299,13 @@ fn evaluate_function_body() {
   }
 
 */
-// mig: fn evaluate_lets
-fn evaluate_lets() {
-  panic!("Unimplemented: evaluate_lets");
 }
+
+// mig: fn evaluate_lets
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_lets(&self) { panic!("Unimplemented: evaluate_lets"); }
 /*
   // Produce the lets at the start of a function.
   private def evaluateLets(
@@ -335,3 +341,4 @@ fn evaluate_lets() {
 
 }
 */
+}
