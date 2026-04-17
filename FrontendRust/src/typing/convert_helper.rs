@@ -204,7 +204,7 @@ where 's: 't,
         source_expr: ReferenceExpressionTE,
         source_sub_kind: ISubKindTT,
         target_super_kind: ISuperKindTT,
-    ) -> ReferenceExpressionTE {
+    ) -> ReferenceExpressionTE<'_, '_> {
         panic!("Unimplemented: convert");
     }
 /*

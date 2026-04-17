@@ -37,7 +37,7 @@ class RSALenMacro() extends IFunctionBodyMacro {
   val generatorId: String = "vale_runtime_sized_array_len"
 */
 // mig: fn generate_function_body
-pub fn generate_function_body<'s, 't>(env: FunctionEnvironmentT<'s, 't>, coutputs: CompilerOutputs<'s, 't>, generatorId: StrI<'s>, life: LocationInFunctionEnvironmentT<'s>, callRange: Vec<RangeS<'s>>, callLocation: LocationInDenizen<'s>, originFunction: Option<FunctionA<'s>>, paramCoords: Vec<ParameterT<'s, 't>>, maybeRetCoord: Option<CoordT<'s, 't>>) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+pub fn generate_function_body<'s, 't>(env: FunctionEnvironmentT<'s, 't>, coutputs: CompilerOutputs<'s, 't>, generator_id: StrI<'s>, life: LocationInFunctionEnvironmentT<'s>, call_range: Vec<RangeS<'s>>, call_location: LocationInDenizen<'s>, origin_function: Option<FunctionA<'s>>, param_coords: Vec<ParameterT<'s, 't>>, maybe_ret_coord: Option<CoordT<'s, 't>>) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
     panic!("Unimplemented: generate_function_body");
 }
 

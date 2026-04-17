@@ -1289,7 +1289,7 @@ impl<'s, 't> LocalLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> 
   override def result: AddressResultT = AddressResultT(localVariable.coord)
 */
 // mig: fn variability
-impl<'s, 't> LocalLookupTE<'s, 't> { fn variability(&self) -> VariabilityT { panic!("Unimplemented: variability"); } }
+impl<'s, 't> LocalLookupTE<'s, 't> { fn variability(&self) -> VariabilityT<'_, '_> { panic!("Unimplemented: variability"); } }
 /*
   override def variability: VariabilityT = localVariable.variability
 }

@@ -72,15 +72,17 @@ If any piece of information is an arcana (cross-cutting concern):
 
 1. **Generate title and ID.** The title describes the concern plainly (does NOT contain the word "arcana"). The ID is an uppercase initialism of the title words with Z appended. Keep the acronym readable (4-10 letters before the Z). Present to user for approval.
 
-2. **Create the arcana doc** at `<feature>/docs/arcana/<HammerCaseTitle>-<ID>.md` in the `docs/` directory of the feature that *causes* the cross-cutting effect. HammerCase with the initialism at the end, like `PostParserSynthesizesParserASTNodes-PPSPASTNZ.md`. Include information such as: a brief description of the concept, at least one example concisely illustrating it, why the concept exists, and what its cross-cutting effect is. If there are other arcana that it affects or is affected by it, mention those as part of regular prose (not as an extra section). Notes:
+2. **Draft the arcana text and get a second approval.** Once the user approves the title and ID, write the tentative arcana doc body inline in chat (not to disk yet) and ask the user to approve the text before it's written to a file. The user may want to tweak wording, add nuance, or cut fluff. Only after they approve the drafted text do you move on to step 3.
+
+3. **Create the arcana doc** at `<feature>/docs/arcana/<HammerCaseTitle>-<ID>.md` in the `docs/` directory of the feature that *causes* the cross-cutting effect. HammerCase with the initialism at the end, like `PostParserSynthesizesParserASTNodes-PPSPASTNZ.md`. Include information such as: a brief description of the concept, at least one example concisely illustrating it, why the concept exists, and what its cross-cutting effect is. If there are other arcana that it affects or is affected by it, mention those as part of regular prose (not as an extra section). Notes:
    * It should be concise. Don't include fluff. Don't be redundant. Get to the point.
    * Instead of long paragraphs, feel free to break things up with newlines.
    * It should be one markdown section, it should not have subsections headers. If it must be long enough that subsections are needed, feel free to use bold lines like, `**Interactions with IDKWTHI:**`.
    * Instead of having a section starting with `**Cross-cutting effect:**`, start it with something else, like `**How this affects call-sites**:` etc.
 
-3. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
+4. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
 
-4. **Add `@ID` references.** At each relevant site, add a comment referencing the arcana. The reference must always appear in a sentence:
+5. **Add `@ID` references.** At each relevant site, add a comment referencing the arcana. The reference must always appear in a sentence:
    - `// Per @PPSPASTNZ, synthesize a constructor call as parser AST.`
    - `// Needed because postparser creates parser nodes (see @PPSPASTNZ)`
 

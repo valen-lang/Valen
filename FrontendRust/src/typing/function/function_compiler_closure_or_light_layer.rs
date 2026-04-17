@@ -119,7 +119,7 @@ where 's: 't,
         already_specified_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult {
+    ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_banner");
     }
 /*
@@ -172,7 +172,7 @@ where 's: 't,
         already_specified_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult {
+    ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_prototype");
     }
 /*
@@ -221,7 +221,7 @@ where 's: 't,
         explicit_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult {
+    ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype2");
     }
 /*
@@ -262,7 +262,7 @@ where 's: 't,
         explicit_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         args: Vec<Option<CoordT>>,
-    ) -> IResolveFunctionResult {
+    ) -> IResolveFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype2");
     }
 /*
@@ -301,7 +301,7 @@ where 's: 't,
         call_location: LocationInDenizen,
         function: FunctionA,
         args: Vec<Option<CoordT>>,
-    ) -> IDefineFunctionResult {
+    ) -> IDefineFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
     }
 /*
@@ -352,7 +352,7 @@ where 's: 't,
         parent_ranges: Vec<RangeS>,
         call_location: LocationInDenizen,
         function: FunctionA,
-    ) -> FunctionHeaderT {
+    ) -> FunctionHeaderT<'_, '_> {
         panic!("Unimplemented: evaluate_generic_light_function_from_non_call");
     }
 /*
@@ -543,7 +543,7 @@ where 's: 't,
         explicit_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult {
+    ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_light_banner_from_call");
     }
 /*
@@ -584,7 +584,7 @@ where 's: 't,
         already_specified_template_args: Vec<ITemplataT>,
         context_region: RegionT,
         arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult {
+    ) -> IEvaluateFunctionResult<'_, '_> {
         panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
     }
 /*
@@ -618,7 +618,7 @@ where 's: 't,
         function: FunctionA,
         template_id: IdT,
         is_root_compiling_denizen: bool,
-    ) -> BuildingFunctionEnvironmentWithClosuredsT {
+    ) -> BuildingFunctionEnvironmentWithClosuredsT<'_, '_> {
         panic!("Unimplemented: make_env_without_closure_stuff");
     }
 /*
@@ -671,7 +671,7 @@ where 's: 't,
         coutputs: CompilerOutputs,
         original_calling_denizen_id: IdT,
         closure_struct_ref: StructTT,
-    ) -> (Vec<IVariableT>, Vec<(INameT, IEnvEntry)>) {
+    ) -> (Vec<IVariableT<'_, '_>>, Vec<(INameT<'_, '_>, IEnvEntry)>) {
         panic!("Unimplemented: make_closure_variables_and_entries");
     }
 /*

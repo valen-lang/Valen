@@ -146,7 +146,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_name_step(&self, name: INameS) -> INameT {
+    pub fn translate_name_step(&self, name: INameS) -> INameT<'_, '_> {
         panic!("Unimplemented: translate_name_step");
     }
 /*
@@ -196,7 +196,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_code_location(&self, s: CodeLocationS) -> CodeLocationS {
+    pub fn translate_code_location(&self, s: CodeLocationS) -> CodeLocationS<'_> {
         panic!("Unimplemented: translate_code_location");
     }
 /*
@@ -211,7 +211,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_var_name_step(&self, name: IVarNameS) -> IVarNameT {
+    pub fn translate_var_name_step(&self, name: IVarNameS) -> IVarNameT<'_, '_> {
         panic!("Unimplemented: translate_var_name_step");
     }
 /*
@@ -237,7 +237,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_impl_name(&self, n: IImplDeclarationNameS) -> IImplTemplateNameT {
+    pub fn translate_impl_name(&self, n: IImplDeclarationNameS) -> IImplTemplateNameT<'_, '_> {
         panic!("Unimplemented: translate_impl_name");
     }
 /*

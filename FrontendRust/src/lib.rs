@@ -1,5 +1,6 @@
 #![feature(box_patterns)]
 #![allow(dead_code)]
+#![allow(unused_variables, unused_imports)]
 
 pub mod builtins;
 pub mod compile_options;

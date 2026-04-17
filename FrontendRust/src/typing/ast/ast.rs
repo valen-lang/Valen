@@ -812,7 +812,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_banner(&self) -> FunctionBannerT<'s
   def toBanner: FunctionBannerT = FunctionBannerT(maybeOriginFunctionTemplata, id)
 */
 // mig: fn to_prototype
-impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_prototype(&self) -> PrototypeT<'s, 't, IFunctionNameT> { panic!("Unimplemented: to_prototype"); } }
+impl<'s, 't> FunctionHeaderT<'s, 't> { fn to_prototype(&self) -> PrototypeT<'s, 't, IFunctionNameT<'_, '_>> { panic!("Unimplemented: to_prototype"); } }
 /*
   def toPrototype: PrototypeT[IFunctionNameT] = {
 //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
