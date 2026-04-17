@@ -49,6 +49,7 @@ use crate::keywords::Keywords;
 use crate::typing::compilation::*;
 use crate::typing::citizen::impl_compiler::*;
 use crate::typing::function::function_compiler::*;
+use crate::typing::compiler::Compiler;
 
 // mig: enum IMethod
 pub enum IMethod<'s, 't> {
@@ -104,16 +105,7 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
 // mig: struct EdgeCompiler
-pub struct EdgeCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub function_compiler: FunctionCompiler<'s, 'ctx, 't>,
-    pub overload_compiler: OverloadResolver<'s, 't>,
-    pub impl_compiler: ImplCompiler<'s, 'ctx, 't>,
-}
 // mig: impl EdgeCompiler
-impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {}
 /*
 class EdgeCompiler(
     opts: TypingPassOptions,
@@ -124,14 +116,15 @@ class EdgeCompiler(
     implCompiler: ImplCompiler) {
 */
 // mig: fn compile_i_tables
-impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {
-fn compile_i_tables(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>>) {
-    panic!("Unimplemented: compile_i_tables");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_i_tables(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+    ) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>>) {
+        panic!("Unimplemented: compile_i_tables");
+    }
 /*
   def compileITables(coutputs: CompilerOutputs):
   (
@@ -191,15 +184,18 @@ fn compile_i_tables(
     (interfaceEdgeBlueprints, itables)
   }
 */
+}
+
 // mig: fn make_interface_edge_blueprints
-impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {
-fn make_interface_edge_blueprints(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-) -> Vec<InterfaceEdgeBlueprintT<'s, 't>> {
-    panic!("Unimplemented: make_interface_edge_blueprints");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_interface_edge_blueprints(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+    ) -> Vec<InterfaceEdgeBlueprintT<'s, 't>> {
+        panic!("Unimplemented: make_interface_edge_blueprints");
+    }
 /*
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
     val x1 =
@@ -254,19 +250,22 @@ fn make_interface_edge_blueprints(
     interfaceEdgeBlueprints.toVector
   }
 */
+}
+
 // mig: fn create_override_placeholder_mimicking
-impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {
-fn create_override_placeholder_mimicking(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    original_templata_to_mimic: ITemplataT<'s, 't>,
-    dispatcher_outer_env: &IInDenizenEnvironmentT<'s, 't>,
-    index: i32,
-    rune: IRuneS<'s>,
-) -> ITemplataT<'s, 't> {
-    panic!("Unimplemented: create_override_placeholder_mimicking");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn create_override_placeholder_mimicking(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_templata_to_mimic: ITemplataT<'s, 't>,
+        dispatcher_outer_env: &IInDenizenEnvironmentT<'s, 't>,
+        index: i32,
+        rune: IRuneS<'s>,
+    ) -> ITemplataT<'s, 't> {
+        panic!("Unimplemented: create_override_placeholder_mimicking");
+    }
 /*
   def createOverridePlaceholderMimicking(
     coutputs: CompilerOutputs,
@@ -346,21 +345,24 @@ fn create_override_placeholder_mimicking(
     result
   }
 */
+}
+
 // mig: fn look_for_override
-impl<'s, 'ctx, 't> EdgeCompiler<'s, 'ctx, 't> {
-fn look_for_override(
-    &self,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    call_location: LocationInDenizen<'s>,
-    impl_t: &ImplT<'s, 't>,
-    interface_template_id: IdT<'s, 't>,
-    sub_citizen_template_id: IdT<'s, 't>,
-    abstract_function_prototype: PrototypeT<'s, 't>,
-    abstract_index: i32,
-) -> OverrideT<'s, 't> {
-    panic!("Unimplemented: look_for_override");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn look_for_override(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_location: LocationInDenizen<'s>,
+        impl_t: &ImplT<'s, 't>,
+        interface_template_id: IdT<'s, 't>,
+        sub_citizen_template_id: IdT<'s, 't>,
+        abstract_function_prototype: PrototypeT<'s, 't>,
+        abstract_index: i32,
+    ) -> OverrideT<'s, 't> {
+        panic!("Unimplemented: look_for_override");
+    }
 /*
   private def lookForOverride(
     coutputs: CompilerOutputs,
@@ -714,3 +716,4 @@ fn look_for_override(
 
 }
 */
+}
