@@ -163,7 +163,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_and_coerce_to_reference_expressions(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expressions"); }
-
 /*
   def evaluateAndCoerceToReferenceExpressions(
     coutputs: CompilerOutputs,
@@ -190,7 +189,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_lookup_for_load(&self) { panic!("Unimplemented: evaluate_lookup_for_load"); }
-
 /*
   private def evaluateLookupForLoad(
     coutputs: CompilerOutputs,
@@ -224,7 +222,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_addressible_lookup_for_mutate(&self) { panic!("Unimplemented: evaluate_addressible_lookup_for_mutate"); }
-
 /*
   private def evaluateAddressibleLookupForMutate(
       coutputs: CompilerOutputs,
@@ -317,7 +314,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_addressible_lookup(&self) { panic!("Unimplemented: evaluate_addressible_lookup"); }
-
 /*
   private def evaluateAddressibleLookup(
     coutputs: CompilerOutputs,
@@ -415,7 +411,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn make_closure_struct_construct_expression(&self) { panic!("Unimplemented: make_closure_struct_construct_expression"); }
-
 /*
   private def makeClosureStructConstructExpression(
       coutputs: CompilerOutputs,
@@ -489,7 +484,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_and_coerce_to_reference_expression(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expression"); }
-
 /*
   def evaluateAndCoerceToReferenceExpression(
     coutputs: CompilerOutputs,
@@ -522,7 +516,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn coerce_to_reference_expression(&self) { panic!("Unimplemented: coerce_to_reference_expression"); }
-
 /*
   def coerceToReferenceExpression(
     nenv: NodeEnvironmentBox,
@@ -547,7 +540,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_expected_address_expression(&self) { panic!("Unimplemented: evaluate_expected_address_expression"); }
-
 /*
   private def evaluateExpectedAddressExpression(
     coutputs: CompilerOutputs,
@@ -577,7 +569,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate(&self) { panic!("Unimplemented: evaluate"); }
-
 /*
   // returns:
   // - resulting expression
@@ -1659,7 +1650,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn check_array(&self) { panic!("Unimplemented: check_array"); }
-
 /*
   private def checkArray(
       coutputs: CompilerOutputs,
@@ -1699,7 +1689,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_option(&self) { panic!("Unimplemented: get_option"); }
-
 /*
   def getOption(
     coutputs: CompilerOutputs,
@@ -1777,7 +1766,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_result(&self) { panic!("Unimplemented: get_result"); }
-
 /*
   def getResult(
     coutputs: CompilerOutputs,
@@ -1874,7 +1862,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn weak_alias(&self) { panic!("Unimplemented: weak_alias"); }
-
 /*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
     expr.kind match {
@@ -1903,7 +1890,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn dot_borrow(&self) { panic!("Unimplemented: dot_borrow"); }
-
 /*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.
   // If it receives an owning address, that's fine, just borrowsoftload from it.
@@ -1949,7 +1935,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_closure(&self) { panic!("Unimplemented: evaluate_closure"); }
-
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
   // returns:
@@ -2002,7 +1987,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn new_global_function_group_expression(&self) { panic!("Unimplemented: new_global_function_group_expression"); }
-
 /*
   private def newGlobalFunctionGroupExpression(
     env: IInDenizenEnvironmentT,
@@ -2027,7 +2011,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn evaluate_block_statements(&self) { panic!("Unimplemented: evaluate_block_statements"); }
-
 /*
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
@@ -2051,7 +2034,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn translate_pattern_list(&self) { panic!("Unimplemented: translate_pattern_list"); }
-
 /*
   def translatePatternList(
     coutputs: CompilerOutputs,
@@ -2076,7 +2058,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn astronomize_lambda(&self) { panic!("Unimplemented: astronomize_lambda"); }
-
 /*
   def astronomizeLambda(
     coutputs: CompilerOutputs,
@@ -2156,7 +2137,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn drop_since(&self) { panic!("Unimplemented: drop_since"); }
-
 /*
   def dropSince(
     coutputs: CompilerOutputs,
@@ -2231,7 +2211,6 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn resultify_expressions(&self) { panic!("Unimplemented: resultify_expressions"); }
-
 /*
   // Makes the last expression stored in a variable.
   // Dont call this for void or never or no expressions.

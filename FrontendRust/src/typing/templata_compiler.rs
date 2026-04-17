@@ -43,6 +43,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 
 // mig: enum IBoundArgumentsSource
 pub enum IBoundArgumentsSource {}
@@ -63,12 +64,11 @@ case class UseBoundsFromContainer(
 ) extends IBoundArgumentsSource
 */
 // mig: trait ITemplataCompilerDelegate
-pub trait ITemplataCompilerDelegate {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait ITemplataCompilerDelegate {
 */
 // mig: fn is_parent
-fn is_parent() { panic!("Unimplemented: is_parent"); }
 /*
   def isParent(
     coutputs: CompilerOutputs,
@@ -80,7 +80,6 @@ fn is_parent() { panic!("Unimplemented: is_parent"); }
   IsParentResult
 */
 // mig: fn resolve_struct
-fn resolve_struct() { panic!("Unimplemented: resolve_struct"); }
 /*
   def resolveStruct(
     coutputs: CompilerOutputs,
@@ -93,7 +92,6 @@ fn resolve_struct() { panic!("Unimplemented: resolve_struct"); }
   IResolveOutcome[StructTT]
 */
 // mig: fn resolve_interface
-fn resolve_interface() { panic!("Unimplemented: resolve_interface"); }
 /*
   def resolveInterface(
     coutputs: CompilerOutputs,
@@ -894,32 +892,27 @@ fn substitute_templatas_in_function_bound_id() { panic!("Unimplemented: substitu
   // }
 */
 // mig: trait IPlaceholderSubstituter
-pub trait IPlaceholderSubstituter {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
   trait IPlaceholderSubstituter {
 */
 // mig: fn substitute_for_coord
-fn substitute_for_coord() { panic!("Unimplemented: substitute_for_coord"); }
 /*
     def substituteForCoord(coutputs: CompilerOutputs, coordT: CoordT): CoordT
 */
 // mig: fn substitute_for_interface
-fn substitute_for_interface() { panic!("Unimplemented: substitute_for_interface"); }
 /*
     def substituteForInterface(coutputs: CompilerOutputs, interfaceTT: InterfaceTT): InterfaceTT
 */
 // mig: fn substitute_for_templata
-fn substitute_for_templata() { panic!("Unimplemented: substitute_for_templata"); }
 /*
     def substituteForTemplata(coutputs: CompilerOutputs, coordT: ITemplataT[ITemplataType]): ITemplataT[ITemplataType]
 */
 // mig: fn substitute_for_prototype
-fn substitute_for_prototype() { panic!("Unimplemented: substitute_for_prototype"); }
 /*
     def substituteForPrototype[T <: IFunctionNameT](coutputs: CompilerOutputs, proto: PrototypeT[T]): PrototypeT[T]
 */
 // mig: fn substitute_for_impl_id
-fn substitute_for_impl_id() { panic!("Unimplemented: substitute_for_impl_id"); }
 /*
     def substituteForImplId[T <: IImplNameT](coutputs: CompilerOutputs, implId: IdT[T]): IdT[T]
   }
@@ -1095,9 +1088,9 @@ fn create_rune_type_solver_env() { panic!("Unimplemented: create_rune_type_solve
 }
 */
 // mig: struct TemplataCompiler
+// vestigial: kept until Step 8 cleanup because sub-compilers still hold `templata_compiler: TemplataCompiler<'s, 'ctx, 't>` fields
 pub struct TemplataCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl TemplataCompiler
-impl<'s, 'ctx, 't> TemplataCompiler<'s, 'ctx, 't> {}
 /*
 class TemplataCompiler(
   interner: Interner,
@@ -1107,7 +1100,10 @@ class TemplataCompiler(
   delegate: ITemplataCompilerDelegate) {
 */
 // mig: fn is_type_convertible
-fn is_type_convertible() { panic!("Unimplemented: is_type_convertible"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_type_convertible(&self) { panic!("Unimplemented: is_type_convertible"); }
 /*
   def isTypeConvertible(
     coutputs: CompilerOutputs,
@@ -1181,8 +1177,13 @@ fn is_type_convertible() { panic!("Unimplemented: is_type_convertible"); }
     true
   }
 */
+}
+
 // mig: fn pointify_kind
-fn pointify_kind() { panic!("Unimplemented: pointify_kind"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn pointify_kind(&self) { panic!("Unimplemented: pointify_kind"); }
 /*
   def pointifyKind(
     coutputs: CompilerOutputs,
@@ -1275,8 +1276,13 @@ fn pointify_kind() { panic!("Unimplemented: pointify_kind"); }
 //    (templata)
 //  }
 */
+}
+
 // mig: fn lookup_templata
-fn lookup_templata_by_name() { panic!("Unimplemented: lookup_templata"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn lookup_templata_by_name(&self) { panic!("Unimplemented: lookup_templata"); }
 /*
   def lookupTemplata(
     env: IEnvironmentT,
@@ -1290,8 +1296,13 @@ fn lookup_templata_by_name() { panic!("Unimplemented: lookup_templata"); }
     vassertOne(env.lookupNearestWithName(name, Set(TemplataLookupContext)))
   }
 */
+}
+
 // mig: fn lookup_templata
-fn lookup_templata_by_rune() { panic!("Unimplemented: lookup_templata"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn lookup_templata_by_rune(&self) { panic!("Unimplemented: lookup_templata"); }
 /*
   def lookupTemplata(
     env: IEnvironmentT,
@@ -1309,8 +1320,13 @@ fn lookup_templata_by_rune() { panic!("Unimplemented: lookup_templata"); }
     results.headOption
   }
 */
+}
+
 // mig: fn coerce_kind_to_coord
-fn coerce_kind_to_coord() { panic!("Unimplemented: coerce_kind_to_coord"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn coerce_kind_to_coord(&self) { panic!("Unimplemented: coerce_kind_to_coord"); }
 /*
   def coerceKindToCoord(coutputs: CompilerOutputs, kind: KindT, region: RegionT):
   CoordT = {
@@ -1325,8 +1341,13 @@ fn coerce_kind_to_coord() { panic!("Unimplemented: coerce_kind_to_coord"); }
       kind)
   }
 */
+}
+
 // mig: fn coerce_to_coord
-fn coerce_to_coord() { panic!("Unimplemented: coerce_to_coord"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn coerce_to_coord(&self) { panic!("Unimplemented: coerce_to_coord"); }
 /*
   def coerceToCoord(
     coutputs: CompilerOutputs,
@@ -1388,24 +1409,39 @@ fn coerce_to_coord() { panic!("Unimplemented: coerce_to_coord"); }
     }
   }
 */
+}
+
 // mig: fn resolve_struct_template
-fn resolve_struct_template() { panic!("Unimplemented: resolve_struct_template"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_struct_template(&self) { panic!("Unimplemented: resolve_struct_template"); }
 /*
   def resolveStructTemplate(structTemplata: StructDefinitionTemplataT): IdT[IStructTemplateNameT] = {
     val StructDefinitionTemplataT(declaringEnv, structA) = structTemplata
     declaringEnv.id.addStep(nameTranslator.translateStructName(structA.name))
   }
 */
+}
+
 // mig: fn resolve_interface_template
-fn resolve_interface_template() { panic!("Unimplemented: resolve_interface_template"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_interface_template(&self) { panic!("Unimplemented: resolve_interface_template"); }
 /*
   def resolveInterfaceTemplate(interfaceTemplata: InterfaceDefinitionTemplataT): IdT[IInterfaceTemplateNameT] = {
     val InterfaceDefinitionTemplataT(declaringEnv, interfaceA) = interfaceTemplata
     declaringEnv.id.addStep(nameTranslator.translateInterfaceName(interfaceA.name))
   }
 */
+}
+
 // mig: fn resolve_citizen_template
-fn resolve_citizen_template() { panic!("Unimplemented: resolve_citizen_template"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_citizen_template(&self) { panic!("Unimplemented: resolve_citizen_template"); }
 /*
   def resolveCitizenTemplate(citizenTemplata: CitizenDefinitionTemplataT): IdT[ICitizenTemplateNameT] = {
     citizenTemplata match {
@@ -1414,8 +1450,13 @@ fn resolve_citizen_template() { panic!("Unimplemented: resolve_citizen_template"
     }
   }
 */
+}
+
 // mig: fn citizen_is_from_template
-fn citizen_is_from_template() { panic!("Unimplemented: citizen_is_from_template"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn citizen_is_from_template(&self) { panic!("Unimplemented: citizen_is_from_template"); }
 /*
   def citizenIsFromTemplate(actualCitizenRef: ICitizenTT, expectedCitizenTemplata: ITemplataT[ITemplataType]): Boolean = {
     val citizenTemplateId =
@@ -1429,8 +1470,13 @@ fn citizen_is_from_template() { panic!("Unimplemented: citizen_is_from_template"
     TemplataCompiler.getCitizenTemplate(actualCitizenRef.id) == citizenTemplateId
   }
 */
+}
+
 // mig: fn create_placeholder
-fn create_placeholder() { panic!("Unimplemented: create_placeholder"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn create_placeholder(&self) { panic!("Unimplemented: create_placeholder"); }
 /*
   def createPlaceholder(
       coutputs: CompilerOutputs,
@@ -1483,8 +1529,13 @@ fn create_placeholder() { panic!("Unimplemented: create_placeholder"); }
     }
   }
 */
+}
+
 // mig: fn create_coord_placeholder_inner
-fn create_coord_placeholder_inner() { panic!("Unimplemented: create_coord_placeholder_inner"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn create_coord_placeholder_inner(&self) { panic!("Unimplemented: create_coord_placeholder_inner"); }
 /*
   def createCoordPlaceholderInner(
       coutputs: CompilerOutputs,
@@ -1506,8 +1557,13 @@ fn create_coord_placeholder_inner() { panic!("Unimplemented: create_coord_placeh
     CoordTemplataT(CoordT(kindOwnership, regionPlaceholderTemplata, kindPlaceholderT.kind))
   }
 */
+}
+
 // mig: fn create_kind_placeholder_inner
-fn create_kind_placeholder_inner() { panic!("Unimplemented: create_kind_placeholder_inner"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn create_kind_placeholder_inner(&self) { panic!("Unimplemented: create_kind_placeholder_inner"); }
 /*
   def createKindPlaceholderInner(
       coutputs: CompilerOutputs,
@@ -1544,8 +1600,13 @@ fn create_kind_placeholder_inner() { panic!("Unimplemented: create_kind_placehol
     KindTemplataT(KindPlaceholderT(kindPlaceholderId))
   }
 */
+}
+
 // mig: fn create_non_kind_non_region_placeholder_inner
-fn create_non_kind_non_region_placeholder_inner() { panic!("Unimplemented: create_non_kind_non_region_placeholder_inner"); }
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn create_non_kind_non_region_placeholder_inner(&self) { panic!("Unimplemented: create_non_kind_non_region_placeholder_inner"); }
 /*
   def createNonKindNonRegionPlaceholderInner[T <: ITemplataType](
       namePrefix: IdT[INameT],
@@ -1558,3 +1619,4 @@ fn create_non_kind_non_region_placeholder_inner() { panic!("Unimplemented: creat
   }
 }
 */
+}
