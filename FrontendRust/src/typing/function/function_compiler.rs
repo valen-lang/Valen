@@ -53,7 +53,7 @@ use crate::typing::compilation::*;
 use crate::typing::compiler::Compiler;
 
 // mig: trait IFunctionCompilerDelegate
-pub trait IFunctionCompilerDelegate<'s, 't> {}
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IFunctionCompilerDelegate {
   def evaluateBlockStatements(
