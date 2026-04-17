@@ -54,19 +54,17 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct StructCompilerCore
-pub struct StructCompilerCore<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
-
-// TODO: placeholder PhantomData — replace with real fields during body migration
 // mig: impl StructCompilerCore
-impl<'s, 'ctx, 't> StructCompilerCore<'s, 'ctx, 't> {}
 /*
 */
 // mig: fn compile_struct
-fn compile_struct() {
-  panic!("Unimplemented: compile_struct");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_struct_core(&self) { panic!("Unimplemented: compile_struct"); }
 /*
   def compileStruct(
     outerEnv: IInDenizenEnvironmentT,
@@ -197,10 +195,13 @@ fn compile_struct() {
   }
 
 */
-// mig: fn translate_citizen_attributes
-fn translate_citizen_attributes() {
-  panic!("Unimplemented: translate_citizen_attributes");
 }
+
+// mig: fn translate_citizen_attributes
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn translate_citizen_attributes(&self) { panic!("Unimplemented: translate_citizen_attributes"); }
 /*
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
     attrs.map({
@@ -212,10 +213,13 @@ fn translate_citizen_attributes() {
 
 
 */
-// mig: fn compile_interface
-fn compile_interface() {
-  panic!("Unimplemented: compile_interface");
 }
+
+// mig: fn compile_interface
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_interface_core(&self) { panic!("Unimplemented: compile_interface"); }
 /*
   // Takes a IEnvironment because we might be inside a:
   // struct<T> Thing<T> {
@@ -289,10 +293,13 @@ fn compile_interface() {
   }
 
 */
-// mig: fn make_struct_members
-fn make_struct_members() {
-  panic!("Unimplemented: make_struct_members");
 }
+
+// mig: fn make_struct_members
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_struct_members(&self) { panic!("Unimplemented: make_struct_members"); }
 /*
   private def makeStructMembers(
     env: IInDenizenEnvironmentT,
@@ -303,10 +310,13 @@ fn make_struct_members() {
   }
 
 */
-// mig: fn make_struct_member
-fn make_struct_member() {
-  panic!("Unimplemented: make_struct_member");
 }
+
+// mig: fn make_struct_member
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_struct_member(&self) { panic!("Unimplemented: make_struct_member"); }
 /*
   private def makeStructMember(
     env: IInDenizenEnvironmentT,
@@ -342,10 +352,13 @@ fn make_struct_member() {
   }
 
 */
-// mig: fn make_closure_understruct
-fn make_closure_understruct() {
-  panic!("Unimplemented: make_closure_understruct");
 }
+
+// mig: fn make_closure_understruct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_closure_understruct_core(&self) { panic!("Unimplemented: make_closure_understruct"); }
 /*
   // Makes a struct to back a closure
   def makeClosureUnderstruct(
@@ -483,3 +496,4 @@ fn make_closure_understruct() {
   }
 }
 */
+}

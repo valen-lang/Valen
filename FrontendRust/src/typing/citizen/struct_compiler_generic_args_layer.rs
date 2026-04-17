@@ -28,22 +28,10 @@ use crate::interner::Interner;
 use crate::typing::names::name_translator::*;
 use crate::typing::function::function_compiler::*;
 use crate::typing::overload_resolver::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct StructCompilerGenericArgsLayer
-pub struct StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub opts: &'ctx TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub name_translator: &'ctx NameTranslator<'s>,
-    pub templata_compiler: &'ctx TemplataCompiler<'s, 'ctx, 't>,
-    pub infer_compiler: &'ctx InferCompiler<'s, 't>,
-    pub delegate: &'ctx dyn IStructCompilerDelegate<'s, 't>,
-}
-
 // mig: impl StructCompilerGenericArgsLayer
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-}
-
 /*
 package dev.vale.typing.citizen
 
@@ -78,8 +66,10 @@ class StructCompilerGenericArgsLayer(
   val core = new StructCompilerCore(opts, interner, keywords, nameTranslator, delegate)
 */
 // mig: fn resolve_struct
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn resolve_struct(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
@@ -90,8 +80,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
         panic!("Unimplemented: resolve_struct");
     }
-}
-
 /*
   def resolveStruct(
     coutputs: CompilerOutputs,
@@ -167,9 +155,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn predict_interface
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn predict_interface(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn predict_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
@@ -180,8 +172,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> InterfaceTT<'s, 't> {
         panic!("Unimplemented: predict_interface");
     }
-}
-
 /*
   // See SFWPRL for how this is different from resolveInterface.
   def predictInterface(
@@ -251,9 +241,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn predict_struct
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn predict_struct(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn predict_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
@@ -264,8 +258,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> StructTT<'s, 't> {
         panic!("Unimplemented: predict_struct");
     }
-}
-
 /*
   // See SFWPRL for how this is different from resolveStruct.
   def predictStruct(
@@ -337,9 +329,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn resolve_interface
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn resolve_interface(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
@@ -350,8 +346,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
         panic!("Unimplemented: resolve_interface");
     }
-}
-
 /*
   def resolveInterface(
     coutputs: CompilerOutputs,
@@ -413,9 +407,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn compile_struct
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn compile_struct(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
@@ -424,8 +422,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> UncheckedDefiningConclusions<'s, 't> {
         panic!("Unimplemented: compile_struct");
     }
-}
-
 /*
   def compileStruct(
     coutputs: CompilerOutputs,
@@ -530,9 +526,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn compile_interface
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn compile_interface(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_interface_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
@@ -541,8 +541,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> UncheckedDefiningConclusions<'s, 't> {
         panic!("Unimplemented: compile_interface");
     }
-}
-
 /*
   def compileInterface(
     coutputs: CompilerOutputs,
@@ -640,9 +638,13 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn make_closure_understruct
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
-    pub fn make_closure_understruct(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_closure_understruct_layer(
         &self,
         containing_function_env: &dyn NodeEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -654,8 +656,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
         panic!("Unimplemented: make_closure_understruct");
     }
-}
-
 /*
   // Makes a struct to back a closure
   def makeClosureUnderstruct(
@@ -672,8 +672,12 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn assemble_struct_name
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
     pub fn assemble_struct_name(
         &self,
         template_name: IdT<IStructTemplateNameT>,
@@ -681,8 +685,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> IdT<IStructNameT> {
         panic!("Unimplemented: assemble_struct_name");
     }
-}
-
 /*
   def assembleStructName(
     templateName: IdT[IStructTemplateNameT],
@@ -693,8 +695,12 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 
 */
+}
+
 // mig: fn assemble_interface_name
-impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
     pub fn assemble_interface_name(
         &self,
         template_name: IdT<IInterfaceTemplateNameT>,
@@ -702,8 +708,6 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
     ) -> IdT<IInterfaceNameT> {
         panic!("Unimplemented: assemble_interface_name");
     }
-}
-
 /*
   def assembleInterfaceName(
     templateName: IdT[IInterfaceTemplateNameT],
@@ -714,3 +718,4 @@ impl<'s, 'ctx, 't> StructCompilerGenericArgsLayer<'s, 'ctx, 't> {
   }
 }
 */
+}

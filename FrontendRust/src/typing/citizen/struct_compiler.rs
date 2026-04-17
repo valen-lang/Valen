@@ -53,6 +53,7 @@ use crate::typing::infer_compiler::*;
 use crate::typing::infer::compiler_solver::*;
 use crate::typing::overload_resolver::*;
 use crate::typing::citizen::struct_compiler_generic_args_layer::*;
+use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::itemplatatype::ITemplataType;
@@ -108,20 +109,11 @@ case class UncheckedDefiningConclusions(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]])
 */
 // mig: trait IStructCompilerDelegate
-pub trait IStructCompilerDelegate<'s, 't> {
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IStructCompilerDelegate {
 */
 // mig: fn evaluate_generic_function_from_non_call_for_header
-fn evaluate_generic_function_from_non_call_for_header(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    function_templata: FunctionTemplataT<'s, 't>,
-) -> FunctionHeaderT<'s, 't> {
-    panic!("Unimplemented: evaluate_generic_function_from_non_call_for_header");
-}
 /*
   def evaluateGenericFunctionFromNonCallForHeader(
     coutputs: CompilerOutputs,
@@ -131,22 +123,6 @@ fn evaluate_generic_function_from_non_call_for_header(
   FunctionHeaderT
 */
 // mig: fn scout_expected_function_for_prototype
-fn scout_expected_function_for_prototype(
-    &self,
-    env: &IInDenizenEnvironmentT<'s, 't>,
-    coutputs: &CompilerOutputs<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    function_name: IImpreciseNameS<'s>,
-    explicit_template_arg_rules_s: &[IRulexSR<'s>],
-    explicit_template_arg_runes_s: &[IRuneS<'s>],
-    context_region: RegionT,
-    args: &[CoordT<'s, 't>],
-    extra_envs_to_look_in: &[&IInDenizenEnvironmentT<'s, 't>],
-    exact: bool,
-) -> StampFunctionSuccess<'s, 't> {
-    panic!("Unimplemented: scout_expected_function_for_prototype");
-}
 /*
   def scoutExpectedFunctionForPrototype(
     env: IInDenizenEnvironmentT,
@@ -163,7 +139,6 @@ fn scout_expected_function_for_prototype(
   StampFunctionSuccess
 }
 */
-}
 
 // mig: enum IResolveOutcome
 pub enum IResolveOutcome<'s, 't, T> {
@@ -219,18 +194,9 @@ case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) 
 }
 */
 // mig: struct StructCompiler
-pub struct StructCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub name_translator: NameTranslator<'s>,
-    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
-    pub infer_compiler: InferCompiler<'s, 't>,
-    pub delegate: Box<dyn IStructCompilerDelegate<'s, 't>>,
-    pub template_args_layer: StructCompilerGenericArgsLayer<'s, 'ctx, 't>,
-}
+// vestigial: kept until Step 8 cleanup because function_compiler_middle_layer, function_compiler_closure_or_light_layer, and function_compiler_solving_layer still hold `struct_compiler: StructCompiler<'s, 'ctx, 't>` fields
+pub struct StructCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl StructCompiler
-impl<'s, 'ctx, 't> StructCompiler<'s, 'ctx, 't> {
 /*
 class StructCompiler(
     opts: TypingPassOptions,
@@ -245,17 +211,20 @@ class StructCompiler(
       opts, interner, keywords, nameTranslator, templataCompiler, inferCompiler, delegate)
 */
 // mig: fn resolve_struct
-fn resolve_struct(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s, 't>,
-    uncoerced_template_args: &[ITemplataT<'s, 't>],
-) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
-    panic!("Unimplemented: resolve_struct");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_struct(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
+        uncoerced_template_args: &[ITemplataT<'s, 't>],
+    ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
+        panic!("Unimplemented: resolve_struct");
+    }
 /*
   def resolveStruct(
     coutputs: CompilerOutputs,
@@ -271,14 +240,19 @@ fn resolve_struct(
     })
   }
 */
-// mig: fn precompile_struct
-fn precompile_struct(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    struct_templata: StructDefinitionTemplataT<'s, 't>,
-) -> () {
-    panic!("Unimplemented: precompile_struct");
 }
+
+// mig: fn precompile_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn precompile_struct(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
+    ) -> () {
+        panic!("Unimplemented: precompile_struct");
+    }
 /*
   def precompileStruct(
     coutputs: CompilerOutputs,
@@ -319,14 +293,19 @@ fn precompile_struct(
     coutputs.declareTypeOuterEnv(structTemplateId, outerEnv)
   }
 */
-// mig: fn precompile_interface
-fn precompile_interface(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-) -> () {
-    panic!("Unimplemented: precompile_interface");
 }
+
+// mig: fn precompile_interface
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn precompile_interface(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
+    ) -> () {
+        panic!("Unimplemented: precompile_interface");
+    }
 /*
   def precompileInterface(
     coutputs: CompilerOutputs,
@@ -379,16 +358,21 @@ fn precompile_interface(
     coutputs.declareTypeOuterEnv(interfaceTemplateId, outerEnv)
   }
 */
-// mig: fn compile_struct
-fn compile_struct(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s, 't>,
-) -> UncheckedDefiningConclusions<'s, 't> {
-    panic!("Unimplemented: compile_struct");
 }
+
+// mig: fn compile_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_struct(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
+    ) -> UncheckedDefiningConclusions<'s, 't> {
+        panic!("Unimplemented: compile_struct");
+    }
 /*
   def compileStruct(
     coutputs: CompilerOutputs,
@@ -403,18 +387,23 @@ fn compile_struct(
 
   // See SFWPRL for how this is different from resolveInterface.
 */
-// mig: fn predict_interface
-fn predict_interface(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-    uncoerced_template_args: &[ITemplataT<'s, 't>],
-) -> InterfaceTT<'s, 't> {
-    panic!("Unimplemented: predict_interface");
 }
+
+// mig: fn predict_interface
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn predict_interface(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
+        uncoerced_template_args: &[ITemplataT<'s, 't>],
+    ) -> InterfaceTT<'s, 't> {
+        panic!("Unimplemented: predict_interface");
+    }
 /*
   def predictInterface(
     coutputs: CompilerOutputs,
@@ -432,18 +421,23 @@ fn predict_interface(
 
   // See SFWPRL for how this is different from resolveStruct.
 */
-// mig: fn predict_struct
-fn predict_struct(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    struct_templata: StructDefinitionTemplataT<'s, 't>,
-    uncoerced_template_args: &[ITemplataT<'s, 't>],
-) -> StructTT<'s, 't> {
-    panic!("Unimplemented: predict_struct");
 }
+
+// mig: fn predict_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn predict_struct(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        struct_templata: StructDefinitionTemplataT<'s, 't>,
+        uncoerced_template_args: &[ITemplataT<'s, 't>],
+    ) -> StructTT<'s, 't> {
+        panic!("Unimplemented: predict_struct");
+    }
 /*
   def predictStruct(
     coutputs: CompilerOutputs,
@@ -459,18 +453,23 @@ fn predict_struct(
       coutputs, callingEnv, callRange, callLocation, structTemplata, uncoercedTemplateArgs)
   }
 */
-// mig: fn resolve_interface
-fn resolve_interface(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-    uncoerced_template_args: &[ITemplataT<'s, 't>],
-) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
-    panic!("Unimplemented: resolve_interface");
 }
+
+// mig: fn resolve_interface
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_interface(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
+        uncoerced_template_args: &[ITemplataT<'s, 't>],
+    ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
+        panic!("Unimplemented: resolve_interface");
+    }
 /*
   def resolveInterface(
     coutputs: CompilerOutputs,
@@ -489,16 +488,21 @@ fn resolve_interface(
     success
   }
 */
-// mig: fn compile_interface
-fn compile_interface(
-    &self,
-    coutputs: &CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-) -> UncheckedDefiningConclusions<'s, 't> {
-    panic!("Unimplemented: compile_interface");
 }
+
+// mig: fn compile_interface
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_interface(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
+    ) -> UncheckedDefiningConclusions<'s, 't> {
+        panic!("Unimplemented: compile_interface");
+    }
 /*
   def compileInterface(
     coutputs: CompilerOutputs,
@@ -514,19 +518,24 @@ fn compile_interface(
 
   // Makes a struct to back a closure
 */
-// mig: fn make_closure_understruct
-fn make_closure_understruct(
-    &self,
-    containing_function_env: NodeEnvironmentT<'s, 't>,
-    coutputs: &CompilerOutputs<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    name: IFunctionDeclarationNameS<'s>,
-    function_s: &FunctionA<'s>,
-    members: &[NormalStructMemberT<'s, 't>],
-) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
-    panic!("Unimplemented: make_closure_understruct");
 }
+
+// mig: fn make_closure_understruct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_closure_understruct(
+        &self,
+        containing_function_env: NodeEnvironmentT<'s, 't>,
+        coutputs: &CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        name: IFunctionDeclarationNameS<'s>,
+        function_s: &FunctionA<'s>,
+        members: &[NormalStructMemberT<'s, 't>],
+    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
+        panic!("Unimplemented: make_closure_understruct");
+    }
 /*
   def makeClosureUnderstruct(
     containingFunctionEnv: NodeEnvironmentT,
