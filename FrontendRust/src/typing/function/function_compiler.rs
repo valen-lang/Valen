@@ -50,6 +50,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compilation::*;
+use crate::typing::compiler::Compiler;
 
 // mig: trait IFunctionCompilerDelegate
 pub trait IFunctionCompilerDelegate<'s, 't> {}
@@ -202,10 +203,7 @@ case class StampFunctionFailure(
 
 */
 // mig: struct FunctionCompiler
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct FunctionCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl FunctionCompiler
-impl<'s, 'ctx, 't> FunctionCompiler<'s, 'ctx, 't> {}
 /*
 // When typingpassing a function, these things need to happen:
 // - Spawn a local environment for the function
@@ -229,9 +227,10 @@ class FunctionCompiler(
 
 */
 // mig: fn evaluate_generic_function_from_non_call
-fn evaluate_generic_function_from_non_call() {
-  panic!("Unimplemented: evaluate_generic_function_from_non_call");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_generic_function_from_non_call(&self) { panic!("Unimplemented: evaluate_generic_function_from_non_call"); }
 /*
   // We would want only the prototype instead of the entire header if, for example,
   // we were calling the function. This is necessary for a recursive function like
@@ -255,10 +254,13 @@ fn evaluate_generic_function_from_non_call() {
   }
 
 */
-// mig: fn evaluate_templated_light_function_from_call_for_prototype
-fn evaluate_templated_light_function_from_call_for_prototype() {
-  panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype");
 }
+
+// mig: fn evaluate_templated_light_function_from_call_for_prototype
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_templated_light_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype"); }
 /*
   def evaluateTemplatedLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -281,10 +283,13 @@ fn evaluate_templated_light_function_from_call_for_prototype() {
   }
 
 */
-// mig: fn evaluate_templated_function_from_call_for_prototype
-fn evaluate_templated_function_from_call_for_prototype() {
-  panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
 }
+
+// mig: fn evaluate_templated_function_from_call_for_prototype
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_templated_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype"); }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -327,10 +332,13 @@ fn evaluate_templated_function_from_call_for_prototype() {
   }
 
 */
-// mig: fn evaluate_templated_function_from_call_for_prototype
-fn evaluate_templated_function_from_call_for_prototype_ext() {
-  panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype");
 }
+
+// mig: fn evaluate_templated_function_from_call_for_prototype
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_templated_function_from_call_for_prototype_ext(&self) { panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype"); }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -367,10 +375,13 @@ fn evaluate_templated_function_from_call_for_prototype_ext() {
   }
 
 */
-// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
-fn evaluate_generic_virtual_dispatcher_function_for_prototype() {
-  panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
 }
+
+// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(&self) { panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype"); }
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     coutputs: CompilerOutputs,
@@ -388,10 +399,13 @@ fn evaluate_generic_virtual_dispatcher_function_for_prototype() {
   }
 
 */
-// mig: fn evaluate_generic_light_function_from_call_for_prototype
-fn evaluate_generic_light_function_from_call_for_prototype() {
-  panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype");
 }
+
+// mig: fn evaluate_generic_light_function_from_call_for_prototype
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_generic_light_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype"); }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -412,10 +426,13 @@ fn evaluate_generic_light_function_from_call_for_prototype() {
   }
 
 */
-// mig: fn evaluate_closure_struct
-fn evaluate_closure_struct() {
-  panic!("Unimplemented: evaluate_closure_struct");
 }
+
+// mig: fn evaluate_closure_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_closure_struct(&self) { panic!("Unimplemented: evaluate_closure_struct"); }
 /*
   def evaluateClosureStruct(
     coutputs: CompilerOutputs,
@@ -443,10 +460,13 @@ fn evaluate_closure_struct() {
   }
 
 */
-// mig: fn determine_closure_variable_member
-fn determine_closure_variable_member() {
-  panic!("Unimplemented: determine_closure_variable_member");
 }
+
+// mig: fn determine_closure_variable_member
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn determine_closure_variable_member(&self) { panic!("Unimplemented: determine_closure_variable_member"); }
 /*
   private def determineClosureVariableMember(
     env: NodeEnvironmentT,
@@ -484,3 +504,4 @@ fn determine_closure_variable_member() {
 
 }
 */
+}
