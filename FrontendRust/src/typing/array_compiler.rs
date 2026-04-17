@@ -56,19 +56,12 @@ use crate::typing::overload_resolver::*;
 use crate::typing::templata_compiler::*;
 use crate::typing::function::destructor_compiler::*;
 use crate::typing::citizen::struct_compiler::*;
+use crate::typing::compiler::Compiler;
 
 // mig: struct ArrayCompiler
-pub struct ArrayCompiler<'s, 'ctx, 't> {
-    pub opts: TypingPassOptions<'s>,
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub infer_compiler: InferCompiler<'s, 't>,
-    pub overload_resolver: OverloadResolver<'s, 't>,
-    pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
-    pub templata_compiler: TemplataCompiler<'s, 'ctx, 't>,
-}
+// vestigial: kept until Step 8 cleanup because rsa_mutable_new_macro and rsa_drop_into_macro still hold `array_compiler: ArrayCompiler<'s, 'ctx, 't>` fields
+pub struct ArrayCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ArrayCompiler
-impl<'s, 'ctx, 't> ArrayCompiler<'s, 'ctx, 't> {}
 /*
 class ArrayCompiler(
     opts: TypingPassOptions,
@@ -84,21 +77,25 @@ class ArrayCompiler(
   vassert(overloadResolver != null)
 */
 // mig: fn evaluate_static_sized_array_from_callable
-pub fn evaluate_static_sized_array_from_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    region: RegionT,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
-    maybe_element_type_rune_a: Option<IRuneS<'s>>,
-    size_rune_a: IRuneS<'s>,
-    mutability_rune: IRuneS<'s>,
-    variability_rune: IRuneS<'s>,
-    callable_te: ReferenceExpressionTE<'s, 't>,
-) -> StaticArrayFromCallableTE<'s, 't> {
-    panic!("Unimplemented: evaluate_static_sized_array_from_callable");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_static_sized_array_from_callable(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        region: RegionT,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        maybe_element_type_rune_a: Option<IRuneS<'s>>,
+        size_rune_a: IRuneS<'s>,
+        mutability_rune: IRuneS<'s>,
+        variability_rune: IRuneS<'s>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
+    ) -> StaticArrayFromCallableTE<'s, 't> {
+        panic!("Unimplemented: evaluate_static_sized_array_from_callable");
+    }
 /*
   def evaluateStaticSizedArrayFromCallable(
     coutputs: CompilerOutputs,
@@ -186,21 +183,27 @@ pub fn evaluate_static_sized_array_from_callable<'s, 't>(
     expr2
   }
 */
-// mig: fn evaluate_runtime_sized_array_from_callable
-pub fn evaluate_runtime_sized_array_from_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    calling_env: &NodeEnvironmentT<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    region: RegionT,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
-    maybe_element_type_rune: Option<IRuneS<'s>>,
-    mutability_rune: IRuneS<'s>,
-    size_te: ReferenceExpressionTE<'s, 't>,
-    maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
-) -> ReferenceExpressionTE<'s, 't> {
-    panic!("Unimplemented: evaluate_runtime_sized_array_from_callable");
 }
+
+// mig: fn evaluate_runtime_sized_array_from_callable
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_runtime_sized_array_from_callable(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &NodeEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        maybe_element_type_rune: Option<IRuneS<'s>>,
+        mutability_rune: IRuneS<'s>,
+        size_te: ReferenceExpressionTE<'s, 't>,
+        maybe_callable_te: Option<ReferenceExpressionTE<'s, 't>>,
+    ) -> ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: evaluate_runtime_sized_array_from_callable");
+    }
 /*
   def evaluateRuntimeSizedArrayFromCallable(
     coutputs: CompilerOutputs,
@@ -383,22 +386,28 @@ pub fn evaluate_runtime_sized_array_from_callable<'s, 't>(
     }
   }
 */
-// mig: fn evaluate_static_sized_array_from_values
-pub fn evaluate_static_sized_array_from_values<'s, 't>(
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    calling_env: &IInDenizenEnvironmentT<'s, 't>,
-    parent_ranges: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
-    maybe_element_type_rune_a: Option<IRuneS<'s>>,
-    size_rune_a: IRuneS<'s>,
-    mutability_rune_a: IRuneS<'s>,
-    variability_rune_a: IRuneS<'s>,
-    exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
-    region: RegionT,
-) -> StaticArrayFromValuesTE<'s, 't> {
-    panic!("Unimplemented: evaluate_static_sized_array_from_values");
 }
+
+// mig: fn evaluate_static_sized_array_from_values
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_static_sized_array_from_values(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
+        maybe_element_type_rune_a: Option<IRuneS<'s>>,
+        size_rune_a: IRuneS<'s>,
+        mutability_rune_a: IRuneS<'s>,
+        variability_rune_a: IRuneS<'s>,
+        exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
+        region: RegionT,
+    ) -> StaticArrayFromValuesTE<'s, 't> {
+        panic!("Unimplemented: evaluate_static_sized_array_from_values");
+    }
 /*
   def evaluateStaticSizedArrayFromValues(
       coutputs: CompilerOutputs,
@@ -523,18 +532,24 @@ pub fn evaluate_static_sized_array_from_values<'s, 't>(
     (finalExpr)
   }
 */
-// mig: fn evaluate_destroy_static_sized_array_into_callable
-pub fn evaluate_destroy_static_sized_array_into_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    fate: FunctionEnvironmentBoxT,
-    range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    arr_te: ReferenceExpressionTE<'s, 't>,
-    callable_te: ReferenceExpressionTE<'s, 't>,
-    context_region: RegionT,
-) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
-    panic!("Unimplemented: evaluate_destroy_static_sized_array_into_callable");
 }
+
+// mig: fn evaluate_destroy_static_sized_array_into_callable
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_destroy_static_sized_array_into_callable(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        fate: FunctionEnvironmentBoxT,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        arr_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
+        context_region: RegionT,
+    ) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
+        panic!("Unimplemented: evaluate_destroy_static_sized_array_into_callable");
+    }
 /*
   def evaluateDestroyStaticSizedArrayIntoCallable(
     coutputs: CompilerOutputs,
@@ -564,18 +579,24 @@ pub fn evaluate_destroy_static_sized_array_into_callable<'s, 't>(
       prototype)
   }
 */
-// mig: fn evaluate_destroy_runtime_sized_array_into_callable
-pub fn evaluate_destroy_runtime_sized_array_into_callable<'s, 't>(
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    fate: FunctionEnvironmentBoxT,
-    range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    arr_te: ReferenceExpressionTE<'s, 't>,
-    callable_te: ReferenceExpressionTE<'s, 't>,
-    context_region: RegionT,
-) -> DestroyImmRuntimeSizedArrayTE<'s, 't> {
-    panic!("Unimplemented: evaluate_destroy_runtime_sized_array_into_callable");
 }
+
+// mig: fn evaluate_destroy_runtime_sized_array_into_callable
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate_destroy_runtime_sized_array_into_callable(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        fate: FunctionEnvironmentBoxT,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        arr_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
+        context_region: RegionT,
+    ) -> DestroyImmRuntimeSizedArrayTE<'s, 't> {
+        panic!("Unimplemented: evaluate_destroy_runtime_sized_array_into_callable");
+    }
 /*
   def evaluateDestroyRuntimeSizedArrayIntoCallable(
     coutputs: CompilerOutputs,
@@ -621,10 +642,15 @@ pub fn evaluate_destroy_runtime_sized_array_into_callable<'s, 't>(
       prototype)
   }
 */
-// mig: fn compile_static_sized_array
-pub fn compile_static_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
-    panic!("Unimplemented: compile_static_sized_array");
 }
+
+// mig: fn compile_static_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_static_sized_array(&self, global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
+        panic!("Unimplemented: compile_static_sized_array");
+    }
 /*
   def compileStaticSizedArray(globalEnv: GlobalEnvironment, coutputs: CompilerOutputs): Unit = {
     val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
@@ -673,16 +699,22 @@ pub fn compile_static_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutpu
     coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
   }
 */
-// mig: fn resolve_static_sized_array
-pub fn resolve_static_sized_array<'s, 't>(
-    mutability: ITemplataT<'s, 't>,
-    variability: ITemplataT<'s, 't>,
-    size: ITemplataT<'s, 't>,
-    type_2: CoordT<'s, 't>,
-    region: RegionT,
-) -> StaticSizedArrayTT<'s, 't> {
-    panic!("Unimplemented: resolve_static_sized_array");
 }
+
+// mig: fn resolve_static_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_static_sized_array(
+        &self,
+        mutability: ITemplataT<'s, 't>,
+        variability: ITemplataT<'s, 't>,
+        size: ITemplataT<'s, 't>,
+        type_2: CoordT<'s, 't>,
+        region: RegionT,
+    ) -> StaticSizedArrayTT<'s, 't> {
+        panic!("Unimplemented: resolve_static_sized_array");
+    }
 /*
   def resolveStaticSizedArray(
     mutability: ITemplataT[MutabilityTemplataType],
@@ -702,10 +734,15 @@ pub fn resolve_static_sized_array<'s, 't>(
           interner.intern(RawArrayNameT(mutability, type2, region)))))))
   }
 */
-// mig: fn compile_runtime_sized_array
-pub fn compile_runtime_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
-    panic!("Unimplemented: compile_runtime_sized_array");
 }
+
+// mig: fn compile_runtime_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_runtime_sized_array(&self, global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
+        panic!("Unimplemented: compile_runtime_sized_array");
+    }
 /*
   def compileRuntimeSizedArray(globalEnv: GlobalEnvironment, coutputs: CompilerOutputs): Unit = {
     val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
@@ -748,14 +785,20 @@ pub fn compile_runtime_sized_array<'s, 't>(global_env: &GlobalEnvironment, coutp
     coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
   }
 */
-// mig: fn resolve_runtime_sized_array
-pub fn resolve_runtime_sized_array<'s, 't>(
-    type_2: CoordT<'s, 't>,
-    mutability: ITemplataT<'s, 't>,
-    region: RegionT,
-) -> RuntimeSizedArrayTT<'s, 't> {
-    panic!("Unimplemented: resolve_runtime_sized_array");
 }
+
+// mig: fn resolve_runtime_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn resolve_runtime_sized_array(
+        &self,
+        type_2: CoordT<'s, 't>,
+        mutability: ITemplataT<'s, 't>,
+        region: RegionT,
+    ) -> RuntimeSizedArrayTT<'s, 't> {
+        panic!("Unimplemented: resolve_runtime_sized_array");
+    }
 /*
   def resolveRuntimeSizedArray(
     type2: CoordT,
@@ -771,35 +814,51 @@ pub fn resolve_runtime_sized_array<'s, 't>(
           interner.intern(RawArrayNameT(mutability, type2, region)))))))
   }
 */
-// mig: fn get_array_size
-fn get_array_size<'s, 't>(templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
-    panic!("Unimplemented: get_array_size");
 }
+
+// mig: fn get_array_size
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn get_array_size(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, size_rune_a: IRuneS<'s>) -> i32 {
+        panic!("Unimplemented: get_array_size");
+    }
 /*
   private def getArraySize(templatas: Map[IRuneS, ITemplataT[ITemplataType]], sizeRuneA: IRuneS): Int = {
     val IntegerTemplataT(m) = vassertSome(templatas.get(sizeRuneA))
     m.toInt
   }
 */
-// mig: fn get_array_element_type
-fn get_array_element_type<'s, 't>(templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
-    panic!("Unimplemented: get_array_element_type");
 }
+
+// mig: fn get_array_element_type
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn get_array_element_type(&self, templatas: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, type_rune_a: IRuneS<'s>) -> CoordT<'s, 't> {
+        panic!("Unimplemented: get_array_element_type");
+    }
 /*
   private def getArrayElementType(templatas: Map[IRuneS, ITemplataT[ITemplataType]], typeRuneA: IRuneS): CoordT = {
     val CoordTemplataT(m) = vassertSome(templatas.get(typeRuneA))
     m
   }
 */
-// mig: fn lookup_in_static_sized_array
-pub fn lookup_in_static_sized_array<'s, 't>(
-    range: RangeS<'s>,
-    container_expr_2: ReferenceExpressionTE<'s, 't>,
-    index_expr_2: ReferenceExpressionTE<'s, 't>,
-    at: StaticSizedArrayTT<'s, 't>,
-) -> StaticSizedArrayLookupTE<'s, 't> {
-    panic!("Unimplemented: lookup_in_static_sized_array");
 }
+
+// mig: fn lookup_in_static_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn lookup_in_static_sized_array(
+        &self,
+        range: RangeS<'s>,
+        container_expr_2: ReferenceExpressionTE<'s, 't>,
+        index_expr_2: ReferenceExpressionTE<'s, 't>,
+        at: StaticSizedArrayTT<'s, 't>,
+    ) -> StaticSizedArrayLookupTE<'s, 't> {
+        panic!("Unimplemented: lookup_in_static_sized_array");
+    }
 /*
   def lookupInStaticSizedArray(
       range: RangeS,
@@ -816,16 +875,22 @@ pub fn lookup_in_static_sized_array<'s, 't>(
     StaticSizedArrayLookupTE(range, containerExpr2, at, indexExpr2, memberType,  variability)
   }
 */
-// mig: fn lookup_in_unknown_sized_array
-pub fn lookup_in_unknown_sized_array<'s, 't>(
-    parent_ranges: &[RangeS<'s>],
-    range: RangeS<'s>,
-    container_expr_2: ReferenceExpressionTE<'s, 't>,
-    index_expr_2: ReferenceExpressionTE<'s, 't>,
-    rsa: RuntimeSizedArrayTT<'s, 't>,
-) -> RuntimeSizedArrayLookupTE<'s, 't> {
-    panic!("Unimplemented: lookup_in_unknown_sized_array");
 }
+
+// mig: fn lookup_in_unknown_sized_array
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn lookup_in_unknown_sized_array(
+        &self,
+        parent_ranges: &[RangeS<'s>],
+        range: RangeS<'s>,
+        container_expr_2: ReferenceExpressionTE<'s, 't>,
+        index_expr_2: ReferenceExpressionTE<'s, 't>,
+        rsa: RuntimeSizedArrayTT<'s, 't>,
+    ) -> RuntimeSizedArrayLookupTE<'s, 't> {
+        panic!("Unimplemented: lookup_in_unknown_sized_array");
+    }
 /*
   def lookupInUnknownSizedArray(
     parentRanges: List[RangeS],
@@ -850,3 +915,4 @@ pub fn lookup_in_unknown_sized_array<'s, 't>(
 
 }
 */
+}
