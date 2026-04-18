@@ -4,35 +4,23 @@ This document describes the architectural decisions for migrating `src/typing/` 
 
 The approach is **pragmatic arena retention**: scout data lives past the typing pass, so typing output can reference it directly. Output types carry `<'s, 't>` — they can hold `&'s` refs into the scout arena. Heavy templatas hold `&'s FunctionA` / `&'s StructA` directly. No re-interning, no side tables for origin data. Envs allocate into the scout arena.
 
-## Status (2026-04-16)
+## Status (2026-04-18)
 
-Phase 1 — **lifetime-parameter correction across `src/typing/`** — complete. Every `pub struct`, `pub enum`, and `pub trait` in the typing pass now carries the correct generics per §1.5:
+**Phase 1 — lifetime-parameter correction across `src/typing/`** — complete. Every `pub struct`, `pub enum`, and `pub trait` in the typing pass carries the generics specified in §1.5. Empty placeholder types use `PhantomData<(&'s (), ...)>` with a `// TODO: placeholder PhantomData — replace with real fields during body migration` line.
 
-- `<'s, 't>` on all output AST (HinputsT excepted — still only a `// mig:` marker with no Rust stub), names (IdT + ~95 name types), kinds (KindT + variants), envs (IEnvironmentT + 9 variants, function envs, variables), heavy templatas, citizen defs, expressions (~60), compiler outputs, macros (~20), and error/data types.
-- `<'s, 'ctx, 't>` on `Compiler`, `TypingPassCompilation`, and all `*Compiler` / `*Macro` structs.
-- `<'s>` only on `LocationInFunctionEnvironmentT` (scout-arena per §3.1).
-- No lifetimes on Ownership/Mutability/Variability/Location/Region enums + their singletons, and on the small Copy templata value variants (Mutability/Variability/Ownership/Location/Boolean/Integer/StringTemplataT).
-- Empty placeholder types (no real fields yet) use `PhantomData<(&'s (), ...)>` with a `// TODO: placeholder PhantomData — replace with real fields during body migration` comment above each site.
-- `<'p>` remains only at the parser boundary in `compilation.rs` and in `tests/typing_pass_tests.rs`.
+**Phase 2 — god-struct refactor** — complete. All ~20 sub-compilers and all 15 macros are now methods on a single `Compiler<'s, 'ctx, 't>`. Macro dispatch runs through four Copy unit-variant enums (`FunctionBodyMacro`, `OnStructDefinedMacro`, `OnInterfaceDefinedMacro`, `OnImplDefinedMacro`) whose variants tag the target `Compiler::<method>_<suffix>` method. Vestigial `*Compiler` PhantomData holders (`ExpressionCompiler`, `ImplCompiler`, `StructCompiler`, `ArrayCompiler`, `DestructorCompiler`, `InferCompiler`, `TemplataCompiler`, `NameTranslator`, `ConvertHelper`, `OverloadResolver`, `CompilerSolver`) were deleted once the macros stopped holding them as fields. Only `Compiler` itself remains. `IInfererDelegate` stays vestigial because fn signatures in `compiler_solver.rs` still take `&dyn IInfererDelegate`; rewriting those is a later item. Progress tracked at `FrontendRust/docs/migration/handoff-god-struct-progress.md`; master plan at `FrontendRust/docs/migration/handoff-god-struct-refactor.md`.
 
-Phase 2 — **god-struct refactor** — in progress. Collapsing ~20 sub-compilers into `Compiler<'s, 'ctx, 't>` per §2. Tracking at `FrontendRust/docs/migration/handoff-god-struct-refactor.md` (master plan) and `FrontendRust/docs/migration/handoff-god-struct-progress.md` (progress + continuation guide).
+**Phase 3 — body migration (Slabs 1–9+)** — in progress. Replace `PhantomData` stubs with real Scala-parity fields, one type family per slab per §12.
+- ✅ **Slab 1** (leaf types): `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT` real Copy enums; primitive `KindT` payloads (`NeverT`/`VoidT`/`IntT`/`BoolT`/`StrT`/`FloatT`) got full derives; `KindT<'s, 't>` gained the six primitive variants (`_Phantom` stays to anchor lifetimes until non-primitive variants land in Slab 3); leaf-value templatas (`OwnershipTemplataT`/`VariabilityTemplataT`/`MutabilityTemplataT`/`LocationTemplataT`/`BooleanTemplataT`/`IntegerTemplataT`/`StringTemplataT`) wrap their inner values. Commit `9fd7641c`.
+- ⏳ **Slab 2** (name hierarchy): `IdT<'s, 't, T: Copy>` generic with `widen`/`try_narrow`; ~60 concrete name types `<'s, 't>`; ~14 sub-enums with DAG variant duplication per §6.2; `INameValT` and per-sub-enum `*ValT` companions for IDEPFL interning; `From`/`TryFrom` bridges. Handoff at `FrontendRust/docs/migration/handoff-slab-2.md`.
+- Slab 3+: Kind/Coord/Templata trio, envs, expression AST, `CompilerOutputs`, `HinputsT`, sub-compiler method signatures, method bodies.
 
-Done so far (as of 2026-04-16, commit `8883ac08`):
-- **Step 0 prep**: `TypingInterner<'t>` created with six panic-bodied intern methods and six `*ValT` placeholder structs. `Compiler` filled in with its four fields (`scout_arena`, `typing_interner`, `keywords`, `opts`) and a `new` constructor.
-- **Leaf merges (4)**: `VirtualCompiler`, `LocalHelper`, `NameTranslator`, `ConvertHelper`.
-- **Mid-tier merges (4)**: `DestructorCompiler`, `SequenceCompiler`, `OverloadResolver`, `InferCompiler` (+ its `compiler_solver.rs` companion).
-- **Upper-tier in progress (3)**: `PatternCompiler`, `CallCompiler`, `BlockCompiler`.
-- Error count: 32 baseline → 30 (two "self outside impl" baseline errors fixed by wrapping).
+Build is clean throughout: `cargo check --lib` passes with 0 errors and 0 warnings (the crate sets `#![allow(unused_variables, unused_imports)]` in `src/lib.rs`, so incremental drift from adding/removing imports doesn't surface as noise).
 
-Upper-tier remaining: `ExpressionCompiler`, `TemplataCompiler`, `EdgeCompiler`, `ImplCompiler`, `StructCompiler` (+2 layers in one commit), `ArrayCompiler`, `BodyCompiler`, `FunctionCompiler` (+4 layers in one commit). Then macros (~20), then Step 8 cleanup (delete `Interner<'s>`, vestigial sub-compiler structs, dead imports).
-
-Known remaining issues (deferred, not about lifetimes):
-- Many files have unresolved imports / missing `mod.rs` re-exports.
-- Many function bodies still `panic!()`.
-- Free `fn equals`/`fn hash_code` stubs dangle outside `impl` blocks — leftover from slice pipeline, not migrated yet.
-- `HinputsT` (in `hinputs_t.rs`) was intentionally left unstubbed; only `// mig:` marker + Scala comment remain.
-
-Next phases: finish Phase 2 god-struct refactor, then begin body migration (replace `PhantomData` stubs with real Scala-parity fields, one type family at a time).
+Known deferred items (separate from the slab plan):
+- `HinputsT` is still just a `// mig:` marker + Scala comment — no Rust stub at all.
+- Several sub-compiler methods have free `fn equals` / `fn hash_code` stubs dangling from the slice pipeline; they'll be wrapped or deleted during Slab 8.
+- Macro dispatcher methods on `Compiler` (`dispatch_function_body_macro` etc.) are not wired yet — will be added when env lookup is implemented (Slab 4 / later).
 
 ### The Trade
 

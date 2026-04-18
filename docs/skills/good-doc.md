@@ -79,6 +79,7 @@ If any piece of information is an arcana (cross-cutting concern):
    * Instead of long paragraphs, feel free to break things up with newlines.
    * It should be one markdown section, it should not have subsections headers. If it must be long enough that subsections are needed, feel free to use bold lines like, `**Interactions with IDKWTHI:**`.
    * Instead of having a section starting with `**Cross-cutting effect:**`, start it with something else, like `**How this affects call-sites**:` etc.
+   * Do NOT reference file/line numbers (e.g. `FunctionCompiler.scala:194`). Code moves around constantly and line-anchored references go stale fast. Refer to code by concepts, function names, type names, or module/file names only — readers can find the current location by searching for those. The `@ID` markers added to code sites in step 5 are the reverse pointer; the arcana doc doesn't need to point back at specific lines.
 
 4. **Find all relevant code sites.** Search the codebase for every place this arcana manifests: struct fields, code blocks, function signatures, comments. Use Grep, Glob, and Read. Be thorough — missing a site defeats the purpose.
 
@@ -87,6 +88,8 @@ If any piece of information is an arcana (cross-cutting concern):
    - `// Needed because postparser creates parser nodes (see @PPSPASTNZ)`
 
    Never write a bare `@ID` without a sentence. The sentence gives local context; the `@ID` tells readers where to find the full explanation. Add references in code as comments, and add references to other documentation and other arcana where relevant.
+
+   **Keep code-comment references concise.** Preferably one sentence. Ideally one line. The arcana doc is the place for the full explanation — the comment just needs to tell the reader "this is an instance of `@ID`, go read it" plus whatever local context is genuinely needed to understand what *this* site is doing. If you find yourself writing a three-line comment explaining the arcana again, cut it — readers can follow the `@ID` to the doc.
 
 ### Shield-specific steps
 
