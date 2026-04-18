@@ -171,8 +171,6 @@ trait IInferCompilerDelegate {
 
 */
 // mig: struct InferCompiler
-// vestigial: kept until Step 8 cleanup because sub-compilers still hold `infer_compiler: InferCompiler<'s, 't>` fields
-pub struct InferCompiler<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl InferCompiler
 /*
 class InferCompiler(

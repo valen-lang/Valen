@@ -26,7 +26,7 @@ You're a junior engineer picking up an in-progress refactor partway through. A c
 
 ## Status as of last commit
 
-Commit `92e3cdde` on branch `rustmigrate-z`. `cargo check --lib` is **clean** (0 errors, 0 warnings — `src/lib.rs` sets `#![allow(unused_variables, unused_imports)]`). All 8 upper-tier sub-compilers merged plus three warning-cleanup follow-ups landed. Next phase is macros (~20 files in `src/typing/macros/**`), then Step 8 cleanup.
+On branch `rustmigrate-z`. `cargo check --lib` is **clean** (0 errors, 0 warnings — `src/lib.rs` sets `#![allow(unused_variables, unused_imports)]`). Phase 2 (god-struct refactor) is complete: all 8 upper-tier sub-compilers merged, all 15 macros merged, and Step 8 cleanup done (vestigial `ArrayCompiler`, `InferCompiler`, `TemplataCompiler`, `ImplCompiler`, `StructCompiler`, `DestructorCompiler`, `ExpressionCompiler`, `NameTranslator`, `ConvertHelper`, `OverloadResolver`, `CompilerSolver` PhantomData structs deleted). Only `Compiler` itself remains as a real type; the other `*Compiler` names are now just `// mig: struct` markers with Scala comments beneath. The `IInfererDelegate` trait is still kept vestigial because fn signatures in `compiler_solver.rs` reference it as `&dyn IInfererDelegate<'s, 't>`; that goes away when those fn signatures get rewritten in a later phase. Next phase is body migration — filling in the typing-pass skeleton per `quest.md` §12 (Slabs 1–6).
 
 ### Done
 

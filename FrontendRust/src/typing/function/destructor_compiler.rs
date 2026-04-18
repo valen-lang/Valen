@@ -30,8 +30,6 @@ import scala.collection.immutable.List
 use crate::typing::compiler::Compiler;
 
 // mig: struct DestructorCompiler
-// vestigial: kept until Step 8 cleanup because sub-compilers still hold `destructor_compiler: DestructorCompiler<'s, 'ctx, 't>` fields
-pub struct DestructorCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl DestructorCompiler
 /*
 class DestructorCompiler(

@@ -182,8 +182,6 @@ case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) 
 }
 */
 // mig: struct StructCompiler
-// vestigial: kept until Step 8 cleanup because function_compiler_middle_layer, function_compiler_closure_or_light_layer, and function_compiler_solving_layer still hold `struct_compiler: StructCompiler<'s, 'ctx, 't>` fields
-pub struct StructCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl StructCompiler
 /*
 class StructCompiler(

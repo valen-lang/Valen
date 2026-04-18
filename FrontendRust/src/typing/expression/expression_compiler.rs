@@ -83,8 +83,6 @@ trait IExpressionCompilerDelegate {
 
 */
 // mig: struct ExpressionCompiler
-// vestigial: kept until Step 8 cleanup because as_subtype_macro and lock_weak_macro still hold `expression_compiler: ExpressionCompiler<'s, 'ctx, 't>` fields
-pub struct ExpressionCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ExpressionCompiler
 /*
 class ExpressionCompiler(

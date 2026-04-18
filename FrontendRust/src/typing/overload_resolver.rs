@@ -114,8 +114,6 @@ override def hashCode(): Int = vcurious()
 
 */
 // mig: struct OverloadResolver
-// vestigial: kept until Step 8 cleanup because sub-compilers still hold `overload_resolver: OverloadResolver<'s, 't>` fields
-pub struct OverloadResolver<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl OverloadResolver
 /*
 class OverloadResolver(

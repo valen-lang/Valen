@@ -19,8 +19,6 @@ use crate::typing::types::types::*;
 use crate::typing::compiler::Compiler;
 
 // mig: struct NameTranslator
-// vestigial: kept until Step 8 cleanup because sub-compilers still hold `name_translator: NameTranslator<'s>` fields
-pub struct NameTranslator<'s>(pub std::marker::PhantomData<&'s ()>);
 // mig: impl NameTranslator
 /*
 class NameTranslator(interner: Interner) {

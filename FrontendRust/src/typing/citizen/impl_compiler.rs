@@ -77,8 +77,6 @@ case class IsntParent(
 
 */
 // mig: struct ImplCompiler
-// vestigial: kept until Step 8 cleanup because as_subtype_macro still holds `impl_compiler: ImplCompiler<'s, 'ctx, 't>` field
-pub struct ImplCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ImplCompiler
 /*
 class ImplCompiler(

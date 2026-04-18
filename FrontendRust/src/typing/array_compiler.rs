@@ -44,8 +44,6 @@ use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 
 // mig: struct ArrayCompiler
-// vestigial: kept until Step 8 cleanup because rsa_mutable_new_macro and rsa_drop_into_macro still hold `array_compiler: ArrayCompiler<'s, 'ctx, 't>` fields
-pub struct ArrayCompiler<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
 // mig: impl ArrayCompiler
 /*
 class ArrayCompiler(

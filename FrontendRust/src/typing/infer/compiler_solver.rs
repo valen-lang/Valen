@@ -211,8 +211,6 @@ trait IInfererDelegate {
 
 */
 // mig: struct CompilerSolver
-// vestigial: kept as a placeholder type (no Rust code currently uses it)
-pub struct CompilerSolver;
 // mig: impl CompilerSolver
 /*
 class CompilerSolver(

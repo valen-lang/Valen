@@ -51,8 +51,6 @@ trait IConvertHelperDelegate {
 
 */
 // mig: struct ConvertHelper
-// vestigial: kept until Step 8 cleanup because sub-compilers still hold `convert_helper: ConvertHelper<'s, 't>` fields
-pub struct ConvertHelper<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // mig: impl ConvertHelper
 /*
 class ConvertHelper(

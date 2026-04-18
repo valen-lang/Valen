@@ -37,7 +37,6 @@ import scala.collection.immutable.{List, Set}
 */
 use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
-use crate::typing::function::destructor_compiler::DestructorCompiler;
 use crate::typing::compilation::TypingPassOptions;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::typing::infer_compiler::{InitialKnown, InitialSend};
