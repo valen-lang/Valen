@@ -14,6 +14,13 @@ import dev.vale.typing.types._
 // but Compiler's correspond more to what packages and stamped functions / structs
 // they're in. See TNAD.
 */
+use crate::interner::StrI;
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::postparsing::names::IRuneS;
+use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+
 // TODO: placeholder PhantomData — replace with real fields during body migration
 pub struct IdT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
@@ -226,8 +233,11 @@ pub enum IRegionNameT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t (
 /*
 sealed trait IRegionNameT extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ExportTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ExportTemplateNameT<'s, 't> {
+    pub code_loc: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ExportTemplateNameT(codeLoc: CodeLocationS) extends ITemplateNameT
 */
@@ -239,8 +249,11 @@ case class ExportNameT(template: ExportTemplateNameT, region: RegionT) extends I
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ImplTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ImplTemplateNameT<'s, 't> {
+    pub code_location_s: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ImplTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {
   vpass()
@@ -263,8 +276,11 @@ case class ImplNameT(
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ImplBoundTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ImplBoundTemplateNameT<'s, 't> {
+    pub code_location_s: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ImplBoundTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplateNameT {
   override def makeImplName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]], subCitizen: ICitizenTT): ImplBoundNameT = {
@@ -290,13 +306,19 @@ case class ImplBoundNameT(
 //case class ImplAugmentingSubCitizenNameT(subCitizen: FullNameT[ICitizenTemplateNameT]) extends IImplTemplateNameT
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct LetNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LetNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class LetNameT(codeLocation: CodeLocationS) extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ExportAsNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ExportAsNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ExportAsNameT(codeLocation: CodeLocationS) extends INameT
 */
@@ -311,8 +333,11 @@ case class RawArrayNameT(
 
 // This num is really just here to disambiguate it from other reachable prototypes in the environment
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ReachablePrototypeNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ReachablePrototypeNameT<'s, 't> {
+    pub num: i32,
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class ReachablePrototypeNameT(num: Int) extends INameT
 */
@@ -385,8 +410,12 @@ sealed trait IPlaceholderNameT extends INameT {
 // in call/overload resolution. Environments are associated with templates, so it makes
 // some sense to have a "placeholder template" notion.
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct KindPlaceholderTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct KindPlaceholderTemplateNameT<'s, 't> {
+    pub index: i32,
+    pub rune: IRuneS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class KindPlaceholderTemplateNameT(index: Int, rune: IRuneS) extends ISubKindTemplateNameT with ISuperKindTemplateNameT
 */
@@ -402,8 +431,12 @@ case class KindPlaceholderNameT(template: KindPlaceholderTemplateNameT) extends 
 // This exists because we need a different way to refer to a coord generic param's other components,
 // see MNRFGC.
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct NonKindNonRegionPlaceholderNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct NonKindNonRegionPlaceholderNameT<'s, 't> {
+    pub index: i32,
+    pub rune: IRuneS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IPlaceholderNameT
 
@@ -479,8 +512,11 @@ pub struct TypingPassPatternMemberNameT<'s, 't>(pub std::marker::PhantomData<(&'
 /*
 case class TypingPassPatternMemberNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct TypingIgnoredParamNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct TypingIgnoredParamNameT<'s, 't> {
+    pub num: i32,
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class TypingIgnoredParamNameT(num: Int) extends IVarNameT
 */
@@ -489,59 +525,92 @@ pub struct TypingPassPatternDestructureeNameT<'s, 't>(pub std::marker::PhantomDa
 /*
 case class TypingPassPatternDestructureeNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct UnnamedLocalNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct UnnamedLocalNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class UnnamedLocalNameT(codeLocation: CodeLocationS) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ClosureParamNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ClosureParamNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ClosureParamNameT(codeLocation: CodeLocationS) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ConstructingMemberNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ConstructingMemberNameT<'s, 't> {
+    pub name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ConstructingMemberNameT(name: StrI) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct WhileCondResultNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct WhileCondResultNameT<'s, 't> {
+    pub range: RangeS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class WhileCondResultNameT(range: RangeS) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct IterableNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IterableNameT<'s, 't> {
+    pub range: RangeS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class IterableNameT(range: RangeS) extends IVarNameT {  }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct IteratorNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IteratorNameT<'s, 't> {
+    pub range: RangeS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class IteratorNameT(range: RangeS) extends IVarNameT {  }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct IterationOptionNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IterationOptionNameT<'s, 't> {
+    pub range: RangeS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class IterationOptionNameT(range: RangeS) extends IVarNameT {  }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct MagicParamNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct MagicParamNameT<'s, 't> {
+    pub code_location2: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class MagicParamNameT(codeLocation2: CodeLocationS) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct CodeVarNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CodeVarNameT<'s, 't> {
+    pub name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class CodeVarNameT(name: StrI) extends IVarNameT
 // We dont use CodeVarName2(0), CodeVarName2(1) etc because we dont want the user to address these members directly.
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct AnonymousSubstructMemberNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AnonymousSubstructMemberNameT<'s, 't> {
+    pub index: i32,
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class AnonymousSubstructMemberNameT(index: Int) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct PrimitiveNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrimitiveNameT<'s, 't> {
+    pub human_name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class PrimitiveNameT(humanName: StrI) extends INameT
 // Only made in typingpass
@@ -553,18 +622,27 @@ pub struct PackageTopLevelNameT<'s, 't> {
 /*
 case class PackageTopLevelNameT() extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ProjectNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ProjectNameT<'s, 't> {
+    pub name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ProjectNameT(name: StrI) extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct PackageNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PackageNameT<'s, 't> {
+    pub name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class PackageNameT(name: StrI) extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct RuneNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuneNameT<'s, 't> {
+    pub rune: IRuneS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class RuneNameT(rune: IRuneS) extends INameT
 
@@ -583,8 +661,11 @@ case class BuildingFunctionNameWithClosuredsT(
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ExternTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ExternTemplateNameT<'s, 't> {
+    pub code_loc: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ExternTemplateNameT(
   codeLoc: CodeLocationS,
@@ -643,8 +724,11 @@ case class ForwarderFunctionNameT(
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct FunctionBoundTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FunctionBoundTemplateNameT<'s, 't> {
+    pub human_name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class FunctionBoundTemplateNameT(
   humanName: StrI,
@@ -678,8 +762,11 @@ case class FunctionBoundNameT(
 // runes. At the end of solving, just afterward, they're turned into actual FunctionBoundNameT
 // or resolved from the calling environment.
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct PredictedFunctionTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PredictedFunctionTemplateNameT<'s, 't> {
+    pub human_name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class PredictedFunctionTemplateNameT(
     humanName: StrI
@@ -700,8 +787,12 @@ case class PredictedFunctionNameT(
 ) extends IFunctionNameT
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct FunctionTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct FunctionTemplateNameT<'s, 't> {
+    pub human_name: StrI<'s>,
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class FunctionTemplateNameT(
     humanName: StrI,
@@ -790,8 +881,11 @@ case class ForwarderFunctionTemplateNameT(
 //  }
 //}
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ConstructorTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ConstructorTemplateNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class ConstructorTemplateNameT(
   codeLocation: CodeLocationS
@@ -902,8 +996,11 @@ case class InterfaceNameT(
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct LambdaCitizenTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LambdaCitizenTemplateNameT<'s, 't> {
+    pub code_location: CodeLocationS<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class LambdaCitizenTemplateNameT(
   codeLocation: CodeLocationS
@@ -957,8 +1054,11 @@ object CitizenTemplateNameT {
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct StructTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructTemplateNameT<'s, 't> {
+    pub human_name: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class StructTemplateNameT(
   humanName: StrI,
@@ -977,8 +1077,11 @@ case class StructTemplateNameT(
   }
 }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct InterfaceTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceTemplateNameT<'s, 't> {
+    pub human_namee: StrI<'s>,
+    pub _phantom: std::marker::PhantomData<&'t ()>,
+}
 /*
 case class InterfaceTemplateNameT(
   humanNamee: StrI,
