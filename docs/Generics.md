@@ -698,6 +698,8 @@ Alas, that's likely too much work for now, we'll have to fall back to having a t
 
 # Lambdas Are Generic Templates (LAGT)
 
+See also the cross-cutting arcana `docs/arcana/LambdasAreGenericTemplatesNotGenerics-LAGTNGZ.md` for how this design interacts with the typing pass's dispatcher (`function.isLight()`), the two `NameTranslator` entry points, and `FunctionS.genericParams` for untyped lambda params.
+
 Lambdas are instantiated every time they're called. In this:
 
 ```

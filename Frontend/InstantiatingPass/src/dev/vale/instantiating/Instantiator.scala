@@ -3596,6 +3596,7 @@ class Instantiator(
           templateArgs.map(translateTemplata(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _)),
           params.map(translateCoord(denizenName, denizenBoundToDenizenCallerSuppliedThing, substitutions, perspectiveRegionT, _).coord))
       }
+      // Per @LAGTNGZ, paramTypesForGeneric carries the argTypes that distinguish one lambda's __call from another.
       case LambdaCallFunctionNameT(LambdaCallFunctionTemplateNameT(codeLocation, paramTypesForGeneric), templateArgs, paramTypes) => {
         LambdaCallFunctionNameI(
           LambdaCallFunctionTemplateNameI(

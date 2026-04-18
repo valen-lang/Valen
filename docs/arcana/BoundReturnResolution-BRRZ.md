@@ -16,7 +16,7 @@ BRRZ is a relaxation of `ResolveSR`'s puzzle in `CompilerSolver.scala:245`, plus
 
 **What callers gain.** The previously-required `Array<mut, int>(n, lambda)` can now be written `Array<mut>(n, lambda)` or even `#[](n, lambda)`, with the element type inferred from the lambda's return.
 
-**Interactions with other arcana.** BRRZ fires inside a per-call-site solve (ECSIIOSZ). It does not interact with DRSINI — BRRZ's trigger condition (a rune is the unconstrained return of a bound) never overlaps with DRSINI's trigger (a rune is an identifying generic param with a declared default), since bound return runes are derived, not identifying. BRRZ is gated by the SROACSD filters — it only fires in call-site solves, where `DefinitionFuncSR` is excluded.
+**Interactions with other arcana.** BRRZ fires inside a per-call-site solve (ECSIIOSZ). It does not interact with DRSINI — BRRZ's trigger condition (a rune is the unconstrained return of a bound) never overlaps with DRSINI's trigger (a rune is an identifying generic param with a declared default), since bound return runes are derived, not identifying. BRRZ is gated by the SROACSD filters — it only fires in call-site solves, where `DefinitionFuncSR` is excluded. BRRZ's canonical cases involve lambdas passed through `where func(&G, ...)E` bounds, so the lambda specialization described in LAGTNGZ is what actually produces the prototype that BRRZ reads the return type from.
 
 The long-form reasoning, safety analysis, and canonical tests are in `docs/Generics.md` under the BRRZ section. The rejected alternative (origin tracking) is recorded at `docs/refactor-thoughts/thoughts-on-origin-tracking.md`.
 

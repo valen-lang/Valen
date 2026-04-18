@@ -179,6 +179,7 @@ class FunctionCompiler(
     })
   }
 
+  // Per @LAGTNGZ, the isLight branch routes top-level functions through the generic path and closures through the template path.
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE

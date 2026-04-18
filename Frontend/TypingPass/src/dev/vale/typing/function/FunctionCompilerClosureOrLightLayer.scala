@@ -107,6 +107,7 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, alreadySpecifiedTemplateArgs, contextRegion, argTypes)
   }
 
+  // Per @LAGTNGZ, each call site reaches here with its own argTypes, producing a distinct LambdaCallFunctionTemplateNameT.
   def evaluateTemplatedClosureFunctionFromCallForPrototype(
     outerEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
@@ -153,6 +154,7 @@ class FunctionCompilerClosureOrLightLayer(
       outerEnv, coutputs, callingEnv, callRange, callLocation, explicitTemplateArgs, contextRegion, argTypes)
   }
 
+  // Per @LAGTNGZ, "Generic" here means true generics (one solve, later stamped); contrast the Templated methods used for lambdas.
   def evaluateGenericLightFunctionFromCallForPrototype2(
     parentEnv: IEnvironmentT,
     coutputs: CompilerOutputs,
