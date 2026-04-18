@@ -215,27 +215,16 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
 
-    val lambdaFuncs =
-      coutputs.functions.filter(func => {
-        func.header.id.localName.template match {
-          case FunctionTemplateNameT(StrI("__call"), _) => true
-          case _ => false
-        }
-      })
+    // Per @LAGTNGZ, two call-sites with different arg types produce two distinct
+    // LambdaCallFunctionNameT entries in coutputs.functions, sharing one closure struct.
+    val lambdaFuncs = coutputs.lookupLambdasIn("main")
     lambdaFuncs.size shouldEqual 2
 
-    // The above test seems to work, but we still have to decide whether we want lambda function
-    // instantiations to have different identifying runes, or if we just want to disambiguate
-    // by parameters alone.
-    // See also "Test one-anonymous-param lambda identifying runes"
-    vimpl()
-
-    //    val lamFunc = coutputs.lookupFunction("__call")
-    //    lamFunc.header.fullName.last.templateArgs.size shouldEqual 1
-    //
-    //    val main = coutputs.lookupFunction("main")
-    //    val call =
-    //      Collector.only(main, { case call @ FunctionCallTE(PrototypeT(FullNameT(_, _, FunctionNameT(FunctionTemplateNameT(StrI("__call"), _), _, _)), _), _) => call })
+    val paramTypeTuples =
+      lambdaFuncs.map(f => f.header.id.localName match {
+        case LambdaCallFunctionNameT(LambdaCallFunctionTemplateNameT(_, paramTypes), _, _) => paramTypes
+      }).toSet
+    paramTypeTuples.size shouldEqual 2 // distinct per-call-site instantiations
   }
 
   test("Test interface default generic argument in type") {

@@ -245,7 +245,9 @@ class FunctionScout(
     // like in `(_) => { true }`
     // Later on, we'll make identifying runes for these.
 
-    val explicitParamsS =
+    // For lambdas, untyped explicit params (like `(a, b) => ...` or `(_) => ...`) get a
+    // synthesized coord rune here that will be added to the function's identifying runes.
+    val explicitParamsSAndSynthesizedRunes: Vector[(ParameterS, Option[RuneUsage])] =
       paramsP
         .map({
           case ParameterP(rangeL, maybeAbstractP, maybePreChecked, maybeSelfBorrow, maybePattern) => {
@@ -263,7 +265,7 @@ class FunctionScout(
                 runeToExplicitType += ((rune.rune, CoordTemplataType()))
                 val patternS =
                   AtomSP(rangeS, Some(CaptureS(CodeVarNameS(keywords.self), false)), Some(rune), None)
-                ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS)
+                (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS), None)
               }
               case (None, Some(patternP)) => {
                 val patternPerhapsWithoutCoordRuneS =
@@ -273,22 +275,35 @@ class FunctionScout(
                     ruleBuilder,
                     runeToExplicitType,
                     patternP)
-                val patternS =
-                  patternPerhapsWithoutCoordRuneS.coordRune match {
-                    case None => {
-                      val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
-                      runeToExplicitType += ((rune.rune, CoordTemplataType()))
-                      patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
-                    }
-                    case Some(_) => patternPerhapsWithoutCoordRuneS
+                patternPerhapsWithoutCoordRuneS.coordRune match {
+                  case None => {
+                    // Untyped param (like in `(a) => a`) so make a rune that will be added to
+                    // genericParams and to the identifying runes. This only happens for lambdas,
+                    // top level functions can't have these (enforced elsewhere).
+                    val rune = rules.RuneUsage(rangeS, ImplicitRuneS(lidb.child().consume()))
+                    runeToExplicitType += ((rune.rune, CoordTemplataType()))
+                    val patternS = patternPerhapsWithoutCoordRuneS.copy(coordRune = Some(rune))
+                    (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS), Some(rune))
                   }
-                ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternS)
+                  case Some(_) =>
+                    (ParameterS(rangeS, maybeAbstractS, maybePreChecked.nonEmpty, patternPerhapsWithoutCoordRuneS), None)
+                }
               }
             }
           }
         })
-//    val explicitParamsS = explicitParamPatternsAndIdentifyingRunes.map(_._1).map(ParameterS)
-//    val identifyingRunesFromExplicitParams = explicitParamPatternsAndIdentifyingRunes.flatMap(_._2)
+    val explicitParamsS = explicitParamsSAndSynthesizedRunes.map(_._1)
+    // Untyped lambda params (from `(_) =>` or `(a, b) =>`) contribute their synthesized coord runes here so later
+    // passes see a uniform FunctionS shape regardless of whether the user wrote `<T>` or an untyped param.
+    val extraGenericParamsFromExplicitParamsS =
+      explicitParamsSAndSynthesizedRunes
+          .flatMap(_._2)
+          .map(rune =>
+            GenericParameterS(
+              rune.range,
+              rune,
+              CoordGenericParameterTypeS(None, true, false),
+              None))
 
     // Only if the function actually has a body
     val maybeCaptureDeclarations =
@@ -491,6 +506,7 @@ class FunctionScout(
     val genericParametersS =
       (extraGenericParamsFromParentS ++
         functionUserSpecifiedGenericParametersS ++
+        extraGenericParamsFromExplicitParamsS ++
         extraGenericParamsFromBodyS)
           .filter({
             case GenericParameterS(_, _, RegionGenericParameterTypeS(_), _) => false
