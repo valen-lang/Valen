@@ -14,6 +14,7 @@ import dev.vale.typing.types._
 // but Compiler's correspond more to what packages and stamped functions / structs
 // they're in. See TNAD.
 */
+use std::hash::{Hash, Hasher};
 use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
@@ -22,7 +23,7 @@ use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct IdT<'s, 't, T: Copy>
 where 's: 't,
 {
@@ -30,6 +31,31 @@ where 's: 't,
     pub init_steps: &'t [&'t INameT<'s, 't>],
     pub local_name: T,
 }
+
+// (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
+// and init_steps slice (canonicalized by the typing interner per IDEPFL),
+// structural compare on local_name (inline-owned sub-enum or concrete ref).)
+impl<'s, 't, T: Copy + Hash> Hash for IdT<'s, 't, T>
+where 's: 't,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.package_coord, state);
+        std::ptr::hash(self.init_steps.as_ptr(), state);
+        self.init_steps.len().hash(state);
+        self.local_name.hash(state);
+    }
+}
+impl<'s, 't, T: Copy + PartialEq> PartialEq for IdT<'s, 't, T>
+where 's: 't,
+{
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.package_coord, other.package_coord)
+            && std::ptr::eq(self.init_steps.as_ptr(), other.init_steps.as_ptr())
+            && self.init_steps.len() == other.init_steps.len()
+            && self.local_name == other.local_name
+    }
+}
+impl<'s, 't, T: Copy + Eq> Eq for IdT<'s, 't, T> where 's: 't, {}
 /*
 case class IdT[+T <: INameT](
   packageCoord: PackageCoordinate,
@@ -111,11 +137,12 @@ case class IdT[+T <: INameT](
 }
 
 */
-// (no scala counterpart — narrow -> wide conversion per handoff §6.3)
+// (no scala counterpart — narrow -> wide conversion per handoff §6.3, now on
+// owned INameT since sub-enums are inline-owned value types rather than arena refs.)
 impl<'s, 't, T> IdT<'s, 't, T>
-where 's: 't, T: Copy + Into<&'t INameT<'s, 't>>,
+where 's: 't, T: Copy + Into<INameT<'s, 't>>,
 {
-    pub fn widen(self) -> IdT<'s, 't, &'t INameT<'s, 't>> {
+    pub fn widen(self) -> IdT<'s, 't, INameT<'s, 't>> {
         IdT {
             package_coord: self.package_coord,
             init_steps: self.init_steps,
@@ -139,12 +166,13 @@ where 's: 't, T: Copy,
     }
 }
 
-// (no scala counterpart — wide -> narrow conversion per handoff §6.3)
-impl<'s, 't> IdT<'s, 't, &'t INameT<'s, 't>>
+// (no scala counterpart — wide -> narrow conversion per handoff §6.3, now on
+// owned INameT.)
+impl<'s, 't> IdT<'s, 't, INameT<'s, 't>>
 where 's: 't,
 {
     pub fn try_narrow<U: Copy>(self) -> Option<IdT<'s, 't, U>>
-    where &'t INameT<'s, 't>: TryInto<U>,
+    where INameT<'s, 't>: TryInto<U>,
     {
         self.local_name.try_into().ok().map(|local_name| IdT {
             package_coord: self.package_coord,
@@ -715,7 +743,7 @@ case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IP
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherTemplateNameT<'s, 't> {
-    pub impl_id: IdT<'s, 't, &'t IImplTemplateNameT<'s, 't>>,
+    pub impl_id: IdT<'s, 't, IImplTemplateNameT<'s, 't>>,
 }
 /*
 case class OverrideDispatcherTemplateNameT(
@@ -960,7 +988,7 @@ case class RuneNameT(rune: IRuneS) extends INameT
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BuildingFunctionNameWithClosuredsT<'s, 't> {
-    pub template_name: &'t IFunctionTemplateNameT<'s, 't>,
+    pub template_name: IFunctionTemplateNameT<'s, 't>,
 }
 /*
 case class BuildingFunctionNameWithClosuredsT(
@@ -1036,7 +1064,7 @@ case class FunctionNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ForwarderFunctionNameT<'s, 't> {
     pub template: &'t ForwarderFunctionTemplateNameT<'s, 't>,
-    pub inner: &'t IFunctionNameT<'s, 't>,
+    pub inner: IFunctionNameT<'s, 't>,
 }
 /*
 case class ForwarderFunctionNameT(
@@ -1171,7 +1199,7 @@ case class LambdaCallFunctionNameT(
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ForwarderFunctionTemplateNameT<'s, 't> {
-    pub inner: &'t IFunctionTemplateNameT<'s, 't>,
+    pub inner: IFunctionTemplateNameT<'s, 't>,
     pub index: i32,
 }
 /*
@@ -1321,7 +1349,7 @@ object CitizenNameT {
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructNameT<'s, 't> {
-    pub template: &'t IStructTemplateNameT<'s, 't>,
+    pub template: IStructTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
 }
 /*
@@ -1460,7 +1488,7 @@ case class InterfaceTemplateNameT(
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructImplTemplateNameT<'s, 't> {
-    pub interface: &'t IInterfaceTemplateNameT<'s, 't>,
+    pub interface: IInterfaceTemplateNameT<'s, 't>,
 }
 /*
 case class AnonymousSubstructImplTemplateNameT(
@@ -1488,7 +1516,7 @@ case class AnonymousSubstructImplNameT(
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructTemplateNameT<'s, 't> {
-    pub interface: &'t IInterfaceTemplateNameT<'s, 't>,
+    pub interface: IInterfaceTemplateNameT<'s, 't>,
 }
 /*
 case class AnonymousSubstructTemplateNameT(
@@ -1503,7 +1531,7 @@ case class AnonymousSubstructTemplateNameT(
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructConstructorTemplateNameT<'s, 't> {
-    pub substruct: &'t ICitizenTemplateNameT<'s, 't>,
+    pub substruct: ICitizenTemplateNameT<'s, 't>,
 }
 /*
 case class AnonymousSubstructConstructorTemplateNameT(
@@ -1820,398 +1848,583 @@ impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for CitizenNameT<'s, 't> { fn from
 impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::StructTemplate(x) } }
 impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::InterfaceTemplate(x) } }
 
-// -- Sub-enum → wider sub-enum (cascade via .into() on inner concrete ref) ---
+// -- Sub-enum → wider sub-enum (owned input, cascade via .into() on inner ref) --
 
-impl<'s, 't> From<&'t IFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
-    fn from(f: &'t IFunctionTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(f: IFunctionTemplateNameT<'s, 't>) -> Self {
         match f {
-            IFunctionTemplateNameT::OverrideDispatcherTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::ExternFunction(x) => (*x).into(),
-            IFunctionTemplateNameT::FunctionBoundTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::PredictedFunctionTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::FunctionTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::LambdaCallFunctionTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::ForwarderFunctionTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::ConstructorTemplate(x) => (*x).into(),
-            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(x) => (*x).into(),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(x) => x.into(),
+            IFunctionTemplateNameT::ExternFunction(x) => x.into(),
+            IFunctionTemplateNameT::FunctionBoundTemplate(x) => x.into(),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(x) => x.into(),
+            IFunctionTemplateNameT::FunctionTemplate(x) => x.into(),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(x) => x.into(),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(x) => x.into(),
+            IFunctionTemplateNameT::ConstructorTemplate(x) => x.into(),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
-    fn from(f: &'t IFunctionNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(f: IFunctionNameT<'s, 't>) -> Self {
         match f {
-            IFunctionNameT::OverrideDispatcher(x) => (*x).into(),
-            IFunctionNameT::ExternFunction(x) => (*x).into(),
-            IFunctionNameT::Function(x) => (*x).into(),
-            IFunctionNameT::ForwarderFunction(x) => (*x).into(),
-            IFunctionNameT::FunctionBound(x) => (*x).into(),
-            IFunctionNameT::PredictedFunction(x) => (*x).into(),
-            IFunctionNameT::LambdaCallFunction(x) => (*x).into(),
-            IFunctionNameT::AnonymousSubstructConstructor(x) => (*x).into(),
+            IFunctionNameT::OverrideDispatcher(x) => x.into(),
+            IFunctionNameT::ExternFunction(x) => x.into(),
+            IFunctionNameT::Function(x) => x.into(),
+            IFunctionNameT::ForwarderFunction(x) => x.into(),
+            IFunctionNameT::FunctionBound(x) => x.into(),
+            IFunctionNameT::PredictedFunction(x) => x.into(),
+            IFunctionNameT::LambdaCallFunction(x) => x.into(),
+            IFunctionNameT::AnonymousSubstructConstructor(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ISuperKindTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
-    fn from(f: &'t ISuperKindTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ISuperKindTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(f: ISuperKindTemplateNameT<'s, 't>) -> Self {
         match f {
-            ISuperKindTemplateNameT::KindPlaceholderTemplate(x) => (*x).into(),
-            ISuperKindTemplateNameT::InterfaceTemplate(x) => (*x).into(),
+            ISuperKindTemplateNameT::KindPlaceholderTemplate(x) => x.into(),
+            ISuperKindTemplateNameT::InterfaceTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ISubKindTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
-    fn from(f: &'t ISubKindTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ISubKindTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(f: ISubKindTemplateNameT<'s, 't>) -> Self {
         match f {
-            ISubKindTemplateNameT::StaticSizedArrayTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::RuntimeSizedArrayTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::KindPlaceholderTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::LambdaCitizenTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::StructTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::InterfaceTemplate(x) => (*x).into(),
-            ISubKindTemplateNameT::AnonymousSubstructTemplate(x) => (*x).into(),
+            ISubKindTemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
+            ISubKindTemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
+            ISubKindTemplateNameT::KindPlaceholderTemplate(x) => x.into(),
+            ISubKindTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+            ISubKindTemplateNameT::StructTemplate(x) => x.into(),
+            ISubKindTemplateNameT::InterfaceTemplate(x) => x.into(),
+            ISubKindTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ICitizenTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
-    fn from(f: &'t ICitizenTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ICitizenTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(f: ICitizenTemplateNameT<'s, 't>) -> Self {
         match f {
-            ICitizenTemplateNameT::StaticSizedArrayTemplate(x) => (*x).into(),
-            ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) => (*x).into(),
-            ICitizenTemplateNameT::LambdaCitizenTemplate(x) => (*x).into(),
-            ICitizenTemplateNameT::StructTemplate(x) => (*x).into(),
-            ICitizenTemplateNameT::InterfaceTemplate(x) => (*x).into(),
-            ICitizenTemplateNameT::AnonymousSubstructTemplate(x) => (*x).into(),
+            ICitizenTemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
+            ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
+            ICitizenTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+            ICitizenTemplateNameT::StructTemplate(x) => x.into(),
+            ICitizenTemplateNameT::InterfaceTemplate(x) => x.into(),
+            ICitizenTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IStructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
-    fn from(f: &'t IStructTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IStructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(f: IStructTemplateNameT<'s, 't>) -> Self {
         match f {
-            IStructTemplateNameT::LambdaCitizenTemplate(x) => (*x).into(),
-            IStructTemplateNameT::StructTemplate(x) => (*x).into(),
-            IStructTemplateNameT::AnonymousSubstructTemplate(x) => (*x).into(),
+            IStructTemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+            IStructTemplateNameT::StructTemplate(x) => x.into(),
+            IStructTemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IInterfaceTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
-    fn from(f: &'t IInterfaceTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IInterfaceTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(f: IInterfaceTemplateNameT<'s, 't>) -> Self {
         match f {
-            IInterfaceTemplateNameT::InterfaceTemplate(x) => (*x).into(),
+            IInterfaceTemplateNameT::InterfaceTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ISuperKindNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
-    fn from(f: &'t ISuperKindNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ISuperKindNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(f: ISuperKindNameT<'s, 't>) -> Self {
         match f {
-            ISuperKindNameT::KindPlaceholder(x) => (*x).into(),
-            ISuperKindNameT::Interface(x) => (*x).into(),
+            ISuperKindNameT::KindPlaceholder(x) => x.into(),
+            ISuperKindNameT::Interface(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ISubKindNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
-    fn from(f: &'t ISubKindNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ISubKindNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(f: ISubKindNameT<'s, 't>) -> Self {
         match f {
-            ISubKindNameT::StaticSizedArray(x) => (*x).into(),
-            ISubKindNameT::RuntimeSizedArray(x) => (*x).into(),
-            ISubKindNameT::KindPlaceholder(x) => (*x).into(),
-            ISubKindNameT::Struct(x) => (*x).into(),
-            ISubKindNameT::Interface(x) => (*x).into(),
-            ISubKindNameT::LambdaCitizen(x) => (*x).into(),
-            ISubKindNameT::AnonymousSubstruct(x) => (*x).into(),
+            ISubKindNameT::StaticSizedArray(x) => x.into(),
+            ISubKindNameT::RuntimeSizedArray(x) => x.into(),
+            ISubKindNameT::KindPlaceholder(x) => x.into(),
+            ISubKindNameT::Struct(x) => x.into(),
+            ISubKindNameT::Interface(x) => x.into(),
+            ISubKindNameT::LambdaCitizen(x) => x.into(),
+            ISubKindNameT::AnonymousSubstruct(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ICitizenNameT<'s, 't>> for ISubKindNameT<'s, 't> {
-    fn from(f: &'t ICitizenNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ICitizenNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(f: ICitizenNameT<'s, 't>) -> Self {
         match f {
-            ICitizenNameT::StaticSizedArray(x) => (*x).into(),
-            ICitizenNameT::RuntimeSizedArray(x) => (*x).into(),
-            ICitizenNameT::Struct(x) => (*x).into(),
-            ICitizenNameT::Interface(x) => (*x).into(),
-            ICitizenNameT::LambdaCitizen(x) => (*x).into(),
-            ICitizenNameT::AnonymousSubstruct(x) => (*x).into(),
+            ICitizenNameT::StaticSizedArray(x) => x.into(),
+            ICitizenNameT::RuntimeSizedArray(x) => x.into(),
+            ICitizenNameT::Struct(x) => x.into(),
+            ICitizenNameT::Interface(x) => x.into(),
+            ICitizenNameT::LambdaCitizen(x) => x.into(),
+            ICitizenNameT::AnonymousSubstruct(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IStructNameT<'s, 't>> for ICitizenNameT<'s, 't> {
-    fn from(f: &'t IStructNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IStructNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(f: IStructNameT<'s, 't>) -> Self {
         match f {
-            IStructNameT::Struct(x) => (*x).into(),
-            IStructNameT::LambdaCitizen(x) => (*x).into(),
-            IStructNameT::AnonymousSubstruct(x) => (*x).into(),
+            IStructNameT::Struct(x) => x.into(),
+            IStructNameT::LambdaCitizen(x) => x.into(),
+            IStructNameT::AnonymousSubstruct(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IInterfaceNameT<'s, 't>> for ICitizenNameT<'s, 't> {
-    fn from(f: &'t IInterfaceNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IInterfaceNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(f: IInterfaceNameT<'s, 't>) -> Self {
         match f {
-            IInterfaceNameT::Interface(x) => (*x).into(),
+            IInterfaceNameT::Interface(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
-    fn from(f: &'t IImplTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(f: IImplTemplateNameT<'s, 't>) -> Self {
         match f {
-            IImplTemplateNameT::ImplTemplate(x) => (*x).into(),
-            IImplTemplateNameT::ImplBoundTemplate(x) => (*x).into(),
-            IImplTemplateNameT::AnonymousSubstructImplTemplate(x) => (*x).into(),
+            IImplTemplateNameT::ImplTemplate(x) => x.into(),
+            IImplTemplateNameT::ImplBoundTemplate(x) => x.into(),
+            IImplTemplateNameT::AnonymousSubstructImplTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
-    fn from(f: &'t IImplNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(f: IImplNameT<'s, 't>) -> Self {
         match f {
-            IImplNameT::Impl(x) => (*x).into(),
-            IImplNameT::ImplBound(x) => (*x).into(),
-            IImplNameT::AnonymousSubstructImpl(x) => (*x).into(),
+            IImplNameT::Impl(x) => x.into(),
+            IImplNameT::ImplBound(x) => x.into(),
+            IImplNameT::AnonymousSubstructImpl(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IPlaceholderNameT<'s, 't>> for INameT<'s, 't> {
-    fn from(f: &'t IPlaceholderNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IPlaceholderNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: IPlaceholderNameT<'s, 't>) -> Self {
         match f {
-            IPlaceholderNameT::KindPlaceholder(x) => (*x).into(),
-            IPlaceholderNameT::NonKindNonRegionPlaceholder(x) => (*x).into(),
+            IPlaceholderNameT::KindPlaceholder(x) => x.into(),
+            IPlaceholderNameT::NonKindNonRegionPlaceholder(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IVarNameT<'s, 't>> for INameT<'s, 't> {
-    fn from(f: &'t IVarNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IVarNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: IVarNameT<'s, 't>) -> Self {
         match f {
-            IVarNameT::TypingPassBlockResultVar(x) => (*x).into(),
-            IVarNameT::TypingPassFunctionResultVar(x) => (*x).into(),
-            IVarNameT::TypingPassTemporaryVar(x) => (*x).into(),
-            IVarNameT::TypingPassPatternMember(x) => (*x).into(),
-            IVarNameT::TypingIgnoredParam(x) => (*x).into(),
-            IVarNameT::TypingPassPatternDestructuree(x) => (*x).into(),
-            IVarNameT::UnnamedLocal(x) => (*x).into(),
-            IVarNameT::ClosureParam(x) => (*x).into(),
-            IVarNameT::ConstructingMember(x) => (*x).into(),
-            IVarNameT::WhileCondResult(x) => (*x).into(),
-            IVarNameT::Iterable(x) => (*x).into(),
-            IVarNameT::Iterator(x) => (*x).into(),
-            IVarNameT::IterationOption(x) => (*x).into(),
-            IVarNameT::MagicParam(x) => (*x).into(),
-            IVarNameT::CodeVar(x) => (*x).into(),
-            IVarNameT::AnonymousSubstructMember(x) => (*x).into(),
-            IVarNameT::Self_(x) => (*x).into(),
+            IVarNameT::TypingPassBlockResultVar(x) => x.into(),
+            IVarNameT::TypingPassFunctionResultVar(x) => x.into(),
+            IVarNameT::TypingPassTemporaryVar(x) => x.into(),
+            IVarNameT::TypingPassPatternMember(x) => x.into(),
+            IVarNameT::TypingIgnoredParam(x) => x.into(),
+            IVarNameT::TypingPassPatternDestructuree(x) => x.into(),
+            IVarNameT::UnnamedLocal(x) => x.into(),
+            IVarNameT::ClosureParam(x) => x.into(),
+            IVarNameT::ConstructingMember(x) => x.into(),
+            IVarNameT::WhileCondResult(x) => x.into(),
+            IVarNameT::Iterable(x) => x.into(),
+            IVarNameT::Iterator(x) => x.into(),
+            IVarNameT::IterationOption(x) => x.into(),
+            IVarNameT::MagicParam(x) => x.into(),
+            IVarNameT::CodeVar(x) => x.into(),
+            IVarNameT::AnonymousSubstructMember(x) => x.into(),
+            IVarNameT::Self_(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t ITemplateNameT<'s, 't>> for INameT<'s, 't> {
-    fn from(f: &'t ITemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<ITemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: ITemplateNameT<'s, 't>) -> Self {
         match f {
-            ITemplateNameT::ExportTemplate(x) => (*x).into(),
-            ITemplateNameT::ImplTemplate(x) => (*x).into(),
-            ITemplateNameT::ImplBoundTemplate(x) => (*x).into(),
-            ITemplateNameT::StaticSizedArrayTemplate(x) => (*x).into(),
-            ITemplateNameT::RuntimeSizedArrayTemplate(x) => (*x).into(),
-            ITemplateNameT::KindPlaceholderTemplate(x) => (*x).into(),
-            ITemplateNameT::OverrideDispatcherTemplate(x) => (*x).into(),
-            ITemplateNameT::OverrideDispatcherCase(x) => (*x).into(),
-            ITemplateNameT::ExternTemplate(x) => (*x).into(),
-            ITemplateNameT::ExternFunction(x) => (*x).into(),
-            ITemplateNameT::FunctionBoundTemplate(x) => (*x).into(),
-            ITemplateNameT::PredictedFunctionTemplate(x) => (*x).into(),
-            ITemplateNameT::FunctionTemplate(x) => (*x).into(),
-            ITemplateNameT::LambdaCallFunctionTemplate(x) => (*x).into(),
-            ITemplateNameT::ForwarderFunctionTemplate(x) => (*x).into(),
-            ITemplateNameT::ConstructorTemplate(x) => (*x).into(),
-            ITemplateNameT::LambdaCitizenTemplate(x) => (*x).into(),
-            ITemplateNameT::StructTemplate(x) => (*x).into(),
-            ITemplateNameT::InterfaceTemplate(x) => (*x).into(),
-            ITemplateNameT::AnonymousSubstructImplTemplate(x) => (*x).into(),
-            ITemplateNameT::AnonymousSubstructTemplate(x) => (*x).into(),
-            ITemplateNameT::AnonymousSubstructConstructorTemplate(x) => (*x).into(),
+            ITemplateNameT::ExportTemplate(x) => x.into(),
+            ITemplateNameT::ImplTemplate(x) => x.into(),
+            ITemplateNameT::ImplBoundTemplate(x) => x.into(),
+            ITemplateNameT::StaticSizedArrayTemplate(x) => x.into(),
+            ITemplateNameT::RuntimeSizedArrayTemplate(x) => x.into(),
+            ITemplateNameT::KindPlaceholderTemplate(x) => x.into(),
+            ITemplateNameT::OverrideDispatcherTemplate(x) => x.into(),
+            ITemplateNameT::OverrideDispatcherCase(x) => x.into(),
+            ITemplateNameT::ExternTemplate(x) => x.into(),
+            ITemplateNameT::ExternFunction(x) => x.into(),
+            ITemplateNameT::FunctionBoundTemplate(x) => x.into(),
+            ITemplateNameT::PredictedFunctionTemplate(x) => x.into(),
+            ITemplateNameT::FunctionTemplate(x) => x.into(),
+            ITemplateNameT::LambdaCallFunctionTemplate(x) => x.into(),
+            ITemplateNameT::ForwarderFunctionTemplate(x) => x.into(),
+            ITemplateNameT::ConstructorTemplate(x) => x.into(),
+            ITemplateNameT::LambdaCitizenTemplate(x) => x.into(),
+            ITemplateNameT::StructTemplate(x) => x.into(),
+            ITemplateNameT::InterfaceTemplate(x) => x.into(),
+            ITemplateNameT::AnonymousSubstructImplTemplate(x) => x.into(),
+            ITemplateNameT::AnonymousSubstructTemplate(x) => x.into(),
+            ITemplateNameT::AnonymousSubstructConstructorTemplate(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t IInstantiationNameT<'s, 't>> for INameT<'s, 't> {
-    fn from(f: &'t IInstantiationNameT<'s, 't>) -> Self {
+impl<'s, 't> From<IInstantiationNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: IInstantiationNameT<'s, 't>) -> Self {
         match f {
-            IInstantiationNameT::Export(x) => (*x).into(),
-            IInstantiationNameT::Impl(x) => (*x).into(),
-            IInstantiationNameT::ImplBound(x) => (*x).into(),
-            IInstantiationNameT::StaticSizedArray(x) => (*x).into(),
-            IInstantiationNameT::RuntimeSizedArray(x) => (*x).into(),
-            IInstantiationNameT::KindPlaceholder(x) => (*x).into(),
-            IInstantiationNameT::OverrideDispatcher(x) => (*x).into(),
-            IInstantiationNameT::OverrideDispatcherCase(x) => (*x).into(),
-            IInstantiationNameT::Extern(x) => (*x).into(),
-            IInstantiationNameT::ExternFunction(x) => (*x).into(),
-            IInstantiationNameT::Function(x) => (*x).into(),
-            IInstantiationNameT::ForwarderFunction(x) => (*x).into(),
-            IInstantiationNameT::FunctionBound(x) => (*x).into(),
-            IInstantiationNameT::PredictedFunction(x) => (*x).into(),
-            IInstantiationNameT::LambdaCallFunction(x) => (*x).into(),
-            IInstantiationNameT::Struct(x) => (*x).into(),
-            IInstantiationNameT::Interface(x) => (*x).into(),
-            IInstantiationNameT::LambdaCitizen(x) => (*x).into(),
-            IInstantiationNameT::AnonymousSubstructImpl(x) => (*x).into(),
-            IInstantiationNameT::AnonymousSubstructConstructor(x) => (*x).into(),
-            IInstantiationNameT::AnonymousSubstruct(x) => (*x).into(),
+            IInstantiationNameT::Export(x) => x.into(),
+            IInstantiationNameT::Impl(x) => x.into(),
+            IInstantiationNameT::ImplBound(x) => x.into(),
+            IInstantiationNameT::StaticSizedArray(x) => x.into(),
+            IInstantiationNameT::RuntimeSizedArray(x) => x.into(),
+            IInstantiationNameT::KindPlaceholder(x) => x.into(),
+            IInstantiationNameT::OverrideDispatcher(x) => x.into(),
+            IInstantiationNameT::OverrideDispatcherCase(x) => x.into(),
+            IInstantiationNameT::Extern(x) => x.into(),
+            IInstantiationNameT::ExternFunction(x) => x.into(),
+            IInstantiationNameT::Function(x) => x.into(),
+            IInstantiationNameT::ForwarderFunction(x) => x.into(),
+            IInstantiationNameT::FunctionBound(x) => x.into(),
+            IInstantiationNameT::PredictedFunction(x) => x.into(),
+            IInstantiationNameT::LambdaCallFunction(x) => x.into(),
+            IInstantiationNameT::Struct(x) => x.into(),
+            IInstantiationNameT::Interface(x) => x.into(),
+            IInstantiationNameT::LambdaCitizen(x) => x.into(),
+            IInstantiationNameT::AnonymousSubstructImpl(x) => x.into(),
+            IInstantiationNameT::AnonymousSubstructConstructor(x) => x.into(),
+            IInstantiationNameT::AnonymousSubstruct(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t CitizenNameT<'s, 't>> for ICitizenNameT<'s, 't> {
-    fn from(f: &'t CitizenNameT<'s, 't>) -> Self {
+impl<'s, 't> From<CitizenNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(f: CitizenNameT<'s, 't>) -> Self {
         match f {
-            CitizenNameT::Struct(x) => (*x).into(),
-            CitizenNameT::Interface(x) => (*x).into(),
+            CitizenNameT::Struct(x) => x.into(),
+            CitizenNameT::Interface(x) => x.into(),
         }
     }
 }
 
-impl<'s, 't> From<&'t CitizenTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
-    fn from(f: &'t CitizenTemplateNameT<'s, 't>) -> Self {
+impl<'s, 't> From<CitizenTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(f: CitizenTemplateNameT<'s, 't>) -> Self {
         match f {
-            CitizenTemplateNameT::StructTemplate(x) => (*x).into(),
-            CitizenTemplateNameT::InterfaceTemplate(x) => (*x).into(),
+            CitizenTemplateNameT::StructTemplate(x) => x.into(),
+            CitizenTemplateNameT::InterfaceTemplate(x) => x.into(),
         }
     }
 }
 
-// -- TryFrom<&'t INameT> for &'t IYyyNameT (interner required; panic stubs) --
-// These are the wide→narrow conversions. Producing an &'t to an arena-allocated
-// narrower enum requires the TypingInterner, which is still a panic-stub.
-// Kept here so `IdT::try_narrow<U>` bound `&'t INameT: TryInto<U>` resolves at
-// bound-check time; at runtime these todo! until Slab 3+ fills the interner.
+// -- TryFrom<INameT> for IYyyNameT (wide → narrow, owned values, no interner) --
+// These are free stack-only conversions under the inline-owned sub-enum design:
+// pattern-match INameT, pick the variants that belong to the narrower sub-enum,
+// and rewrap. No arena allocation needed.
 
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ITemplateNameT<'s, 't> {
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ITemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ITemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::ExportTemplate(x) => Ok(ITemplateNameT::ExportTemplate(x)),
+            INameT::ImplTemplate(x) => Ok(ITemplateNameT::ImplTemplate(x)),
+            INameT::ImplBoundTemplate(x) => Ok(ITemplateNameT::ImplBoundTemplate(x)),
+            INameT::StaticSizedArrayTemplate(x) => Ok(ITemplateNameT::StaticSizedArrayTemplate(x)),
+            INameT::RuntimeSizedArrayTemplate(x) => Ok(ITemplateNameT::RuntimeSizedArrayTemplate(x)),
+            INameT::KindPlaceholderTemplate(x) => Ok(ITemplateNameT::KindPlaceholderTemplate(x)),
+            INameT::OverrideDispatcherTemplate(x) => Ok(ITemplateNameT::OverrideDispatcherTemplate(x)),
+            INameT::OverrideDispatcherCase(x) => Ok(ITemplateNameT::OverrideDispatcherCase(x)),
+            INameT::ExternTemplate(x) => Ok(ITemplateNameT::ExternTemplate(x)),
+            INameT::ExternFunction(x) => Ok(ITemplateNameT::ExternFunction(x)),
+            INameT::FunctionBoundTemplate(x) => Ok(ITemplateNameT::FunctionBoundTemplate(x)),
+            INameT::PredictedFunctionTemplate(x) => Ok(ITemplateNameT::PredictedFunctionTemplate(x)),
+            INameT::FunctionTemplate(x) => Ok(ITemplateNameT::FunctionTemplate(x)),
+            INameT::LambdaCallFunctionTemplate(x) => Ok(ITemplateNameT::LambdaCallFunctionTemplate(x)),
+            INameT::ForwarderFunctionTemplate(x) => Ok(ITemplateNameT::ForwarderFunctionTemplate(x)),
+            INameT::ConstructorTemplate(x) => Ok(ITemplateNameT::ConstructorTemplate(x)),
+            INameT::LambdaCitizenTemplate(x) => Ok(ITemplateNameT::LambdaCitizenTemplate(x)),
+            INameT::StructTemplate(x) => Ok(ITemplateNameT::StructTemplate(x)),
+            INameT::InterfaceTemplate(x) => Ok(ITemplateNameT::InterfaceTemplate(x)),
+            INameT::AnonymousSubstructImplTemplate(x) => Ok(ITemplateNameT::AnonymousSubstructImplTemplate(x)),
+            INameT::AnonymousSubstructTemplate(x) => Ok(ITemplateNameT::AnonymousSubstructTemplate(x)),
+            INameT::AnonymousSubstructConstructorTemplate(x) => Ok(ITemplateNameT::AnonymousSubstructConstructorTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IInstantiationNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IInstantiationNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IInstantiationNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::Export(x) => Ok(IInstantiationNameT::Export(x)),
+            INameT::Impl(x) => Ok(IInstantiationNameT::Impl(x)),
+            INameT::ImplBound(x) => Ok(IInstantiationNameT::ImplBound(x)),
+            INameT::StaticSizedArray(x) => Ok(IInstantiationNameT::StaticSizedArray(x)),
+            INameT::RuntimeSizedArray(x) => Ok(IInstantiationNameT::RuntimeSizedArray(x)),
+            INameT::KindPlaceholder(x) => Ok(IInstantiationNameT::KindPlaceholder(x)),
+            INameT::OverrideDispatcher(x) => Ok(IInstantiationNameT::OverrideDispatcher(x)),
+            INameT::OverrideDispatcherCase(x) => Ok(IInstantiationNameT::OverrideDispatcherCase(x)),
+            INameT::Extern(x) => Ok(IInstantiationNameT::Extern(x)),
+            INameT::ExternFunction(x) => Ok(IInstantiationNameT::ExternFunction(x)),
+            INameT::Function(x) => Ok(IInstantiationNameT::Function(x)),
+            INameT::ForwarderFunction(x) => Ok(IInstantiationNameT::ForwarderFunction(x)),
+            INameT::FunctionBound(x) => Ok(IInstantiationNameT::FunctionBound(x)),
+            INameT::PredictedFunction(x) => Ok(IInstantiationNameT::PredictedFunction(x)),
+            INameT::LambdaCallFunction(x) => Ok(IInstantiationNameT::LambdaCallFunction(x)),
+            INameT::Struct(x) => Ok(IInstantiationNameT::Struct(x)),
+            INameT::Interface(x) => Ok(IInstantiationNameT::Interface(x)),
+            INameT::LambdaCitizen(x) => Ok(IInstantiationNameT::LambdaCitizen(x)),
+            INameT::AnonymousSubstructImpl(x) => Ok(IInstantiationNameT::AnonymousSubstructImpl(x)),
+            INameT::AnonymousSubstructConstructor(x) => Ok(IInstantiationNameT::AnonymousSubstructConstructor(x)),
+            INameT::AnonymousSubstruct(x) => Ok(IInstantiationNameT::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IFunctionTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IFunctionTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::OverrideDispatcherTemplate(x) => Ok(IFunctionTemplateNameT::OverrideDispatcherTemplate(x)),
+            INameT::ExternFunction(x) => Ok(IFunctionTemplateNameT::ExternFunction(x)),
+            INameT::FunctionBoundTemplate(x) => Ok(IFunctionTemplateNameT::FunctionBoundTemplate(x)),
+            INameT::PredictedFunctionTemplate(x) => Ok(IFunctionTemplateNameT::PredictedFunctionTemplate(x)),
+            INameT::FunctionTemplate(x) => Ok(IFunctionTemplateNameT::FunctionTemplate(x)),
+            INameT::LambdaCallFunctionTemplate(x) => Ok(IFunctionTemplateNameT::LambdaCallFunctionTemplate(x)),
+            INameT::ForwarderFunctionTemplate(x) => Ok(IFunctionTemplateNameT::ForwarderFunctionTemplate(x)),
+            INameT::ConstructorTemplate(x) => Ok(IFunctionTemplateNameT::ConstructorTemplate(x)),
+            INameT::AnonymousSubstructConstructorTemplate(x) => Ok(IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IFunctionNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IFunctionNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IFunctionNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::OverrideDispatcher(x) => Ok(IFunctionNameT::OverrideDispatcher(x)),
+            INameT::ExternFunction(x) => Ok(IFunctionNameT::ExternFunction(x)),
+            INameT::Function(x) => Ok(IFunctionNameT::Function(x)),
+            INameT::ForwarderFunction(x) => Ok(IFunctionNameT::ForwarderFunction(x)),
+            INameT::FunctionBound(x) => Ok(IFunctionNameT::FunctionBound(x)),
+            INameT::PredictedFunction(x) => Ok(IFunctionNameT::PredictedFunction(x)),
+            INameT::LambdaCallFunction(x) => Ok(IFunctionNameT::LambdaCallFunction(x)),
+            INameT::AnonymousSubstructConstructor(x) => Ok(IFunctionNameT::AnonymousSubstructConstructor(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ISuperKindTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ISuperKindTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ISuperKindTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::KindPlaceholderTemplate(x) => Ok(ISuperKindTemplateNameT::KindPlaceholderTemplate(x)),
+            INameT::InterfaceTemplate(x) => Ok(ISuperKindTemplateNameT::InterfaceTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ISubKindTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ISubKindTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::StaticSizedArrayTemplate(x) => Ok(ISubKindTemplateNameT::StaticSizedArrayTemplate(x)),
+            INameT::RuntimeSizedArrayTemplate(x) => Ok(ISubKindTemplateNameT::RuntimeSizedArrayTemplate(x)),
+            INameT::KindPlaceholderTemplate(x) => Ok(ISubKindTemplateNameT::KindPlaceholderTemplate(x)),
+            INameT::LambdaCitizenTemplate(x) => Ok(ISubKindTemplateNameT::LambdaCitizenTemplate(x)),
+            INameT::StructTemplate(x) => Ok(ISubKindTemplateNameT::StructTemplate(x)),
+            INameT::InterfaceTemplate(x) => Ok(ISubKindTemplateNameT::InterfaceTemplate(x)),
+            INameT::AnonymousSubstructTemplate(x) => Ok(ISubKindTemplateNameT::AnonymousSubstructTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ICitizenTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ICitizenTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::StaticSizedArrayTemplate(x) => Ok(ICitizenTemplateNameT::StaticSizedArrayTemplate(x)),
+            INameT::RuntimeSizedArrayTemplate(x) => Ok(ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x)),
+            INameT::LambdaCitizenTemplate(x) => Ok(ICitizenTemplateNameT::LambdaCitizenTemplate(x)),
+            INameT::StructTemplate(x) => Ok(ICitizenTemplateNameT::StructTemplate(x)),
+            INameT::InterfaceTemplate(x) => Ok(ICitizenTemplateNameT::InterfaceTemplate(x)),
+            INameT::AnonymousSubstructTemplate(x) => Ok(ICitizenTemplateNameT::AnonymousSubstructTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IStructTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IStructTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IStructTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::LambdaCitizenTemplate(x) => Ok(IStructTemplateNameT::LambdaCitizenTemplate(x)),
+            INameT::StructTemplate(x) => Ok(IStructTemplateNameT::StructTemplate(x)),
+            INameT::AnonymousSubstructTemplate(x) => Ok(IStructTemplateNameT::AnonymousSubstructTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IInterfaceTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IInterfaceTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IInterfaceTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::InterfaceTemplate(x) => Ok(IInterfaceTemplateNameT::InterfaceTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ISuperKindNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ISuperKindNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ISuperKindNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::KindPlaceholder(x) => Ok(ISuperKindNameT::KindPlaceholder(x)),
+            INameT::Interface(x) => Ok(ISuperKindNameT::Interface(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ISubKindNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ISubKindNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ISubKindNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::StaticSizedArray(x) => Ok(ISubKindNameT::StaticSizedArray(x)),
+            INameT::RuntimeSizedArray(x) => Ok(ISubKindNameT::RuntimeSizedArray(x)),
+            INameT::KindPlaceholder(x) => Ok(ISubKindNameT::KindPlaceholder(x)),
+            INameT::Struct(x) => Ok(ISubKindNameT::Struct(x)),
+            INameT::Interface(x) => Ok(ISubKindNameT::Interface(x)),
+            INameT::LambdaCitizen(x) => Ok(ISubKindNameT::LambdaCitizen(x)),
+            INameT::AnonymousSubstruct(x) => Ok(ISubKindNameT::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t ICitizenNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for ICitizenNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t ICitizenNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::StaticSizedArray(x) => Ok(ICitizenNameT::StaticSizedArray(x)),
+            INameT::RuntimeSizedArray(x) => Ok(ICitizenNameT::RuntimeSizedArray(x)),
+            INameT::Struct(x) => Ok(ICitizenNameT::Struct(x)),
+            INameT::Interface(x) => Ok(ICitizenNameT::Interface(x)),
+            INameT::LambdaCitizen(x) => Ok(ICitizenNameT::LambdaCitizen(x)),
+            INameT::AnonymousSubstruct(x) => Ok(ICitizenNameT::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IStructNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IStructNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IStructNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::Struct(x) => Ok(IStructNameT::Struct(x)),
+            INameT::LambdaCitizen(x) => Ok(IStructNameT::LambdaCitizen(x)),
+            INameT::AnonymousSubstruct(x) => Ok(IStructNameT::AnonymousSubstruct(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IInterfaceNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IInterfaceNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IInterfaceNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::Interface(x) => Ok(IInterfaceNameT::Interface(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IImplTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IImplTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IImplTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::ImplTemplate(x) => Ok(IImplTemplateNameT::ImplTemplate(x)),
+            INameT::ImplBoundTemplate(x) => Ok(IImplTemplateNameT::ImplBoundTemplate(x)),
+            INameT::AnonymousSubstructImplTemplate(x) => Ok(IImplTemplateNameT::AnonymousSubstructImplTemplate(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IImplNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IImplNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IImplNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::Impl(x) => Ok(IImplNameT::Impl(x)),
+            INameT::ImplBound(x) => Ok(IImplNameT::ImplBound(x)),
+            INameT::AnonymousSubstructImpl(x) => Ok(IImplNameT::AnonymousSubstructImpl(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IPlaceholderNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IPlaceholderNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IPlaceholderNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::KindPlaceholder(x) => Ok(IPlaceholderNameT::KindPlaceholder(x)),
+            INameT::NonKindNonRegionPlaceholder(x) => Ok(IPlaceholderNameT::NonKindNonRegionPlaceholder(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t IVarNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for IVarNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t IVarNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::TypingPassBlockResultVar(x) => Ok(IVarNameT::TypingPassBlockResultVar(x)),
+            INameT::TypingPassFunctionResultVar(x) => Ok(IVarNameT::TypingPassFunctionResultVar(x)),
+            INameT::TypingPassTemporaryVar(x) => Ok(IVarNameT::TypingPassTemporaryVar(x)),
+            INameT::TypingPassPatternMember(x) => Ok(IVarNameT::TypingPassPatternMember(x)),
+            INameT::TypingIgnoredParam(x) => Ok(IVarNameT::TypingIgnoredParam(x)),
+            INameT::TypingPassPatternDestructuree(x) => Ok(IVarNameT::TypingPassPatternDestructuree(x)),
+            INameT::UnnamedLocal(x) => Ok(IVarNameT::UnnamedLocal(x)),
+            INameT::ClosureParam(x) => Ok(IVarNameT::ClosureParam(x)),
+            INameT::ConstructingMember(x) => Ok(IVarNameT::ConstructingMember(x)),
+            INameT::WhileCondResult(x) => Ok(IVarNameT::WhileCondResult(x)),
+            INameT::Iterable(x) => Ok(IVarNameT::Iterable(x)),
+            INameT::Iterator(x) => Ok(IVarNameT::Iterator(x)),
+            INameT::IterationOption(x) => Ok(IVarNameT::IterationOption(x)),
+            INameT::MagicParam(x) => Ok(IVarNameT::MagicParam(x)),
+            INameT::CodeVar(x) => Ok(IVarNameT::CodeVar(x)),
+            INameT::AnonymousSubstructMember(x) => Ok(IVarNameT::AnonymousSubstructMember(x)),
+            INameT::Self_(x) => Ok(IVarNameT::Self_(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t CitizenNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t CitizenNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::Struct(x) => Ok(CitizenNameT::Struct(x)),
+            INameT::Interface(x) => Ok(CitizenNameT::Interface(x)),
+            _ => Err(()),
+        }
     }
 }
-impl<'s, 't> TryFrom<&'t INameT<'s, 't>> for &'t CitizenTemplateNameT<'s, 't> {
+
+impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
     type Error = ();
-    fn try_from(_n: &'t INameT<'s, 't>) -> Result<Self, ()> {
-        todo!("TryFrom<&'t INameT> for &'t CitizenTemplateNameT requires TypingInterner")
+    fn try_from(n: INameT<'s, 't>) -> Result<Self, ()> {
+        match n {
+            INameT::StructTemplate(x) => Ok(CitizenTemplateNameT::StructTemplate(x)),
+            INameT::InterfaceTemplate(x) => Ok(CitizenTemplateNameT::InterfaceTemplate(x)),
+            _ => Err(()),
+        }
     }
 }

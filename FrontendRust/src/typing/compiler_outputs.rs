@@ -44,7 +44,7 @@ case class DeferredEvaluatingFunctionBody(
   call: (CompilerOutputs) => Unit)
 */
 pub struct DeferredEvaluatingFunction<'s, 't> {
-    name: IdT<'s, 't, &'t INameT<'s, 't>>,
+    name: IdT<'s, 't,INameT<'s, 't>>,
     call: fn(),
 }
 /*
@@ -166,7 +166,7 @@ fn peek_next_deferred_function_compile<'s, 't>() -> Option<DeferredEvaluatingFun
     deferredFunctionCompiles.headOption.map(_._2)
   }
 */
-fn mark_deferred_function_compiled<'s, 't>(name: IdT<'s, 't, &'t INameT<'s, 't>>) { panic!("Unimplemented: mark_deferred_function_compiled"); }
+fn mark_deferred_function_compiled<'s, 't>(name: IdT<'s, 't,INameT<'s, 't>>) { panic!("Unimplemented: mark_deferred_function_compiled"); }
 /*
   def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
     vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
@@ -174,7 +174,7 @@ fn mark_deferred_function_compiled<'s, 't>(name: IdT<'s, 't, &'t INameT<'s, 't>>
     deferredFunctionCompiles -= name
   }
 */
-fn get_instantiation_name_to_function_bound_to_rune<'s, 't>() -> HashMap<IdT<'s, 't, &'t IInstantiationNameT<'s, 't>>, InstantiationBoundArgumentsT<'s, 't>> { panic!("Unimplemented: get_instantiation_name_to_function_bound_to_rune"); }
+fn get_instantiation_name_to_function_bound_to_rune<'s, 't>() -> HashMap<IdT<'s, 't,IInstantiationNameT<'s, 't>>, InstantiationBoundArgumentsT<'s, 't>> { panic!("Unimplemented: get_instantiation_name_to_function_bound_to_rune"); }
 /*
   def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
     instantiationNameToInstantiationBounds.toMap
@@ -186,7 +186,7 @@ fn lookup_function<'s, 't>(signature: SignatureT<'s, 't>) -> Option<FunctionDefi
     signatureToFunction.get(signature)
   }
 */
-fn get_instantiation_bounds<'s, 't>(instantiation_id: IdT<'s, 't, &'t IInstantiationNameT<'s, 't>>) -> Option<InstantiationBoundArgumentsT<'s, 't>> { panic!("Unimplemented: get_instantiation_bounds"); }
+fn get_instantiation_bounds<'s, 't>(instantiation_id: IdT<'s, 't,IInstantiationNameT<'s, 't>>) -> Option<InstantiationBoundArgumentsT<'s, 't>> { panic!("Unimplemented: get_instantiation_bounds"); }
 /*
   def getInstantiationBounds(
     instantiationId: IdT[IInstantiationNameT]):
@@ -194,7 +194,7 @@ fn get_instantiation_bounds<'s, 't>(instantiation_id: IdT<'s, 't, &'t IInstantia
     instantiationNameToInstantiationBounds.get(instantiationId)
   }
 */
-fn add_instantiation_bounds<'s, 't>(sanity_check: bool, interner: Interner<'s>, original_calling_template_id: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>, instantiation_id: IdT<'s, 't, &'t IInstantiationNameT<'s, 't>>, instantiation_bound_args: InstantiationBoundArgumentsT<'s, 't>) { panic!("Unimplemented: add_instantiation_bounds"); }
+fn add_instantiation_bounds<'s, 't>(sanity_check: bool, interner: Interner<'s>, original_calling_template_id: IdT<'s, 't,ITemplateNameT<'s, 't>>, instantiation_id: IdT<'s, 't,IInstantiationNameT<'s, 't>>, instantiation_bound_args: InstantiationBoundArgumentsT<'s, 't>) { panic!("Unimplemented: add_instantiation_bounds"); }
 /*
   def addInstantiationBounds(
     sanityCheck: Boolean,
@@ -362,7 +362,7 @@ fn add_function(function: FunctionDefinitionT) { panic!("Unimplemented: add_func
 //    functionsByPrototype.put(function.header.toPrototype, function)
   }
 */
-fn declare_function<'s, 't>(call_ranges: Vec<RangeS<'s>>, name: IdT<'s, 't, &'t IFunctionNameT<'s, 't>>) { panic!("Unimplemented: declare_function"); }
+fn declare_function<'s, 't>(call_ranges: Vec<RangeS<'s>>, name: IdT<'s, 't,IFunctionNameT<'s, 't>>) { panic!("Unimplemented: declare_function"); }
 /*
   def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
     functionDeclaredNames.get(name) match {
@@ -374,7 +374,7 @@ fn declare_function<'s, 't>(call_ranges: Vec<RangeS<'s>>, name: IdT<'s, 't, &'t 
     functionDeclaredNames.put(name, callRanges.head)
   }
 */
-fn declare_type<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) { panic!("Unimplemented: declare_type"); }
+fn declare_type<'s, 't>(template_name: IdT<'s, 't,ITemplateNameT<'s, 't>>) { panic!("Unimplemented: declare_type"); }
 /*
   // We can't declare the struct at the same time as we declare its mutability or environment,
   // see MFDBRE.
@@ -383,7 +383,7 @@ fn declare_type<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) 
     typeDeclaredNames += templateName
   }
 */
-fn declare_type_mutability<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>, mutability: ITemplataT<'s, 't>) { panic!("Unimplemented: declare_type_mutability"); }
+fn declare_type_mutability<'s, 't>(template_name: IdT<'s, 't,ITemplateNameT<'s, 't>>, mutability: ITemplataT<'s, 't>) { panic!("Unimplemented: declare_type_mutability"); }
 /*
   def declareTypeMutability(
     templateName: IdT[ITemplateNameT],
@@ -394,7 +394,7 @@ fn declare_type_mutability<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT
     typeNameToMutability += (templateName -> mutability)
   }
 */
-fn declare_type_sealed<'s, 't>(template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>, sealed: bool) { panic!("Unimplemented: declare_type_sealed"); }
+fn declare_type_sealed<'s, 't>(template_name: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>, sealed: bool) { panic!("Unimplemented: declare_type_sealed"); }
 /*
   def declareTypeSealed(
     templateName: IdT[IInterfaceTemplateNameT],
@@ -405,7 +405,7 @@ fn declare_type_sealed<'s, 't>(template_name: IdT<'s, 't, &'t IInterfaceTemplate
     interfaceNameToSealed += (templateName -> seealed)
   }
 */
-fn declare_function_inner_env<'s, 't>(name_t: IdT<'s, 't, &'t IFunctionNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_function_inner_env"); }
+fn declare_function_inner_env<'s, 't>(name_t: IdT<'s, 't,IFunctionNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_function_inner_env"); }
 /*
   def declareFunctionInnerEnv(
     nameT: IdT[IFunctionNameT],
@@ -418,7 +418,7 @@ fn declare_function_inner_env<'s, 't>(name_t: IdT<'s, 't, &'t IFunctionNameT<'s,
     functionNameToInnerEnv += (nameT -> env)
   }
 */
-fn declare_function_outer_env<'s, 't>(name_t: IdT<'s, 't, &'t IFunctionTemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_function_outer_env"); }
+fn declare_function_outer_env<'s, 't>(name_t: IdT<'s, 't,IFunctionTemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_function_outer_env"); }
 /*
   def declareFunctionOuterEnv(
     nameT: IdT[IFunctionTemplateNameT],
@@ -429,7 +429,7 @@ fn declare_function_outer_env<'s, 't>(name_t: IdT<'s, 't, &'t IFunctionTemplateN
     functionNameToOuterEnv += (nameT -> env)
   }
 */
-fn declare_type_outer_env<'s, 't>(name_t: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_type_outer_env"); }
+fn declare_type_outer_env<'s, 't>(name_t: IdT<'s, 't,ITemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_type_outer_env"); }
 /*
   def declareTypeOuterEnv(
     nameT: IdT[ITemplateNameT],
@@ -441,7 +441,7 @@ fn declare_type_outer_env<'s, 't>(name_t: IdT<'s, 't, &'t ITemplateNameT<'s, 't>
     typeNameToOuterEnv += (nameT -> env)
   }
 */
-fn declare_type_inner_env<'s, 't>(template_id: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_type_inner_env"); }
+fn declare_type_inner_env<'s, 't>(template_id: IdT<'s, 't,ITemplateNameT<'s, 't>>, env: IInDenizenEnvironmentT<'s, 't>) { panic!("Unimplemented: declare_type_inner_env"); }
 /*
   def declareTypeInnerEnv(
     templateId: IdT[ITemplateNameT],
@@ -511,25 +511,25 @@ fn add_impl(impl_t: ImplT) { panic!("Unimplemented: add_impl"); }
       superInterfaceTemplateToImpls.getOrElse(impl.superInterfaceTemplateId, Vector()) :+ impl)
   }
 */
-fn get_parent_impls_for_sub_citizen_template<'s, 't>(sub_citizen_template: IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>>) -> Vec<ImplT<'s, 't>> { panic!("Unimplemented: get_parent_impls_for_sub_citizen_template"); }
+fn get_parent_impls_for_sub_citizen_template<'s, 't>(sub_citizen_template: IdT<'s, 't,ICitizenTemplateNameT<'s, 't>>) -> Vec<ImplT<'s, 't>> { panic!("Unimplemented: get_parent_impls_for_sub_citizen_template"); }
 /*
   def getParentImplsForSubCitizenTemplate(subCitizenTemplate: IdT[ICitizenTemplateNameT]): Vector[ImplT] = {
     subCitizenTemplateToImpls.getOrElse(subCitizenTemplate, Vector[ImplT]())
   }
 */
-fn get_child_impls_for_super_interface_template<'s, 't>(super_interface_template: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>) -> Vec<ImplT<'s, 't>> { panic!("Unimplemented: get_child_impls_for_super_interface_template"); }
+fn get_child_impls_for_super_interface_template<'s, 't>(super_interface_template: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>) -> Vec<ImplT<'s, 't>> { panic!("Unimplemented: get_child_impls_for_super_interface_template"); }
 /*
   def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
     superInterfaceTemplateToImpls.getOrElse(superInterfaceTemplate, Vector[ImplT]())
   }
 */
-fn add_kind_export<'s, 't>(range: RangeS<'s>, kind: KindT<'s, 't>, id: IdT<'s, 't, &'t ExportNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_kind_export"); }
+fn add_kind_export<'s, 't>(range: RangeS<'s>, kind: KindT<'s, 't>, id: IdT<'s, 't,ExportNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_kind_export"); }
 /*
   def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {
     kindExports += KindExportT(range, kind, id, exportedName)
   }
 */
-fn add_function_export<'s, 't>(range: RangeS<'s>, function: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, export_id: IdT<'s, 't, &'t ExportNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_function_export"); }
+fn add_function_export<'s, 't>(range: RangeS<'s>, function: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, export_id: IdT<'s, 't,ExportNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_function_export"); }
 /*
   def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
     vassert(getInstantiationBounds(function.id).nonEmpty)
@@ -542,7 +542,7 @@ fn add_kind_extern<'s, 't>(kind: KindT<'s, 't>, package_coord: PackageCoordinate
     kindExterns += KindExternT(kind, packageCoord, exportedName)
   }
 */
-fn add_function_extern<'s, 't>(range: RangeS<'s>, extern_placeholdered_id: IdT<'s, 't, &'t ExternNameT<'s, 't>>, function: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_function_extern"); }
+fn add_function_extern<'s, 't>(range: RangeS<'s>, extern_placeholdered_id: IdT<'s, 't,ExternNameT<'s, 't>>, function: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, exported_name: StrI<'s>) { panic!("Unimplemented: add_function_extern"); }
 /*
   def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
     functionExterns += FunctionExternT(range, externPlaceholderedId, function, exportedName)
@@ -560,7 +560,7 @@ fn defer_evaluating_function<'s, 't>(devf: DeferredEvaluatingFunction<'s, 't>) {
     deferredFunctionCompiles.put(devf.name, devf)
   }
 */
-fn struct_declared<'s, 't>(template_name: IdT<'s, 't, &'t IStructTemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: struct_declared"); }
+fn struct_declared<'s, 't>(template_name: IdT<'s, 't,IStructTemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: struct_declared"); }
 /*
   def structDeclared(templateName: IdT[IStructTemplateNameT]): Boolean = {
     // This is the only place besides StructDefinition2 and declareStruct thats allowed to make one of these
@@ -580,7 +580,7 @@ fn struct_declared<'s, 't>(template_name: IdT<'s, 't, &'t IStructTemplateNameT<'
 //    }
 //  }
 */
-fn lookup_mutability<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) -> ITemplataT<'s, 't> { panic!("Unimplemented: lookup_mutability"); }
+fn lookup_mutability<'s, 't>(template_name: IdT<'s, 't,ITemplateNameT<'s, 't>>) -> ITemplataT<'s, 't> { panic!("Unimplemented: lookup_mutability"); }
 /*
   def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
     // If it has a structTT, then we've at least started to evaluate this citizen
@@ -590,7 +590,7 @@ fn lookup_mutability<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, '
     }
   }
 */
-fn lookup_sealed<'s, 't>(template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: lookup_sealed"); }
+fn lookup_sealed<'s, 't>(template_name: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: lookup_sealed"); }
 /*
   def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
     // If it has a structTT, then we've at least started to evaluate this citizen
@@ -607,20 +607,20 @@ fn lookup_sealed<'s, 't>(template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<
 //    }
 //  }
 */
-fn interface_declared<'s, 't>(template_name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: interface_declared"); }
+fn interface_declared<'s, 't>(template_name: IdT<'s, 't,ITemplateNameT<'s, 't>>) -> bool { panic!("Unimplemented: interface_declared"); }
 /*
   def interfaceDeclared(templateName: IdT[ITemplateNameT]): Boolean = {
     // This is the only place besides InterfaceDefinition2 and declareInterface thats allowed to make one of these
     typeDeclaredNames.contains(templateName)
   }
 */
-fn lookup_struct<'s, 't>(struct_tt: IdT<'s, 't, &'t IStructNameT<'s, 't>>) -> StructDefinitionT<'s, 't> { panic!("Unimplemented: lookup_struct"); }
+fn lookup_struct<'s, 't>(struct_tt: IdT<'s, 't,IStructNameT<'s, 't>>) -> StructDefinitionT<'s, 't> { panic!("Unimplemented: lookup_struct"); }
 /*
   def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
     lookupStructTemplate(TemplataCompiler.getStructTemplate(structTT))
   }
 */
-fn lookup_struct_template<'s, 't>(template_name: IdT<'s, 't, &'t IStructTemplateNameT<'s, 't>>) -> StructDefinitionT<'s, 't> { panic!("Unimplemented: lookup_struct_template"); }
+fn lookup_struct_template<'s, 't>(template_name: IdT<'s, 't,IStructTemplateNameT<'s, 't>>) -> StructDefinitionT<'s, 't> { panic!("Unimplemented: lookup_struct_template"); }
 /*
   def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
     vassertSome(structTemplateNameToDefinition.get(templateName))
@@ -632,13 +632,13 @@ fn lookup_interface<'s, 't>(interface_tt: InterfaceTT<'s, 't>) -> InterfaceDefin
     lookupInterface(TemplataCompiler.getInterfaceTemplate(interfaceTT.id))
   }
 */
-fn lookup_interface_by_template_name<'s, 't>(template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>) -> InterfaceDefinitionT<'s, 't> { panic!("Unimplemented: lookup_interface"); }
+fn lookup_interface_by_template_name<'s, 't>(template_name: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>) -> InterfaceDefinitionT<'s, 't> { panic!("Unimplemented: lookup_interface"); }
 /*
   def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
     vassertSome(interfaceTemplateNameToDefinition.get(templateName))
   }
 */
-fn lookup_citizen_by_template_name<'s, 't>(template_name: IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>>) -> CitizenDefinitionT<'s, 't> { panic!("Unimplemented: lookup_citizen"); }
+fn lookup_citizen_by_template_name<'s, 't>(template_name: IdT<'s, 't,ICitizenTemplateNameT<'s, 't>>) -> CitizenDefinitionT<'s, 't> { panic!("Unimplemented: lookup_citizen"); }
 /*
   def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
     val IdT(packageCoord, initSteps, last) = templateName
@@ -687,7 +687,7 @@ fn get_env_for_function_signature<'s, 't>(sig: SignatureT<'s, 't>) -> FunctionEn
     vassertSome(envByFunctionSignature.get(sig))
   }
 */
-fn get_outer_env_for_type<'s, 't>(range: Vec<RangeS<'s>>, name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_outer_env_for_type"); }
+fn get_outer_env_for_type<'s, 't>(range: Vec<RangeS<'s>>, name: IdT<'s, 't,ITemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_outer_env_for_type"); }
 /*
   def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
     typeNameToOuterEnv.get(name) match {
@@ -698,19 +698,19 @@ fn get_outer_env_for_type<'s, 't>(range: Vec<RangeS<'s>>, name: IdT<'s, 't, &'t 
     }
   }
 */
-fn get_inner_env_for_type<'s, 't>(name: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_inner_env_for_type"); }
+fn get_inner_env_for_type<'s, 't>(name: IdT<'s, 't,ITemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_inner_env_for_type"); }
 /*
   def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
     vassertSome(typeNameToInnerEnv.get(name))
   }
 */
-fn get_inner_env_for_function<'s, 't>(name: IdT<'s, 't, &'t INameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_inner_env_for_function"); }
+fn get_inner_env_for_function<'s, 't>(name: IdT<'s, 't,INameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_inner_env_for_function"); }
 /*
   def getInnerEnvForFunction(name: IdT[INameT]): IInDenizenEnvironmentT = {
     vassertSome(functionNameToInnerEnv.get(name))
   }
 */
-fn get_outer_env_for_function<'s, 't>(name: IdT<'s, 't, &'t IFunctionTemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_outer_env_for_function"); }
+fn get_outer_env_for_function<'s, 't>(name: IdT<'s, 't,IFunctionTemplateNameT<'s, 't>>) -> IInDenizenEnvironmentT<'s, 't> { panic!("Unimplemented: get_outer_env_for_function"); }
 /*
   def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {
     vassertSome(functionNameToOuterEnv.get(name))

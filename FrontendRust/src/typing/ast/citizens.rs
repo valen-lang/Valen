@@ -25,7 +25,7 @@ pub enum CitizenDefinitionT<'s, 't> {
 /*
 trait CitizenDefinitionT {
 */
-fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>> {
+fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't,ICitizenTemplateNameT<'s, 't>> {
     panic!("Unimplemented: template_name");
 }
 /*
@@ -51,7 +51,7 @@ fn citizen_definition_default_region() -> RegionT {
 }
 */
 pub struct StructDefinitionT<'s, 't> {
-    pub template_name: IdT<'s, 't, &'t IStructTemplateNameT<'s, 't>>,
+    pub template_name: IdT<'s, 't,IStructTemplateNameT<'s, 't>>,
     pub instantiated_citizen: StructTT<'s, 't>,
     pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
     pub weakable: bool,
@@ -231,7 +231,7 @@ impl<'s, 't> ReferenceMemberTypeT<'s, 't> {
 case class ReferenceMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
 pub struct InterfaceDefinitionT<'s, 't> {
-    pub template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>,
+    pub template_name: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>,
     pub instantiated_interface: InterfaceTT<'s, 't>,
     pub ref_: InterfaceTT<'s, 't>,
     pub attributes: Vec<ICitizenAttributeT<'s, 't>>,

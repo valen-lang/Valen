@@ -424,7 +424,7 @@ fn printable_kind_name(kind: KindT) -> String {
     }
   }
 */
-fn printable_id<'s, 't>(id: IdT<'s, 't, &'t INameT<'s, 't>>) -> String {
+fn printable_id<'s, 't>(id: IdT<'s, 't,INameT<'s, 't>>) -> String {
   panic!("Unimplemented: printable_id");
 }
 /*

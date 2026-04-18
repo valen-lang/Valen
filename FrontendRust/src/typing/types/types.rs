@@ -272,7 +272,7 @@ object contentsStaticSizedArrayTT {
 }
 */
 pub struct StaticSizedArrayTT<'s, 't> {
-  pub name: IdT<'s, 't, &'t StaticSizedArrayNameT<'s, 't>>,
+  pub name: IdT<'s, 't,StaticSizedArrayNameT<'s, 't>>,
 }
 /*
 case class StaticSizedArrayTT(
@@ -299,7 +299,7 @@ object contentsRuntimeSizedArrayTT {
 }
 */
 pub struct RuntimeSizedArrayTT<'s, 't> {
-  pub name: IdT<'s, 't, &'t RuntimeSizedArrayNameT<'s, 't>>,
+  pub name: IdT<'s, 't,RuntimeSizedArrayNameT<'s, 't>>,
 }
 /*
 case class RuntimeSizedArrayTT(
@@ -351,7 +351,7 @@ sealed trait ICitizenTT extends ISubKindTT with IInterning {
 }
 */
 pub struct StructTT<'s, 't> {
-  pub id: IdT<'s, 't, &'t IStructNameT<'s, 't>>,
+  pub id: IdT<'s, 't,IStructNameT<'s, 't>>,
 }
 /*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
@@ -364,7 +364,7 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
 }
 */
 pub struct InterfaceTT<'s, 't> {
-  pub id: IdT<'s, 't, &'t IInterfaceNameT<'s, 't>>,
+  pub id: IdT<'s, 't,IInterfaceNameT<'s, 't>>,
 }
 /*
 case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperKindTT {
@@ -394,7 +394,7 @@ case class OverloadSetT(
 }
 */
 pub struct KindPlaceholderT<'s, 't> {
-  pub id: IdT<'s, 't, &'t KindPlaceholderNameT<'s, 't>>,
+  pub id: IdT<'s, 't,KindPlaceholderNameT<'s, 't>>,
 }
 /*
 // At some point it'd be nice to make Coord.kind into a templata so we can directly have a

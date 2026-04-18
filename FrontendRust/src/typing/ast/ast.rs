@@ -41,12 +41,12 @@ use crate::typing::hinputs_t::*;
 
 pub struct ImplT<'s, 't> {
     pub templata: ImplDefinitionTemplataT<'s, 't>,
-    pub instantiated_id: IdT<'s, 't, &'t IImplNameT<'s, 't>>,
-    pub template_id: IdT<'s, 't, &'t IImplTemplateNameT<'s, 't>>,
-    pub sub_citizen_template_id: IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>>,
+    pub instantiated_id: IdT<'s, 't,IImplNameT<'s, 't>>,
+    pub template_id: IdT<'s, 't,IImplTemplateNameT<'s, 't>>,
+    pub sub_citizen_template_id: IdT<'s, 't,ICitizenTemplateNameT<'s, 't>>,
     pub sub_citizen: ICitizenTT<'s, 't>,
     pub super_interface: InterfaceTT<'s, 't>,
-    pub super_interface_template_id: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>,
+    pub super_interface_template_id: IdT<'s, 't,IInterfaceTemplateNameT<'s, 't>>,
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
     pub rune_index_to_independence: Vec<bool>,
 }
@@ -81,7 +81,7 @@ case class ImplT(
 pub struct KindExportT<'s, 't> {
     pub range: RangeS<'s>,
     pub tyype: KindT<'s, 't>,
-    pub id: IdT<'s, 't, &'t ExportNameT<'s, 't>>,
+    pub id: IdT<'s, 't,ExportNameT<'s, 't>>,
     pub exported_name: StrI<'s>,
 }
 impl<'s, 't> KindExportT<'s, 't> {}
@@ -108,7 +108,7 @@ impl<'s, 't> KindExportT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplem
 pub struct FunctionExportT<'s, 't> {
     pub range: RangeS<'s>,
     pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
-    pub export_id: IdT<'s, 't, &'t ExportNameT<'s, 't>>,
+    pub export_id: IdT<'s, 't,ExportNameT<'s, 't>>,
     pub exported_name: StrI<'s>,
 }
 impl<'s, 't> FunctionExportT<'s, 't> {}
@@ -155,7 +155,7 @@ impl<'s, 't> KindExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplem
 */
 pub struct FunctionExternT<'s, 't> {
     pub range: RangeS<'s>,
-    pub extern_placeholdered_id: IdT<'s, 't, &'t ExternNameT<'s, 't>>,
+    pub extern_placeholdered_id: IdT<'s, 't,ExternNameT<'s, 't>>,
     pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
     pub extern_name: StrI<'s>,
 }
@@ -179,7 +179,7 @@ impl<'s, 't> FunctionExternT<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unim
 }
 */
 pub struct InterfaceEdgeBlueprintT<'s, 't> {
-    pub interface: IdT<'s, 't, &'t IInterfaceNameT<'s, 't>>,
+    pub interface: IdT<'s, 't,IInterfaceNameT<'s, 't>>,
     pub super_family_root_headers: Vec<(PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, i32)>,
 }
 impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> {}
@@ -199,11 +199,11 @@ impl<'s, 't> InterfaceEdgeBlueprintT<'s, 't> { fn equals(&self, obj: &InterfaceE
   override def equals(obj: Any): Boolean = vcurious(); }
 */
 pub struct OverrideT<'s, 't> {
-    pub dispatcher_call_id: IdT<'s, 't, &'t OverrideDispatcherNameT<'s, 't>>,
-    pub impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't, &'t IPlaceholderNameT<'s, 't>>, ITemplataT<'s, 't>)>,
-    pub impl_placeholder_to_case_placeholder: Vec<(IdT<'s, 't, &'t IPlaceholderNameT<'s, 't>>, ITemplataT<'s, 't>)>,
+    pub dispatcher_call_id: IdT<'s, 't,OverrideDispatcherNameT<'s, 't>>,
+    pub impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't,IPlaceholderNameT<'s, 't>>, ITemplataT<'s, 't>)>,
+    pub impl_placeholder_to_case_placeholder: Vec<(IdT<'s, 't,IPlaceholderNameT<'s, 't>>, ITemplataT<'s, 't>)>,
     pub dispatcher_and_case_placeholdered_impl_reachable_prototypes: HashMap<IRuneS<'s>, HashMap<IRuneS<'s>, PrototypeT<'s, 't, FunctionBoundNameT<'s, 't>>>>,
-    pub case_id: IdT<'s, 't, &'t OverrideDispatcherCaseNameT<'s, 't>>,
+    pub case_id: IdT<'s, 't,OverrideDispatcherCaseNameT<'s, 't>>,
     pub override_prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
     pub dispatcher_instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
 }
@@ -249,11 +249,11 @@ case class OverrideT(
 )
 */
 pub struct EdgeT<'s, 't> {
-    pub edge_id: IdT<'s, 't, &'t IImplNameT<'s, 't>>,
+    pub edge_id: IdT<'s, 't,IImplNameT<'s, 't>>,
     pub sub_citizen: ICitizenTT<'s, 't>,
-    pub super_interface: IdT<'s, 't, &'t IInterfaceNameT<'s, 't>>,
+    pub super_interface: IdT<'s, 't,IInterfaceNameT<'s, 't>>,
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub abstract_func_to_override_func: HashMap<IdT<'s, 't, &'t IFunctionNameT<'s, 't>>, OverrideT<'s, 't>>,
+    pub abstract_func_to_override_func: HashMap<IdT<'s, 't,IFunctionNameT<'s, 't>>, OverrideT<'s, 't>>,
 }
 impl<'s, 't> EdgeT<'s, 't> {}
 /*
@@ -496,7 +496,7 @@ override def equals(obj: Any): Boolean = vcurious();
 
 */
 pub struct SignatureT<'s, 't> {
-    pub id: IdT<'s, 't, &'t IFunctionNameT<'s, 't>>,
+    pub id: IdT<'s, 't,IFunctionNameT<'s, 't>>,
 }
 impl<'s, 't> SignatureT<'s, 't> {}
 /*
@@ -514,7 +514,7 @@ impl<'s, 't> SignatureT<'s, 't> { fn param_types(&self) -> Vec<CoordT<'s, 't>> {
 */
 pub struct FunctionBannerT<'s, 't> {
     pub origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
-    pub name: IdT<'s, 't, &'t IFunctionNameT<'s, 't>>,
+    pub name: IdT<'s, 't,IFunctionNameT<'s, 't>>,
 }
 impl<'s, 't> FunctionBannerT<'s, 't> {}
 /*
@@ -585,7 +585,7 @@ case object SealedT extends ICitizenAttributeT
 case object UserFunctionT extends IFunctionAttributeT // Whether it was written by a human. Mostly for tests right now.
 */
 pub struct FunctionHeaderT<'s, 't> {
-    pub id: IdT<'s, 't, &'t IFunctionNameT<'s, 't>>,
+    pub id: IdT<'s, 't,IFunctionNameT<'s, 't>>,
     pub attributes: Vec<IFunctionAttributeT<'s, 't>>,
     pub params: Vec<ParameterT<'s, 't>>,
     pub return_type: CoordT<'s, 't>,
@@ -752,7 +752,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn param_types(&self) -> Vec<CoordT<'s, '
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
-fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't, &'t IFunctionNameT<'s, 't>>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
+fn function_header_unapply<'a, 's, 't>(arg: &'a FunctionHeaderT<'s, 't>) -> Option<(&'a IdT<'s, 't,IFunctionNameT<'s, 't>>, &'a Vec<ParameterT<'s, 't>>, &'a CoordT<'s, 't>)> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(arg: FunctionHeaderT): Option[(IdT[IFunctionNameT], Vector[ParameterT], CoordT)] = {
     Some(id, params, returnType)
@@ -765,28 +765,28 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_pure(&self) -> bool { panic!("Unimp
   }
 }
 */
-pub struct PrototypeT<'s, 't, T: 't + Copy = ()>
+pub struct PrototypeT<'s, 't, T: Copy = ()>
 where 's: 't,
 {
-    pub id: IdT<'s, 't, &'t T>,
+    pub id: IdT<'s, 't, T>,
     pub return_type: CoordT<'s, 't>,
 }
-impl<'s, 't, T: 't + Copy> PrototypeT<'s, 't, T> where 's: 't, {}
+impl<'s, 't, T: Copy> PrototypeT<'s, 't, T> where 's: 't, {}
 /*
 case class PrototypeT[+T <: IFunctionNameT](
     id: IdT[T],
     returnType: CoordT) {
 */
-impl<'s, 't, T: 't + Copy> PrototypeT<'s, 't, T> where 's: 't, { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
+impl<'s, 't, T: Copy> PrototypeT<'s, 't, T> where 's: 't, { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
   override def hashCode(): Int = hash;
 */
-impl<'s, 't, T: 't + Copy> PrototypeT<'s, 't, T> where 's: 't, { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
+impl<'s, 't, T: Copy> PrototypeT<'s, 't, T> where 's: 't, { fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); } }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */
-impl<'s, 't, T: 't + Copy> PrototypeT<'s, 't, T> where 's: 't, { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
+impl<'s, 't, T: Copy> PrototypeT<'s, 't, T> where 's: 't, { fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); } }
 /*
   def toSignature: SignatureT = SignatureT(id)
 }

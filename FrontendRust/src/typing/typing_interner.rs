@@ -23,7 +23,7 @@ impl<'t> TypingInterner<'t> {
         panic!("TypingInterner::intern_kind not yet implemented")
     }
 
-    pub fn intern_id<'s>(&self, _val: IdValT<'s, 't>) -> &'t IdT<'s, 't, &'t INameT<'s, 't>>
+    pub fn intern_id<'s>(&self, _val: IdValT<'s, 't>) -> &'t IdT<'s, 't,INameT<'s, 't>>
     where 's: 't {
         panic!("TypingInterner::intern_id not yet implemented")
     }
