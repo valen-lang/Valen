@@ -96,7 +96,6 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - **NEW in typing pass:** `IEnvironmentT<'s, 't>` and all 9 variants (allocated via `scout_arena.alloc(...)`)
 
 **`'t` typing arena — interned (dedup via `TypingInterner`):**
-- `INameT<'s, 't>` (~60 variants) — the "widest" name enum; the only name-side enum that gets arena storage and pointer-identity.
 - Concrete name structs (`FunctionNameT`, `StructNameT`, etc. — ~60 of them)
 - `IdT<'s, 't, T>` (generic)
 - `KindT<'s, 't>` (all variants including primitives, for uniformity)
@@ -115,7 +114,7 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - `HinputsT<'s, 't>` (pass output)
 
 **Inline Copy, NOT interned (Scala-verbatim structural equality):**
-- Name sub-enum families (`IFunctionNameT`, `IFunctionTemplateNameT`, `IInstantiationNameT`, `IStructNameT`, `IInterfaceNameT`, `ICitizenNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ISubKindTemplateNameT`, `ISuperKindTemplateNameT`, `ITemplateNameT`, `IImplNameT`, `IImplTemplateNameT`, `IPlaceholderNameT`, `IVarNameT`, `IRegionNameT`, `CitizenNameT`, `CitizenTemplateNameT`) — 16-byte inline Copy values (tag + 8-byte concrete ref). Casting a concrete or narrow sub-enum into a wider sub-enum (or into `INameT`) is a stack-only rewrap: no interner, no arena allocation. Identity between two sub-enum values is structural compare on the 16 bytes; identity between concrete refs or between `INameT` refs stays pointer-eq because those sides remain interned.
+- Name sub-enum families (`INameT`, `IFunctionNameT`, `IFunctionTemplateNameT`, `IInstantiationNameT`, `IStructNameT`, `IInterfaceNameT`, `ICitizenNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ISubKindTemplateNameT`, `ISuperKindTemplateNameT`, `ITemplateNameT`, `IImplNameT`, `IImplTemplateNameT`, `IPlaceholderNameT`, `IVarNameT`, `IRegionNameT`, `CitizenNameT`, `CitizenTemplateNameT`) — 16-byte inline Copy values (tag + 8-byte concrete ref). `INameT` (the widest union) lives inline too — in `IdT.local_name`, in `IdT.init_steps: &'t [INameT<'s, 't>]` elements, and anywhere a typed name is passed by value. Casting a concrete or narrow sub-enum into a wider sub-enum (or into `INameT`) is a stack-only rewrap: no interner, no arena allocation. Identity between two sub-enum values (including `INameT`) is structural compare on the 16 bytes; identity between concrete refs stays pointer-eq because concrete name structs remain interned.
 - `CoordT<'s, 't>` — passed by value, pointer-eq on `kind` field
 - `OwnershipT`, `MutabilityT`, `VariabilityT`, `LocationT`, `RegionT` — pure Copy enums
 - Small templata value variants: `MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `RuntimeSizedArrayTemplateTemplataT`, `StaticSizedArrayTemplateTemplataT`
@@ -520,14 +519,13 @@ All interned typing types use the dual-enum pattern: a **reference enum** (canon
 
 Interned type families:
 - Concrete name structs (`FunctionNameT`, `StructNameT`, `ImplNameT`, … ~60 of them) / their respective `*ValT` lookup keys
-- `INameT<'s, 't>` / `INameValT<'s, 't>` (~60 variants, the widest union)
 - `IdT<'s, 't, T>` / `IdValT<'s, 't, T>`
 - `KindT<'s, 't>` / `KindValT<'s, 't>`
 - `ITemplataT<'s, 't>` / `ITemplataValT<'s, 't>`
 - `PrototypeT<'s, 't>` / `PrototypeValT<'s, 't>`
 - `SignatureT<'s, 't>` / `SignatureValT<'s, 't>`
 
-**Sub-enum name families (`IFunctionNameT`, `IFunctionTemplateNameT`, `ICitizenNameT`, etc. — 21 of them) are NOT interned.** They're inline-owned 16-byte `Copy` values — tag + inner concrete ref — built on the stack. See §6.2 for the rationale (sub-enum casts are free, no per-wrapper arena allocation). Only `INameT` (the widest) and the ~60 concrete name structs get arena storage on the name side.
+**All name enums (`INameT` + its 21 sub-enum families like `IFunctionNameT`, `ICitizenNameT`, etc.) are NOT interned.** They're inline-owned 16-byte `Copy` values — tag + inner concrete ref — built on the stack. See §6.2 for the rationale (sub-enum casts are free, no per-wrapper arena allocation). Only the ~60 concrete name structs get arena storage on the name side. `IdT.init_steps` is a `&'t [INameT<'s, 't>]` arena slice of inline `INameT` values (not a slice of refs).
 
 **No `'t`-lifetime re-interned versions of `StrI`, `IImpreciseNameS`, `RangeS`, `CodeLocationS`, `PackageCoordinate`, `FileCoordinate`.** Use the scout-arena versions directly. Anywhere you'd be tempted to create a `StrI<'t>` or `RangeT<'t>`, use the existing `StrI<'s>` or `RangeS<'s>` instead.
 
@@ -555,7 +553,7 @@ pub enum IFunctionTemplateNameT<'s, 't> {
 
 **Sub-enums are inline-owned Copy values, NOT arena-interned.** Only the concrete name types (wrapped in the variants above) and `INameT` itself (the widest union of all ~60 concretes) live in the typing arena. The intermediate sub-enums (`IFunctionNameT`, `IFunctionTemplateNameT`, `ICitizenNameT`, etc. — 21 families) are 16-byte `#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]` values built on the stack when needed. Casting a concrete into a sub-enum, or a narrow sub-enum into a wider one, is a pure stack-only rewrap via `.into()` — no interner round-trip.
 
-The consequence for identity: two concrete names (e.g. two `&'t FunctionNameT`) are compared via `ptr::eq` since concretes stay interned. Two `INameT` refs (`&'t INameT<'s, 't>`) are also compared via `ptr::eq`. Two owned sub-enum values (e.g. two `IFunctionNameT<'s, 't>`) are compared structurally — but since the tag + inner pointer is 16 bytes, this is a 2-word compare and still cheap.
+The consequence for identity: two concrete names (e.g. two `&'t FunctionNameT`) are compared via `ptr::eq` since concretes stay interned. Two owned sub-enum values (e.g. two `IFunctionNameT<'s, 't>`, or two `INameT<'s, 't>`) are compared structurally — but since the tag + inner pointer is 16 bytes, this is a 2-word compare and still cheap.
 
 Bridging via `From<X> for SubEnum` (narrow → wide, infallible — concrete into sub-enum and narrow sub-enum into wider sub-enum) and `TryFrom<INameT<'s, 't>> for SubEnum` (wide → narrow, fallible, match-and-rewrap on the stack). All of these are real implementations in `names.rs`, no interner involvement.
 
@@ -570,12 +568,12 @@ pub struct IdT<'s, 't, T: Copy>
 where 's: 't,
 {
     pub package_coord: &'s PackageCoordinate<'s>,  // scout-lifetimed
-    pub init_steps: &'t [&'t INameT<'s, 't>],
+    pub init_steps: &'t [INameT<'s, 't>],  // inline INameT values
     pub local_name: T,
 }
 ```
 
-`local_name` holds the sub-enum (or concrete ref) **inline by value**, not behind `&'t`. For a function's id, `T = IFunctionNameT<'s, 't>`; for a struct's id, `T = IStructNameT<'s, 't>`; for the widest form, `T = INameT<'s, 't>`. The sub-enum side is 16 bytes (tag + 8-byte inner concrete ref).
+Both `init_steps` elements and `local_name` hold their name representation **inline by value**, not behind `&'t`. For a function's id, `T = IFunctionNameT<'s, 't>`; for a struct's id, `T = IStructNameT<'s, 't>`; for the widest form, `T = INameT<'s, 't>`. Each `INameT` / sub-enum value is 16 bytes (tag + 8-byte inner concrete ref). `init_steps` is an arena slice that the typing interner canonicalizes as a whole: two IdTs built with structurally-identical init_steps sequences share the same `&'t [INameT]` allocation.
 
 Only `T: Copy` on the struct itself — keep bounds minimal so `IdT` is cheap to mention in signatures elsewhere. Conversion bounds (`Into<INameT<'s, 't>>`, `TryInto<...>`) live on the impl blocks for the conversion methods:
 
@@ -608,7 +606,7 @@ Generic parameter preserves leaf-kind info at the type level (e.g. `IdT<'s, 't, 
 Since sub-enum identity is structural (not pointer-eq), `IdT` defines a **custom** `PartialEq`/`Eq`/`Hash` rather than using derive:
 
 - `package_coord`: pointer-eq (scout arena canonicalizes `PackageCoordinate`).
-- `init_steps`: slice data pointer + length compare (the typing interner canonicalizes `&'t [&'t INameT]` slices per IDEPFL, so equal content ⇒ equal slice pointer).
+- `init_steps`: slice data pointer + length compare (the typing interner canonicalizes `&'t [INameT]` slices per IDEPFL — equal content ⇒ equal slice pointer).
 - `local_name`: structural compare on the inline `T` (16-byte sub-enum, `INameT`, or concrete ref).
 
 Interning uses one HashMap keyed by the widest form (`IdValT<'s, 't, INameT<'s, 't>>`); specialized `IdT<'s, 't, IXxxNameT<'s, 't>>` views are type-cast from the widest-form arena storage (unsafe at the interner boundary since `IdT`'s layout is T-independent at the byte level for any T that is `Copy` + same size as the widened-form's inline enum).

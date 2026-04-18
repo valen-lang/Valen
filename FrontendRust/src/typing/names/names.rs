@@ -28,7 +28,7 @@ pub struct IdT<'s, 't, T: Copy>
 where 's: 't,
 {
     pub package_coord: &'s PackageCoordinate<'s>,
-    pub init_steps: &'t [&'t INameT<'s, 't>],
+    pub init_steps: &'t [INameT<'s, 't>],
     pub local_name: T,
 }
 
