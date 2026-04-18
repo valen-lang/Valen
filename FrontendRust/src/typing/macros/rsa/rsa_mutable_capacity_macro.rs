@@ -20,7 +20,6 @@ import dev.vale.typing.ast
 
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::higher_typing::ast::*;
@@ -30,36 +29,34 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::interner::Interner;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct RSAMutableCapacityMacro
-pub struct RSAMutableCapacityMacro<'s, 'ctx, 't> {
-  pub interner: Interner<'s>,
-  pub keywords: Keywords<'s>,
-  pub generator_id: StrI<'s>,
-  pub _phantom: std::marker::PhantomData<(&'ctx (), &'t ())>,
-}
-// mig: impl RSAMutableCapacityMacro
-impl<'s, 'ctx, 't> RSAMutableCapacityMacro<'s, 'ctx, 't> {}
+// (Scala `class RSAMutableCapacityMacro(interner, keywords)` absorbed onto `Compiler`;
+//  the method body lives at `Compiler::generate_function_body_rsa_mutable_capacity` below.)
 /*
 class RSAMutableCapacityMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_capacity
 */
 // mig: fn generate_function_body
-pub fn generate_function_body<'s, 't>(
-    env: FunctionEnvironmentT<'s, 't>,
-    coutputs: CompilerOutputs<'s, 't>,
-    generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
-    call_range: Vec<RangeS<'s>>,
-    call_location: LocationInDenizen<'s>,
-    origin_function: Option<FunctionA<'s>>,
-    param_coords: Vec<ParameterT<'s, 't>>,
-    maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-  panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_rsa_mutable_capacity(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_rsa_mutable_capacity");
+    }
 /*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
@@ -91,3 +88,4 @@ pub fn generate_function_body<'s, 't>(
 
 }
 */
+}

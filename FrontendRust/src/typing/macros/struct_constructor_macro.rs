@@ -28,42 +28,25 @@ import dev.vale.typing.types.InterfaceTT
 import scala.collection.mutable
 
 */
-use crate::interner::{StrI, Interner};
-use crate::keywords::Keywords;
+use crate::interner::StrI;
 use crate::utils::range::RangeS;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::compilation::TypingPassOptions;
-use crate::typing::infer_compiler::{InitialKnown, InitialSend};
-use crate::typing::function::destructor_compiler::DestructorCompiler;
-use crate::typing::names::name_translator::*;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::*;
-use crate::postparsing::names::*;
-use crate::postparsing::rules::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 use crate::higher_typing::ast::*;
 
 // mig: struct StructConstructorMacro
-pub struct StructConstructorMacro<'s, 'ctx, 't> {
-  pub opts: TypingPassOptions<'s>,
-  pub interner: Interner<'s>,
-  pub keywords: Keywords<'s>,
-  pub name_translator: NameTranslator<'s>,
-  pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
-}
-
-// mig: impl StructConstructorMacro
-impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {}
-
+// (Scala `class StructConstructorMacro(opts, interner, keywords, nameTranslator,
+//  destructorCompiler)` absorbed onto `Compiler`; the method bodies live at
+//  `Compiler::get_struct_sibling_entries_struct_constructor` and
+//  `Compiler::generate_function_body_struct_constructor` below.)
 /*
 class StructConstructorMacro(
   opts: TypingPassOptions,
@@ -79,15 +62,16 @@ class StructConstructorMacro(
 
 */
 // mig: fn get_struct_sibling_entries
-impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {
-pub fn get_struct_sibling_entries(
-  &self,
-  struct_name: IdT<'s, 't>,
-  struct_a: StructA<'s>,
-) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
-  panic!("Unimplemented: get_struct_sibling_entries");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_struct_sibling_entries_struct_constructor(
+        &self,
+        struct_name: IdT<'s, 't>,
+        struct_a: &'s StructA<'s>,
+    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
+        panic!("Unimplemented: get_struct_sibling_entries_struct_constructor");
+    }
 
 /*
   override def getStructSiblingEntries(structName: IdT[INameT], structA: StructA):
@@ -164,23 +148,26 @@ pub fn get_struct_sibling_entries(
 
 
 */
+}
+
 // mig: fn generate_function_body
-impl<'s, 'ctx, 't> StructConstructorMacro<'s, 'ctx, 't> {
-pub fn generate_function_body(
-  &self,
-  env: FunctionEnvironmentT<'s, 't>,
-  coutputs: CompilerOutputs<'s, 't>,
-  generator_id: StrI<'s>,
-  life: LocationInFunctionEnvironmentT<'s>,
-  call_range: Vec<RangeS<'s>>,
-  call_location: LocationInDenizen<'s>,
-  origin_function: Option<FunctionA<'s>>,
-  param_coords: Vec<ParameterT<'s, 't>>,
-  maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-  panic!("Unimplemented: generate_function_body");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_struct_constructor(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_struct_constructor");
+    }
 
 /*
   override def generateFunctionBody(
@@ -258,3 +245,4 @@ pub fn generate_function_body(
   }
 }
 */
+}

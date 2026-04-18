@@ -22,13 +22,16 @@ import dev.vale.typing.OverloadResolver
 
 import scala.collection.mutable
 */
-// mig: struct InterfaceDropMacro
-pub struct InterfaceDropMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+use crate::higher_typing::ast::*;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler::Compiler;
 
-// mig: impl InterfaceDropMacro
-impl<'s, 'ctx, 't> InterfaceDropMacro<'s, 'ctx, 't> {
-}
+// mig: struct InterfaceDropMacro
+// (Scala `class InterfaceDropMacro(interner, keywords, nameTranslator)` absorbed onto
+//  `Compiler`; the method body lives at
+//  `Compiler::get_interface_sibling_entries_interface_drop` below.)
 /*
 class InterfaceDropMacro(
   interner: Interner,
@@ -39,9 +42,16 @@ class InterfaceDropMacro(
   val macroName: StrI = keywords.DeriveInterfaceDrop
 */
 // mig: fn get_interface_sibling_entries
-fn get_interface_sibling_entries() {
-    panic!("Unimplemented: get_interface_sibling_entries");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_interface_sibling_entries_interface_drop(
+        &self,
+        interface_name: IdT<'s, 't>,
+        interface_a: &'s InterfaceA<'s>,
+    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
+        panic!("Unimplemented: get_interface_sibling_entries_interface_drop");
+    }
 
 /*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], FunctionEnvEntry)] = {
@@ -123,3 +133,4 @@ fn get_interface_sibling_entries() {
   }
 }
 */
+}

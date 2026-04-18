@@ -18,26 +18,44 @@ import dev.vale.typing.env.TemplataLookupContext
 import dev.vale.typing.types._
 import dev.vale.typing.ast
 */
-use crate::interner::{StrI, Interner};
-use crate::keywords::Keywords;
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+
+use crate::higher_typing::ast::*;
+
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct RSAMutablePopMacro
-pub struct RSAMutablePopMacro<'s, 'ctx, 't> {
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub generator_id: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
-}
-// mig: impl RSAMutablePopMacro
-impl<'s, 'ctx, 't> RSAMutablePopMacro<'s, 'ctx, 't> {}
+// (Scala `class RSAMutablePopMacro(interner, keywords)` absorbed onto `Compiler`;
+//  the method body lives at `Compiler::generate_function_body_rsa_mutable_pop` below.)
 /*
 class RSAMutablePopMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_pop
 */
 // mig: fn generate_function_body
-pub fn generate_function_body() {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_rsa_mutable_pop(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_rsa_mutable_pop");
+    }
 /*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
@@ -64,3 +82,4 @@ pub fn generate_function_body() {
 
 }
 */
+}

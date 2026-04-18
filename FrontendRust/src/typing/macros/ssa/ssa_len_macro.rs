@@ -26,37 +26,35 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::keywords::Keywords;
 
 // mig: struct SSALenMacro
-pub struct SSALenMacro<'s, 'ctx, 't> {
-    pub keywords: &'ctx Keywords<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
-}
-
-// mig: impl SSALenMacro
-impl<'s, 'ctx, 't> SSALenMacro<'s, 'ctx, 't> {
-}
+// (Scala `class SSALenMacro(keywords)` absorbed onto `Compiler`; the method
+//  body lives at `Compiler::generate_function_body_ssa_len` below.)
 /*
 class SSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_static_sized_array_len
 
 */
 // mig: fn generate_function_body
-fn generate_function_body<'s, 't>(
-    env: &FunctionEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    origin_function: Option<&FunctionA<'s>>,
-    param_coords: &[ParameterT<'s, 't>],
-    maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_ssa_len(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_ssa_len");
+    }
 
 /*
   def generateFunctionBody(
@@ -91,3 +89,4 @@ fn generate_function_body<'s, 't>(
 
 }
 */
+}

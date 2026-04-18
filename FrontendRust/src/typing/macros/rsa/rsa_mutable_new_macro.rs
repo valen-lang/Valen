@@ -22,7 +22,6 @@ import dev.vale.typing.types.RuntimeSizedArrayTT
 
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::higher_typing::ast::*;
@@ -32,21 +31,13 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::array_compiler::*;
-use crate::interner::Interner;
-use crate::typing::function::destructor_compiler::*;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct RSAMutableNewMacro
-pub struct RSAMutableNewMacro<'s, 'ctx, 't> {
-    pub interner: &'ctx Interner<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub array_compiler: &'ctx ArrayCompiler<'s, 'ctx, 't>,
-    pub destructor_compiler: &'ctx DestructorCompiler<'s, 'ctx, 't>,
-}
-// mig: impl RSAMutableNewMacro
-impl<'s, 'ctx, 't> RSAMutableNewMacro<'s, 'ctx, 't> {
-}
+// (Scala `class RSAMutableNewMacro(interner, keywords, arrayCompiler, destructorCompiler)`
+//  absorbed onto `Compiler`; the method body lives at
+//  `Compiler::generate_function_body_rsa_mutable_new` below.)
 /*
 class RSAMutableNewMacro(
   interner: Interner,
@@ -58,22 +49,23 @@ class RSAMutableNewMacro(
 
 */
 // mig: fn generate_function_body
-impl<'s, 'ctx, 't> RSAMutableNewMacro<'s, 'ctx, 't> {
-pub fn generate_function_body(
-    &self,
-    env: &FunctionEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    origin_function: Option<&FunctionA<'s>>,
-    param_coords: &[ParameterT<'s, 't>],
-    maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-    panic!("Unimplemented: generate_function_body");
-}
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_rsa_mutable_new(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_rsa_mutable_new");
+    }
 /*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
@@ -117,3 +109,4 @@ pub fn generate_function_body(
 
 }
 */
+}

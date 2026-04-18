@@ -14,38 +14,44 @@ import dev.vale.typing.function._
 import dev.vale.typing.templata._
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
-// mig: struct AbstractBodyMacro
-pub struct AbstractBodyMacro<'s, 'ctx, 't> {
-    pub interner: &'ctx Keywords<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub overload_resolver: &'ctx (),
-    pub generator_id: StrI<'s>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
-}
+use crate::higher_typing::ast::*;
 
-// mig: impl AbstractBodyMacro
-impl<'s, 'ctx, 't> AbstractBodyMacro<'s, 'ctx, 't> {}
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+
+// mig: struct AbstractBodyMacro
+// (Scala `class AbstractBodyMacro(interner, keywords, overloadResolver)` absorbed onto
+//  `Compiler`; the method body lives at
+//  `Compiler::generate_function_body_abstract_body` below.)
 /*
 class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver: OverloadResolver) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.abstractBody
 */
 // mig: fn generate_function_body
-fn generate_function_body<'s, 't>(
-    env: &'s (),
-    coutputs: &'s (),
-    generator_id: StrI<'s>,
-    life: &'s (),
-    call_range: &'s [RangeS<'s>],
-    call_location: &'s (),
-    origin_function: Option<&'s ()>,
-    params2: &'s [()],
-    maybe_ret_coord: Option<()>,
-) -> ((), ()) {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_abstract_body(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        params2: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_abstract_body");
+    }
 
 /*
   override def generateFunctionBody(
@@ -102,3 +108,4 @@ fn generate_function_body<'s, 't>(
   }
 }
 */
+}

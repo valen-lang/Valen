@@ -14,38 +14,43 @@ import dev.vale.typing.env.FunctionEnvironmentBoxT
 import dev.vale.typing.ast
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
-// mig: struct SSADropIntoMacro
-pub struct SSADropIntoMacro<'s, 'ctx, 't> {
-    pub generator_id: StrI<'s>,
-    pub keywords: &'ctx Keywords<'s>,
-    pub array_compiler: &'ctx (), // placeholder for ArrayCompiler
-    pub _phantom: std::marker::PhantomData<&'t ()>,
-}
+use crate::higher_typing::ast::*;
 
-// mig: impl SSADropIntoMacro
-impl<'s, 'ctx, 't> SSADropIntoMacro<'s, 'ctx, 't> {
-}
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+
+// mig: struct SSADropIntoMacro
+// (Scala `class SSADropIntoMacro(keywords, arrayCompiler)` absorbed onto `Compiler`;
+//  the method body lives at `Compiler::generate_function_body_ssa_drop_into` below.)
 /*
 class SSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_static_sized_array_drop_into
 */
 // mig: fn generate_function_body
-fn generate_function_body(
-    env: &(),
-    coutputs: &(),
-    generator_id: StrI,
-    life: &(),
-    call_range: &[RangeS],
-    call_location: &(),
-    origin_function: Option<&()>,
-    param_coords: &[()],
-    maybe_ret_coord: Option<&()>,
-) -> ((), ()) {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_ssa_drop_into(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_ssa_drop_into");
+    }
 
 /*
   def generateFunctionBody(
@@ -78,3 +83,4 @@ fn generate_function_body(
   }
 }
 */
+}

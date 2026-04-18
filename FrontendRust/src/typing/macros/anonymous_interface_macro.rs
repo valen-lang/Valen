@@ -30,11 +30,18 @@ import scala.collection.mutable
 
 */
 
+use crate::higher_typing::ast::*;
+use crate::typing::names::names::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler::Compiler;
+
 // mig: struct AnonymousInterfaceMacro
-pub struct AnonymousInterfaceMacro<'s, 'ctx, 't>(pub std::marker::PhantomData<(&'s (), &'ctx (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl AnonymousInterfaceMacro
-impl<'s, 'ctx, 't> AnonymousInterfaceMacro<'s, 'ctx, 't> {}
+// (Scala `class AnonymousInterfaceMacro(opts, interner, keywords, nameTranslator,
+//  overloadCompiler, structCompiler, structConstructorMacro, structDropMacro)` absorbed
+//  onto `Compiler`; the method bodies live at
+//  `Compiler::{get_interface_sibling_entries_anonymous_interface, map_runes_anonymous_interface,
+//  inherited_method_rune_anonymous_interface, make_struct_anonymous_interface,
+//  make_forwarder_function_anonymous_interface}` below.)
 /*
 class AnonymousInterfaceMacro(
     opts: TypingPassOptions,
@@ -57,9 +64,16 @@ class AnonymousInterfaceMacro(
 
 */
 // mig: fn get_interface_sibling_entries
-fn get_interface_sibling_entries() {
-    panic!("Unimplemented: get_interface_sibling_entries");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_interface_sibling_entries_anonymous_interface(
+        &self,
+        interface_name: IdT<'s, 't>,
+        interface_a: &'s InterfaceA<'s>,
+    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
+        panic!("Unimplemented: get_interface_sibling_entries_anonymous_interface");
+    }
 /*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], IEnvEntry)] = {
     if (interfaceA.attributes.contains(SealedS)) {
@@ -155,10 +169,15 @@ fn get_interface_sibling_entries() {
   }
 
 */
-// mig: fn map_runes
-fn map_runes() {
-    panic!("Unimplemented: map_runes");
 }
+
+// mig: fn map_runes
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn map_runes_anonymous_interface(&self) {
+        panic!("Unimplemented: map_runes_anonymous_interface");
+    }
 /*
   private def mapRunes(rule: IRulexSR, func: IRuneS => IRuneS): IRulexSR = {
     rule match {
@@ -198,10 +217,15 @@ fn map_runes() {
   }
 
 */
-// mig: fn inherited_method_rune
-fn inherited_method_rune() {
-    panic!("Unimplemented: inherited_method_rune");
 }
+
+// mig: fn inherited_method_rune
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn inherited_method_rune_anonymous_interface(&self) {
+        panic!("Unimplemented: inherited_method_rune_anonymous_interface");
+    }
 /*
   // These are how the forwarder function refers to runes from the abstract function it's overriding. After all, the
   // forwarder function copies all the runes and rules from the abstract function, so we rename them here to avoid any
@@ -211,10 +235,15 @@ fn inherited_method_rune() {
   }
 
 */
-// mig: fn make_struct
-fn make_struct() {
-    panic!("Unimplemented: make_struct");
 }
+
+// mig: fn make_struct
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_struct_anonymous_interface(&self) {
+        panic!("Unimplemented: make_struct_anonymous_interface");
+    }
 /*
   private def makeStruct(interfaceA: InterfaceA, memberRunes: Vector[RuneUsage], members: Vector[NormalStructMemberS], structTemplateNameS: AnonymousSubstructTemplateNameS) = {
     def range(n: Int) = RangeS.internal(interner, n)
@@ -422,10 +451,15 @@ fn make_struct() {
   }
 
 */
-// mig: fn make_forwarder_function
-fn make_forwarder_function() {
-    panic!("Unimplemented: make_forwarder_function");
 }
+
+// mig: fn make_forwarder_function
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_forwarder_function_anonymous_interface(&self) {
+        panic!("Unimplemented: make_forwarder_function_anonymous_interface");
+    }
 /*
   private def makeForwarderFunction(
     structNameS: AnonymousSubstructTemplateNameS,
@@ -591,3 +625,4 @@ fn make_forwarder_function() {
   }
 }
 */
+}

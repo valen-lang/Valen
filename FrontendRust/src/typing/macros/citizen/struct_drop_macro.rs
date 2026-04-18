@@ -22,38 +22,27 @@ import dev.vale.typing.templata._
 
 import scala.collection.mutable
 */
-use crate::interner::{StrI, Interner};
+use crate::interner::StrI;
 use crate::utils::range::RangeS;
-use crate::keywords::Keywords;
-use crate::postparsing::*;
 use crate::postparsing::names::*;
-use crate::postparsing::rules::*;
 use crate::higher_typing::ast::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::function::destructor_compiler::*;
-use crate::typing::templata::templata::*;
-use crate::typing::names::name_translator::*;
-use crate::typing::compilation::*;
 
 // mig: struct StructDropMacro
-pub struct StructDropMacro<'s, 'ctx, 't> {
-  pub opts: TypingPassOptions<'s>,
-  pub interner: &'ctx Interner<'s>,
-  pub keywords: &'ctx Keywords<'s>,
-  pub name_translator: NameTranslator<'s>,
-  pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
-}
-// mig: impl StructDropMacro
-impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {}
+// (Scala `class StructDropMacro(opts, interner, keywords, nameTranslator, destructorCompiler)`
+//  absorbed onto `Compiler`; the three method bodies live at
+//  `Compiler::get_struct_sibling_entries_struct_drop`,
+//  `Compiler::make_implicit_drop_function_struct_drop`, and
+//  `Compiler::generate_function_body_struct_drop` below.)
 /*
 class StructDropMacro(
   opts: TypingPassOptions,
@@ -68,14 +57,16 @@ class StructDropMacro(
   val dropGeneratorId: StrI = keywords.dropGenerator
 */
 // mig: fn get_struct_sibling_entries
-impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
-    fn get_struct_sibling_entries(
-      struct_name: IdT<'s, 't>,
-      struct_a: &'s StructA<'s>,
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_struct_sibling_entries_struct_drop(
+        &self,
+        struct_name: IdT<'s, 't>,
+        struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
-      panic!("Unimplemented: get_struct_sibling_entries");
+        panic!("Unimplemented: get_struct_sibling_entries_struct_drop");
     }
-}
 /*
   override def getStructSiblingEntries(
     structName: IdT[INameT], structA: StructA):
@@ -160,15 +151,19 @@ impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
   // Implicit drop is one made for closures, arrays, or anything else that's not explicitly
   // defined by the user.
 */
-// mig: fn make_implicit_drop_function
-impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
-    fn make_implicit_drop_function(
-      drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
-      struct_range: RangeS<'s>,
-    ) -> FunctionA<'s> {
-      panic!("Unimplemented: make_implicit_drop_function");
-    }
 }
+
+// mig: fn make_implicit_drop_function
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn make_implicit_drop_function_struct_drop(
+        &self,
+        drop_or_free_function_name_s: IFunctionDeclarationNameS<'s>,
+        struct_range: RangeS<'s>,
+    ) -> FunctionA<'s> {
+        panic!("Unimplemented: make_implicit_drop_function_struct_drop");
+    }
 /*
   def makeImplicitDropFunction(
     dropOrFreeFunctionNameS: IFunctionDeclarationNameS,
@@ -208,23 +203,26 @@ impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
   }
 
 */
-// mig: fn generate_function_body
-impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
-    fn generate_function_body(
-      &self,
-      env: &FunctionEnvironmentT<'s, 't>,
-      coutputs: &mut CompilerOutputs<'s, 't>,
-      generator_id: StrI<'s>,
-      life: LocationInFunctionEnvironmentT<'s>,
-      call_range: Vec<RangeS<'s>>,
-      call_location: LocationInDenizen<'s>,
-      origin_function1: Option<&'s FunctionA<'s>>,
-      params2: Vec<ParameterT<'s, 't>>,
-      maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-      panic!("Unimplemented: generate_function_body");
-    }
 }
+
+// mig: fn generate_function_body
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_struct_drop(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function1: Option<&'s FunctionA<'s>>,
+        params2: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_struct_drop");
+    }
 /*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,
@@ -305,3 +303,4 @@ impl<'s, 'ctx, 't> StructDropMacro<'s, 'ctx, 't> {
   }
 }
 */
+}
