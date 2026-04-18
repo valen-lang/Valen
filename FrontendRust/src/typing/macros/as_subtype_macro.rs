@@ -22,7 +22,6 @@ import dev.vale.typing.ast
 import dev.vale.typing.function.DestructorCompiler
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::higher_typing::ast::*;
@@ -32,22 +31,13 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::citizen::impl_compiler::*;
-use crate::typing::function::destructor_compiler::*;
-use crate::typing::expression::expression_compiler::*;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct AsSubtypeMacro
-pub struct AsSubtypeMacro<'s, 'ctx, 't> {
-    pub keywords: &'ctx Keywords<'s>,
-    pub impl_compiler: ImplCompiler<'s, 'ctx, 't>,
-    pub expression_compiler: ExpressionCompiler<'s, 'ctx, 't>,
-    pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
-}
-
-// mig: impl AsSubtypeMacro
-impl<'s, 'ctx, 't> AsSubtypeMacro<'s, 'ctx, 't> {
-}
+// (Scala `class AsSubtypeMacro(keywords, implCompiler, expressionCompiler, destructorCompiler)`
+//  absorbed onto `Compiler`; the method body lives at
+//  `Compiler::generate_function_body_as_subtype` below.)
 /*
 class AsSubtypeMacro(
   keywords: Keywords,
@@ -57,19 +47,23 @@ class AsSubtypeMacro(
   val generatorId: StrI = keywords.vale_as_subtype
 */
 // mig: fn generate_function_body
-fn generate_function_body<'s, 't>(
-    env: &FunctionEnvironmentT<'s, 't>,
-    coutputs: &mut CompilerOutputs<'s, 't>,
-    generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
-    call_range: &[RangeS<'s>],
-    call_location: LocationInDenizen<'s>,
-    origin_function: Option<&FunctionA<'s>>,
-    param_coords: &[ParameterT<'s, 't>],
-    maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_as_subtype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_as_subtype");
+    }
 
 /*
   def generateFunctionBody(
@@ -131,3 +125,4 @@ fn generate_function_body<'s, 't>(
 
 }
 */
+}
