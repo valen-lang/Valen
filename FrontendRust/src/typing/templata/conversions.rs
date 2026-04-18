@@ -42,7 +42,7 @@ pub fn evaluate_location(location: LocationP) -> LocationT {
   }
 */
 // mig: fn evaluate_variability
-pub fn evaluate_variability<'s, 't>(variability: VariabilityP) -> VariabilityT<'s, 't> {
+pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
   panic!("Unimplemented: evaluate_variability");
 }
 /*

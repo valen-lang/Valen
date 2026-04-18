@@ -20,97 +20,112 @@ use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 
 // mig: enum OwnershipT
-#[derive(Copy, Clone)]
-pub enum OwnershipT {}
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum OwnershipT {
+    Share,
+    Own,
+    Borrow,
+    Weak,
+}
 /*
 sealed trait OwnershipT  {
 }
 */
 // mig: struct ShareT
-pub struct ShareT;
+// merged into OwnershipT above
 /*
 case object ShareT extends OwnershipT {
   override def toString: String = "share"
 }
 */
 // mig: struct OwnT
-pub struct OwnT;
+// merged into OwnershipT above
 /*
 case object OwnT extends OwnershipT {
   override def toString: String = "own"
 }
 */
 // mig: struct BorrowT
-pub struct BorrowT;
+// merged into OwnershipT above
 /*
 case object BorrowT extends OwnershipT {
   override def toString: String = "borrow"
 }
 */
 // mig: struct WeakT
-pub struct WeakT;
+// merged into OwnershipT above
 /*
 case object WeakT extends OwnershipT {
   override def toString: String = "weak"
 }
 */
 // mig: enum MutabilityT
-pub enum MutabilityT {}
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum MutabilityT {
+    Mutable,
+    Immutable,
+}
 /*
 sealed trait MutabilityT  {
 }
 */
 // mig: struct MutableT
-pub struct MutableT;
+// merged into MutabilityT above
 /*
 case object MutableT extends MutabilityT {
   override def toString: String = "mut"
 }
 */
 // mig: struct ImmutableT
-pub struct ImmutableT;
+// merged into MutabilityT above
 /*
 case object ImmutableT extends MutabilityT {
   override def toString: String = "imm"
 }
 */
 // mig: enum VariabilityT
-pub enum VariabilityT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum VariabilityT {
+    Final,
+    Varying,
 }
 /*
 sealed trait VariabilityT  {
 }
 */
 // mig: struct FinalT
-pub struct FinalT;
+// merged into VariabilityT above
 /*
 case object FinalT extends VariabilityT {
   override def toString: String = "final"
 }
 */
 // mig: struct VaryingT
-pub struct VaryingT;
+// merged into VariabilityT above
 /*
 case object VaryingT extends VariabilityT {
   override def toString: String = "vary"
 }
 */
 // mig: enum LocationT
-pub enum LocationT {}
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum LocationT {
+    Inline,
+    Yonder,
+}
 /*
 sealed trait LocationT  {
 }
 */
 // mig: struct InlineT
-pub struct InlineT;
+// merged into LocationT above
 /*
 case object InlineT extends LocationT {
   override def toString: String = "inl"
 }
 */
 // mig: struct YonderT
-pub struct YonderT;
+// merged into LocationT above
 /*
 case object YonderT extends LocationT {
   override def toString: String = "heap"
@@ -152,9 +167,17 @@ case class CoordT(
 }
 */
 // mig: enum KindT
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// TODO: non-primitive variants (StructTT, InterfaceTT, StaticSizedArrayTT,
+//   RuntimeSizedArrayTT, KindPlaceholderT, OverloadSet) are deferred to Slab 3;
+//   _Phantom stays until then to anchor the 's/'t lifetime params.
 #[derive(Copy, Clone)]
 pub enum KindT<'s, 't> {
+  Never(NeverT),
+  Void(VoidT),
+  Int(IntT),
+  Bool(BoolT),
+  Str(StrT),
+  Float(FloatT),
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
@@ -188,6 +211,7 @@ sealed trait KindT {
 }
 */
 // mig: struct NeverT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NeverT {
   pub from_break: bool,
 }
@@ -204,6 +228,7 @@ case class NeverT(
 }
 */
 // mig: struct VoidT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidT;
 /*
 // Mostly for interoperability with extern functions
@@ -212,7 +237,10 @@ case class VoidT() extends KindT {
 }
 */
 // mig: impl IntT
-impl IntT {}
+impl IntT {
+    pub const I32: IntT = IntT { bits: 32 };
+    pub const I64: IntT = IntT { bits: 64 };
+}
 /*
 object IntT {
   val i32: IntT = IntT(32)
@@ -220,6 +248,7 @@ object IntT {
 }
 */
 // mig: struct IntT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntT {
   pub bits: i32,
 }
@@ -229,6 +258,7 @@ case class IntT(bits: Int) extends KindT {
 }
 */
 // mig: struct BoolT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolT;
 /*
 case class BoolT() extends KindT {
@@ -237,6 +267,7 @@ case class BoolT() extends KindT {
 }
 */
 // mig: struct StrT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrT;
 /*
 case class StrT() extends KindT {
@@ -245,6 +276,7 @@ case class StrT() extends KindT {
 }
 */
 // mig: struct FloatT
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatT;
 /*
 case class FloatT() extends KindT {

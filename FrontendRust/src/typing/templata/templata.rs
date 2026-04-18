@@ -18,8 +18,10 @@ import scala.collection.immutable.List
 
 object ITemplataT {
 */
+use crate::interner::StrI;
 use crate::higher_typing::ast::*;
 use crate::typing::env::environment::*;
+use crate::typing::types::types::*;
 
 // mig: fn expect_mutability
 fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
@@ -506,7 +508,10 @@ case class ImplDefinitionTemplataT(
 
 */
 // mig: struct OwnershipTemplataT
-pub struct OwnershipTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct OwnershipTemplataT {
+    pub ownership: OwnershipT,
+}
 // mig: impl OwnershipTemplataT
 impl OwnershipTemplataT {}
 /*
@@ -517,7 +522,10 @@ case class OwnershipTemplataT(ownership: OwnershipT) extends ITemplataT[Ownershi
 }
 */
 // mig: struct VariabilityTemplataT
-pub struct VariabilityTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct VariabilityTemplataT {
+    pub variability: VariabilityT,
+}
 // mig: impl VariabilityTemplataT
 impl VariabilityTemplataT {}
 /*
@@ -528,7 +536,10 @@ case class VariabilityTemplataT(variability: VariabilityT) extends ITemplataT[Va
 }
 */
 // mig: struct MutabilityTemplataT
-pub struct MutabilityTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct MutabilityTemplataT {
+    pub mutability: MutabilityT,
+}
 // mig: impl MutabilityTemplataT
 impl MutabilityTemplataT {}
 /*
@@ -539,7 +550,10 @@ case class MutabilityTemplataT(mutability: MutabilityT) extends ITemplataT[Mutab
 }
 */
 // mig: struct LocationTemplataT
-pub struct LocationTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct LocationTemplataT {
+    pub location: LocationT,
+}
 // mig: impl LocationTemplataT
 impl LocationTemplataT {}
 /*
@@ -551,7 +565,10 @@ case class LocationTemplataT(location: LocationT) extends ITemplataT[LocationTem
 
 */
 // mig: struct BooleanTemplataT
-pub struct BooleanTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct BooleanTemplataT {
+    pub value: bool,
+}
 // mig: impl BooleanTemplataT
 impl BooleanTemplataT {}
 /*
@@ -562,7 +579,10 @@ case class BooleanTemplataT(value: Boolean) extends ITemplataT[BooleanTemplataTy
 }
 */
 // mig: struct IntegerTemplataT
-pub struct IntegerTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IntegerTemplataT {
+    pub value: i64,
+}
 // mig: impl IntegerTemplataT
 impl IntegerTemplataT {}
 /*
@@ -573,9 +593,12 @@ case class IntegerTemplataT(value: Long) extends ITemplataT[IntegerTemplataType]
 }
 */
 // mig: struct StringTemplataT
-pub struct StringTemplataT;
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StringTemplataT<'s> {
+    pub value: StrI<'s>,
+}
 // mig: impl StringTemplataT
-impl StringTemplataT {}
+impl<'s> StringTemplataT<'s> {}
 /*
 case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)

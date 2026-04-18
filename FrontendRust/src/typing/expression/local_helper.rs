@@ -409,7 +409,7 @@ fn determine_if_local_is_addressible<'s, 't>(mutability: &ITemplataT<'s, 't>, lo
 
 */
 // mig: fn determine_local_variability
-fn determine_local_variability<'s, 't>(local_a: &LocalS<'s>) -> VariabilityT<'s, 't> {
+fn determine_local_variability<'s>(local_a: &LocalS<'s>) -> VariabilityT {
   panic!("Unimplemented: determine_local_variability");
 }
 /*

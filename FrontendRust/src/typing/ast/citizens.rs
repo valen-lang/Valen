@@ -164,7 +164,7 @@ fn struct_member_name<'s, 't>() -> IVarNameT<'s, 't> {
 // mig: struct NormalStructMemberT
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
-    pub variability: VariabilityT<'s, 't>,
+    pub variability: VariabilityT,
     pub tyype: IMemberTypeT<'s, 't>,
 }
 // mig: impl NormalStructMemberT
