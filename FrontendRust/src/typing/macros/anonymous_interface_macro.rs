@@ -35,7 +35,6 @@ use crate::typing::names::names::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct AnonymousInterfaceMacro
 // (Scala `class AnonymousInterfaceMacro(opts, interner, keywords, nameTranslator,
 //  overloadCompiler, structCompiler, structConstructorMacro, structDropMacro)` absorbed
 //  onto `Compiler`; the method bodies live at
@@ -63,7 +62,6 @@ class AnonymousInterfaceMacro(
 //  }
 
 */
-// mig: fn get_interface_sibling_entries
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -171,7 +169,6 @@ where 's: 't,
 */
 }
 
-// mig: fn map_runes
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -219,7 +216,6 @@ where 's: 't,
 */
 }
 
-// mig: fn inherited_method_rune
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -237,7 +233,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -453,7 +448,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_forwarder_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

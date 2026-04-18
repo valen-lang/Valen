@@ -26,7 +26,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct AbstractBodyMacro
 // (Scala `class AbstractBodyMacro(interner, keywords, overloadResolver)` absorbed onto
 //  `Compiler`; the method body lives at
 //  `Compiler::generate_function_body_abstract_body` below.)
@@ -34,7 +33,6 @@ use crate::postparsing::ast::LocationInDenizen;
 class AbstractBodyMacro(interner: Interner, keywords: Keywords, overloadResolver: OverloadResolver) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.abstractBody
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

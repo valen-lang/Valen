@@ -29,7 +29,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct LockWeakMacro
 // (Scala `class LockWeakMacro(keywords, expressionCompiler)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::generate_function_body_lock_weak` below.)
 /*
@@ -40,7 +39,6 @@ class LockWeakMacro(
   val generatorId: StrI = keywords.vale_lock_weak
 
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

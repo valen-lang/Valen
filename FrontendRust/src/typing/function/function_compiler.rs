@@ -32,7 +32,6 @@ import scala.collection.immutable.{List, Set}
 */
 use crate::typing::compiler::Compiler;
 
-// mig: trait IFunctionCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IFunctionCompilerDelegate {
@@ -77,7 +76,6 @@ trait IFunctionCompilerDelegate {
 }
 
 */
-// mig: trait IEvaluateFunctionResult
 pub enum IEvaluateFunctionResult<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -85,7 +83,6 @@ pub enum IEvaluateFunctionResult<'s, 't> {
 trait IEvaluateFunctionResult
 
 */
-// mig: struct EvaluateFunctionSuccess
 pub struct EvaluateFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class EvaluateFunctionSuccess(
@@ -95,7 +92,6 @@ case class EvaluateFunctionSuccess(
 ) extends IEvaluateFunctionResult
 
 */
-// mig: struct EvaluateFunctionFailure
 pub struct EvaluateFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class EvaluateFunctionFailure(
@@ -103,7 +99,6 @@ case class EvaluateFunctionFailure(
 ) extends IEvaluateFunctionResult
 
 */
-// mig: trait IDefineFunctionResult
 pub enum IDefineFunctionResult<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -111,7 +106,6 @@ pub enum IDefineFunctionResult<'s, 't> {
 trait IDefineFunctionResult
 
 */
-// mig: struct DefineFunctionSuccess
 pub struct DefineFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class DefineFunctionSuccess(
@@ -121,7 +115,6 @@ case class DefineFunctionSuccess(
 ) extends IDefineFunctionResult
 
 */
-// mig: struct DefineFunctionFailure
 pub struct DefineFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class DefineFunctionFailure(
@@ -130,7 +123,6 @@ case class DefineFunctionFailure(
 
 
 */
-// mig: trait IResolveFunctionResult
 pub enum IResolveFunctionResult<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -138,7 +130,6 @@ pub enum IResolveFunctionResult<'s, 't> {
 trait IResolveFunctionResult
 
 */
-// mig: struct ResolveFunctionSuccess
 pub struct ResolveFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class ResolveFunctionSuccess(
@@ -147,7 +138,6 @@ case class ResolveFunctionSuccess(
 ) extends IResolveFunctionResult
 
 */
-// mig: struct ResolveFunctionFailure
 pub struct ResolveFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class ResolveFunctionFailure(
@@ -156,7 +146,6 @@ case class ResolveFunctionFailure(
 
 
 */
-// mig: trait IStampFunctionResult
 pub enum IStampFunctionResult<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -164,7 +153,6 @@ pub enum IStampFunctionResult<'s, 't> {
 trait IStampFunctionResult
 
 */
-// mig: struct StampFunctionSuccess
 pub struct StampFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class StampFunctionSuccess(
@@ -173,7 +161,6 @@ case class StampFunctionSuccess(
 ) extends IStampFunctionResult
 
 */
-// mig: struct StampFunctionFailure
 pub struct StampFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class StampFunctionFailure(
@@ -182,8 +169,6 @@ case class StampFunctionFailure(
 
 
 */
-// mig: struct FunctionCompiler
-// mig: impl FunctionCompiler
 /*
 // When typingpassing a function, these things need to happen:
 // - Spawn a local environment for the function
@@ -206,7 +191,6 @@ class FunctionCompiler(
       opts, interner, keywords, nameTranslator, templataCompiler, inferCompiler, convertHelper, structCompiler, delegate)
 
 */
-// mig: fn evaluate_generic_function_from_non_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -236,7 +220,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_light_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -265,7 +248,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -314,7 +296,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -357,7 +338,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -381,7 +361,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_light_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -408,7 +387,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_closure_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -442,7 +420,6 @@ where 's: 't,
 */
 }
 
-// mig: fn determine_closure_variable_member
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

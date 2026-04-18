@@ -13,7 +13,6 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 */
-// mig: case class InstantiationReachableBoundArgumentsT
 // TODO: stub — replace Vec with arena slice during body migration. Scala's
 // R <: IFunctionNameT generic is gone (enum in Rust). The prototype slot below is
 // `()` because PrototypeT upstream declares T: IFunctionNameT as a trait bound on
@@ -32,7 +31,6 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 
 object InstantiationBoundArgumentsT {
 */
-// mig: def make
 // TODO: stub — re-add PrototypeT arg once PrototypeT upstream is repaired.
 pub fn make<'s, 't>(
     _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, ())>,
@@ -54,7 +52,6 @@ pub fn make<'s, 't>(
   }
 }
 */
-// mig: case class InstantiationBoundArgumentsT
 // TODO: stub — Vec pairs stand in for Scala's HashMap; revisit (arena slice, sorted?) during body migration.
 // Also: Scala's [BF <: IFunctionNameT, BI <: IImplNameT] generics collapsed to the enums directly.
 // TODO: replace () with PrototypeT<'s,'t> once upstream T:IFunctionNameT bound is fixed.
@@ -92,7 +89,6 @@ case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
   vassert(!runeToCitizenRuneToReachablePrototype.exists(_._2.citizenRuneToReachablePrototype.isEmpty))
 }
 */
-// mig: case class HinputsT
 // TODO: stub — Vec/HashMap fields mirror the Scala case class. Per quest.md §1.5
 // HinputsT is 't-arena-allocated, which per AASSNCMCX means these should later become
 // arena slices, not std Vec/HashMap. Keeping Vec/HashMap for now to match Scala shape;
@@ -157,69 +153,57 @@ case class HinputsT(
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
 */
-// mig: def equals
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: def hashCode
 /*
   override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 */
-// mig: def lookupStruct
 /*
   def lookupStruct(structId: IdT[IStructNameT]): StructDefinitionT = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))
   }
 */
-// mig: def lookupStructByTemplate
 /*
   def lookupStructByTemplate(structTemplateName: IStructTemplateNameT): StructDefinitionT = {
     vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
   }
 */
-// mig: def lookupInterfaceByTemplate
 /*
   def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameT): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
   }
 */
-// mig: def lookupImplByTemplate
 /*
   def lookupImplByTemplate(implTemplateName: IImplTemplateNameT): EdgeT = {
     vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
   }
 */
-// mig: def lookupInterface
 /*
   def lookupInterface(interfaceId: IdT[IInterfaceNameT]): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
   }
 */
-// mig: def lookupEdge
 /*
   def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
     vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
   }
 */
-// mig: def getInstantiationBoundArgs
 /*
   def getInstantiationBoundArgs(instantiationName: IdT[IInstantiationNameT]): InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT] = {
     vassertSome(instantiationNameToInstantiationBounds.get(instantiationName))
   }
 */
-// mig: def lookupStructByTemplateId
 /*
   def lookupStructByTemplateId(structTemplateId: IdT[IStructTemplateNameT]): StructDefinitionT = {
     vassertSome(structs.find(_.templateName == structTemplateId))
   }
 */
-// mig: def lookupInterfaceByTemplateId
 /*
   def lookupInterfaceByTemplateId(interfaceTemplateId: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
     vassertSome(interfaces.find(_.templateName == interfaceTemplateId))
   }
 */
-// mig: def lookupCitizenByTemplateId
 /*
   def lookupCitizenByTemplateId(interfaceTemplateId: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
     interfaceTemplateId match {

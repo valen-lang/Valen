@@ -28,7 +28,6 @@ use crate::typing::env::environment::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct InterfaceDropMacro
 // (Scala `class InterfaceDropMacro(interner, keywords, nameTranslator)` absorbed onto
 //  `Compiler`; the method body lives at
 //  `Compiler::get_interface_sibling_entries_interface_drop` below.)
@@ -41,7 +40,6 @@ class InterfaceDropMacro(
 
   val macroName: StrI = keywords.DeriveInterfaceDrop
 */
-// mig: fn get_interface_sibling_entries
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

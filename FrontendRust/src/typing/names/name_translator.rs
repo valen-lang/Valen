@@ -18,12 +18,9 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct NameTranslator
-// mig: impl NameTranslator
 /*
 class NameTranslator(interner: Interner) {
 */
-// mig: fn translate_generic_template_function_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -45,7 +42,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_generic_function_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -75,7 +71,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_struct_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -97,7 +92,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_interface_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -115,7 +109,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_citizen_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -140,7 +133,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_name_step
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -190,7 +182,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_code_location
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -205,7 +196,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_var_name_step
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -231,7 +221,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_impl_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

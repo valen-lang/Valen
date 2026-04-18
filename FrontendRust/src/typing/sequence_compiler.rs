@@ -34,8 +34,6 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 
-// mig: struct SequenceCompiler
-// mig: impl SequenceCompiler
 /*
 class SequenceCompiler(
   opts: TypingPassOptions,
@@ -44,7 +42,6 @@ class SequenceCompiler(
     structCompiler: StructCompiler,
     templataCompiler: TemplataCompiler) {
 */
-// mig: fn resolve_tuple
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -73,7 +70,6 @@ where 's: 't,
   }
 */
 }
-// mig: fn make_tuple_kind
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -110,7 +106,6 @@ where 's: 't,
   }
 */
 }
-// mig: fn make_tuple_coord
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

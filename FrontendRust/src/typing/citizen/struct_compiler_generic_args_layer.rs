@@ -18,8 +18,6 @@ use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compiler::Compiler;
 use crate::solver::solver::*;
 
-// mig: struct StructCompilerGenericArgsLayer
-// mig: impl StructCompilerGenericArgsLayer
 /*
 package dev.vale.typing.citizen
 
@@ -53,7 +51,6 @@ class StructCompilerGenericArgsLayer(
     delegate: IStructCompilerDelegate) {
   val core = new StructCompilerCore(opts, interner, keywords, nameTranslator, delegate)
 */
-// mig: fn resolve_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -145,7 +142,6 @@ where 's: 't,
 */
 }
 
-// mig: fn predict_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -231,7 +227,6 @@ where 's: 't,
 */
 }
 
-// mig: fn predict_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -319,7 +314,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -397,7 +391,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -516,7 +509,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -628,7 +620,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_closure_understruct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -662,7 +653,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_struct_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -685,7 +675,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_interface_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

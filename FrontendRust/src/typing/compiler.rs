@@ -47,12 +47,10 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::typing_interner::TypingInterner;
 
-// mig: trait IFunctionGenerator
 pub trait IFunctionGenerator<'s, 't> {
 /*
 trait IFunctionGenerator {
 */
-// mig: fn generate
 fn generate(
     &self,
     function_compiler_core: (), // FunctionCompilerCore
@@ -94,12 +92,10 @@ fn generate(
 }
 
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: struct DefaultPrintyThing
 pub struct DefaultPrintyThing<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 object DefaultPrintyThing {
 */
-// mig: fn print
 pub fn print(x: ()) {
     panic!("Unimplemented: print");
 }
@@ -112,7 +108,6 @@ pub fn print(x: ()) {
 
 
 */
-// mig: struct Compiler
 pub struct Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -122,7 +117,6 @@ where 's: 't,
     pub opts: &'ctx TypingPassOptions<'s>,
 }
 
-// mig: fn new
 // (no direct Scala counterpart — derived from `class Compiler(opts, interner, keywords)` in the Scala block below)
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -137,7 +131,6 @@ where 's: 't,
     }
 }
 
-// mig: impl Compiler
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
 /*
 class Compiler(
@@ -802,7 +795,6 @@ class Compiler(
 
 
 */
-// mig: fn evaluate
 pub fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
     panic!("Unimplemented: evaluate");
 }
@@ -1499,7 +1491,6 @@ pub fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
   }
 
 */
-// mig: fn preprocess_struct
 fn preprocess_struct(&self, name_to_struct_defined_macro: (), struct_name_t: (), struct_a: ()) -> Vec<()> {
     panic!("Unimplemented: preprocess_struct");
 }
@@ -1519,7 +1510,6 @@ fn preprocess_struct(&self, name_to_struct_defined_macro: (), struct_name_t: (),
   }
 
 */
-// mig: fn preprocess_interface
 fn preprocess_interface(&self, name_to_interface_defined_macro: (), interface_name_t: (), interface_a: ()) -> Vec<()> {
     panic!("Unimplemented: preprocess_interface");
 }
@@ -1544,7 +1534,6 @@ fn preprocess_interface(&self, name_to_interface_defined_macro: (), interface_na
   }
 
 */
-// mig: fn determine_macros_to_call
 fn determine_macros_to_call<T>(&self, name_to_macro: (), default_called_macros: Vec<()>, parent_ranges: Vec<()>, attributes: Vec<()>) -> Vec<T> {
     panic!("Unimplemented: determine_macros_to_call");
 }
@@ -1575,7 +1564,6 @@ fn determine_macros_to_call<T>(&self, name_to_macro: (), default_called_macros: 
   }
 
 */
-// mig: fn ensure_deep_exports
 fn ensure_deep_exports(&self, coutputs: ()) {
     panic!("Unimplemented: ensure_deep_exports");
 }
@@ -1677,7 +1665,6 @@ fn ensure_deep_exports(&self, coutputs: ()) {
   }
 
 */
-// mig: fn is_root_function
 fn is_root_function(&self, function_a: ()) -> bool {
     panic!("Unimplemented: is_root_function");
 }
@@ -1696,7 +1683,6 @@ fn is_root_function(&self, function_a: ()) -> bool {
   }
 
 */
-// mig: fn is_root_struct
 fn is_root_struct(&self, struct_a: ()) -> bool {
     panic!("Unimplemented: is_root_struct");
 }
@@ -1707,7 +1693,6 @@ fn is_root_struct(&self, struct_a: ()) -> bool {
   }
 
 */
-// mig: fn is_root_interface
 fn is_root_interface(&self, interface_a: ()) -> bool {
     panic!("Unimplemented: is_root_interface");
 }
@@ -1724,7 +1709,6 @@ fn is_root_interface(&self, interface_a: ()) -> bool {
 
 object Compiler {
 */
-// mig: fn consecutive
 pub fn consecutive(exprs: Vec<()>) -> () {
     panic!("Unimplemented: consecutive");
 }
@@ -1756,7 +1740,6 @@ pub fn consecutive(exprs: Vec<()>) -> () {
   }
 
 */
-// mig: fn is_primitive
 pub fn is_primitive(kind: ()) -> bool {
     panic!("Unimplemented: is_primitive");
 }
@@ -1774,7 +1757,6 @@ pub fn is_primitive(kind: ()) -> bool {
   }
 
 */
-// mig: fn get_mutabilities
 pub fn get_mutabilities(coutputs: (), concrete_values2: Vec<()>) -> Vec<()> {
     panic!("Unimplemented: get_mutabilities");
 }
@@ -1785,7 +1767,6 @@ pub fn get_mutabilities(coutputs: (), concrete_values2: Vec<()>) -> Vec<()> {
   }
 
 */
-// mig: fn get_mutability
 pub fn get_mutability(coutputs: (), concrete_value2: ()) -> () {
     panic!("Unimplemented: get_mutability");
 }

@@ -36,7 +36,6 @@ import scala.collection.mutable.ArrayBuffer
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct TookWeakRefOfNonWeakableError
 pub struct TookWeakRefOfNonWeakableError<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 
 /*
@@ -46,7 +45,6 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 
 */
-// mig: trait IExpressionCompilerDelegate
 /*
 trait IExpressionCompilerDelegate {
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -82,8 +80,6 @@ trait IExpressionCompilerDelegate {
 }
 
 */
-// mig: struct ExpressionCompiler
-// mig: impl ExpressionCompiler
 /*
 class ExpressionCompiler(
     opts: TypingPassOptions,
@@ -136,7 +132,6 @@ class ExpressionCompiler(
   })
 
 */
-// mig: fn evaluate_and_coerce_to_reference_expressions
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -162,7 +157,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_lookup_for_load
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -195,7 +189,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_addressible_lookup_for_mutate
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -287,7 +280,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_addressible_lookup
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -384,7 +376,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_closure_struct_construct_expression
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -457,7 +448,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_and_coerce_to_reference_expression
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -489,7 +479,6 @@ where 's: 't,
 */
 }
 
-// mig: fn coerce_to_reference_expression
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -513,7 +502,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_expected_address_expression
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -542,7 +530,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1623,7 +1610,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1662,7 +1648,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_option
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1739,7 +1724,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_result
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1835,7 +1819,6 @@ where 's: 't,
 */
 }
 
-// mig: fn weak_alias
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1863,7 +1846,6 @@ where 's: 't,
 */
 }
 
-// mig: fn dot_borrow
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1908,7 +1890,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_closure
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1960,7 +1941,6 @@ where 's: 't,
 */
 }
 
-// mig: fn new_global_function_group_expression
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1984,7 +1964,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_block_statements
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2007,7 +1986,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_pattern_list
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2031,7 +2009,6 @@ where 's: 't,
 */
 }
 
-// mig: fn astronomize_lambda
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2110,7 +2087,6 @@ where 's: 't,
 */
 }
 
-// mig: fn drop_since
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2184,7 +2160,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resultify_expressions
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -19,7 +19,6 @@ use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
 
-// mig: enum OwnershipT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipT {
     Share,
@@ -31,35 +30,30 @@ pub enum OwnershipT {
 sealed trait OwnershipT  {
 }
 */
-// mig: struct ShareT
 // merged into OwnershipT above
 /*
 case object ShareT extends OwnershipT {
   override def toString: String = "share"
 }
 */
-// mig: struct OwnT
 // merged into OwnershipT above
 /*
 case object OwnT extends OwnershipT {
   override def toString: String = "own"
 }
 */
-// mig: struct BorrowT
 // merged into OwnershipT above
 /*
 case object BorrowT extends OwnershipT {
   override def toString: String = "borrow"
 }
 */
-// mig: struct WeakT
 // merged into OwnershipT above
 /*
 case object WeakT extends OwnershipT {
   override def toString: String = "weak"
 }
 */
-// mig: enum MutabilityT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum MutabilityT {
     Mutable,
@@ -69,21 +63,18 @@ pub enum MutabilityT {
 sealed trait MutabilityT  {
 }
 */
-// mig: struct MutableT
 // merged into MutabilityT above
 /*
 case object MutableT extends MutabilityT {
   override def toString: String = "mut"
 }
 */
-// mig: struct ImmutableT
 // merged into MutabilityT above
 /*
 case object ImmutableT extends MutabilityT {
   override def toString: String = "imm"
 }
 */
-// mig: enum VariabilityT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum VariabilityT {
     Final,
@@ -93,21 +84,18 @@ pub enum VariabilityT {
 sealed trait VariabilityT  {
 }
 */
-// mig: struct FinalT
 // merged into VariabilityT above
 /*
 case object FinalT extends VariabilityT {
   override def toString: String = "final"
 }
 */
-// mig: struct VaryingT
 // merged into VariabilityT above
 /*
 case object VaryingT extends VariabilityT {
   override def toString: String = "vary"
 }
 */
-// mig: enum LocationT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LocationT {
     Inline,
@@ -117,27 +105,23 @@ pub enum LocationT {
 sealed trait LocationT  {
 }
 */
-// mig: struct InlineT
 // merged into LocationT above
 /*
 case object InlineT extends LocationT {
   override def toString: String = "inl"
 }
 */
-// mig: struct YonderT
 // merged into LocationT above
 /*
 case object YonderT extends LocationT {
   override def toString: String = "heap"
 }
 */
-// mig: struct RegionT
 #[derive(Copy, Clone)]
 pub struct RegionT;
 /*
 case class RegionT()
 */
-// mig: struct CoordT
 #[derive(Copy, Clone)]
 pub struct CoordT<'s, 't> {
   pub ownership: OwnershipT,
@@ -166,7 +150,6 @@ case class CoordT(
   }
 }
 */
-// mig: enum KindT
 // TODO: non-primitive variants (StructTT, InterfaceTT, StaticSizedArrayTT,
 //   RuntimeSizedArrayTT, KindPlaceholderT, OverloadSet) are deferred to Slab 3;
 //   _Phantom stays until then to anchor the 's/'t lifetime params.
@@ -210,7 +193,6 @@ sealed trait KindT {
   def isPrimitive: Boolean
 }
 */
-// mig: struct NeverT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NeverT {
   pub from_break: bool,
@@ -227,7 +209,6 @@ case class NeverT(
   override def isPrimitive: Boolean = true
 }
 */
-// mig: struct VoidT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidT;
 /*
@@ -236,7 +217,6 @@ case class VoidT() extends KindT {
   override def isPrimitive: Boolean = true
 }
 */
-// mig: impl IntT
 impl IntT {
     pub const I32: IntT = IntT { bits: 32 };
     pub const I64: IntT = IntT { bits: 64 };
@@ -247,7 +227,6 @@ object IntT {
   val i64: IntT = IntT(64)
 }
 */
-// mig: struct IntT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntT {
   pub bits: i32,
@@ -257,7 +236,6 @@ case class IntT(bits: Int) extends KindT {
   override def isPrimitive: Boolean = true
 }
 */
-// mig: struct BoolT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolT;
 /*
@@ -266,7 +244,6 @@ case class BoolT() extends KindT {
 
 }
 */
-// mig: struct StrT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrT;
 /*
@@ -275,7 +252,6 @@ case class StrT() extends KindT {
 
 }
 */
-// mig: struct FloatT
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatT;
 /*
@@ -283,7 +259,6 @@ case class FloatT() extends KindT {
   override def isPrimitive: Boolean = true
 }
 */
-// mig: fn unapply
 fn unapply_contents_static_sized_array_tt() {
   panic!("Unimplemented: unapply_contents_static_sized_array_tt");
 }
@@ -296,7 +271,6 @@ object contentsStaticSizedArrayTT {
   }
 }
 */
-// mig: struct StaticSizedArrayTT
 pub struct StaticSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
 }
@@ -312,7 +286,6 @@ case class StaticSizedArrayTT(
   def variability = name.localName.variability
 }
 */
-// mig: fn unapply
 fn unapply_contents_runtime_sized_array_tt() {
   panic!("Unimplemented: unapply_contents_runtime_sized_array_tt");
 }
@@ -325,7 +298,6 @@ object contentsRuntimeSizedArrayTT {
   }
 }
 */
-// mig: struct RuntimeSizedArrayTT
 pub struct RuntimeSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
 }
@@ -338,7 +310,6 @@ case class RuntimeSizedArrayTT(
   def elementType = name.localName.arr.elementType
 }
 */
-// mig: fn unapply
 fn unapply_i_citizen_tt() {
   panic!("Unimplemented: unapply_i_citizen_tt");
 }
@@ -349,7 +320,6 @@ object ICitizenTT {
   }
 }
 */
-// mig: enum ISubKindTT
 // TODO: placeholder PhantomData — replace with real fields during body migration
 pub enum ISubKindTT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
@@ -360,7 +330,6 @@ sealed trait ISubKindTT extends KindT {
   def id: IdT[ISubKindNameT]
 }
 */
-// mig: enum ISuperKindTT
 // TODO: placeholder PhantomData — replace with real fields during body migration
 pub enum ISuperKindTT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
@@ -371,7 +340,6 @@ sealed trait ISuperKindTT extends KindT {
   def id: IdT[ISuperKindNameT]
 }
 */
-// mig: enum ICitizenTT
 // TODO: placeholder PhantomData — replace with real fields during body migration
 pub enum ICitizenTT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
@@ -381,7 +349,6 @@ sealed trait ICitizenTT extends ISubKindTT with IInterning {
   def id: IdT[ICitizenNameT]
 }
 */
-// mig: struct StructTT
 pub struct StructTT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
@@ -395,7 +362,6 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
   }
 }
 */
-// mig: struct InterfaceTT
 pub struct InterfaceTT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
@@ -408,7 +374,6 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
   }
 }
 */
-// mig: struct OverloadSetT
 pub struct OverloadSetT<'s, 't> {
   pub env: &'s IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
@@ -427,7 +392,6 @@ case class OverloadSetT(
 
 }
 */
-// mig: struct KindPlaceholderT
 pub struct KindPlaceholderT<'s, 't> {
   pub id: IdT<'s, 't>,
 }

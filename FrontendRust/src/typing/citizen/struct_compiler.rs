@@ -45,18 +45,15 @@ use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
 
-// mig: struct WeakableImplingMismatch
 pub struct WeakableImplingMismatch {
     pub struct_weakable: bool,
     pub interface_weakable: bool,
 }
-// mig: impl WeakableImplingMismatch
 impl WeakableImplingMismatch {}
 /*
 case class WeakableImplingMismatch(structWeakable: Boolean, interfaceWeakable: Boolean) extends Throwable {
   val hash = runtime.ScalaRunTime._hashCode(this);
 */
-// mig: fn hash_code
 impl WeakableImplingMismatch {
     fn hash_code(&self) -> i32 {
         panic!("Unimplemented: hash_code");
@@ -65,7 +62,6 @@ impl WeakableImplingMismatch {
 /*
 override def hashCode(): Int = hash;
 */
-// mig: fn equals
 impl WeakableImplingMismatch {
     fn equals(&self, obj: &dyn std::any::Any) -> bool {
         panic!("Unimplemented: equals");
@@ -76,7 +72,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
 
 // See ODMFRC.
 */
-// mig: struct UncheckedDefiningConclusions
 pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s>,
     pub ranges: Vec<RangeS<'s>>,
@@ -84,7 +79,6 @@ pub struct UncheckedDefiningConclusions<'s, 't> {
     pub definition_rules: Vec<IRulexSR<'s>>,
     pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
-// mig: impl UncheckedDefiningConclusions
 impl<'s, 't> UncheckedDefiningConclusions<'s, 't> {}
 /*
 case class UncheckedDefiningConclusions(
@@ -94,12 +88,10 @@ case class UncheckedDefiningConclusions(
     definitionRules: Vector[IRulexSR],
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]])
 */
-// mig: trait IStructCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IStructCompilerDelegate {
 */
-// mig: fn evaluate_generic_function_from_non_call_for_header
 /*
   def evaluateGenericFunctionFromNonCallForHeader(
     coutputs: CompilerOutputs,
@@ -108,7 +100,6 @@ trait IStructCompilerDelegate {
     functionTemplata: FunctionTemplataT):
   FunctionHeaderT
 */
-// mig: fn scout_expected_function_for_prototype
 /*
   def scoutExpectedFunctionForPrototype(
     env: IInDenizenEnvironmentT,
@@ -126,28 +117,23 @@ trait IStructCompilerDelegate {
 }
 */
 
-// mig: enum IResolveOutcome
 pub enum IResolveOutcome<'s, 't, T> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t (), T)>),
 }
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
 */
-// mig: fn expect
 fn resolve_outcome_expect<'s, 't, T>(this: IResolveOutcome<'s, 't, T>) -> ResolveSuccess<'s, 't, T> { panic!("Unimplemented: expect"); }
 /*
   def expect(): ResolveSuccess[T]
 }
 */
 
-// mig: struct ResolveSuccess
 pub struct ResolveSuccess<'s, 't, T> {
     pub kind: T,
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
 }
-// mig: impl ResolveSuccess
 impl<'s, 't, T> ResolveSuccess<'s, 't, T> {
-// mig: fn expect
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
 }
@@ -159,15 +145,12 @@ case class ResolveSuccess[+T <: KindT](kind: T) extends IResolveOutcome[T] {
   override def expect(): ResolveSuccess[T] = this
 }
 */
-// mig: struct ResolveFailure
 pub struct ResolveFailure<'s, 't, T> {
     pub range: Vec<RangeS<'s>>,
     pub x: IResolvingError<'s, 't>,
     pub _phantom: std::marker::PhantomData<T>,
 }
-// mig: impl ResolveFailure
 impl<'s, 't, T> ResolveFailure<'s, 't, T> {
-// mig: fn expect
 fn expect(self) -> ResolveSuccess<'s, 't, T> {
     panic!("Unimplemented: expect");
 }
@@ -181,8 +164,6 @@ case class ResolveFailure[+T <: KindT](range: List[RangeS], x: IResolvingError) 
   }
 }
 */
-// mig: struct StructCompiler
-// mig: impl StructCompiler
 /*
 class StructCompiler(
     opts: TypingPassOptions,
@@ -196,7 +177,6 @@ class StructCompiler(
     new StructCompilerGenericArgsLayer(
       opts, interner, keywords, nameTranslator, templataCompiler, inferCompiler, delegate)
 */
-// mig: fn resolve_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -228,7 +208,6 @@ where 's: 't,
 */
 }
 
-// mig: fn precompile_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -281,7 +260,6 @@ where 's: 't,
 */
 }
 
-// mig: fn precompile_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -346,7 +324,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -375,7 +352,6 @@ where 's: 't,
 */
 }
 
-// mig: fn predict_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -409,7 +385,6 @@ where 's: 't,
 */
 }
 
-// mig: fn predict_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -441,7 +416,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -476,7 +450,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -506,7 +479,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_closure_understruct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -558,7 +530,6 @@ use super::*;
 /*
 object StructCompiler {
 */
-// mig: fn get_compound_type_mutability
 pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> MutabilityT {
     panic!("Unimplemented: get_compound_type_mutability");
 }
@@ -570,7 +541,6 @@ pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> Mutabili
     if (allMembersImmutable) ImmutableT else MutableT
   }
 */
-// mig: fn get_mutability
 pub fn get_mutability<'s, 't>(
     sanity_check: bool,
     interner: &Interner<'s>,

@@ -11,7 +11,6 @@ object simpleNameT {
 use crate::typing::ast::ast::*;
 use crate::typing::names::names::*;
 
-// mig: fn unapply
 pub fn unapply_simple_name(id: &IdT) -> Option<String> {
   panic!("Unimplemented: unapply_simple_name");
 }
@@ -39,7 +38,6 @@ pub fn unapply_simple_name(id: &IdT) -> Option<String> {
 
 object functionNameT {
 */
-// mig: fn unapply
 pub fn unapply_function_name_def(function2: &FunctionDefinitionT) -> Option<String> {
   panic!("Unimplemented: unapply_function_name_def");
 }
@@ -48,7 +46,6 @@ pub fn unapply_function_name_def(function2: &FunctionDefinitionT) -> Option<Stri
     unapply(function2.header)
   }
 */
-// mig: fn unapply
 pub fn unapply_function_name_header(header: &FunctionHeaderT) -> Option<String> {
   panic!("Unimplemented: unapply_function_name_header");
 }
@@ -57,7 +54,6 @@ pub fn unapply_function_name_header(header: &FunctionHeaderT) -> Option<String> 
     simpleNameT.unapply(header.id)
   }
 */
-// mig: fn unapply
 pub fn unapply_function_name_prototype(prototype: &PrototypeT) -> Option<String> {
   panic!("Unimplemented: unapply_function_name_prototype");
 }

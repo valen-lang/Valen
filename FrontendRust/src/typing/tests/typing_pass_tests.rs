@@ -17,7 +17,6 @@ import org.scalatest._
 class TypingPassTests extends FunSuite with Matchers  {
 */
 
-// mig: fn compile_program_to_hinputs
 fn compile_program_to_hinputs<'s, 'ctx, 'p>(
     compilation: &mut TypingPassCompilation<'s, 'ctx, 'p>,
 ) -> ()

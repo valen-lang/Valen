@@ -51,7 +51,6 @@ use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::typing::infer_compiler::InferEnv;
 
-// mig: enum ITypingPassSolverError
 pub enum ITypingPassSolverError<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait ITypingPassSolverError
@@ -97,7 +96,6 @@ case class ReturnTypeConflict(range: List[RangeS], expectedReturnType: CoordT, a
 case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ITypingPassSolverError
 
 */
-// mig: trait IInfererDelegate
 // vestigial: kept until Step 8 cleanup because fn signatures still reference `IInfererDelegate<'s, 't>` as a param type
 pub trait IInfererDelegate<'s, 't> {}
 /*
@@ -210,8 +208,6 @@ trait IInfererDelegate {
 }
 
 */
-// mig: struct CompilerSolver
-// mig: impl CompilerSolver
 /*
 class CompilerSolver(
   globalOptions: GlobalOptions,
@@ -219,7 +215,6 @@ class CompilerSolver(
   delegate: IInfererDelegate
 ) {
 */
-// mig: fn get_runes
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -270,7 +265,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_puzzles
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -322,7 +316,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_solver_state
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -385,7 +378,6 @@ where 's: 't,
 */
 }
 
-// mig: fn advance_infer
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -456,7 +448,6 @@ where 's: 't,
 */
 }
 
-// mig: fn r#continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -493,7 +484,6 @@ object CompilerRuleSolver {
 */
 }
 
-// mig: fn sanity_check_conclusion
 pub fn sanity_check_conclusion<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
@@ -509,7 +499,6 @@ pub fn sanity_check_conclusion<'s, 't>(
   }
 
 */
-// mig: fn complex_solve
 fn complex_solve<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
@@ -530,7 +519,6 @@ fn complex_solve<'s, 't>(
   }
 
 */
-// mig: fn complex_solve_inner
 fn complex_solve_inner<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
@@ -639,7 +627,6 @@ fn complex_solve_inner<'s, 't>(
   }
 
 */
-// mig: fn solve_receives
 fn solve_receives<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
@@ -712,7 +699,6 @@ fn solve_receives<'s, 't>(
   }
 
 */
-// mig: fn narrow
 fn narrow<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
@@ -745,7 +731,6 @@ fn narrow<'s, 't>(
   }
 
 */
-// mig: fn solve
 fn solve<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
@@ -772,7 +757,6 @@ fn solve<'s, 't>(
   }
 
 */
-// mig: fn solve_rule
 fn solve_rule<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
@@ -1203,7 +1187,6 @@ fn solve_rule<'s, 't>(
   }
 
 */
-// mig: fn solve_call_rule
 fn solve_call_rule<'s, 't>(
     delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
@@ -1603,7 +1586,6 @@ fn solve_call_rule<'s, 't>(
   }
 
 */
-// mig: fn literal_to_templata
 fn literal_to_templata<'s, 't>(literal: ILiteralSL) -> ITemplataT<'s, 't> {
     panic!("Unimplemented: literal_to_templata");
 }

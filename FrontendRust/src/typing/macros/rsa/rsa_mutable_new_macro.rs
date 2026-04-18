@@ -34,7 +34,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSAMutableNewMacro
 // (Scala `class RSAMutableNewMacro(interner, keywords, arrayCompiler, destructorCompiler)`
 //  absorbed onto `Compiler`; the method body lives at
 //  `Compiler::generate_function_body_rsa_mutable_new` below.)
@@ -48,7 +47,6 @@ class RSAMutableNewMacro(
   val generatorId: StrI = keywords.vale_runtime_sized_array_mut_new
 
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

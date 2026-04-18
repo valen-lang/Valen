@@ -31,14 +31,12 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSAMutablePopMacro
 // (Scala `class RSAMutablePopMacro(interner, keywords)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::generate_function_body_rsa_mutable_pop` below.)
 /*
 class RSAMutablePopMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_pop
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

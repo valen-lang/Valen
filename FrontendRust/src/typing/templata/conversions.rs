@@ -17,7 +17,6 @@ object Conversions {
 use crate::parsing::ast::ast::*;
 use crate::typing::types::types::*;
 
-// mig: fn evaluate_mutability
 pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
   panic!("Unimplemented: evaluate_mutability");
 }
@@ -29,7 +28,6 @@ pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
     }
   }
 */
-// mig: fn evaluate_location
 pub fn evaluate_location(location: LocationP) -> LocationT {
   panic!("Unimplemented: evaluate_location");
 }
@@ -41,7 +39,6 @@ pub fn evaluate_location(location: LocationP) -> LocationT {
     }
   }
 */
-// mig: fn evaluate_variability
 pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
   panic!("Unimplemented: evaluate_variability");
 }
@@ -53,7 +50,6 @@ pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
     }
   }
 */
-// mig: fn evaluate_ownership
 pub fn evaluate_ownership(ownership: OwnershipP) -> OwnershipT {
   panic!("Unimplemented: evaluate_ownership");
 }
@@ -67,7 +63,6 @@ pub fn evaluate_ownership(ownership: OwnershipP) -> OwnershipT {
     }
   }
 */
-// mig: fn evaluate_maybe_ownership
 pub fn evaluate_maybe_ownership(maybe_ownership: Option<OwnershipP>) -> Option<OwnershipT> {
   panic!("Unimplemented: evaluate_maybe_ownership");
 }
@@ -80,7 +75,6 @@ pub fn evaluate_maybe_ownership(maybe_ownership: Option<OwnershipP>) -> Option<O
     })
   }
 */
-// mig: fn unevaluate_ownership
 pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
   panic!("Unimplemented: unevaluate_ownership");
 }
@@ -94,7 +88,6 @@ pub fn unevaluate_ownership(ownership: OwnershipT) -> OwnershipP {
     }
   }
 */
-// mig: fn unevaluate_mutability
 pub fn unevaluate_mutability(mutability: MutabilityT) -> MutabilityP {
   panic!("Unimplemented: unevaluate_mutability");
 }

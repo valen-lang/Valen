@@ -21,8 +21,6 @@ import scala.collection.immutable.List
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct CallCompiler
-// mig: impl CallCompiler
 /*
 class CallCompiler(
     opts: TypingPassOptions,
@@ -33,7 +31,6 @@ class CallCompiler(
     localHelper: LocalHelper,
     overloadCompiler: OverloadResolver) {
 */
-// mig: fn evaluate_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -134,7 +131,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_custom_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -229,7 +225,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_types
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -284,7 +279,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_prefix_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

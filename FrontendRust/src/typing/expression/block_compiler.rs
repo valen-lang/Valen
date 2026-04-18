@@ -23,7 +23,6 @@ import scala.collection.immutable.{List, Set}
 */
 use crate::typing::compiler::Compiler;
 
-// mig: trait IBlockCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IBlockCompilerDelegate {
@@ -49,8 +48,6 @@ trait IBlockCompilerDelegate {
   ReferenceExpressionTE
 }
 */
-// mig: struct BlockCompiler
-// mig: impl BlockCompiler
 /*
 class BlockCompiler(
     opts: TypingPassOptions,
@@ -60,7 +57,6 @@ class BlockCompiler(
     delegate: IBlockCompilerDelegate) {
 
 */
-// mig: fn evaluate_block
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -101,7 +97,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_block_statements
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -39,7 +39,6 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 
-// mig: enum IMethod
 pub enum IMethod<'s, 't> {
     NeededOverride(NeededOverride<'s, 't>),
     FoundFunction(FoundFunction<'s, 't>),
@@ -47,12 +46,10 @@ pub enum IMethod<'s, 't> {
 /*
 sealed trait IMethod
 */
-// mig: struct NeededOverride
 pub struct NeededOverride<'s, 't> {
     pub name: IImpreciseNameS<'s>,
     pub param_filters: Vec<CoordT<'s, 't>>,
 }
-// mig: impl NeededOverride
 impl<'s, 't> NeededOverride<'s, 't> {}
 /*
 case class NeededOverride(
@@ -63,11 +60,9 @@ case class NeededOverride(
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
-// mig: struct FoundFunction
 pub struct FoundFunction<'s, 't> {
     pub prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
 }
-// mig: impl FoundFunction
 impl<'s, 't> FoundFunction<'s, 't> {}
 /*
 case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod {
@@ -75,13 +70,11 @@ case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod 
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
-// mig: struct PartialEdgeT
 pub struct PartialEdgeT<'s, 't> {
     pub struct_tt: StructTT<'s, 't>,
     pub interface: InterfaceTT<'s, 't>,
     pub methods: Vec<IMethod<'s, 't>>,
 }
-// mig: impl PartialEdgeT
 impl<'s, 't> PartialEdgeT<'s, 't> {}
 /*
 case class PartialEdgeT(
@@ -92,8 +85,6 @@ case class PartialEdgeT(
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
-// mig: struct EdgeCompiler
-// mig: impl EdgeCompiler
 /*
 class EdgeCompiler(
     opts: TypingPassOptions,
@@ -103,7 +94,6 @@ class EdgeCompiler(
     overloadCompiler: OverloadResolver,
     implCompiler: ImplCompiler) {
 */
-// mig: fn compile_i_tables
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -174,7 +164,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_interface_edge_blueprints
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -240,7 +229,6 @@ where 's: 't,
 */
 }
 
-// mig: fn create_override_placeholder_mimicking
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -335,7 +323,6 @@ where 's: 't,
 */
 }
 
-// mig: fn look_for_override
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

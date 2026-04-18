@@ -35,11 +35,8 @@ class StructCompilerCore(
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct StructCompilerCore
-// mig: impl StructCompilerCore
 /*
 */
-// mig: fn compile_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -176,7 +173,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_citizen_attributes
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -194,7 +190,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_interface
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -274,7 +269,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_struct_members
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -291,7 +285,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_struct_member
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -333,7 +326,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_closure_understruct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -29,8 +29,6 @@ import scala.collection.immutable.List
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct DestructorCompiler
-// mig: impl DestructorCompiler
 /*
 class DestructorCompiler(
     opts: TypingPassOptions,
@@ -39,7 +37,6 @@ class DestructorCompiler(
     structCompiler: StructCompiler,
     overloadCompiler: OverloadResolver) {
 */
-// mig: fn get_drop_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -66,7 +63,6 @@ where 's: 't,
 */
 }
 
-// mig: fn drop
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

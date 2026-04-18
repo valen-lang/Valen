@@ -42,7 +42,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::higher_typing::ast::*;
 
-// mig: struct StructConstructorMacro
 // (Scala `class StructConstructorMacro(opts, interner, keywords, nameTranslator,
 //  destructorCompiler)` absorbed onto `Compiler`; the method bodies live at
 //  `Compiler::get_struct_sibling_entries_struct_constructor` and
@@ -61,7 +60,6 @@ class StructConstructorMacro(
   val macroName: StrI = keywords.DeriveStructConstructor
 
 */
-// mig: fn get_struct_sibling_entries
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -150,7 +148,6 @@ where 's: 't,
 */
 }
 
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -29,7 +29,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSALenMacro
 // (Scala `class RSALenMacro(keywords)` absorbed onto `Compiler`; the method
 //  body lives at `Compiler::generate_function_body_rsa_len` below.)
 /*
@@ -37,7 +36,6 @@ class RSALenMacro(keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_len
 
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

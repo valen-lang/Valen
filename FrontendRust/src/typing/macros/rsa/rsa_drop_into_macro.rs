@@ -29,7 +29,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSADropIntoMacro
 // (Scala `class RSADropIntoMacro(keywords, arrayCompiler)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::generate_function_body_rsa_drop_into` below.)
 /*
@@ -37,7 +36,6 @@ class RSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends
   val generatorId: StrI = keywords.vale_runtime_sized_array_drop_into
 
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

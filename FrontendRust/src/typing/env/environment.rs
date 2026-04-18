@@ -22,7 +22,6 @@ import dev.vale.typing.types.{InterfaceTT, KindPlaceholderT, StructTT}
 import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
-// mig: trait IEnvironmentT
 pub enum IEnvironmentT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -97,7 +96,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
   def id: IdT[INameT]
 }
 */
-// mig: trait IInDenizenEnvironmentT
 pub enum IInDenizenEnvironmentT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -111,7 +109,6 @@ trait IInDenizenEnvironmentT extends IEnvironmentT {
   def denizenTemplateId: IdT[ITemplateNameT]
 }
 */
-// mig: trait IDenizenEnvironmentBoxT
 pub trait IDenizenEnvironmentBoxT<'s, 't> {}
 /*
 trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
@@ -124,7 +121,6 @@ trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
   def id: IdT[INameT]
 }
 */
-// mig: enum ILookupContext
 pub enum ILookupContext {
   TemplataLookupContext,
   ExpressionLookupContext,
@@ -134,7 +130,6 @@ sealed trait ILookupContext
 case object TemplataLookupContext extends ILookupContext
 case object ExpressionLookupContext extends ILookupContext
 */
-// mig: struct GlobalEnvironment
 pub struct GlobalEnvironment<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /*
@@ -161,7 +156,6 @@ case class GlobalEnvironment(
   builtins: TemplatasStore
 )
 */
-// mig: fn entry_matches_filter
 fn entry_matches_filter() {
   panic!("Unimplemented: entry_matches_filter");
 }
@@ -202,7 +196,6 @@ object TemplatasStore {
     }
   }
 */
-// mig: fn entry_to_templata
 fn entry_to_templata() {
   panic!("Unimplemented: entry_to_templata");
 }
@@ -218,7 +211,6 @@ fn entry_to_templata() {
     }
   }
 */
-// mig: fn get_imprecise_name
 fn get_imprecise_name() {
   panic!("Unimplemented: get_imprecise_name");
 }
@@ -282,7 +274,6 @@ fn get_imprecise_name() {
     }
   }
 */
-// mig: fn code_locations_match
 fn code_locations_match() {
   panic!("Unimplemented: code_locations_match");
 }
@@ -294,10 +285,8 @@ fn code_locations_match() {
   }
 }
 */
-// mig: struct TemplatasStore
 pub struct TemplatasStore<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl TemplatasStore
 impl<'s, 't> TemplatasStore<'s, 't> {}
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
@@ -423,7 +412,6 @@ override def hashCode(): Int = vcurious()
   }
 }
 */
-// mig: fn make_top_level_environment
 fn make_top_level_environment() {
   panic!("Unimplemented: make_top_level_environment");
 }
@@ -439,10 +427,8 @@ object PackageEnvironmentT {
   }
 }
 */
-// mig: struct PackageEnvironmentT
 pub struct PackageEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl PackageEnvironmentT
 impl<'s, 't> PackageEnvironmentT<'s, 't> {}
 /*
 case class PackageEnvironmentT[+T <: INameT](
@@ -504,10 +490,8 @@ override def hashCode(): Int = hash;
   }
 }
 */
-// mig: struct CitizenEnvironmentT
 pub struct CitizenEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl CitizenEnvironmentT
 impl<'s, 't> CitizenEnvironmentT<'s, 't> {}
 /*
 case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
@@ -580,7 +564,6 @@ override def hashCode(): Int = hash;
   }
 }
 */
-// mig: fn child_of
 fn child_of() {
   panic!("Unimplemented: child_of");
 }
@@ -603,10 +586,8 @@ object GeneralEnvironmentT {
   }
 }
 */
-// mig: struct ExportEnvironmentT
 pub struct ExportEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl ExportEnvironmentT
 impl<'s, 't> ExportEnvironmentT<'s, 't> {}
 /*
 case class ExportEnvironmentT(
@@ -640,10 +621,8 @@ case class ExportEnvironmentT(
   }
 }
 */
-// mig: struct ExternEnvironmentT
 pub struct ExternEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl ExternEnvironmentT
 impl<'s, 't> ExternEnvironmentT<'s, 't> {}
 /*
 case class ExternEnvironmentT(
@@ -677,10 +656,8 @@ case class ExternEnvironmentT(
   }
 }
 */
-// mig: struct GeneralEnvironmentT
 pub struct GeneralEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl GeneralEnvironmentT
 impl<'s, 't> GeneralEnvironmentT<'s, 't> {}
 /*
 case class GeneralEnvironmentT[+T <: INameT](

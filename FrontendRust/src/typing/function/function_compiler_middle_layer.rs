@@ -40,8 +40,6 @@ use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compiler::Compiler;
 
-// mig: struct FunctionCompilerMiddleLayer
-// mig: impl FunctionCompilerMiddleLayer
 /*
 class FunctionCompilerMiddleLayer(
     opts: TypingPassOptions,
@@ -84,7 +82,6 @@ class FunctionCompilerMiddleLayer(
 //  }
 
 */
-// mig: fn evaluate_maybe_virtuality
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -149,7 +146,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_or_evaluate_templated_function_for_banner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -217,7 +213,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_or_evaluate_function_for_header
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -357,7 +352,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_function_param_types
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -388,7 +382,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_function_params
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -432,7 +425,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_maybe_return_type
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -461,7 +453,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_generic_function_banner_from_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -504,7 +495,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_generic_function_prototype_from_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -616,7 +606,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -642,7 +631,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_named_env
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

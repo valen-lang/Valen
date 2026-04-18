@@ -37,7 +37,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct StructDropMacro
 // (Scala `class StructDropMacro(opts, interner, keywords, nameTranslator, destructorCompiler)`
 //  absorbed onto `Compiler`; the three method bodies live at
 //  `Compiler::get_struct_sibling_entries_struct_drop`,
@@ -56,7 +55,6 @@ class StructDropMacro(
 
   val dropGeneratorId: StrI = keywords.dropGenerator
 */
-// mig: fn get_struct_sibling_entries
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -153,7 +151,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_implicit_drop_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -205,7 +202,6 @@ where 's: 't,
 */
 }
 
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

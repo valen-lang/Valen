@@ -26,18 +26,15 @@ import scala.collection.immutable.{List, Map, Set}
 */
 use crate::typing::compiler::Compiler;
 
-// mig: trait IBoundArgumentsSource
 pub trait IBoundArgumentsSource<'s, 't> {}
 /*
 sealed trait IBoundArgumentsSource
 */
-// mig: struct InheritBoundsFromTypeItself
 pub struct InheritBoundsFromTypeItself;
 impl<'s, 't> IBoundArgumentsSource<'s, 't> for InheritBoundsFromTypeItself {}
 /*
 case object InheritBoundsFromTypeItself extends IBoundArgumentsSource
 */
-// mig: struct UseBoundsFromContainer
 pub struct UseBoundsFromContainer;
 impl<'s, 't> IBoundArgumentsSource<'s, 't> for UseBoundsFromContainer {}
 /*
@@ -46,12 +43,10 @@ case class UseBoundsFromContainer(
   instantiationBoundArguments: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 ) extends IBoundArgumentsSource
 */
-// mig: trait ITemplataCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait ITemplataCompilerDelegate {
 */
-// mig: fn is_parent
 /*
   def isParent(
     coutputs: CompilerOutputs,
@@ -62,7 +57,6 @@ trait ITemplataCompilerDelegate {
     superKindTT: ISuperKindTT):
   IsParentResult
 */
-// mig: fn resolve_struct
 /*
   def resolveStruct(
     coutputs: CompilerOutputs,
@@ -74,7 +68,6 @@ trait ITemplataCompilerDelegate {
   ):
   IResolveOutcome[StructTT]
 */
-// mig: fn resolve_interface
 /*
   def resolveInterface(
     coutputs: CompilerOutputs,
@@ -91,7 +84,6 @@ trait ITemplataCompilerDelegate {
 
 object TemplataCompiler {
 */
-// mig: fn get_top_level_denizen_id
 fn get_top_level_denizen_id() { panic!("Unimplemented: get_top_level_denizen_id"); }
 /*
   def getTopLevelDenizenId(
@@ -115,7 +107,6 @@ fn get_top_level_denizen_id() { panic!("Unimplemented: get_top_level_denizen_id"
     IdT(id.packageCoord, initSteps, lastStep)
   }
 */
-// mig: fn get_placeholder_templata_id
 fn get_placeholder_templata_id() { panic!("Unimplemented: get_placeholder_templata_id"); }
 /*
   def getPlaceholderTemplataId(implPlaceholder: ITemplataT[ITemplataType]): IdT[IPlaceholderNameT] = {
@@ -127,7 +118,6 @@ fn get_placeholder_templata_id() { panic!("Unimplemented: get_placeholder_templa
     }
   }
 */
-// mig: fn assemble_predict_rules
 fn assemble_predict_rules() { panic!("Unimplemented: assemble_predict_rules"); }
 /*
   // See SFWPRL
@@ -147,7 +137,6 @@ fn assemble_predict_rules() { panic!("Unimplemented: assemble_predict_rules"); }
     })
   }
 */
-// mig: fn assemble_call_site_rules
 fn assemble_call_site_rules() { panic!("Unimplemented: assemble_call_site_rules"); }
 /*
   def assembleCallSiteRules(rules: Vector[IRulexSR], genericParameters: Vector[GenericParameterS], numExplicitTemplateArgs: Int): Vector[IRulexSR] = {
@@ -164,7 +153,6 @@ fn assemble_call_site_rules() { panic!("Unimplemented: assemble_call_site_rules"
       }))
   }
 */
-// mig: fn get_function_template
 fn get_function_template() { panic!("Unimplemented: get_function_template"); }
 /*
   def getFunctionTemplate(id: IdT[IFunctionNameT]): IdT[IFunctionTemplateNameT] = {
@@ -175,7 +163,6 @@ fn get_function_template() { panic!("Unimplemented: get_function_template"); }
       last.template)
   }
 */
-// mig: fn get_citizen_template
 fn get_citizen_template() { panic!("Unimplemented: get_citizen_template"); }
 /*
   def getCitizenTemplate(id: IdT[ICitizenNameT]): IdT[ICitizenTemplateNameT] = {
@@ -186,7 +173,6 @@ fn get_citizen_template() { panic!("Unimplemented: get_citizen_template"); }
       last.template)
   }
 */
-// mig: fn get_name_template
 fn get_name_template() { panic!("Unimplemented: get_name_template"); }
 /*
   def getNameTemplate(name: INameT): INameT = {
@@ -196,7 +182,6 @@ fn get_name_template() { panic!("Unimplemented: get_name_template"); }
     }
   }
 */
-// mig: fn get_super_template
 fn get_super_template() { panic!("Unimplemented: get_super_template"); }
 /*
   def getSuperTemplate(id: IdT[INameT]): IdT[INameT] = {
@@ -207,7 +192,6 @@ fn get_super_template() { panic!("Unimplemented: get_super_template"); }
       getNameTemplate(last))
   }
 */
-// mig: fn get_root_super_template
 fn get_root_super_template() { panic!("Unimplemented: get_root_super_template"); }
 /*
   // Removes lambda citizens / lambda calls from the end, so we get the root function.
@@ -231,7 +215,6 @@ fn get_root_super_template() { panic!("Unimplemented: get_root_super_template");
     removeTrailingLambdas(getSuperTemplate(id))
   }
 */
-// mig: fn get_template
 fn get_template() { panic!("Unimplemented: get_template"); }
 /*
   def getTemplate(id: IdT[IInstantiationNameT]): IdT[ITemplateNameT] = {
@@ -242,7 +225,6 @@ fn get_template() { panic!("Unimplemented: get_template"); }
       last.template)
   }
 */
-// mig: fn get_sub_kind_template
 fn get_sub_kind_template() { panic!("Unimplemented: get_sub_kind_template"); }
 /*
   def getSubKindTemplate(id: IdT[ISubKindNameT]): IdT[ISubKindTemplateNameT] = {
@@ -253,7 +235,6 @@ fn get_sub_kind_template() { panic!("Unimplemented: get_sub_kind_template"); }
       last.template)
   }
 */
-// mig: fn get_super_kind_template
 fn get_super_kind_template() { panic!("Unimplemented: get_super_kind_template"); }
 /*
   def getSuperKindTemplate(id: IdT[ISuperKindNameT]): IdT[ISuperKindTemplateNameT] = {
@@ -264,7 +245,6 @@ fn get_super_kind_template() { panic!("Unimplemented: get_super_kind_template");
       last.template)
   }
 */
-// mig: fn get_struct_template
 fn get_struct_template() { panic!("Unimplemented: get_struct_template"); }
 /*
   def getStructTemplate(id: IdT[IStructNameT]): IdT[IStructTemplateNameT] = {
@@ -275,7 +255,6 @@ fn get_struct_template() { panic!("Unimplemented: get_struct_template"); }
       last.template)
   }
 */
-// mig: fn get_interface_template
 fn get_interface_template() { panic!("Unimplemented: get_interface_template"); }
 /*
   def getInterfaceTemplate(id: IdT[IInterfaceNameT]): IdT[IInterfaceTemplateNameT] = {
@@ -286,7 +265,6 @@ fn get_interface_template() { panic!("Unimplemented: get_interface_template"); }
       last.template)
   }
 */
-// mig: fn get_export_template
 fn get_export_template() { panic!("Unimplemented: get_export_template"); }
 /*
   def getExportTemplate(id: IdT[ExportNameT]): IdT[ExportTemplateNameT] = {
@@ -297,7 +275,6 @@ fn get_export_template() { panic!("Unimplemented: get_export_template"); }
       last.template)
   }
 */
-// mig: fn get_extern_template
 fn get_extern_template() { panic!("Unimplemented: get_extern_template"); }
 /*
   def getExternTemplate(id: IdT[ExternNameT]): IdT[ExternTemplateNameT] = {
@@ -308,7 +285,6 @@ fn get_extern_template() { panic!("Unimplemented: get_extern_template"); }
       last.template)
   }
 */
-// mig: fn get_impl_template
 fn get_impl_template() { panic!("Unimplemented: get_impl_template"); }
 /*
   def getImplTemplate(id: IdT[IImplNameT]): IdT[IImplTemplateNameT] = {
@@ -319,7 +295,6 @@ fn get_impl_template() { panic!("Unimplemented: get_impl_template"); }
       last.template)
   }
 */
-// mig: fn get_placeholder_template
 fn get_placeholder_template() { panic!("Unimplemented: get_placeholder_template"); }
 /*
   def getPlaceholderTemplate(id: IdT[KindPlaceholderNameT]): IdT[KindPlaceholderTemplateNameT] = {
@@ -330,7 +305,6 @@ fn get_placeholder_template() { panic!("Unimplemented: get_placeholder_template"
       last.template)
   }
 */
-// mig: fn assemble_rune_to_function_bound
 fn assemble_rune_to_function_bound() { panic!("Unimplemented: assemble_rune_to_function_bound"); }
 /*
   def assembleRuneToFunctionBound(templatas: TemplatasStore): Map[IRuneS, PrototypeT[FunctionBoundNameT]] = {
@@ -342,7 +316,6 @@ fn assemble_rune_to_function_bound() { panic!("Unimplemented: assemble_rune_to_f
     }).toMap
   }
 */
-// mig: fn assemble_rune_to_impl_bound
 fn assemble_rune_to_impl_bound() { panic!("Unimplemented: assemble_rune_to_impl_bound"); }
 /*
   def assembleRuneToImplBound(templatas: TemplatasStore): Map[IRuneS, IdT[ImplBoundNameT]] = {
@@ -354,7 +327,6 @@ fn assemble_rune_to_impl_bound() { panic!("Unimplemented: assemble_rune_to_impl_
     }).toMap
   }
 */
-// mig: fn substitute_templatas_in_coord
 fn substitute_templatas_in_coord() { panic!("Unimplemented: substitute_templatas_in_coord"); }
 /*
   def substituteTemplatasInCoord(
@@ -389,7 +361,6 @@ fn substitute_templatas_in_coord() { panic!("Unimplemented: substitute_templatas
 
   }
 */
-// mig: fn substitute_templatas_in_kind
 fn substitute_templatas_in_kind() { panic!("Unimplemented: substitute_templatas_in_kind"); }
 /*
   // This returns an ITemplata because...
@@ -459,7 +430,6 @@ fn substitute_templatas_in_kind() { panic!("Unimplemented: substitute_templatas_
     }
   }
 */
-// mig: fn substitute_templatas_in_struct
 fn substitute_templatas_in_struct() { panic!("Unimplemented: substitute_templatas_in_struct"); }
 /*
   def substituteTemplatasInStruct(
@@ -507,7 +477,6 @@ fn substitute_templatas_in_struct() { panic!("Unimplemented: substitute_templata
     newStruct
   }
 */
-// mig: fn translate_instantiation_bounds
 fn translate_instantiation_bounds() { panic!("Unimplemented: translate_instantiation_bounds"); }
 /*
   private def translateInstantiationBounds(
@@ -607,7 +576,6 @@ fn translate_instantiation_bounds() { panic!("Unimplemented: translate_instantia
     }
   }
 */
-// mig: fn substitute_templatas_in_impl_id
 fn substitute_templatas_in_impl_id() { panic!("Unimplemented: substitute_templatas_in_impl_id"); }
 /*
   def substituteTemplatasInImplId[T <: IImplNameT](
@@ -653,7 +621,6 @@ fn substitute_templatas_in_impl_id() { panic!("Unimplemented: substitute_templat
     return result
   }
 */
-// mig: fn substitute_templatas_in_bounds
 fn substitute_templatas_in_bounds() { panic!("Unimplemented: substitute_templatas_in_bounds"); }
 /*
   def substituteTemplatasInBounds(
@@ -688,7 +655,6 @@ fn substitute_templatas_in_bounds() { panic!("Unimplemented: substitute_templata
       }))
   }
 */
-// mig: fn substitute_templatas_in_interface
 fn substitute_templatas_in_interface() { panic!("Unimplemented: substitute_templatas_in_interface"); }
 /*
   def substituteTemplatasInInterface(
@@ -728,7 +694,6 @@ fn substitute_templatas_in_interface() { panic!("Unimplemented: substitute_templ
     newInterface
   }
 */
-// mig: fn substitute_templatas_in_templata
 fn substitute_templatas_in_templata() { panic!("Unimplemented: substitute_templatas_in_templata"); }
 /*
   def substituteTemplatasInTemplata(
@@ -765,7 +730,6 @@ fn substitute_templatas_in_templata() { panic!("Unimplemented: substitute_templa
     }
   }
 */
-// mig: fn substitute_templatas_in_prototype
 fn substitute_templatas_in_prototype() { panic!("Unimplemented: substitute_templatas_in_prototype"); }
 /*
   def substituteTemplatasInPrototype[T <: IFunctionNameT](
@@ -814,7 +778,6 @@ fn substitute_templatas_in_prototype() { panic!("Unimplemented: substitute_templ
     return result
   }
 */
-// mig: fn substitute_templatas_in_function_bound_id
 fn substitute_templatas_in_function_bound_id() { panic!("Unimplemented: substitute_templatas_in_function_bound_id"); }
 /*
   def substituteTemplatasInFunctionBoundId(
@@ -874,33 +837,26 @@ fn substitute_templatas_in_function_bound_id() { panic!("Unimplemented: substitu
   //   newId
   // }
 */
-// mig: trait IPlaceholderSubstituter
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
   trait IPlaceholderSubstituter {
 */
-// mig: fn substitute_for_coord
 /*
     def substituteForCoord(coutputs: CompilerOutputs, coordT: CoordT): CoordT
 */
-// mig: fn substitute_for_interface
 /*
     def substituteForInterface(coutputs: CompilerOutputs, interfaceTT: InterfaceTT): InterfaceTT
 */
-// mig: fn substitute_for_templata
 /*
     def substituteForTemplata(coutputs: CompilerOutputs, coordT: ITemplataT[ITemplataType]): ITemplataT[ITemplataType]
 */
-// mig: fn substitute_for_prototype
 /*
     def substituteForPrototype[T <: IFunctionNameT](coutputs: CompilerOutputs, proto: PrototypeT[T]): PrototypeT[T]
 */
-// mig: fn substitute_for_impl_id
 /*
     def substituteForImplId[T <: IImplNameT](coutputs: CompilerOutputs, implId: IdT[T]): IdT[T]
   }
 */
-// mig: fn get_placeholder_substituter
 fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substituter"); }
 /*
   def getPlaceholderSubstituter(
@@ -927,7 +883,6 @@ fn get_placeholder_substituter() { panic!("Unimplemented: get_placeholder_substi
       boundArgumentsSource)
   }
 */
-// mig: fn get_placeholder_substituter
 fn get_placeholder_substituter_ext() { panic!("Unimplemented: get_placeholder_substituter"); }
 /*
   // Let's say you have the line:
@@ -990,7 +945,6 @@ fn get_placeholder_substituter_ext() { panic!("Unimplemented: get_placeholder_su
 //  }
 
 */
-// mig: fn get_reachable_bounds
 fn get_reachable_bounds() { panic!("Unimplemented: get_reachable_bounds"); }
 /*
   def getReachableBounds(
@@ -1022,7 +976,6 @@ fn get_reachable_bounds() { panic!("Unimplemented: get_reachable_bounds"); }
           .toMap)
   }
 */
-// mig: fn get_first_unsolved_identifying_rune
 fn get_first_unsolved_identifying_rune() { panic!("Unimplemented: get_first_unsolved_identifying_rune"); }
 /*
   def getFirstUnsolvedIdentifyingRune(
@@ -1039,7 +992,6 @@ fn get_first_unsolved_identifying_rune() { panic!("Unimplemented: get_first_unso
       .headOption
   }
 */
-// mig: fn create_rune_type_solver_env
 fn create_rune_type_solver_env() { panic!("Unimplemented: create_rune_type_solver_env"); }
 /*
   def createRuneTypeSolverEnv(parentEnv: IInDenizenEnvironmentT): IRuneTypeSolverEnv = {
@@ -1070,8 +1022,6 @@ fn create_rune_type_solver_env() { panic!("Unimplemented: create_rune_type_solve
   }
 }
 */
-// mig: struct TemplataCompiler
-// mig: impl TemplataCompiler
 /*
 class TemplataCompiler(
   interner: Interner,
@@ -1080,7 +1030,6 @@ class TemplataCompiler(
   nameTranslator: NameTranslator,
   delegate: ITemplataCompilerDelegate) {
 */
-// mig: fn is_type_convertible
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1160,7 +1109,6 @@ where 's: 't,
 */
 }
 
-// mig: fn pointify_kind
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1259,7 +1207,6 @@ where 's: 't,
 */
 }
 
-// mig: fn lookup_templata
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1279,7 +1226,6 @@ where 's: 't,
 */
 }
 
-// mig: fn lookup_templata
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1303,7 +1249,6 @@ where 's: 't,
 */
 }
 
-// mig: fn coerce_kind_to_coord
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1324,7 +1269,6 @@ where 's: 't,
 */
 }
 
-// mig: fn coerce_to_coord
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1392,7 +1336,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_struct_template
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1405,7 +1348,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_interface_template
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1418,7 +1360,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_citizen_template
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1433,7 +1374,6 @@ where 's: 't,
 */
 }
 
-// mig: fn citizen_is_from_template
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1453,7 +1393,6 @@ where 's: 't,
 */
 }
 
-// mig: fn create_placeholder
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1512,7 +1451,6 @@ where 's: 't,
 */
 }
 
-// mig: fn create_coord_placeholder_inner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1540,7 +1478,6 @@ where 's: 't,
 */
 }
 
-// mig: fn create_kind_placeholder_inner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1583,7 +1520,6 @@ where 's: 't,
 */
 }
 
-// mig: fn create_non_kind_non_region_placeholder_inner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

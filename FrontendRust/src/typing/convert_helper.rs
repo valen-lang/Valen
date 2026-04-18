@@ -31,12 +31,10 @@ use crate::typing::env::environment::*;
 use crate::typing::compiler_outputs::*;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::compiler::Compiler;
-// mig: trait IConvertHelperDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IConvertHelperDelegate {
 */
-// mig: fn is_parent
 /*
   def isParent(
     coutputs: CompilerOutputs,
@@ -50,14 +48,11 @@ trait IConvertHelperDelegate {
 
 
 */
-// mig: struct ConvertHelper
-// mig: impl ConvertHelper
 /*
 class ConvertHelper(
     opts: TypingPassOptions,
     delegate: IConvertHelperDelegate) {
 */
-// mig: fn convert_exprs
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -99,7 +94,6 @@ where 's: 't,
 */
 }
 
-// mig: fn convert
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -189,7 +183,6 @@ where 's: 't,
 */
 }
 
-// mig: fn convert
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

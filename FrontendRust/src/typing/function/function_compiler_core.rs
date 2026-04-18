@@ -27,7 +27,6 @@ use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct ResultTypeMismatchError
 pub struct ResultTypeMismatchError<'s, 't> {
     pub expected_type: CoordT<'s, 't>,
     pub actual_type: CoordT<'s, 't>,
@@ -39,8 +38,6 @@ override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 
 */
-// mig: struct FunctionCompilerCore
-// mig: impl FunctionCompilerCore
 /*
 class FunctionCompilerCore(
     opts: TypingPassOptions,
@@ -81,7 +78,6 @@ class FunctionCompilerCore(
   })
 
 */
-// mig: fn evaluate_function_for_header
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -268,7 +264,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_function_prototype_for_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -293,7 +288,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_function_prototype_inner_for_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -319,7 +313,6 @@ where 's: 't,
 */
 }
 
-// mig: fn finalize_header
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -349,7 +342,6 @@ where 's: 't,
 */
 }
 
-// mig: fn finish_function_maybe_deferred
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -413,7 +405,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_attributes
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -433,7 +424,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_extern_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -492,7 +482,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_function_attributes
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -21,14 +21,12 @@ use crate::typing::templata::templata::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::ast::ast::*;
 
-// mig: trait IExpressionResultT
 pub enum IExpressionResultT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 trait IExpressionResultT  {
 */
-// mig: fn expect_reference
 fn expression_result_expect_reference<'s, 't>() -> ReferenceResultT<'s, 't> { panic!("Unimplemented: expect_reference"); }
 /*
   def expectReference(): ReferenceResultT = {
@@ -38,7 +36,6 @@ fn expression_result_expect_reference<'s, 't>() -> ReferenceResultT<'s, 't> { pa
     }
   }
 */
-// mig: fn expect_address
 fn expression_result_expect_address<'s, 't>() -> AddressResultT<'s, 't> { panic!("Unimplemented: expect_address"); }
 /*
   def expectAddress(): AddressResultT = {
@@ -48,46 +45,38 @@ fn expression_result_expect_address<'s, 't>() -> AddressResultT<'s, 't> { panic!
     }
   }
 */
-// mig: fn underlying_coord
 fn expression_result_underlying_coord<'s, 't>() -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
 /*
   def underlyingCoord: CoordT
 */
-// mig: fn kind
 fn expression_result_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   def kind: KindT
 }
 */
-// mig: struct AddressResultT
 pub struct AddressResultT<'s, 't> { pub coord: CoordT<'s, 't> }
-// mig: impl AddressResultT
 impl<'s, 't> AddressResultT<'s, 't> {}
 /*
 case class AddressResultT(coord: CoordT) extends IExpressionResultT {
 */
-// mig: fn equals
 impl<'s, 't> AddressResultT<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> AddressResultT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
   override def hashCode(): Int = vcurious()
 */
-// mig: fn underlying_coord
 impl<'s, 't> AddressResultT<'s, 't> {
     fn underlying_coord(&self) -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
 }
 /*
   override def underlyingCoord: CoordT = coord
 */
-// mig: fn kind
 impl<'s, 't> AddressResultT<'s, 't> {
     fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 }
@@ -95,35 +84,29 @@ impl<'s, 't> AddressResultT<'s, 't> {
   override def kind = coord.kind
 }
 */
-// mig: struct ReferenceResultT
 pub struct ReferenceResultT<'s, 't> { pub coord: CoordT<'s, 't> }
-// mig: impl ReferenceResultT
 impl<'s, 't> ReferenceResultT<'s, 't> {}
 /*
 case class ReferenceResultT(coord: CoordT) extends IExpressionResultT {
 */
-// mig: fn equals
 impl<'s, 't> ReferenceResultT<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ReferenceResultT<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
   override def hashCode(): Int = vcurious()
 */
-// mig: fn underlying_coord
 impl<'s, 't> ReferenceResultT<'s, 't> {
     fn underlying_coord(&self) -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
 }
 /*
   override def underlyingCoord: CoordT = coord
 */
-// mig: fn kind
 impl<'s, 't> ReferenceResultT<'s, 't> {
     fn kind(&self) -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 }
@@ -131,43 +114,36 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
   override def kind = coord.kind
 }
 */
-// mig: trait ExpressionT
 pub enum ExpressionT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 trait ExpressionT  {
 */
-// mig: fn result
 fn expression_result<'s, 't>() -> IExpressionResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   def result: IExpressionResultT
 */
-// mig: fn kind
 fn expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   def kind: KindT
 }
 */
-// mig: trait ReferenceExpressionTE
 pub enum ReferenceExpressionTE<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
 /*
 trait ReferenceExpressionTE extends ExpressionT {
 */
-// mig: fn result
 fn reference_expression_result<'s, 't>() -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result: ReferenceResultT
 */
-// mig: fn kind
 fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = result.coord.kind
 }
 */
-// mig: trait AddressExpressionTE
 pub enum AddressExpressionTE<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -176,22 +152,18 @@ pub enum AddressExpressionTE<'s, 't> {
 // directly into a struct (closures!), which can have addressible members.
 trait AddressExpressionTE extends ExpressionT {
 */
-// mig: fn result
 fn address_expression_result<'s, 't>() -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result: AddressResultT
 */
-// mig: fn kind
 fn address_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = result.coord.kind
 */
-// mig: fn range
 fn address_expression_range<'s>() -> RangeS<'s> { panic!("Unimplemented: range"); }
 /*
   def range: RangeS
 */
-// mig: fn variability
 fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: variability"); }
 /*
   // Whether or not we can change where this address points to
@@ -199,9 +171,7 @@ fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: var
 }
 
 */
-// mig: struct LetAndLendTE
 pub struct LetAndLendTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub expr: ReferenceExpressionTE<'s, 't>, pub target_ownership: OwnershipT }
-// mig: impl LetAndLendTE
 impl<'s, 't> LetAndLendTE<'s, 't> {}
 /*
 case class LetAndLendTE(
@@ -210,14 +180,12 @@ case class LetAndLendTE(
   targetOwnership: OwnershipT
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> LetAndLendTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> LetAndLendTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
@@ -236,7 +204,6 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
   }
 
 */
-// mig: fn result
 impl<'s, 't> LetAndLendTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -248,9 +215,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 }
 
 */
-// mig: struct LockWeakTE
 pub struct LockWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub result_opt_borrow_type: CoordT<'s, 't>, pub some_constructor: PrototypeT<'s, 't>, pub none_constructor: PrototypeT<'s, 't>, pub some_impl_name: IdT<'s, 't>, pub none_impl_name: IdT<'s, 't> }
-// mig: impl LockWeakTE
 impl<'s, 't> LockWeakTE<'s, 't> {}
 /*
 case class LockWeakTE(
@@ -272,21 +237,18 @@ case class LockWeakTE(
   noneImplName: IdT[IImplNameT],
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> LockWeakTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> LockWeakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
   override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> LockWeakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -297,9 +259,7 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 }
 
 */
-// mig: struct BorrowToWeakTE
 pub struct BorrowToWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl BorrowToWeakTE
 impl<'s, 't> BorrowToWeakTE<'s, 't> {}
 /*
 // Turns a borrow ref into a weak ref
@@ -311,14 +271,12 @@ case class BorrowToWeakTE(
   vassert(innerExpr.result.coord.ownership == BorrowT)
 
 */
-// mig: fn equals
 impl<'s, 't> BorrowToWeakTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> BorrowToWeakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
@@ -329,7 +287,6 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
   }
 
 */
-// mig: fn result
 impl<'s, 't> BorrowToWeakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -340,9 +297,7 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 }
 
 */
-// mig: struct LetNormalTE
 pub struct LetNormalTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl LetNormalTE
 impl<'s, 't> LetNormalTE<'s, 't> {}
 /*
 case class LetNormalTE(
@@ -350,21 +305,18 @@ case class LetNormalTE(
     expr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> LetNormalTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> LetNormalTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
   override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> LetNormalTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -390,29 +342,24 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 }
 
 */
-// mig: struct UnletTE
 pub struct UnletTE<'s, 't> { pub variable: ILocalVariableT<'s, 't> }
-// mig: impl UnletTE
 impl<'s, 't> UnletTE<'s, 't> {}
 /*
 // Only ExpressionCompiler.unletLocal should make these
 case class UnletTE(variable: ILocalVariableT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> UnletTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> UnletTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
   override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> UnletTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -423,9 +370,7 @@ impl<'s, 't> UnletTE<'s, 't> {
 }
 
 */
-// mig: struct DiscardTE
 pub struct DiscardTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl DiscardTE
 impl<'s, 't> DiscardTE<'s, 't> {}
 /*
 // Throws away a reference.
@@ -440,21 +385,18 @@ case class DiscardTE(
   expr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> DiscardTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DiscardTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DiscardTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -481,9 +423,7 @@ impl<'s, 't> DiscardTE<'s, 't> {
 }
 
 */
-// mig: struct DeferTE
 pub struct DeferTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub deferred_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl DeferTE
 impl<'s, 't> DeferTE<'s, 't> {}
 /*
 case class DeferTE(
@@ -492,21 +432,18 @@ case class DeferTE(
   deferredExpr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> DeferTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DeferTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DeferTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -518,9 +455,7 @@ impl<'s, 't> DeferTE<'s, 't> {
 
 
 */
-// mig: struct IfTE
 pub struct IfTE<'s, 't> { pub condition: ReferenceExpressionTE<'s, 't>, pub then_call: ReferenceExpressionTE<'s, 't>, pub else_call: ReferenceExpressionTE<'s, 't> }
-// mig: impl IfTE
 impl<'s, 't> IfTE<'s, 't> {}
 /*
 // Eventually, when we want to do if-let, we'll have a different construct
@@ -531,21 +466,18 @@ case class IfTE(
     thenCall: ReferenceExpressionTE,
     elseCall: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> IfTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> IfTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> IfTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -576,9 +508,7 @@ impl<'s, 't> IfTE<'s, 't> {
 }
 
 */
-// mig: struct WhileTE
 pub struct WhileTE<'s, 't> { pub block: BlockTE<'s, 't> }
-// mig: impl WhileTE
 impl<'s, 't> WhileTE<'s, 't> {}
 /*
 // The block is expected to return a boolean (false = stop, true = keep going).
@@ -596,21 +526,18 @@ case class WhileTE(block: BlockTE) extends ReferenceExpressionTE {
     }
 
 */
-// mig: fn equals
 impl<'s, 't> WhileTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> WhileTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> WhileTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -620,9 +547,7 @@ impl<'s, 't> WhileTE<'s, 't> {
 }
 
 */
-// mig: struct MutateTE
 pub struct MutateTE<'s, 't> { pub destination_expr: AddressExpressionTE<'s, 't>, pub source_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl MutateTE
 impl<'s, 't> MutateTE<'s, 't> {}
 /*
 case class MutateTE(
@@ -630,21 +555,18 @@ case class MutateTE(
   sourceExpr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> MutateTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> MutateTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> MutateTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -653,9 +575,7 @@ impl<'s, 't> MutateTE<'s, 't> {
 }
 
 */
-// mig: struct RestackifyTE
 pub struct RestackifyTE<'s, 't> { pub variable: ILocalVariableT<'s, 't>, pub source_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl RestackifyTE
 impl<'s, 't> RestackifyTE<'s, 't> {}
 /*
 case class RestackifyTE(
@@ -663,21 +583,18 @@ case class RestackifyTE(
   sourceExpr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> RestackifyTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> RestackifyTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> RestackifyTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -686,9 +603,7 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 }
 
 */
-// mig: struct TransmigrateTE
 pub struct TransmigrateTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_region: RegionT }
-// mig: impl TransmigrateTE
 impl<'s, 't> TransmigrateTE<'s, 't> {}
 /*
 case class TransmigrateTE(
@@ -697,21 +612,18 @@ case class TransmigrateTE(
 ) extends ReferenceExpressionTE {
   vassert(sourceExpr.kind.isPrimitive)
 */
-// mig: fn equals
 impl<'s, 't> TransmigrateTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> TransmigrateTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> TransmigrateTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -721,30 +633,25 @@ impl<'s, 't> TransmigrateTE<'s, 't> {
 
 
 */
-// mig: struct ReturnTE
 pub struct ReturnTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl ReturnTE
 impl<'s, 't> ReturnTE<'s, 't> {}
 /*
 case class ReturnTE(
   sourceExpr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ReturnTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ReturnTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ReturnTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -755,28 +662,23 @@ impl<'s, 't> ReturnTE<'s, 't> {
 }
 
 */
-// mig: struct BreakTE
 pub struct BreakTE<'s, 't> { pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl BreakTE
 impl<'s, 't> BreakTE<'s, 't> {}
 /*
 case class BreakTE(region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> BreakTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> BreakTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> BreakTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -787,9 +689,7 @@ impl<'s, 't> BreakTE<'s, 't> {
 }
 
 */
-// mig: struct BlockTE
 pub struct BlockTE<'s, 't> { pub inner: ReferenceExpressionTE<'s, 't> }
-// mig: impl BlockTE
 impl<'s, 't> BlockTE<'s, 't> {}
 /*
 // when we make a closure, we make a struct full of pointers to all our variables
@@ -802,21 +702,18 @@ case class BlockTE(
     inner: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> BlockTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> BlockTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> BlockTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -825,9 +722,7 @@ impl<'s, 't> BlockTE<'s, 't> {
 }
 
 */
-// mig: struct PureTE
 pub struct PureTE<'s, 't> { pub newdefault_region: RegionT, pub inner: ReferenceExpressionTE<'s, 't>, pub result_type: CoordT<'s, 't> }
-// mig: impl PureTE
 impl<'s, 't> PureTE<'s, 't> {}
 /*
 // A pure block will:
@@ -848,21 +743,18 @@ case class PureTE(
   vpass()
 
 */
-// mig: fn equals
 impl<'s, 't> PureTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> PureTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> PureTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -871,28 +763,23 @@ impl<'s, 't> PureTE<'s, 't> {
 }
 
 */
-// mig: struct ConsecutorTE
 pub struct ConsecutorTE<'s, 't> { pub exprs: Vec<ReferenceExpressionTE<'s, 't>> }
-// mig: impl ConsecutorTE
 impl<'s, 't> ConsecutorTE<'s, 't> {}
 /*
 case class ConsecutorTE(exprs: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConsecutorTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConsecutorTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConsecutorTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -943,7 +830,6 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
       case None => exprs.last.result
     }
 */
-// mig: fn last_reference_expr
 impl<'s, 't> ConsecutorTE<'s, 't> {
     fn last_reference_expr(&self) -> &ReferenceExpressionTE<'s, 't> { panic!("Unimplemented: last_reference_expr"); }
 }
@@ -952,30 +838,25 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 }
 
 */
-// mig: struct TupleTE
 pub struct TupleTE<'s, 't> { pub elements: Vec<ReferenceExpressionTE<'s, 't>>, pub result_reference: CoordT<'s, 't> }
-// mig: impl TupleTE
 impl<'s, 't> TupleTE<'s, 't> {}
 /*
 case class TupleTE(
     elements: Vector[ReferenceExpressionTE],
     resultReference: CoordT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> TupleTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> TupleTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> TupleTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -997,9 +878,7 @@ override def hashCode(): Int = vcurious()
 //  override def result = ReferenceResultT(CoordT(ShareT, NeverT()))
 //}
 */
-// mig: struct StaticArrayFromValuesTE
 pub struct StaticArrayFromValuesTE<'s, 't> { pub elements: Vec<ReferenceExpressionTE<'s, 't>>, pub result_reference: CoordT<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't> }
-// mig: impl StaticArrayFromValuesTE
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {}
 /*
 case class StaticArrayFromValuesTE(
@@ -1008,21 +887,18 @@ case class StaticArrayFromValuesTE(
   arrayType: StaticSizedArrayTT,
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -1031,28 +907,23 @@ impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
 }
 
 */
-// mig: struct ArraySizeTE
 pub struct ArraySizeTE<'s, 't> { pub array: ReferenceExpressionTE<'s, 't> }
-// mig: impl ArraySizeTE
 impl<'s, 't> ArraySizeTE<'s, 't> {}
 /*
 case class ArraySizeTE(array: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ArraySizeTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ArraySizeTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ArraySizeTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -1061,29 +932,24 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 }
 
 */
-// mig: struct IsSameInstanceTE
 pub struct IsSameInstanceTE<'s, 't> { pub left: ReferenceExpressionTE<'s, 't>, pub right: ReferenceExpressionTE<'s, 't> }
-// mig: impl IsSameInstanceTE
 impl<'s, 't> IsSameInstanceTE<'s, 't> {}
 /*
 // Can we do an === of objects in two regions? It could be pretty useful.
 case class IsSameInstanceTE(left: ReferenceExpressionTE, right: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
     fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); }
 }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
     fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 }
@@ -1094,9 +960,7 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 }
 
 */
-// mig: struct AsSubtypeTE
 pub struct AsSubtypeTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_type: CoordT<'s, 't>, pub result_result_type: CoordT<'s, 't>, pub ok_constructor: PrototypeT<'s, 't>, pub err_constructor: PrototypeT<'s, 't>, pub impl_name: IdT<'s, 't>, pub ok_impl_name: IdT<'s, 't>, pub err_impl_name: IdT<'s, 't> }
-// mig: impl AsSubtypeTE
 impl<'s, 't> AsSubtypeTE<'s, 't> {}
 /*
 case class AsSubtypeTE(
@@ -1123,65 +987,52 @@ case class AsSubtypeTE(
   vpass()
 
 */
-// mig: fn equals
 impl<'s, 't> AsSubtypeTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> AsSubtypeTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> AsSubtypeTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = ReferenceResultT(resultResultType)
 }
 
 */
-// mig: struct VoidLiteralTE
 pub struct VoidLiteralTE<'s, 't> { pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl VoidLiteralTE
 impl<'s, 't> VoidLiteralTE<'s, 't> {}
 /*
 case class VoidLiteralTE(region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> VoidLiteralTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> VoidLiteralTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> VoidLiteralTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, region, VoidT()))
 }
 
 */
-// mig: struct ConstantIntTE
 pub struct ConstantIntTE<'s, 't> { pub value: ITemplataT<'s, 't>, pub bits: i32, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl ConstantIntTE
 impl<'s, 't> ConstantIntTE<'s, 't> {}
 /*
 case class ConstantIntTE(value: ITemplataT[IntegerTemplataType], bits: Int, region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConstantIntTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConstantIntTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConstantIntTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = {
@@ -1190,81 +1041,64 @@ impl<'s, 't> ConstantIntTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 }
 
 */
-// mig: struct ConstantBoolTE
 pub struct ConstantBoolTE<'s, 't> { pub value: bool, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl ConstantBoolTE
 impl<'s, 't> ConstantBoolTE<'s, 't> {}
 /*
 case class ConstantBoolTE(value: Boolean, region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConstantBoolTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConstantBoolTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConstantBoolTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, region, BoolT()))
 }
 
 */
-// mig: struct ConstantStrTE
 pub struct ConstantStrTE<'s, 't> { pub value: String, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl ConstantStrTE
 impl<'s, 't> ConstantStrTE<'s, 't> {}
 /*
 case class ConstantStrTE(value: String, region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConstantStrTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConstantStrTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConstantStrTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, region, StrT()))
 }
 
 */
-// mig: struct ConstantFloatTE
 pub struct ConstantFloatTE<'s, 't> { pub value: f64, pub region: RegionT, pub _phantom: std::marker::PhantomData<(&'s (), &'t ())> }
-// mig: impl ConstantFloatTE
 impl<'s, 't> ConstantFloatTE<'s, 't> {}
 /*
 case class ConstantFloatTE(value: Double, region: RegionT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConstantFloatTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConstantFloatTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConstantFloatTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, region, FloatT()))
 }
 
 */
-// mig: struct LocalLookupTE
 pub struct LocalLookupTE<'s, 't> { pub range: RangeS<'s>, pub local_variable: ILocalVariableT<'s, 't> }
-// mig: impl LocalLookupTE
 impl<'s, 't> LocalLookupTE<'s, 't> {}
 /*
 case class LocalLookupTE(
@@ -1273,31 +1107,25 @@ case class LocalLookupTE(
   localVariable: ILocalVariableT
 ) extends AddressExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> LocalLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> LocalLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> LocalLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: AddressResultT = AddressResultT(localVariable.coord)
 */
-// mig: fn variability
 impl<'s, 't> LocalLookupTE<'s, 't> { fn variability(&self) -> VariabilityT { panic!("Unimplemented: variability"); } }
 /*
   override def variability: VariabilityT = localVariable.variability
 }
 
 */
-// mig: struct ArgLookupTE
 pub struct ArgLookupTE<'s, 't> { pub param_index: i32, pub coord: CoordT<'s, 't> }
-// mig: impl ArgLookupTE
 impl<'s, 't> ArgLookupTE<'s, 't> {}
 /*
 case class ArgLookupTE(
@@ -1305,26 +1133,21 @@ case class ArgLookupTE(
     coord: CoordT
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ArgLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ArgLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ArgLookupTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = ReferenceResultT(coord)
 }
 
 */
-// mig: struct StaticSizedArrayLookupTE
 pub struct StaticSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub element_type: CoordT<'s, 't>, pub variability: VariabilityT }
-// mig: impl StaticSizedArrayLookupTE
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {}
 /*
 case class StaticSizedArrayLookupTE(
@@ -1338,17 +1161,14 @@ case class StaticSizedArrayLookupTE(
     variability: VariabilityT
 ) extends AddressExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = {
@@ -1358,9 +1178,7 @@ impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> { fn result(&self) -> AddressResul
 }
 
 */
-// mig: struct RuntimeSizedArrayLookupTE
 pub struct RuntimeSizedArrayLookupTE<'s, 't> { pub range: RangeS<'s>, pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub index_expr: ReferenceExpressionTE<'s, 't>, pub variability: VariabilityT }
-// mig: impl RuntimeSizedArrayLookupTE
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {}
 /*
 case class RuntimeSizedArrayLookupTE(
@@ -1372,17 +1190,14 @@ case class RuntimeSizedArrayLookupTE(
   variability: VariabilityT
 ) extends AddressExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert(arrayExpr.result.coord.kind == arrayType)
@@ -1394,33 +1209,26 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> { fn result(&self) -> AddressResu
 }
 
 */
-// mig: struct ArrayLengthTE
 pub struct ArrayLengthTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl ArrayLengthTE
 impl<'s, 't> ArrayLengthTE<'s, 't> {}
 /*
 case class ArrayLengthTE(arrayExpr: ReferenceExpressionTE) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ArrayLengthTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ArrayLengthTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ArrayLengthTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, IntT.i32))
 }
 
 */
-// mig: struct ReferenceMemberLookupTE
 pub struct ReferenceMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub member_reference: CoordT<'s, 't>, pub variability: VariabilityT }
-// mig: impl ReferenceMemberLookupTE
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {}
 /*
 case class ReferenceMemberLookupTE(
@@ -1434,17 +1242,14 @@ case class ReferenceMemberLookupTE(
     // See RMLRMO for why we dont have a targetOwnership field here.
     variability: VariabilityT) extends AddressExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = {
@@ -1453,9 +1258,7 @@ impl<'s, 't> ReferenceMemberLookupTE<'s, 't> { fn result(&self) -> AddressResult
   }
 }
 */
-// mig: struct AddressMemberLookupTE
 pub struct AddressMemberLookupTE<'s, 't> { pub range: RangeS<'s>, pub struct_expr: ReferenceExpressionTE<'s, 't>, pub member_name: IVarNameT<'s, 't>, pub result_type2: CoordT<'s, 't>, pub variability: VariabilityT }
-// mig: impl AddressMemberLookupTE
 impl<'s, 't> AddressMemberLookupTE<'s, 't> {}
 /*
 case class AddressMemberLookupTE(
@@ -1465,26 +1268,21 @@ case class AddressMemberLookupTE(
     resultType2: CoordT,
     variability: VariabilityT) extends AddressExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> AddressMemberLookupTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> AddressMemberLookupTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> AddressMemberLookupTE<'s, 't> { fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result = AddressResultT(resultType2)
 }
 
 */
-// mig: struct InterfaceFunctionCallTE
 pub struct InterfaceFunctionCallTE<'s, 't> { pub super_function_prototype: PrototypeT<'s, 't>, pub virtual_param_index: i32, pub result_reference: CoordT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>> }
-// mig: impl InterfaceFunctionCallTE
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {}
 /*
 case class InterfaceFunctionCallTE(
@@ -1493,43 +1291,35 @@ case class InterfaceFunctionCallTE(
     resultReference: CoordT,
     args: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(resultReference)
 }
 
 */
-// mig: struct ExternFunctionCallTE
 pub struct ExternFunctionCallTE<'s, 't> { pub prototype2: PrototypeT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>> }
-// mig: impl ExternFunctionCallTE
 impl<'s, 't> ExternFunctionCallTE<'s, 't> {}
 /*
 case class ExternFunctionCallTE(
     prototype2: PrototypeT[ExternFunctionNameT],
     args: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ExternFunctionCallTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ExternFunctionCallTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ExternFunctionCallTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   // We dont:
@@ -1549,9 +1339,7 @@ impl<'s, 't> ExternFunctionCallTE<'s, 't> { fn result(&self) -> ReferenceResultT
 }
 
 */
-// mig: struct FunctionCallTE
 pub struct FunctionCallTE<'s, 't> { pub callable: PrototypeT<'s, 't>, pub args: Vec<ReferenceExpressionTE<'s, 't>>, pub return_type: CoordT<'s, 't> }
-// mig: impl FunctionCallTE
 impl<'s, 't> FunctionCallTE<'s, 't> {}
 /*
 case class FunctionCallTE(
@@ -1562,17 +1350,14 @@ case class FunctionCallTE(
   returnType: CoordT
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> FunctionCallTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> FunctionCallTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> FunctionCallTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert(callable.paramTypes.size == args.size)
@@ -1585,9 +1370,7 @@ impl<'s, 't> FunctionCallTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, '
 }
 
 */
-// mig: struct ReinterpretTE
 pub struct ReinterpretTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub result_reference: CoordT<'s, 't> }
-// mig: impl ReinterpretTE
 impl<'s, 't> ReinterpretTE<'s, 't> {}
 /*
 // A typingpass reinterpret is interpreting a type as a different one which is hammer-equivalent.
@@ -1599,17 +1382,14 @@ case class ReinterpretTE(
     expr: ReferenceExpressionTE,
     resultReference: CoordT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ReinterpretTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ReinterpretTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ReinterpretTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert(expr.result.coord != resultReference)
@@ -1629,9 +1409,7 @@ impl<'s, 't> ReinterpretTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't
 }
 
 */
-// mig: struct ConstructTE
 pub struct ConstructTE<'s, 't> { pub struct_tt: StructTT<'s, 't>, pub result_reference: CoordT<'s, 't>, pub args: Vec<ExpressionT<'s, 't>> }
-// mig: impl ConstructTE
 impl<'s, 't> ConstructTE<'s, 't> {}
 /*
 case class ConstructTE(
@@ -1640,17 +1418,14 @@ case class ConstructTE(
     args: Vector[ExpressionT],
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> ConstructTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> ConstructTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> ConstructTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vpass()
@@ -1659,9 +1434,7 @@ impl<'s, 't> ConstructTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> 
 }
 
 */
-// mig: struct NewMutRuntimeSizedArrayTE
 pub struct NewMutRuntimeSizedArrayTE<'s, 't> { pub array_type: RuntimeSizedArrayTT<'s, 't>, pub region: RegionT, pub capacity_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl NewMutRuntimeSizedArrayTE
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
@@ -1672,17 +1445,14 @@ case class NewMutRuntimeSizedArrayTE(
   capacityExpr: ReferenceExpressionTE,
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = {
@@ -1699,9 +1469,7 @@ impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceRe
 }
 
 */
-// mig: struct StaticArrayFromCallableTE
 pub struct StaticArrayFromCallableTE<'s, 't> { pub array_type: StaticSizedArrayTT<'s, 't>, pub region: RegionT, pub generator: ReferenceExpressionTE<'s, 't>, pub generator_method: PrototypeT<'s, 't> }
-// mig: impl StaticArrayFromCallableTE
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {}
 /*
 case class StaticArrayFromCallableTE(
@@ -1711,17 +1479,14 @@ case class StaticArrayFromCallableTE(
   generatorMethod: PrototypeT[IFunctionNameT],
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> StaticArrayFromCallableTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = {
@@ -1738,9 +1503,7 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> { fn result(&self) -> ReferenceRe
 }
 
 */
-// mig: struct DestroyStaticSizedArrayIntoFunctionTE
 pub struct DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: StaticSizedArrayTT<'s, 't>, pub consumer: ReferenceExpressionTE<'s, 't>, pub consumer_method: PrototypeT<'s, 't> }
-// mig: impl DestroyStaticSizedArrayIntoFunctionTE
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
@@ -1753,17 +1516,14 @@ case class DestroyStaticSizedArrayIntoFunctionTE(
     consumer: ReferenceExpressionTE,
     consumerMethod: PrototypeT[IFunctionNameT]) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert(consumerMethod.paramTypes.size == 2)
@@ -1783,9 +1543,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { fn result(&self) ->
 }
 
 */
-// mig: struct DestroyStaticSizedArrayIntoLocalsTE
 pub struct DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub static_sized_array: StaticSizedArrayTT<'s, 't>, pub destination_reference_variables: Vec<ReferenceLocalVariableT<'s, 't>> }
-// mig: impl DestroyStaticSizedArrayIntoLocalsTE
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {}
 /*
 // We destroy both Share and Own things
@@ -1797,17 +1555,14 @@ case class DestroyStaticSizedArrayIntoLocalsTE(
   destinationReferenceVariables: Vector[ReferenceLocalVariableT]
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, expr.result.coord.region, VoidT()))
@@ -1819,16 +1574,13 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { fn result(&self) -> R
 }
 
 */
-// mig: struct DestroyMutRuntimeSizedArrayTE
 pub struct DestroyMutRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl DestroyMutRuntimeSizedArrayTE
 impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class DestroyMutRuntimeSizedArrayTE(
   arrayExpr: ReferenceExpressionTE,
 ) extends ReferenceExpressionTE {
 */
-// mig: fn result
 impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = {
@@ -1837,25 +1589,20 @@ impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> Referen
 }
 
 */
-// mig: struct RuntimeSizedArrayCapacityTE
 pub struct RuntimeSizedArrayCapacityTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl RuntimeSizedArrayCapacityTE
 impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {}
 /*
 case class RuntimeSizedArrayCapacityTE(
   arrayExpr: ReferenceExpressionTE
 ) extends ReferenceExpressionTE {
 */
-// mig: fn result
 impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, IntT(32)))
 }
 
 */
-// mig: struct PushRuntimeSizedArrayTE
 pub struct PushRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub new_element_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl PushRuntimeSizedArrayTE
 impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class PushRuntimeSizedArrayTE(
@@ -1865,16 +1612,13 @@ case class PushRuntimeSizedArrayTE(
 //  newElementType: CoordT,
 ) extends ReferenceExpressionTE {
 */
-// mig: fn result
 impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
 }
 
 */
-// mig: struct PopRuntimeSizedArrayTE
 pub struct PopRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't> }
-// mig: impl PopRuntimeSizedArrayTE
 impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class PopRuntimeSizedArrayTE(
@@ -1886,33 +1630,27 @@ case class PopRuntimeSizedArrayTE(
       case other => vwat(other)
     }
 */
-// mig: fn result
 impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(elementType)
 }
 
 */
-// mig: struct InterfaceToInterfaceUpcastTE
 pub struct InterfaceToInterfaceUpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_interface: InterfaceTT<'s, 't> }
-// mig: impl InterfaceToInterfaceUpcastTE
 impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {}
 /*
 case class InterfaceToInterfaceUpcastTE(
     innerExpr: ReferenceExpressionTE,
     targetInterface: InterfaceTT) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   def result: ReferenceResultT = {
@@ -1925,9 +1663,7 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> { fn result(&self) -> Referenc
 }
 
 */
-// mig: struct UpcastTE
 pub struct UpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_super_kind: ISuperKindTT<'s, 't>, pub impl_name: IdT<'s, 't> }
-// mig: impl UpcastTE
 impl<'s, 't> UpcastTE<'s, 't> {}
 /*
 // This used to be StructToInterfaceUpcastTE, and then we added generics.
@@ -1943,17 +1679,14 @@ case class UpcastTE(
   implName: IdT[IImplNameT],
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> UpcastTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> UpcastTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> UpcastTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   def result: ReferenceResultT = {
@@ -1966,9 +1699,7 @@ impl<'s, 't> UpcastTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { p
 }
 
 */
-// mig: struct SoftLoadTE
 pub struct SoftLoadTE<'s, 't> { pub expr: AddressExpressionTE<'s, 't>, pub target_ownership: OwnershipT }
-// mig: impl SoftLoadTE
 impl<'s, 't> SoftLoadTE<'s, 't> {}
 /*
 // A soft load is one that turns an int&& into an int*. a hard load turns an int* into an int.
@@ -1981,17 +1712,14 @@ case class SoftLoadTE(
     targetOwnership: OwnershipT
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> SoftLoadTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> SoftLoadTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> SoftLoadTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert((targetOwnership == ShareT) == (expr.result.coord.ownership == ShareT))
@@ -2005,9 +1733,7 @@ impl<'s, 't> SoftLoadTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> {
 }
 
 */
-// mig: struct DestroyTE
 pub struct DestroyTE<'s, 't> { pub expr: ReferenceExpressionTE<'s, 't>, pub struct_tt: StructTT<'s, 't>, pub destination_reference_variables: Vec<ReferenceLocalVariableT<'s, 't>> }
-// mig: impl DestroyTE
 impl<'s, 't> DestroyTE<'s, 't> {}
 /*
 // Destroy an object.
@@ -2021,17 +1747,14 @@ case class DestroyTE(
     destinationReferenceVariables: Vector[ReferenceLocalVariableT]
 ) extends ReferenceExpressionTE {
 */
-// mig: fn equals
 impl<'s, 't> DestroyTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DestroyTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DestroyTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = {
@@ -2044,9 +1767,7 @@ impl<'s, 't> DestroyTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { 
 }
 
 */
-// mig: struct DestroyImmRuntimeSizedArrayTE
 pub struct DestroyImmRuntimeSizedArrayTE<'s, 't> { pub array_expr: ReferenceExpressionTE<'s, 't>, pub array_type: RuntimeSizedArrayTT<'s, 't>, pub consumer: ReferenceExpressionTE<'s, 't>, pub consumer_method: PrototypeT<'s, 't> }
-// mig: impl DestroyImmRuntimeSizedArrayTE
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {}
 /*
 case class DestroyImmRuntimeSizedArrayTE(
@@ -2061,17 +1782,14 @@ case class DestroyImmRuntimeSizedArrayTE(
   }
 
 */
-// mig: fn equals
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   vassert(consumerMethod.paramTypes.size == 2)
@@ -2088,9 +1806,7 @@ impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> Referen
 }
 
 */
-// mig: struct NewImmRuntimeSizedArrayTE
 pub struct NewImmRuntimeSizedArrayTE<'s, 't> { pub array_type: RuntimeSizedArrayTT<'s, 't>, pub region: RegionT, pub size_expr: ReferenceExpressionTE<'s, 't>, pub generator: ReferenceExpressionTE<'s, 't>, pub generator_method: PrototypeT<'s, 't> }
-// mig: impl NewImmRuntimeSizedArrayTE
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {}
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
@@ -2117,17 +1833,14 @@ case class NewImmRuntimeSizedArrayTE(
   }
 
 */
-// mig: fn equals
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> { fn equals(&self, obj: &dyn std::any::Any) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
-// mig: fn hash_code
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> { fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); } }
 /*
 override def hashCode(): Int = vcurious()
 */
-// mig: fn result
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); } }
 /*
   override def result: ReferenceResultT = {
@@ -2145,7 +1858,6 @@ impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> { fn result(&self) -> ReferenceRe
 
 object referenceExprResultStructName {
 */
-// mig: fn unapply
 fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<StrI<'s>> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(expr: ReferenceExpressionTE): Option[StrI] = {
@@ -2158,7 +1870,6 @@ fn reference_expr_result_struct_name_unapply<'s, 't>(expr: &ReferenceExpressionT
 
 object referenceExprResultKind {
 */
-// mig: fn unapply
 fn reference_expr_result_kind_unapply<'s, 't>(expr: &ReferenceExpressionTE<'s, 't>) -> Option<KindT<'s, 't>> { panic!("Unimplemented: unapply"); }
 /*
   def unapply(expr: ReferenceExpressionTE): Option[KindT] = {

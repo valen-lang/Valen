@@ -32,7 +32,6 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSAMutablePushMacro
 // (Scala `class RSAMutablePushMacro(interner, keywords)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::generate_function_body_rsa_mutable_push` below.)
 /*
@@ -40,7 +39,6 @@ class RSAMutablePushMacro(interner: Interner, keywords: Keywords) extends IFunct
   val generatorId: StrI = keywords.vale_runtime_sized_array_push
 
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

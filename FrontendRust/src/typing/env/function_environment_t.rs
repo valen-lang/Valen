@@ -17,10 +17,8 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 import scala.collection.immutable.{List, Map, Set}
 
 */
-// mig: struct BuildingFunctionEnvironmentWithClosuredsT
 pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl BuildingFunctionEnvironmentWithClosuredsT
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsT(
@@ -87,10 +85,8 @@ override def hashCode(): Int = hash;
 }
 
 */
-// mig: struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT
 pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
@@ -158,10 +154,8 @@ override def hashCode(): Int = hash;
 }
 
 */
-// mig: struct NodeEnvironmentT
 pub struct NodeEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl NodeEnvironmentT
 impl<'s, 't> NodeEnvironmentT<'s, 't> {}
 /*
 case class NodeEnvironmentT(
@@ -456,10 +450,8 @@ case class NodeEnvironmentT(
 }
 
 */
-// mig: struct NodeEnvironmentBox
 pub struct NodeEnvironmentBox<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl NodeEnvironmentBox
 impl<'s, 't> NodeEnvironmentBox<'s, 't> {}
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
@@ -555,10 +547,8 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
-// mig: struct FunctionEnvironmentT
 pub struct FunctionEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl FunctionEnvironmentT
 impl<'s, 't> FunctionEnvironmentT<'s, 't> {}
 /*
 case class FunctionEnvironmentT(
@@ -706,10 +696,8 @@ override def hashCode(): Int = hash;
 }
 
 */
-// mig: struct FunctionEnvironmentBoxT
 pub struct FunctionEnvironmentBoxT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
-// mig: impl FunctionEnvironmentBoxT
 impl<'s, 't> FunctionEnvironmentBoxT<'s, 't> {}
 /*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
@@ -778,7 +766,6 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
-// mig: enum IVariableT
 pub enum IVariableT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -790,7 +777,6 @@ sealed trait IVariableT  {
   def coord: CoordT
 }
 */
-// mig: enum ILocalVariableT
 pub enum ILocalVariableT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -807,7 +793,6 @@ sealed trait ILocalVariableT extends IVariableT {
 // Lucky for us, the parser figured out if any of our child closures did
 // any mutates/moves/borrows.
 */
-// mig: struct AddressibleLocalVariableT
 pub struct AddressibleLocalVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /*
@@ -822,7 +807,6 @@ override def equals(obj: Any): Boolean = vcurious();
 
 }
 */
-// mig: struct ReferenceLocalVariableT
 pub struct ReferenceLocalVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /*
@@ -837,7 +821,6 @@ override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 */
-// mig: struct AddressibleClosureVariableT
 pub struct AddressibleClosureVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /*
@@ -850,7 +833,6 @@ case class AddressibleClosureVariableT(
   vpass()
 }
 */
-// mig: struct ReferenceClosureVariableT
 pub struct ReferenceClosureVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 /*
@@ -868,7 +850,6 @@ override def equals(obj: Any): Boolean = vcurious();
 
 object EnvironmentHelper {
 */
-// mig: fn lookup_with_name_inner
 fn lookup_with_name_inner() {
   panic!("Unimplemented: lookup_with_name_inner");
 }
@@ -891,7 +872,6 @@ fn lookup_with_name_inner() {
   }
 
 */
-// mig: fn lookup_with_imprecise_name_inner
 fn lookup_with_imprecise_name_inner() {
   panic!("Unimplemented: lookup_with_imprecise_name_inner");
 }

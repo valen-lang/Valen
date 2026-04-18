@@ -41,8 +41,6 @@ use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use crate::interner::Interner;
 
-// mig: struct LocalHelper
-// mig: impl LocalHelper
 /*
 class LocalHelper(
     opts: TypingPassOptions,
@@ -50,7 +48,6 @@ class LocalHelper(
     nameTranslator: NameTranslator,
     destructorCompiler: DestructorCompiler) {
 */
-// mig: fn make_temporary_local
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -71,7 +68,6 @@ where 's: 't,
 
 */
 }
-// mig: fn make_temporary_local
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -110,7 +106,6 @@ where 's: 't,
 
 */
 }
-// mig: fn unlet_local_without_dropping
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -126,7 +121,6 @@ where 's: 't,
 
 */
 }
-// mig: fn unlet_and_drop_all
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -152,7 +146,6 @@ where 's: 't,
 
 */
 }
-// mig: fn unlet_all_without_dropping
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -171,7 +164,6 @@ where 's: 't,
 
 */
 }
-// mig: fn make_user_local_variable
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -215,7 +207,6 @@ where 's: 't,
 */
 }
 
-// mig: fn maybe_borrow_soft_load
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -235,7 +226,6 @@ where 's: 't,
 
 */
 }
-// mig: fn soft_load
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -309,7 +299,6 @@ where 's: 't,
 */
 }
 
-// mig: fn borrow_soft_load
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -325,7 +314,6 @@ where 's: 't,
 
 */
 }
-// mig: fn get_borrow_ownership
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -390,7 +378,6 @@ object LocalHelper {
 */
 }
 
-// mig: fn determine_if_local_is_addressible
 fn determine_if_local_is_addressible<'s, 't>(mutability: &ITemplataT<'s, 't>, local_a: &LocalS<'s>) -> bool {
   panic!("Unimplemented: determine_if_local_is_addressible");
 }
@@ -408,7 +395,6 @@ fn determine_if_local_is_addressible<'s, 't>(mutability: &ITemplataT<'s, 't>, lo
   }
 
 */
-// mig: fn determine_local_variability
 fn determine_local_variability<'s>(local_a: &LocalS<'s>) -> VariabilityT {
   panic!("Unimplemented: determine_local_variability");
 }

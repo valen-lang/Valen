@@ -43,8 +43,6 @@ use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct ArrayCompiler
-// mig: impl ArrayCompiler
 /*
 class ArrayCompiler(
     opts: TypingPassOptions,
@@ -59,7 +57,6 @@ class ArrayCompiler(
 
   vassert(overloadResolver != null)
 */
-// mig: fn evaluate_static_sized_array_from_callable
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -168,7 +165,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_runtime_sized_array_from_callable
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -371,7 +367,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_static_sized_array_from_values
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -517,7 +512,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_destroy_static_sized_array_into_callable
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -564,7 +558,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_destroy_runtime_sized_array_into_callable
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -627,7 +620,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_static_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -684,7 +676,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_static_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -719,7 +710,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_runtime_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -770,7 +760,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_runtime_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -799,7 +788,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_array_size
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -814,7 +802,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_array_element_type
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -829,7 +816,6 @@ where 's: 't,
 */
 }
 
-// mig: fn lookup_in_static_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -860,7 +846,6 @@ where 's: 't,
 */
 }
 
-// mig: fn lookup_in_unknown_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

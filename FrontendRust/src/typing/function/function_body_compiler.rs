@@ -25,7 +25,6 @@ import scala.collection.immutable.{List, Set}
 */
 use crate::typing::compiler::Compiler;
 
-// mig: trait IBodyCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IBodyCompilerDelegate {
@@ -52,8 +51,6 @@ trait IBodyCompilerDelegate {
   ReferenceExpressionTE
 }
 */
-// mig: struct BodyCompiler
-// mig: impl BodyCompiler
 /*
 class BodyCompiler(
   opts: TypingPassOptions,
@@ -65,7 +62,6 @@ class BodyCompiler(
     delegate: IBodyCompilerDelegate) {
 
 */
-// mig: fn declare_and_evaluate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -176,7 +172,6 @@ where 's: 't,
 */
 }
 
-// mig: struct ResultTypeMismatchError
 pub struct ResultTypeMismatchError;
 /*
   case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
@@ -188,7 +183,6 @@ override def equals(obj: Any): Boolean = vcurious();
 
 */
 
-// mig: fn evaluate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -283,7 +277,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_lets
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

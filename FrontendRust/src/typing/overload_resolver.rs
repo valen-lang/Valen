@@ -41,7 +41,6 @@ object OverloadResolver {
 */
 use crate::typing::compiler::Compiler;
 
-// mig: enum IFindFunctionFailureReason
 pub enum IFindFunctionFailureReason<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -82,7 +81,6 @@ override def hashCode(): Int = vcurious() }
 
 
 */
-// mig: struct FindFunctionFailure
 pub struct FindFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
   case class FindFunctionFailure(
@@ -97,7 +95,6 @@ override def hashCode(): Int = vcurious()
   }
 
 */
-// mig: struct EvaluateFunctionFailure2
 pub struct EvaluateFunctionFailure2;
 /*
   case class EvaluateFunctionFailure2(
@@ -113,8 +110,6 @@ override def hashCode(): Int = vcurious()
 }
 
 */
-// mig: struct OverloadResolver
-// mig: impl OverloadResolver
 /*
 class OverloadResolver(
     opts: TypingPassOptions,
@@ -126,7 +121,6 @@ class OverloadResolver(
   val runeTypeSolver = new RuneTypeSolver(interner)
 
 */
-// mig: fn find_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -172,7 +166,6 @@ where 's: 't,
 */
 }
 
-// mig: fn params_match
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -213,7 +206,6 @@ where 's: 't,
 */
 }
 
-// mig: struct SearchedEnvironment
 pub struct SearchedEnvironment;
 /*
   case class SearchedEnvironment(
@@ -222,7 +214,6 @@ pub struct SearchedEnvironment;
     matchingTemplatas: Vector[ITemplataT[ITemplataType]])
 
 */
-// mig: fn get_candidate_banners
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -248,7 +239,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_candidate_banners_inner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -296,7 +286,6 @@ where 's: 't,
 */
 }
 
-// mig: struct AttemptedCandidate
 pub struct AttemptedCandidate;
 /*
   case class AttemptedCandidate(
@@ -305,7 +294,6 @@ pub struct AttemptedCandidate;
   )
 
 */
-// mig: fn attempt_candidate_banner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -513,7 +501,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_param_environments
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -535,7 +522,6 @@ where 's: 't,
 */
 }
 
-// mig: fn find_potential_function
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -590,7 +576,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_banner_param_scores
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -634,7 +619,6 @@ where 's: 't,
 */
 }
 
-// mig: fn narrow_down_callable_overloads
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -847,7 +831,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_array_generator_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -877,7 +860,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_array_consumer_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

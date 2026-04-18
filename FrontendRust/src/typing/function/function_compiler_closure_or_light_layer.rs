@@ -48,8 +48,6 @@ use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 
-// mig: struct FunctionCompilerClosureOrLightLayer
-// mig: impl FunctionCompilerClosureOrLightLayer
 /*
 class FunctionCompilerClosureOrLightLayer(
     opts: TypingPassOptions,
@@ -103,7 +101,6 @@ class FunctionCompilerClosureOrLightLayer(
 //  }
 
 */
-// mig: fn evaluate_templated_closure_function_from_call_for_banner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -156,7 +153,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_closure_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -206,7 +202,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_light_function_from_call_for_prototype2
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -247,7 +242,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_light_function_from_call_for_prototype2
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -288,7 +282,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -341,7 +334,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_light_function_from_non_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -528,7 +520,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_light_banner_from_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -569,7 +560,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_function_from_call_for_banner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -608,7 +598,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_env_without_closure_stuff
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -641,7 +630,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_not_closure
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -662,7 +650,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_closure_variables_and_entries
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

@@ -32,14 +32,12 @@ use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
-// mig: struct RSAMutableCapacityMacro
 // (Scala `class RSAMutableCapacityMacro(interner, keywords)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::generate_function_body_rsa_mutable_capacity` below.)
 /*
 class RSAMutableCapacityMacro(interner: Interner, keywords: Keywords) extends IFunctionBodyMacro {
   val generatorId: StrI = keywords.vale_runtime_sized_array_capacity
 */
-// mig: fn generate_function_body
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

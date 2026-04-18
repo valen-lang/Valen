@@ -60,8 +60,6 @@ use crate::solver::solver::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 
-// mig: struct FunctionCompilerSolvingLayer
-// mig: impl FunctionCompilerSolvingLayer
 /*
 class FunctionCompilerSolvingLayer(
     opts: TypingPassOptions,
@@ -82,7 +80,6 @@ class FunctionCompilerSolvingLayer(
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
 */
-// mig: fn evaluate_templated_function_from_call_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -172,7 +169,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_function_from_call_for_banner
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -264,7 +260,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_templated_light_banner_from_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -356,7 +351,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_known_templatas
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -383,7 +377,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_closure_concerns_handled
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -414,7 +407,6 @@ where 's: 't,
 */
 }
 
-// mig: fn add_runed_data_to_near_env
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -469,7 +461,6 @@ where 's: 't,
   // - either no closured vars, or they were already added to the env.
   // - env is the environment the templated function was made in
 */
-// mig: fn evaluate_generic_function_from_call_for_prototype
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -598,7 +589,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_virtual_dispatcher_function_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -719,7 +709,6 @@ where 's: 't,
 */
 }
 
-// mig: fn evaluate_generic_function_from_non_call
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -830,7 +819,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_initial_sends_from_args
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

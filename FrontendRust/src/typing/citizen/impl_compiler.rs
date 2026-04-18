@@ -42,20 +42,17 @@ use crate::typing::compiler_outputs::*;
 use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 
-// mig: trait IsParentResult
 pub enum IsParentResult {
     _Phantom,
 }
 /*
 sealed trait IsParentResult
 */
-// mig: struct IsParent
 pub struct IsParent<'s, 't> {
     pub templata: ITemplataT<'s, 't>,
     pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub impl_id: IdT<'s, 't>,
 }
-// mig: impl IsParent
 impl<'s, 't> IsParent<'s, 't> {}
 /*
 case class IsParent(
@@ -64,11 +61,9 @@ case class IsParent(
   implId: IdT[IImplNameT]
 ) extends IsParentResult
 */
-// mig: struct IsntParent
 pub struct IsntParent<'s, 't> {
     pub candidates: Vec<IResolvingError<'s, 't>>,
 }
-// mig: impl IsntParent
 impl<'s, 't> IsntParent<'s, 't> {}
 /*
 case class IsntParent(
@@ -76,8 +71,6 @@ case class IsntParent(
 ) extends IsParentResult
 
 */
-// mig: struct ImplCompiler
-// mig: impl ImplCompiler
 /*
 class ImplCompiler(
     opts: TypingPassOptions,
@@ -89,7 +82,6 @@ class ImplCompiler(
 
   // We don't have an isAncestor call, see REMUIDDA.
 */
-// mig: fn resolve_impl
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -163,7 +155,6 @@ where 's: 't,
 */
 }
 
-// mig: fn partial_resolve_impl
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -225,7 +216,6 @@ where 's: 't,
 */
 }
 
-// mig: fn compile_impl
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -371,7 +361,6 @@ where 's: 't,
 */
 }
 
-// mig: fn calculate_runes_independence
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -422,7 +411,6 @@ where 's: 't,
 */
 }
 
-// mig: fn assemble_impl_name
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -597,7 +585,6 @@ where 's: 't,
 */
 }
 
-// mig: fn is_descendant
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -641,7 +628,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_impl_parent_given_sub_citizen
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -677,7 +663,6 @@ where 's: 't,
 */
 }
 
-// mig: fn get_parents
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -746,7 +731,6 @@ where 's: 't,
 */
 }
 
-// mig: fn is_parent
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

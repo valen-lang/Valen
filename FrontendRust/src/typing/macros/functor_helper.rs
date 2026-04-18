@@ -26,13 +26,11 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 
-// mig: struct FunctorHelper
 // (Scala `class FunctorHelper(interner, keywords)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::get_functor_for_prototype` below.)
 /*
 class FunctorHelper( interner: Interner, keywords: Keywords) {
 */
-// mig: fn get_functor_for_prototype
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

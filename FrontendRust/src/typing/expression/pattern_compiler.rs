@@ -31,8 +31,6 @@ import scala.collection.mutable.ArrayBuffer
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct PatternCompiler
-// mig: impl PatternCompiler
 /*
 class PatternCompiler(
     opts: TypingPassOptions,
@@ -46,7 +44,6 @@ class PatternCompiler(
     destructorCompiler: DestructorCompiler,
     localHelper: LocalHelper) {
 */
-// mig: fn translate_pattern_list
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -86,7 +83,6 @@ where 's: 't,
 */
 }
 
-// mig: fn iterate_translate_list_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -133,7 +129,6 @@ where 's: 't,
 */
 }
 
-// mig: fn infer_and_translate_pattern
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -228,7 +223,6 @@ where 's: 't,
 */
 }
 
-// mig: fn inner_translate_sub_pattern_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -344,7 +338,6 @@ where 's: 't,
 */
 }
 
-// mig: fn destructure_owning
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -419,7 +412,6 @@ where 's: 't,
 */
 }
 
-// mig: fn destructure_non_owning_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -456,7 +448,6 @@ where 's: 't,
 */
 }
 
-// mig: fn iterate_destructure_non_owning_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -545,7 +536,6 @@ where 's: 't,
 */
 }
 
-// mig: fn translate_destroy_struct_inner_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -616,7 +606,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_lets_for_own_and_maybe_continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -665,7 +654,6 @@ where 's: 't,
 */
 }
 
-// mig: fn load_result_ownership
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -685,7 +673,6 @@ where 's: 't,
 */
 }
 
-// mig: fn load_from_struct
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -736,7 +723,6 @@ where 's: 't,
 */
 }
 
-// mig: fn load_from_static_sized_array
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

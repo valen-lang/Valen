@@ -25,7 +25,6 @@ import scala.collection.immutable._
 */
 use crate::typing::compiler::Compiler;
 
-// mig: struct CompleteResolveSolve
 pub struct CompleteResolveSolve;
 /*
 case class CompleteResolveSolve(
@@ -34,7 +33,6 @@ case class CompleteResolveSolve(
 )
 
 */
-// mig: struct CompleteDefineSolve
 pub struct CompleteDefineSolve;
 /*
 case class CompleteDefineSolve(
@@ -42,7 +40,6 @@ case class CompleteDefineSolve(
     runeToBound: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT])
 
 */
-// mig: enum IConclusionResolveError
 pub enum IConclusionResolveError<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -54,7 +51,6 @@ case class CouldntFindFunctionForConclusionResolve(range: List[RangeS], fff: Fin
 case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends IConclusionResolveError
 
 */
-// mig: enum IResolvingError
 pub enum IResolvingError<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -64,7 +60,6 @@ case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS,
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
 */
-// mig: enum IDefiningError
 pub enum IDefiningError {}
 /*
 sealed trait IDefiningError
@@ -72,7 +67,6 @@ case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, 
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
 */
-// mig: struct InferEnv
 pub struct InferEnv<'s>(pub std::marker::PhantomData<&'s ()>);
 /*
 case class InferEnv(
@@ -93,7 +87,6 @@ case class InferEnv(
 )
 
 */
-// mig: struct InitialSend
 pub struct InitialSend;
 /*
 case class InitialSend(
@@ -102,7 +95,6 @@ case class InitialSend(
   sendTemplata: ITemplataT[ITemplataType])
 
 */
-// mig: struct InitialKnown
 pub struct InitialKnown;
 /*
 case class InitialKnown(
@@ -110,7 +102,6 @@ case class InitialKnown(
   templata: ITemplataT[ITemplataType])
 
 */
-// mig: trait IInferCompilerDelegate
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IInferCompilerDelegate {
@@ -170,8 +161,6 @@ trait IInferCompilerDelegate {
 }
 
 */
-// mig: struct InferCompiler
-// mig: impl InferCompiler
 /*
 class InferCompiler(
     opts: TypingPassOptions,
@@ -185,7 +174,6 @@ class InferCompiler(
   // The difference between solveForDefining and solveForResolving is whether we declare the function bounds that the
   // rules mention, see DBDAR.
 */
-// mig: fn solve_for_defining
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -225,7 +213,6 @@ where 's: 't,
 */
 }
 
-// mig: fn solve_for_resolving
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -254,7 +241,6 @@ where 's: 't,
 */
 }
 
-// mig: fn partial_solve
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -281,7 +267,6 @@ where 's: 't,
 */
 }
 
-// mig: fn make_solver_state
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -330,7 +315,6 @@ where 's: 't,
 */
 }
 
-// mig: fn r#continue
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -347,7 +331,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_resolving_conclusions_and_resolve
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -479,7 +462,6 @@ where 's: 't,
 */
 }
 
-// mig: fn interpret_results
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -505,7 +487,6 @@ where 's: 't,
 */
 }
 
-// mig: fn check_defining_conclusions_and_resolve
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -589,7 +570,6 @@ where 's: 't,
 */
 }
 
-// mig: fn import_reachable_bounds
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -614,7 +594,6 @@ where 's: 't,
 */
 }
 
-// mig: fn import_conclusions_and_reachable_bounds
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -645,7 +624,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_conclusions_for_define
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -720,7 +698,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_function_call_conclusion
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -767,7 +744,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_impl_conclusion
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -812,7 +788,6 @@ where 's: 't,
 */
 }
 
-// mig: fn resolve_template_call_conclusion
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -884,7 +859,6 @@ where 's: 't,
 */
 }
 
-// mig: fn incrementally_solve
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -925,7 +899,6 @@ object InferCompiler {
 */
 }
 
-// mig: fn include_rule_in_call_site_solve
 pub fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_in_call_site_solve"); }
 /*
   def includeRuleInCallSiteSolve(rule: IRulexSR): Boolean = {
@@ -938,7 +911,6 @@ pub fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_i
 
   // Some rules should be excluded from the call site, see SROACSD.
 */
-// mig: fn include_rule_in_definition_solve
 pub fn include_rule_in_definition_solve() { panic!("Unimplemented: include_rule_in_definition_solve"); }
 /*
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
