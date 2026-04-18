@@ -18,36 +18,33 @@ import dev.vale.typing.names.{IFunctionNameT, RuneNameT}
 import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types.CoordT
 */
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::typing::templata::templata::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::interner::Interner;
+use crate::typing::compiler::Compiler;
+
 // mig: struct FunctorHelper
-pub struct FunctorHelper<'s, 'ctx, 't> {
-    pub interner: Interner<'s>,
-    pub keywords: Keywords<'s>,
-    pub _phantom: std::marker::PhantomData<(&'ctx (), &'t ())>,
-}
-
-// mig: impl FunctorHelper
-impl<'s, 'ctx, 't> FunctorHelper<'s, 'ctx, 't> {}
-
+// (Scala `class FunctorHelper(interner, keywords)` absorbed onto `Compiler`;
+//  the method body lives at `Compiler::get_functor_for_prototype` below.)
 /*
 class FunctorHelper( interner: Interner, keywords: Keywords) {
 */
 // mig: fn get_functor_for_prototype
-fn get_functor_for_prototype<'s, 't>(
-    env: FunctionEnvironmentT<'s, 't>,
-    coutputs: CompilerOutputs<'s, 't>,
-    call_range: Vec<RangeS<'s>>,
-    drop_function: PrototypeTemplataT<'s, 't>,
-) -> ReinterpretTE<'s, 't> {
-    panic!("Unimplemented: get_functor_for_prototype");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_functor_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        drop_function: PrototypeTemplataT<'s, 't>,
+    ) -> ReinterpretTE<'s, 't> {
+        panic!("Unimplemented: get_functor_for_prototype");
+    }
 /*
   def getFunctorForPrototype(
     env: FunctionEnvironmentT,
@@ -77,3 +74,4 @@ fn get_functor_for_prototype<'s, 't>(
   }
 }
 */
+}
