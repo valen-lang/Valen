@@ -117,12 +117,12 @@ case object YonderT extends LocationT {
   override def toString: String = "heap"
 }
 */
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionT;
 /*
 case class RegionT()
 */
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordT<'s, 't> {
   pub ownership: OwnershipT,
   pub region: RegionT,
@@ -153,7 +153,7 @@ case class CoordT(
 // TODO: non-primitive variants (StructTT, InterfaceTT, StaticSizedArrayTT,
 //   RuntimeSizedArrayTT, KindPlaceholderT, OverloadSet) are deferred to Slab 3;
 //   _Phantom stays until then to anchor the 's/'t lifetime params.
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
   Never(NeverT),
   Void(VoidT),
@@ -341,6 +341,7 @@ sealed trait ISuperKindTT extends KindT {
 }
 */
 // TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTT<'s, 't> {
   _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
