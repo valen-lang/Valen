@@ -18,7 +18,26 @@ import dev.vale.typing.types.InterfaceTT
 */
 
 // mig: trait IFunctionBodyMacro
-pub trait IFunctionBodyMacro<'s, 't> {}
+// Dispatch-tag enum replacing Scala's IFunctionBodyMacro trait; bodies live as
+// Compiler::generate_function_body_<suffix> methods.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum FunctionBodyMacro {
+    LockWeak,
+    AsSubtype,
+    StructDrop,
+    StructConstructor,
+    AbstractBody,
+    SameInstance,
+    RsaLen,
+    RsaMutableNew,
+    RsaImmutableNew,
+    RsaDropInto,
+    RsaMutableCapacity,
+    RsaMutablePop,
+    RsaMutablePush,
+    SsaLen,
+    SsaDropInto,
+}
 /*
 trait IFunctionBodyMacro {
 //  def generatorId: String
@@ -37,7 +56,12 @@ trait IFunctionBodyMacro {
 }
 */
 // mig: trait IOnStructDefinedMacro
-pub trait IOnStructDefinedMacro<'s, 't> {}
+// Dispatch-tag enum replacing Scala's IOnStructDefinedMacro trait; bodies live on impl Compiler.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum OnStructDefinedMacro {
+    StructConstructor,
+    StructDrop,
+}
 /*
 trait IOnStructDefinedMacro {
   def getStructSiblingEntries(
@@ -46,7 +70,12 @@ trait IOnStructDefinedMacro {
 }
 */
 // mig: trait IOnInterfaceDefinedMacro
-pub trait IOnInterfaceDefinedMacro<'s, 't> {}
+// Dispatch-tag enum replacing Scala's IOnInterfaceDefinedMacro trait; bodies live on impl Compiler.
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum OnInterfaceDefinedMacro {
+    AnonymousInterface,
+    InterfaceDrop,
+}
 /*
 trait IOnInterfaceDefinedMacro {
   def getInterfaceSiblingEntries(
@@ -55,7 +84,10 @@ trait IOnInterfaceDefinedMacro {
 }
 */
 // mig: trait IOnImplDefinedMacro
-pub trait IOnImplDefinedMacro<'s, 't> {}
+// Dispatch-tag enum replacing Scala's IOnImplDefinedMacro trait; bodies live on impl Compiler.
+// (No concrete implementors in the current codebase — Scala initializes this map empty.)
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum OnImplDefinedMacro {}
 /*
 trait IOnImplDefinedMacro {
   def getImplSiblingEntries(implName: IdT[INameT], implA: ImplA):

@@ -17,7 +17,6 @@ import dev.vale.typing.ast
 
 */
 use crate::interner::StrI;
-use crate::keywords::Keywords;
 use crate::utils::range::RangeS;
 
 use crate::higher_typing::ast::*;
@@ -27,16 +26,12 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::typing::expression::expression_compiler::*;
+use crate::typing::compiler::Compiler;
 use crate::postparsing::ast::LocationInDenizen;
 
 // mig: struct LockWeakMacro
-pub struct LockWeakMacro<'s, 'ctx, 't> {
-    pub keywords: Keywords<'s>,
-    pub expression_compiler: ExpressionCompiler<'s, 'ctx, 't>,
-}
-// mig: impl LockWeakMacro
-impl<'s, 'ctx, 't> LockWeakMacro<'s, 'ctx, 't> {}
+// (Scala `class LockWeakMacro(keywords, expressionCompiler)` absorbed onto `Compiler`;
+//  the method body lives at `Compiler::generate_function_body_lock_weak` below.)
 /*
 class LockWeakMacro(
   keywords: Keywords,
@@ -46,19 +41,23 @@ class LockWeakMacro(
 
 */
 // mig: fn generate_function_body
-fn generate_function_body<'s, 't>(
-    env: &FunctionEnvironmentT<'s, 't>,
-    coutputs: &CompilerOutputs<'s, 't>,
-    generator_id: StrI<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
-    call_range: Vec<RangeS<'s>>,
-    call_location: LocationInDenizen<'s>,
-    origin_function: Option<&FunctionA<'s>>,
-    param_coords: Vec<ParameterT<'s, 't>>,
-    maybe_ret_coord: Option<CoordT<'s, 't>>,
-) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-    panic!("Unimplemented: generate_function_body");
-}
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_lock_weak(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        generator_id: StrI<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        origin_function: Option<&FunctionA<'s>>,
+        param_coords: &[ParameterT<'s, 't>],
+        maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_lock_weak");
+    }
 /*
   def generateFunctionBody(
     env: FunctionEnvironmentT,
@@ -93,3 +92,4 @@ fn generate_function_body<'s, 't>(
 
 }
 */
+}

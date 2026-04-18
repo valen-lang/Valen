@@ -26,7 +26,7 @@ You're a junior engineer picking up an in-progress refactor partway through. A c
 
 ## Status as of last commit
 
-Commit `fd45b5a9` on branch `rustmigrate-z`. Error count in `cargo check --lib`: **19**. All 8 upper-tier sub-compilers merged. Next phase is macros (~20 files in `src/typing/macros/**`), then Step 8 cleanup.
+Commit `92e3cdde` on branch `rustmigrate-z`. `cargo check --lib` is **clean** (0 errors, 0 warnings — `src/lib.rs` sets `#![allow(unused_variables, unused_imports)]`). All 8 upper-tier sub-compilers merged plus three warning-cleanup follow-ups landed. Next phase is macros (~20 files in `src/typing/macros/**`), then Step 8 cleanup.
 
 ### Done
 
@@ -60,6 +60,138 @@ Commit `fd45b5a9` on branch `rustmigrate-z`. Error count in `cargo check --lib`:
 Upper-tier: **none, all done.**
 
 Next phase: macros (~20 files in `src/typing/macros/**` and subdirs). Then Step 8 cleanup (see master handoff).
+
+## The macros pattern — how to do one macro
+
+Macros are different from sub-compilers in one way: they're dispatched dynamically (stored in the global env, looked up by generator id). But the shape is the same — all state has already been hoisted onto `Compiler`, so the macro struct has nothing real left in it. We collapse them onto `Compiler` the same way we did sub-compilers, plus wire a per-trait unit-variant enum as the dispatch tag.
+
+### The four dispatch enums
+
+Scala has four macro traits. Each becomes a unit-variant enum in Rust (`src/typing/compiler.rs` or a new `src/typing/macros/macros.rs` — same place the current `IFunctionGenerator` stub lives):
+
+```rust
+pub enum FunctionBodyMacro {
+    LockWeak,
+    AsSubtype,
+    StructDrop,
+    InterfaceDrop,
+    StructConstructor,
+    AbstractBody,
+    SameInstance,
+    RsaLen, RsaMutableNew, RsaImmutableNew, RsaDropInto,
+    RsaMutableCapacity, RsaMutablePop, RsaMutablePush,
+    SsaLen, SsaDropInto,
+    // (only macros that extend IFunctionBodyMacro in Scala — roughly the list above)
+}
+pub enum OnStructDefinedMacro { StructConstructor, StructDrop, SameInstance, /* ... */ }
+pub enum OnInterfaceDefinedMacro { /* ... */ }
+pub enum OnImplDefinedMacro { /* ... */ }
+```
+
+A given macro (e.g. `StructDropMacro`) appears in multiple enums iff Scala had it extending multiple traits. These are Copy unit enums — cheap, no lifetimes.
+
+### Per-macro per-method transformation
+
+For each macro file `src/typing/macros/.../foo_macro.rs`:
+
+**Before (the slice-pipeline output we inherited):**
+
+```rust
+// mig: struct FooMacro
+pub struct FooMacro<'s, 'ctx, 't> {
+    pub keywords: Keywords<'s>,
+    pub expression_compiler: ExpressionCompiler<'s, 'ctx, 't>,    // or other sub-compilers
+    pub destructor_compiler: DestructorCompiler<'s, 'ctx, 't>,
+}
+// mig: impl FooMacro
+impl<'s, 'ctx, 't> FooMacro<'s, 'ctx, 't> {}
+/*
+class FooMacro(keywords: Keywords, expressionCompiler: ExpressionCompiler, ...) extends IFunctionBodyMacro {
+*/
+// mig: fn generate_function_body
+fn generate_function_body<'s, 't>(
+    env: &FunctionEnvironmentT<'s, 't>,
+    coutputs: &CompilerOutputs<'s, 't>,
+    /* ... */
+) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    panic!("Unimplemented: generate_function_body");
+}
+/* scala body */
+```
+
+**After:**
+
+```rust
+// mig: struct FooMacro
+// (Scala class fields absorbed by Compiler; all logic lives on impl Compiler.)
+/*
+class FooMacro(keywords: Keywords, expressionCompiler: ExpressionCompiler, ...) extends IFunctionBodyMacro {
+*/
+// mig: fn generate_function_body
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn generate_function_body_foo(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        /* ... same params as before, minus the sub-compiler fields ... */
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        panic!("Unimplemented: generate_function_body_foo");
+    }
+/* scala body */
+}
+```
+
+**What changed:**
+
+1. **Struct deleted entirely.** The `pub struct FooMacro<'s, 'ctx, 't> { ... }` goes away — nothing Rust-level holds it (the sub-compiler fields it held are all already merged). The `// mig: struct FooMacro` marker stays so the audit trail is preserved; add a `//` note explaining the fields absorbed into `Compiler`.
+2. **Empty `impl FooMacro<'s, 'ctx, 't> {}` deleted.**
+3. **Every Scala instance method (`generateFunctionBody`, `onStructDefined`, etc.) wraps into its own per-fn `impl Compiler` block**, exactly like sub-compiler methods. The method name gets a suffix derived from the macro name to avoid collisions (every `FunctionBodyMacro` has a `generateFunctionBody` in Scala).
+4. **Name suffix convention:** strip the `Macro` suffix from the macro name and lower-snake. `LockWeakMacro.generateFunctionBody` → `generate_function_body_lock_weak`. `RSADropIntoMacro.generateFunctionBody` → `generate_function_body_rsa_drop_into`. `StructConstructorMacro.onStructDefined` → `on_struct_defined_struct_constructor`. Keep it verbose — readability beats brevity for audit-trail grep.
+5. **Companion object helpers stay as free fns** (same rule as sub-compilers — see Gotcha 4).
+
+### Dispatcher methods on `Compiler`
+
+One dispatcher per Scala trait, wired in `src/typing/compiler.rs` or alongside the enums. These exist solely to turn a `FunctionBodyMacro` tag into the correct `generate_function_body_*` call:
+
+```rust
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> where 's: 't {
+    pub fn dispatch_function_body_macro(
+        &self,
+        which: FunctionBodyMacro,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        /* shared params */
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        match which {
+            FunctionBodyMacro::LockWeak => self.generate_function_body_lock_weak(coutputs, env, /* ... */),
+            FunctionBodyMacro::AsSubtype => self.generate_function_body_as_subtype(coutputs, env, /* ... */),
+            // ...
+        }
+    }
+}
+```
+
+Since no one calls the dispatcher yet (env lookup is still panic-stubbed), you can leave the match with `todo!()` arms for macros not yet migrated. Fill in arms as you merge each macro.
+
+### Order of macro merges
+
+Start with the simplest (unit-struct / one-method) macros first:
+
+1. `lock_weak_macro.rs` — two fields, one method. Good first example.
+2. `as_subtype_macro.rs` — four fields, one method.
+3. `same_instance_macro.rs`, `functor_helper.rs` — small helpers.
+4. RSA/SSA macros (10 files) — mostly copy-paste of the same shape.
+5. `struct_drop_macro.rs`, `interface_drop_macro.rs` — extends both `IFunctionBodyMacro` and `IOnStructDefinedMacro` / `IOnInterfaceDefinedMacro`; two methods to merge.
+6. `struct_constructor_macro.rs` — multiple methods + helper fns.
+7. `abstract_body_macro.rs`, `anonymous_interface_macro.rs` — the complex ones, leave for last.
+
+Commit one macro per commit. Error count should stay at 0 throughout (we're clean right now).
+
+### Unblocking Step 8
+
+Two macros currently hold `ExpressionCompiler` as a field — `as_subtype_macro.rs` and `lock_weak_macro.rs`. Once both are merged (struct deleted → field gone), `ExpressionCompiler` is no longer held anywhere and can be deleted in Step 8. Same chain for other vestigial `*Compiler` structs (ArrayCompiler held by RSA macros, ImplCompiler held by AsSubtypeMacro, etc.).
 
 ## The pattern — how to do one sub-compiler
 

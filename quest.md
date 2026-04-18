@@ -181,26 +181,46 @@ Deep mutual recursion works because `&self` allows shared borrow, and `&mut cout
 
 ### 2.3 Macros
 
-Macros (`AsSubtypeMacro`, `LockWeakMacro`, `StructDropMacro`, etc.) are stored in the global environment and receive the god struct at call time:
+Macros (`AsSubtypeMacro`, `LockWeakMacro`, `StructDropMacro`, etc.) were stateful classes in Scala (holding `keywords`, `expressionCompiler`, etc.). In the god-struct refactor, all that state is already on `Compiler`. So macro structs disappear entirely and their methods become ordinary methods on `Compiler`.
+
+Dispatch is via a small Copy unit-variant enum per Scala macro trait — `FunctionBodyMacro`, `OnStructDefinedMacro`, `OnInterfaceDefinedMacro`, `OnImplDefinedMacro`. Each variant tags which `Compiler` method to call.
 
 ```rust
-pub enum IFunctionGenerator<'s, 't> {
-    AsSubtype(AsSubtypeMacro<'s, 't>),
-    LockWeak(LockWeakMacro<'s, 't>),
-    StructDrop(StructDropMacro<'s, 't>),
-    // ... enum rather than trait-object hierarchy
+pub enum FunctionBodyMacro {
+    LockWeak,
+    AsSubtype,
+    StructDrop,
+    StructConstructor,
+    // ... one variant per Scala class extending IFunctionBodyMacro
 }
 
-impl<'s, 't> IFunctionGenerator<'s, 't> {
-    pub fn generate(
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> where 's: 't {
+    // Individual method per Scala class, name-suffixed to avoid collisions.
+    pub fn generate_function_body_lock_weak(
         &self,
-        compiler: &Compiler<'s, '_, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'s IEnvironmentT<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
         // ...
-    ) -> &'t FunctionHeaderT<'s, 't> { ... }
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) { ... }
+
+    // Central dispatcher for dynamic lookups out of the env.
+    pub fn dispatch_function_body_macro(
+        &self,
+        which: FunctionBodyMacro,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &FunctionEnvironmentT<'s, 't>,
+        // ...
+    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+        match which {
+            FunctionBodyMacro::LockWeak => self.generate_function_body_lock_weak(coutputs, env, /* ... */),
+            FunctionBodyMacro::AsSubtype => self.generate_function_body_as_subtype(coutputs, env, /* ... */),
+            // ...
+        }
+    }
 }
 ```
+
+A given macro may appear in multiple enums iff Scala had it extending multiple traits (e.g. `StructDropMacro extends IFunctionBodyMacro with IOnStructDefinedMacro` → appears in both `FunctionBodyMacro` and `OnStructDefinedMacro`). Globally the shared implementation is a single `Compiler` method per Scala method, reused across the dispatcher matches.
 
 ### 2.4 Delegate Traits Eliminated
 
