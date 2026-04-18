@@ -2428,3 +2428,224 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
         }
     }
 }
+
+// ============================================================================
+// IDEPFL *ValT companion types (Slab 2 Step 6).
+//
+// The typing interner canonicalizes each concrete name struct — two
+// structurally-equivalent values share the same `&'t XxxNameT` arena
+// allocation. The lookup flow is the IDEPFL transient/permanent split:
+//
+//   1. Caller builds a transient `XxxNameValT<'s, 't, 'tmp>` on the stack.
+//   2. Interner hashes the Val, probes its per-family HashMap.
+//   3. On HIT: return the existing `&'t XxxNameT` — transient Val discarded.
+//   4. On MISS: promote Val's slice fields into the arena (via
+//      `promote_in()`), allocate the permanent `XxxNameT`, install in the
+//      HashMap, return the new `&'t XxxNameT`.
+//
+// Three IDEPFL kinds (see `.claude/rules/postparser/IDEPFL-postparser-interning.md`):
+//
+// - **Simple** — struct fields are all Copy primitives or scout-lifetime refs
+//   (`StrI<'s>`, `CodeLocationS<'s>`, `RangeS<'s>`, `IRuneS<'s>`, `i32`).
+//   The struct itself is the Val — no separate type needed. The interner
+//   passes the struct by value as its HashMap key.
+//
+// - **Shallow** — struct holds `&'t` refs to parent interned types, or
+//   inline-owned sub-enum values (already canonical since concretes are
+//   pointer-interned). The struct itself is still the Val; no 'tmp lifetime
+//   is required because there's nothing transient to borrow.
+//
+// - **Transient-with-'tmp** — struct has `&'t [...]` arena slices
+//   (`template_args`, `parameters`, `init_steps`, etc.). The transient Val
+//   replaces those with `&'tmp [...]` slices borrowed from a stack-local Vec
+//   so lookup can hash/compare without allocating. Slices are canonicalized
+//   into `&'t` on miss.
+//
+// Under the inline-owned sub-enum design (§6.2 / §6.3): sub-enum families
+// (`IFunctionNameT`, `IStructNameT`, `INameT`, etc.) are NOT interned — they
+// are 16-byte inline Copy values constructed on the stack. Only concrete
+// name structs and `IdT` need Val companions.
+//
+// Simple/shallow concretes below use the struct itself as their Val. The
+// 15 transient concretes each get a `*ValT` struct defined explicitly.
+// ============================================================================
+
+// -- IdValT: transient Val for IdT --------------------------------------------
+// `init_steps: &'tmp [INameT<'s, 't>]` replaces the permanent IdT's `&'t`
+// slice so callers can hash a trial IdT against the interner without yet
+// arena-allocating the slice. Per §6.3, interning keys the widest form
+// (`IdValT<'s, 't, 'tmp, INameT<'s, 't>>`); specialized IdT<'s, 't, T>
+// shares storage.
+#[derive(Copy, Clone, Debug)]
+pub struct IdValT<'s, 't, 'tmp, T: Copy>
+where 's: 't, 't: 'tmp,
+{
+    pub package_coord: &'s PackageCoordinate<'s>,
+    pub init_steps: &'tmp [INameT<'s, 't>],
+    pub local_name: T,
+}
+
+// -- Transient-with-'tmp Val types for the 15 concrete names with slices ----
+// Fields match the permanent struct verbatim, except each `&'t [...]` slice
+// is replaced by `&'tmp [...]`.
+
+#[derive(Copy, Clone, Debug)]
+pub struct ImplNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t ImplTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub sub_citizen: ICitizenTT<'s, 't>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ImplBoundNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t ImplBoundTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct OverrideDispatcherNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t OverrideDispatcherTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct OverrideDispatcherCaseNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub independent_impl_template_args: &'tmp [ITemplataT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct ExternFunctionNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub human_name: StrI<'s>,
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t FunctionTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionBoundNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t FunctionBoundTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct PredictedFunctionNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t PredictedFunctionTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct LambdaCallFunctionTemplateNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub code_location: CodeLocationS<'s>,
+    pub param_types: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct LambdaCallFunctionNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t LambdaCallFunctionTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct StructNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: IStructTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t InterfaceTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct AnonymousSubstructImplNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t AnonymousSubstructImplTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub sub_citizen: ICitizenTT<'s, 't>,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct AnonymousSubstructConstructorNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+    pub parameters: &'tmp [CoordT<'s, 't>],
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct AnonymousSubstructNameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub template: &'t AnonymousSubstructTemplateNameT<'s, 't>,
+    pub template_args: &'tmp [ITemplataT<'s, 't>],
+}
+
+// -- Simple / shallow concretes (reuse struct itself as Val) ------------------
+// The following ~45 concrete name structs have no `&'t [...]` slices, so
+// their permanent struct doubles as the Val (they're already `Copy` and
+// `Hash + Eq`). No separate `*ValT` type is defined for:
+//
+//   Fieldless (8): StaticSizedArrayTemplateNameT, RuntimeSizedArrayTemplateNameT,
+//   TypingPassFunctionResultVarNameT, PackageTopLevelNameT, SelfNameT,
+//   ArbitraryNameT, ResolvingEnvNameT, CallEnvNameT.
+//
+//   Scout-only fields (31): ExportTemplateNameT, ImplTemplateNameT,
+//   ImplBoundTemplateNameT, LetNameT, ExportAsNameT, ReachablePrototypeNameT,
+//   KindPlaceholderTemplateNameT, NonKindNonRegionPlaceholderNameT,
+//   TypingIgnoredParamNameT, UnnamedLocalNameT, ClosureParamNameT,
+//   ConstructingMemberNameT, WhileCondResultNameT, IterableNameT,
+//   IteratorNameT, IterationOptionNameT, MagicParamNameT, CodeVarNameT,
+//   AnonymousSubstructMemberNameT, PrimitiveNameT, ProjectNameT, PackageNameT,
+//   RuneNameT, ExternTemplateNameT, FunctionBoundTemplateNameT,
+//   PredictedFunctionTemplateNameT, FunctionTemplateNameT,
+//   ConstructorTemplateNameT, LambdaCitizenTemplateNameT, StructTemplateNameT,
+//   InterfaceTemplateNameT.
+//
+//   Typing refs / inline sub-enums (no slices, ~18): ExportNameT, RawArrayNameT,
+//   StaticSizedArrayNameT, RuntimeSizedArrayNameT, KindPlaceholderNameT,
+//   TypingPassBlockResultVarNameT, TypingPassTemporaryVarNameT,
+//   TypingPassPatternMemberNameT, TypingPassPatternDestructureeNameT,
+//   BuildingFunctionNameWithClosuredsT, ExternNameT, ForwarderFunctionNameT,
+//   ForwarderFunctionTemplateNameT, LambdaCitizenNameT,
+//   AnonymousSubstructImplTemplateNameT, AnonymousSubstructTemplateNameT,
+//   AnonymousSubstructConstructorTemplateNameT, OverrideDispatcherTemplateNameT.
+//
+// (OverrideDispatcherTemplateNameT is shallow because it holds an inline
+// `IdT<'s, 't, IImplTemplateNameT<'s, 't>>` — the IdT's own init_steps slice
+// must be canonicalized via IdValT before this Val is constructed.)
