@@ -316,8 +316,10 @@ pub struct ReachablePrototypeNameT<'s, 't>(pub std::marker::PhantomData<(&'s (),
 /*
 case class ReachablePrototypeNameT(num: Int) extends INameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct StaticSizedArrayTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayTemplateNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
   override def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT = {
@@ -345,8 +347,10 @@ case class StaticSizedArrayNameT(
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct RuntimeSizedArrayTemplateNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayTemplateNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
   override def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT = {
@@ -458,8 +462,10 @@ pub struct TypingPassBlockResultVarNameT<'s, 't>(pub std::marker::PhantomData<(&
 /*
 case class TypingPassBlockResultVarNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct TypingPassFunctionResultVarNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct TypingPassFunctionResultVarNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class TypingPassFunctionResultVarNameT() extends IVarNameT
 */
@@ -540,8 +546,10 @@ pub struct PrimitiveNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>
 case class PrimitiveNameT(humanName: StrI) extends INameT
 // Only made in typingpass
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct PackageTopLevelNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PackageTopLevelNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class PackageTopLevelNameT() extends INameT
 */
@@ -837,13 +845,17 @@ case class ConstructorTemplateNameT(
 // Vale has no Self, its just a convenient first name parameter.
 // See also SelfNameS.
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct SelfNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct SelfNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class SelfNameT() extends IVarNameT
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ArbitraryNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ArbitraryNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class ArbitraryNameT() extends INameT
 */
@@ -1060,16 +1072,20 @@ case class AnonymousSubstructNameT(
 //}
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct ResolvingEnvNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ResolvingEnvNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class ResolvingEnvNameT() extends INameT {
   vpass()
 }
 
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct CallEnvNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CallEnvNameT<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 /*
 case class CallEnvNameT() extends INameT {
   vpass()
