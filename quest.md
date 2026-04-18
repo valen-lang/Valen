@@ -96,13 +96,13 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - **NEW in typing pass:** `IEnvironmentT<'s, 't>` and all 9 variants (allocated via `scout_arena.alloc(...)`)
 
 **`'t` typing arena — interned (dedup via `TypingInterner`):**
-- `INameT<'s, 't>` (~60 variants) + all sub-enums (~14)
+- `INameT<'s, 't>` (~60 variants) — the "widest" name enum; the only name-side enum that gets arena storage and pointer-identity.
+- Concrete name structs (`FunctionNameT`, `StructNameT`, etc. — ~60 of them)
 - `IdT<'s, 't, T>` (generic)
 - `KindT<'s, 't>` (all variants including primitives, for uniformity)
 - `ITemplataT<'s, 't>` (all variants)
 - `PrototypeT<'s, 't>`, `SignatureT<'s, 't>`
 - `OverloadSetT<'s, 't>`
-- Sub-enum families (`IFunctionNameT`, `IStructNameT`, etc.) — own HashMap per family
 
 **`'t` typing arena — allocated but NOT interned:**
 - `FunctionDefinitionT<'s, 't>`, `FunctionHeaderT<'s, 't>`
@@ -115,6 +115,7 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - `HinputsT<'s, 't>` (pass output)
 
 **Inline Copy, NOT interned (Scala-verbatim structural equality):**
+- Name sub-enum families (`IFunctionNameT`, `IFunctionTemplateNameT`, `IInstantiationNameT`, `IStructNameT`, `IInterfaceNameT`, `ICitizenNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ISubKindTemplateNameT`, `ISuperKindTemplateNameT`, `ITemplateNameT`, `IImplNameT`, `IImplTemplateNameT`, `IPlaceholderNameT`, `IVarNameT`, `IRegionNameT`, `CitizenNameT`, `CitizenTemplateNameT`) — 16-byte inline Copy values (tag + 8-byte concrete ref). Casting a concrete or narrow sub-enum into a wider sub-enum (or into `INameT`) is a stack-only rewrap: no interner, no arena allocation. Identity between two sub-enum values is structural compare on the 16 bytes; identity between concrete refs or between `INameT` refs stays pointer-eq because those sides remain interned.
 - `CoordT<'s, 't>` — passed by value, pointer-eq on `kind` field
 - `OwnershipT`, `MutabilityT`, `VariabilityT`, `LocationT`, `RegionT` — pure Copy enums
 - Small templata value variants: `MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `RuntimeSizedArrayTemplateTemplataT`, `StaticSizedArrayTemplateTemplataT`
@@ -518,25 +519,28 @@ Every lifetime-parameterized struct in this section has an implicit `where 's: '
 All interned typing types use the dual-enum pattern: a **reference enum** (canonical, `&'t` refs) and a **value enum** (transient, HashMap lookup). Scout-lifetimed values (`StrI<'s>`, `IImpreciseNameS<'s>`, `RangeS<'s>`, etc.) are used directly wherever they appear — no re-interning boundary.
 
 Interned type families:
-- `INameT<'s, 't>` / `INameValT<'s, 't>` (~60 variants)
+- Concrete name structs (`FunctionNameT`, `StructNameT`, `ImplNameT`, … ~60 of them) / their respective `*ValT` lookup keys
+- `INameT<'s, 't>` / `INameValT<'s, 't>` (~60 variants, the widest union)
 - `IdT<'s, 't, T>` / `IdValT<'s, 't, T>`
 - `KindT<'s, 't>` / `KindValT<'s, 't>`
 - `ITemplataT<'s, 't>` / `ITemplataValT<'s, 't>`
 - `PrototypeT<'s, 't>` / `PrototypeValT<'s, 't>`
 - `SignatureT<'s, 't>` / `SignatureValT<'s, 't>`
 
+**Sub-enum name families (`IFunctionNameT`, `IFunctionTemplateNameT`, `ICitizenNameT`, etc. — 21 of them) are NOT interned.** They're inline-owned 16-byte `Copy` values — tag + inner concrete ref — built on the stack. See §6.2 for the rationale (sub-enum casts are free, no per-wrapper arena allocation). Only `INameT` (the widest) and the ~60 concrete name structs get arena storage on the name side.
+
 **No `'t`-lifetime re-interned versions of `StrI`, `IImpreciseNameS`, `RangeS`, `CodeLocationS`, `PackageCoordinate`, `FileCoordinate`.** Use the scout-arena versions directly. Anywhere you'd be tempted to create a `StrI<'t>` or `RangeT<'t>`, use the existing `StrI<'s>` or `RangeS<'s>` instead.
 
 ### 6.2 INameT Hierarchy
 
-~60 concrete name types, ~14 sub-trait enums. Every name type carries `<'s, 't>`.
+~60 concrete name types, ~21 sub-trait enums. Every name type carries `<'s, 't>`.
 
-**DAG rule (critical).** Scala's sealed-trait hierarchy is a DAG — some concrete names extend multiple sub-traits (`ExternFunctionNameT extends IFunctionNameT with IFunctionTemplateNameT`, etc.). In Rust this becomes: **a shared name type gets a variant in each sub-enum it belongs to.** Example:
+**DAG rule (critical).** Scala's sealed-trait hierarchy is a DAG — some concrete names extend multiple sub-traits (`ExternFunctionNameT extends IFunctionNameT with IFunctionTemplateNameT`, etc.). In Rust this becomes: **a shared concrete name gets a variant in each sub-enum it belongs to.** Example:
 
 ```rust
 pub enum IFunctionNameT<'s, 't> {
     Function(&'t FunctionNameT<'s, 't>),
-    Forwarder(&'t ForwarderFunctionNameT<'s, 't>),
+    ForwarderFunction(&'t ForwarderFunctionNameT<'s, 't>),
     ExternFunction(&'t ExternFunctionNameT<'s, 't>),  // also appears below
     // ...
 }
@@ -544,14 +548,18 @@ pub enum IFunctionNameT<'s, 't> {
 pub enum IFunctionTemplateNameT<'s, 't> {
     FunctionTemplate(&'t FunctionTemplateNameT<'s, 't>),
     ExternFunction(&'t ExternFunctionNameT<'s, 't>),  // shared with IFunctionNameT
-    Forwarder(&'t ForwarderFunctionTemplateNameT<'s, 't>),
+    ForwarderFunctionTemplate(&'t ForwarderFunctionTemplateNameT<'s, 't>),
     // ...
 }
 ```
 
-Bridging via `From` (narrow → wide, infallible) and `TryFrom` (wide → narrow, fallible). The shared underlying `&'t ExternFunctionNameT` pointer is the same in both — both enum wrappers are just different tags over the same arena payload.
+**Sub-enums are inline-owned Copy values, NOT arena-interned.** Only the concrete name types (wrapped in the variants above) and `INameT` itself (the widest union of all ~60 concretes) live in the typing arena. The intermediate sub-enums (`IFunctionNameT`, `IFunctionTemplateNameT`, `ICitizenNameT`, etc. — 21 families) are 16-byte `#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]` values built on the stack when needed. Casting a concrete into a sub-enum, or a narrow sub-enum into a wider one, is a pure stack-only rewrap via `.into()` — no interner round-trip.
 
-**Self-referential variants** (e.g. `ForwarderFunctionNameT.inner: &'t IFunctionNameT<'s, 't>`, `ForwarderFunctionTemplateNameT.inner: &'t IFunctionTemplateNameT<'s, 't>`) are resolved by the `&'t` indirection — no `Box` needed.
+The consequence for identity: two concrete names (e.g. two `&'t FunctionNameT`) are compared via `ptr::eq` since concretes stay interned. Two `INameT` refs (`&'t INameT<'s, 't>`) are also compared via `ptr::eq`. Two owned sub-enum values (e.g. two `IFunctionNameT<'s, 't>`) are compared structurally — but since the tag + inner pointer is 16 bytes, this is a 2-word compare and still cheap.
+
+Bridging via `From<X> for SubEnum` (narrow → wide, infallible — concrete into sub-enum and narrow sub-enum into wider sub-enum) and `TryFrom<INameT<'s, 't>> for SubEnum` (wide → narrow, fallible, match-and-rewrap on the stack). All of these are real implementations in `names.rs`, no interner involvement.
+
+**Self-referential variants** (e.g. `ForwarderFunctionNameT.inner: IFunctionNameT<'s, 't>`, `ForwarderFunctionTemplateNameT.inner: IFunctionTemplateNameT<'s, 't>`) are inline-owned; since sub-enums are 16 bytes and Copy they can live directly as struct fields without `Box` or `&'t`.
 
 No new name variants needed for env handling (env-id uniqueness isn't required).
 
@@ -567,13 +575,15 @@ where 's: 't,
 }
 ```
 
-Only `T: Copy` on the struct itself — keep bounds minimal so `IdT` is cheap to mention in signatures elsewhere. Conversion bounds (`Into<&'t INameT>`, `TryInto<...>`) live on the impl blocks for the conversion methods, not on the struct definition:
+`local_name` holds the sub-enum (or concrete ref) **inline by value**, not behind `&'t`. For a function's id, `T = IFunctionNameT<'s, 't>`; for a struct's id, `T = IStructNameT<'s, 't>`; for the widest form, `T = INameT<'s, 't>`. The sub-enum side is 16 bytes (tag + 8-byte inner concrete ref).
+
+Only `T: Copy` on the struct itself — keep bounds minimal so `IdT` is cheap to mention in signatures elsewhere. Conversion bounds (`Into<INameT<'s, 't>>`, `TryInto<...>`) live on the impl blocks for the conversion methods:
 
 ```rust
-impl<'s, 't, T: Copy + Into<&'t INameT<'s, 't>>> IdT<'s, 't, T>
+impl<'s, 't, T: Copy + Into<INameT<'s, 't>>> IdT<'s, 't, T>
 where 's: 't,
 {
-    pub fn widen(self) -> IdT<'s, 't, &'t INameT<'s, 't>> { ... }
+    pub fn widen(self) -> IdT<'s, 't, INameT<'s, 't>> { ... }
 }
 
 impl<'s, 't, T: Copy> IdT<'s, 't, T>
@@ -583,17 +593,25 @@ where 's: 't,
     where T: Into<U> { ... }
 }
 
-impl<'s, 't> IdT<'s, 't, &'t INameT<'s, 't>>
+impl<'s, 't> IdT<'s, 't, INameT<'s, 't>>
 where 's: 't,
 {
     pub fn try_narrow<U: Copy>(self) -> Option<IdT<'s, 't, U>>
-    where &'t INameT<'s, 't>: TryInto<U> { ... }
+    where INameT<'s, 't>: TryInto<U> { ... }
 }
 ```
 
-Generic parameter preserves leaf-kind info at the type level (e.g. `IdT<'s, 't, &'t IFunctionNameT<'s, 't>>` vs `IdT<'s, 't, &'t IStructTemplateNameT<'s, 't>>`).
+`widen`, `widen_to`, and `try_narrow` are all real, no interner dependency — they just rewrap the inline `local_name` via its `From`/`TryFrom` impl and reuse the same `package_coord` and `init_steps` pointers.
 
-Interning uses one HashMap keyed by the widest form (`IdValT<'s, 't, &'t INameT>`).
+Generic parameter preserves leaf-kind info at the type level (e.g. `IdT<'s, 't, IFunctionNameT<'s, 't>>` vs `IdT<'s, 't, IStructTemplateNameT<'s, 't>>`).
+
+Since sub-enum identity is structural (not pointer-eq), `IdT` defines a **custom** `PartialEq`/`Eq`/`Hash` rather than using derive:
+
+- `package_coord`: pointer-eq (scout arena canonicalizes `PackageCoordinate`).
+- `init_steps`: slice data pointer + length compare (the typing interner canonicalizes `&'t [&'t INameT]` slices per IDEPFL, so equal content ⇒ equal slice pointer).
+- `local_name`: structural compare on the inline `T` (16-byte sub-enum, `INameT`, or concrete ref).
+
+Interning uses one HashMap keyed by the widest form (`IdValT<'s, 't, INameT<'s, 't>>`); specialized `IdT<'s, 't, IXxxNameT<'s, 't>>` views are type-cast from the widest-form arena storage (unsafe at the interner boundary since `IdT`'s layout is T-independent at the byte level for any T that is `Copy` + same size as the widened-form's inline enum).
 
 ### 6.4 `CoordT<'s, 't>` — Inline Copy
 
@@ -695,13 +713,13 @@ pub struct ExternFunctionTemplataT<'s, 't> {
 
 No ID indirection, no side tables, no slot-constraint enforcement. `FunctionHeaderT.maybe_origin_function_templata` and `ImplT.templata` and `FunctionBannerT.origin_function_templata` all just hold the heavy templata directly.
 
-**`PrototypeTemplataT`'s own `T` parameter is orthogonal.** Scala's `ITemplataT[+T <: ITemplataType]` outer parameter is erased (handled by variant tag + runtime `tyype` field on `PlaceholderTemplataT`). But `PrototypeTemplataT[T <: IFunctionNameT]` has a *separate* inner type parameter tracking which kind of function-name the prototype points at. Decide that parameter independently — most likely: keep it as `PrototypeTemplataT<'s, 't>` with `prototype: &'t PrototypeT<'s, 't>` where `PrototypeT` is generic in its leaf name (`PrototypeT<'s, 't, T = &'t IFunctionNameT>`). Don't confuse the two erasures.
+**`PrototypeTemplataT`'s own `T` parameter is orthogonal.** Scala's `ITemplataT[+T <: ITemplataType]` outer parameter is erased (handled by variant tag + runtime `tyype` field on `PlaceholderTemplataT`). But `PrototypeTemplataT[T <: IFunctionNameT]` has a *separate* inner type parameter tracking which kind of function-name the prototype points at. Decide that parameter independently — most likely: keep it as `PrototypeTemplataT<'s, 't>` with `prototype: &'t PrototypeT<'s, 't>` where `PrototypeT` is generic in its leaf name (`PrototypeT<'s, 't, T: Copy = ()>` with `id: IdT<'s, 't, T>`, T holding the leaf sub-enum inline). Don't confuse the two erasures.
 
 **Mixed-mode equality.** `ITemplataT` deliberately mixes Copy-value variants (`Mutability`, `Variability`, `Ownership`, `Integer`, `Boolean`) with `&'t`-ref variants (`Coord`, `Kind`, `Prototype`, heavy templatas, …). Value variants compare by value; ref variants compare by pointer identity (the typing interner guarantees uniqueness). `ITemplataValT` mirrors this split for HashMap lookup. When an `ITemplataT` itself lives behind `&'t ITemplataT` and is used as a key, wrap in `PtrKey<'t, ITemplataT>` (pointer-eq on the whole value); when it's used by value, the derived `PartialEq`/`Hash` does the right thing per-variant.
 
 ### 6.7 Mutual Recursion
 
-Types form a mutually recursive graph (`CoordT → KindT → StructTT → IdT → INameT → ITemplataT → CoordT`). Every link is an `&'s` or `&'t` ref — pointer-sized, finite. No `Box`/`Vec` needed; arena references provide the indirection.
+Types form a mutually recursive graph (`CoordT → KindT → StructTT → IdT → INameT → ITemplataT → CoordT`). Most links are `&'s` or `&'t` refs — pointer-sized, finite. The name sub-enums (`IFunctionNameT`, `IStructNameT`, etc.) are the exception — they're inline 16-byte tagged pointers, one word larger than a raw ref but still finite and `Copy`. No `Box`/`Vec` needed; arena references + inline sub-enums provide the indirection.
 
 ---
 
