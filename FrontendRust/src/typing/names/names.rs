@@ -15,15 +15,21 @@ import dev.vale.typing.types._
 // they're in. See TNAD.
 */
 use crate::interner::StrI;
+use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
-// TODO: placeholder PhantomData — replace with real fields during body migration
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct IdT<'s, 't, T: Copy = &'t INameT<'s, 't>>
+where 's: 't,
+{
+    pub package_coord: &'s PackageCoordinate<'s>,
+    pub init_steps: &'t [&'t INameT<'s, 't>],
+    pub local_name: T,
+}
 /*
 case class IdT[+T <: INameT](
   packageCoord: PackageCoordinate,
@@ -105,6 +111,49 @@ case class IdT[+T <: INameT](
 }
 
 */
+// (no scala counterpart — narrow -> wide conversion per handoff §6.3)
+impl<'s, 't, T> IdT<'s, 't, T>
+where 's: 't, T: Copy + Into<&'t INameT<'s, 't>>,
+{
+    pub fn widen(self) -> IdT<'s, 't, &'t INameT<'s, 't>> {
+        IdT {
+            package_coord: self.package_coord,
+            init_steps: self.init_steps,
+            local_name: self.local_name.into(),
+        }
+    }
+}
+
+// (no scala counterpart — generic upcast per handoff §6.3)
+impl<'s, 't, T> IdT<'s, 't, T>
+where 's: 't, T: Copy,
+{
+    pub fn widen_to<U: Copy>(self) -> IdT<'s, 't, U>
+    where T: Into<U>,
+    {
+        IdT {
+            package_coord: self.package_coord,
+            init_steps: self.init_steps,
+            local_name: self.local_name.into(),
+        }
+    }
+}
+
+// (no scala counterpart — wide -> narrow conversion per handoff §6.3)
+impl<'s, 't> IdT<'s, 't, &'t INameT<'s, 't>>
+where 's: 't,
+{
+    pub fn try_narrow<U: Copy>(self) -> Option<IdT<'s, 't, U>>
+    where &'t INameT<'s, 't>: TryInto<U>,
+    {
+        self.local_name.try_into().ok().map(|local_name| IdT {
+            package_coord: self.package_coord,
+            init_steps: self.init_steps,
+            local_name,
+        })
+    }
+}
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum INameT<'s, 't> {
     ExportTemplate(&'t ExportTemplateNameT<'s, 't>),
@@ -666,7 +715,7 @@ case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IP
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherTemplateNameT<'s, 't> {
-    pub impl_id: IdT<'s, 't>,
+    pub impl_id: IdT<'s, 't, &'t IImplTemplateNameT<'s, 't>>,
 }
 /*
 case class OverrideDispatcherTemplateNameT(
