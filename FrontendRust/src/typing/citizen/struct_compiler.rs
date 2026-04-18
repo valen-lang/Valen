@@ -546,7 +546,7 @@ pub fn get_mutability<'s, 't>(
     interner: &Interner<'s>,
     keywords: &Keywords<'s>,
     coutputs: &CompilerOutputs<'s, 't>,
-    original_calling_denizen_id: IdT<'s, 't>,
+    original_calling_denizen_id: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>,
     region: RegionT,
     struct_tt: StructTT<'s, 't>,
     bound_arguments_source: &dyn IBoundArgumentsSource<'s, 't>,

@@ -424,7 +424,7 @@ fn printable_kind_name(kind: KindT) -> String {
     }
   }
 */
-fn printable_id<'s, 't>(id: IdT<'s, 't>) -> String {
+fn printable_id<'s, 't>(id: IdT<'s, 't, &'t INameT<'s, 't>>) -> String {
   panic!("Unimplemented: printable_id");
 }
 /*
@@ -777,7 +777,9 @@ fn humanize_kind(code_map: &dyn Fn(CodeLocationS) -> String, kind: KindT, contai
     }
   }
 */
-pub fn humanize_id<'s, 't>(code_map: &dyn Fn(CodeLocationS) -> String, name: IdT<'s, 't>, containing_region: Option<RegionT>) -> String {
+pub fn humanize_id<'s, 't, T: Copy + 't>(code_map: &dyn Fn(CodeLocationS) -> String, name: IdT<'s, 't, T>, containing_region: Option<RegionT>) -> String
+where 's: 't,
+{
   panic!("Unimplemented: humanize_id");
 }
 /*

@@ -215,7 +215,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 }
 
 */
-pub struct LockWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub result_opt_borrow_type: CoordT<'s, 't>, pub some_constructor: PrototypeT<'s, 't>, pub none_constructor: PrototypeT<'s, 't>, pub some_impl_name: IdT<'s, 't>, pub none_impl_name: IdT<'s, 't> }
+pub struct LockWeakTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub result_opt_borrow_type: CoordT<'s, 't>, pub some_constructor: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, pub none_constructor: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, pub some_impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>>, pub none_impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>> }
 impl<'s, 't> LockWeakTE<'s, 't> {}
 /*
 case class LockWeakTE(
@@ -960,7 +960,7 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 }
 
 */
-pub struct AsSubtypeTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_type: CoordT<'s, 't>, pub result_result_type: CoordT<'s, 't>, pub ok_constructor: PrototypeT<'s, 't>, pub err_constructor: PrototypeT<'s, 't>, pub impl_name: IdT<'s, 't>, pub ok_impl_name: IdT<'s, 't>, pub err_impl_name: IdT<'s, 't> }
+pub struct AsSubtypeTE<'s, 't> { pub source_expr: ReferenceExpressionTE<'s, 't>, pub target_type: CoordT<'s, 't>, pub result_result_type: CoordT<'s, 't>, pub ok_constructor: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, pub err_constructor: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, pub impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>>, pub ok_impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>>, pub err_impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>> }
 impl<'s, 't> AsSubtypeTE<'s, 't> {}
 /*
 case class AsSubtypeTE(
@@ -1663,7 +1663,7 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> { fn result(&self) -> Referenc
 }
 
 */
-pub struct UpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_super_kind: ISuperKindTT<'s, 't>, pub impl_name: IdT<'s, 't> }
+pub struct UpcastTE<'s, 't> { pub inner_expr: ReferenceExpressionTE<'s, 't>, pub target_super_kind: ISuperKindTT<'s, 't>, pub impl_name: IdT<'s, 't, &'t IImplNameT<'s, 't>> }
 impl<'s, 't> UpcastTE<'s, 't> {}
 /*
 // This used to be StructToInterfaceUpcastTE, and then we added generics.

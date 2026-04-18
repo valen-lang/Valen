@@ -23,7 +23,7 @@ use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct IdT<'s, 't, T: Copy = &'t INameT<'s, 't>>
+pub struct IdT<'s, 't, T: Copy>
 where 's: 't,
 {
     pub package_coord: &'s PackageCoordinate<'s>,

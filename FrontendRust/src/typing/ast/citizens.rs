@@ -25,7 +25,7 @@ pub enum CitizenDefinitionT<'s, 't> {
 /*
 trait CitizenDefinitionT {
 */
-fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't> {
+fn citizen_definition_template_name<'s, 't>() -> IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>> {
     panic!("Unimplemented: template_name");
 }
 /*
@@ -51,7 +51,7 @@ fn citizen_definition_default_region() -> RegionT {
 }
 */
 pub struct StructDefinitionT<'s, 't> {
-    pub template_name: IdT<'s, 't>,
+    pub template_name: IdT<'s, 't, &'t IStructTemplateNameT<'s, 't>>,
     pub instantiated_citizen: StructTT<'s, 't>,
     pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
     pub weakable: bool,
@@ -231,14 +231,14 @@ impl<'s, 't> ReferenceMemberTypeT<'s, 't> {
 case class ReferenceMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
 pub struct InterfaceDefinitionT<'s, 't> {
-    pub template_name: IdT<'s, 't>,
+    pub template_name: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>,
     pub instantiated_interface: InterfaceTT<'s, 't>,
     pub ref_: InterfaceTT<'s, 't>,
     pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub internal_methods: Vec<(PrototypeT<'s, 't>, usize)>,
+    pub internal_methods: Vec<(PrototypeT<'s, 't, IFunctionNameT<'s, 't>>, usize)>,
 }
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {}
 /*

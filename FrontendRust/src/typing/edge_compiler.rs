@@ -100,7 +100,7 @@ where 's: 't,
     pub fn compile_i_tables(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-    ) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>>) {
+    ) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't, &'t IInterfaceNameT<'s, 't>>, HashMap<IdT<'s, 't, &'t ICitizenNameT<'s, 't>>, EdgeT<'s, 't>>>) {
         panic!("Unimplemented: compile_i_tables");
     }
 /*
@@ -331,9 +331,9 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
         impl_t: &ImplT<'s, 't>,
-        interface_template_id: IdT<'s, 't>,
-        sub_citizen_template_id: IdT<'s, 't>,
-        abstract_function_prototype: PrototypeT<'s, 't>,
+        interface_template_id: IdT<'s, 't, &'t IInterfaceTemplateNameT<'s, 't>>,
+        sub_citizen_template_id: IdT<'s, 't, &'t ICitizenTemplateNameT<'s, 't>>,
+        abstract_function_prototype: PrototypeT<'s, 't, IFunctionNameT<'s, 't>>,
         abstract_index: i32,
     ) -> OverrideT<'s, 't> {
         panic!("Unimplemented: look_for_override");

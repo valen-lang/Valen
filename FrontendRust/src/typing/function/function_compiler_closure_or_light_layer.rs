@@ -605,7 +605,7 @@ where 's: 't,
         &self,
         outer_env: IEnvironmentT,
         function: FunctionA,
-        template_id: IdT,
+        template_id: IdT<'s, 't, &'t IFunctionTemplateNameT<'s, 't>>,
         is_root_compiling_denizen: bool,
     ) -> BuildingFunctionEnvironmentWithClosuredsT<'_, '_> {
         panic!("Unimplemented: make_env_without_closure_stuff");
@@ -656,8 +656,8 @@ where 's: 't,
     fn make_closure_variables_and_entries(
         &self,
         coutputs: CompilerOutputs,
-        original_calling_denizen_id: IdT,
-        closure_struct_ref: StructTT,
+        original_calling_denizen_id: IdT<'s, 't, &'t ITemplateNameT<'s, 't>>,
+        closure_struct_ref: StructTT<'s, 't>,
     ) -> (Vec<IVariableT<'_, '_>>, Vec<(INameT<'_, '_>, IEnvEntry)>) {
         panic!("Unimplemented: make_closure_variables_and_entries");
     }

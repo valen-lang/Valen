@@ -611,10 +611,10 @@ where 's: 't,
 {
     pub fn assemble_name(
         &self,
-        template_name: &IdT<'s, 't>,
+        template_name: &IdT<'s, 't, &'t IFunctionTemplateNameT<'s, 't>>,
         template_args: &[ITemplataT<'s, 't>],
         param_types: &[CoordT<'s, 't>],
-    ) -> IdT<'s, 't> {
+    ) -> IdT<'s, 't, &'t IFunctionNameT<'s, 't>> {
         panic!("Unimplemented: assemble_name");
     }
 
