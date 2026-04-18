@@ -326,6 +326,7 @@ fn get_function_last_name_unapply<'s, 't>(f: &'t FunctionDefinitionT<'s, 't>) ->
   def unapply(f: FunctionDefinitionT): Option[IFunctionNameT] = Some(f.header.id.localName)
 }
 */
+#[derive(Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LocationInFunctionEnvironmentT<'s> {
     pub path: Vec<i32>,
     pub _phantom: std::marker::PhantomData<&'s ()>,
