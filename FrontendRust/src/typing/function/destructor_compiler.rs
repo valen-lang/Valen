@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.function
 
@@ -27,8 +29,6 @@ import dev.vale.typing.names.PackageTopLevelNameT
 import scala.collection.immutable.List
 
 */
-use crate::typing::compiler::Compiler;
-
 /*
 class DestructorCompiler(
     opts: TypingPassOptions,

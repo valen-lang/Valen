@@ -1,3 +1,7 @@
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.function
 
@@ -23,10 +27,6 @@ import dev.vale.typing.env._
 import scala.collection.immutable.{List, Set}
 
 */
-use crate::typing::types::types::*;
-use crate::typing::ast::ast::*;
-use crate::typing::compiler::Compiler;
-
 pub struct ResultTypeMismatchError<'s, 't> {
     pub expected_type: CoordT<'s, 't>,
     pub actual_type: CoordT<'s, 't>,

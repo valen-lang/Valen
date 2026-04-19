@@ -1,3 +1,28 @@
+use std::collections::{HashMap, HashSet};
+
+use crate::utils::range::RangeS;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::rules::rules::*;
+use crate::postparsing::names::*;
+use crate::postparsing::*;
+use crate::solver::solver::*;
+use crate::solver::simple_solver_state::*;
+use crate::typing::compiler::Compiler;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::higher_typing::ast::*;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+use crate::typing::infer_compiler::InferEnv;
+
 /*
 package dev.vale.typing.infer
 
@@ -26,31 +51,6 @@ import scala.collection.immutable.{HashSet, Map}
 import scala.collection.mutable
 
 */
-use std::collections::{HashMap, HashSet};
-
-use crate::utils::range::RangeS;
-use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::*;
-use crate::postparsing::names::*;
-use crate::postparsing::*;
-use crate::solver::solver::*;
-use crate::solver::simple_solver_state::*;
-use crate::typing::compiler::Compiler;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::templata::templata::*;
-use crate::typing::types::types::*;
-use crate::typing::names::names::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::higher_typing::ast::*;
-use crate::interner::Interner;
-use crate::keywords::Keywords;
-use crate::typing::infer_compiler::InferEnv;
-
 pub enum ITypingPassSolverError<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait ITypingPassSolverError

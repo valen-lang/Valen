@@ -1,3 +1,14 @@
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::expressions::IExpressionSE;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::env::environment::{
+  GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
+};
+use crate::typing::names::names::{IdT, IVarNameT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::{CoordT, RegionT, StructTT, VariabilityT};
+use crate::typing::typing_interner::TypingInterner;
+
 /*
 package dev.vale.typing.env
 
@@ -17,16 +28,6 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 import scala.collection.immutable.{List, Map, Set}
 
 */
-use crate::higher_typing::ast::FunctionA;
-use crate::postparsing::expressions::IExpressionSE;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
-use crate::typing::env::environment::{
-  GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
-};
-use crate::typing::names::names::{IdT, IVarNameT};
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::{CoordT, RegionT, StructTT, VariabilityT};
-use crate::typing::typing_interner::TypingInterner;
 
 #[derive(Debug)]
 pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>

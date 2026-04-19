@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing
 
@@ -23,8 +25,6 @@ import scala.collection.immutable._
 //ISolverOutcome[IRulexSR, IRuneS, ITemplata[ITemplataType], ITypingPassSolverError]
 
 */
-use crate::typing::compiler::Compiler;
-
 pub struct CompleteResolveSolve;
 /*
 case class CompleteResolveSolve(

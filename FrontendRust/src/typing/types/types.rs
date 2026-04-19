@@ -1,3 +1,7 @@
+use crate::postparsing::names::IImpreciseNameS;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+
 /*
 package dev.vale.typing.types
 
@@ -15,10 +19,6 @@ import dev.vale.typing.types._
 
 import scala.collection.immutable.List
 */
-use crate::postparsing::names::IImpreciseNameS;
-use crate::typing::names::names::*;
-use crate::typing::env::environment::*;
-
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipT {
     Share,

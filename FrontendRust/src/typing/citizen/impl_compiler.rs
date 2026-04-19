@@ -1,3 +1,22 @@
+use crate::typing::compiler::Compiler;
+use crate::typing::infer_compiler::*;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::*;
+use crate::postparsing::rules::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::compiler_outputs::*;
+use crate::higher_typing::ast::*;
+use crate::interner::Interner;
+
 /*
 package dev.vale.typing.citizen
 
@@ -23,24 +42,6 @@ import dev.vale.typing.infer.ITypingPassSolverError
 import scala.collection.immutable.Set
 
 */
-use crate::typing::compiler::Compiler;
-use crate::typing::infer_compiler::*;
-use crate::utils::range::RangeS;
-use crate::postparsing::names::*;
-use crate::postparsing::*;
-use crate::postparsing::rules::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::compiler_outputs::*;
-use crate::higher_typing::ast::*;
-use crate::interner::Interner;
 
 pub enum IsParentResult {
     _Phantom,
@@ -53,7 +54,6 @@ pub struct IsParent<'s, 't> {
     pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub impl_id: IdT<'s, 't>,
 }
-impl<'s, 't> IsParent<'s, 't> {}
 /*
 case class IsParent(
   templata: ITemplataT[ImplTemplataType],
@@ -64,7 +64,6 @@ case class IsParent(
 pub struct IsntParent<'s, 't> {
     pub candidates: Vec<IResolvingError<'s, 't>>,
 }
-impl<'s, 't> IsntParent<'s, 't> {}
 /*
 case class IsntParent(
   candidates: Vector[IResolvingError]

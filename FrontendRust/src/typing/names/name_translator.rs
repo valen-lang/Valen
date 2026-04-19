@@ -1,3 +1,11 @@
+use crate::utils::range::CodeLocationS;
+
+use crate::postparsing::names::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.names
 
@@ -10,14 +18,6 @@ import dev.vale.postparsing._
 import scala.collection.mutable
 
 */
-use crate::utils::range::CodeLocationS;
-
-use crate::postparsing::names::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::compiler::Compiler;
-
 /*
 class NameTranslator(interner: Interner) {
 */

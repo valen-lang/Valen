@@ -1,3 +1,16 @@
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+
+use crate::higher_typing::ast::*;
+
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+
 /*
 package dev.vale.typing.macros
 
@@ -21,19 +34,6 @@ import dev.vale.typing.types.InterfaceTT
 import dev.vale.typing.ast
 import dev.vale.typing.function.DestructorCompiler
 */
-use crate::interner::StrI;
-use crate::utils::range::RangeS;
-
-use crate::higher_typing::ast::*;
-
-use crate::typing::types::types::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::LocationInDenizen;
-
 // (Scala `class AsSubtypeMacro(keywords, implCompiler, expressionCompiler, destructorCompiler)`
 //  absorbed onto `Compiler`; the method body lives at
 //  `Compiler::generate_function_body_as_subtype` below.)

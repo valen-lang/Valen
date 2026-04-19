@@ -1,3 +1,22 @@
+use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler::Compiler;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::expressions::*;
+use crate::postparsing::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::compiler_outputs::*;
+use crate::parsing::ast::*;
+use crate::interner::Interner;
+
 /*
 package dev.vale.typing.expression
 
@@ -22,25 +41,6 @@ import dev.vale.typing.names.TypingPassTemporaryVarNameT
 
 import scala.collection.immutable.List
 */
-use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::compiler::Compiler;
-use crate::utils::range::RangeS;
-use crate::postparsing::names::*;
-use crate::postparsing::expressions::*;
-use crate::postparsing::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::compiler_outputs::*;
-use crate::parsing::ast::*;
-use crate::interner::Interner;
-
 /*
 class LocalHelper(
     opts: TypingPassOptions,

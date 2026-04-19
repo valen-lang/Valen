@@ -36,7 +36,6 @@ pub struct TypingPassOptions<'s> {
   pub tree_shaking_enabled: bool,
   pub _phantom: std::marker::PhantomData<&'s ()>,
 }
-impl<'s> TypingPassOptions<'s> {}
 /*
 case class TypingPassOptions(
   globalOptions: GlobalOptions = GlobalOptions(),

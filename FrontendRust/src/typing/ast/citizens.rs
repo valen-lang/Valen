@@ -1,3 +1,10 @@
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::hinputs_t::*;
+use crate::typing::ast::ast::*;
+use crate::postparsing::itemplatatype::ITemplataType;
+
 /*
 package dev.vale.typing.ast
 
@@ -12,12 +19,6 @@ import scala.collection.immutable.Map
 
 // A "citizen" is a struct or an interface.
 */
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::hinputs_t::*;
-use crate::typing::ast::ast::*;
-use crate::postparsing::itemplatatype::ITemplataType;
 
 pub enum CitizenDefinitionT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
@@ -60,7 +61,6 @@ pub struct StructDefinitionT<'s, 't> {
     pub is_closure: bool,
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
 }
-impl<'s, 't> StructDefinitionT<'s, 't> {}
 /*
 case class StructDefinitionT(
   templateName: IdT[IStructTemplateNameT],
@@ -240,7 +240,6 @@ pub struct InterfaceDefinitionT<'s, 't> {
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
     pub internal_methods: Vec<(PrototypeT<'s, 't>, usize)>,
 }
-impl<'s, 't> InterfaceDefinitionT<'s, 't> {}
 /*
 case class InterfaceDefinitionT(
   templateName: IdT[IInterfaceTemplateNameT],

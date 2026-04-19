@@ -1,3 +1,23 @@
+use crate::keywords::Keywords;
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::interner::Interner;
+use crate::typing::templata_compiler::*;
+use crate::typing::infer_compiler::*;
+use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::rules::rules::*;
+
 /*
 package dev.vale.typing.citizen
 
@@ -25,31 +45,11 @@ import dev.vale.typing.templata.ITemplataT.expectMutability
 import scala.collection.immutable.List
 import scala.collection.mutable
 */
-use crate::keywords::Keywords;
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::compiler_outputs::*;
-use crate::interner::Interner;
-use crate::typing::templata_compiler::*;
-use crate::typing::infer_compiler::*;
-use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::rules::rules::*;
 
 pub struct WeakableImplingMismatch {
     pub struct_weakable: bool,
     pub interface_weakable: bool,
 }
-impl WeakableImplingMismatch {}
 /*
 case class WeakableImplingMismatch(structWeakable: Boolean, interfaceWeakable: Boolean) extends Throwable {
   val hash = runtime.ScalaRunTime._hashCode(this);
@@ -79,7 +79,6 @@ pub struct UncheckedDefiningConclusions<'s, 't> {
     pub definition_rules: Vec<IRulexSR<'s>>,
     pub conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
 }
-impl<'s, 't> UncheckedDefiningConclusions<'s, 't> {}
 /*
 case class UncheckedDefiningConclusions(
     envs: InferEnv,

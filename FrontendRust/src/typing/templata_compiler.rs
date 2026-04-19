@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing
 
@@ -24,7 +26,6 @@ import scala.collection.immutable.{List, Map, Set}
 // See SBITAFD, we need to register bounds for these new instantiations. This instructs us where
 // to get those new bounds from.
 */
-use crate::typing::compiler::Compiler;
 
 pub trait IBoundArgumentsSource<'s, 't> {}
 /*

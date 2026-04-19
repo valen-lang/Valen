@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.citizen
 
@@ -33,8 +35,6 @@ class StructCompilerCore(
   nameTranslator: NameTranslator,
   delegate: IStructCompilerDelegate) {
 */
-use crate::typing::compiler::Compiler;
-
 /*
 */
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>

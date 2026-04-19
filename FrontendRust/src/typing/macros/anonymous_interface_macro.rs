@@ -1,3 +1,8 @@
+use crate::higher_typing::ast::*;
+use crate::typing::names::names::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.macros
 
@@ -29,12 +34,6 @@ import scala.collection.immutable.List
 import scala.collection.mutable
 
 */
-
-use crate::higher_typing::ast::*;
-use crate::typing::names::names::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::compiler::Compiler;
-
 // (Scala `class AnonymousInterfaceMacro(opts, interner, keywords, nameTranslator,
 //  overloadCompiler, structCompiler, structConstructorMacro, structDropMacro)` absorbed
 //  onto `Compiler`; the method bodies live at

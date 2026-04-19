@@ -1,3 +1,28 @@
+use crate::typing::compiler::Compiler;
+use crate::typing::function::function_compiler::*;
+use crate::typing::compilation::TypingPassOptions;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::typing::infer_compiler::{InitialKnown, InitialSend};
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::ast::*;
+use crate::postparsing::*;
+use crate::postparsing::rules::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::compiler_outputs::*;
+use crate::higher_typing::ast::*;
+use crate::solver::solver::*;
+use crate::interner::Interner;
+use crate::keywords::Keywords;
+
 /*
 package dev.vale.typing.function
 
@@ -35,31 +60,6 @@ import scala.collection.immutable.{List, Set}
 // There's a layer to take care of each of these things.
 // This file is the outer layer, which spawns a local environment for the function.
 */
-use crate::typing::compiler::Compiler;
-use crate::typing::function::function_compiler::*;
-use crate::typing::compilation::TypingPassOptions;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::infer_compiler::{InitialKnown, InitialSend};
-use crate::utils::range::RangeS;
-use crate::postparsing::names::*;
-use crate::postparsing::ast::*;
-use crate::postparsing::*;
-use crate::postparsing::rules::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::compiler_outputs::*;
-use crate::higher_typing::ast::*;
-use crate::solver::solver::*;
-use crate::interner::Interner;
-use crate::keywords::Keywords;
-
 /*
 class FunctionCompilerSolvingLayer(
     opts: TypingPassOptions,

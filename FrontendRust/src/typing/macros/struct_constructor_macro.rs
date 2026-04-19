@@ -1,3 +1,17 @@
+use crate::interner::StrI;
+use crate::utils::range::RangeS;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+use crate::higher_typing::ast::*;
+
 /*
 package dev.vale.typing.macros
 
@@ -28,20 +42,6 @@ import dev.vale.typing.types.InterfaceTT
 import scala.collection.mutable
 
 */
-use crate::interner::StrI;
-use crate::utils::range::RangeS;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::compiler::Compiler;
-use crate::higher_typing::ast::*;
-
 // (Scala `class StructConstructorMacro(opts, interner, keywords, nameTranslator,
 //  destructorCompiler)` absorbed onto `Compiler`; the method bodies live at
 //  `Compiler::get_struct_sibling_entries_struct_constructor` and

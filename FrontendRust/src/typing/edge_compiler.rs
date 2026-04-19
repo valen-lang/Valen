@@ -1,3 +1,21 @@
+use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler::Compiler;
+use std::collections::HashMap;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::citizens::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::compiler_outputs::*;
+use crate::interner::Interner;
+
 /*
 package dev.vale.typing
 
@@ -21,24 +39,6 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 
 */
-use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::compiler::Compiler;
-use std::collections::HashMap;
-use crate::utils::range::RangeS;
-use crate::postparsing::names::*;
-use crate::postparsing::*;
-use crate::typing::ast::ast::*;
-use crate::typing::ast::citizens::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::compiler_outputs::*;
-use crate::interner::Interner;
-
 pub enum IMethod<'s, 't> {
     NeededOverride(NeededOverride<'s, 't>),
     FoundFunction(FoundFunction<'s, 't>),
@@ -50,7 +50,6 @@ pub struct NeededOverride<'s, 't> {
     pub name: IImpreciseNameS<'s>,
     pub param_filters: Vec<CoordT<'s, 't>>,
 }
-impl<'s, 't> NeededOverride<'s, 't> {}
 /*
 case class NeededOverride(
   name: IImpreciseNameS,
@@ -63,7 +62,6 @@ override def equals(obj: Any): Boolean = vcurious(); }
 pub struct FoundFunction<'s, 't> {
     pub prototype: PrototypeT<'s, 't>,
 }
-impl<'s, 't> FoundFunction<'s, 't> {}
 /*
 case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod {
   val hash = runtime.ScalaRunTime._hashCode(this);
@@ -75,7 +73,6 @@ pub struct PartialEdgeT<'s, 't> {
     pub interface: InterfaceTT<'s, 't>,
     pub methods: Vec<IMethod<'s, 't>>,
 }
-impl<'s, 't> PartialEdgeT<'s, 't> {}
 /*
 case class PartialEdgeT(
   struct: StructTT,

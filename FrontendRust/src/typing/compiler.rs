@@ -1,3 +1,8 @@
+use crate::keywords::Keywords;
+use crate::scout_arena::ScoutArena;
+use crate::typing::compilation::TypingPassOptions;
+use crate::typing::typing_interner::TypingInterner;
+
 /*
 package dev.vale.typing
 
@@ -42,11 +47,6 @@ import scala.collection.mutable
 import scala.util.control.Breaks._
 
 */
-use crate::keywords::Keywords;
-use crate::scout_arena::ScoutArena;
-use crate::typing::compilation::TypingPassOptions;
-use crate::typing::typing_interner::TypingInterner;
-
 pub trait IFunctionGenerator<'s, 't> {
 /*
 trait IFunctionGenerator {

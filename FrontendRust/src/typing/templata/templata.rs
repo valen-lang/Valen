@@ -1,3 +1,11 @@
+use crate::interner::StrI;
+use crate::higher_typing::ast::*;
+use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
+use crate::typing::env::environment::*;
+use crate::typing::names::names::IdT;
+use crate::typing::types::types::*;
+use crate::utils::range::RangeS;
+
 /*
 package dev.vale.typing.templata
 
@@ -18,13 +26,6 @@ import scala.collection.immutable.List
 
 object ITemplataT {
 */
-use crate::interner::StrI;
-use crate::higher_typing::ast::*;
-use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
-use crate::typing::env::environment::*;
-use crate::typing::names::names::IdT;
-use crate::typing::types::types::*;
-use crate::utils::range::RangeS;
 
 fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_mutability");
@@ -198,7 +199,6 @@ sealed trait ITemplataT[+T <: ITemplataType]  {
 pub struct CoordTemplataT<'s, 't> {
   pub coord: CoordT<'s, 't>,
 }
-impl<'s, 't> CoordTemplataT<'s, 't> {}
 /*
 case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -213,7 +213,6 @@ pub struct PlaceholderTemplataT<'s, 't> {
   pub id: IdT<'s, 't>,
   pub tyype: ITemplataT<'s, 't>,
 }
-impl<'s, 't> PlaceholderTemplataT<'s, 't> {}
 /*
 case class PlaceholderTemplataT[+T <: ITemplataType](
   idT: IdT[IPlaceholderNameT],
@@ -232,7 +231,6 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
 pub struct KindTemplataT<'s, 't> {
   pub kind: KindT<'s, 't>,
 }
-impl<'s, 't> KindTemplataT<'s, 't> {}
 /*
 case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -244,7 +242,6 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
 pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't> {
   pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
 }
-impl<'s, 't> RuntimeSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -256,7 +253,6 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
 pub struct StaticSizedArrayTemplateTemplataT<'s, 't> {
   pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
 }
-impl<'s, 't> StaticSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -272,7 +268,6 @@ pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: &'t IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
 }
-impl<'s, 't> FunctionTemplataT<'s, 't> {}
 impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
     std::ptr::eq(self.outer_env, other.outer_env) && std::ptr::eq(self.function, other.function)
@@ -344,7 +339,6 @@ pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
 }
-impl<'s, 't> StructDefinitionTemplataT<'s, 't> {}
 impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
     std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_struct, other.origin_struct)
@@ -415,7 +409,6 @@ sealed trait IContainer
 pub struct ContainerInterface<'s> {
   pub interface: &'s InterfaceA<'s>,
 }
-impl<'s> ContainerInterface<'s> {}
 impl<'s> PartialEq for ContainerInterface<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.interface, other.interface) }
 }
@@ -432,7 +425,6 @@ override def hashCode(): Int = hash; }
 pub struct ContainerStruct<'s> {
   pub struct_: &'s StructA<'s>,
 }
-impl<'s> ContainerStruct<'s> {}
 impl<'s> PartialEq for ContainerStruct<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.struct_, other.struct_) }
 }
@@ -449,7 +441,6 @@ override def hashCode(): Int = hash; }
 pub struct ContainerFunction<'s> {
   pub function: &'s FunctionA<'s>,
 }
-impl<'s> ContainerFunction<'s> {}
 impl<'s> PartialEq for ContainerFunction<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.function, other.function) }
 }
@@ -466,7 +457,6 @@ override def hashCode(): Int = hash; }
 pub struct ContainerImpl<'s> {
   pub impl_: &'s ImplA<'s>,
 }
-impl<'s> ContainerImpl<'s> {}
 impl<'s> PartialEq for ContainerImpl<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.impl_, other.impl_) }
 }
@@ -485,7 +475,6 @@ pub enum CitizenDefinitionTemplataT<'s, 't> {
   Struct(&'t StructDefinitionTemplataT<'s, 't>),
   Interface(&'t InterfaceDefinitionTemplataT<'s, 't>),
 }
-impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> {}
 /*
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
   def declaringEnv: IEnvironmentT
@@ -511,7 +500,6 @@ pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
 }
-impl<'s, 't> InterfaceDefinitionTemplataT<'s, 't> {}
 impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
     std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_interface, other.origin_interface)
@@ -575,7 +563,6 @@ pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: &'t IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
 }
-impl<'s, 't> ImplDefinitionTemplataT<'s, 't> {}
 impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
     std::ptr::eq(self.env, other.env) && std::ptr::eq(self.impl_, other.impl_)
@@ -614,7 +601,6 @@ case class ImplDefinitionTemplataT(
 pub struct OwnershipTemplataT {
     pub ownership: OwnershipT,
 }
-impl OwnershipTemplataT {}
 /*
 case class OwnershipTemplataT(ownership: OwnershipT) extends ITemplataT[OwnershipTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -626,7 +612,6 @@ case class OwnershipTemplataT(ownership: OwnershipT) extends ITemplataT[Ownershi
 pub struct VariabilityTemplataT {
     pub variability: VariabilityT,
 }
-impl VariabilityTemplataT {}
 /*
 case class VariabilityTemplataT(variability: VariabilityT) extends ITemplataT[VariabilityTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -638,7 +623,6 @@ case class VariabilityTemplataT(variability: VariabilityT) extends ITemplataT[Va
 pub struct MutabilityTemplataT {
     pub mutability: MutabilityT,
 }
-impl MutabilityTemplataT {}
 /*
 case class MutabilityTemplataT(mutability: MutabilityT) extends ITemplataT[MutabilityTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -650,7 +634,6 @@ case class MutabilityTemplataT(mutability: MutabilityT) extends ITemplataT[Mutab
 pub struct LocationTemplataT {
     pub location: LocationT,
 }
-impl LocationTemplataT {}
 /*
 case class LocationTemplataT(location: LocationT) extends ITemplataT[LocationTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -663,7 +646,6 @@ case class LocationTemplataT(location: LocationT) extends ITemplataT[LocationTem
 pub struct BooleanTemplataT {
     pub value: bool,
 }
-impl BooleanTemplataT {}
 /*
 case class BooleanTemplataT(value: Boolean) extends ITemplataT[BooleanTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -675,7 +657,6 @@ case class BooleanTemplataT(value: Boolean) extends ITemplataT[BooleanTemplataTy
 pub struct IntegerTemplataT {
     pub value: i64,
 }
-impl IntegerTemplataT {}
 /*
 case class IntegerTemplataT(value: Long) extends ITemplataT[IntegerTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -687,7 +668,6 @@ case class IntegerTemplataT(value: Long) extends ITemplataT[IntegerTemplataType]
 pub struct StringTemplataT<'s> {
     pub value: StrI<'s>,
 }
-impl<'s> StringTemplataT<'s> {}
 /*
 case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -699,7 +679,6 @@ case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType]
 pub struct PrototypeTemplataT<'s, 't> {
   pub prototype: &'t PrototypeT<'s, 't>,
 }
-impl<'s, 't> PrototypeTemplataT<'s, 't> {}
 /*
 case class PrototypeTemplataT[+T <: IFunctionNameT](
     // Removed this because we want to merge different bound functions from different places, see MFBFDP.
@@ -719,7 +698,6 @@ pub struct IsaTemplataT<'s, 't> {
   pub sub_kind: KindT<'s, 't>,
   pub super_kind: KindT<'s, 't>,
 }
-impl<'s, 't> IsaTemplataT<'s, 't> {}
 /*
 case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], subKind: KindT, superKind: KindT) extends ITemplataT[ImplTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -731,7 +709,6 @@ case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], sub
 pub struct CoordListTemplataT<'s, 't> {
   pub coords: &'t [CoordT<'s, 't>],
 }
-impl<'s, 't> CoordListTemplataT<'s, 't> {}
 
 // Transient Val for interning: holds a stack-borrowed slice (&'tmp) instead of
 // the canonical &'t slice. Per @DSAUIMZ / IDEPFL, this lets callers construct a
@@ -779,7 +756,6 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 pub struct ExternFunctionTemplataT<'s, 't> {
   pub header: &'t FunctionHeaderT<'s, 't>,
 }
-impl<'s, 't> ExternFunctionTemplataT<'s, 't> {}
 impl<'s, 't> PartialEq for ExternFunctionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.header, other.header) }
 }

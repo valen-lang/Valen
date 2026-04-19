@@ -1,3 +1,12 @@
+use crate::utils::range::RangeS;
+
+use crate::typing::types::types::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::compiler_outputs::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing
 
@@ -23,14 +32,6 @@ import scala.collection.immutable.List
 import dev.vale.postparsing._
 
 */
-use crate::utils::range::RangeS;
-
-use crate::typing::types::types::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::compiler_outputs::*;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::compiler::Compiler;
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IConvertHelperDelegate {

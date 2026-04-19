@@ -1,3 +1,11 @@
+use crate::utils::range::RangeS;
+
+use crate::typing::templata::templata::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.macros
 
@@ -18,14 +26,6 @@ import dev.vale.typing.names.{IFunctionNameT, RuneNameT}
 import dev.vale.typing.templata.PrototypeTemplataT
 import dev.vale.typing.types.CoordT
 */
-use crate::utils::range::RangeS;
-
-use crate::typing::templata::templata::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::compiler::Compiler;
-
 // (Scala `class FunctorHelper(interner, keywords)` absorbed onto `Compiler`;
 //  the method body lives at `Compiler::get_functor_for_prototype` below.)
 /*

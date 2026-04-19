@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.expression
 
@@ -29,8 +31,6 @@ import scala.collection.immutable.{List, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
-use crate::typing::compiler::Compiler;
-
 /*
 class PatternCompiler(
     opts: TypingPassOptions,

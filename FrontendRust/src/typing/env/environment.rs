@@ -1,3 +1,14 @@
+use std::collections::HashMap as StdHashMap;
+
+use crate::postparsing::names::IImpreciseNameS;
+use crate::typing::env::function_environment_t::{
+  BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+  BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
+};
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::names::names::{IdT, INameT};
+use crate::typing::typing_interner::TypingInterner;
+
 /*
 package dev.vale.typing.env
 
@@ -22,16 +33,6 @@ import dev.vale.typing.types.{InterfaceTT, KindPlaceholderT, StructTT}
 import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
-use std::collections::HashMap as StdHashMap;
-
-use crate::postparsing::names::IImpreciseNameS;
-use crate::typing::env::function_environment_t::{
-  BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
-  BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
-};
-use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::typing::names::names::{IdT, INameT};
-use crate::typing::typing_interner::TypingInterner;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>

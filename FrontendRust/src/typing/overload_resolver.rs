@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing
 
@@ -39,8 +41,6 @@ import scala.collection.immutable.List
 object OverloadResolver {
 
 */
-use crate::typing::compiler::Compiler;
-
 pub enum IFindFunctionFailureReason<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }

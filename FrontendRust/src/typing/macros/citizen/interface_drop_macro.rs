@@ -1,3 +1,9 @@
+use crate::higher_typing::ast::*;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.macros.citizen
 
@@ -22,12 +28,6 @@ import dev.vale.typing.OverloadResolver
 
 import scala.collection.mutable
 */
-use crate::higher_typing::ast::*;
-use crate::typing::names::names::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::i_env_entry::*;
-use crate::typing::compiler::Compiler;
-
 // (Scala `class InterfaceDropMacro(interner, keywords, nameTranslator)` absorbed onto
 //  `Compiler`; the method body lives at
 //  `Compiler::get_interface_sibling_entries_interface_drop` below.)

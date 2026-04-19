@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.expression
 
@@ -19,8 +21,6 @@ import dev.vale.typing.names._
 
 import scala.collection.immutable.List
 */
-use crate::typing::compiler::Compiler;
-
 /*
 class CallCompiler(
     opts: TypingPassOptions,

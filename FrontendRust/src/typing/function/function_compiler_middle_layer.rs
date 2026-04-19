@@ -1,3 +1,20 @@
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+use crate::higher_typing::ast::*;
+
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::ast::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::postparsing::ast::{LocationInDenizen, ParameterS};
+use crate::postparsing::ast::AbstractSP;
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.function
 
@@ -23,23 +40,6 @@ import dev.vale.typing.env._
 import scala.collection.immutable.{List, Set}
 
 */
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-use crate::higher_typing::ast::*;
-
-use crate::typing::names::names::*;
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::ast::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::compiler_outputs::*;
-use crate::postparsing::ast::{LocationInDenizen, ParameterS};
-use crate::postparsing::ast::AbstractSP;
-use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
-use crate::typing::compiler::Compiler;
-
 /*
 class FunctionCompilerMiddleLayer(
     opts: TypingPassOptions,

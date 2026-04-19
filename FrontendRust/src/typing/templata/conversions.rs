@@ -1,3 +1,6 @@
+use crate::parsing::ast::ast::*;
+use crate::typing::types::types::*;
+
 /*
 package dev.vale.typing.templata
 
@@ -14,9 +17,6 @@ import dev.vale.typing.types._
 
 object Conversions {
 */
-use crate::parsing::ast::ast::*;
-use crate::typing::types::types::*;
-
 pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
   panic!("Unimplemented: evaluate_mutability");
 }

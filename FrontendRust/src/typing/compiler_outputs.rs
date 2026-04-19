@@ -1,20 +1,3 @@
-/*
-package dev.vale.typing
-
-import dev.vale.postparsing._
-import dev.vale.typing.ast._
-import dev.vale.typing.env._
-import dev.vale.typing.expression.CallCompiler
-import dev.vale.typing.names._
-import dev.vale.typing.types._
-import dev.vale._
-import dev.vale.typing.ast._
-import dev.vale.typing.templata._
-import dev.vale.typing.types.InterfaceTT
-
-import scala.collection.immutable.{List, Map}
-import scala.collection.mutable
-*/
 use crate::interner::{Interner, StrI};
 use std::collections::HashMap;
 use crate::utils::range::RangeS;
@@ -34,6 +17,23 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 
+/*
+package dev.vale.typing
+
+import dev.vale.postparsing._
+import dev.vale.typing.ast._
+import dev.vale.typing.env._
+import dev.vale.typing.expression.CallCompiler
+import dev.vale.typing.names._
+import dev.vale.typing.types._
+import dev.vale._
+import dev.vale.typing.ast._
+import dev.vale.typing.templata._
+import dev.vale.typing.types.InterfaceTT
+
+import scala.collection.immutable.{List, Map}
+import scala.collection.mutable
+*/
 pub struct DeferredEvaluatingFunctionBody<'s, 't> {
     prototype_t: PrototypeT<'s, 't>,
     call: fn(),

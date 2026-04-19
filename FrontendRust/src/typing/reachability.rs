@@ -1,3 +1,8 @@
+use crate::typing::types::types::*;
+use crate::typing::ast::ast::*;
+use crate::typing::compiler_outputs::*;
+use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
+
 /*
 package dev.vale.typing
 
@@ -14,11 +19,6 @@ import dev.vale.typing.types._
 import scala.collection.mutable
 
 */
-use crate::typing::types::types::*;
-use crate::typing::ast::ast::*;
-use crate::typing::compiler_outputs::*;
-use crate::typing::ast::ast::InterfaceEdgeBlueprintT;
-
 pub struct Reachables<'s, 't> {
     pub functions: std::collections::HashSet<SignatureT<'s, 't>>,
     pub structs: std::collections::HashSet<StructTT<'s, 't>>,

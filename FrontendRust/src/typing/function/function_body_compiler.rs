@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.function
 
@@ -23,8 +25,6 @@ import dev.vale.typing.env._
 
 import scala.collection.immutable.{List, Set}
 */
-use crate::typing::compiler::Compiler;
-
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait IBodyCompilerDelegate {

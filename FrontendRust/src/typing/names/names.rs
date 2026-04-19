@@ -1,3 +1,12 @@
+use std::hash::{Hash, Hasher};
+use crate::interner::StrI;
+use crate::utils::code_hierarchy::PackageCoordinate;
+use crate::utils::range::{CodeLocationS, RangeS};
+use crate::postparsing::names::IRuneS;
+use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+
 /*
 package dev.vale.typing.names
 
@@ -14,14 +23,6 @@ import dev.vale.typing.types._
 // but Compiler's correspond more to what packages and stamped functions / structs
 // they're in. See TNAD.
 */
-use std::hash::{Hash, Hasher};
-use crate::interner::StrI;
-use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::utils::range::{CodeLocationS, RangeS};
-use crate::postparsing::names::IRuneS;
-use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
 // Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md`. Scala's
 // `IdT[+T <: INameT]` phantom outer parameter is erased in Rust — callers
@@ -1572,243 +1573,641 @@ case class CallEnvNameT() extends INameT {
 // ============================================================================
 
 // -- Concrete → INameT -------------------------------------------------------
-impl<'s, 't> From<&'t ExportTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExportTemplateNameT<'s, 't>) -> Self { INameT::ExportTemplate(x) } }
-impl<'s, 't> From<&'t ExportNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExportNameT<'s, 't>) -> Self { INameT::Export(x) } }
-impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { INameT::ImplTemplate(x) } }
-impl<'s, 't> From<&'t ImplNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ImplNameT<'s, 't>) -> Self { INameT::Impl(x) } }
-impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { INameT::ImplBoundTemplate(x) } }
-impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { INameT::ImplBound(x) } }
-impl<'s, 't> From<&'t LetNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t LetNameT<'s, 't>) -> Self { INameT::Let(x) } }
-impl<'s, 't> From<&'t ExportAsNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExportAsNameT<'s, 't>) -> Self { INameT::ExportAs(x) } }
-impl<'s, 't> From<&'t RawArrayNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t RawArrayNameT<'s, 't>) -> Self { INameT::RawArray(x) } }
-impl<'s, 't> From<&'t ReachablePrototypeNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ReachablePrototypeNameT<'s, 't>) -> Self { INameT::ReachablePrototype(x) } }
-impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { INameT::StaticSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { INameT::StaticSizedArray(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { INameT::RuntimeSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { INameT::RuntimeSizedArray(x) } }
-impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { INameT::KindPlaceholderTemplate(x) } }
-impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { INameT::KindPlaceholder(x) } }
-impl<'s, 't> From<&'t NonKindNonRegionPlaceholderNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t NonKindNonRegionPlaceholderNameT<'s, 't>) -> Self { INameT::NonKindNonRegionPlaceholder(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { INameT::OverrideDispatcherTemplate(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { INameT::OverrideDispatcher(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { INameT::OverrideDispatcherCase(x) } }
-impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingPassBlockResultVarNameT<'s, 't>) -> Self { INameT::TypingPassBlockResultVar(x) } }
-impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingPassFunctionResultVarNameT<'s, 't>) -> Self { INameT::TypingPassFunctionResultVar(x) } }
-impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingPassTemporaryVarNameT<'s, 't>) -> Self { INameT::TypingPassTemporaryVar(x) } }
-impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingPassPatternMemberNameT<'s, 't>) -> Self { INameT::TypingPassPatternMember(x) } }
-impl<'s, 't> From<&'t TypingIgnoredParamNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingIgnoredParamNameT<'s, 't>) -> Self { INameT::TypingIgnoredParam(x) } }
-impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t TypingPassPatternDestructureeNameT<'s, 't>) -> Self { INameT::TypingPassPatternDestructuree(x) } }
-impl<'s, 't> From<&'t UnnamedLocalNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t UnnamedLocalNameT<'s, 't>) -> Self { INameT::UnnamedLocal(x) } }
-impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self { INameT::ClosureParam(x) } }
-impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self { INameT::ConstructingMember(x) } }
-impl<'s, 't> From<&'t WhileCondResultNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t WhileCondResultNameT<'s, 't>) -> Self { INameT::WhileCondResult(x) } }
-impl<'s, 't> From<&'t IterableNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t IterableNameT<'s, 't>) -> Self { INameT::Iterable(x) } }
-impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t IteratorNameT<'s, 't>) -> Self { INameT::Iterator(x) } }
-impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self { INameT::IterationOption(x) } }
-impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t MagicParamNameT<'s, 't>) -> Self { INameT::MagicParam(x) } }
-impl<'s, 't> From<&'t CodeVarNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t CodeVarNameT<'s, 't>) -> Self { INameT::CodeVar(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructMemberNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructMemberNameT<'s, 't>) -> Self { INameT::AnonymousSubstructMember(x) } }
-impl<'s, 't> From<&'t PrimitiveNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t PrimitiveNameT<'s, 't>) -> Self { INameT::Primitive(x) } }
-impl<'s, 't> From<&'t PackageTopLevelNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t PackageTopLevelNameT<'s, 't>) -> Self { INameT::PackageTopLevel(x) } }
-impl<'s, 't> From<&'t ProjectNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ProjectNameT<'s, 't>) -> Self { INameT::Project(x) } }
-impl<'s, 't> From<&'t PackageNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t PackageNameT<'s, 't>) -> Self { INameT::Package(x) } }
-impl<'s, 't> From<&'t RuneNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t RuneNameT<'s, 't>) -> Self { INameT::Rune(x) } }
-impl<'s, 't> From<&'t BuildingFunctionNameWithClosuredsT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t BuildingFunctionNameWithClosuredsT<'s, 't>) -> Self { INameT::BuildingFunctionNameWithClosureds(x) } }
-impl<'s, 't> From<&'t ExternTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExternTemplateNameT<'s, 't>) -> Self { INameT::ExternTemplate(x) } }
-impl<'s, 't> From<&'t ExternNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExternNameT<'s, 't>) -> Self { INameT::Extern(x) } }
-impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { INameT::ExternFunction(x) } }
-impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t FunctionNameT<'s, 't>) -> Self { INameT::Function(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { INameT::ForwarderFunction(x) } }
-impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { INameT::FunctionBoundTemplate(x) } }
-impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { INameT::FunctionBound(x) } }
-impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { INameT::PredictedFunctionTemplate(x) } }
-impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { INameT::PredictedFunction(x) } }
-impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { INameT::FunctionTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { INameT::LambdaCallFunctionTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { INameT::LambdaCallFunction(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { INameT::ForwarderFunctionTemplate(x) } }
-impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { INameT::ConstructorTemplate(x) } }
-impl<'s, 't> From<&'t SelfNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t SelfNameT<'s, 't>) -> Self { INameT::Self_(x) } }
-impl<'s, 't> From<&'t ArbitraryNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ArbitraryNameT<'s, 't>) -> Self { INameT::Arbitrary(x) } }
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { INameT::Struct(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { INameT::Interface(x) } }
-impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { INameT::LambdaCitizenTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { INameT::LambdaCitizen(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { INameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { INameT::InterfaceTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructImplTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { INameT::AnonymousSubstructImpl(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructConstructorTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { INameT::AnonymousSubstructConstructor(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { INameT::AnonymousSubstruct(x) } }
-impl<'s, 't> From<&'t ResolvingEnvNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t ResolvingEnvNameT<'s, 't>) -> Self { INameT::ResolvingEnv(x) } }
-impl<'s, 't> From<&'t CallEnvNameT<'s, 't>> for INameT<'s, 't> { fn from(x: &'t CallEnvNameT<'s, 't>) -> Self { INameT::CallEnv(x) } }
+impl<'s, 't> From<&'t ExportTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExportTemplateNameT<'s, 't>) -> Self { INameT::ExportTemplate(x) }
+}
+impl<'s, 't> From<&'t ExportNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExportNameT<'s, 't>) -> Self { INameT::Export(x) }
+}
+impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { INameT::ImplTemplate(x) }
+}
+impl<'s, 't> From<&'t ImplNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ImplNameT<'s, 't>) -> Self { INameT::Impl(x) }
+}
+impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { INameT::ImplBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { INameT::ImplBound(x) }
+}
+impl<'s, 't> From<&'t LetNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t LetNameT<'s, 't>) -> Self { INameT::Let(x) }
+}
+impl<'s, 't> From<&'t ExportAsNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExportAsNameT<'s, 't>) -> Self { INameT::ExportAs(x) }
+}
+impl<'s, 't> From<&'t RawArrayNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t RawArrayNameT<'s, 't>) -> Self { INameT::RawArray(x) }
+}
+impl<'s, 't> From<&'t ReachablePrototypeNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ReachablePrototypeNameT<'s, 't>) -> Self { INameT::ReachablePrototype(x) }
+}
+impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { INameT::StaticSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { INameT::StaticSizedArray(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { INameT::RuntimeSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { INameT::RuntimeSizedArray(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { INameT::KindPlaceholderTemplate(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { INameT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t NonKindNonRegionPlaceholderNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t NonKindNonRegionPlaceholderNameT<'s, 't>) -> Self { INameT::NonKindNonRegionPlaceholder(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { INameT::OverrideDispatcherTemplate(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { INameT::OverrideDispatcher(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { INameT::OverrideDispatcherCase(x) }
+}
+impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingPassBlockResultVarNameT<'s, 't>) -> Self { INameT::TypingPassBlockResultVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingPassFunctionResultVarNameT<'s, 't>) -> Self { INameT::TypingPassFunctionResultVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingPassTemporaryVarNameT<'s, 't>) -> Self { INameT::TypingPassTemporaryVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingPassPatternMemberNameT<'s, 't>) -> Self { INameT::TypingPassPatternMember(x) }
+}
+impl<'s, 't> From<&'t TypingIgnoredParamNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingIgnoredParamNameT<'s, 't>) -> Self { INameT::TypingIgnoredParam(x) }
+}
+impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t TypingPassPatternDestructureeNameT<'s, 't>) -> Self { INameT::TypingPassPatternDestructuree(x) }
+}
+impl<'s, 't> From<&'t UnnamedLocalNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t UnnamedLocalNameT<'s, 't>) -> Self { INameT::UnnamedLocal(x) }
+}
+impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self { INameT::ClosureParam(x) }
+}
+impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self { INameT::ConstructingMember(x) }
+}
+impl<'s, 't> From<&'t WhileCondResultNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t WhileCondResultNameT<'s, 't>) -> Self { INameT::WhileCondResult(x) }
+}
+impl<'s, 't> From<&'t IterableNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t IterableNameT<'s, 't>) -> Self { INameT::Iterable(x) }
+}
+impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t IteratorNameT<'s, 't>) -> Self { INameT::Iterator(x) }
+}
+impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self { INameT::IterationOption(x) }
+}
+impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t MagicParamNameT<'s, 't>) -> Self { INameT::MagicParam(x) }
+}
+impl<'s, 't> From<&'t CodeVarNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t CodeVarNameT<'s, 't>) -> Self { INameT::CodeVar(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructMemberNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructMemberNameT<'s, 't>) -> Self { INameT::AnonymousSubstructMember(x) }
+}
+impl<'s, 't> From<&'t PrimitiveNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t PrimitiveNameT<'s, 't>) -> Self { INameT::Primitive(x) }
+}
+impl<'s, 't> From<&'t PackageTopLevelNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t PackageTopLevelNameT<'s, 't>) -> Self { INameT::PackageTopLevel(x) }
+}
+impl<'s, 't> From<&'t ProjectNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ProjectNameT<'s, 't>) -> Self { INameT::Project(x) }
+}
+impl<'s, 't> From<&'t PackageNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t PackageNameT<'s, 't>) -> Self { INameT::Package(x) }
+}
+impl<'s, 't> From<&'t RuneNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t RuneNameT<'s, 't>) -> Self { INameT::Rune(x) }
+}
+impl<'s, 't> From<&'t BuildingFunctionNameWithClosuredsT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t BuildingFunctionNameWithClosuredsT<'s, 't>) -> Self { INameT::BuildingFunctionNameWithClosureds(x) }
+}
+impl<'s, 't> From<&'t ExternTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExternTemplateNameT<'s, 't>) -> Self { INameT::ExternTemplate(x) }
+}
+impl<'s, 't> From<&'t ExternNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExternNameT<'s, 't>) -> Self { INameT::Extern(x) }
+}
+impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { INameT::ExternFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t FunctionNameT<'s, 't>) -> Self { INameT::Function(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { INameT::ForwarderFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { INameT::FunctionBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { INameT::FunctionBound(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { INameT::PredictedFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { INameT::PredictedFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { INameT::FunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { INameT::LambdaCallFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { INameT::LambdaCallFunction(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { INameT::ForwarderFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { INameT::ConstructorTemplate(x) }
+}
+impl<'s, 't> From<&'t SelfNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t SelfNameT<'s, 't>) -> Self { INameT::Self_(x) }
+}
+impl<'s, 't> From<&'t ArbitraryNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ArbitraryNameT<'s, 't>) -> Self { INameT::Arbitrary(x) }
+}
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { INameT::Struct(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { INameT::Interface(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { INameT::LambdaCitizenTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { INameT::LambdaCitizen(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { INameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { INameT::InterfaceTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructImplTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { INameT::AnonymousSubstructImpl(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { INameT::AnonymousSubstructConstructorTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { INameT::AnonymousSubstructConstructor(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { INameT::AnonymousSubstruct(x) }
+}
+impl<'s, 't> From<&'t ResolvingEnvNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t ResolvingEnvNameT<'s, 't>) -> Self { INameT::ResolvingEnv(x) }
+}
+impl<'s, 't> From<&'t CallEnvNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(x: &'t CallEnvNameT<'s, 't>) -> Self { INameT::CallEnv(x) }
+}
 
 // -- Concrete → ITemplateNameT -----------------------------------------------
-impl<'s, 't> From<&'t ExportTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ExportTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ExportTemplate(x) } }
-impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ImplTemplate(x) } }
-impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ImplBoundTemplate(x) } }
-impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ITemplateNameT::StaticSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ITemplateNameT::RuntimeSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ITemplateNameT::KindPlaceholderTemplate(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { ITemplateNameT::OverrideDispatcherTemplate(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { ITemplateNameT::OverrideDispatcherCase(x) } }
-impl<'s, 't> From<&'t ExternTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ExternTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ExternTemplate(x) } }
-impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { ITemplateNameT::ExternFunction(x) } }
-impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { ITemplateNameT::FunctionBoundTemplate(x) } }
-impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::PredictedFunctionTemplate(x) } }
-impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::FunctionTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::LambdaCallFunctionTemplate(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ForwarderFunctionTemplate(x) } }
-impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ConstructorTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ITemplateNameT::LambdaCitizenTemplate(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ITemplateNameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ITemplateNameT::InterfaceTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructImplTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructConstructorTemplate(x) } }
+impl<'s, 't> From<&'t ExportTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ExportTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ExportTemplate(x) }
+}
+impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ImplTemplate(x) }
+}
+impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ImplBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ITemplateNameT::StaticSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ITemplateNameT::RuntimeSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ITemplateNameT::KindPlaceholderTemplate(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { ITemplateNameT::OverrideDispatcherTemplate(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { ITemplateNameT::OverrideDispatcherCase(x) }
+}
+impl<'s, 't> From<&'t ExternTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ExternTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ExternTemplate(x) }
+}
+impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { ITemplateNameT::ExternFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { ITemplateNameT::FunctionBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::PredictedFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::FunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::LambdaCallFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ForwarderFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { ITemplateNameT::ConstructorTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ITemplateNameT::LambdaCitizenTemplate(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ITemplateNameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ITemplateNameT::InterfaceTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructImplTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for ITemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { ITemplateNameT::AnonymousSubstructConstructorTemplate(x) }
+}
 
 // -- Concrete → IInstantiationNameT ------------------------------------------
-impl<'s, 't> From<&'t ExportNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ExportNameT<'s, 't>) -> Self { IInstantiationNameT::Export(x) } }
-impl<'s, 't> From<&'t ImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ImplNameT<'s, 't>) -> Self { IInstantiationNameT::Impl(x) } }
-impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { IInstantiationNameT::ImplBound(x) } }
-impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { IInstantiationNameT::StaticSizedArray(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { IInstantiationNameT::RuntimeSizedArray(x) } }
-impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { IInstantiationNameT::KindPlaceholder(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { IInstantiationNameT::OverrideDispatcher(x) } }
-impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { IInstantiationNameT::OverrideDispatcherCase(x) } }
-impl<'s, 't> From<&'t ExternNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ExternNameT<'s, 't>) -> Self { IInstantiationNameT::Extern(x) } }
-impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::ExternFunction(x) } }
-impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t FunctionNameT<'s, 't>) -> Self { IInstantiationNameT::Function(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::ForwarderFunction(x) } }
-impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { IInstantiationNameT::FunctionBound(x) } }
-impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::PredictedFunction(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::LambdaCallFunction(x) } }
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { IInstantiationNameT::Struct(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { IInstantiationNameT::Interface(x) } }
-impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { IInstantiationNameT::LambdaCitizen(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstructImpl(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstructConstructor(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for IInstantiationNameT<'s, 't> { fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstruct(x) } }
+impl<'s, 't> From<&'t ExportNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ExportNameT<'s, 't>) -> Self { IInstantiationNameT::Export(x) }
+}
+impl<'s, 't> From<&'t ImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ImplNameT<'s, 't>) -> Self { IInstantiationNameT::Impl(x) }
+}
+impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { IInstantiationNameT::ImplBound(x) }
+}
+impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { IInstantiationNameT::StaticSizedArray(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { IInstantiationNameT::RuntimeSizedArray(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { IInstantiationNameT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { IInstantiationNameT::OverrideDispatcher(x) }
+}
+impl<'s, 't> From<&'t OverrideDispatcherCaseNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherCaseNameT<'s, 't>) -> Self { IInstantiationNameT::OverrideDispatcherCase(x) }
+}
+impl<'s, 't> From<&'t ExternNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ExternNameT<'s, 't>) -> Self { IInstantiationNameT::Extern(x) }
+}
+impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::ExternFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t FunctionNameT<'s, 't>) -> Self { IInstantiationNameT::Function(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::ForwarderFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { IInstantiationNameT::FunctionBound(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::PredictedFunction(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { IInstantiationNameT::LambdaCallFunction(x) }
+}
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { IInstantiationNameT::Struct(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { IInstantiationNameT::Interface(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { IInstantiationNameT::LambdaCitizen(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstructImpl(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstructConstructor(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { IInstantiationNameT::AnonymousSubstruct(x) }
+}
 
 // -- Concrete → IFunctionTemplateNameT --------------------------------------
-impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::OverrideDispatcherTemplate(x) } }
-impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ExternFunction(x) } }
-impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::FunctionBoundTemplate(x) } }
-impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::PredictedFunctionTemplate(x) } }
-impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::FunctionTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::LambdaCallFunctionTemplate(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ForwarderFunctionTemplate(x) } }
-impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ConstructorTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(x) } }
+impl<'s, 't> From<&'t OverrideDispatcherTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::OverrideDispatcherTemplate(x) }
+}
+impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ExternFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t FunctionBoundTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::FunctionBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::PredictedFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t FunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t FunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::FunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::LambdaCallFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ForwarderFunctionTemplate(x) }
+}
+impl<'s, 't> From<&'t ConstructorTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t ConstructorTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::ConstructorTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorTemplateNameT<'s, 't>> for IFunctionTemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>) -> Self { IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(x) }
+}
 
 // -- Concrete → IFunctionNameT -----------------------------------------------
-impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { IFunctionNameT::OverrideDispatcher(x) } }
-impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IFunctionNameT::ExternFunction(x) } }
-impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t FunctionNameT<'s, 't>) -> Self { IFunctionNameT::Function(x) } }
-impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { IFunctionNameT::ForwarderFunction(x) } }
-impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { IFunctionNameT::FunctionBound(x) } }
-impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { IFunctionNameT::PredictedFunction(x) } }
-impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { IFunctionNameT::LambdaCallFunction(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for IFunctionNameT<'s, 't> { fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { IFunctionNameT::AnonymousSubstructConstructor(x) } }
+impl<'s, 't> From<&'t OverrideDispatcherNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t OverrideDispatcherNameT<'s, 't>) -> Self { IFunctionNameT::OverrideDispatcher(x) }
+}
+impl<'s, 't> From<&'t ExternFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t ExternFunctionNameT<'s, 't>) -> Self { IFunctionNameT::ExternFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t FunctionNameT<'s, 't>) -> Self { IFunctionNameT::Function(x) }
+}
+impl<'s, 't> From<&'t ForwarderFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t ForwarderFunctionNameT<'s, 't>) -> Self { IFunctionNameT::ForwarderFunction(x) }
+}
+impl<'s, 't> From<&'t FunctionBoundNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t FunctionBoundNameT<'s, 't>) -> Self { IFunctionNameT::FunctionBound(x) }
+}
+impl<'s, 't> From<&'t PredictedFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t PredictedFunctionNameT<'s, 't>) -> Self { IFunctionNameT::PredictedFunction(x) }
+}
+impl<'s, 't> From<&'t LambdaCallFunctionNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t LambdaCallFunctionNameT<'s, 't>) -> Self { IFunctionNameT::LambdaCallFunction(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructConstructorNameT<'s, 't>> for IFunctionNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructConstructorNameT<'s, 't>) -> Self { IFunctionNameT::AnonymousSubstructConstructor(x) }
+}
 
 // -- Concrete → ISuperKindTemplateNameT --------------------------------------
-impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ISuperKindTemplateNameT<'s, 't> { fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ISuperKindTemplateNameT::KindPlaceholderTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ISuperKindTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ISuperKindTemplateNameT::InterfaceTemplate(x) } }
+impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ISuperKindTemplateNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ISuperKindTemplateNameT::KindPlaceholderTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ISuperKindTemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ISuperKindTemplateNameT::InterfaceTemplate(x) }
+}
 
 // -- Concrete → ISubKindTemplateNameT ----------------------------------------
-impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::StaticSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::RuntimeSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::KindPlaceholderTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::LambdaCitizenTemplate(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::InterfaceTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::AnonymousSubstructTemplate(x) } }
+impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::StaticSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::RuntimeSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::KindPlaceholderTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::LambdaCitizenTemplate(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::InterfaceTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ISubKindTemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ISubKindTemplateNameT::AnonymousSubstructTemplate(x) }
+}
 
 // -- Concrete → ICitizenTemplateNameT ----------------------------------------
-impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::StaticSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) } }
-impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::LambdaCitizenTemplate(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::InterfaceTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::AnonymousSubstructTemplate(x) } }
+impl<'s, 't> From<&'t StaticSizedArrayTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::StaticSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::RuntimeSizedArrayTemplate(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::LambdaCitizenTemplate(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::InterfaceTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { ICitizenTemplateNameT::AnonymousSubstructTemplate(x) }
+}
 
 // -- Concrete → IStructTemplateNameT -----------------------------------------
-impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> { fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::LambdaCitizenTemplate(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::AnonymousSubstructTemplate(x) } }
+impl<'s, 't> From<&'t LambdaCitizenTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::LambdaCitizenTemplate(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructTemplateNameT<'s, 't>> for IStructTemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructTemplateNameT<'s, 't>) -> Self { IStructTemplateNameT::AnonymousSubstructTemplate(x) }
+}
 
 // -- Concrete → IInterfaceTemplateNameT --------------------------------------
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for IInterfaceTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { IInterfaceTemplateNameT::InterfaceTemplate(x) } }
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for IInterfaceTemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { IInterfaceTemplateNameT::InterfaceTemplate(x) }
+}
 
 // -- Concrete → ISuperKindNameT ----------------------------------------------
-impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for ISuperKindNameT<'s, 't> { fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { ISuperKindNameT::KindPlaceholder(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ISuperKindNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ISuperKindNameT::Interface(x) } }
+impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for ISuperKindNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { ISuperKindNameT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ISuperKindNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ISuperKindNameT::Interface(x) }
+}
 
 // -- Concrete → ISubKindNameT ------------------------------------------------
-impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { ISubKindNameT::StaticSizedArray(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { ISubKindNameT::RuntimeSizedArray(x) } }
-impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { ISubKindNameT::KindPlaceholder(x) } }
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { ISubKindNameT::Struct(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ISubKindNameT::Interface(x) } }
-impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { ISubKindNameT::LambdaCitizen(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for ISubKindNameT<'s, 't> { fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { ISubKindNameT::AnonymousSubstruct(x) } }
+impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { ISubKindNameT::StaticSizedArray(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { ISubKindNameT::RuntimeSizedArray(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { ISubKindNameT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { ISubKindNameT::Struct(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ISubKindNameT::Interface(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { ISubKindNameT::LambdaCitizen(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for ISubKindNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { ISubKindNameT::AnonymousSubstruct(x) }
+}
 
 // -- Concrete → ICitizenNameT ------------------------------------------------
-impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { ICitizenNameT::StaticSizedArray(x) } }
-impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { ICitizenNameT::RuntimeSizedArray(x) } }
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { ICitizenNameT::Struct(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ICitizenNameT::Interface(x) } }
-impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { ICitizenNameT::LambdaCitizen(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for ICitizenNameT<'s, 't> { fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { ICitizenNameT::AnonymousSubstruct(x) } }
+impl<'s, 't> From<&'t StaticSizedArrayNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t StaticSizedArrayNameT<'s, 't>) -> Self { ICitizenNameT::StaticSizedArray(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t RuntimeSizedArrayNameT<'s, 't>) -> Self { ICitizenNameT::RuntimeSizedArray(x) }
+}
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { ICitizenNameT::Struct(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { ICitizenNameT::Interface(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { ICitizenNameT::LambdaCitizen(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for ICitizenNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { ICitizenNameT::AnonymousSubstruct(x) }
+}
 
 // -- Concrete → IStructNameT -------------------------------------------------
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for IStructNameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { IStructNameT::Struct(x) } }
-impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for IStructNameT<'s, 't> { fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { IStructNameT::LambdaCitizen(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for IStructNameT<'s, 't> { fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { IStructNameT::AnonymousSubstruct(x) } }
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for IStructNameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { IStructNameT::Struct(x) }
+}
+impl<'s, 't> From<&'t LambdaCitizenNameT<'s, 't>> for IStructNameT<'s, 't> {
+    fn from(x: &'t LambdaCitizenNameT<'s, 't>) -> Self { IStructNameT::LambdaCitizen(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructNameT<'s, 't>> for IStructNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructNameT<'s, 't>) -> Self { IStructNameT::AnonymousSubstruct(x) }
+}
 
 // -- Concrete → IInterfaceNameT ----------------------------------------------
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for IInterfaceNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { IInterfaceNameT::Interface(x) } }
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for IInterfaceNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { IInterfaceNameT::Interface(x) }
+}
 
 // -- Concrete → IImplTemplateNameT -------------------------------------------
-impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> { fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::ImplTemplate(x) } }
-impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> { fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::ImplBoundTemplate(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::AnonymousSubstructImplTemplate(x) } }
+impl<'s, 't> From<&'t ImplTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> {
+    fn from(x: &'t ImplTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::ImplTemplate(x) }
+}
+impl<'s, 't> From<&'t ImplBoundTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> {
+    fn from(x: &'t ImplBoundTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::ImplBoundTemplate(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplTemplateNameT<'s, 't>> for IImplTemplateNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplTemplateNameT<'s, 't>) -> Self { IImplTemplateNameT::AnonymousSubstructImplTemplate(x) }
+}
 
 // -- Concrete → IImplNameT ---------------------------------------------------
-impl<'s, 't> From<&'t ImplNameT<'s, 't>> for IImplNameT<'s, 't> { fn from(x: &'t ImplNameT<'s, 't>) -> Self { IImplNameT::Impl(x) } }
-impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for IImplNameT<'s, 't> { fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { IImplNameT::ImplBound(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for IImplNameT<'s, 't> { fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { IImplNameT::AnonymousSubstructImpl(x) } }
+impl<'s, 't> From<&'t ImplNameT<'s, 't>> for IImplNameT<'s, 't> {
+    fn from(x: &'t ImplNameT<'s, 't>) -> Self { IImplNameT::Impl(x) }
+}
+impl<'s, 't> From<&'t ImplBoundNameT<'s, 't>> for IImplNameT<'s, 't> {
+    fn from(x: &'t ImplBoundNameT<'s, 't>) -> Self { IImplNameT::ImplBound(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructImplNameT<'s, 't>> for IImplNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructImplNameT<'s, 't>) -> Self { IImplNameT::AnonymousSubstructImpl(x) }
+}
 
 // -- Concrete → IPlaceholderNameT --------------------------------------------
-impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for IPlaceholderNameT<'s, 't> { fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { IPlaceholderNameT::KindPlaceholder(x) } }
-impl<'s, 't> From<&'t NonKindNonRegionPlaceholderNameT<'s, 't>> for IPlaceholderNameT<'s, 't> { fn from(x: &'t NonKindNonRegionPlaceholderNameT<'s, 't>) -> Self { IPlaceholderNameT::NonKindNonRegionPlaceholder(x) } }
+impl<'s, 't> From<&'t KindPlaceholderNameT<'s, 't>> for IPlaceholderNameT<'s, 't> {
+    fn from(x: &'t KindPlaceholderNameT<'s, 't>) -> Self { IPlaceholderNameT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t NonKindNonRegionPlaceholderNameT<'s, 't>> for IPlaceholderNameT<'s, 't> {
+    fn from(x: &'t NonKindNonRegionPlaceholderNameT<'s, 't>) -> Self { IPlaceholderNameT::NonKindNonRegionPlaceholder(x) }
+}
 
 // -- Concrete → IVarNameT ----------------------------------------------------
-impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingPassBlockResultVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassBlockResultVar(x) } }
-impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingPassFunctionResultVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassFunctionResultVar(x) } }
-impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingPassTemporaryVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassTemporaryVar(x) } }
-impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingPassPatternMemberNameT<'s, 't>) -> Self { IVarNameT::TypingPassPatternMember(x) } }
-impl<'s, 't> From<&'t TypingIgnoredParamNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingIgnoredParamNameT<'s, 't>) -> Self { IVarNameT::TypingIgnoredParam(x) } }
-impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t TypingPassPatternDestructureeNameT<'s, 't>) -> Self { IVarNameT::TypingPassPatternDestructuree(x) } }
-impl<'s, 't> From<&'t UnnamedLocalNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t UnnamedLocalNameT<'s, 't>) -> Self { IVarNameT::UnnamedLocal(x) } }
-impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self { IVarNameT::ClosureParam(x) } }
-impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self { IVarNameT::ConstructingMember(x) } }
-impl<'s, 't> From<&'t WhileCondResultNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t WhileCondResultNameT<'s, 't>) -> Self { IVarNameT::WhileCondResult(x) } }
-impl<'s, 't> From<&'t IterableNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t IterableNameT<'s, 't>) -> Self { IVarNameT::Iterable(x) } }
-impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t IteratorNameT<'s, 't>) -> Self { IVarNameT::Iterator(x) } }
-impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self { IVarNameT::IterationOption(x) } }
-impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t MagicParamNameT<'s, 't>) -> Self { IVarNameT::MagicParam(x) } }
-impl<'s, 't> From<&'t CodeVarNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t CodeVarNameT<'s, 't>) -> Self { IVarNameT::CodeVar(x) } }
-impl<'s, 't> From<&'t AnonymousSubstructMemberNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t AnonymousSubstructMemberNameT<'s, 't>) -> Self { IVarNameT::AnonymousSubstructMember(x) } }
-impl<'s, 't> From<&'t SelfNameT<'s, 't>> for IVarNameT<'s, 't> { fn from(x: &'t SelfNameT<'s, 't>) -> Self { IVarNameT::Self_(x) } }
+impl<'s, 't> From<&'t TypingPassBlockResultVarNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingPassBlockResultVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassBlockResultVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassFunctionResultVarNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingPassFunctionResultVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassFunctionResultVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassTemporaryVarNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingPassTemporaryVarNameT<'s, 't>) -> Self { IVarNameT::TypingPassTemporaryVar(x) }
+}
+impl<'s, 't> From<&'t TypingPassPatternMemberNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingPassPatternMemberNameT<'s, 't>) -> Self { IVarNameT::TypingPassPatternMember(x) }
+}
+impl<'s, 't> From<&'t TypingIgnoredParamNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingIgnoredParamNameT<'s, 't>) -> Self { IVarNameT::TypingIgnoredParam(x) }
+}
+impl<'s, 't> From<&'t TypingPassPatternDestructureeNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t TypingPassPatternDestructureeNameT<'s, 't>) -> Self { IVarNameT::TypingPassPatternDestructuree(x) }
+}
+impl<'s, 't> From<&'t UnnamedLocalNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t UnnamedLocalNameT<'s, 't>) -> Self { IVarNameT::UnnamedLocal(x) }
+}
+impl<'s, 't> From<&'t ClosureParamNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t ClosureParamNameT<'s, 't>) -> Self { IVarNameT::ClosureParam(x) }
+}
+impl<'s, 't> From<&'t ConstructingMemberNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t ConstructingMemberNameT<'s, 't>) -> Self { IVarNameT::ConstructingMember(x) }
+}
+impl<'s, 't> From<&'t WhileCondResultNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t WhileCondResultNameT<'s, 't>) -> Self { IVarNameT::WhileCondResult(x) }
+}
+impl<'s, 't> From<&'t IterableNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t IterableNameT<'s, 't>) -> Self { IVarNameT::Iterable(x) }
+}
+impl<'s, 't> From<&'t IteratorNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t IteratorNameT<'s, 't>) -> Self { IVarNameT::Iterator(x) }
+}
+impl<'s, 't> From<&'t IterationOptionNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t IterationOptionNameT<'s, 't>) -> Self { IVarNameT::IterationOption(x) }
+}
+impl<'s, 't> From<&'t MagicParamNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t MagicParamNameT<'s, 't>) -> Self { IVarNameT::MagicParam(x) }
+}
+impl<'s, 't> From<&'t CodeVarNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t CodeVarNameT<'s, 't>) -> Self { IVarNameT::CodeVar(x) }
+}
+impl<'s, 't> From<&'t AnonymousSubstructMemberNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t AnonymousSubstructMemberNameT<'s, 't>) -> Self { IVarNameT::AnonymousSubstructMember(x) }
+}
+impl<'s, 't> From<&'t SelfNameT<'s, 't>> for IVarNameT<'s, 't> {
+    fn from(x: &'t SelfNameT<'s, 't>) -> Self { IVarNameT::Self_(x) }
+}
 
 // -- Concrete → CitizenNameT / CitizenTemplateNameT --------------------------
-impl<'s, 't> From<&'t StructNameT<'s, 't>> for CitizenNameT<'s, 't> { fn from(x: &'t StructNameT<'s, 't>) -> Self { CitizenNameT::Struct(x) } }
-impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for CitizenNameT<'s, 't> { fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { CitizenNameT::Interface(x) } }
-impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> { fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::StructTemplate(x) } }
-impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> { fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::InterfaceTemplate(x) } }
+impl<'s, 't> From<&'t StructNameT<'s, 't>> for CitizenNameT<'s, 't> {
+    fn from(x: &'t StructNameT<'s, 't>) -> Self { CitizenNameT::Struct(x) }
+}
+impl<'s, 't> From<&'t InterfaceNameT<'s, 't>> for CitizenNameT<'s, 't> {
+    fn from(x: &'t InterfaceNameT<'s, 't>) -> Self { CitizenNameT::Interface(x) }
+}
+impl<'s, 't> From<&'t StructTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t StructTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::StructTemplate(x) }
+}
+impl<'s, 't> From<&'t InterfaceTemplateNameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
+    fn from(x: &'t InterfaceTemplateNameT<'s, 't>) -> Self { CitizenTemplateNameT::InterfaceTemplate(x) }
+}
 
 // -- Sub-enum → wider sub-enum (owned input, cascade via .into() on inner ref) --
 

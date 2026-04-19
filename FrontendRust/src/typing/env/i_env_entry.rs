@@ -1,3 +1,6 @@
+use crate::higher_typing::ast::{FunctionA, ImplA, InterfaceA, StructA};
+use crate::typing::templata::templata::ITemplataT;
+
 /*
 package dev.vale.typing.env
 
@@ -10,8 +13,6 @@ import dev.vale.typing.templata.IContainer
 import dev.vale.typing.types.InterfaceTT
 import dev.vale.vpass
 */
-use crate::higher_typing::ast::{FunctionA, ImplA, InterfaceA, StructA};
-use crate::typing::templata::templata::ITemplataT;
 
 #[derive(Copy, Clone, Debug)]
 pub enum IEnvEntryT<'s, 't>

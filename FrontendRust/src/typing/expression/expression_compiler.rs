@@ -1,3 +1,5 @@
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing.expression
 
@@ -34,8 +36,6 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 */
-use crate::typing::compiler::Compiler;
-
 pub struct TookWeakRefOfNonWeakableError<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 
 /*

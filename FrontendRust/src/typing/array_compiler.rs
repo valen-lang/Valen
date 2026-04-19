@@ -1,3 +1,19 @@
+use std::collections::HashMap;
+
+use crate::utils::range::RangeS;
+
+use crate::postparsing::names::*;
+
+use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::compiler_outputs::*;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::rules::rules::*;
+use crate::typing::compiler::Compiler;
+
 /*
 package dev.vale.typing
 
@@ -27,22 +43,6 @@ import scala.collection.immutable.{List, Set}
 import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 */
-use std::collections::HashMap;
-
-use crate::utils::range::RangeS;
-
-use crate::postparsing::names::*;
-
-use crate::typing::types::types::*;
-use crate::typing::templata::templata::*;
-use crate::typing::ast::expressions::*;
-use crate::typing::env::environment::*;
-use crate::typing::env::function_environment_t::*;
-use crate::typing::compiler_outputs::*;
-use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::rules::rules::*;
-use crate::typing::compiler::Compiler;
-
 /*
 class ArrayCompiler(
     opts: TypingPassOptions,
