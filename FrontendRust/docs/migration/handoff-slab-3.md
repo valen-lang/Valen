@@ -112,11 +112,12 @@ Same rules as Slab 2. Quick reference:
 | `IRuneS` | `IRuneS<'s>` |
 | `RangeS` / `CodeLocationS` | `RangeS<'s>` / `CodeLocationS<'s>` |
 | `CoordT` | `CoordT<'s, 't>` (Copy, inline per §6.4) |
-| `KindT` | `&'t KindT<'s, 't>` (interned, per §6.5) |
+| `KindT` | `KindT<'s, 't>` — **inline**, not interned (see Gotcha 1 resolution). |
 | `ITemplataT[...]` | `ITemplataT<'s, 't>` (inline enum, passed by value; see §6.6 — **erase** the outer `[T]` parameter) |
 | `IdT[SomeNameT]` | `IdT<'s, 't>` — **monomorphic**, no generic T (Scala's `+T` is erased). See `docs/reasoning/idt-typed-view-alternatives.md`. |
 | `PrototypeT[IFunctionNameT]` | `PrototypeT<'s, 't>` — monomorphic, same reason. |
-| Concrete `StructTT` / `InterfaceTT` / `KindT` variants | inline by value on the variant payload (e.g. `Struct(StructTT<'s, 't>)`) unless quest.md says otherwise |
+| Concrete Kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`) | **arena-interned** like concrete name structs — accessed as `&'t StructTT<'s, 't>` etc. The wrapper enums (`KindT`, `ICitizenTT`, `ISubKindTT`, `ISuperKindTT`) hold these as `&'t` refs in their variants. |
+| Primitive Kind payloads (`NeverT`, `VoidT`, `IntT`, `BoolT`, `StrT`, `FloatT`) | inline by value, as today — `KindT::Int(IntT { bits: 32 })`. Too small to warrant arena overhead. |
 | `FunctionA` / `StructA` / `InterfaceA` / `ImplA` | `&'s FunctionA<'s>` etc. — scout-lifetime refs into higher_typing output |
 | `IEnvironmentT` | `&'s IEnvironmentT<'s, 't>` (scout-allocated from Slab 4 — for now just use the existing trait/enum stub as a type) |
 | `Vector[T]` of Copy T | `&'t [T]` (arena slice) |
@@ -151,53 +152,55 @@ Concrete Kind variants extend these:
 - `KindPlaceholderT extends ISubKindTT with ISuperKindTT`.
 - `NeverT`, `VoidT`, `IntT`, `BoolT`, `StrT`, `FloatT`, `OverloadSetT` extend **only** `KindT` (not the sub-traits).
 
-Apply the Slab 2 DAG rule: each concrete type gets a variant in each sub-enum it transitively belongs to. Expect:
+Apply the Slab 2 DAG rule: each concrete type gets a variant in each sub-enum it transitively belongs to. Per the Gotcha 1 resolution, variants hold concrete payloads as `&'t` arena refs (the concretes are interned; the wrapper enums are inline-owned):
 
 ```rust
 pub enum ICitizenTT<'s, 't> {
-    Struct(StructTT<'s, 't>),
-    Interface(InterfaceTT<'s, 't>),
+    Struct(&'t StructTT<'s, 't>),
+    Interface(&'t InterfaceTT<'s, 't>),
 }
 
 pub enum ISubKindTT<'s, 't> {
-    Struct(StructTT<'s, 't>),
-    Interface(InterfaceTT<'s, 't>),
-    StaticSizedArray(StaticSizedArrayTT<'s, 't>),
-    RuntimeSizedArray(RuntimeSizedArrayTT<'s, 't>),
-    KindPlaceholder(KindPlaceholderT<'s, 't>),
+    Struct(&'t StructTT<'s, 't>),
+    Interface(&'t InterfaceTT<'s, 't>),
+    StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
+    RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
+    KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 
 pub enum ISuperKindTT<'s, 't> {
-    Interface(InterfaceTT<'s, 't>),
-    KindPlaceholder(KindPlaceholderT<'s, 't>),
+    Interface(&'t InterfaceTT<'s, 't>),
+    KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 ```
 
-**But see Gotcha 1 below** — the inline-vs-interned question for these sub-enums needs to be settled with the senior before you commit.
+All three are `#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]`. They're constructed on the stack (16-byte tag + ref) and never arena-allocated themselves. Casting between them is a `match`-and-rewrap, free.
 
-## The quest.md §6.5 reference `KindT` shape
+## The resolved `KindT` shape
 
-Per §6.5:
+Per the Gotcha 1 resolution (concrete payloads interned, wrapper enums inline):
 
 ```rust
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
+    // Primitives inline by value (small enough; current shape from Slab 1)
     Never(NeverT),
     Void(VoidT),
     Int(IntT),
     Bool(BoolT),
     Str(StrT),
     Float(FloatT),
-    Struct(StructTT<'s, 't>),
-    Interface(InterfaceTT<'s, 't>),
-    StaticSizedArray(StaticSizedArrayTT<'s, 't>),
-    RuntimeSizedArray(RuntimeSizedArrayTT<'s, 't>),
-    KindPlaceholder(KindPlaceholderT<'s, 't>),
+    // Non-primitives as &'t refs (interned payloads)
+    Struct(&'t StructTT<'s, 't>),
+    Interface(&'t InterfaceTT<'s, 't>),
+    StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
+    RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
+    KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
     OverloadSet(&'t OverloadSetT<'s, 't>),
 }
 ```
 
-Note the mix: primitive and struct-like variants are **inline by value**; `OverloadSet` is a `&'t` ref (because `OverloadSetT` is heavier — it holds a whole `&'s IEnvironmentT`). That's the quest.md plan; follow it literally unless Gotcha 1 shifts things.
+KindT itself is 16 bytes (tag + 8-byte ref / inline primitive). `CoordT.kind: KindT<'s, 't>` stays inline (CoordT becomes ~24 bytes — still small, still Copy, still passed by value). This deviates from quest.md §6.5 which shows `Struct(StructTT<'s, 't>)` inline; the resolution is documented in `docs/reasoning/idt-typed-view-alternatives.md` alongside the IdT decision (same philosophy: concrete payloads interned for pointer-identity, wrappers inline for free casts).
 
 ## The quest.md §6.6 reference `ITemplataT` shape
 
@@ -245,11 +248,20 @@ pub struct FunctionTemplataT<'s, 't> {
 
 ## IDEPFL `*ValT` companions
 
-Same pattern as Slab 2 Step 6. Four families get Val companions this slab:
+Per the Gotcha 1 resolution, the scope here is narrower than quest.md §6.1 suggested. `KindT` (and its three wrapper sub-enums) are inline-owned and do NOT need Val types. The concrete Kind payloads are what get interned.
 
-1. **`KindValT<'s, 't>`** — moves out of `typing_interner.rs` into `types/types.rs`. Mirrors `KindT`: one variant per Kind case. Most variants just wrap the same payload by value (since `StructTT`, `InterfaceTT`, etc. are Copy). The `OverloadSet` variant is interesting — since `KindT::OverloadSet(&'t OverloadSetT)` uses a ref, `KindValT::OverloadSet` can either take the Val struct by value or take a ref-to-just-interned `&'t OverloadSetT`. Use `&'t OverloadSetT` for consistency with the canonical ref form.
+**Vals to add** (for interned concrete Kind payloads + `ITemplataT` + `PrototypeT` + `SignatureT`):
 
-2. **`ITemplataValT<'s, 't>`** — moves into `templata/templata.rs`. Per §6.6's mixed-mode note, Val variants for the Copy-value templatas hold them by value; Val variants for the `&'t`-ref templatas hold `&'t` too.
+1. **Per-concrete Kind payload Vals** (shallow — reuse the struct as its own Val, like Slab 2 did for most concrete names):
+   - `StructTT<'s, 't> { id: IdT<'s, 't> }` — interned; Val = the struct itself (simple/shallow, canonical `IdT` already at its widest form).
+   - `InterfaceTT<'s, 't>` — same pattern.
+   - `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>` — same.
+   - `KindPlaceholderT<'s, 't>` — same.
+   - `OverloadSetT<'s, 't> { env: &'s IEnvironmentT<'s, 't>, name: &'s IImpreciseNameS<'s> }` — scout-lifetime fields only; simple reuse.
+
+   So: no separate `*ValT` types needed. Document this as a comment in `types/types.rs` matching the Slab 2 "~45 simple/shallow concretes reuse struct as Val" comment block.
+
+2. **`ITemplataValT<'s, 't>`** — moves into `templata/templata.rs`. Per §6.6's mixed-mode note, Val variants for the Copy-value templatas hold them by value; Val variants for the `&'t`-ref templatas hold `&'t` too. Since `ITemplataT` is inline (not arena-interned — per §6.6), you could argue it doesn't need a Val either. Double-check with the senior; if it's inline like KindT, skip the Val.
 
 3. **`PrototypeValT<'s, 't, 'tmp>`** — moves into `ast/ast.rs` next to `PrototypeT`. Since `PrototypeT<'s, 't>` has `id: IdT<'s, 't>` and `return_type: CoordT<'s, 't>`, and `IdT` contains a `&'t [INameT]` slice, `PrototypeValT` needs the `'tmp` lifetime for the inner `IdValT<'s, 't, 'tmp>`. No generic T — Slab 2's monomorphic refactor dropped it.
 
@@ -257,7 +269,7 @@ Same pattern as Slab 2 Step 6. Four families get Val companions this slab:
 
 For each `*ValT`, add `#[derive(Copy, Clone, Debug)]` plus custom `PartialEq`/`Eq`/`Hash` *if* the struct has slices or fields where structural hashing isn't enough. If the Val is pure Copy + structural-eq'able (no slices, no `&'s` refs needing pointer-eq), just derive all six traits.
 
-Finally, update `typing_interner.rs` to import the relocated Vals and leave the four `intern_*` method bodies as `panic!()` stubs. No body implementation this slab.
+Finally, update `typing_interner.rs`: keep `intern_templata`/`intern_prototype`/`intern_signature` stubs with their new signatures; **remove `intern_kind`** entirely since `KindT` is no longer interned (stub was leftover from the old design). Add `intern_struct_tt`/`intern_interface_tt`/`intern_static_sized_array_tt`/`intern_runtime_sized_array_tt`/`intern_kind_placeholder_t`/`intern_overload_set_t` method stubs — one per interned concrete Kind payload.
 
 ## Step-by-step plan
 
@@ -277,12 +289,13 @@ Before writing any code: **read Gotcha 1 below and get an answer from the senior
 
 ### Step 3 — Fill `KindT` non-primitive variants + sub-enums (types/types.rs)
 
-1. Delete the `_Phantom` variant on `KindT` and add the 6 non-primitive variants per quest.md §6.5.
-2. Delete the `_Phantom` variants on `ICitizenTT`/`ISubKindTT`/`ISuperKindTT` and add the DAG-per-§6.2 variants (see "The DAG rule" section above).
+1. Delete the `_Phantom` variant on `KindT` and add the 6 non-primitive variants as `&'t` refs per "The resolved `KindT` shape" section above.
+2. Delete the `_Phantom` variants on `ICitizenTT`/`ISubKindTT`/`ISuperKindTT` and add the DAG-per-§6.2 variants (see "The DAG rule" section above) — all as `&'t` refs to the interned concrete payloads.
 3. Add `#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]` to all four enums if not already present.
-4. Leave `/* scala */` blocks untouched.
-5. Remove any `// TODO: placeholder PhantomData` comments immediately above each filled definition.
-6. Run `cargo check --lib` per the session-file convention.
+4. Add `From<&'t StructTT<'s, 't>> for KindT<'s, 't>` / `From<&'t InterfaceTT<'s, 't>> for KindT<'s, 't>` / etc. (concrete → wrapper), plus the narrow → wide cascade (`From<ICitizenTT<'s, 't>> for KindT<'s, 't>` etc.), plus `TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't>` etc. Mirror the Slab 2 names bridges.
+5. Leave `/* scala */` blocks untouched.
+6. Remove any `// TODO: placeholder PhantomData` comments immediately above each filled definition.
+7. Run `cargo check --lib` per the session-file convention.
 
 Expected fallout: dozens of downstream uses of `KindT<'s, 't>` pattern-match on variants; they may now have new variants unhandled. Since you're only defining types, match arms in callers are still `panic!()`-stubbed — nothing structural breaks.
 
@@ -343,23 +356,29 @@ git tag -a slab-3-complete -m "Typing Slab 3 complete: KindT + ITemplataT + ValT
 
 ## Gotchas
 
-### Gotcha 1 (READ BEFORE CODING): Inline vs interned for KindT sub-enums
+### Gotcha 1 (resolved): Inline vs interned for KindT sub-enums
 
-Slab 2 refactored name sub-enum families (`IFunctionNameT`, `IStructNameT`, `INameT`, etc.) from arena-interned wrappers to inline-owned 16-byte `Copy` values. quest.md §§1.5/6.1/6.2/6.3 were updated. But **§6.5 KindT was not updated** because it says "All variants interned" and treats `KindT`-family types analogously to the *old* names design.
+The Slab 2 refactor philosophy applies uniformly to KindT and its sub-enums. quest.md §6.5 is out-of-date on this point; follow the split documented here:
 
-You have two reasonable paths and I want you to ask the senior before committing to either:
+**Arena-interned (accessed as `&'t`):**
+- `StructTT<'s, 't>`, `InterfaceTT<'s, 't>`, `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>`, `KindPlaceholderT<'s, 't>`, `OverloadSetT<'s, 't>` — the non-primitive Kind payloads. They already contain `IdT<'s, 't>` or heavy scout refs; interning gives them pointer-identity.
 
-**Path A (literal §6.5):** `KindT` itself stays interned (`&'t KindT` everywhere it's used). `ICitizenTT`/`ISubKindTT`/`ISuperKindTT` also stay interned (arena-allocated wrappers, pointer-eq identity). This matches §6.5 verbatim. `KindValT` has variants per KindT variant, mirroring what Slab 2 did for name concretes.
+**Inline-owned 16-byte Copy enums (never arena-allocated):**
+- `KindT<'s, 't>`, `ICitizenTT<'s, 't>`, `ISubKindTT<'s, 't>`, `ISuperKindTT<'s, 't>`.
+- Primitive KindT payloads (`NeverT`, `VoidT`, `IntT`, `BoolT`, `StrT`, `FloatT`) stay inline as variants of `KindT` itself — no arena round-trip for `KindT::Int(IntT { bits: 32 })`.
 
-**Path B (apply Slab 2 refactor to kind sub-enums):** `ICitizenTT`/`ISubKindTT`/`ISuperKindTT` become inline-owned 16-40 byte Copy values. `KindT` might stay interned because it's 40+ bytes and the existing `CoordT.kind: &'t KindT<'s, 't>` field is pervasive (`&'t` avoids growing Coord). This matches the names-refactor philosophy: cast-between-family-enums is a stack rewrap.
+**Why this shape (and why it deviates from §6.5):**
 
-The trade-off is exactly like Slab 2's:
-- Path A: pointer-eq identity on `&'t ICitizenTT` for free; but every cast (concrete → ICitizenTT → ISubKindTT → KindT) costs an interner allocation.
-- Path B: casts are stack-only; but structural compare on 40-byte enum values.
+1. Matches the Slab 2 names refactor exactly. Concrete names are interned (`&'t FunctionNameT`); wrapper enums (`INameT`, `IFunctionNameT`, etc.) are inline 16-byte values. Applying the same philosophy here keeps the typing pass' storage model uniform.
+2. `&'t KindT<'s, 't>` everywhere (the literal §6.5 approach) wasn't what the code already had — `CoordT.kind` is already inline `KindT<'s, 't>`. Making KindT 16 bytes (tag + 8-byte ref) keeps CoordT small (~24 bytes including ownership + region).
+3. Casts between `KindT`, `ICitizenTT`, `ISubKindTT`, `ISuperKindTT` become stack-only rewraps — `From`/`TryFrom` impls can be real (no interner round-trip).
+4. Concrete payloads (`StructTT`, etc.) keep pointer-identity via interning, which is what `HashMap<&'t StructTT, V>` callers rely on.
 
-Given the sizes involved here (ICitizenTT variants hold inline StructTT/InterfaceTT which are 40 bytes each), inline-owned is **bigger** (~48 bytes) than for names (16 bytes). That changes the calculus.
+**No Val type for KindT or its sub-enums.** Since they're inline-owned (not arena-interned), they don't need IDEPFL Val companions. The four interned concrete Kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`) do need Vals — most are simple/shallow (reuse the struct as its own Val per Slab 2 Step 6 convention); `OverloadSetT` has scout-lifetime fields only and is simple.
 
-**Ask the senior.** They'll have context on whether the names-refactor philosophy should be uniformly applied. Once you have the answer, write the corresponding Val types to match.
+**Write the From/TryFrom bridges like Slab 2.** Concrete → wrapper enum: `impl From<&'t StructTT<'s, 't>> for KindT<'s, 't>` etc. Narrow → wide: `impl From<ICitizenTT<'s, 't>> for KindT<'s, 't>`. Wide → narrow: `impl TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't>` (owned, match-and-rewrap). Exactly like `From<&'t FunctionNameT> for INameT` and `TryFrom<INameT> for IFunctionNameT` in names.rs.
+
+This decision is captured in `docs/reasoning/idt-typed-view-alternatives.md` — the sub-enum inline philosophy is common to both names and kinds.
 
 ### Gotcha 2: `PrototypeT` derive(Hash) after Slab 2
 
