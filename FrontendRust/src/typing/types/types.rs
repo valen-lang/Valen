@@ -395,7 +395,7 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
-  pub env: &'s IInDenizenEnvironmentT<'s, 't>,
+  pub env: &'t IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
 }
 /*
@@ -436,6 +436,37 @@ case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT wi
 // inline-owned 16-byte Copy values (never arena-allocated), so they don't
 // need Val companions either. Casts between them are `match`-and-rewrap via
 // the From/TryFrom bridges below.
+
+// -- Union enums for the Kind-payload interning family ----------------------
+// Per handoff-slab-4.md Gotcha 2: typing interner uses one HashMap per
+// sealed-trait family with a tagged-union Val key. These mirror scout's
+// INameValS/INameS pattern.
+//
+// All 6 variants are "simple" (struct is its own Val, no 'tmp lifetime).
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedKindPayloadValT<'s, 't>
+where 's: 't,
+{
+  StructTT(StructTT<'s, 't>),
+  InterfaceTT(InterfaceTT<'s, 't>),
+  StaticSizedArrayTT(StaticSizedArrayTT<'s, 't>),
+  RuntimeSizedArrayTT(RuntimeSizedArrayTT<'s, 't>),
+  KindPlaceholder(KindPlaceholderT<'s, 't>),
+  OverloadSet(OverloadSetT<'s, 't>),
+}
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedKindPayloadT<'s, 't>
+where 's: 't,
+{
+  StructTT(&'t StructTT<'s, 't>),
+  InterfaceTT(&'t InterfaceTT<'s, 't>),
+  StaticSizedArrayTT(&'t StaticSizedArrayTT<'s, 't>),
+  RuntimeSizedArrayTT(&'t RuntimeSizedArrayTT<'s, 't>),
+  KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
+  OverloadSet(&'t OverloadSetT<'s, 't>),
+}
 
 // -- From bridges: concrete payload → each wrapper enum it belongs to --------
 

@@ -25,13 +25,27 @@ import scala.collection.mutable
 use std::collections::HashMap as StdHashMap;
 
 use crate::postparsing::names::IImpreciseNameS;
+use crate::typing::env::function_environment_t::{
+  BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
+  BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
+};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::names::names::{IdT, INameT};
 use crate::typing::typing_interner::TypingInterner;
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IEnvironmentT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+pub enum IEnvironmentT<'s, 't>
+where 's: 't,
+{
+    Package(&'t PackageEnvironmentT<'s, 't>),
+    Citizen(&'t CitizenEnvironmentT<'s, 't>),
+    Function(&'t FunctionEnvironmentT<'s, 't>),
+    Node(&'t NodeEnvironmentT<'s, 't>),
+    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
+    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
+    General(&'t GeneralEnvironmentT<'s, 't>),
+    Export(&'t ExportEnvironmentT<'s, 't>),
+    Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 /*
 trait IEnvironmentT {
@@ -105,8 +119,15 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 }
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IInDenizenEnvironmentT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+pub enum IInDenizenEnvironmentT<'s, 't>
+where 's: 't,
+{
+    Citizen(&'t CitizenEnvironmentT<'s, 't>),
+    Function(&'t FunctionEnvironmentT<'s, 't>),
+    Node(&'t NodeEnvironmentT<'s, 't>),
+    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
+    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
+    General(&'t GeneralEnvironmentT<'s, 't>),
 }
 /*
 trait IInDenizenEnvironmentT extends IEnvironmentT {
@@ -118,7 +139,6 @@ trait IInDenizenEnvironmentT extends IEnvironmentT {
   def denizenTemplateId: IdT[ITemplateNameT]
 }
 */
-pub trait IDenizenEnvironmentBoxT<'s, 't> {}
 /*
 trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
   def snapshot: IInDenizenEnvironmentT
@@ -504,9 +524,23 @@ object PackageEnvironmentT {
   }
 }
 */
-pub struct PackageEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> PackageEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct PackageEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub global_namespaces: &'t [TemplatasStoreT<'s, 't>],
+}
+
+// Id-based Hash/PartialEq per Gotcha 13.
+impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class PackageEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
@@ -567,9 +601,24 @@ override def hashCode(): Int = hash;
   }
 }
 */
-pub struct CitizenEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> CitizenEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct CitizenEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+}
+
+impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   globalEnv: GlobalEnvironment,
@@ -663,9 +712,24 @@ object GeneralEnvironmentT {
   }
 }
 */
-pub struct ExportEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> ExportEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct ExportEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: &'t PackageEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+}
+
+impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class ExportEnvironmentT(
     globalEnv: GlobalEnvironment,
@@ -698,9 +762,24 @@ case class ExportEnvironmentT(
   }
 }
 */
-pub struct ExternEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> ExternEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct ExternEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: &'t PackageEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+}
+
+impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class ExternEnvironmentT(
     globalEnv: GlobalEnvironment,
@@ -733,9 +812,27 @@ case class ExternEnvironmentT(
   }
 }
 */
-pub struct GeneralEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> GeneralEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct GeneralEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IInDenizenEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+}
+
+// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
+impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
+}
+impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+    panic!("vcurious: GeneralEnvironmentT.hash")
+  }
+}
 /*
 case class GeneralEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
@@ -778,3 +875,236 @@ case class GeneralEnvironmentT[+T <: INameT](
   }
 }
 */
+
+// Concrete → IEnvironmentT
+impl<'s, 't> From<&'t PackageEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t PackageEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Package(e) }
+}
+impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Citizen(e) }
+}
+impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Function(e) }
+}
+impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Node(e) }
+}
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
+    IEnvironmentT::BuildingWithClosureds(e)
+  }
+}
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
+    IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
+  }
+}
+impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IEnvironmentT::General(e) }
+}
+impl<'s, 't> From<&'t ExportEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Export(e) }
+}
+impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Extern(e) }
+}
+
+// Concrete → IInDenizenEnvironmentT (6 variants; no Package/Export/Extern)
+impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Citizen(e) }
+}
+impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Function(e) }
+}
+impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Node(e) }
+}
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::BuildingWithClosureds(e)
+  }
+}
+impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
+    IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
+  }
+}
+impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::General(e) }
+}
+
+// Widening: IInDenizenEnvironmentT → IEnvironmentT (always succeeds)
+impl<'s, 't> From<IInDenizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
+  fn from(e: IInDenizenEnvironmentT<'s, 't>) -> Self {
+    match e {
+      IInDenizenEnvironmentT::Citizen(c) => IEnvironmentT::Citizen(c),
+      IInDenizenEnvironmentT::Function(f) => IEnvironmentT::Function(f),
+      IInDenizenEnvironmentT::Node(n) => IEnvironmentT::Node(n),
+      IInDenizenEnvironmentT::BuildingWithClosureds(b) => IEnvironmentT::BuildingWithClosureds(b),
+      IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
+        IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b),
+      IInDenizenEnvironmentT::General(g) => IEnvironmentT::General(g),
+    }
+  }
+}
+
+// Narrowing: IEnvironmentT → IInDenizenEnvironmentT (errors on Package/Export/Extern)
+impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  type Error = IEnvironmentT<'s, 't>;
+  fn try_from(e: IEnvironmentT<'s, 't>) -> Result<Self, Self::Error> {
+    match e {
+      IEnvironmentT::Citizen(c) => Ok(IInDenizenEnvironmentT::Citizen(c)),
+      IEnvironmentT::Function(f) => Ok(IInDenizenEnvironmentT::Function(f)),
+      IEnvironmentT::Node(n) => Ok(IInDenizenEnvironmentT::Node(n)),
+      IEnvironmentT::BuildingWithClosureds(b) => Ok(IInDenizenEnvironmentT::BuildingWithClosureds(b)),
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
+        Ok(IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b)),
+      IEnvironmentT::General(g) => Ok(IInDenizenEnvironmentT::General(g)),
+      other @ (IEnvironmentT::Package(_)
+        | IEnvironmentT::Export(_)
+        | IEnvironmentT::Extern(_)) => Err(other),
+    }
+  }
+}
+
+// ============================================================================
+// Builders — one per env kind. Each owns heap Vec/HashMap for incrementally
+// built fields (templatas + slices), then freezes via build_in(interner) into
+// an arena-allocated &'t FooEnvironmentT.
+// ============================================================================
+
+pub struct PackageEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub global_namespaces: Vec<TemplatasStoreT<'s, 't>>,
+}
+
+impl<'s, 't> PackageEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t PackageEnvironmentT<'s, 't> {
+    let global_namespaces = interner.alloc_slice_from_vec(self.global_namespaces);
+    interner.alloc(PackageEnvironmentT {
+      global_env: self.global_env,
+      id: self.id,
+      global_namespaces,
+    })
+  }
+}
+
+pub struct CitizenEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+}
+
+impl<'s, 't> CitizenEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t CitizenEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    interner.alloc(CitizenEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+    })
+  }
+}
+
+pub struct ExportEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: &'t PackageEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+}
+
+impl<'s, 't> ExportEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t ExportEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    interner.alloc(ExportEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+    })
+  }
+}
+
+pub struct ExternEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: &'t PackageEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+}
+
+impl<'s, 't> ExternEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t ExternEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    interner.alloc(ExternEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+    })
+  }
+}
+
+pub struct GeneralEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IInDenizenEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+}
+
+impl<'s, 't> GeneralEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t GeneralEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    interner.alloc(GeneralEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+    })
+  }
+}

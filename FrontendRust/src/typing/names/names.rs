@@ -2437,7 +2437,12 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
 // slice so callers can hash a trial IdT against the interner without yet
 // arena-allocating the slice. Monomorphic per
 // `docs/reasoning/idt-typed-view-alternatives.md`.
-#[derive(Copy, Clone, Debug)]
+// Derive Hash/PartialEq/Eq: content-based (iterates the init_steps slice,
+// delegates to &ref's target). This is *required* for heterogeneous lookup:
+// the hash must be consistent whether the Val's slice is 'tmp-borrowed (query)
+// or 't-arena-allocated (stored). Pointer-based hashing would fail to match
+// structurally-equal Vals with different slice pointers.
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct IdValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2446,11 +2451,32 @@ where 's: 't, 't: 'tmp,
     pub local_name: INameT<'s, 't>,
 }
 
+// Query wrapper for heterogeneous lookup (IdValT<'s, 't, 'tmp> against stored
+// IdValT<'s, 't, 't>). Mirrors postparsing::names::RuneValQuery.
+pub struct IdValQuery<'a, 's, 't, 'tmp>(pub &'a IdValT<'s, 't, 'tmp>)
+where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> Hash for IdValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<IdValT<'s, 't, 't>> for IdValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn equivalent(&self, key: &IdValT<'s, 't, 't>) -> bool {
+        self.0.package_coord == key.package_coord
+            && self.0.init_steps == key.init_steps
+            && self.0.local_name == key.local_name
+    }
+}
+
 // -- Transient-with-'tmp Val types for the 15 concrete names with slices ----
 // Fields match the permanent struct verbatim, except each `&'t [...]` slice
 // is replaced by `&'tmp [...]`.
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ImplNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2459,7 +2485,7 @@ where 's: 't, 't: 'tmp,
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ImplBoundNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2467,7 +2493,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct OverrideDispatcherNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2476,14 +2502,14 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct OverrideDispatcherCaseNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub independent_impl_template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ExternFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2491,7 +2517,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct FunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2500,7 +2526,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct FunctionBoundNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2509,7 +2535,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct PredictedFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2518,7 +2544,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct LambdaCallFunctionTemplateNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2526,7 +2552,7 @@ where 's: 't, 't: 'tmp,
     pub param_types: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct LambdaCallFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2535,7 +2561,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct StructNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2543,7 +2569,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct InterfaceNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2551,7 +2577,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructImplNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2560,7 +2586,7 @@ where 's: 't, 't: 'tmp,
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructConstructorNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2569,7 +2595,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
@@ -2610,3 +2636,262 @@ where 's: 't, 't: 'tmp,
 // (OverrideDispatcherTemplateNameT is shallow because it holds an inline
 // `IdT<'s, 't>` — the IdT's own init_steps slice
 // must be canonicalized via IdValT before this Val is constructed.)
+
+// ============================================================================
+// Hash/PartialEq/Eq + Query wrappers for the 15 transient Vals.
+//
+// Pattern per IDEPFL: stored values live at `'tmp = 't` and compare/hash via
+// pointer identity for their slices (the interner canonicalizes them). The
+// Query wrapper lets a `'tmp`-borrowed Val look up against a stored key by
+// comparing slice CONTENTS, not pointers.
+// ============================================================================
+
+// Each transient Val uses derived Hash/PartialEq/Eq (added below via struct attr).
+// This macro emits only the Query wrapper + its Equivalent impl for heterogeneous
+// lookup; the derive on the Val struct itself gives content-based hash+eq that's
+// consistent across 'tmp differences.
+macro_rules! transient_name_val_impls {
+    (
+        $val:ident, $query:ident,
+        refs = [ $( $r:ident ),* ],
+        slices = [ $( $s:ident ),* ],
+        inline = [ $( $i:ident ),* ]
+    ) => {
+        pub struct $query<'a, 's, 't, 'tmp>(pub &'a $val<'s, 't, 'tmp>)
+        where 's: 't, 't: 'tmp;
+
+        impl<'a, 's, 't, 'tmp> Hash for $query<'a, 's, 't, 'tmp>
+        where 's: 't, 't: 'tmp,
+        {
+            fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
+        }
+
+        impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<$val<'s, 't, 't>> for $query<'a, 's, 't, 'tmp>
+        where 's: 't, 't: 'tmp,
+        {
+            #[allow(unused_mut)]
+            fn equivalent(&self, key: &$val<'s, 't, 't>) -> bool {
+                let mut ok = true;
+                $( ok = ok && self.0.$r == key.$r; )*
+                $( ok = ok && self.0.$s == key.$s; )*
+                $( ok = ok && self.0.$i == key.$i; )*
+                ok
+            }
+        }
+    };
+}
+
+transient_name_val_impls!(ImplNameValT, ImplNameValQuery,
+    refs = [template], slices = [template_args], inline = [sub_citizen]);
+transient_name_val_impls!(ImplBoundNameValT, ImplBoundNameValQuery,
+    refs = [template], slices = [template_args], inline = []);
+transient_name_val_impls!(OverrideDispatcherNameValT, OverrideDispatcherNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(OverrideDispatcherCaseNameValT, OverrideDispatcherCaseNameValQuery,
+    refs = [], slices = [independent_impl_template_args], inline = []);
+transient_name_val_impls!(ExternFunctionNameValT, ExternFunctionNameValQuery,
+    refs = [], slices = [parameters], inline = [human_name]);
+transient_name_val_impls!(FunctionNameValT, FunctionNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(FunctionBoundNameValT, FunctionBoundNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(PredictedFunctionNameValT, PredictedFunctionNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(LambdaCallFunctionTemplateNameValT, LambdaCallFunctionTemplateNameValQuery,
+    refs = [], slices = [param_types], inline = [code_location]);
+transient_name_val_impls!(LambdaCallFunctionNameValT, LambdaCallFunctionNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(StructNameValT, StructNameValQuery,
+    refs = [], slices = [template_args], inline = [template]);
+transient_name_val_impls!(InterfaceNameValT, InterfaceNameValQuery,
+    refs = [template], slices = [template_args], inline = []);
+transient_name_val_impls!(AnonymousSubstructImplNameValT, AnonymousSubstructImplNameValQuery,
+    refs = [template], slices = [template_args], inline = [sub_citizen]);
+transient_name_val_impls!(AnonymousSubstructConstructorNameValT, AnonymousSubstructConstructorNameValQuery,
+    refs = [template], slices = [template_args, parameters], inline = []);
+transient_name_val_impls!(AnonymousSubstructNameValT, AnonymousSubstructNameValQuery,
+    refs = [template], slices = [template_args], inline = []);
+
+// ============================================================================
+// INameValT — the union Val enum for the name-interning family.
+//
+// Per handoff-slab-4.md Gotcha 2 (6-family-map design mirroring scout's
+// INameValS/INameS). One variant per concrete name in INameT. For simple names
+// the variant payload is the concrete struct by value; for transient names
+// (15, carrying slices) the payload is the concrete `*ValT` struct.
+//
+// Hash is derived (content-based; iterates slice contents). Query wrapper
+// provides heterogeneous lookup (`'tmp` → `'t`) via Equivalent.
+// ============================================================================
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum INameValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    ExportTemplate(ExportTemplateNameT<'s, 't>),
+    Export(ExportNameT<'s, 't>),
+    ImplTemplate(ImplTemplateNameT<'s, 't>),
+    Impl(ImplNameValT<'s, 't, 'tmp>),
+    ImplBoundTemplate(ImplBoundTemplateNameT<'s, 't>),
+    ImplBound(ImplBoundNameValT<'s, 't, 'tmp>),
+    Let(LetNameT<'s, 't>),
+    ExportAs(ExportAsNameT<'s, 't>),
+    RawArray(RawArrayNameT<'s, 't>),
+    ReachablePrototype(ReachablePrototypeNameT<'s, 't>),
+    StaticSizedArrayTemplate(StaticSizedArrayTemplateNameT<'s, 't>),
+    StaticSizedArray(StaticSizedArrayNameT<'s, 't>),
+    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateNameT<'s, 't>),
+    RuntimeSizedArray(RuntimeSizedArrayNameT<'s, 't>),
+    KindPlaceholderTemplate(KindPlaceholderTemplateNameT<'s, 't>),
+    KindPlaceholder(KindPlaceholderNameT<'s, 't>),
+    NonKindNonRegionPlaceholder(NonKindNonRegionPlaceholderNameT<'s, 't>),
+    OverrideDispatcherTemplate(OverrideDispatcherTemplateNameT<'s, 't>),
+    OverrideDispatcher(OverrideDispatcherNameValT<'s, 't, 'tmp>),
+    OverrideDispatcherCase(OverrideDispatcherCaseNameValT<'s, 't, 'tmp>),
+    TypingPassBlockResultVar(TypingPassBlockResultVarNameT<'s, 't>),
+    TypingPassFunctionResultVar(TypingPassFunctionResultVarNameT<'s, 't>),
+    TypingPassTemporaryVar(TypingPassTemporaryVarNameT<'s, 't>),
+    TypingPassPatternMember(TypingPassPatternMemberNameT<'s, 't>),
+    TypingIgnoredParam(TypingIgnoredParamNameT<'s, 't>),
+    TypingPassPatternDestructuree(TypingPassPatternDestructureeNameT<'s, 't>),
+    UnnamedLocal(UnnamedLocalNameT<'s, 't>),
+    ClosureParam(ClosureParamNameT<'s, 't>),
+    ConstructingMember(ConstructingMemberNameT<'s, 't>),
+    WhileCondResult(WhileCondResultNameT<'s, 't>),
+    Iterable(IterableNameT<'s, 't>),
+    Iterator(IteratorNameT<'s, 't>),
+    IterationOption(IterationOptionNameT<'s, 't>),
+    MagicParam(MagicParamNameT<'s, 't>),
+    CodeVar(CodeVarNameT<'s, 't>),
+    AnonymousSubstructMember(AnonymousSubstructMemberNameT<'s, 't>),
+    Primitive(PrimitiveNameT<'s, 't>),
+    PackageTopLevel(PackageTopLevelNameT<'s, 't>),
+    Project(ProjectNameT<'s, 't>),
+    Package(PackageNameT<'s, 't>),
+    Rune(RuneNameT<'s, 't>),
+    BuildingFunctionNameWithClosureds(BuildingFunctionNameWithClosuredsT<'s, 't>),
+    ExternTemplate(ExternTemplateNameT<'s, 't>),
+    Extern(ExternNameT<'s, 't>),
+    ExternFunction(ExternFunctionNameValT<'s, 't, 'tmp>),
+    Function(FunctionNameValT<'s, 't, 'tmp>),
+    ForwarderFunction(ForwarderFunctionNameT<'s, 't>),
+    FunctionBoundTemplate(FunctionBoundTemplateNameT<'s, 't>),
+    FunctionBound(FunctionBoundNameValT<'s, 't, 'tmp>),
+    PredictedFunctionTemplate(PredictedFunctionTemplateNameT<'s, 't>),
+    PredictedFunction(PredictedFunctionNameValT<'s, 't, 'tmp>),
+    FunctionTemplate(FunctionTemplateNameT<'s, 't>),
+    LambdaCallFunctionTemplate(LambdaCallFunctionTemplateNameValT<'s, 't, 'tmp>),
+    LambdaCallFunction(LambdaCallFunctionNameValT<'s, 't, 'tmp>),
+    ForwarderFunctionTemplate(ForwarderFunctionTemplateNameT<'s, 't>),
+    ConstructorTemplate(ConstructorTemplateNameT<'s, 't>),
+    Self_(SelfNameT<'s, 't>),
+    Arbitrary(ArbitraryNameT<'s, 't>),
+    Struct(StructNameValT<'s, 't, 'tmp>),
+    Interface(InterfaceNameValT<'s, 't, 'tmp>),
+    LambdaCitizenTemplate(LambdaCitizenTemplateNameT<'s, 't>),
+    LambdaCitizen(LambdaCitizenNameT<'s, 't>),
+    StructTemplate(StructTemplateNameT<'s, 't>),
+    InterfaceTemplate(InterfaceTemplateNameT<'s, 't>),
+    AnonymousSubstructImplTemplate(AnonymousSubstructImplTemplateNameT<'s, 't>),
+    AnonymousSubstructImpl(AnonymousSubstructImplNameValT<'s, 't, 'tmp>),
+    AnonymousSubstructTemplate(AnonymousSubstructTemplateNameT<'s, 't>),
+    AnonymousSubstructConstructorTemplate(AnonymousSubstructConstructorTemplateNameT<'s, 't>),
+    AnonymousSubstructConstructor(AnonymousSubstructConstructorNameValT<'s, 't, 'tmp>),
+    AnonymousSubstruct(AnonymousSubstructNameValT<'s, 't, 'tmp>),
+    ResolvingEnv(ResolvingEnvNameT<'s, 't>),
+    CallEnv(CallEnvNameT<'s, 't>),
+}
+
+pub struct INameValQuery<'a, 's, 't, 'tmp>(pub &'a INameValT<'s, 't, 'tmp>)
+where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> Hash for INameValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<INameValT<'s, 't, 't>> for INameValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn equivalent(&self, key: &INameValT<'s, 't, 't>) -> bool {
+        use INameValT::*;
+        match (self.0, key) {
+            // 15 transient variants: delegate to per-concrete Query wrapper.
+            (Impl(a), Impl(b)) => ImplNameValQuery(a).equivalent(b),
+            (ImplBound(a), ImplBound(b)) => ImplBoundNameValQuery(a).equivalent(b),
+            (OverrideDispatcher(a), OverrideDispatcher(b)) => OverrideDispatcherNameValQuery(a).equivalent(b),
+            (OverrideDispatcherCase(a), OverrideDispatcherCase(b)) => OverrideDispatcherCaseNameValQuery(a).equivalent(b),
+            (ExternFunction(a), ExternFunction(b)) => ExternFunctionNameValQuery(a).equivalent(b),
+            (Function(a), Function(b)) => FunctionNameValQuery(a).equivalent(b),
+            (FunctionBound(a), FunctionBound(b)) => FunctionBoundNameValQuery(a).equivalent(b),
+            (PredictedFunction(a), PredictedFunction(b)) => PredictedFunctionNameValQuery(a).equivalent(b),
+            (LambdaCallFunctionTemplate(a), LambdaCallFunctionTemplate(b)) => LambdaCallFunctionTemplateNameValQuery(a).equivalent(b),
+            (LambdaCallFunction(a), LambdaCallFunction(b)) => LambdaCallFunctionNameValQuery(a).equivalent(b),
+            (Struct(a), Struct(b)) => StructNameValQuery(a).equivalent(b),
+            (Interface(a), Interface(b)) => InterfaceNameValQuery(a).equivalent(b),
+            (AnonymousSubstructImpl(a), AnonymousSubstructImpl(b)) => AnonymousSubstructImplNameValQuery(a).equivalent(b),
+            (AnonymousSubstructConstructor(a), AnonymousSubstructConstructor(b)) => AnonymousSubstructConstructorNameValQuery(a).equivalent(b),
+            (AnonymousSubstruct(a), AnonymousSubstruct(b)) => AnonymousSubstructNameValQuery(a).equivalent(b),
+            // 57 simple variants: payload types match (no 'tmp), direct ==.
+            (ExportTemplate(a), ExportTemplate(b)) => a == b,
+            (Export(a), Export(b)) => a == b,
+            (ImplTemplate(a), ImplTemplate(b)) => a == b,
+            (ImplBoundTemplate(a), ImplBoundTemplate(b)) => a == b,
+            (Let(a), Let(b)) => a == b,
+            (ExportAs(a), ExportAs(b)) => a == b,
+            (RawArray(a), RawArray(b)) => a == b,
+            (ReachablePrototype(a), ReachablePrototype(b)) => a == b,
+            (StaticSizedArrayTemplate(a), StaticSizedArrayTemplate(b)) => a == b,
+            (StaticSizedArray(a), StaticSizedArray(b)) => a == b,
+            (RuntimeSizedArrayTemplate(a), RuntimeSizedArrayTemplate(b)) => a == b,
+            (RuntimeSizedArray(a), RuntimeSizedArray(b)) => a == b,
+            (KindPlaceholderTemplate(a), KindPlaceholderTemplate(b)) => a == b,
+            (KindPlaceholder(a), KindPlaceholder(b)) => a == b,
+            (NonKindNonRegionPlaceholder(a), NonKindNonRegionPlaceholder(b)) => a == b,
+            (OverrideDispatcherTemplate(a), OverrideDispatcherTemplate(b)) => a == b,
+            (TypingPassBlockResultVar(a), TypingPassBlockResultVar(b)) => a == b,
+            (TypingPassFunctionResultVar(a), TypingPassFunctionResultVar(b)) => a == b,
+            (TypingPassTemporaryVar(a), TypingPassTemporaryVar(b)) => a == b,
+            (TypingPassPatternMember(a), TypingPassPatternMember(b)) => a == b,
+            (TypingIgnoredParam(a), TypingIgnoredParam(b)) => a == b,
+            (TypingPassPatternDestructuree(a), TypingPassPatternDestructuree(b)) => a == b,
+            (UnnamedLocal(a), UnnamedLocal(b)) => a == b,
+            (ClosureParam(a), ClosureParam(b)) => a == b,
+            (ConstructingMember(a), ConstructingMember(b)) => a == b,
+            (WhileCondResult(a), WhileCondResult(b)) => a == b,
+            (Iterable(a), Iterable(b)) => a == b,
+            (Iterator(a), Iterator(b)) => a == b,
+            (IterationOption(a), IterationOption(b)) => a == b,
+            (MagicParam(a), MagicParam(b)) => a == b,
+            (CodeVar(a), CodeVar(b)) => a == b,
+            (AnonymousSubstructMember(a), AnonymousSubstructMember(b)) => a == b,
+            (Primitive(a), Primitive(b)) => a == b,
+            (PackageTopLevel(a), PackageTopLevel(b)) => a == b,
+            (Project(a), Project(b)) => a == b,
+            (Package(a), Package(b)) => a == b,
+            (Rune(a), Rune(b)) => a == b,
+            (BuildingFunctionNameWithClosureds(a), BuildingFunctionNameWithClosureds(b)) => a == b,
+            (ExternTemplate(a), ExternTemplate(b)) => a == b,
+            (Extern(a), Extern(b)) => a == b,
+            (ForwarderFunction(a), ForwarderFunction(b)) => a == b,
+            (FunctionBoundTemplate(a), FunctionBoundTemplate(b)) => a == b,
+            (PredictedFunctionTemplate(a), PredictedFunctionTemplate(b)) => a == b,
+            (FunctionTemplate(a), FunctionTemplate(b)) => a == b,
+            (ForwarderFunctionTemplate(a), ForwarderFunctionTemplate(b)) => a == b,
+            (ConstructorTemplate(a), ConstructorTemplate(b)) => a == b,
+            (Self_(a), Self_(b)) => a == b,
+            (Arbitrary(a), Arbitrary(b)) => a == b,
+            (LambdaCitizenTemplate(a), LambdaCitizenTemplate(b)) => a == b,
+            (LambdaCitizen(a), LambdaCitizen(b)) => a == b,
+            (StructTemplate(a), StructTemplate(b)) => a == b,
+            (InterfaceTemplate(a), InterfaceTemplate(b)) => a == b,
+            (AnonymousSubstructImplTemplate(a), AnonymousSubstructImplTemplate(b)) => a == b,
+            (AnonymousSubstructTemplate(a), AnonymousSubstructTemplate(b)) => a == b,
+            (AnonymousSubstructConstructorTemplate(a), AnonymousSubstructConstructorTemplate(b)) => a == b,
+            (ResolvingEnv(a), ResolvingEnv(b)) => a == b,
+            (CallEnv(a), CallEnv(b)) => a == b,
+            _ => false,
+        }
+    }
+}

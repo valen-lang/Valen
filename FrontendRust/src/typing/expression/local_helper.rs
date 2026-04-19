@@ -51,7 +51,7 @@ class LocalHelper(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_temporary_local(&self, nenv: &NodeEnvironmentBox, life: LocationInFunctionEnvironmentT<'s>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
+    pub fn make_temporary_local(&self, nenv: &NodeEnvironmentT<'s, 't>, life: LocationInFunctionEnvironmentT<'s>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
         panic!("Unimplemented: make_temporary_local");
     }
 /*
@@ -71,7 +71,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_temporary_local_defer(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentBox, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
+    pub fn make_temporary_local_defer(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentT<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
         panic!("Unimplemented: make_temporary_local");
     }
 /*
@@ -109,7 +109,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn unlet_local_without_dropping(&self, nenv: &NodeEnvironmentBox, local_var: &ILocalVariableT<'s, 't>) -> UnletTE<'s, 't> {
+    pub fn unlet_local_without_dropping(&self, nenv: &NodeEnvironmentT<'s, 't>, local_var: &ILocalVariableT<'s, 't>) -> UnletTE<'s, 't> {
         panic!("Unimplemented: unlet_local_without_dropping");
     }
 /*
@@ -124,7 +124,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn unlet_and_drop_all(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentBox, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
+    pub fn unlet_and_drop_all(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentT<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, context_region: RegionT, variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
         panic!("Unimplemented: unlet_and_drop_all");
     }
 /*
@@ -149,7 +149,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn unlet_all_without_dropping(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentBox, range: &[RangeS<'s>], variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
+    pub fn unlet_all_without_dropping(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentT<'s, 't>, range: &[RangeS<'s>], variables: &[&ILocalVariableT<'s, 't>]) -> Vec<ReferenceExpressionTE<'s, 't>> {
         panic!("Unimplemented: unlet_all_without_dropping");
     }
 /*
@@ -167,7 +167,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentBox, range: &[RangeS<'s>], local_variable_a: &LocalS<'s>, reference_type2: CoordT<'s, 't>) -> ILocalVariableT<'s, 't> {
+    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &NodeEnvironmentT<'s, 't>, range: &[RangeS<'s>], local_variable_a: &LocalS<'s>, reference_type2: CoordT<'s, 't>) -> ILocalVariableT<'s, 't> {
         panic!("Unimplemented: make_user_local_variable");
     }
 /*
@@ -229,7 +229,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn soft_load(&self, nenv: &NodeEnvironmentBox, load_range: &[RangeS<'s>], a: &AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
+    pub fn soft_load(&self, nenv: &NodeEnvironmentT<'s, 't>, load_range: &[RangeS<'s>], a: &AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
         panic!("Unimplemented: soft_load");
     }
 /*

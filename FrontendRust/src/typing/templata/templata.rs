@@ -269,7 +269,7 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 */
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
-  pub outer_env: &'s IEnvironmentT<'s, 't>,
+  pub outer_env: &'t IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
 }
 impl<'s, 't> FunctionTemplataT<'s, 't> {}
@@ -341,7 +341,7 @@ case class FunctionTemplataT(
 */
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'s IEnvironmentT<'s, 't>,
+  pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
 }
 impl<'s, 't> StructDefinitionTemplataT<'s, 't> {}
@@ -508,7 +508,7 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 */
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'s IEnvironmentT<'s, 't>,
+  pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
 }
 impl<'s, 't> InterfaceDefinitionTemplataT<'s, 't> {}
@@ -572,7 +572,7 @@ case class InterfaceDefinitionTemplataT(
 */
 #[derive(Copy, Clone, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
-  pub env: &'s IEnvironmentT<'s, 't>,
+  pub env: &'t IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
 }
 impl<'s, 't> ImplDefinitionTemplataT<'s, 't> {}
@@ -736,11 +736,27 @@ impl<'s, 't> CoordListTemplataT<'s, 't> {}
 // Transient Val for interning: holds a stack-borrowed slice (&'tmp) instead of
 // the canonical &'t slice. Per @DSAUIMZ / IDEPFL, this lets callers construct a
 // lookup key without arena-allocating the coords Vec on a HashMap hit.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct CoordListTemplataValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
   pub coords: &'tmp [CoordT<'s, 't>],
+}
+
+pub struct CoordListTemplataValQuery<'a, 's, 't, 'tmp>(pub &'a CoordListTemplataValT<'s, 't, 'tmp>)
+where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> std::hash::Hash for CoordListTemplataValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<CoordListTemplataValT<'s, 't, 't>> for CoordListTemplataValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  fn equivalent(&self, key: &CoordListTemplataValT<'s, 't, 't>) -> bool {
+    self.0.coords == key.coords
+  }
 }
 /*
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
@@ -786,3 +802,62 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
   override def tyype: ITemplataType = vfail()
 }
 */
+
+// -- Union enums for the interned-templata-payload interning family ----------
+// Per handoff-slab-4.md Gotcha 2. Mirrors the Kind-payload pattern but with
+// one transient variant (CoordListTemplataT has a slice, so it carries 'tmp).
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedTemplataPayloadValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  Coord(CoordTemplataT<'s, 't>),
+  Kind(KindTemplataT<'s, 't>),
+  Placeholder(PlaceholderTemplataT<'s, 't>),
+  Prototype(PrototypeTemplataT<'s, 't>),
+  Isa(IsaTemplataT<'s, 't>),
+  CoordList(CoordListTemplataValT<'s, 't, 'tmp>),
+}
+
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
+pub enum InternedTemplataPayloadT<'s, 't>
+where 's: 't,
+{
+  Coord(&'t CoordTemplataT<'s, 't>),
+  Kind(&'t KindTemplataT<'s, 't>),
+  Placeholder(&'t PlaceholderTemplataT<'s, 't>),
+  Prototype(&'t PrototypeTemplataT<'s, 't>),
+  Isa(&'t IsaTemplataT<'s, 't>),
+  CoordList(&'t CoordListTemplataT<'s, 't>),
+}
+
+// Query wrapper for heterogeneous HashMap lookup: 'tmp-borrowed query against
+// 't-canonicalized stored keys. Equivalence compares each variant's payload;
+// for the transient CoordList variant we delegate to CoordListTemplataValQuery.
+pub struct InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>(
+  pub &'a InternedTemplataPayloadValT<'s, 't, 'tmp>,
+) where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> std::hash::Hash for InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<InternedTemplataPayloadValT<'s, 't, 't>>
+  for InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  fn equivalent(&self, key: &InternedTemplataPayloadValT<'s, 't, 't>) -> bool {
+    use InternedTemplataPayloadValT::*;
+    match (self.0, key) {
+      (Coord(a), Coord(b)) => a == b,
+      (Kind(a), Kind(b)) => a == b,
+      (Placeholder(a), Placeholder(b)) => a == b,
+      (Prototype(a), Prototype(b)) => a == b,
+      (Isa(a), Isa(b)) => a == b,
+      (CoordList(a), CoordList(b)) => CoordListTemplataValQuery(a).equivalent(b),
+      _ => false,
+    }
+  }
+}

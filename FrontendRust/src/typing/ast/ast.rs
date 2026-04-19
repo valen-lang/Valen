@@ -504,11 +504,28 @@ impl<'s, 't> SignatureT<'s, 't> {}
 // (no scala counterpart — Rust-only interning scaffolding)
 // Transient Val for interning: holds a stack-borrowed IdValT<'s, 't, 'tmp> so
 // callers can construct a lookup key without first arena-allocating init_steps.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct SignatureValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub id: IdValT<'s, 't, 'tmp>,
+}
+
+pub struct SignatureValQuery<'a, 's, 't, 'tmp>(pub &'a SignatureValT<'s, 't, 'tmp>)
+where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> std::hash::Hash for SignatureValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<SignatureValT<'s, 't, 't>> for SignatureValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn equivalent(&self, key: &SignatureValT<'s, 't, 't>) -> bool {
+        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+    }
 }
 /*
 case class SignatureT(id: IdT[IFunctionNameT]) {
@@ -791,12 +808,30 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {}
 // (no scala counterpart — Rust-only interning scaffolding)
 // Transient Val for interning: inner IdValT borrows its init_steps slice from
 // a stack-local builder via 'tmp, so construction doesn't arena-allocate.
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct PrototypeValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub id: IdValT<'s, 't, 'tmp>,
     pub return_type: CoordT<'s, 't>,
+}
+
+pub struct PrototypeValQuery<'a, 's, 't, 'tmp>(pub &'a PrototypeValT<'s, 't, 'tmp>)
+where 's: 't, 't: 'tmp;
+
+impl<'a, 's, 't, 'tmp> std::hash::Hash for PrototypeValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+}
+
+impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<PrototypeValT<'s, 't, 't>> for PrototypeValQuery<'a, 's, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    fn equivalent(&self, key: &PrototypeValT<'s, 't, 't>) -> bool {
+        crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
+            && self.0.return_type == key.return_type
+    }
 }
 /*
 case class PrototypeT[+T <: IFunctionNameT](

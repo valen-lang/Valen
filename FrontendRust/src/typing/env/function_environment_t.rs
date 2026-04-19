@@ -17,12 +17,37 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 import scala.collection.immutable.{List, Map, Set}
 
 */
-use crate::typing::names::names::IVarNameT;
-use crate::typing::types::types::{CoordT, StructTT, VariabilityT};
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::expressions::IExpressionSE;
+use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::env::environment::{
+  GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, TemplatasStoreBuilder, TemplatasStoreT,
+};
+use crate::typing::names::names::{IdT, IVarNameT};
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::{CoordT, RegionT, StructTT, VariabilityT};
+use crate::typing::typing_interner::TypingInterner;
 
-pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {}
+#[derive(Debug)]
+pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub variables: &'t [IVariableT<'s, 't>],
+  pub is_root_compiling_denizen: bool,
+}
+
+impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsT(
   globalEnv: GlobalEnvironment,
@@ -88,9 +113,28 @@ override def hashCode(): Int = hash;
 }
 
 */
-pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {}
+#[derive(Debug)]
+pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub template_args: &'t [ITemplataT<'s, 't>],
+  pub templatas: TemplatasStoreT<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub variables: &'t [IVariableT<'s, 't>],
+  pub is_root_compiling_denizen: bool,
+  pub default_region: RegionT,
+}
+
+impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
   globalEnv: GlobalEnvironment,
@@ -157,9 +201,36 @@ override def hashCode(): Int = hash;
 }
 
 */
-pub struct NodeEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> NodeEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct NodeEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
+  pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
+  pub node: &'s IExpressionSE<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+  pub declared_locals: &'t [IVariableT<'s, 't>],
+  pub unstackified_locals: &'t [IVarNameT<'s, 't>],
+  pub restackified_locals: &'t [IVarNameT<'s, 't>],
+  pub default_region: RegionT,
+}
+
+// Scala hashes `id.hashCode ^ life.hashCode` and compares `(id, life)`. The id
+// delegates to parent_function_env.id.
+impl<'s, 't> PartialEq for NodeEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool {
+    self.parent_function_env.id == other.parent_function_env.id
+      && self.life == other.life
+  }
+}
+impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for NodeEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.parent_function_env.id.hash(state);
+    self.life.hash(state);
+  }
+}
 /*
 case class NodeEnvironmentT(
   parentFunctionEnv: FunctionEnvironmentT,
@@ -453,9 +524,6 @@ case class NodeEnvironmentT(
 }
 
 */
-pub struct NodeEnvironmentBox<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> NodeEnvironmentBox<'s, 't> {}
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
   override def equals(obj: Any): Boolean = vcurious();
@@ -550,9 +618,29 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
-pub struct FunctionEnvironmentT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> FunctionEnvironmentT<'s, 't> {}
+#[derive(Debug)]
+pub struct FunctionEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas: TemplatasStoreT<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub maybe_return_type: Option<CoordT<'s, 't>>,
+  pub closured_locals: &'t [IVariableT<'s, 't>],
+  pub is_root_compiling_denizen: bool,
+  pub default_region: RegionT,
+}
+
+impl<'s, 't> PartialEq for FunctionEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class FunctionEnvironmentT(
   // These things are the "environment"; they are the same for every line in a function.
@@ -699,9 +787,6 @@ override def hashCode(): Int = hash;
 }
 
 */
-pub struct FunctionEnvironmentBoxT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> FunctionEnvironmentBoxT<'s, 't> {}
 /*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
   override def equals(obj: Any): Boolean = vcurious();
@@ -1010,3 +1095,155 @@ fn lookup_with_imprecise_name_inner() {
   }
 }
 */
+
+// Builders — see environment.rs for the Package/Citizen/Export/Extern/General
+// builders; these 4 finish out the set for the function-env family.
+
+pub struct BuildingFunctionEnvironmentWithClosuredsBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub variables: Vec<IVariableT<'s, 't>>,
+  pub is_root_compiling_denizen: bool,
+}
+
+impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    let variables = interner.alloc_slice_from_vec(self.variables);
+    interner.alloc(BuildingFunctionEnvironmentWithClosuredsT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      id: self.id,
+      templatas,
+      function: self.function,
+      variables,
+      is_root_compiling_denizen: self.is_root_compiling_denizen,
+    })
+  }
+}
+
+pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub template_args: Vec<ITemplataT<'s, 't>>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub variables: Vec<IVariableT<'s, 't>>,
+  pub is_root_compiling_denizen: bool,
+  pub default_region: RegionT,
+}
+
+impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    let template_args = interner.alloc_slice_from_vec(self.template_args);
+    let variables = interner.alloc_slice_from_vec(self.variables);
+    interner.alloc(BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      id: self.id,
+      template_args,
+      templatas,
+      function: self.function,
+      variables,
+      is_root_compiling_denizen: self.is_root_compiling_denizen,
+      default_region: self.default_region,
+    })
+  }
+}
+
+pub struct FunctionEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub global_env: &'t GlobalEnvironmentT<'s, 't>,
+  pub parent_env: IEnvironmentT<'s, 't>,
+  pub template_id: IdT<'s, 't>,
+  pub id: IdT<'s, 't>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+  pub maybe_return_type: Option<CoordT<'s, 't>>,
+  pub closured_locals: Vec<IVariableT<'s, 't>>,
+  pub is_root_compiling_denizen: bool,
+  pub default_region: RegionT,
+}
+
+impl<'s, 't> FunctionEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t FunctionEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    let closured_locals = interner.alloc_slice_from_vec(self.closured_locals);
+    interner.alloc(FunctionEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+      function: self.function,
+      maybe_return_type: self.maybe_return_type,
+      closured_locals,
+      is_root_compiling_denizen: self.is_root_compiling_denizen,
+      default_region: self.default_region,
+    })
+  }
+}
+
+pub struct NodeEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
+  pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
+  pub node: &'s IExpressionSE<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+  pub declared_locals: Vec<IVariableT<'s, 't>>,
+  pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
+  pub restackified_locals: Vec<IVarNameT<'s, 't>>,
+  pub default_region: RegionT,
+}
+
+impl<'s, 't> NodeEnvironmentBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t NodeEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.build_in(interner);
+    let declared_locals = interner.alloc_slice_from_vec(self.declared_locals);
+    let unstackified_locals = interner.alloc_slice_from_vec(self.unstackified_locals);
+    let restackified_locals = interner.alloc_slice_from_vec(self.restackified_locals);
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: self.parent_node_env,
+      node: self.node,
+      life: self.life,
+      templatas,
+      declared_locals,
+      unstackified_locals,
+      restackified_locals,
+      default_region: self.default_region,
+    })
+  }
+}
