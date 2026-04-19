@@ -504,7 +504,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         function1: &FunctionA<'s>,
-    ) -> PrototypeT<'s, 't, IFunctionNameT<'s, 't>> {
+    ) -> PrototypeT<'s, 't> {
         panic!("Unimplemented: get_generic_function_prototype_from_call");
     }
 
@@ -611,10 +611,10 @@ where 's: 't,
 {
     pub fn assemble_name(
         &self,
-        template_name: &IdT<'s, 't,IFunctionTemplateNameT<'s, 't>>,
+        template_name: &IdT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
         param_types: &[CoordT<'s, 't>],
-    ) -> IdT<'s, 't,IFunctionNameT<'s, 't>> {
+    ) -> IdT<'s, 't> {
         panic!("Unimplemented: assemble_name");
     }
 

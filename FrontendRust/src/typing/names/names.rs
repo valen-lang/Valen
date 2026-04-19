@@ -23,19 +23,22 @@ use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 
+// Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md`. Scala's
+// `IdT[+T <: INameT]` phantom outer parameter is erased in Rust — callers
+// pattern-match on `local_name` at the point they need narrowing.
 #[derive(Copy, Clone, Debug)]
-pub struct IdT<'s, 't, T: Copy>
+pub struct IdT<'s, 't>
 where 's: 't,
 {
     pub package_coord: &'s PackageCoordinate<'s>,
     pub init_steps: &'t [INameT<'s, 't>],
-    pub local_name: T,
+    pub local_name: INameT<'s, 't>,
 }
 
 // (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
 // and init_steps slice (canonicalized by the typing interner per IDEPFL),
-// structural compare on local_name (inline-owned sub-enum or concrete ref).)
-impl<'s, 't, T: Copy + Hash> Hash for IdT<'s, 't, T>
+// structural compare on local_name (inline-owned INameT).)
+impl<'s, 't> Hash for IdT<'s, 't>
 where 's: 't,
 {
     fn hash<H: Hasher>(&self, state: &mut H) {
@@ -45,7 +48,7 @@ where 's: 't,
         self.local_name.hash(state);
     }
 }
-impl<'s, 't, T: Copy + PartialEq> PartialEq for IdT<'s, 't, T>
+impl<'s, 't> PartialEq for IdT<'s, 't>
 where 's: 't,
 {
     fn eq(&self, other: &Self) -> bool {
@@ -55,7 +58,7 @@ where 's: 't,
             && self.local_name == other.local_name
     }
 }
-impl<'s, 't, T: Copy + Eq> Eq for IdT<'s, 't, T> where 's: 't, {}
+impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
 /*
 case class IdT[+T <: INameT](
   packageCoord: PackageCoordinate,
@@ -137,50 +140,9 @@ case class IdT[+T <: INameT](
 }
 
 */
-// (no scala counterpart — narrow -> wide conversion per handoff §6.3, now on
-// owned INameT since sub-enums are inline-owned value types rather than arena refs.)
-impl<'s, 't, T> IdT<'s, 't, T>
-where 's: 't, T: Copy + Into<INameT<'s, 't>>,
-{
-    pub fn widen(self) -> IdT<'s, 't, INameT<'s, 't>> {
-        IdT {
-            package_coord: self.package_coord,
-            init_steps: self.init_steps,
-            local_name: self.local_name.into(),
-        }
-    }
-}
-
-// (no scala counterpart — generic upcast per handoff §6.3)
-impl<'s, 't, T> IdT<'s, 't, T>
-where 's: 't, T: Copy,
-{
-    pub fn widen_to<U: Copy>(self) -> IdT<'s, 't, U>
-    where T: Into<U>,
-    {
-        IdT {
-            package_coord: self.package_coord,
-            init_steps: self.init_steps,
-            local_name: self.local_name.into(),
-        }
-    }
-}
-
-// (no scala counterpart — wide -> narrow conversion per handoff §6.3, now on
-// owned INameT.)
-impl<'s, 't> IdT<'s, 't, INameT<'s, 't>>
-where 's: 't,
-{
-    pub fn try_narrow<U: Copy>(self) -> Option<IdT<'s, 't, U>>
-    where INameT<'s, 't>: TryInto<U>,
-    {
-        self.local_name.try_into().ok().map(|local_name| IdT {
-            package_coord: self.package_coord,
-            init_steps: self.init_steps,
-            local_name,
-        })
-    }
-}
+// Widen/narrow conversion methods removed with the move to monomorphic IdT.
+// Callers that need a specific leaf-name pattern-match on `local_name` directly,
+// like Scala does. See `docs/reasoning/idt-typed-view-alternatives.md`.
 
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum INameT<'s, 't> {
@@ -743,7 +705,7 @@ case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IP
 */
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherTemplateNameT<'s, 't> {
-    pub impl_id: IdT<'s, 't, IImplTemplateNameT<'s, 't>>,
+    pub impl_id: IdT<'s, 't>,
 }
 /*
 case class OverrideDispatcherTemplateNameT(
@@ -2473,16 +2435,15 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
 // -- IdValT: transient Val for IdT --------------------------------------------
 // `init_steps: &'tmp [INameT<'s, 't>]` replaces the permanent IdT's `&'t`
 // slice so callers can hash a trial IdT against the interner without yet
-// arena-allocating the slice. Per §6.3, interning keys the widest form
-// (`IdValT<'s, 't, 'tmp, INameT<'s, 't>>`); specialized IdT<'s, 't, T>
-// shares storage.
+// arena-allocating the slice. Monomorphic per
+// `docs/reasoning/idt-typed-view-alternatives.md`.
 #[derive(Copy, Clone, Debug)]
-pub struct IdValT<'s, 't, 'tmp, T: Copy>
+pub struct IdValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
     pub package_coord: &'s PackageCoordinate<'s>,
     pub init_steps: &'tmp [INameT<'s, 't>],
-    pub local_name: T,
+    pub local_name: INameT<'s, 't>,
 }
 
 // -- Transient-with-'tmp Val types for the 15 concrete names with slices ----
@@ -2647,5 +2608,5 @@ where 's: 't, 't: 'tmp,
 //   AnonymousSubstructConstructorTemplateNameT, OverrideDispatcherTemplateNameT.
 //
 // (OverrideDispatcherTemplateNameT is shallow because it holds an inline
-// `IdT<'s, 't, IImplTemplateNameT<'s, 't>>` — the IdT's own init_steps slice
+// `IdT<'s, 't>` — the IdT's own init_steps slice
 // must be canonicalized via IdValT before this Val is constructed.)

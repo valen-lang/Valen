@@ -35,7 +35,7 @@ object InstantiationBoundArgumentsT {
 pub fn make<'s, 't>(
     _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, ())>,
     _rune_to_citizen_rune_to_reachable_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
-    _rune_to_bound_impl: Vec<(crate::postparsing::names::IRuneS<'s>, crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IImplNameT<'s, 't>>)>,
+    _rune_to_bound_impl: Vec<(crate::postparsing::names::IRuneS<'s>, crate::typing::names::names::IdT<'s, 't>)>,
 ) -> InstantiationBoundArgumentsT<'s, 't> {
     panic!("Unimplemented: InstantiationBoundArgumentsT::make");
 }
@@ -66,7 +66,7 @@ pub struct InstantiationBoundArgumentsT<'s, 't> {
     )>,
     pub rune_to_bound_impl: Vec<(
         crate::postparsing::names::IRuneS<'s>,
-        crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IImplNameT<'s, 't>>,
+        crate::typing::names::names::IdT<'s, 't>,
     )>,
 }
 /*
@@ -99,16 +99,16 @@ pub struct HinputsT<'s, 't> {
     pub functions: Vec<crate::typing::ast::ast::FunctionDefinitionT<'s, 't>>,
 
     pub interface_to_edge_blueprints: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IInterfaceNameT<'s, 't>>,
+        crate::typing::names::names::IdT<'s, 't>,
         crate::typing::ast::ast::InterfaceEdgeBlueprintT<'s, 't>,
     >,
     pub interface_to_sub_citizen_to_edge: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IInterfaceNameT<'s, 't>>,
-        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::ICitizenNameT<'s, 't>>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+        crate::typing::names::names::IdT<'s, 't>,
+        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
     >,
 
     pub instantiation_name_to_instantiation_bounds: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IInstantiationNameT<'s, 't>>,
+        crate::typing::names::names::IdT<'s, 't>,
         InstantiationBoundArgumentsT<'s, 't>,
     >,
 
@@ -118,8 +118,8 @@ pub struct HinputsT<'s, 't> {
     pub function_externs: Vec<crate::typing::ast::ast::FunctionExternT<'s, 't>>,
 
     pub sub_citizen_to_interface_to_edge: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::ICitizenNameT<'s, 't>>,
-        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't,crate::typing::names::names::IInterfaceNameT<'s, 't>>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+        crate::typing::names::names::IdT<'s, 't>,
+        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
     >,
 }
 /*

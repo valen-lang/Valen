@@ -1,7 +1,7 @@
 use std::marker::PhantomData;
 
 use crate::typing::ast::ast::{PrototypeT, SignatureT};
-use crate::typing::names::names::{IdT, IdValT, INameT, IFunctionNameT};
+use crate::typing::names::names::{IdT, IdValT, IFunctionNameT};
 use crate::typing::templata::templata::ITemplataT;
 use crate::typing::types::types::KindT;
 
@@ -18,10 +18,10 @@ impl<'t> TypingInterner<'t> {
         panic!("TypingInterner::intern_kind not yet implemented")
     }
 
-    pub fn intern_id<'s, 'tmp, T: Copy>(
+    pub fn intern_id<'s, 'tmp>(
         &self,
-        _val: IdValT<'s, 't, 'tmp, T>,
-    ) -> &'t IdT<'s, 't, T>
+        _val: IdValT<'s, 't, 'tmp>,
+    ) -> &'t IdT<'s, 't>
     where 's: 't {
         panic!("TypingInterner::intern_id not yet implemented")
     }
@@ -31,7 +31,7 @@ impl<'t> TypingInterner<'t> {
         panic!("TypingInterner::intern_templata not yet implemented")
     }
 
-    pub fn intern_prototype<'s>(&self, _val: PrototypeValT<'s, 't>) -> &'t PrototypeT<'s, 't, IFunctionNameT<'s, 't>>
+    pub fn intern_prototype<'s>(&self, _val: PrototypeValT<'s, 't>) -> &'t PrototypeT<'s, 't>
     where 's: 't {
         panic!("TypingInterner::intern_prototype not yet implemented")
     }

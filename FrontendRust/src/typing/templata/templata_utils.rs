@@ -11,7 +11,7 @@ object simpleNameT {
 use crate::typing::ast::ast::*;
 use crate::typing::names::names::*;
 
-pub fn unapply_simple_name<'s, 't>(id: &IdT<'s, 't,INameT<'s, 't>>) -> Option<String>
+pub fn unapply_simple_name<'s, 't>(id: &IdT<'s, 't>) -> Option<String>
 where 's: 't,
 {
   panic!("Unimplemented: unapply_simple_name");

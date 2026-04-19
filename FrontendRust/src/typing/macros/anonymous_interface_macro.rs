@@ -67,9 +67,9 @@ where 's: 't,
 {
     pub fn get_interface_sibling_entries_anonymous_interface(
         &self,
-        interface_name: IdT<'s, 't,INameT<'s, 't>>,
+        interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
-    ) -> Vec<(IdT<'s, 't,INameT<'s, 't>>, FunctionEnvEntry<'s, 't>)> {
+    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
         panic!("Unimplemented: get_interface_sibling_entries_anonymous_interface");
     }
 /*
