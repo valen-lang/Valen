@@ -20,8 +20,11 @@ object ITemplataT {
 */
 use crate::interner::StrI;
 use crate::higher_typing::ast::*;
+use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
+use crate::typing::names::names::IdT;
 use crate::typing::types::types::*;
+use crate::utils::range::RangeS;
 
 fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: expect_mutability");
@@ -160,16 +163,41 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
   }
 }
 */
+// Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
+// outer phantom parameter is erased in Rust. Interned payloads are held as
+// &'t refs; Copy-value variants are held inline.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum ITemplataT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
+pub enum ITemplataT<'s, 't> {
+  Coord(&'t CoordTemplataT<'s, 't>),
+  Kind(&'t KindTemplataT<'s, 't>),
+  Placeholder(&'t PlaceholderTemplataT<'s, 't>),
+  Mutability(MutabilityTemplataT),
+  Variability(VariabilityTemplataT),
+  Ownership(OwnershipTemplataT),
+  Integer(i64),
+  Boolean(bool),
+  String(StrI<'s>),
+  Prototype(&'t PrototypeTemplataT<'s, 't>),
+  Isa(&'t IsaTemplataT<'s, 't>),
+  CoordList(&'t CoordListTemplataT<'s, 't>),
+  RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT<'s, 't>),
+  StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT<'s, 't>),
+  Function(&'t FunctionTemplataT<'s, 't>),
+  StructDefinition(&'t StructDefinitionTemplataT<'s, 't>),
+  InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
+  ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
+  ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
+}
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {
   def tyype: T
 }
 
 */
-pub struct CoordTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CoordTemplataT<'s, 't> {
+  pub coord: CoordT<'s, 't>,
+}
 impl<'s, 't> CoordTemplataT<'s, 't> {}
 /*
 case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
@@ -180,8 +208,11 @@ case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
   vpass()
 }
 */
-pub struct PlaceholderTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PlaceholderTemplataT<'s, 't> {
+  pub id: IdT<'s, 't>,
+  pub tyype: ITemplataT<'s, 't>,
+}
 impl<'s, 't> PlaceholderTemplataT<'s, 't> {}
 /*
 case class PlaceholderTemplataT[+T <: ITemplataType](
@@ -197,8 +228,10 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
   override def hashCode(): Int = hash;
 }
 */
-pub struct KindTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct KindTemplataT<'s, 't> {
+  pub kind: KindT<'s, 't>,
+}
 impl<'s, 't> KindTemplataT<'s, 't> {}
 /*
 case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
@@ -207,8 +240,10 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
   override def tyype: KindTemplataType = KindTemplataType()
 }
 */
-pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't> {
+  pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 impl<'s, 't> RuntimeSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
@@ -217,8 +252,10 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
   override def tyype: TemplateTemplataType = TemplateTemplataType(Vector(MutabilityTemplataType(), CoordTemplataType()), KindTemplataType())
 }
 */
-pub struct StaticSizedArrayTemplateTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayTemplateTemplataT<'s, 't> {
+  pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
 impl<'s, 't> StaticSizedArrayTemplateTemplataT<'s, 't> {}
 /*
 case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTemplataType] {
@@ -230,9 +267,24 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 
 */
-pub struct FunctionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct FunctionTemplataT<'s, 't> {
+  pub outer_env: &'s IEnvironmentT<'s, 't>,
+  pub function: &'s FunctionA<'s>,
+}
 impl<'s, 't> FunctionTemplataT<'s, 't> {}
+impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.outer_env, other.outer_env) && std::ptr::eq(self.function, other.function)
+  }
+}
+impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.outer_env, state);
+    std::ptr::hash(self.function, state);
+  }
+}
 /*
 case class FunctionTemplataT(
   // The environment this function was declared in.
@@ -287,9 +339,24 @@ case class FunctionTemplataT(
 }
 
 */
-pub struct StructDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct StructDefinitionTemplataT<'s, 't> {
+  pub declaring_env: &'s IEnvironmentT<'s, 't>,
+  pub origin_struct: &'s StructA<'s>,
+}
 impl<'s, 't> StructDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_struct, other.origin_struct)
+  }
+}
+impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.declaring_env, state);
+    std::ptr::hash(self.origin_struct, state);
+  }
+}
 /*
 case class StructDefinitionTemplataT(
   // The paackage this struct was declared in.
@@ -333,44 +400,91 @@ case class StructDefinitionTemplataT(
 }
 
 */
-pub enum IContainer<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IContainer<'s, 't> {
+  Interface(ContainerInterface<'s>),
+  Struct(ContainerStruct<'s>),
+  Function(ContainerFunction<'s>),
+  Impl(ContainerImpl<'s>),
+  _Phantom(std::marker::PhantomData<&'t ()>),
+}
 /*
 sealed trait IContainer
 */
-pub struct ContainerInterface<'s>(pub std::marker::PhantomData<&'s ()>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct ContainerInterface<'s> {
+  pub interface: &'s InterfaceA<'s>,
+}
 impl<'s> ContainerInterface<'s> {}
+impl<'s> PartialEq for ContainerInterface<'s> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.interface, other.interface) }
+}
+impl<'s> Eq for ContainerInterface<'s> {}
+impl<'s> std::hash::Hash for ContainerInterface<'s> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.interface, state); }
+}
 /*
 case class ContainerInterface(interface: InterfaceA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-pub struct ContainerStruct<'s>(pub std::marker::PhantomData<&'s ()>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct ContainerStruct<'s> {
+  pub struct_: &'s StructA<'s>,
+}
 impl<'s> ContainerStruct<'s> {}
+impl<'s> PartialEq for ContainerStruct<'s> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.struct_, other.struct_) }
+}
+impl<'s> Eq for ContainerStruct<'s> {}
+impl<'s> std::hash::Hash for ContainerStruct<'s> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.struct_, state); }
+}
 /*
 case class ContainerStruct(struct: StructA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-pub struct ContainerFunction<'s>(pub std::marker::PhantomData<&'s ()>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct ContainerFunction<'s> {
+  pub function: &'s FunctionA<'s>,
+}
 impl<'s> ContainerFunction<'s> {}
+impl<'s> PartialEq for ContainerFunction<'s> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.function, other.function) }
+}
+impl<'s> Eq for ContainerFunction<'s> {}
+impl<'s> std::hash::Hash for ContainerFunction<'s> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.function, state); }
+}
 /*
 case class ContainerFunction(function: FunctionA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-pub struct ContainerImpl<'s>(pub std::marker::PhantomData<&'s ()>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct ContainerImpl<'s> {
+  pub impl_: &'s ImplA<'s>,
+}
 impl<'s> ContainerImpl<'s> {}
+impl<'s> PartialEq for ContainerImpl<'s> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.impl_, other.impl_) }
+}
+impl<'s> Eq for ContainerImpl<'s> {}
+impl<'s> std::hash::Hash for ContainerImpl<'s> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.impl_, state); }
+}
 /*
 case class ContainerImpl(impl: ImplA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 
 */
-pub enum CitizenDefinitionTemplataT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum CitizenDefinitionTemplataT<'s, 't> {
+  Struct(&'t StructDefinitionTemplataT<'s, 't>),
+  Interface(&'t InterfaceDefinitionTemplataT<'s, 't>),
+}
 impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> {}
 /*
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
@@ -392,9 +506,24 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 */
-pub struct InterfaceDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct InterfaceDefinitionTemplataT<'s, 't> {
+  pub declaring_env: &'s IEnvironmentT<'s, 't>,
+  pub origin_interface: &'s InterfaceA<'s>,
+}
 impl<'s, 't> InterfaceDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_interface, other.origin_interface)
+  }
+}
+impl<'s, 't> Eq for InterfaceDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for InterfaceDefinitionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.declaring_env, state);
+    std::ptr::hash(self.origin_interface, state);
+  }
+}
 /*
 case class InterfaceDefinitionTemplataT(
   // The paackage this interface was declared in.
@@ -441,9 +570,24 @@ case class InterfaceDefinitionTemplataT(
 }
 
 */
-pub struct ImplDefinitionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, Debug)]
+pub struct ImplDefinitionTemplataT<'s, 't> {
+  pub env: &'s IEnvironmentT<'s, 't>,
+  pub impl_: &'s ImplA<'s>,
+}
 impl<'s, 't> ImplDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.env, other.env) && std::ptr::eq(self.impl_, other.impl_)
+  }
+}
+impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for ImplDefinitionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.env, state);
+    std::ptr::hash(self.impl_, state);
+  }
+}
 /*
 case class ImplDefinitionTemplataT(
   // The paackage this interface was declared in.
@@ -551,8 +695,10 @@ case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType]
   override def tyype: StringTemplataType = StringTemplataType()
 }
 */
-pub struct PrototypeTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct PrototypeTemplataT<'s, 't> {
+  pub prototype: &'t PrototypeT<'s, 't>,
+}
 impl<'s, 't> PrototypeTemplataT<'s, 't> {}
 /*
 case class PrototypeTemplataT[+T <: IFunctionNameT](
@@ -566,8 +712,13 @@ case class PrototypeTemplataT[+T <: IFunctionNameT](
   override def tyype: PrototypeTemplataType = PrototypeTemplataType()
 }
 */
-pub struct IsaTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct IsaTemplataT<'s, 't> {
+  pub declaration_range: RangeS<'s>,
+  pub impl_name: IdT<'s, 't>,
+  pub sub_kind: KindT<'s, 't>,
+  pub super_kind: KindT<'s, 't>,
+}
 impl<'s, 't> IsaTemplataT<'s, 't> {}
 /*
 case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], subKind: KindT, superKind: KindT) extends ITemplataT[ImplTemplataType] {
@@ -576,9 +727,21 @@ case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], sub
   override def tyype: ImplTemplataType = ImplTemplataType()
 }
 */
-pub struct CoordListTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct CoordListTemplataT<'s, 't> {
+  pub coords: &'t [CoordT<'s, 't>],
+}
 impl<'s, 't> CoordListTemplataT<'s, 't> {}
+
+// Transient Val for interning: holds a stack-borrowed slice (&'tmp) instead of
+// the canonical &'t slice. Per @DSAUIMZ / IDEPFL, this lets callers construct a
+// lookup key without arena-allocating the coords Vec on a HashMap hit.
+#[derive(Copy, Clone, Debug)]
+pub struct CoordListTemplataValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+  pub coords: &'tmp [CoordT<'s, 't>],
+}
 /*
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -596,9 +759,26 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 // by plugins, but theyre also used internally.
 
 */
-pub struct ExternFunctionTemplataT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone)]
+pub struct ExternFunctionTemplataT<'s, 't> {
+  pub header: &'t FunctionHeaderT<'s, 't>,
+}
 impl<'s, 't> ExternFunctionTemplataT<'s, 't> {}
+impl<'s, 't> PartialEq for ExternFunctionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.header, other.header) }
+}
+impl<'s, 't> Eq for ExternFunctionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for ExternFunctionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.header, state); }
+}
+// FunctionHeaderT doesn't derive Debug yet; treat the header as an opaque ptr.
+impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
+  fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+    f.debug_struct("ExternFunctionTemplataT")
+      .field("header", &(self.header as *const _))
+      .finish()
+  }
+}
 /*
 case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[ITemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)

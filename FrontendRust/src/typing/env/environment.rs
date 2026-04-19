@@ -22,6 +22,7 @@ import dev.vale.typing.types.{InterfaceTT, KindPlaceholderT, StructTT}
 import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -96,6 +97,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
   def id: IdT[INameT]
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInDenizenEnvironmentT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }

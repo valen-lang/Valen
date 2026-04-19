@@ -150,9 +150,10 @@ case class CoordT(
   }
 }
 */
-// TODO: non-primitive variants (StructTT, InterfaceTT, StaticSizedArrayTT,
-//   RuntimeSizedArrayTT, KindPlaceholderT, OverloadSet) are deferred to Slab 3;
-//   _Phantom stays until then to anchor the 's/'t lifetime params.
+// KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
+// (StructTT, InterfaceTT, etc.) are arena-interned and held as &'t refs here.
+// Primitives (NeverT, VoidT, IntT, BoolT, StrT, FloatT) inline by value —
+// they're small enough to skip arena indirection.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
   Never(NeverT),
@@ -161,7 +162,12 @@ pub enum KindT<'s, 't> {
   Bool(BoolT),
   Str(StrT),
   Float(FloatT),
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+  Struct(&'t StructTT<'s, 't>),
+  Interface(&'t InterfaceTT<'s, 't>),
+  StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
+  RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
+  KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
+  OverloadSet(&'t OverloadSetT<'s, 't>),
 }
 /*
 sealed trait KindT {
@@ -271,6 +277,7 @@ object contentsStaticSizedArrayTT {
   }
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
 }
@@ -298,6 +305,7 @@ object contentsRuntimeSizedArrayTT {
   }
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
 }
@@ -320,9 +328,14 @@ object ICitizenTT {
   }
 }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindTT<'s, 't> {
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+  Struct(&'t StructTT<'s, 't>),
+  Interface(&'t InterfaceTT<'s, 't>),
+  StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
+  RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
+  KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 /*
 // Structs, interfaces, and placeholders
@@ -330,9 +343,11 @@ sealed trait ISubKindTT extends KindT {
   def id: IdT[ISubKindNameT]
 }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindTT<'s, 't> {
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+  Interface(&'t InterfaceTT<'s, 't>),
+  KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 /*
 // Interfaces and placeholders
@@ -340,16 +355,18 @@ sealed trait ISuperKindTT extends KindT {
   def id: IdT[ISuperKindNameT]
 }
 */
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTT<'s, 't> {
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+  Struct(&'t StructTT<'s, 't>),
+  Interface(&'t InterfaceTT<'s, 't>),
 }
 /*
 sealed trait ICitizenTT extends ISubKindTT with IInterning {
   def id: IdT[ICitizenNameT]
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
@@ -363,6 +380,7 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
   }
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
@@ -375,6 +393,7 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
   }
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
   pub env: &'s IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
@@ -393,6 +412,7 @@ case class OverloadSetT(
 
 }
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderT<'s, 't> {
   pub id: IdT<'s, 't>,
 }
@@ -403,3 +423,153 @@ case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT wi
   override def isPrimitive: Boolean = false
 }
 */
+
+// -- Simple / shallow concretes (reuse struct itself as Val) ------------------
+// The 6 concrete Kind payloads above (StructTT, InterfaceTT, StaticSizedArrayTT,
+// RuntimeSizedArrayTT, KindPlaceholderT, OverloadSetT) are arena-interned but
+// have no `&'t [...]` slice fields — each holds either a canonical IdT<'s, 't>
+// (canonicalized by IdValT before this Val is constructed) or scout-lifetime
+// refs only (OverloadSetT). So their permanent struct doubles as the lookup
+// Val. No separate `*ValT` type is defined for any of them.
+//
+// The wrapper enums KindT / ICitizenTT / ISubKindTT / ISuperKindTT are
+// inline-owned 16-byte Copy values (never arena-allocated), so they don't
+// need Val companions either. Casts between them are `match`-and-rewrap via
+// the From/TryFrom bridges below.
+
+// -- From bridges: concrete payload → each wrapper enum it belongs to --------
+
+impl<'s, 't> From<&'t StructTT<'s, 't>> for ICitizenTT<'s, 't> {
+  fn from(x: &'t StructTT<'s, 't>) -> Self { ICitizenTT::Struct(x) }
+}
+impl<'s, 't> From<&'t StructTT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(x: &'t StructTT<'s, 't>) -> Self { ISubKindTT::Struct(x) }
+}
+impl<'s, 't> From<&'t StructTT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t StructTT<'s, 't>) -> Self { KindT::Struct(x) }
+}
+
+impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ICitizenTT<'s, 't> {
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ICitizenTT::Interface(x) }
+}
+impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISubKindTT::Interface(x) }
+}
+impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISuperKindTT<'s, 't> {
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISuperKindTT::Interface(x) }
+}
+impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { KindT::Interface(x) }
+}
+
+impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { ISubKindTT::StaticSizedArray(x) }
+}
+impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { KindT::StaticSizedArray(x) }
+}
+
+impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { ISubKindTT::RuntimeSizedArray(x) }
+}
+impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { KindT::RuntimeSizedArray(x) }
+}
+
+impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISubKindTT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISuperKindTT<'s, 't> {
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISuperKindTT::KindPlaceholder(x) }
+}
+impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { KindT::KindPlaceholder(x) }
+}
+
+impl<'s, 't> From<&'t OverloadSetT<'s, 't>> for KindT<'s, 't> {
+  fn from(x: &'t OverloadSetT<'s, 't>) -> Self { KindT::OverloadSet(x) }
+}
+
+// -- From bridges: narrow sub-enum → wider sub-enum / KindT ------------------
+
+impl<'s, 't> From<ICitizenTT<'s, 't>> for ISubKindTT<'s, 't> {
+  fn from(c: ICitizenTT<'s, 't>) -> Self {
+    match c {
+      ICitizenTT::Struct(x) => ISubKindTT::Struct(x),
+      ICitizenTT::Interface(x) => ISubKindTT::Interface(x),
+    }
+  }
+}
+impl<'s, 't> From<ICitizenTT<'s, 't>> for KindT<'s, 't> {
+  fn from(c: ICitizenTT<'s, 't>) -> Self {
+    match c {
+      ICitizenTT::Struct(x) => KindT::Struct(x),
+      ICitizenTT::Interface(x) => KindT::Interface(x),
+    }
+  }
+}
+impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
+  fn from(s: ISubKindTT<'s, 't>) -> Self {
+    match s {
+      ISubKindTT::Struct(x) => KindT::Struct(x),
+      ISubKindTT::Interface(x) => KindT::Interface(x),
+      ISubKindTT::StaticSizedArray(x) => KindT::StaticSizedArray(x),
+      ISubKindTT::RuntimeSizedArray(x) => KindT::RuntimeSizedArray(x),
+      ISubKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
+    }
+  }
+}
+impl<'s, 't> From<ISuperKindTT<'s, 't>> for KindT<'s, 't> {
+  fn from(s: ISuperKindTT<'s, 't>) -> Self {
+    match s {
+      ISuperKindTT::Interface(x) => KindT::Interface(x),
+      ISuperKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
+    }
+  }
+}
+
+// -- TryFrom bridges: wider → narrower ---------------------------------------
+
+impl<'s, 't> TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't> {
+  type Error = ();
+  fn try_from(k: KindT<'s, 't>) -> Result<Self, ()> {
+    match k {
+      KindT::Struct(x) => Ok(ICitizenTT::Struct(x)),
+      KindT::Interface(x) => Ok(ICitizenTT::Interface(x)),
+      _ => Err(()),
+    }
+  }
+}
+impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
+  type Error = ();
+  fn try_from(k: KindT<'s, 't>) -> Result<Self, ()> {
+    match k {
+      KindT::Struct(x) => Ok(ISubKindTT::Struct(x)),
+      KindT::Interface(x) => Ok(ISubKindTT::Interface(x)),
+      KindT::StaticSizedArray(x) => Ok(ISubKindTT::StaticSizedArray(x)),
+      KindT::RuntimeSizedArray(x) => Ok(ISubKindTT::RuntimeSizedArray(x)),
+      KindT::KindPlaceholder(x) => Ok(ISubKindTT::KindPlaceholder(x)),
+      _ => Err(()),
+    }
+  }
+}
+impl<'s, 't> TryFrom<KindT<'s, 't>> for ISuperKindTT<'s, 't> {
+  type Error = ();
+  fn try_from(k: KindT<'s, 't>) -> Result<Self, ()> {
+    match k {
+      KindT::Interface(x) => Ok(ISuperKindTT::Interface(x)),
+      KindT::KindPlaceholder(x) => Ok(ISuperKindTT::KindPlaceholder(x)),
+      _ => Err(()),
+    }
+  }
+}
+impl<'s, 't> TryFrom<ISubKindTT<'s, 't>> for ICitizenTT<'s, 't> {
+  type Error = ();
+  fn try_from(s: ISubKindTT<'s, 't>) -> Result<Self, ()> {
+    match s {
+      ISubKindTT::Struct(x) => Ok(ICitizenTT::Struct(x)),
+      ISubKindTT::Interface(x) => Ok(ICitizenTT::Interface(x)),
+      _ => Err(()),
+    }
+  }
+}

@@ -495,10 +495,21 @@ override def equals(obj: Any): Boolean = vcurious();
 // it takes a complete typingpass evaluate to deduce a function's return type.
 
 */
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SignatureT<'s, 't> {
     pub id: IdT<'s, 't>,
 }
 impl<'s, 't> SignatureT<'s, 't> {}
+
+// (no scala counterpart — Rust-only interning scaffolding)
+// Transient Val for interning: holds a stack-borrowed IdValT<'s, 't, 'tmp> so
+// callers can construct a lookup key without first arena-allocating init_steps.
+#[derive(Copy, Clone, Debug)]
+pub struct SignatureValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub id: IdValT<'s, 't, 'tmp>,
+}
 /*
 case class SignatureT(id: IdT[IFunctionNameT]) {
 */
@@ -768,6 +779,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> { fn is_pure(&self) -> bool { panic!("Unimp
 // Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md` (same
 // treatment as IdT). Scala's `PrototypeT[+T <: IFunctionNameT]` phantom
 // parameter is erased in Rust.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeT<'s, 't>
 where 's: 't,
 {
@@ -775,6 +787,17 @@ where 's: 't,
     pub return_type: CoordT<'s, 't>,
 }
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {}
+
+// (no scala counterpart — Rust-only interning scaffolding)
+// Transient Val for interning: inner IdValT borrows its init_steps slice from
+// a stack-local builder via 'tmp, so construction doesn't arena-allocate.
+#[derive(Copy, Clone, Debug)]
+pub struct PrototypeValT<'s, 't, 'tmp>
+where 's: 't, 't: 'tmp,
+{
+    pub id: IdValT<'s, 't, 'tmp>,
+    pub return_type: CoordT<'s, 't>,
+}
 /*
 case class PrototypeT[+T <: IFunctionNameT](
     id: IdT[T],
