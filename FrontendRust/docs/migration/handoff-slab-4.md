@@ -1,5 +1,7 @@
 # Handoff: Typing Pass Slab 4 — Environments + Interner Bodies
 
+**⚠️ HISTORICAL — SLAB 4 COMPLETE.** This doc was the prescriptive handoff written before Slab 4 shipped; it stays as the authoritative record of what Slab 4 was and isn't live spec anymore. Two corrections happened during execution and are now reflected in the committed code: (1) the interner uses **6 family-level HashMaps, not ~75 per-concrete maps** (Gotcha 2's sizing was wrong; see the family-dispatch skeleton for the right shape); (2) the `*Box*T` family of stubs to delete is broader than Gotcha 4 originally listed — it covers `NodeEnvironmentBox`, `FunctionEnvironmentBoxT`, and `IDenizenEnvironmentBoxT` (and any sibling that extends `IDenizenEnvironmentBoxT` in Scala). Tagged `slab-4-complete`. The Gotchas themselves (16 of them) are still a good template for future slab handoffs. Current arena architecture lives in `FrontendRust/docs/architecture/typing-pass-arenas.md`; long-term target in `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
+
 ## Who this is for
 
 You're picking up an in-progress Rust port of a Scala compiler frontend. A senior engineer has been moving through the typing pass one "slab" at a time per `quest.md` §12. Slabs 0–3 are done:

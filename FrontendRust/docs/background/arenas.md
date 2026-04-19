@@ -1,6 +1,6 @@
 # Arena Allocation
 
-The compiler frontend uses two bump arenas (`bumpalo::Bump`), each self-contained with its own lifetime and interning maps.
+The compiler frontend uses three bump arenas (`bumpalo::Bump`), each self-contained with its own lifetime and interning maps.
 
 ## `'p` — Parser Arena
 
@@ -16,6 +16,16 @@ Owned by `ScoutArena<'s>`. Contains all postparser output (`StructS`, `FunctionS
 
 Access: `scout_arena.intern_str(...)`, `scout_arena.intern_rune(...)`, `scout_arena.intern_name(...)`, `scout_arena.bump()`.
 
+## `'t` — Typing Arena
+
+Owned by `TypingInterner<'s, 't>` (note: two lifetime parameters — interned values transitively hold both scout and typing refs). Contains all typing-pass output: interned names (`INameT<'s, 't>`, `IdT<'s, 't>`, concrete name structs), interned Kind payloads (`StructTT`, `InterfaceTT`, etc.), interned templata payloads, `PrototypeT`/`SignatureT`, environment structs, heavy-templata payloads, expression nodes (from Slab 5 onward), and `HinputsT`.
+
+Access: `typing_interner.intern_name(...)`, `typing_interner.intern_id(...)`, `typing_interner.intern_struct_tt(...)` etc. (6 family-level methods + ~84 per-concrete wrappers), plus `alloc(...)` / `alloc_slice_copy(...)` / `alloc_slice_from_vec(...)` for non-interned arena allocation.
+
+The typing arena's lifetime ordering: `'s` outlives `'t` (`where 's: 't` on every typing-pass type). Scout arena must not drop until the typing arena (and anything holding its `&'t` refs — e.g. `HinputsT` consumed by the instantiator) is done.
+
+See `FrontendRust/docs/architecture/typing-pass-arenas.md` for the typing pass's arena architecture.
+
 ## Data Flow
 
 ```
@@ -29,10 +39,16 @@ PostParser --- allocates into 's arena -> StructS, FunctionS, IExpressionSE, ...
     |                                      (re-interns StrI<'p> -> StrI<'s>)
     v
 HigherTyping --- allocates into 's arena -> StructA, FunctionA, InterfaceA, ...
-                                             (same 's arena as postparser)
+    |                                        (same 's arena as postparser)
+    v
+Typing --- allocates into 't arena -----> INameT, IdT, KindT payloads, templatas,
+                                          PrototypeT, SignatureT, envs,
+                                          expressions, FunctionDefinitionT, HinputsT
+                                          (holds &'s refs to FunctionA/StructA
+                                          directly — no re-interning)
 ```
 
-At the parser->postparser boundary, `StrI<'p>` values are re-interned into `'s` via `scout_arena.intern_str(name_p.as_str())`. Coordinates are similarly re-interned.
+At the parser->postparser boundary, `StrI<'p>` values are re-interned into `'s` via `scout_arena.intern_str(name_p.as_str())`. Coordinates are similarly re-interned. At the scout->typing boundary there is **no re-interning** — typing holds `&'s` references directly and adds its own interned `'t` data alongside.
 
 ## Key Invariant
 

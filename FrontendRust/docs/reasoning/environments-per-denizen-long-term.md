@@ -1,92 +1,14 @@
-# Reasoning: Typing-Pass Arenas — Migration Design and Long-Term Per-Denizen Target
+# Reasoning: Typing-Pass Arenas — Why Today's Design, and Where It's Heading
 
-The typing pass has one working arena today and a planned two-tier arena model long-term. This doc records the migration-phase design (Slab 4 and downstream), the long-term target (post-Slab-8 refactor), and the empirical audit that justifies the target shape.
+The current typing-pass arena model (single `'t` interner for the whole pass, envs allocated into `'t` via builder → freeze, slice-based `TemplatasStoreT`) is described in `FrontendRust/docs/architecture/typing-pass-arenas.md`. This doc records *why* that's the migration choice, what's wrong with it long-term, the empirical audit that justifies the target design, the target itself, and further future direction toward LSP.
 
 ## TL;DR
 
-- **During migration:** envs live in the `'t` typing arena alongside names, kinds, templatas. Accessed via `&'t IEnvironmentT<'s, 't>`. Mutation uses builder → arena freeze. Single `TypingInterner<'t>` globally scoped for the whole pass. This is Slab 4's spec.
+- **Migration-phase (today's design):** envs in the `'t` typing arena alongside names, kinds, templatas. Single `TypingInterner<'t>` for the whole pass. Chosen for Scala parity and uniformity with Slabs 1-3; costs of the model (builder-freeze churn, slice-based lookup, no `HashMap`-in-env) are acceptable at migration scale.
 - **Long-term (post-Slab-8):** split typing-pass storage into **two tiers** — a program-wide `'out` outputs arena for declarations + resolved types + skeleton envs, and a **per-top-level-denizen scratchpad arena** (`'scratch`) for working envs + transient templatas + solver state. A side table of `&'scratch env` with `EnvIdx(u32)` indices covers the scratchpad-env handoff to arena-allocated types. The scratchpad drops at the end of each worklist item; the outputs arena survives the whole pass.
+- **Further out (LSP):** per-denizen arenas + `DefId`-indexed cross-denizen refs + shattered `GlobalEnvironment` + two-tier interner with single-writer cleanup promotion + periodic interner rebuild.
 
-Scala parity is why the migration picks arenas. Cross-denizen edge analysis + `bumpalo`'s no-destructor semantics are why the long-term target is two-tier per-denizen.
-
----
-
-## Migration-phase: arena envs in `'t`
-
-### Shape
-
-```rust
-// Envs live in the 't typing arena (NOT the 's scout arena — see "Arena choice" below).
-pub enum IEnvironmentT<'s, 't> {
-    Package(&'t PackageEnvironmentT<'s, 't>),
-    Citizen(&'t CitizenEnvironmentT<'s, 't>),
-    Function(&'t FunctionEnvironmentT<'s, 't>),
-    Node(&'t NodeEnvironmentT<'s, 't>),
-    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
-    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
-    General(&'t GeneralEnvironmentT<'s, 't>),
-    Export(&'t ExportEnvironmentT<'s, 't>),
-    Extern(&'t ExternEnvironmentT<'s, 't>),
-}
-
-pub enum IInDenizenEnvironmentT<'s, 't> {
-    // Subset of IEnvironmentT — variants representing "a denizen currently being compiled"
-    Citizen(&'t CitizenEnvironmentT<'s, 't>),
-    Function(&'t FunctionEnvironmentT<'s, 't>),
-    Node(&'t NodeEnvironmentT<'s, 't>),
-    BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
-    BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
-    General(&'t GeneralEnvironmentT<'s, 't>),
-}
-
-pub struct TemplatasStoreT<'s, 't> {
-    pub name_to_entry: &'t [(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
-    pub imprecise_to_entries: &'t [(&'s IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>])],
-    pub id: &'t IdT<'s, 't>,
-}
-
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IEnvEntryT<'s, 't> {
-    Function(&'s FunctionA<'s>),
-    Struct(&'s StructA<'s>),
-    Interface(&'s InterfaceA<'s>),
-    Impl(&'s ImplA<'s>),
-    Templata(ITemplataT<'s, 't>),
-}
-```
-
-Wrapper enums are 16-byte inline `Copy` values (tag + 8-byte ref), matching the Slab 2 name wrappers and Slab 3 `KindT` / `ITemplataT`. `IEnvEntryT` is ~24 bytes (tag + 16-byte `ITemplataT` variant).
-
-### Arena choice: `'t`, not `'s`
-
-`quest.md` §3.1 placed envs in the scout arena `'s`. That's infeasible: envs hold `TemplatasStoreT` which stores `IEnvEntryT::Templata(ITemplataT<'s, 't>)`, which transitively holds `&'t` refs to interned typing-pass payloads. A struct with lifetime `'s` can only hold `&'x` references where `'x: 's`. Since `'s: 't` (scout outlives typing), `'t: 's` is false — `'s`-allocated envs **cannot** hold `&'t` refs.
-
-Envs must be in `'t`. Quest.md §3.1 is overridden; `TL-HANDOFF.md` notes this.
-
-### Construction: builder → freeze
-
-`NodeEnvironmentT` accumulates locals during expression scouting. Stack builder with heap `Vec`, frozen into the arena when shared:
-
-```rust
-pub struct NodeEnvironmentBuilder<'s, 't> {
-    pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
-    pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
-    pub life: LocationInFunctionEnvT<'s>,
-    pub templatas_pending: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
-    pub declared_locals_pending: Vec<&'t ILocalVariableT<'s, 't>>,
-    // ... unstackifieds, restackifieds, etc.
-}
-
-impl<'s, 't> NodeEnvironmentBuilder<'s, 't> {
-    pub fn build_in(self, typing_arena: &TypingArena<'t>) -> &'t NodeEnvironmentT<'s, 't> { /* ... */ }
-}
-```
-
-Every mutation during child-scope compilation produces a fresh builder → fresh arena allocation → fresh `&'t` ref. Matches Scala's `NodeEnvironmentBox`, which allocates a new `NodeEnvironmentT` case class per mutation (`var currentEnv` gets replaced). Scala's GC hides the allocation cost; our arena pays it visibly. Same churn rate, different debugger pane.
-
-### Lookup: linear slice scan
-
-Per AASSNCMCX we cannot store `HashMap` inside an arena struct. `TemplatasStoreT` uses unsorted arena slices; `lookup_*` does linear scan. Acceptable for typical 5-10 entries per scope. If profiling flags a hot slow scope, switch that env kind to sorted-binary. Not required for migration.
+Scala parity is why the migration picks arenas. Cross-denizen edge analysis + `bumpalo`'s no-destructor semantics + per-denizen memory bounds are why the long-term target is two-tier per-denizen. Incremental recompilation on source change is why LSP needs a further evolution on top of that.
 
 ---
 

@@ -25,6 +25,7 @@ import scala.collection.immutable._
 //   type to avoid a cyclical definition.
 // - If not in declared banners, then tell FunctionCompiler to start evaluating it.
 */
+// VX: all the `use` lines in every file should be moved to above the first scala comment.
 use std::collections::HashMap;
 
 use crate::interner::StrI;
@@ -50,6 +51,7 @@ pub struct ImplT<'s, 't> {
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
     pub rune_index_to_independence: Vec<bool>,
 }
+// VX: please remove all the empty impl blocks
 impl<'s, 't> ImplT<'s, 't> {}
 /*
 case class ImplT(
@@ -95,6 +97,7 @@ case class KindExportT(
   exportedName: StrI
 )  {
 */
+// VX: whenever there's an impl block and a contained method all on one line, please expand it
 impl<'s, 't> KindExportT<'s, 't> { fn equals(&self, obj: &KindExportT<'s, 't>) -> bool { panic!("Unimplemented: equals"); } }
 /*
   override def equals(obj: Any): Boolean = vcurious();
