@@ -6,21 +6,29 @@ The approach is **pragmatic arena retention**: scout data lives past the typing 
 
 ## Status (2026-04-18)
 
-**Phase 1 — lifetime-parameter correction across `src/typing/`** — complete. Every `pub struct`, `pub enum`, and `pub trait` in the typing pass carries the generics specified in §1.5. Empty placeholder types use `PhantomData<(&'s (), ...)>` with a `// TODO: placeholder PhantomData — replace with real fields during body migration` line.
+Handed off; see `TL-HANDOFF.md` at the repository root for the current state summary, design decisions that supersede parts of this doc, and the next-slab entry point.
 
-**Phase 2 — god-struct refactor** — complete. All ~20 sub-compilers and all 15 macros are now methods on a single `Compiler<'s, 'ctx, 't>`. Macro dispatch runs through four Copy unit-variant enums (`FunctionBodyMacro`, `OnStructDefinedMacro`, `OnInterfaceDefinedMacro`, `OnImplDefinedMacro`) whose variants tag the target `Compiler::<method>_<suffix>` method. Vestigial `*Compiler` PhantomData holders (`ExpressionCompiler`, `ImplCompiler`, `StructCompiler`, `ArrayCompiler`, `DestructorCompiler`, `InferCompiler`, `TemplataCompiler`, `NameTranslator`, `ConvertHelper`, `OverloadResolver`, `CompilerSolver`) were deleted once the macros stopped holding them as fields. Only `Compiler` itself remains. `IInfererDelegate` stays vestigial because fn signatures in `compiler_solver.rs` still take `&dyn IInfererDelegate`; rewriting those is a later item. Progress tracked at `FrontendRust/docs/migration/handoff-god-struct-progress.md`; master plan at `FrontendRust/docs/migration/handoff-god-struct-refactor.md`.
+**Phase 1 — lifetime-parameter correction** — complete. Every `pub struct` / `pub enum` / `pub trait` in `src/typing/` carries the generics specified in §1.5.
 
-**Phase 3 — body migration (Slabs 1–9+)** — in progress. Replace `PhantomData` stubs with real Scala-parity fields, one type family per slab per §12.
-- ✅ **Slab 1** (leaf types): `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT` real Copy enums; primitive `KindT` payloads (`NeverT`/`VoidT`/`IntT`/`BoolT`/`StrT`/`FloatT`) got full derives; `KindT<'s, 't>` gained the six primitive variants (`_Phantom` stays to anchor lifetimes until non-primitive variants land in Slab 3); leaf-value templatas (`OwnershipTemplataT`/`VariabilityTemplataT`/`MutabilityTemplataT`/`LocationTemplataT`/`BooleanTemplataT`/`IntegerTemplataT`/`StringTemplataT`) wrap their inner values. Commit `9fd7641c`.
-- ⏳ **Slab 2** (name hierarchy): `IdT<'s, 't, T: Copy>` generic with `widen`/`try_narrow`; ~60 concrete name types `<'s, 't>`; ~14 sub-enums with DAG variant duplication per §6.2; `INameValT` and per-sub-enum `*ValT` companions for IDEPFL interning; `From`/`TryFrom` bridges. Handoff at `FrontendRust/docs/migration/handoff-slab-2.md`.
-- Slab 3+: Kind/Coord/Templata trio, envs, expression AST, `CompilerOutputs`, `HinputsT`, sub-compiler method signatures, method bodies.
+**Phase 2 — god-struct refactor** — complete. All ~20 sub-compilers and 15 macros merged onto a single `Compiler<'s, 'ctx, 't>`. Macro dispatch via four Copy unit-variant enums. Vestigial `*Compiler` PhantomData holders deleted. Only `Compiler` remains. `IInfererDelegate` stays vestigial (fn signatures in `compiler_solver.rs` still take `&dyn`; later cleanup). See `FrontendRust/docs/migration/handoff-god-struct-progress.md`.
 
-Build is clean throughout: `cargo check --lib` passes with 0 errors and 0 warnings (the crate sets `#![allow(unused_variables, unused_imports)]` in `src/lib.rs`, so incremental drift from adding/removing imports doesn't surface as noise).
+**Phase 3 — body migration (Slabs 0–9+)** — in progress through Slab 3.
+- ✅ **Slab 0**: arena substrate scaffolding.
+- ✅ **Slab 1** (leaf types): merged as commit `9fd7641c`.
+- ✅ **Slab 2** (name hierarchy): tagged `slab-2-complete`. `IdT` is **monomorphic** (not generic `T: Copy` as described in §6.3 below — see `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`). Sub-enum families (`INameT`, `IFunctionNameT`, etc. — 22 of them) went **inline-owned** (not interned) as part of this slab.
+- ✅ **Slab 3** (Kind/Coord/Templata trio): tagged `slab-3-complete`. `KindT` and `ITemplataT` also went **inline-owned** wrappers with `&'t` refs to interned concrete payloads (same philosophy as Slab 2). `PrototypeT` and `SignatureT` are monomorphic.
+- ⏳ **Slab 4** (envs): next. Design spec is Part 3 below — accurate, no overrides.
+- Slab 5+: expression AST, CompilerOutputs, HinputsT, Compiler shell, method sigs, method bodies.
+
+**Design-doc drift from the inline-owned refactors.** §§6.1, 6.3, 6.5, 6.6 describe the *original* design where most sub-enums and wrappers were interned. The code now follows `docs/reasoning/idt-typed-view-alternatives.md`, which captures the resolved design: **wrapper enums inline-owned, concrete payloads interned**. Those four sections in this doc are out-of-date; `TL-HANDOFF.md` calls out which sections to believe.
+
+Build is clean throughout: `cargo check --lib` passes with 0 errors and 0 warnings.
 
 Known deferred items (separate from the slab plan):
-- `HinputsT` is still just a `// mig:` marker + Scala comment — no Rust stub at all.
-- Several sub-compiler methods have free `fn equals` / `fn hash_code` stubs dangling from the slice pipeline; they'll be wrapped or deleted during Slab 8.
-- Macro dispatcher methods on `Compiler` (`dispatch_function_body_macro` etc.) are not wired yet — will be added when env lookup is implemented (Slab 4 / later).
+- `HinputsT` is still just a `// mig:` marker + Scala comment — no Rust stub.
+- Several sub-compiler methods have free `fn equals` / `fn hash_code` stubs dangling from the slice pipeline; wrap or delete during Slab 8.
+- Macro dispatcher methods on `Compiler` (`dispatch_function_body_macro` etc.) are not wired yet — add when env lookup is implemented (Slab 4 / later).
+- The `TypingInterner` intern methods are all `panic!()` stubs; bodies wait for Slab 4+.
 
 ### The Trade
 
@@ -97,11 +105,10 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 
 **`'t` typing arena — interned (dedup via `TypingInterner`):**
 - Concrete name structs (`FunctionNameT`, `StructNameT`, etc. — ~60 of them)
-- `IdT<'s, 't, T>` (generic)
-- `KindT<'s, 't>` (all variants including primitives, for uniformity)
-- `ITemplataT<'s, 't>` (all variants)
-- `PrototypeT<'s, 't>`, `SignatureT<'s, 't>`
-- `OverloadSetT<'s, 't>`
+- `IdT<'s, 't>` — monomorphic (always widest form with `local_name: INameT<'s, 't>`)
+- Concrete Kind payloads: `StructTT<'s, 't>`, `InterfaceTT<'s, 't>`, `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>`, `KindPlaceholderT<'s, 't>`, `OverloadSetT<'s, 't>`
+- Interned templata payloads: `CoordTemplataT<'s, 't>`, `KindTemplataT<'s, 't>`, `PlaceholderTemplataT<'s, 't>`, `PrototypeTemplataT<'s, 't>`, `IsaTemplataT<'s, 't>`, `CoordListTemplataT<'s, 't>`
+- `PrototypeT<'s, 't>`, `SignatureT<'s, 't>` — monomorphic
 
 **`'t` typing arena — allocated but NOT interned:**
 - `FunctionDefinitionT<'s, 't>`, `FunctionHeaderT<'s, 't>`
@@ -114,11 +121,14 @@ A complete per-type checklist for Slabs 1–6. For each `// mig:` stub, the corr
 - `HinputsT<'s, 't>` (pass output)
 
 **Inline Copy, NOT interned (Scala-verbatim structural equality):**
-- Name sub-enum families (`INameT`, `IFunctionNameT`, `IFunctionTemplateNameT`, `IInstantiationNameT`, `IStructNameT`, `IInterfaceNameT`, `ICitizenNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ISubKindTemplateNameT`, `ISuperKindTemplateNameT`, `ITemplateNameT`, `IImplNameT`, `IImplTemplateNameT`, `IPlaceholderNameT`, `IVarNameT`, `IRegionNameT`, `CitizenNameT`, `CitizenTemplateNameT`) — 16-byte inline Copy values (tag + 8-byte concrete ref). `INameT` (the widest union) lives inline too — in `IdT.local_name`, in `IdT.init_steps: &'t [INameT<'s, 't>]` elements, and anywhere a typed name is passed by value. Casting a concrete or narrow sub-enum into a wider sub-enum (or into `INameT`) is a stack-only rewrap: no interner, no arena allocation. Identity between two sub-enum values (including `INameT`) is structural compare on the 16 bytes; identity between concrete refs stays pointer-eq because concrete name structs remain interned.
-- `CoordT<'s, 't>` — passed by value, pointer-eq on `kind` field
-- `OwnershipT`, `MutabilityT`, `VariabilityT`, `LocationT`, `RegionT` — pure Copy enums
-- Small templata value variants: `MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `RuntimeSizedArrayTemplateTemplataT`, `StaticSizedArrayTemplateTemplataT`
-- `Integer(i64)`, `Boolean(bool)` variants of `ITemplataT`
+- Name sub-enum families (22 of them): `INameT`, `IFunctionNameT`, `IFunctionTemplateNameT`, `IInstantiationNameT`, `IStructNameT`, `IInterfaceNameT`, `ICitizenNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ISubKindTemplateNameT`, `ISuperKindTemplateNameT`, `ITemplateNameT`, `IImplNameT`, `IImplTemplateNameT`, `IPlaceholderNameT`, `IVarNameT`, `IRegionNameT`, `CitizenNameT`, `CitizenTemplateNameT`. Each is a 16-byte inline Copy value (tag + 8-byte concrete ref).
+- Kind wrapper enums: `KindT<'s, 't>`, `ICitizenTT<'s, 't>`, `ISubKindTT<'s, 't>`, `ISuperKindTT<'s, 't>` — same pattern. Non-primitive variants hold `&'t StructTT` etc.; primitive variants (`Never`, `Void`, `Int`, `Bool`, `Str`, `Float`) hold tiny Copy payloads inline.
+- `ITemplataT<'s, 't>` — also inline wrapper. Variants mix `&'t` refs to interned templata payloads with inline Copy-value variants (`Integer(i64)`, `Boolean(bool)`, `Mutability(MutabilityTemplataT)`, etc.).
+- `CoordT<'s, 't>` — passed by value, `kind: KindT<'s, 't>` inline.
+- `OwnershipT`, `MutabilityT`, `VariabilityT`, `LocationT`, `RegionT` — pure Copy enums.
+- Small templata value variants: `MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `RuntimeSizedArrayTemplateTemplataT`, `StaticSizedArrayTemplateTemplataT`.
+
+**Casting identity rule.** Wrapper enums compare structurally on their 16 bytes (tag + inner ref). Concrete payloads and interned templata payloads compare via `ptr::eq` on the `&'t` ref. Casting up a sub-enum hierarchy (concrete → sub-enum → super-sub-enum → widest) is a stack-only rewrap via `From`/`TryFrom` impls; no interner involvement.
 
 **Neither arena (stack / heap-Vec / HashMap):**
 - `CompilerOutputs<'s, 't>` — stack-owned accumulator, dies at pass end
@@ -517,15 +527,14 @@ Every lifetime-parameterized struct in this section has an implicit `where 's: '
 
 All interned typing types use the dual-enum pattern: a **reference enum** (canonical, `&'t` refs) and a **value enum** (transient, HashMap lookup). Scout-lifetimed values (`StrI<'s>`, `IImpreciseNameS<'s>`, `RangeS<'s>`, etc.) are used directly wherever they appear — no re-interning boundary.
 
-Interned type families:
-- Concrete name structs (`FunctionNameT`, `StructNameT`, `ImplNameT`, … ~60 of them) / their respective `*ValT` lookup keys
-- `IdT<'s, 't, T>` / `IdValT<'s, 't, T>`
-- `KindT<'s, 't>` / `KindValT<'s, 't>`
-- `ITemplataT<'s, 't>` / `ITemplataValT<'s, 't>`
-- `PrototypeT<'s, 't>` / `PrototypeValT<'s, 't>`
-- `SignatureT<'s, 't>` / `SignatureValT<'s, 't>`
+Interned type families (each gets its own HashMap dedup + optional `*ValT` lookup key per IDEPFL):
+- Concrete name structs (`FunctionNameT`, `StructNameT`, … ~60). 15 have `&'t [...]` slices and get a transient `*ValT<'s, 't, 'tmp>`; the rest reuse the struct as its own Val (Slab 2 Step 6 convention).
+- `IdT<'s, 't>` / `IdValT<'s, 't, 'tmp>` — monomorphic (see §6.3).
+- Concrete Kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`) — all simple/shallow, reuse struct as Val.
+- Interned templata payloads (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `PrototypeTemplataT`, `IsaTemplataT`) — simple/shallow, reuse struct as Val. `CoordListTemplataT` has an arena slice so it gets `CoordListTemplataValT<'s, 't, 'tmp>`.
+- `PrototypeT<'s, 't>` / `PrototypeValT<'s, 't, 'tmp>`, `SignatureT<'s, 't>` / `SignatureValT<'s, 't, 'tmp>` — monomorphic; both contain `IdT` so Val needs `'tmp` for the nested `IdValT`'s slice.
 
-**All name enums (`INameT` + its 21 sub-enum families like `IFunctionNameT`, `ICitizenNameT`, etc.) are NOT interned.** They're inline-owned 16-byte `Copy` values — tag + inner concrete ref — built on the stack. See §6.2 for the rationale (sub-enum casts are free, no per-wrapper arena allocation). Only the ~60 concrete name structs get arena storage on the name side. `IdT.init_steps` is a `&'t [INameT<'s, 't>]` arena slice of inline `INameT` values (not a slice of refs).
+**Wrapper enums are NOT interned.** `INameT` + 21 name sub-enums, `KindT` + 3 Kind sub-enums (`ICitizenTT`/`ISubKindTT`/`ISuperKindTT`), and `ITemplataT` are all 16-byte inline Copy values. Sub-enum casts between narrow and wide forms are stack-only rewraps via `From`/`TryFrom`. See §6.2 for the names rationale; §6.5 for Kind; `docs/reasoning/idt-typed-view-alternatives.md` for the overarching design.
 
 **No `'t`-lifetime re-interned versions of `StrI`, `IImpreciseNameS`, `RangeS`, `CodeLocationS`, `PackageCoordinate`, `FileCoordinate`.** Use the scout-arena versions directly. Anywhere you'd be tempted to create a `StrI<'t>` or `RangeT<'t>`, use the existing `StrI<'s>` or `RangeS<'s>` instead.
 
@@ -561,55 +570,26 @@ Bridging via `From<X> for SubEnum` (narrow → wide, infallible — concrete int
 
 No new name variants needed for env handling (env-id uniqueness isn't required).
 
-### 6.3 `IdT<'s, 't, T>` — Generic, Interned
+### 6.3 `IdT<'s, 't>` — Monomorphic, Interned
 
 ```rust
-pub struct IdT<'s, 't, T: Copy>
+pub struct IdT<'s, 't>
 where 's: 't,
 {
     pub package_coord: &'s PackageCoordinate<'s>,  // scout-lifetimed
     pub init_steps: &'t [INameT<'s, 't>],  // inline INameT values
-    pub local_name: T,
+    pub local_name: INameT<'s, 't>,  // always the widest form
 }
 ```
 
-Both `init_steps` elements and `local_name` hold their name representation **inline by value**, not behind `&'t`. For a function's id, `T = IFunctionNameT<'s, 't>`; for a struct's id, `T = IStructNameT<'s, 't>`; for the widest form, `T = INameT<'s, 't>`. Each `INameT` / sub-enum value is 16 bytes (tag + 8-byte inner concrete ref). `init_steps` is an arena slice that the typing interner canonicalizes as a whole: two IdTs built with structurally-identical init_steps sequences share the same `&'t [INameT]` allocation.
+Scala's `IdT[+T <: INameT]` phantom outer parameter is **erased** in Rust — the Rust port is monomorphic. Callers that need a specific leaf-name variant pattern-match on `local_name` at the point of use, like Scala does after `match id.localName`. See `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` for the full rationale and the alternatives (generic-with-layout-cast, RawIdT+TypedIdT wrapper, etc.) that were considered and deferred for post-migration revisit.
 
-Only `T: Copy` on the struct itself — keep bounds minimal so `IdT` is cheap to mention in signatures elsewhere. Conversion bounds (`Into<INameT<'s, 't>>`, `TryInto<...>`) live on the impl blocks for the conversion methods:
-
-```rust
-impl<'s, 't, T: Copy + Into<INameT<'s, 't>>> IdT<'s, 't, T>
-where 's: 't,
-{
-    pub fn widen(self) -> IdT<'s, 't, INameT<'s, 't>> { ... }
-}
-
-impl<'s, 't, T: Copy> IdT<'s, 't, T>
-where 's: 't,
-{
-    pub fn widen_to<U: Copy>(self) -> IdT<'s, 't, U>
-    where T: Into<U> { ... }
-}
-
-impl<'s, 't> IdT<'s, 't, INameT<'s, 't>>
-where 's: 't,
-{
-    pub fn try_narrow<U: Copy>(self) -> Option<IdT<'s, 't, U>>
-    where INameT<'s, 't>: TryInto<U> { ... }
-}
-```
-
-`widen`, `widen_to`, and `try_narrow` are all real, no interner dependency — they just rewrap the inline `local_name` via its `From`/`TryFrom` impl and reuse the same `package_coord` and `init_steps` pointers.
-
-Generic parameter preserves leaf-kind info at the type level (e.g. `IdT<'s, 't, IFunctionNameT<'s, 't>>` vs `IdT<'s, 't, IStructTemplateNameT<'s, 't>>`).
-
-Since sub-enum identity is structural (not pointer-eq), `IdT` defines a **custom** `PartialEq`/`Eq`/`Hash` rather than using derive:
-
+`IdT` defines custom `PartialEq`/`Eq`/`Hash` (not derive):
 - `package_coord`: pointer-eq (scout arena canonicalizes `PackageCoordinate`).
-- `init_steps`: slice data pointer + length compare (the typing interner canonicalizes `&'t [INameT]` slices per IDEPFL — equal content ⇒ equal slice pointer).
-- `local_name`: structural compare on the inline `T` (16-byte sub-enum, `INameT`, or concrete ref).
+- `init_steps`: slice data pointer + length compare — the typing interner canonicalizes `&'t [INameT]` slices as a whole per IDEPFL, so equal content ⇒ equal slice pointer.
+- `local_name`: structural compare on the inline `INameT<'s, 't>` (16 bytes: tag + 8-byte concrete ref).
 
-Interning uses one HashMap keyed by the widest form (`IdValT<'s, 't, INameT<'s, 't>>`); specialized `IdT<'s, 't, IXxxNameT<'s, 't>>` views are type-cast from the widest-form arena storage (unsafe at the interner boundary since `IdT`'s layout is T-independent at the byte level for any T that is `Copy` + same size as the widened-form's inline enum).
+Interning uses one HashMap per IDEPFL keyed by `IdValT<'s, 't, 'tmp>` (transient, `'tmp`-borrowed init_steps slice). No widen/try_narrow methods — pattern-match instead.
 
 ### 6.4 `CoordT<'s, 't>` — Inline Copy
 
@@ -618,102 +598,98 @@ Interning uses one HashMap keyed by the widest form (`IdValT<'s, 't, INameT<'s, 
 pub struct CoordT<'s, 't> {
     pub ownership: OwnershipT,
     pub region: RegionT,
-    pub kind: &'t KindT<'s, 't>,
+    pub kind: KindT<'s, 't>,  // KindT is inline (16 bytes), so CoordT is ~24 bytes
 }
 ```
 
-Small (3 fields, Copy). Passed by value. Not interned — structural eq, pointer-eq on kind.
+Small, Copy, passed by value. Not interned — structural eq.
 
-### 6.5 `KindT<'s, 't>` — Interned
-
-Every variant carries a payload struct, even the primitives — uniformity makes pattern matching and visitor-pattern code simpler to write mechanically:
+### 6.5 `KindT<'s, 't>` — Inline Wrapper
 
 ```rust
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
-    Never(NeverT),                                  // NeverT { from_break: bool } per Scala
-    Void(VoidT),                                    // zero-sized unit struct
-    Int(IntT),                                      // IntT { bits: u8 } per Scala
-    Bool(BoolT),                                    // zero-sized unit struct
-    Str(StrT),                                      // zero-sized unit struct
-    Float(FloatT),                                  // zero-sized unit struct
-    Struct(StructTT<'s, 't>),
-    Interface(InterfaceTT<'s, 't>),
-    StaticSizedArray(StaticSizedArrayTT<'s, 't>),
-    RuntimeSizedArray(RuntimeSizedArrayTT<'s, 't>),
-    KindPlaceholder(KindPlaceholderT<'s, 't>),
+    // Primitives inline (small, Slab 1 shape)
+    Never(NeverT),                          // NeverT { from_break: bool }
+    Void(VoidT),                            // unit
+    Int(IntT),                              // IntT { bits: i32 }
+    Bool(BoolT), Str(StrT), Float(FloatT),  // unit
+    // Non-primitives — &'t refs to interned payloads
+    Struct(&'t StructTT<'s, 't>),
+    Interface(&'t InterfaceTT<'s, 't>),
+    StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
+    RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
+    KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
     OverloadSet(&'t OverloadSetT<'s, 't>),
 }
-
-pub struct NeverT { pub from_break: bool }
-pub struct VoidT;
-pub struct IntT { pub bits: u8 }
-pub struct BoolT;
-pub struct StrT;
-pub struct FloatT;
 ```
 
-All variants interned. Pointer-eq on `&'t KindT` is identity.
+`KindT` is **inline-owned** (not arena-interned): 16 bytes tag + ref, Copy. Concrete payloads (`StructTT` etc.) are arena-interned; the wrapper just tags them.
 
-### 6.6 `ITemplataT<'s, 't>` — Type Parameter Erased, No Split Needed
+Same philosophy for the three Kind sub-enum families:
+```rust
+pub enum ICitizenTT<'s, 't>   { Struct(&'t StructTT<'s, 't>), Interface(&'t InterfaceTT<'s, 't>) }
+pub enum ISubKindTT<'s, 't>   { Struct(...), Interface(...), StaticSizedArray(...), RuntimeSizedArray(...), KindPlaceholder(...) }
+pub enum ISuperKindTT<'s, 't> { Interface(...), KindPlaceholder(...) }
+```
 
-All variants are equally free to hold `&'s` refs:
+DAG rule matches §6.2: a concrete payload gets a variant in each sub-enum it extends in Scala. Casts between `KindT` / `ICitizenTT` / `ISubKindTT` / `ISuperKindTT` are stack-only rewraps via `From`/`TryFrom`.
+
+See `docs/reasoning/idt-typed-view-alternatives.md` — the split "wrapper enums inline, concrete payloads interned" is uniform across names (§6.2), kinds (this section), and templatas (§6.6).
+
+### 6.6 `ITemplataT<'s, 't>` — Inline Wrapper, Phantom Parameters Erased
+
+Scala's `ITemplataT[+T <: ITemplataType]` outer phantom type parameter is **erased** in Rust — the wrapper is a monomorphic `ITemplataT<'s, 't>` enum, and callers that need a specific kind pattern-match on the variant.
 
 ```rust
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
-    // Leaf-like
+    // Interned-payload variants — &'t ref to arena-allocated payload
     Coord(&'t CoordTemplataT<'s, 't>),
     Kind(&'t KindTemplataT<'s, 't>),
     Placeholder(&'t PlaceholderTemplataT<'s, 't>),
+    Prototype(&'t PrototypeTemplataT<'s, 't>),
+    Isa(&'t IsaTemplataT<'s, 't>),
+    CoordList(&'t CoordListTemplataT<'s, 't>),
+    // Inline Copy-value variants
     Mutability(MutabilityTemplataT),
     Variability(VariabilityTemplataT),
     Ownership(OwnershipTemplataT),
     Integer(i64),
     Boolean(bool),
-    String(&'s StrI<'s>),  // scout-lifetimed StrI is fine
-    Prototype(&'t PrototypeTemplataT<'s, 't>),
-    Isa(&'t IsaTemplataT<'s, 't>),
-    CoordList(&'t CoordListTemplataT<'s, 't>),
-    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT),
-    StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT),
-    
-    // Heavy — carry direct &'s refs, like Scala
+    String(StrI<'s>),  // scout-lifetimed, not re-interned
+    RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT<'s, 't>),
+    StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT<'s, 't>),
+    // Heavy templatas — &'t to scout-ref-holding payloads, not interned
     Function(&'t FunctionTemplataT<'s, 't>),
     StructDefinition(&'t StructDefinitionTemplataT<'s, 't>),
     InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
     ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
     ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
 }
+```
 
+`ITemplataT` itself is **inline-owned**, not arena-interned. Same split as `KindT`: wrapper inline, concrete payloads interned (for the leaf-like group) or arena-allocated-but-not-interned (for the heavy group).
+
+Heavy templata payloads (`FunctionTemplataT`, `StructDefinitionTemplataT`, `InterfaceDefinitionTemplataT`, `ImplDefinitionTemplataT`, `ExternFunctionTemplataT`) hold scout-lifetime refs directly:
+
+```rust
 pub struct FunctionTemplataT<'s, 't> {
     pub outer_env: &'s IEnvironmentT<'s, 't>,
     pub function: &'s FunctionA<'s>,
 }
-
-pub struct StructDefinitionTemplataT<'s, 't> {
-    pub declaring_env: &'s IEnvironmentT<'s, 't>,
-    pub origin_struct: &'s StructA<'s>,
-}
-
-pub struct InterfaceDefinitionTemplataT<'s, 't> {
-    pub declaring_env: &'s IEnvironmentT<'s, 't>,
-    pub origin_interface: &'s InterfaceA<'s>,
-}
-
-pub struct ImplDefinitionTemplataT<'s, 't> {
-    pub declaring_env: &'s IEnvironmentT<'s, 't>,
-    pub impl_a: &'s ImplA<'s>,
-}
-
+// …StructDefinitionTemplataT / InterfaceDefinitionTemplataT / ImplDefinitionTemplataT
+// each hold `&'s IEnvironmentT` and one of `&'s StructA` / `&'s InterfaceA` / `&'s ImplA`.
 pub struct ExternFunctionTemplataT<'s, 't> {
     pub header: &'t FunctionHeaderT<'s, 't>,
 }
 ```
 
-No ID indirection, no side tables, no slot-constraint enforcement. `FunctionHeaderT.maybe_origin_function_templata` and `ImplT.templata` and `FunctionBannerT.origin_function_templata` all just hold the heavy templata directly.
+Since `FunctionA`, `StructA`, etc. don't derive `Eq`/`Hash`, heavy-templata Eq/Hash is via `std::ptr::eq` on the scout refs (the scout arena canonicalizes those). Slab 3 wrote manual `PartialEq`/`Eq`/`Hash` impls for the heavy templata payloads.
 
-**`PrototypeTemplataT`'s own `T` parameter is orthogonal.** Scala's `ITemplataT[+T <: ITemplataType]` outer parameter is erased (handled by variant tag + runtime `tyype` field on `PlaceholderTemplataT`). But `PrototypeTemplataT[T <: IFunctionNameT]` has a *separate* inner type parameter tracking which kind of function-name the prototype points at. Decide that parameter independently — most likely: keep it as `PrototypeTemplataT<'s, 't>` with `prototype: &'t PrototypeT<'s, 't>` where `PrototypeT` is generic in its leaf name (`PrototypeT<'s, 't, T: Copy = ()>` with `id: IdT<'s, 't, T>`, T holding the leaf sub-enum inline). Don't confuse the two erasures.
+`PrototypeTemplataT`'s Scala inner type parameter (`PrototypeTemplataT[T <: IFunctionNameT]`) is also erased — `PrototypeT<'s, 't>` is monomorphic post Slab 2 refactor (see §6.3), so `PrototypeTemplataT<'s, 't>` just holds `&'t PrototypeT<'s, 't>` with no inner phantom.
 
-**Mixed-mode equality.** `ITemplataT` deliberately mixes Copy-value variants (`Mutability`, `Variability`, `Ownership`, `Integer`, `Boolean`) with `&'t`-ref variants (`Coord`, `Kind`, `Prototype`, heavy templatas, …). Value variants compare by value; ref variants compare by pointer identity (the typing interner guarantees uniqueness). `ITemplataValT` mirrors this split for HashMap lookup. When an `ITemplataT` itself lives behind `&'t ITemplataT` and is used as a key, wrap in `PtrKey<'t, ITemplataT>` (pointer-eq on the whole value); when it's used by value, the derived `PartialEq`/`Hash` does the right thing per-variant.
+`ITemplataValT` doesn't exist — since `ITemplataT` itself isn't interned, no Val companion is needed. The six interned-payload variants have their own `*ValT` lookups (all simple/shallow — reuse the payload struct as its own Val; `CoordListTemplataT` with its arena slice gets a transient `CoordListTemplataValT<'s, 't, 'tmp>`).
 
 ### 6.7 Mutual Recursion
 
@@ -846,36 +822,36 @@ The instantiator receives `HinputsT<'s, 't>` plus both arena references. When it
 
 ## Part 12: Slab-Ordered Migration Plan
 
-### 12.0 Ground Rule: Preserve The `// mig:` Audit Trail
+### 12.0 Ground Rule: Preserve The `/* scala */` Audit Trail
 
-The typing/ skeleton is already generated: every Scala definition in a `/* ... */` block has a `// mig: ...` marker and an empty stub (`pub enum KindT {}`, `panic!()` bodies, etc.) **directly above** its Scala counterpart. This structure is the migration audit trail and is non-negotiable.
+The typing/ skeleton has a `/* ... */` block with the Scala source directly below every Rust definition. The `.claude/hooks/check-scala-comments` pre-commit hook does exact-match comparison and rejects any edit inside those blocks. Rules:
 
-**When filling definitions:**
-- Replace the empty stub in-place with the real definition. Keep the `// mig: <name>` line. Keep the `/* ... scala ... */` block immediately below unchanged.
+- Replace the empty Rust stub in-place with the real definition. Keep the Scala `/* ... */` block below unchanged.
 - Never move a Rust definition away from its Scala block.
-- Never delete a `/* ... scala ... */` block during filling — it gets removed only at the slice-reconcile-delete phase, long after the definition is complete and proven.
-- A Rust definition grown to need helper structs (e.g. an `INameValT` companion for an `INameT`) gets its companion block **adjacent to** the main definition, with its own `// mig:` marker if it corresponds to a Scala construct, or a `// (no scala counterpart)` note if it's Rust-only scaffolding (interning Val enums, `PtrKey` newtypes, builders).
+- A Rust definition grown to need helper structs (e.g. an `IdValT` companion for an `IdT`) gets its companion block **adjacent to** the main definition, with a `// (no scala counterpart — …)` note.
+
+(The original `// mig:` marker lines above each stub were removed in Slab 0 Step 0 — they were slice-pipeline artifacts. The `/* scala */` blocks are the audit trail now.)
 
 ### 12.1 Slabs
 
-1. **Slab 0**: Arena substrate — `TypingInterner<'t>`, `PtrKey<'t, T>`, lifetime conventions docs. Non-migration Rust scaffolding; lives in files without `// mig:` markers.
-2. **Slab 1**: Leaf types (`types/types.rs` primitives portion) — convert unit-struct stubs into real enums: `OwnershipT { Share, Own, Borrow, Weak }`, `MutabilityT { Mutable, Immutable }`, `VariabilityT { Final, Varying }`, `LocationT { Inline, Yonder }`, `RegionT`. Primitive `KindT` payloads (`NeverT`, `VoidT`, `IntT`, `BoolT`, `StrT`, `FloatT`) with fields per Scala. Leaf-value templatas (`MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `IntegerTemplataT`, `BooleanTemplataT`, `StringTemplataT`). All Copy where possible.
-3. **Slab 2**: Name hierarchy (`names/names.rs`) — `IdT<'s, 't, T: Copy>` generic struct with `widen`/`try_narrow` conversion impls; all ~60 `INameT` concrete structs with `<'s, 't>`; ~14 sub-enums (`IFunctionNameT`, `IStructNameT`, `IInterfaceNameT`, `IFunctionTemplateNameT`, `IStructTemplateNameT`, `IInterfaceTemplateNameT`, `ITemplateNameT`, `IInstantiationNameT`, `ISubKindNameT`, `ISuperKindNameT`, `ICitizenNameT`, `ICitizenTemplateNameT`, `IVarNameT`, `IRegionNameT`) with **DAG variant duplication** per §6.2. `From`/`TryFrom` bridges. `INameValT<'s, 't>` + per-sub-enum `*ValT` companions for IDEPFL interning. Self-referential `ForwarderFunctionNameT.inner: &'t IFunctionNameT<'s, 't>` resolved by `&'t`.
-4. **Slab 3**: Kind/Coord/Templata trio (`types/types.rs` remainder, `templata/templata.rs`) — non-primitive `KindT` variants (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`); `CoordT<'s, 't>` as inline Copy struct; `ITemplataT<'s, 't>` with all 19 variants including heavy (`FunctionTemplataT`, `StructDefinitionTemplataT`, `InterfaceDefinitionTemplataT`, `ImplDefinitionTemplataT`, `ExternFunctionTemplataT`) holding direct `&'s FunctionA`/`&'s StructA` refs; `PrototypeT` (generic in leaf-name `T`), `SignatureT`; `KindValT`, `ITemplataValT`, `PrototypeValT`, `SignatureValT` companions.
-5. **Slab 4**: Environments (`env/*.rs`) — **convert the current `trait IEnvironmentT` stub into an enum** per §3.1. 9 variants, each as its own struct. `TemplatasStoreT<'s, 't>` with arena-slice pairs (no heap HashMap). Stack builder types (`NodeEnvironmentBuilder`, etc.) with `build_in(&ScoutArena<'s>) -> &'s NodeEnvironmentT<'s, 't>`.
-6. **Slab 5**: Expression AST (`ast/expressions.rs`) — 3 enums (`ReferenceExpressionTE` ~38 variants, `AddressExpressionTE` ~6 variants, narrow-use `ExpressionTE` wrapper). Arena-allocated, not interned. Per-variant payload structs with `<'s, 't>`. `NodeRefT<'s, 't>` visitor enum + `visit_*` + `collect_*` macros.
-7. **Slab 6**: `CompilerOutputs<'s, 't>` (`compiler_outputs.rs`) — all fields per §4.1, `PtrKey<'t, T>`-keyed HashMaps, `DeferredActionT<'s, 't>` enum (no `Box<dyn>`).
-8. **Slab 7**: `HinputsT<'s, 't>` + Compiler god struct shell + top-level `run_typing_pass` entry point.
-9. **Slab 8**: Function signatures across sub-compiler methods — file-by-file, each method's signature matches Scala's, body is `panic!("unimplemented: <id>")`. Goal: clean `cargo build --lib`.
-10. **Slab 9+**: Method implementations, driven by failing tests.
+1. ✅ **Slab 0** (arena substrate): `TypingInterner<'t>`, `PtrKey<'t, T>`, lifetime conventions docs. Non-migration Rust scaffolding.
+2. ✅ **Slab 1** (leaf types): real Copy enums for `OwnershipT` / `MutabilityT` / `VariabilityT` / `LocationT`; primitive `KindT` payloads; leaf-value templatas. Commit `9fd7641c`.
+3. ✅ **Slab 2** (name hierarchy): monomorphic `IdT<'s, 't>` (§6.3); ~60 concrete name structs + 22 inline-owned sub-enums per the §6.2 DAG; `From`/`TryFrom` bridges; IDEPFL `*ValT` companions. Tagged `slab-2-complete`. Handoff at `FrontendRust/docs/migration/handoff-slab-2.md`.
+4. ✅ **Slab 3** (Kind/Coord/Templata trio): `KindT` inline wrapper + interned concrete payloads per §6.5; `ITemplataT` inline wrapper with interned + heavy-allocated + inline-value variants per §6.6; `CoordListTemplataValT` for the one slice-bearing templata payload; `PrototypeValT` / `SignatureValT` with `'tmp`. Tagged `slab-3-complete`. Handoff at `FrontendRust/docs/migration/handoff-slab-3.md`.
+5. ⏳ **Slab 4** (envs, `env/*.rs`): convert the current `trait IEnvironmentT` stub into an enum per §3.1. 9 variants. `TemplatasStoreT<'s, 't>` with arena-slice pairs. Stack builder types with `build_in(&ScoutArena<'s>) -> &'s NodeEnvironmentT<'s, 't>`.
+6. ⏳ **Slab 5** (expression AST, `ast/expressions.rs`): 3 enums (`ReferenceExpressionTE` ~38, `AddressExpressionTE` ~6, wrapper `ExpressionTE`). Per-variant payload structs. `NodeRefT` visitor + `visit_*` / `collect_*` macros.
+7. ⏳ **Slab 6** (`CompilerOutputs<'s, 't>`): all fields per §4.1, `PtrKey<'t, T>`-keyed HashMaps, `DeferredActionT<'s, 't>` enum (no `Box<dyn>`).
+8. ⏳ **Slab 7** (`HinputsT<'s, 't>` + Compiler god struct shell + `run_typing_pass` entry point).
+9. ⏳ **Slab 8** (method signatures across sub-compilers): each method's signature matches Scala; body is `panic!("unimplemented")`. Goal: clean `cargo build --lib` end-to-end.
+10. ⏳ **Slab 9+** (method implementations, driven by failing tests).
 
-**Per-slab completion criterion:** the files in-scope compile in isolation against the previously-completed slabs (using `panic!` bodies for anything downstream). The whole crate may still fail to build until Slab 8.
+**Per-slab completion criterion:** files in-scope compile in isolation against previously-completed slabs (`panic!` bodies for downstream). The whole crate may still fail to build until Slab 8.
 
-After Slab 8, build should be clean with `panic!()` bodies awaiting implementation. Subsequent slabs fill them.
+After Slab 8, build is clean with `panic!()` bodies awaiting implementation. Subsequent slabs fill them.
 
 ### 12.2 Immediate Next Action
 
-Slab 1 (`types/types.rs` primitives portion). Concrete work: replace each `pub struct ShareT;` / `pub enum OwnershipT {}` pair with a single `pub enum OwnershipT { Share, Own, Borrow, Weak }`, then mark the four individual unit-struct stubs as merged into the enum by leaving a `// mig: merged into OwnershipT above` line in place of their stub. Repeat for `MutabilityT`, `VariabilityT`, `LocationT`. Fill primitive `KindT` payload structs. Stops at `StructTT`/`InterfaceTT`/etc. which depend on `IdT` (Slab 2).
+Slab 4 (environments). See `TL-HANDOFF.md` at repo root for the transition summary, then write a `FrontendRust/docs/migration/handoff-slab-4.md` matching the style of Slabs 2 and 3 before handing off to a junior. Design spec in Part 3 is accurate and needs no overrides.
 
 ---
 
