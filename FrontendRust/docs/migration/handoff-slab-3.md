@@ -248,20 +248,20 @@ pub struct FunctionTemplataT<'s, 't> {
 
 ## IDEPFL `*ValT` companions
 
-Per the Gotcha 1 resolution, the scope here is narrower than quest.md §6.1 suggested. `KindT` (and its three wrapper sub-enums) are inline-owned and do NOT need Val types. The concrete Kind payloads are what get interned.
+Per the Gotcha 1 resolution, the scope here is narrower than quest.md §6.1 suggested. Wrapper enums (`KindT`, its three sub-enums, and `ITemplataT`) are all inline-owned and do NOT need Val types. The concrete *payloads* are what get interned.
 
-**Vals to add** (for interned concrete Kind payloads + `ITemplataT` + `PrototypeT` + `SignatureT`):
+**Vals to add** (for interned concrete Kind payloads + interned templata payloads + `PrototypeT` + `SignatureT`):
 
-1. **Per-concrete Kind payload Vals** (shallow — reuse the struct as its own Val, like Slab 2 did for most concrete names):
-   - `StructTT<'s, 't> { id: IdT<'s, 't> }` — interned; Val = the struct itself (simple/shallow, canonical `IdT` already at its widest form).
-   - `InterfaceTT<'s, 't>` — same pattern.
-   - `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>` — same.
-   - `KindPlaceholderT<'s, 't>` — same.
+1. **Per-concrete Kind payload Vals** (all simple/shallow — reuse the struct as its own Val, like Slab 2 did for ~45 concrete names):
+   - `StructTT<'s, 't> { id: IdT<'s, 't> }` — Val = the struct itself (`IdT` is already canonical).
+   - `InterfaceTT<'s, 't>`, `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>`, `KindPlaceholderT<'s, 't>` — same pattern.
    - `OverloadSetT<'s, 't> { env: &'s IEnvironmentT<'s, 't>, name: &'s IImpreciseNameS<'s> }` — scout-lifetime fields only; simple reuse.
 
-   So: no separate `*ValT` types needed. Document this as a comment in `types/types.rs` matching the Slab 2 "~45 simple/shallow concretes reuse struct as Val" comment block.
+   No separate `*ValT` types needed. Document this as a comment in `types/types.rs` matching the Slab 2 "~45 simple/shallow concretes reuse struct as Val" comment block.
 
-2. **`ITemplataValT<'s, 't>`** — moves into `templata/templata.rs`. Per §6.6's mixed-mode note, Val variants for the Copy-value templatas hold them by value; Val variants for the `&'t`-ref templatas hold `&'t` too. Since `ITemplataT` is inline (not arena-interned — per §6.6), you could argue it doesn't need a Val either. Double-check with the senior; if it's inline like KindT, skip the Val.
+2. **Per-interned-templata-payload Vals** (in `templata/templata.rs`): like the concrete Kind payloads, these are shallow and can mostly reuse their struct as their own Val — except `CoordListTemplataT` has an arena slice (`&'t [CoordT<'s, 't>]`), so it gets a transient `CoordListTemplataValT<'s, 't, 'tmp>` with the `'tmp`-borrowed slice. The other five (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `PrototypeTemplataT`, `IsaTemplataT`) hold only `&'t` refs to already-canonical data — reuse the struct as its own Val and note it in the comment block (same convention as Slab 2 Step 6's ~45 simple/shallow concretes).
+
+   `ITemplataT<'s, 't>` itself is inline-owned (not interned) — same philosophy as `KindT`. No `ITemplataValT` type. Remove the stub from `typing_interner.rs`.
 
 3. **`PrototypeValT<'s, 't, 'tmp>`** — moves into `ast/ast.rs` next to `PrototypeT`. Since `PrototypeT<'s, 't>` has `id: IdT<'s, 't>` and `return_type: CoordT<'s, 't>`, and `IdT` contains a `&'t [INameT]` slice, `PrototypeValT` needs the `'tmp` lifetime for the inner `IdValT<'s, 't, 'tmp>`. No generic T — Slab 2's monomorphic refactor dropped it.
 
@@ -269,7 +269,10 @@ Per the Gotcha 1 resolution, the scope here is narrower than quest.md §6.1 sugg
 
 For each `*ValT`, add `#[derive(Copy, Clone, Debug)]` plus custom `PartialEq`/`Eq`/`Hash` *if* the struct has slices or fields where structural hashing isn't enough. If the Val is pure Copy + structural-eq'able (no slices, no `&'s` refs needing pointer-eq), just derive all six traits.
 
-Finally, update `typing_interner.rs`: keep `intern_templata`/`intern_prototype`/`intern_signature` stubs with their new signatures; **remove `intern_kind`** entirely since `KindT` is no longer interned (stub was leftover from the old design). Add `intern_struct_tt`/`intern_interface_tt`/`intern_static_sized_array_tt`/`intern_runtime_sized_array_tt`/`intern_kind_placeholder_t`/`intern_overload_set_t` method stubs — one per interned concrete Kind payload.
+Finally, update `typing_interner.rs`:
+- **Remove** `intern_kind` (KindT no longer interned) and `intern_templata` (ITemplataT inline).
+- **Keep** `intern_id`, `intern_prototype`, `intern_signature` stubs with their current signatures (intern_prototype/signature gain the `'tmp` param to match their Val types).
+- **Do NOT add** per-payload intern methods (`intern_struct_tt`, `intern_coord_templata`, etc.). Following Slab 2 Step 6's precedent — Val types get defined in this slab; the per-family intern method API is designed when the interner body is actually implemented (Slab 4+). Family-level stubs are enough.
 
 ## Step-by-step plan
 
@@ -374,7 +377,7 @@ The Slab 2 refactor philosophy applies uniformly to KindT and its sub-enums. que
 3. Casts between `KindT`, `ICitizenTT`, `ISubKindTT`, `ISuperKindTT` become stack-only rewraps — `From`/`TryFrom` impls can be real (no interner round-trip).
 4. Concrete payloads (`StructTT`, etc.) keep pointer-identity via interning, which is what `HashMap<&'t StructTT, V>` callers rely on.
 
-**No Val type for KindT or its sub-enums.** Since they're inline-owned (not arena-interned), they don't need IDEPFL Val companions. The four interned concrete Kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`) do need Vals — most are simple/shallow (reuse the struct as its own Val per Slab 2 Step 6 convention); `OverloadSetT` has scout-lifetime fields only and is simple.
+**No Val type for KindT or its sub-enums.** Since they're inline-owned (not arena-interned), they don't need IDEPFL Val companions. The six interned concrete Kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `KindPlaceholderT`, `OverloadSetT`) are all simple/shallow and reuse themselves as their own Val per the Slab 2 Step 6 convention — no separate `*ValT` types needed. Document this in a comment block in `types/types.rs`.
 
 **Write the From/TryFrom bridges like Slab 2.** Concrete → wrapper enum: `impl From<&'t StructTT<'s, 't>> for KindT<'s, 't>` etc. Narrow → wide: `impl From<ICitizenTT<'s, 't>> for KindT<'s, 't>`. Wide → narrow: `impl TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't>` (owned, match-and-rewrap). Exactly like `From<&'t FunctionNameT> for INameT` and `TryFrom<INameT> for IFunctionNameT` in names.rs.
 
