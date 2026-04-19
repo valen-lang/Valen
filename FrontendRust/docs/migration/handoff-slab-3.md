@@ -6,7 +6,8 @@ You're picking up an in-progress Rust port of a Scala compiler frontend. A senio
 
 - **Slab 0** (arena substrate, TypingInterner stub): merged.
 - **Slab 1** (leaf types: `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT` enums, primitive `KindT` payloads `NeverT`/`VoidT`/`IntT`/`BoolT`/`StrT`/`FloatT`): merged.
-- **Slab 2** (name hierarchy: ~60 concrete names, 21 sub-enums, generic `IdT<'s, 't, T: Copy>`, `From`/`TryFrom` bridges, IDEPFL `*ValT` companions): merged. Tagged `slab-2-complete`.
+- **Slab 2** (name hierarchy: ~60 concrete names, 21 sub-enums, monomorphic `IdT<'s, 't>`, `From`/`TryFrom` bridges, IDEPFL `*ValT` companions): merged. Tagged `slab-2-complete`.
+- **Slab 2 post-refactor** (commit `6b71944f`): `IdT` and `PrototypeT` dropped their generic `T` parameter — both are now monomorphic. Scala's `+T <: INameT` / `+T <: IFunctionNameT` phantom parameters are erased in Rust, matching Scala's JVM runtime behavior. **Read `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` for the why** (recorded alternatives for post-migration revisit). quest.md §6.3 is out-of-date on this; follow the reasoning doc.
 
 You're doing Slab 3 — fleshing out the remaining types in `src/typing/types/types.rs` and `src/typing/templata/templata.rs`. Compared to Slab 2 this is a smaller slab (~1000 lines of scope vs ~2600), but it leans heavily on Slab 2's name types and touches the IDEPFL interning machinery. Budget: plan for half a workday if you stay focused.
 
@@ -14,8 +15,9 @@ You're doing Slab 3 — fleshing out the remaining types in `src/typing/types/ty
 
 1. `quest.md` — at least §§1.2, 1.4, 1.5, 6.4, 6.5, 6.6, 6.7, 12.1 Slab 3 paragraph. §6.4–6.6 is the design spec for the types you're building; it is the source of truth.
 2. `.claude/rules/postparser/IDEPFL-postparser-interning.md` — the dual-enum "value enum for lookup / reference enum for storage" pattern. You'll add `*ValT` companions per IDEPFL, mirroring Slab 2's pattern.
-3. `FrontendRust/docs/migration/handoff-slab-2.md` — not strictly required, but it sets up the conventions you'll follow (Scala `/* */` block rules, `#[derive]` rules, `where 's: 't` bounds). Most of the "Rules for each field translation" table there applies verbatim to Slab 3.
-4. This doc.
+3. `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` — the design note explaining the monomorphic `IdT`/`PrototypeT` choice. quest.md §6.3's generic-IdT design is superseded by this.
+4. `FrontendRust/docs/migration/handoff-slab-2.md` — not strictly required, but it sets up the conventions you'll follow (Scala `/* */` block rules, `#[derive]` rules, `where 's: 't` bounds). Most of the "Rules for each field translation" table there applies verbatim to Slab 3.
+5. This doc.
 
 **Important design note up front:** Slab 2 made a significant design refactor that `quest.md` §6.5 doesn't fully reflect yet — name sub-enum families (`IFunctionNameT`, `IStructNameT`, `INameT`, etc.) were moved from arena-interned wrappers to inline-owned 16-byte `Copy` values. When you hit the analogous question for `KindT`'s ICitizenTT/ISubKindTT/ISuperKindTT sub-enums, stop and ask the senior whether to apply the same pattern. See "Gotcha 1" below.
 
@@ -112,7 +114,8 @@ Same rules as Slab 2. Quick reference:
 | `CoordT` | `CoordT<'s, 't>` (Copy, inline per §6.4) |
 | `KindT` | `&'t KindT<'s, 't>` (interned, per §6.5) |
 | `ITemplataT[...]` | `ITemplataT<'s, 't>` (inline enum, passed by value; see §6.6 — **erase** the outer `[T]` parameter) |
-| `IdT[SomeNameT]` | `IdT<'s, 't, SomeNameT<'s, 't>>` (inline owned sub-enum, from Slab 2) |
+| `IdT[SomeNameT]` | `IdT<'s, 't>` — **monomorphic**, no generic T (Scala's `+T` is erased). See `docs/reasoning/idt-typed-view-alternatives.md`. |
+| `PrototypeT[IFunctionNameT]` | `PrototypeT<'s, 't>` — monomorphic, same reason. |
 | Concrete `StructTT` / `InterfaceTT` / `KindT` variants | inline by value on the variant payload (e.g. `Struct(StructTT<'s, 't>)`) unless quest.md says otherwise |
 | `FunctionA` / `StructA` / `InterfaceA` / `ImplA` | `&'s FunctionA<'s>` etc. — scout-lifetime refs into higher_typing output |
 | `IEnvironmentT` | `&'s IEnvironmentT<'s, 't>` (scout-allocated from Slab 4 — for now just use the existing trait/enum stub as a type) |
@@ -248,9 +251,9 @@ Same pattern as Slab 2 Step 6. Four families get Val companions this slab:
 
 2. **`ITemplataValT<'s, 't>`** — moves into `templata/templata.rs`. Per §6.6's mixed-mode note, Val variants for the Copy-value templatas hold them by value; Val variants for the `&'t`-ref templatas hold `&'t` too.
 
-3. **`PrototypeValT<'s, 't, T: Copy>`** — moves into `ast/ast.rs` next to `PrototypeT`. Since `PrototypeT<'s, 't, T: Copy>` has `id: IdT<'s, 't, T>` and `return_type: CoordT<'s, 't>`, the Val has the same shape — but note `IdT<'s, 't, T>` contains an arena slice (`init_steps`), so `PrototypeValT` needs a `'tmp` lifetime and an `IdValT<'s, 't, 'tmp, T>` for its id field. Mirrors Slab 2's `IdValT` work.
+3. **`PrototypeValT<'s, 't, 'tmp>`** — moves into `ast/ast.rs` next to `PrototypeT`. Since `PrototypeT<'s, 't>` has `id: IdT<'s, 't>` and `return_type: CoordT<'s, 't>`, and `IdT` contains a `&'t [INameT]` slice, `PrototypeValT` needs the `'tmp` lifetime for the inner `IdValT<'s, 't, 'tmp>`. No generic T — Slab 2's monomorphic refactor dropped it.
 
-4. **`SignatureValT<'s, 't>`** — moves into `ast/ast.rs` next to `SignatureT`. Since `SignatureT { id: IdT<'s, 't, &'t IFunctionNameT<'s, 't>> }` — wait, check: after the Slab 2 refactor this is actually `IdT<'s, 't, IFunctionNameT<'s, 't>>` (inline sub-enum). So `SignatureValT<'s, 't, 'tmp>` holds `id: IdValT<'s, 't, 'tmp, IFunctionNameT<'s, 't>>`. Same pattern.
+4. **`SignatureValT<'s, 't, 'tmp>`** — moves into `ast/ast.rs` next to `SignatureT`. `SignatureT { id: IdT<'s, 't> }`, so `SignatureValT<'s, 't, 'tmp> { id: IdValT<'s, 't, 'tmp> }`. Same `'tmp`-for-init_steps pattern as `PrototypeValT`.
 
 For each `*ValT`, add `#[derive(Copy, Clone, Debug)]` plus custom `PartialEq`/`Eq`/`Hash` *if* the struct has slices or fields where structural hashing isn't enough. If the Val is pure Copy + structural-eq'able (no slices, no `&'s` refs needing pointer-eq), just derive all six traits.
 
@@ -360,7 +363,7 @@ Given the sizes involved here (ICitizenTT variants hold inline StructTT/Interfac
 
 ### Gotcha 2: `PrototypeT` derive(Hash) after Slab 2
 
-Slab 2 made `IdT<'s, 't, T: Copy>` use custom `Hash`/`PartialEq`/`Eq` instead of derive. `PrototypeT<'s, 't, T: Copy>` has `id: IdT<'s, 't, T>` and `return_type: CoordT<'s, 't>`. Its `#[derive(Hash, PartialEq, Eq)]` should still work because Rust's `derive` generates an impl that calls the field's `Hash` — which is the custom `IdT` impl. But if it somehow fails to compile, add a manual Hash/Eq to `PrototypeT` that delegates to `self.id.hash(state); self.return_type.hash(state);`.
+Slab 2 made `IdT<'s, 't>` use custom `Hash`/`PartialEq`/`Eq` instead of derive. `PrototypeT<'s, 't>` has `id: IdT<'s, 't>` and `return_type: CoordT<'s, 't>`. Its `#[derive(Hash, PartialEq, Eq)]` should still work because Rust's `derive` generates an impl that calls the field's `Hash` — which is the custom `IdT` impl. But if it somehow fails to compile, add a manual Hash/Eq to `PrototypeT` that delegates to `self.id.hash(state); self.return_type.hash(state);`.
 
 ### Gotcha 3: `IContainer` / `CitizenDefinitionTemplataT` — narrow enums, small DAGs
 
@@ -378,7 +381,7 @@ You don't need to do anything special about this during Slab 3 — just define t
 
 Scala's `ITemplataT` has an outer phantom type parameter tracking what kind of templata it is (`CoordTemplataType`, `KindTemplataType`, `MutabilityTemplataType`, etc.). In Rust this is **erased** — the variant tag + the `tyype` field on `PlaceholderTemplataT` carry the same information at runtime. Don't try to preserve the phantom parameter; the Rust enum is just `ITemplataT<'s, 't>`.
 
-A **separate** inner parameter — `PrototypeTemplataT[T <: IFunctionNameT]` — is NOT erased (see §6.6). That's the `T` in `PrototypeT<'s, 't, T: Copy>`, threaded through to the `id: IdT<'s, 't, T>` field. Keep that T.
+Note: `PrototypeTemplataT[T <: IFunctionNameT]` in Scala is also a phantom — the Slab 2 post-refactor erased this too. `PrototypeT<'s, 't>` is monomorphic; `PrototypeTemplataT<'s, 't>` holds `prototype: &'t PrototypeT<'s, 't>` with no inner T. quest.md §6.6 mentions this T as "keep it" — that was the old design; the reasoning doc supersedes.
 
 ### Gotcha 6: Don't write `impl XxxT { fn ... }` method bodies
 
@@ -417,7 +420,7 @@ Like Slab 2, this is data-definition work only. Scala `case class` bodies with `
 
 ## Final advice
 
-Like Slab 2, this is data-definition grunt work. It's smaller (~1000 lines scope vs 2600) and simpler (tiny DAG for kind sub-enums), but the IDEPFL Val work is fiddly — especially `PrototypeValT` and `SignatureValT` which need `'tmp` lifetimes because they transitively contain IdT's init_steps slice. Follow the Slab 2 Step 6 template: `IdValT<'s, 't, 'tmp, T: Copy>` is your reference.
+Like Slab 2, this is data-definition grunt work. It's smaller (~1000 lines scope vs 2600) and simpler (tiny DAG for kind sub-enums), but the IDEPFL Val work is fiddly — especially `PrototypeValT` and `SignatureValT` which need `'tmp` lifetimes because they transitively contain IdT's init_steps slice. Follow the Slab 2 Step 6 template: `IdValT<'s, 't, 'tmp>` is your reference.
 
 Get the Gotcha 1 answer before writing code. Everything else is mechanical.
 
