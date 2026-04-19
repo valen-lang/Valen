@@ -22,6 +22,13 @@ import dev.vale.typing.types.{InterfaceTT, KindPlaceholderT, StructTT}
 import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
+use std::collections::HashMap as StdHashMap;
+
+use crate::postparsing::names::IImpreciseNameS;
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::names::names::{IdT, INameT};
+use crate::typing::typing_interner::TypingInterner;
+
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
@@ -132,8 +139,17 @@ sealed trait ILookupContext
 case object TemplataLookupContext extends ILookupContext
 case object ExpressionLookupContext extends ILookupContext
 */
-pub struct GlobalEnvironment<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+// Macro-dispatch fields (functorHelper, *Macro, nameToStructDefinedMacro, etc.)
+// from the Scala case class below are omitted here; they moved to `Compiler` as
+// part of the god-struct refactor. See docs/migration/handoff-god-struct-progress.md.
+#[derive(Debug)]
+pub struct GlobalEnvironmentT<'s, 't>
+where 's: 't,
+{
+  pub name_to_top_level_environment:
+    &'t [(&'t IdT<'s, 't>, TemplatasStoreT<'s, 't>)],
+  pub builtins: TemplatasStoreT<'s, 't>,
+}
 /*
 case class GlobalEnvironment(
   functorHelper: FunctorHelper,
@@ -287,9 +303,68 @@ fn code_locations_match() {
   }
 }
 */
-pub struct TemplatasStore<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
-impl<'s, 't> TemplatasStore<'s, 't> {}
+#[derive(Copy, Clone, Debug)]
+pub struct TemplatasStoreT<'s, 't>
+where 's: 't,
+{
+  pub templatas_store_name: &'t IdT<'s, 't>,
+  pub name_to_entry: &'t [(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
+  pub imprecise_to_entries:
+    &'t [(&'s IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>])],
+}
+
+// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
+impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") }
+}
+impl<'s, 't> Eq for TemplatasStoreT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for TemplatasStoreT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+    panic!("vcurious: TemplatasStoreT.hash")
+  }
+}
+
+// (no scala counterpart — builder for TemplatasStoreT. Heap Vec/HashMap during
+// construction, frozen to arena slices at build_in.)
+pub struct TemplatasStoreBuilder<'s, 't>
+where 's: 't,
+{
+  pub templatas_store_name: &'t IdT<'s, 't>,
+  pub name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
+  pub imprecise_to_entries:
+    StdHashMap<&'s IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>,
+}
+
+impl<'s, 't> TemplatasStoreBuilder<'s, 't>
+where 's: 't,
+{
+  pub fn new(templatas_store_name: &'t IdT<'s, 't>) -> Self {
+    TemplatasStoreBuilder {
+      templatas_store_name,
+      name_to_entry: Vec::new(),
+      imprecise_to_entries: StdHashMap::new(),
+    }
+  }
+
+  pub fn build_in(
+    self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> TemplatasStoreT<'s, 't> {
+    let name_to_entry = interner.alloc_slice_from_vec(self.name_to_entry);
+    let mut pairs: Vec<(&'s IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>])> =
+      Vec::with_capacity(self.imprecise_to_entries.len());
+    for (k, v) in self.imprecise_to_entries.into_iter() {
+      let entries = interner.alloc_slice_from_vec(v);
+      pairs.push((k, entries));
+    }
+    let imprecise_to_entries = interner.alloc_slice_from_vec(pairs);
+    TemplatasStoreT {
+      templatas_store_name: self.templatas_store_name,
+      name_to_entry,
+      imprecise_to_entries,
+    }
+  }
+}
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
 case class TemplatasStore(

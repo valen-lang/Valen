@@ -112,7 +112,7 @@ pub struct Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub scout_arena: &'ctx ScoutArena<'s>,
-    pub typing_interner: &'ctx TypingInterner<'t>,
+    pub typing_interner: &'ctx TypingInterner<'s, 't>,
     pub keywords: &'ctx Keywords<'s>,
     pub opts: &'ctx TypingPassOptions<'s>,
 }
@@ -123,7 +123,7 @@ where 's: 't,
 {
     pub fn new(
         scout_arena: &'ctx ScoutArena<'s>,
-        typing_interner: &'ctx TypingInterner<'t>,
+        typing_interner: &'ctx TypingInterner<'s, 't>,
         keywords: &'ctx Keywords<'s>,
         opts: &'ctx TypingPassOptions<'s>,
     ) -> Self {

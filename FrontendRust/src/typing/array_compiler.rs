@@ -623,7 +623,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn compile_static_sized_array(&self, global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
+    pub fn compile_static_sized_array(&self, global_env: &GlobalEnvironmentT, coutputs: &mut CompilerOutputs<'s, 't>) {
         panic!("Unimplemented: compile_static_sized_array");
     }
 /*
@@ -713,7 +713,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn compile_runtime_sized_array(&self, global_env: &GlobalEnvironment, coutputs: &mut CompilerOutputs<'s, 't>) {
+    pub fn compile_runtime_sized_array(&self, global_env: &GlobalEnvironmentT, coutputs: &mut CompilerOutputs<'s, 't>) {
         panic!("Unimplemented: compile_runtime_sized_array");
     }
 /*

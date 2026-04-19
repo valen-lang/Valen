@@ -62,7 +62,7 @@ where 's: 't,
         &self,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
-    ) -> Vec<(IdT<'s, 't>, FunctionEnvEntry<'s, 't>)> {
+    ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: get_struct_sibling_entries_struct_drop");
     }
 /*

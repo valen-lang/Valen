@@ -658,7 +658,7 @@ where 's: 't,
         coutputs: CompilerOutputs,
         original_calling_denizen_id: IdT<'s, 't>,
         closure_struct_ref: StructTT<'s, 't>,
-    ) -> (Vec<IVariableT<'_, '_>>, Vec<(INameT<'_, '_>, IEnvEntry)>) {
+    ) -> (Vec<IVariableT<'_, '_>>, Vec<(INameT<'_, '_>, IEnvEntryT<'_, '_>)>) {
         panic!("Unimplemented: make_closure_variables_and_entries");
     }
 /*

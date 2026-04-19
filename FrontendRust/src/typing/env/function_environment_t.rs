@@ -17,6 +17,9 @@ import dev.vale.{Interner, Profiler, vassert, vcurious, vfail, vimpl, vpass, vwa
 import scala.collection.immutable.{List, Map, Set}
 
 */
+use crate::typing::names::names::IVarNameT;
+use crate::typing::types::types::{CoordT, StructTT, VariabilityT};
+
 pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 // TODO: placeholder PhantomData — replace with real fields during body migration
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {}
@@ -766,10 +769,15 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
-pub enum IVariableT<'s, 't> {
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum IVariableT<'s, 't>
+where 's: 't,
+{
+  AddressibleLocal(AddressibleLocalVariableT<'s, 't>),
+  ReferenceLocal(ReferenceLocalVariableT<'s, 't>),
+  AddressibleClosure(AddressibleClosureVariableT<'s, 't>),
+  ReferenceClosure(ReferenceClosureVariableT<'s, 't>),
 }
-// TODO: placeholder PhantomData — replace with real variants during body migration
 /*
 sealed trait IVariableT  {
   def name: IVarNameT
@@ -777,10 +785,13 @@ sealed trait IVariableT  {
   def coord: CoordT
 }
 */
-pub enum ILocalVariableT<'s, 't> {
-  _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub enum ILocalVariableT<'s, 't>
+where 's: 't,
+{
+  Addressible(AddressibleLocalVariableT<'s, 't>),
+  Reference(ReferenceLocalVariableT<'s, 't>),
 }
-// TODO: placeholder PhantomData — replace with real variants during body migration
 /*
 sealed trait ILocalVariableT extends IVariableT {
   def name: IVarNameT
@@ -793,8 +804,14 @@ sealed trait ILocalVariableT extends IVariableT {
 // Lucky for us, the parser figured out if any of our child closures did
 // any mutates/moves/borrows.
 */
-pub struct AddressibleLocalVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AddressibleLocalVariableT<'s, 't>
+where 's: 't,
+{
+  pub name: IVarNameT<'s, 't>,
+  pub variability: VariabilityT,
+  pub coord: CoordT<'s, 't>,
+}
 /*
 case class AddressibleLocalVariableT(
   name: IVarNameT,
@@ -807,8 +824,14 @@ override def equals(obj: Any): Boolean = vcurious();
 
 }
 */
-pub struct ReferenceLocalVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ReferenceLocalVariableT<'s, 't>
+where 's: 't,
+{
+  pub name: IVarNameT<'s, 't>,
+  pub variability: VariabilityT,
+  pub coord: CoordT<'s, 't>,
+}
 /*
 case class ReferenceLocalVariableT(
   name: IVarNameT,
@@ -821,8 +844,15 @@ override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 */
-pub struct AddressibleClosureVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct AddressibleClosureVariableT<'s, 't>
+where 's: 't,
+{
+  pub name: IVarNameT<'s, 't>,
+  pub closured_vars_struct_type: &'t StructTT<'s, 't>,
+  pub variability: VariabilityT,
+  pub coord: CoordT<'s, 't>,
+}
 /*
 case class AddressibleClosureVariableT(
   name: IVarNameT,
@@ -833,8 +863,15 @@ case class AddressibleClosureVariableT(
   vpass()
 }
 */
-pub struct ReferenceClosureVariableT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-// TODO: placeholder PhantomData — replace with real fields during body migration
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct ReferenceClosureVariableT<'s, 't>
+where 's: 't,
+{
+  pub name: IVarNameT<'s, 't>,
+  pub closured_vars_struct_type: &'t StructTT<'s, 't>,
+  pub variability: VariabilityT,
+  pub coord: CoordT<'s, 't>,
+}
 /*
 case class ReferenceClosureVariableT(
   name: IVarNameT,
@@ -850,6 +887,85 @@ override def equals(obj: Any): Boolean = vcurious();
 
 object EnvironmentHelper {
 */
+
+impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
+  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Addressible(v) }
+}
+impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
+  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Reference(v) }
+}
+
+impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { IVariableT::AddressibleLocal(v) }
+}
+impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { IVariableT::ReferenceLocal(v) }
+}
+impl<'s, 't> From<AddressibleClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: AddressibleClosureVariableT<'s, 't>) -> Self { IVariableT::AddressibleClosure(v) }
+}
+impl<'s, 't> From<ReferenceClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: ReferenceClosureVariableT<'s, 't>) -> Self { IVariableT::ReferenceClosure(v) }
+}
+
+impl<'s, 't> From<ILocalVariableT<'s, 't>> for IVariableT<'s, 't> {
+  fn from(v: ILocalVariableT<'s, 't>) -> Self {
+    match v {
+      ILocalVariableT::Addressible(a) => IVariableT::AddressibleLocal(a),
+      ILocalVariableT::Reference(r) => IVariableT::ReferenceLocal(r),
+    }
+  }
+}
+
+impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
+  type Error = IVariableT<'s, 't>;
+  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v {
+      IVariableT::AddressibleLocal(a) => Ok(ILocalVariableT::Addressible(a)),
+      IVariableT::ReferenceLocal(r) => Ok(ILocalVariableT::Reference(r)),
+      other => Err(other),
+    }
+  }
+}
+
+impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
+  type Error = IVariableT<'s, 't>;
+  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { IVariableT::AddressibleLocal(a) => Ok(a), other => Err(other) }
+  }
+}
+impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
+  type Error = IVariableT<'s, 't>;
+  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { IVariableT::ReferenceLocal(r) => Ok(r), other => Err(other) }
+  }
+}
+impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleClosureVariableT<'s, 't> {
+  type Error = IVariableT<'s, 't>;
+  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { IVariableT::AddressibleClosure(a) => Ok(a), other => Err(other) }
+  }
+}
+impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceClosureVariableT<'s, 't> {
+  type Error = IVariableT<'s, 't>;
+  fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { IVariableT::ReferenceClosure(r) => Ok(r), other => Err(other) }
+  }
+}
+
+impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
+  type Error = ILocalVariableT<'s, 't>;
+  fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { ILocalVariableT::Addressible(a) => Ok(a), other => Err(other) }
+  }
+}
+impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
+  type Error = ILocalVariableT<'s, 't>;
+  fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
+    match v { ILocalVariableT::Reference(r) => Ok(r), other => Err(other) }
+  }
+}
+
 fn lookup_with_name_inner() {
   panic!("Unimplemented: lookup_with_name_inner");
 }
