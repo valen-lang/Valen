@@ -14,7 +14,7 @@ We're porting `src/typing/` from Scala to Rust, slab by slab per `quest.md` §12
 | 1 | leaf types (OwnershipT, primitive KindT payloads, leaf templatas) | ✅ | commit `9fd7641c` |
 | 2 | name hierarchy (~60 concrete names, 22 sub-enums, IdT, ValT companions) | ✅ | `slab-2-complete` · `FrontendRust/docs/migration/handoff-slab-2.md` |
 | 3 | Kind / Coord / Templata trio | ✅ | `slab-3-complete` · `FrontendRust/docs/migration/handoff-slab-3.md` |
-| **4** | **environments** | **⏳ next** | write handoff-slab-4.md; design spec is `quest.md` Part 3 |
+| **4** | **environments + real interner bodies** | **⏳ next** | `FrontendRust/docs/migration/handoff-slab-4.md` (drafted); design spec `quest.md` Part 3 (updated with 't-arena + IInDenizen enum) + `docs/reasoning/environments-per-denizen-long-term.md` |
 | 5 | expression AST | ⏳ | `quest.md` Part 7 |
 | 6 | CompilerOutputs | ⏳ | `quest.md` Part 4 |
 | 7 | HinputsT + Compiler shell + run_typing_pass | ⏳ | `quest.md` Part 10 |
@@ -23,7 +23,7 @@ We're porting `src/typing/` from Scala to Rust, slab by slab per `quest.md` §12
 
 ## Design decisions that *override* `quest.md`
 
-`quest.md` predates two significant refactors we did during Slabs 2–3. If the doc and the code disagree, **the code and the reasoning doc win**. Sections that are out-of-date:
+`quest.md` predates several design refactors we did during Slabs 2–3 and a correction that surfaced planning Slab 4. If the doc and the code/reasoning-doc disagree, **the code and the reasoning doc win**. Sections that are out-of-date:
 
 ### `quest.md` §6.3 — `IdT` is monomorphic, not generic
 
@@ -46,6 +46,16 @@ Original: `ITemplataT` interned; `PrototypeTemplataT[T <: IFunctionNameT]` inner
 Current: `ITemplataT` is inline-owned, not interned. Six of its variants hold `&'t` refs to interned leaf payloads (Coord/Kind/Placeholder/Prototype/Isa/CoordList); five hold `&'t` refs to heavy allocated-but-not-interned payloads (Function/StructDefinition/InterfaceDefinition/ImplDefinition/ExternFunction); the rest are inline Copy values (Integer, Boolean, Mutability, etc.). Heavy-templata `PartialEq`/`Eq`/`Hash` use `std::ptr::eq` on the scout-lifetime refs (scout canonicalizes those).
 
 `PrototypeTemplataT` has no inner T — since `PrototypeT<'s, 't>` is monomorphic, `PrototypeTemplataT<'s, 't>` just holds `&'t PrototypeT<'s, 't>`.
+
+### `quest.md` §3.1 — envs live in `'t` arena, not `'s`
+
+Original: §3.1 has `IEnvironmentT<'s, 't>` variants allocated via `scout_arena.alloc(...)` into the scout arena.
+
+Current: envs must live in the **typing arena `'t`**, not scout `'s`. Reason: envs contain `TemplatasStoreT` which stores `IEnvEntryT::Templata(ITemplataT<'s, 't>)`, which transitively holds `&'t` refs to interned typing-pass payloads. A `'s`-allocated struct can only hold `&'x` references where `'x: 's`; since `'s: 't` (scout outlives typing), `'t: 's` is false, so `'s`-allocated envs cannot hold `&'t` refs.
+
+Concretely: `IEnvironmentT<'s, 't>` variants hold `&'t CitizenEnvironmentT<'s, 't>` etc. (not `&'s`); envs are allocated via the typing arena; `global_env` back-references on each variant are `&'t GlobalEnvironmentT<'s, 't>`.
+
+Slab 4 implements this. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md` for the migration-phase arena design and the long-term per-denizen two-tier target, and `FrontendRust/docs/migration/handoff-slab-4.md` for the migration-phase spec.
 
 ### `quest.md` §6.1 & §1.5 — corrected interned/inline family lists
 
@@ -74,7 +84,7 @@ quest.md §1.5 was partially updated through Slab 2; §6.1 still shows ITemplata
 
 ### Slab 3 patched `env/environment.rs` stubs
 
-To let `OverloadSetT` derive `Hash`/`Eq`/`PartialEq`/`Debug`, Slab 3 added those derives to the `IEnvironmentT` / `IInDenizenEnvironmentT` trait/enum stubs. **Slab 4 will replace those stubs with real enums per §3.1** — make sure the new enums derive the same set, or OverloadSetT breaks.
+To let `OverloadSetT` derive `Hash`/`Eq`/`PartialEq`/`Debug`, Slab 3 added those derives to the `IEnvironmentT` / `IInDenizenEnvironmentT` trait/enum stubs. **Slab 4 replaces those stubs with real enums per §3.1 (plus the `'t`-arena correction noted above)** — make sure the new enums derive the same set, or OverloadSetT breaks. `IDenizenEnvironmentBoxT` gets deleted outright; the builder-freeze pattern replaces the mutable-box role.
 
 ### Heavy-templata custom pointer-identity Eq/Hash
 
@@ -90,6 +100,7 @@ Slab 3 added custom `PartialEq`/`Eq`/`Hash` impls on `FunctionTemplataT`, `Struc
 - Sub-compiler methods have dangling free `fn equals` / `fn hash_code` stubs from the slice pipeline. Wrap or delete in Slab 8.
 - `dispatch_function_body_macro` / friends on `Compiler` are not wired yet — add when env lookup works (Slab 4 or later).
 - `IInfererDelegate` trait stays vestigial because `compiler_solver.rs` fn sigs still reference `&dyn IInfererDelegate`. Remove during Slab 8 signature rewrites.
+- **Env storage migration to per-denizen two-tier arenas** is captured as a post-Slab-8 item in `docs/reasoning/environments-per-denizen-long-term.md`. Migration-phase uses a single-arena env model; the reasoning doc explains the cross-denizen edge audit and the eventual split into a program-wide outputs arena (skeleton envs + resolved definitions) and per-top-level-denizen scratchpads (working envs + transient templatas) with a side-table + `EnvIdx` handoff.
 
 ## Key files / directories
 
@@ -98,6 +109,8 @@ Slab 3 added custom `PartialEq`/`Eq`/`Hash` impls on `FunctionTemplataT`, `Struc
 | `quest.md` | design spec (with overrides above) |
 | `TL-HANDOFF.md` | this doc |
 | `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` | IdT/wrapper-enum design decision, records alternatives for post-migration |
+| `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md` | env storage decision: single arena during migration, two-tier per-denizen arenas post-migration |
+| `FrontendRust/docs/architecture/typing-pass-arenas.md` | typing-pass arena architecture (current + pointer to the long-term reasoning doc) |
 | `FrontendRust/docs/reasoning/` | other design-decision docs (slice interning, arena maps, check-scala-comments hook, output-data-ref-or-copy) |
 | `FrontendRust/docs/migration/handoff-slab-2.md` | Slab 2 handoff (~60 concrete names + sub-enums + IdT + From/TryFrom bridges + ValT) |
 | `FrontendRust/docs/migration/handoff-slab-3.md` | Slab 3 handoff (KindT/Coord/Templata trio + IDEPFL Vals) |
@@ -115,21 +128,22 @@ Slab 3 added custom `PartialEq`/`Eq`/`Hash` impls on `FunctionTemplataT`, `Struc
 
 1. **Review this doc + `quest.md`** (with the overrides in mind).
 2. **Optional doc cleanup**: fold the reasoning-doc "chosen" decisions back into `quest.md` §§6.3/6.5/6.6 and trim the reasoning doc to just the deferred alternatives. Non-blocking.
-3. **Start Slab 4**: write `FrontendRust/docs/migration/handoff-slab-4.md` matching the Slab 2/3 style. Design spec is `quest.md` Part 3. Key subtlety: **§3.1 wants `trait IEnvironmentT` converted into a real enum** (9 variants). Slab 3 patched the stubs with derives; make sure the new enum carries them. Expect a full workday for Slab 4 — environments are structural, not just data definitions.
-4. **Each subsequent slab** gets its own handoff doc, committed + tagged on completion. Keep `slab-N-complete` tags consistent.
+3. **Start Slab 4**: handoff is drafted at `FrontendRust/docs/migration/handoff-slab-4.md`, matching the Slab 2/3 style. Design spec overrides (env arena = `'t`, `IEnvironmentT` variants hold `&'t _`, second `IInDenizenEnvironmentT` enum, inline `IEnvEntryT`, interner bodies implemented in this slab, etc.) are pre-answered in the handoff's Gotchas. Expect ≥ one full workday — environments are structural, not just data definitions.
+4. **Each subsequent slab** gets its own handoff doc. When a slab is done, hand it back for review. Don't commit — the human handles commits and tags. Tag naming for the human's reference: `slab-N-complete`.
 
 ## Suggested process for the incoming TL
 
 - Spawn a junior for each slab. Write them a detailed handoff doc (Slab 2/3 style — prescriptive, lists Gotchas, references shields + reasoning docs).
 - Answer design questions the junior raises in the handoff *before* they code, not during — saves rework. Gotcha 1 in the Slab 3 handoff is an example of this done well (decision captured, not deferred).
 - When a design diverges from `quest.md`, record the divergence in `FrontendRust/docs/reasoning/<topic>.md` with the chosen approach + alternatives considered + why-deferred. Mirror the `idt-typed-view-alternatives.md` shape.
+- **Never commit. The human handles all commits and tags.** Juniors and TLs should finish a slab, run `cargo check --lib` clean, skim their own diff, then hand it back for review — with uncommitted changes in the working tree. The human reviews, directs any changes, and is the one who runs `git commit` / `git tag`. If a junior needs a local savepoint mid-slab, use `git stash` or a WIP branch; don't commit on `rustmigrate-z`. Handoff docs may describe work-organization steps, but those are self-review savepoints, not commit points.
 - After Slab 8 the build should be clean. Slab 9+ becomes test-driven; the shape of that work is different — more per-method instead of per-type-family.
 
 ## Risks / open questions
 
 - **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time type-safe "this IdT's local_name is a FunctionName" assertions. `idt-typed-view-alternatives.md` lists four ways to re-introduce that post-migration. Worth the eventual discussion; not pressing.
 - **LSP / long-running use**: §Part 13 in quest.md flags this — scout arena retention through instantiation is memory-heavy. Batch compilation for now.
-- **Interner implementation**: not yet designed beyond the panic-stub API. Someone needs to think about whether to use `bumpalo::Bump` + hashbrown, or something fancier. Worth a reasoning doc when it's tackled.
+- **Interner implementation**: Slab 4 lands the real bodies (`bumpalo::Bump` + `hashbrown::HashMap` with `RefCell` interior mutation). Worth a reasoning doc once it's written.
 - **`HinputsT` shape**: deferred to Slab 7; currently a bare marker. If field set grows (e.g. adding an impl-to-edge cache map or similar), revisit before Slab 7.
 
 Questions? `quest.md` + the reasoning docs + the Slab 2/3 handoffs have the context. When in doubt, prefer Scala parity over Rust-idiomatic optimization — that's been the guiding principle through Slabs 2–3.

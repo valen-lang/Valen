@@ -106,9 +106,9 @@ For any category, the content lives in either a single file `docs/<category>.md`
 
 ### 7. Reasoning (sub-category of Architecture)
 
-**Audience:** Anyone wondering "why is it done this way?"
+**Audience:** Anyone wondering "why is it done this way?" or "where is this heading?"
 
-**Purpose:** Records the alternatives considered and why the current approach was chosen. Lives alongside the architecture it explains.
+**Purpose:** Records the alternatives considered and why the current approach was chosen, **and future plans** the code is not yet implementing — target designs, deferred refactors, alternatives held in reserve for post-migration. Software architecture is about evolution, so the place that records *why it looks the way it does today* is also the place that records *where we want it to go*. Lives alongside the architecture it explains, and is always cross-referenced from the relevant Architecture doc so readers discover the future plan while reading about the current design.
 
 **Location:** `docs/reasoning.md` or `docs/reasoning/<topic>.md`
 
@@ -173,4 +173,4 @@ Each link is a relative markdown link in a `## See also` section at the bottom o
 - **Inventories/catalogs** of structs, functions, or types. These are derivable from code and go stale. If needed during migration, they belong in #5.
 - **Anything derivable from `git log` or `git blame`.**
 - **Debugging solutions or fix recipes.** The fix is in the code; the commit message has the context.
-- **Plans and proposals.** These are migration-specific (#5) and get deleted or graduated into architecture (#6) once implemented.
+- **Plans and proposals.** Migration-specific plans (ephemeral, deleted once done) go in #5. Long-term architectural targets the code is converging toward go in #7 (Reasoning) and are cross-referenced from #6 (Architecture).

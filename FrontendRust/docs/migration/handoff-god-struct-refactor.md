@@ -1,5 +1,7 @@
 # Handoff: Collapse Typing-Pass Sub-Compilers Into A Single God-Struct
 
+**⚠️ HISTORICAL — Phase 2 complete.** This doc describes the god-struct refactor that shipped. One lifetime example inside (line ~219, `env: &'s IEnvironmentT<'s, 't>` on `IFunctionGenerator::generate`) used the then-current assumption that envs lived in `'s`. That was corrected in Slab 4 planning — envs are now `'t`-allocated; the example signature would use `&'t` today. See `TL-HANDOFF.md` overrides, `quest.md` §3.1, and `docs/reasoning/environments-per-denizen-long-term.md`.
+
 ## Who this is for
 
 You're a junior engineer picking up a medium-scope structural refactor in a Scala→Rust compiler-migration project. This doc gives you the full picture: the goal, the current state, the target state, the theory behind the design, and the step-by-step approach. Read the whole thing before touching code, then keep it open while you work.

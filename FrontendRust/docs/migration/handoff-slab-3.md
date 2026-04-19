@@ -1,5 +1,7 @@
 # Handoff: Typing Pass Slab 3 — Kind / Coord / Templata Trio
 
+**⚠️ HISTORICAL — PARTIALLY SUPERSEDED.** This handoff was written before Slab 4 planning, and spec'd `OverloadSetT.env`, `FunctionTemplataT.outer_env`, `StructDefinitionTemplataT.declaring_env`, `InterfaceDefinitionTemplataT.declaring_env`, and `ImplDefinitionTemplataT.env` as `&'s IEnvironmentT<'s, 't>` / `&'s IInDenizenEnvironmentT<'s, 't>` — matching the then-current `quest.md` §3.1 that placed envs in the scout arena. Slab 4 planning flipped envs to the `'t` typing arena (a `'s`-allocated env cannot hold `&'t` refs; see `docs/reasoning/environments-per-denizen-long-term.md`), so those five sites need to be updated from `&'s` to `&'t`. Slab 4's Gotcha 11 lists them. The rest of this doc is still valid; read as the record of what Slab 3 actually shipped.
+
 ## Who this is for
 
 You're picking up an in-progress Rust port of a Scala compiler frontend. A senior engineer has been moving through the typing pass one "slab" at a time per `quest.md` §12. Slabs 0–2 are done:

@@ -6,9 +6,9 @@ You're picking up an in-progress Rust port of a Scala compiler frontend. A senio
 
 **Read these first in this order**, then come back:
 
-1. `quest.md` — at least §§1.2, 1.4, 1.5, 6.2, 6.3, 12.1 Slab 2 paragraph, and §12.0 "Preserve The `// mig:` Audit Trail". That is the design spec; it is the source of truth.
+1. `quest.md` — at least §§1.2, 1.4, 1.5, 6.2, 6.3, 12.1 Slab 2 paragraph. That is the design spec; it is the source of truth. (§12.0 refers to a `// mig:` audit trail that Step 0 below explicitly removes — ignore the `// mig:` parts and follow the `/* scala */` block rules.)
 2. `.claude/rules/postparser/IDEPFL-postparser-interning.md` — the dual-enum "value enum for lookup / reference enum for storage" pattern. Every interned typing-pass type family follows this pattern, and Slab 2 creates four of them.
-3. `FrontendRust/docs/migration/handoff-god-struct-progress.md` — background on the slice pipeline, the `// mig:` marker convention, and the pre-commit hook that guards the `/* scala */` blocks. You won't *do* god-struct work, but you'll follow the same audit-trail convention.
+3. `FrontendRust/docs/migration/handoff-god-struct-progress.md` — background on the slice pipeline and the pre-commit hook that guards the `/* scala */` blocks. You won't *do* god-struct work, but you'll follow the same audit-trail convention (blocks, not markers).
 4. This doc.
 
 You shouldn't need to read the Scala source externally — every Scala case class and sealed trait is already embedded inline in the `/* ... */` blocks in `src/typing/names/names.rs`. Treat those as your spec. If you can't figure out what a Scala type does from its block, ask; don't guess.
@@ -31,9 +31,8 @@ By the end of Slab 2, `names.rs` compiles cleanly (0 errors), nothing past names
 
 Open `src/typing/names/names.rs`. You'll see ~95 entries, each in one of two shapes:
 
-**Shape A — concrete name struct (stub):**
+**Shape A — concrete name struct (stub), pre-Step-0:**
 ```rust
-// mig: struct FunctionNameT
 pub struct FunctionNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 case class FunctionNameT(
@@ -44,11 +43,10 @@ case class FunctionNameT(
 */
 ```
 
-Your job for each concrete struct is: read the Scala `case class` in the `/* */`, translate the fields into Rust per the arena/lifetime rules, replace the `PhantomData` tuple struct with a named-field struct, delete the `// TODO: placeholder PhantomData — replace with real fields during body migration` line if it exists above the struct. Keep the `// mig:` marker. Keep the Scala `/* */` untouched — the pre-commit hook checks it verbatim.
+Your job for each concrete struct is: read the Scala `case class` in the `/* */`, translate the fields into Rust per the arena/lifetime rules, replace the `PhantomData` tuple struct with a named-field struct, delete the `// TODO: placeholder PhantomData — replace with real fields during body migration` line if it exists above the struct. Keep the Scala `/* */` untouched — the pre-commit hook checks it verbatim.
 
-**Shape B — sub-enum (stub):**
+**Shape B — sub-enum (stub), pre-Step-0:**
 ```rust
-// mig: enum IFunctionNameT
 pub enum IFunctionNameT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait IFunctionNameT extends INameT with IInstantiationNameT {
@@ -204,47 +202,34 @@ The postparser names file (`FrontendRust/src/postparsing/names.rs`) has a comple
 
 Work bottom-up — concrete structs first, then sub-enums once their variants exist, then the top-level `INameT`, then `IdT` and conversions.
 
-### Step 0: Fix misplaced `// mig: fn` markers (prerequisite cleanup)
+### Step 0: Strip all `// mig:` markers (prerequisite cleanup)
 
-During the god-struct refactor, the wrap-each-fn-in-its-own-`impl Compiler`-block pattern ended up with the `// mig: fn xxx` markers sitting **above** the `impl` line instead of directly above the `fn xxx` line. That's wrong: the marker names a function, so it belongs right above the function signature — like the `// mig: struct`/`// mig: enum` markers sit right above their struct/enum. You'll see this shape all over `src/typing/`:
+The `// mig: struct ...` / `// mig: enum ...` / `// mig: fn ...` / `// mig: impl ...` / `// mig: trait ...` markers are an artifact of the slice pipeline — they existed so slicing scripts could match each Rust definition to its Scala counterpart. Slicing is done, the pipeline has been fully consumed across `src/typing/`, and the markers no longer serve a purpose. The `/* scala */` blocks remain as the audit trail; those are what the pre-commit hook enforces, not the `// mig:` lines.
 
-```rust
-// mig: fn xxx                                    <-- WRONG location
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
-    pub fn xxx(&self, ...) { panic!("..."); }
-/*
-  def xxx(...) = { ... }
-*/
-}
+Do a pre-pass before starting Slab 2 work: sweep across all of `src/typing/` (including subdirs like `macros/`, `citizen/`, `function/`, `expression/`, `infer/`, `names/`, `templata/`, `ast/`, `env/`, `types/`) and delete every `// mig:` comment line.
+
+Examples of lines to delete (there are ~500+ of them):
+
 ```
-
-Correct shape:
-
-```rust
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
-    // mig: fn xxx                                <-- RIGHT location
-    pub fn xxx(&self, ...) { panic!("..."); }
-/*
-  def xxx(...) = { ... }
-*/
-}
+// mig: struct FunctionNameT
+// mig: enum IFunctionNameT
+// mig: fn generate_function_body_lock_weak
+// mig: impl Compiler
+// mig: trait IFunctionGenerator
 ```
-
-Do a pre-pass before starting Slab 2 work: sweep across all of `src/typing/` (including subdirs like `macros/`, `citizen/`, `function/`, `expression/`, `infer/`) and move every `// mig: fn <name>` line that sits above an `impl` block down to sit above the `fn <name>` declaration inside the block.
 
 **Rules for the cleanup:**
-- **Only move `// mig: fn ...` markers.** `// mig: struct ...` and `// mig: enum ...` markers belong above their struct/enum declaration and are already correctly placed — don't touch those.
-- **Preserve indentation.** The fn marker, now inside the impl, should be indented 4 spaces to match the `pub fn` line.
-- **Don't change the `/* scala */` blocks.** The pre-commit hook is strict about them; see Gotcha 1 below.
-- **If there's anything else between the misplaced `// mig: fn` line and the `impl` line** (like a `// vestigial:` note or a doc comment), leave those where they are. The god-struct refactor didn't add such notes; you'd only see them on the handful of helper-not-really-a-macro cases.
-- **Do NOT run this as a bulk `sed`.** The project's `CLAUDE.md` has a whole "Bulk Sed Safety Protocol" section; follow it. Safer: do it per-file with `Edit`, verifying each with a quick `cargo check --lib` before moving on. You can batch a few files at a time, just stay under ~10 edits per check so if something breaks you know where.
-- **Expected scope:** roughly 200+ occurrences across ~80 files, but they're all the exact same transformation. Ballpark half a day. Commit the whole sweep as one commit ("Fix misplaced `// mig: fn` markers in src/typing/"). `cargo check --lib` must stay at 0 errors throughout.
 
-After this cleanup is committed, move to Step 1.
+- **Delete only lines whose content starts with `// mig:`** (optionally preceded by whitespace). Don't delete anything else — in particular, don't touch `// TODO: placeholder PhantomData` lines (those flag stubs that later slabs will resolve) or `// vestigial:` notes (those flag intentional workarounds) or `// (no scala counterpart ...)` notes.
+- **Preserve surrounding whitespace.** When deleting a `// mig:` line, remove the entire line including its newline — don't leave a blank line where it was unless the file had a blank line there before the marker was inserted.
+- **Don't change the `/* scala */` blocks.** The pre-commit hook is strict about them; see Gotcha 1 below.
+- **Do NOT run this as a bulk `sed`** against the whole tree in one go. The project's `CLAUDE.md` has a whole "Bulk Sed Safety Protocol" section; follow it. Safer approach:
+  - Run per-file (or per-subdir) with the `Edit` tool.
+  - After each batch of ~5 files, run `cargo check --lib --manifest-path FrontendRust/Cargo.toml > /tmp/sylvan-slab-2.txt 2>&1` and confirm `grep -c "^error" /tmp/sylvan-slab-2.txt` is still 0. If it jumped, you accidentally deleted something that wasn't a `// mig:` line (or deleted one that actually was a load-bearing annotation — shouldn't happen, but verify).
+  - If you *do* want to use `sed` on a single file as a time saver, dry-run it first: `sed "/^\s*\/\/ mig:/d" FILE | diff FILE -`, eyeball the diff, then apply with `sed -i ''` (macOS) only if it looks right.
+- **Expected scope:** ~500+ markers across ~90 files. Ballpark a few hours of mechanical work. Commit the whole sweep as one commit ("Strip `// mig:` markers from src/typing/ — slice pipeline artifacts, no longer needed"). `cargo check --lib` must stay at 0 errors throughout (it should — deleting line comments can't break code).
+
+After this cleanup is committed, move to Step 1. From here on out — including in Slab 2 itself — do not add `// mig:` markers to any new code.
 
 ### Step 1: Confirm your starting point
 
@@ -269,7 +254,7 @@ For each concrete struct:
 3. Replace the `pub struct XxxNameT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);` line with a real `pub struct XxxNameT<'s, 't> { pub field1: T1, pub field2: T2, ... }`.
 4. Delete any `// TODO: placeholder PhantomData — replace with real fields during body migration` line immediately above the struct (that comment is only for Phase-1-era stubs).
 5. Add `#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]` above the struct.
-6. Leave the `// mig: struct XxxNameT` marker and the `/* scala */` block untouched.
+6. Leave the `/* scala */` block untouched. (The `// mig:` markers will have been deleted in Step 0.)
 
 Do **not** write `impl XxxNameT { ... }` blocks. The Scala class bodies have lots of derived methods (`def packageId`, `def steps`, etc.) — those are Slab 8/9+ work. Just the struct bodies.
 
