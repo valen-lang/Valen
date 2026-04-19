@@ -535,6 +535,14 @@ where 's: 't,
     impl_intern_templata_wrapper_simple!(intern_prototype_templata, Prototype, PrototypeTemplataT);
     impl_intern_templata_wrapper_simple!(intern_isa_templata, Isa, IsaTemplataT);
 
+    // Hand-written (not via impl_intern_templata_wrapper_simple!) because
+    // CoordListTemplataT carries a `'tmp`-borrowed arena slice (per @DSAUIMZ —
+    // the one "transient" interned-templata-payload variant). The simple macro
+    // takes a payload struct by value and assumes the key type is the struct
+    // itself; here the key is CoordListTemplataValT<'s, 't, 'tmp> (separate type,
+    // 'tmp-parameterized). The family-level intern_templata_payload handles the
+    // promote-on-miss inside its `match` arm for the CoordList variant; this
+    // wrapper just does the wrap/dispatch/unwrap dance.
     pub fn intern_coord_list_templata<'tmp>(
         &self,
         val: CoordListTemplataValT<'s, 't, 'tmp>,
