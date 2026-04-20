@@ -524,13 +524,18 @@ where 's: 't,
 */
 }
 
-pub mod struct_compiler_module {
-use super::*;
 /*
 object StructCompiler {
 */
-pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> MutabilityT {
-    panic!("Unimplemented: get_compound_type_mutability");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_compound_type_mutability(
+        &self,
+        member_types: &[CoordT<'s, 't>],
+    ) -> MutabilityT {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def getCompoundTypeMutability(memberTypes2: Vector[CoordT])
@@ -540,17 +545,20 @@ pub fn get_compound_type_mutability(member_types: &[CoordT<'_, '_>]) -> Mutabili
     if (allMembersImmutable) ImmutableT else MutableT
   }
 */
-pub fn get_mutability<'s, 't>(
-    sanity_check: bool,
-    interner: &Interner<'s>,
-    keywords: &Keywords<'s>,
-    coutputs: &CompilerOutputs<'s, 't>,
-    original_calling_denizen_id: IdT<'s, 't>,
-    region: RegionT,
-    struct_tt: StructTT<'s, 't>,
-    bound_arguments_source: &dyn IBoundArgumentsSource<'s, 't>,
-) -> ITemplataT<'s, 't> {
-    panic!("Unimplemented: get_mutability");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn struct_compiler_get_mutability(
+        &self,
+        sanity_check: bool,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        original_calling_denizen_id: IdT<'s, 't>,
+        region: RegionT,
+        struct_tt: StructTT<'s, 't>,
+        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+    ) -> ITemplataT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def getMutability(
@@ -575,4 +583,3 @@ pub fn get_mutability<'s, 't>(
   }
 }
 */
-}

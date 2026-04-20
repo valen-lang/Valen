@@ -1,7 +1,22 @@
+use std::collections::HashMap;
+use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
+use crate::interner::StrI;
 use crate::keywords::Keywords;
+use crate::postparsing::ast::{ICitizenAttributeS, MacroCallS};
 use crate::scout_arena::ScoutArena;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compilation::TypingPassOptions;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
+use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
+use crate::typing::env::i_env_entry::IEnvEntryT;
+use crate::typing::hinputs_t::HinputsT;
+use crate::typing::names::names::IdT;
+use crate::typing::templata::templata::ITemplataT;
+use crate::typing::types::types::KindT;
 use crate::typing::typing_interner::TypingInterner;
+use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinateMap};
+use crate::utils::range::RangeS;
 
 /*
 package dev.vale.typing
@@ -96,8 +111,16 @@ pub struct DefaultPrintyThing<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t 
 /*
 object DefaultPrintyThing {
 */
-pub fn print(x: ()) {
-    panic!("Unimplemented: print");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn print(
+        &self,
+        // TODO: Slab 14 — Scala uses a by-name parameter here; pick impl Display or &str as the Rust equivalent when porting the body.
+        x: (),
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def print(x: => Object) = {
@@ -137,7 +160,29 @@ where 's: 't,
     }
 }
 
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn compile_program(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        program_a: &'s ProgramA<'s>,
+    ) -> Result<(), ICompileErrorT<'s, 't>> {
+        panic!("Unimplemented: Compiler::compile_program — Slab 8");
+    }
+}
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn drain_all_deferred(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+    ) {
+        panic!("Unimplemented: Compiler::drain_all_deferred — Slab 8");
+    }
+}
+
 /*
   val debugOut = opts.debugOut
   val globalOptions = opts.globalOptions
@@ -797,8 +842,16 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
 
 
 */
-pub fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
-    panic!("Unimplemented: evaluate");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn evaluate(
+        &self,
+        code_map: &FileCoordinateMap<'s, String>,
+        package_to_program_a: &'s PackageCoordinateMap<'s, ProgramA<'s>>,
+    ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def evaluate(
@@ -1493,8 +1546,17 @@ pub fn evaluate(&self, code_map: (), package_to_program_a: ()) -> () {
   }
 
 */
-fn preprocess_struct(&self, name_to_struct_defined_macro: (), struct_name_t: (), struct_a: ()) -> Vec<()> {
-    panic!("Unimplemented: preprocess_struct");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn preprocess_struct(
+        &self,
+        name_to_struct_defined_macro: &HashMap<StrI<'s>, OnStructDefinedMacro>,
+        struct_name_t: IdT<'s, 't>,
+        struct_a: &'s StructA<'s>,
+    ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   private def preprocessStruct(
@@ -1512,8 +1574,17 @@ fn preprocess_struct(&self, name_to_struct_defined_macro: (), struct_name_t: (),
   }
 
 */
-fn preprocess_interface(&self, name_to_interface_defined_macro: (), interface_name_t: (), interface_a: ()) -> Vec<()> {
-    panic!("Unimplemented: preprocess_interface");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn preprocess_interface(
+        &self,
+        name_to_interface_defined_macro: &HashMap<StrI<'s>, OnInterfaceDefinedMacro>,
+        interface_name_t: IdT<'s, 't>,
+        interface_a: &'s InterfaceA<'s>,
+    ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   private def preprocessInterface(
@@ -1536,8 +1607,18 @@ fn preprocess_interface(&self, name_to_interface_defined_macro: (), interface_na
   }
 
 */
-fn determine_macros_to_call<T>(&self, name_to_macro: (), default_called_macros: Vec<()>, parent_ranges: Vec<()>, attributes: Vec<()>) -> Vec<T> {
-    panic!("Unimplemented: determine_macros_to_call");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn determine_macros_to_call<T>(
+        &self,
+        name_to_macro: &HashMap<StrI<'s>, T>,
+        default_called_macros: &[&'s MacroCallS<'s>],
+        parent_ranges: &[RangeS<'s>],
+        attributes: &[&'s ICitizenAttributeS<'s>],
+    ) -> Vec<T> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   private def determineMacrosToCall[T](
@@ -1566,8 +1647,15 @@ fn determine_macros_to_call<T>(&self, name_to_macro: (), default_called_macros: 
   }
 
 */
-fn ensure_deep_exports(&self, coutputs: ()) {
-    panic!("Unimplemented: ensure_deep_exports");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn ensure_deep_exports(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
@@ -1667,8 +1755,15 @@ fn ensure_deep_exports(&self, coutputs: ()) {
   }
 
 */
-fn is_root_function(&self, function_a: ()) -> bool {
-    panic!("Unimplemented: is_root_function");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_root_function(
+        &self,
+        function_a: &'s FunctionA<'s>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
@@ -1685,8 +1780,15 @@ fn is_root_function(&self, function_a: ()) -> bool {
   }
 
 */
-fn is_root_struct(&self, struct_a: ()) -> bool {
-    panic!("Unimplemented: is_root_struct");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_root_struct(
+        &self,
+        struct_a: &'s StructA<'s>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
@@ -1695,12 +1797,16 @@ fn is_root_struct(&self, struct_a: ()) -> bool {
   }
 
 */
-fn is_root_interface(&self, interface_a: ()) -> bool {
-    panic!("Unimplemented: is_root_interface");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_root_interface(
+        &self,
+        interface_a: &'s InterfaceA<'s>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
-}
-
-
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
   def isRootInterface(interfaceA: InterfaceA): Boolean = {
@@ -1711,8 +1817,15 @@ fn is_root_interface(&self, interface_a: ()) -> bool {
 
 object Compiler {
 */
-pub fn consecutive(exprs: Vec<()>) -> () {
-    panic!("Unimplemented: consecutive");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn consecutive(
+        &self,
+        exprs: &[&'t ReferenceExpressionTE<'s, 't>],
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   // Flattens any nested ConsecutorTEs
@@ -1742,8 +1855,15 @@ pub fn consecutive(exprs: Vec<()>) -> () {
   }
 
 */
-pub fn is_primitive(kind: ()) -> bool {
-    panic!("Unimplemented: is_primitive");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn is_primitive(
+        &self,
+        kind: KindT<'s, 't>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def isPrimitive(kind: KindT): Boolean = {
@@ -1759,8 +1879,16 @@ pub fn is_primitive(kind: ()) -> bool {
   }
 
 */
-pub fn get_mutabilities(coutputs: (), concrete_values2: Vec<()>) -> Vec<()> {
-    panic!("Unimplemented: get_mutabilities");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_mutabilities(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        concrete_values2: &[KindT<'s, 't>],
+    ) -> Vec<ITemplataT<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):
@@ -1769,8 +1897,16 @@ pub fn get_mutabilities(coutputs: (), concrete_values2: Vec<()>) -> Vec<()> {
   }
 
 */
-pub fn get_mutability(coutputs: (), concrete_value2: ()) -> () {
-    panic!("Unimplemented: get_mutability");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn get_mutability(
+        &self,
+        coutputs: &CompilerOutputs<'s, 't>,
+        concrete_value2: KindT<'s, 't>,
+    ) -> ITemplataT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):

@@ -46,6 +46,22 @@ case class TypingPassOptions(
 override def hashCode(): Int = hash;
 override def equals(obj: Any): Boolean = vcurious(); }
 */
+
+pub fn run_typing_pass<'s, 'ctx, 't>(
+    scout_arena: &'ctx ScoutArena<'s>,
+    typing_interner: &'ctx crate::typing::typing_interner::TypingInterner<'s, 't>,
+    keywords: &'ctx Keywords<'s>,
+    opts: &'ctx TypingPassOptions<'s>,
+    program_a: &'s crate::higher_typing::ast::ProgramA<'s>,
+) -> Result<
+    crate::typing::hinputs_t::HinputsT<'s, 't>,
+    crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>,
+>
+where 's: 't,
+{
+    panic!("Unimplemented: run_typing_pass — Slab 8");
+}
+
 pub struct TypingPassCompilation<'s, 'ctx, 't, 'p> {
   higher_typing_compilation: HigherTypingCompilation<'s, 'ctx, 'p>,
   hinputs_cache: Option<()>,

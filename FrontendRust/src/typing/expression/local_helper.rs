@@ -210,7 +210,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn maybe_borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &ExpressionT<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
+    pub fn maybe_borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &ExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
         panic!("Unimplemented: maybe_borrow_soft_load");
     }
 /*
@@ -378,8 +378,16 @@ object LocalHelper {
 */
 }
 
-fn determine_if_local_is_addressible<'s, 't>(mutability: &ITemplataT<'s, 't>, local_a: &LocalS<'s>) -> bool {
-  panic!("Unimplemented: determine_if_local_is_addressible");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn determine_if_local_is_addressible(
+        &self,
+        mutability: ITemplataT<'s, 't>,
+        local_a: &'s LocalS<'s>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   // See ClosureTests for requirements here
@@ -395,8 +403,15 @@ fn determine_if_local_is_addressible<'s, 't>(mutability: &ITemplataT<'s, 't>, lo
   }
 
 */
-fn determine_local_variability<'s>(local_a: &LocalS<'s>) -> VariabilityT {
-  panic!("Unimplemented: determine_local_variability");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn determine_local_variability(
+        &self,
+        local_a: &'s LocalS<'s>,
+    ) -> VariabilityT {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 }
 /*
   def determineLocalVariability(localA: LocalS): VariabilityT = {

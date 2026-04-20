@@ -331,11 +331,11 @@ impl<'s, 't> FunctionDefinitionT<'s, 't> {
 
 */
 }
-impl<'s, 't> FunctionDefinitionT<'s, 't> {
+impl<'s, 't> FunctionDefinitionT<'s, 't> where 's: 't, {
     fn new(
         header: FunctionHeaderT<'s, 't>,
         instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-        body: ReferenceExpressionTE<'s, 't>,
+        body: &'t ReferenceExpressionTE<'s, 't>,
     ) -> FunctionDefinitionT<'s, 't> { panic!("Unimplemented: FunctionDefinitionT::new"); }
 /*
   // We always end a function with a ret, whose result is a Never.

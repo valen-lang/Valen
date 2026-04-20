@@ -13,16 +13,11 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 */
-// TODO: stub — replace Vec with arena slice during body migration. Scala's
-// R <: IFunctionNameT generic is gone (enum in Rust). The prototype slot below is
-// `()` because PrototypeT upstream declares T: IFunctionNameT as a trait bound on
-// an enum (broken); fix there first, then thread PrototypeT back in.
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
     pub citizen_rune_to_reachable_prototype: Vec<(
         crate::postparsing::names::IRuneS<'s>,
-        (),
+        &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
     )>,
-    _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
 }
 /*
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
@@ -33,9 +28,8 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 
 object InstantiationBoundArgumentsT {
 */
-// TODO: stub — re-add PrototypeT arg once PrototypeT upstream is repaired.
 pub fn make<'s, 't>(
-    _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, ())>,
+    _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, &'t crate::typing::ast::ast::PrototypeT<'s, 't>)>,
     _rune_to_citizen_rune_to_reachable_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
     _rune_to_bound_impl: Vec<(crate::postparsing::names::IRuneS<'s>, crate::typing::names::names::IdT<'s, 't>)>,
 ) -> InstantiationBoundArgumentsT<'s, 't> {
@@ -56,11 +50,10 @@ pub fn make<'s, 't>(
 */
 // TODO: stub — Vec pairs stand in for Scala's HashMap; revisit (arena slice, sorted?) during body migration.
 // Also: Scala's [BF <: IFunctionNameT, BI <: IImplNameT] generics collapsed to the enums directly.
-// TODO: replace () with PrototypeT<'s,'t> once upstream T:IFunctionNameT bound is fixed.
 pub struct InstantiationBoundArgumentsT<'s, 't> {
     pub rune_to_bound_prototype: Vec<(
         crate::postparsing::names::IRuneS<'s>,
-        (),
+        &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
     )>,
     pub rune_to_citizen_rune_to_reachable_prototype: Vec<(
         crate::postparsing::names::IRuneS<'s>,
