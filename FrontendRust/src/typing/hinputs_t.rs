@@ -28,6 +28,8 @@ pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
   citizenRuneToReachablePrototype: Map[IRuneS, PrototypeT[R]]
 )
+*/
+/*
 
 object InstantiationBoundArgumentsT {
 */

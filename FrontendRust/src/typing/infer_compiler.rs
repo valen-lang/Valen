@@ -45,9 +45,17 @@ pub enum IConclusionResolveError<'s, 't> {
 }
 /*
 sealed trait IConclusionResolveError
+*/
+/*
 case class CouldntFindImplForConclusionResolve(range: List[RangeS], fail: IsntParent) extends IConclusionResolveError
+*/
+/*
 case class CouldntFindKindForConclusionResolve(inner: ResolveFailure[KindT]) extends IConclusionResolveError
+*/
+/*
 case class CouldntFindFunctionForConclusionResolve(range: List[RangeS], fff: FindFunctionFailure) extends IConclusionResolveError
+*/
+/*
 case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends IConclusionResolveError
 
 */
@@ -56,14 +64,22 @@ pub enum IResolvingError<'s, 't> {
 }
 /*
 sealed trait IResolvingError
+*/
+/*
 case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IResolvingError
+*/
+/*
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
 */
 pub enum IDefiningError {}
 /*
 sealed trait IDefiningError
+*/
+/*
 case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IDefiningError
+*/
+/*
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
 */

@@ -41,14 +41,6 @@ where 's: 't,
   pub variables: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
 }
-
-impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
-}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsT(
   globalEnv: GlobalEnvironment,
@@ -114,6 +106,14 @@ override def hashCode(): Int = hash;
 }
 
 */
+
+impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 #[derive(Debug)]
 pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>
 where 's: 't,
@@ -129,13 +129,6 @@ where 's: 't,
   pub default_region: RegionT,
 }
 
-impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
-}
 /*
 case class BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
   globalEnv: GlobalEnvironment,
@@ -202,6 +195,14 @@ override def hashCode(): Int = hash;
 }
 
 */
+
+impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 #[derive(Debug)]
 pub struct NodeEnvironmentT<'s, 't>
 where 's: 't,
@@ -215,22 +216,6 @@ where 's: 't,
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
   pub restackified_locals: &'t [IVarNameT<'s, 't>],
   pub default_region: RegionT,
-}
-
-// Scala hashes `id.hashCode ^ life.hashCode` and compares `(id, life)`. The id
-// delegates to parent_function_env.id.
-impl<'s, 't> PartialEq for NodeEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool {
-    self.parent_function_env.id == other.parent_function_env.id
-      && self.life == other.life
-  }
-}
-impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for NodeEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    self.parent_function_env.id.hash(state);
-    self.life.hash(state);
-  }
 }
 /*
 case class NodeEnvironmentT(
@@ -250,7 +235,11 @@ case class NodeEnvironmentT(
 
   defaultRegion: RegionT,
 ) extends IInDenizenEnvironmentT {
+*/
+/*
   vassert(declaredLocals.map(_.name) == declaredLocals.map(_.name).distinct)
+*/
+/*
 
   val hash = id.hashCode() ^ life.hashCode();
   override def hashCode(): Int = hash;
@@ -525,6 +514,22 @@ case class NodeEnvironmentT(
 }
 
 */
+
+// Scala hashes `id.hashCode ^ life.hashCode` and compares `(id, life)`. The id
+// delegates to parent_function_env.id.
+impl<'s, 't> PartialEq for NodeEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool {
+    self.parent_function_env.id == other.parent_function_env.id
+      && self.life == other.life
+  }
+}
+impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for NodeEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.parent_function_env.id.hash(state);
+    self.life.hash(state);
+  }
+}
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
   override def equals(obj: Any): Boolean = vcurious();
@@ -633,14 +638,6 @@ where 's: 't,
   pub closured_locals: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
   pub default_region: RegionT,
-}
-
-impl<'s, 't> PartialEq for FunctionEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
 /*
 case class FunctionEnvironmentT(
@@ -788,6 +785,14 @@ override def hashCode(): Int = hash;
 }
 
 */
+
+impl<'s, 't> PartialEq for FunctionEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 /*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
   override def equals(obj: Any): Boolean = vcurious();
@@ -970,6 +975,8 @@ case class ReferenceClosureVariableT(
 override def equals(obj: Any): Boolean = vcurious();
 
 }
+*/
+/*
 
 object EnvironmentHelper {
 */

@@ -268,18 +268,6 @@ pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: &'t IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
 }
-impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.outer_env, other.outer_env) && std::ptr::eq(self.function, other.function)
-  }
-}
-impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.outer_env, state);
-    std::ptr::hash(self.function, state);
-  }
-}
 /*
 case class FunctionTemplataT(
   // The environment this function was declared in.
@@ -293,8 +281,12 @@ case class FunctionTemplataT(
   // structs and interfaces. See NTKPRR for more.
   function: FunctionA
 ) extends ITemplataT[TemplateTemplataType] {
+*/
+/*
   vassert(outerEnv.id.packageCoord == function.name.packageCoordinate)
 
+*/
+/*
   val hash = runtime.ScalaRunTime._hashCode(this)
 
   override def hashCode(): Int = hash;
@@ -313,6 +305,8 @@ case class FunctionTemplataT(
 
   vpass()
 
+*/
+/*
   // Make sure we didn't accidentally code something to include the function's name as
   // the last step.
   // This assertion is helpful now, but will false-positive trip when someone
@@ -323,6 +317,8 @@ case class FunctionTemplataT(
     case _ =>
   }
 
+*/
+/*
 
 
   def getTemplateName(): IdT[INameT] = {
@@ -334,22 +330,22 @@ case class FunctionTemplataT(
 }
 
 */
+impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.outer_env, other.outer_env) && std::ptr::eq(self.function, other.function)
+  }
+}
+impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.outer_env, state);
+    std::ptr::hash(self.function, state);
+  }
+}
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
-}
-impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_struct, other.origin_struct)
-  }
-}
-impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.declaring_env, state);
-    std::ptr::hash(self.origin_struct, state);
-  }
 }
 /*
 case class StructDefinitionTemplataT(
@@ -362,10 +358,16 @@ case class StructDefinitionTemplataT(
   // structs and interfaces. See NTKPRR for more.
   originStruct: StructA,
 ) extends CitizenDefinitionTemplataT {
+*/
+/*
   override def originCitizen: CitizenA = originStruct
 
+*/
+/*
   vassert(declaringEnv.id.packageCoord == originStruct.name.range.file.packageCoordinate)
 
+*/
+/*
   val hash = runtime.ScalaRunTime._hashCode(this)
 
   override def hashCode(): Int = hash;
@@ -380,6 +382,8 @@ case class StructDefinitionTemplataT(
       KindTemplataType())
   }
 
+*/
+/*
   // Make sure we didn't accidentally code something to include the structs's name as
   // the last step.
   // This assertion is helpful now, but will false-positive trip when someone
@@ -390,10 +394,24 @@ case class StructDefinitionTemplataT(
     case _ =>
   }
 
+*/
+/*
   def debugString: String = declaringEnv.id + ":" + originStruct.name
 }
 
 */
+impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_struct, other.origin_struct)
+  }
+}
+impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.declaring_env, state);
+    std::ptr::hash(self.origin_struct, state);
+  }
+}
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IContainer<'s, 't> {
   Interface(ContainerInterface<'s>),
@@ -409,6 +427,11 @@ sealed trait IContainer
 pub struct ContainerInterface<'s> {
   pub interface: &'s InterfaceA<'s>,
 }
+/*
+case class ContainerInterface(interface: InterfaceA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+*/
 impl<'s> PartialEq for ContainerInterface<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.interface, other.interface) }
 }
@@ -416,15 +439,15 @@ impl<'s> Eq for ContainerInterface<'s> {}
 impl<'s> std::hash::Hash for ContainerInterface<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.interface, state); }
 }
-/*
-case class ContainerInterface(interface: InterfaceA) extends IContainer {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerStruct<'s> {
   pub struct_: &'s StructA<'s>,
 }
+/*
+case class ContainerStruct(struct: StructA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+*/
 impl<'s> PartialEq for ContainerStruct<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.struct_, other.struct_) }
 }
@@ -432,15 +455,15 @@ impl<'s> Eq for ContainerStruct<'s> {}
 impl<'s> std::hash::Hash for ContainerStruct<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.struct_, state); }
 }
-/*
-case class ContainerStruct(struct: StructA) extends IContainer {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerFunction<'s> {
   pub function: &'s FunctionA<'s>,
 }
+/*
+case class ContainerFunction(function: FunctionA) extends IContainer {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash; }
+*/
 impl<'s> PartialEq for ContainerFunction<'s> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.function, other.function) }
 }
@@ -448,21 +471,9 @@ impl<'s> Eq for ContainerFunction<'s> {}
 impl<'s> std::hash::Hash for ContainerFunction<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.function, state); }
 }
-/*
-case class ContainerFunction(function: FunctionA) extends IContainer {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash; }
-*/
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerImpl<'s> {
   pub impl_: &'s ImplA<'s>,
-}
-impl<'s> PartialEq for ContainerImpl<'s> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.impl_, other.impl_) }
-}
-impl<'s> Eq for ContainerImpl<'s> {}
-impl<'s> std::hash::Hash for ContainerImpl<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.impl_, state); }
 }
 /*
 case class ContainerImpl(impl: ImplA) extends IContainer {
@@ -470,6 +481,13 @@ case class ContainerImpl(impl: ImplA) extends IContainer {
 override def hashCode(): Int = hash; }
 
 */
+impl<'s> PartialEq for ContainerImpl<'s> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.impl_, other.impl_) }
+}
+impl<'s> Eq for ContainerImpl<'s> {}
+impl<'s> std::hash::Hash for ContainerImpl<'s> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.impl_, state); }
+}
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CitizenDefinitionTemplataT<'s, 't> {
   Struct(&'t StructDefinitionTemplataT<'s, 't>),
@@ -480,6 +498,8 @@ sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType]
   def declaringEnv: IEnvironmentT
   def originCitizen: CitizenA
 }
+*/
+/*
 object CitizenDefinitionTemplataT {
 */
 fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmentT<'s, 't>, &'s dyn CitizenA<'s>)> {
@@ -500,6 +520,62 @@ pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
 }
+/*
+case class InterfaceDefinitionTemplataT(
+  // The paackage this interface was declared in.
+  // Has the name of the surrounding environment, does NOT include interface's name.
+  // See TMRE for more on these environments.
+  declaringEnv: IEnvironmentT,
+
+  // This is the env entry that the interface came from originally. It has all the parent
+  // structs and interfaces. See NTKPRR for more.
+  originInterface: InterfaceA
+) extends CitizenDefinitionTemplataT {
+*/
+/*
+  override def originCitizen: CitizenA = originInterface
+
+*/
+/*
+  vassert(declaringEnv.id.packageCoord == originInterface.name.range.file.packageCoordinate)
+
+  vpass()
+*/
+/*
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+  override def tyype: TemplateTemplataType = {
+    // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
+    // In Compiler, StructTemplatas are templates, even if they have zero arguments.
+    TemplateTemplataType(
+      originInterface.genericParameters.map(_.rune.rune).map(originInterface.runeToType),
+      KindTemplataType())
+  }
+
+*/
+/*
+  // Make sure we didn't accidentally code something to include the interface's name as
+  // the last step.
+  // This assertion is helpful now, but will false-positive trip when someone
+  // tries to make an interface with the same name as its containing. At that point,
+  // feel free to remove this assertion.
+  (declaringEnv.id.localName, originInterface.name) match {
+    case (CitizenNameT(envFunctionName, _), TopLevelCitizenDeclarationNameS(sourceName, _)) => vassert(envFunctionName != sourceName)
+    case _ =>
+  }
+
+*/
+/*
+
+
+  def getTemplateName(): INameT = {
+    InterfaceTemplateNameT(originInterface.name.name)//, nameTranslator.translateCodeLocation(originInterface.name.range.begin))
+  }
+
+  def debugString: String = declaringEnv.id + ":" + originInterface.name
+}
+
+*/
 impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool {
     std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_interface, other.origin_interface)
@@ -512,68 +588,10 @@ impl<'s, 't> std::hash::Hash for InterfaceDefinitionTemplataT<'s, 't> {
     std::ptr::hash(self.origin_interface, state);
   }
 }
-/*
-case class InterfaceDefinitionTemplataT(
-  // The paackage this interface was declared in.
-  // Has the name of the surrounding environment, does NOT include interface's name.
-  // See TMRE for more on these environments.
-  declaringEnv: IEnvironmentT,
-
-  // This is the env entry that the interface came from originally. It has all the parent
-  // structs and interfaces. See NTKPRR for more.
-  originInterface: InterfaceA
-) extends CitizenDefinitionTemplataT {
-  override def originCitizen: CitizenA = originInterface
-
-  vassert(declaringEnv.id.packageCoord == originInterface.name.range.file.packageCoordinate)
-
-  vpass()
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-  override def tyype: TemplateTemplataType = {
-    // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
-    // In Compiler, StructTemplatas are templates, even if they have zero arguments.
-    TemplateTemplataType(
-      originInterface.genericParameters.map(_.rune.rune).map(originInterface.runeToType),
-      KindTemplataType())
-  }
-
-  // Make sure we didn't accidentally code something to include the interface's name as
-  // the last step.
-  // This assertion is helpful now, but will false-positive trip when someone
-  // tries to make an interface with the same name as its containing. At that point,
-  // feel free to remove this assertion.
-  (declaringEnv.id.localName, originInterface.name) match {
-    case (CitizenNameT(envFunctionName, _), TopLevelCitizenDeclarationNameS(sourceName, _)) => vassert(envFunctionName != sourceName)
-    case _ =>
-  }
-
-
-
-  def getTemplateName(): INameT = {
-    InterfaceTemplateNameT(originInterface.name.name)//, nameTranslator.translateCodeLocation(originInterface.name.range.begin))
-  }
-
-  def debugString: String = declaringEnv.id + ":" + originInterface.name
-}
-
-*/
 #[derive(Copy, Clone, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: &'t IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
-}
-impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.env, other.env) && std::ptr::eq(self.impl_, other.impl_)
-  }
-}
-impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for ImplDefinitionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.env, state);
-    std::ptr::hash(self.impl_, state);
-  }
 }
 /*
 case class ImplDefinitionTemplataT(
@@ -597,6 +615,18 @@ case class ImplDefinitionTemplataT(
 }
 
 */
+impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    std::ptr::eq(self.env, other.env) && std::ptr::eq(self.impl_, other.impl_)
+  }
+}
+impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for ImplDefinitionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    std::ptr::hash(self.env, state);
+    std::ptr::hash(self.impl_, state);
+  }
+}
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OwnershipTemplataT {
     pub ownership: OwnershipT,
@@ -756,6 +786,13 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 pub struct ExternFunctionTemplataT<'s, 't> {
   pub header: &'t FunctionHeaderT<'s, 't>,
 }
+/*
+case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[ITemplataType] {
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+  override def tyype: ITemplataType = vfail()
+}
+*/
 impl<'s, 't> PartialEq for ExternFunctionTemplataT<'s, 't> {
   fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.header, other.header) }
 }
@@ -771,13 +808,6 @@ impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
       .finish()
   }
 }
-/*
-case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[ITemplataType] {
-  val hash = runtime.ScalaRunTime._hashCode(this)
-  override def hashCode(): Int = hash;
-  override def tyype: ITemplataType = vfail()
-}
-*/
 
 // -- Union enums for the interned-templata-payload interning family ----------
 // Per handoff-slab-4.md Gotcha 2. Mirrors the Kind-payload pattern but with

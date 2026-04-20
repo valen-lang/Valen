@@ -226,13 +226,13 @@ case class VoidT() extends KindT {
 impl IntT {
     pub const I32: IntT = IntT { bits: 32 };
     pub const I64: IntT = IntT { bits: 64 };
-}
 /*
 object IntT {
   val i32: IntT = IntT(32)
   val i64: IntT = IntT(64)
 }
 */
+}
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntT {
   pub bits: i32,
@@ -285,7 +285,11 @@ pub struct StaticSizedArrayTT<'s, 't> {
 case class StaticSizedArrayTT(
   name: IdT[StaticSizedArrayNameT]
 ) extends KindT with IInterning {
+*/
+/*
   vassert(name.initSteps.isEmpty)
+*/
+/*
   override def isPrimitive: Boolean = false
   def mutability: ITemplataT[MutabilityTemplataType] = name.localName.arr.mutability
   def elementType = name.localName.arr.elementType

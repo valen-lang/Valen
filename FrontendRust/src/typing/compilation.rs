@@ -51,6 +51,18 @@ pub struct TypingPassCompilation<'s, 'ctx, 't, 'p> {
   hinputs_cache: Option<()>,
   _phantom: std::marker::PhantomData<&'t ()>,
 }
+/*
+class TypingPassCompilation(
+  val interner: Interner,
+  val keywords: Keywords,
+  packagesToBuild: Vector[PackageCoordinate],
+  packageToContentsResolver: IPackageResolver[Map[String, String]],
+  options: TypingPassOptions = TypingPassOptions()) {
+  var higherTypingCompilation =
+    new HigherTypingCompilation(
+      options.globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
+  var hinputsCache: Option[HinputsT] = None
+*/
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where
 {
@@ -87,18 +99,6 @@ where
       _phantom: std::marker::PhantomData,
     }
   }
-/*
-class TypingPassCompilation(
-  val interner: Interner,
-  val keywords: Keywords,
-  packagesToBuild: Vector[PackageCoordinate],
-  packageToContentsResolver: IPackageResolver[Map[String, String]],
-  options: TypingPassOptions = TypingPassOptions()) {
-  var higherTypingCompilation =
-    new HigherTypingCompilation(
-      options.globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
-  var hinputsCache: Option[HinputsT] = None
-*/
 pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_code_map()
 }

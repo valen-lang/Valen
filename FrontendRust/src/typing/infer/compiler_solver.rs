@@ -54,45 +54,101 @@ import scala.collection.mutable
 pub enum ITypingPassSolverError<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait ITypingPassSolverError
+*/
+/*
 case class KindIsNotConcrete(kind: KindT) extends ITypingPassSolverError
+*/
+/*
 case class KindIsNotInterface(kind: KindT) extends ITypingPassSolverError
+*/
+/*
 case class KindIsNotStruct(kind: KindT) extends ITypingPassSolverError
+*/
+/*
 case class CouldntFindFunction(range: List[RangeS], fff: FindFunctionFailure) extends ITypingPassSolverError {
   vpass()
 }
+*/
+/*
 case class CouldntFindImpl(range: List[RangeS], fail: IsntParent) extends ITypingPassSolverError
+*/
+/*
 case class CouldntResolveKind(
   rf: ResolveFailure[KindT]
 ) extends ITypingPassSolverError {
   vpass()
 }
+*/
+/*
 case class CantShareMutable(kind: KindT) extends ITypingPassSolverError
+*/
+/*
 case class CantSharePlaceholder(kind: KindT) extends ITypingPassSolverError
+*/
+/*
 case class BadIsaSubKind(kind: KindT) extends ITypingPassSolverError {
   vpass()
 }
+*/
+/*
 case class BadIsaSuperKind(kind: KindT) extends ITypingPassSolverError {
   vpass()
 }
+*/
+/*
 case class SendingNonCitizen(kind: KindT) extends ITypingPassSolverError {
   vpass()
 }
+*/
+/*
 case class CantCheckPlaceholder(range: List[RangeS]) extends ITypingPassSolverError
+*/
+/*
 case class ReceivingDifferentOwnerships(params: Vector[(IRuneS, CoordT)]) extends ITypingPassSolverError
+*/
+/*
 case class SendingNonIdenticalKinds(sendCoord: CoordT, receiveCoord: CoordT) extends ITypingPassSolverError
+*/
+/*
 case class NoCommonAncestors(params: Vector[(IRuneS, CoordT)]) extends ITypingPassSolverError
+*/
+/*
 case class LookupFailed(name: IImpreciseNameS) extends ITypingPassSolverError
+*/
+/*
 case class NoAncestorsSatisfyCall(params: Vector[(IRuneS, CoordT)]) extends ITypingPassSolverError
+*/
+/*
 case class CantDetermineNarrowestKind(kinds: Set[KindT]) extends ITypingPassSolverError
+*/
+/*
 case class OwnershipDidntMatch(coord: CoordT, expectedOwnership: OwnershipT) extends ITypingPassSolverError
+*/
+/*
 case class CallResultWasntExpectedType(expected: ITemplataT[ITemplataType], actual: ITemplataT[ITemplataType]) extends ITypingPassSolverError
+*/
+/*
 case class CallResultIsntCallable(result: ITemplataT[ITemplataType]) extends ITypingPassSolverError
+*/
+/*
 case class OneOfFailed(rule: OneOfSR) extends ITypingPassSolverError
+*/
+/*
 case class IsaFailed(sub: KindT, suuper: KindT) extends ITypingPassSolverError
+*/
+/*
 case class WrongNumberOfTemplateArgs(expectedMinNumArgs: Int, expectedMaxNumArgs: Int) extends ITypingPassSolverError
+*/
+/*
 case class FunctionDoesntHaveName(range: List[RangeS], name: IFunctionNameT) extends ITypingPassSolverError
+*/
+/*
 case class CantGetComponentsOfPlaceholderPrototype(range: List[RangeS]) extends ITypingPassSolverError
+*/
+/*
 case class ReturnTypeConflict(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends ITypingPassSolverError
+*/
+/*
 case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ITypingPassSolverError
 
 */

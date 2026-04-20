@@ -58,20 +58,20 @@ impl WeakableImplingMismatch {
     fn hash_code(&self) -> i32 {
         panic!("Unimplemented: hash_code");
     }
-}
 /*
 override def hashCode(): Int = hash;
 */
+}
 impl WeakableImplingMismatch {
     fn equals(&self, obj: &dyn std::any::Any) -> bool {
         panic!("Unimplemented: equals");
     }
-}
 /*
 override def equals(obj: Any): Boolean = vcurious(); }
 
 // See ODMFRC.
 */
+}
 pub struct UncheckedDefiningConclusions<'s, 't> {
     pub envs: InferEnv<'s>,
     pub ranges: Vec<RangeS<'s>>,
@@ -576,4 +576,3 @@ pub fn get_mutability<'s, 't>(
 }
 */
 }
-

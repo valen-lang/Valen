@@ -54,8 +54,6 @@ case class DeferredEvaluatingFunction(
 */
 // TODO: placeholder PhantomData — replace with real fields during body migration
 pub struct CompilerOutputs<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
-impl<'s, 't> CompilerOutputs<'s, 't> {
-}
 /*
 case class CompilerOutputs() {
   // Not all signatures/banners will have a return type here, it might not have been processed yet.

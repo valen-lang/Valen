@@ -78,25 +78,24 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
     fn default_region(&self) -> RegionT {
         panic!("Unimplemented: default_region");
     }
-}
 /*
   def defaultRegion: RegionT = RegionT()
 */
+}
 impl<'s, 't> StructDefinitionT<'s, 't> {
     fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
         panic!("Unimplemented: generic_param_types");
     }
-}
 /*
   override def genericParamTypes: Vector[ITemplataType] = {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 */
+}
 impl<'s, 't> StructDefinitionT<'s, 't> {
     fn equals(&self, obj: &Self) -> bool {
         panic!("Unimplemented: equals");
     }
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
@@ -117,11 +116,11 @@ override def hashCode(): Int = vcurious()
 //    }
 //  }
 */
+}
 impl<'s, 't> StructDefinitionT<'s, 't> {
     fn get_member_and_index(&self, needle_name: &IVarNameT<'s, 't>) -> Option<(&NormalStructMemberT<'s, 't>, usize)> {
         panic!("Unimplemented: get_member_and_index");
     }
-}
 /*
   def getMemberAndIndex(needleName: IVarNameT): Option[(NormalStructMemberT, Int)] = {
     members.zipWithIndex
@@ -135,6 +134,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
   }
 }
 */
+}
 pub enum IStructMemberT<'s, 't> {
     _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
 }
@@ -153,8 +153,6 @@ pub struct NormalStructMemberT<'s, 't> {
     pub variability: VariabilityT,
     pub tyype: IMemberTypeT<'s, 't>,
 }
-impl<'s, 't> NormalStructMemberT<'s, 't> {
-}
 /*
 case class NormalStructMemberT(
   name: IVarNameT,
@@ -168,8 +166,6 @@ case class NormalStructMemberT(
 pub struct VariadicStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub tyype: PlaceholderTemplataT<'s, 't>,
-}
-impl<'s, 't> VariadicStructMemberT<'s, 't> {
 }
 /*
 case class VariadicStructMemberT(
@@ -217,15 +213,11 @@ fn member_type_expect_address_member<'s, 't>() -> AddressMemberTypeT<'s, 't> {
 pub struct AddressMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
 }
-impl<'s, 't> AddressMemberTypeT<'s, 't> {
-}
 /*
 case class AddressMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
 pub struct ReferenceMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
-}
-impl<'s, 't> ReferenceMemberTypeT<'s, 't> {
 }
 /*
 case class ReferenceMemberTypeT(reference: CoordT) extends IMemberTypeT
@@ -259,36 +251,36 @@ impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn default_region(&self) -> RegionT {
         panic!("Unimplemented: default_region");
     }
-}
 /*
   def defaultRegion: RegionT = RegionT()
 */
+}
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn generic_param_types(&self) -> Vec<ITemplataType<'s>> {
         panic!("Unimplemented: generic_param_types");
     }
-}
 /*
   override def genericParamTypes: Vector[ITemplataType] = {
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 */
+}
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn instantiated_citizen(&self) -> ICitizenTT<'s, 't> {
         panic!("Unimplemented: instantiated_citizen");
     }
-}
 /*
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface
 */
+}
 impl<'s, 't> InterfaceDefinitionT<'s, 't> {
     fn equals(&self, obj: &Self) -> bool {
         panic!("Unimplemented: equals");
     }
-}
 /*
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
 //  override def getRef = ref
 }
 */
+}

@@ -32,18 +32,18 @@ pub trait IBoundArgumentsSource<'s, 't> {}
 sealed trait IBoundArgumentsSource
 */
 pub struct InheritBoundsFromTypeItself;
-impl<'s, 't> IBoundArgumentsSource<'s, 't> for InheritBoundsFromTypeItself {}
 /*
 case object InheritBoundsFromTypeItself extends IBoundArgumentsSource
 */
+impl<'s, 't> IBoundArgumentsSource<'s, 't> for InheritBoundsFromTypeItself {}
 pub struct UseBoundsFromContainer;
-impl<'s, 't> IBoundArgumentsSource<'s, 't> for UseBoundsFromContainer {}
 /*
 case class UseBoundsFromContainer(
   instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT],
   instantiationBoundArguments: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 ) extends IBoundArgumentsSource
 */
+impl<'s, 't> IBoundArgumentsSource<'s, 't> for UseBoundsFromContainer {}
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait ITemplataCompilerDelegate {

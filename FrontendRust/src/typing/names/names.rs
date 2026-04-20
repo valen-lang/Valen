@@ -35,37 +35,14 @@ where 's: 't,
     pub init_steps: &'t [INameT<'s, 't>],
     pub local_name: INameT<'s, 't>,
 }
-
-// (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
-// and init_steps slice (canonicalized by the typing interner per IDEPFL),
-// structural compare on local_name (inline-owned INameT).)
-impl<'s, 't> Hash for IdT<'s, 't>
-where 's: 't,
-{
-    fn hash<H: Hasher>(&self, state: &mut H) {
-        std::ptr::hash(self.package_coord, state);
-        std::ptr::hash(self.init_steps.as_ptr(), state);
-        self.init_steps.len().hash(state);
-        self.local_name.hash(state);
-    }
-}
-impl<'s, 't> PartialEq for IdT<'s, 't>
-where 's: 't,
-{
-    fn eq(&self, other: &Self) -> bool {
-        std::ptr::eq(self.package_coord, other.package_coord)
-            && std::ptr::eq(self.init_steps.as_ptr(), other.init_steps.as_ptr())
-            && self.init_steps.len() == other.init_steps.len()
-            && self.local_name == other.local_name
-    }
-}
-impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
 /*
 case class IdT[+T <: INameT](
   packageCoord: PackageCoordinate,
   initSteps: Vector[INameT],
   localName: T
 )  {
+*/
+/*
   this match {
     case _ =>
   }
@@ -100,6 +77,8 @@ case class IdT[+T <: INameT](
 
   vcurious(initSteps.distinct == initSteps)
 
+*/
+/*
   override def equals(obj: Any): Boolean = {
     obj match {
       case IdT(thatPackageCoord, thatInitSteps, thatLast) => {
@@ -141,6 +120,31 @@ case class IdT[+T <: INameT](
 }
 
 */
+
+// (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
+// and init_steps slice (canonicalized by the typing interner per IDEPFL),
+// structural compare on local_name (inline-owned INameT).)
+impl<'s, 't> Hash for IdT<'s, 't>
+where 's: 't,
+{
+    fn hash<H: Hasher>(&self, state: &mut H) {
+        std::ptr::hash(self.package_coord, state);
+        std::ptr::hash(self.init_steps.as_ptr(), state);
+        self.init_steps.len().hash(state);
+        self.local_name.hash(state);
+    }
+}
+impl<'s, 't> PartialEq for IdT<'s, 't>
+where 's: 't,
+{
+    fn eq(&self, other: &Self) -> bool {
+        std::ptr::eq(self.package_coord, other.package_coord)
+            && std::ptr::eq(self.init_steps.as_ptr(), other.init_steps.as_ptr())
+            && self.init_steps.len() == other.init_steps.len()
+            && self.local_name == other.local_name
+    }
+}
+impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
 // Widen/narrow conversion methods removed with the move to monomorphic IdT.
 // Callers that need a specific leaf-name pattern-match on `local_name` directly,
 // like Scala does. See `docs/reasoning/idt-typed-view-alternatives.md`.
@@ -543,9 +547,13 @@ case class ImplBoundNameT(
 
 }
 
+*/
+/*
 //// The name of an impl that is subclassing some interface. To find all impls subclassing an interface,
 //// look for this name.
 //case class ImplImplementingSuperInterfaceNameT(superInterface: FullNameT[IInterfaceTemplateNameT]) extends IImplTemplateNameT
+*/
+/*
 //// The name of an impl that is augmenting some sub citizen. To find all impls subclassing an interface,
 //// look for this name.
 //case class ImplAugmentingSubCitizenNameT(subCitizen: FullNameT[ICitizenTemplateNameT]) extends IImplTemplateNameT
@@ -1176,6 +1184,8 @@ case class ForwarderFunctionTemplateNameT(
 }
 
 
+*/
+/*
 //case class AbstractVirtualDropFunctionTemplateNameT(
 //  implName: INameT
 //) extends INameT with IFunctionTemplateNameT {
@@ -1185,12 +1195,16 @@ case class ForwarderFunctionTemplateNameT(
 //  }
 //}
 
+*/
+/*
 //case class AbstractVirtualDropFunctionNameT(
 //  implName: INameT,
 //  templateArgs: Vector[ITemplata[ITemplataType]],
 //  parameters: Vector[CoordT]
 //) extends INameT with IFunctionNameT
 
+*/
+/*
 //case class OverrideVirtualDropFunctionTemplateNameT(
 //  implName: INameT
 //) extends INameT with IFunctionTemplateNameT {
@@ -1200,12 +1214,16 @@ case class ForwarderFunctionTemplateNameT(
 //  }
 //}
 
+*/
+/*
 //case class OverrideVirtualDropFunctionNameT(
 //  implName: INameT,
 //  templateArgs: Vector[ITemplata[ITemplataType]],
 //  parameters: Vector[CoordT]
 //) extends INameT with IFunctionNameT
 
+*/
+/*
 //case class LambdaTemplateNameT(
 //  codeLocation: CodeLocationS
 //) extends INameT with IFunctionTemplateNameT {
@@ -1226,6 +1244,8 @@ case class ConstructorTemplateNameT(
   override def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplataT[ITemplataType]], params: Vector[CoordT]): IFunctionNameT = vimpl()
 }
 
+*/
+/*
 //case class FreeTemplateNameT(codeLoc: CodeLocationS) extends INameT with IFunctionTemplateNameT {
 //  vpass()
 //  override def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordT]): IFunctionNameT = {
@@ -1237,6 +1257,8 @@ case class ConstructorTemplateNameT(
 //    }
 //  }
 //}
+*/
+/*
 //case class FreeNameT(
 //  template: FreeTemplateNameT,
 //  templateArgs: Vector[ITemplata[ITemplataType]],
@@ -1245,6 +1267,8 @@ case class ConstructorTemplateNameT(
 //  override def parameters: Vector[CoordT] = Vector(coordT)
 //}
 
+*/
+/*
 //// See NSIDN for why we have these virtual names
 //case class AbstractVirtualFreeTemplateNameT(codeLoc: CodeLocationS) extends INameT with IFunctionTemplateNameT {
 //  override def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordT]): IFunctionNameT = {
@@ -1252,11 +1276,15 @@ case class ConstructorTemplateNameT(
 //    interner.intern(AbstractVirtualFreeNameT(templateArgs, kind))
 //  }
 //}
+*/
+/*
 //// See NSIDN for why we have these virtual names
 //case class AbstractVirtualFreeNameT(templateArgs: Vector[ITemplata[ITemplataType]], param: KindT) extends IFunctionNameT {
 //  override def parameters: Vector[CoordT] = Vector(CoordT(ShareT, param))
 //}
 //
+*/
+/*
 //// See NSIDN for why we have these virtual names
 //case class OverrideVirtualFreeTemplateNameT(codeLoc: CodeLocationS) extends INameT with IFunctionTemplateNameT {
 //  override def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplata[ITemplataType]], params: Vector[CoordT]): IFunctionNameT = {
@@ -1264,6 +1292,8 @@ case class ConstructorTemplateNameT(
 //    interner.intern(OverrideVirtualFreeNameT(templateArgs, kind))
 //  }
 //}
+*/
+/*
 //// See NSIDN for why we have these virtual names
 //case class OverrideVirtualFreeNameT(templateArgs: Vector[ITemplata[ITemplataType]], param: KindT) extends IFunctionNameT {
 //  override def parameters: Vector[CoordT] = Vector(CoordT(ShareT, param))
@@ -1534,6 +1564,8 @@ case class AnonymousSubstructNameT(
 ) extends IStructNameT {
 
 }
+*/
+/*
 //case class AnonymousSubstructImplNameT() extends INameT {
 //
 //}

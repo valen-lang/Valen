@@ -24,6 +24,9 @@ where 's: 't,
   Impl(&'s ImplA<'s>),
   Templata(ITemplataT<'s, 't>),
 }
+/*
+sealed trait IEnvEntry
+*/
 
 // FunctionA/StructA/InterfaceA/ImplA are arena-allocated (ATDCX) and don't
 // derive PartialEq/Eq/Hash. Compare/hash those variants by pointer identity;
@@ -57,9 +60,6 @@ where 's: 't,
     }
   }
 }
-/*
-sealed trait IEnvEntry
-*/
 /*
 // We dont have the unevaluatedContainers in here because see TMRE
 case class FunctionEnvEntry(function: FunctionA) extends IEnvEntry {

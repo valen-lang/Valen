@@ -157,7 +157,11 @@ pub enum ILookupContext {
 }
 /*
 sealed trait ILookupContext
+*/
+/*
 case object TemplataLookupContext extends ILookupContext
+*/
+/*
 case object ExpressionLookupContext extends ILookupContext
 */
 // Macro-dispatch fields (functorHelper, *Macro, nameToStructDefinedMacro, etc.)
@@ -533,15 +537,6 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub global_namespaces: &'t [TemplatasStoreT<'s, 't>],
 }
-
-// Id-based Hash/PartialEq per Gotcha 13.
-impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
-}
 /*
 case class PackageEnvironmentT[+T <: INameT](
   globalEnv: GlobalEnvironment,
@@ -602,6 +597,15 @@ override def hashCode(): Int = hash;
   }
 }
 */
+
+// Id-based Hash/PartialEq per Gotcha 13.
+impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 #[derive(Debug)]
 pub struct CitizenEnvironmentT<'s, 't>
 where 's: 't,
@@ -612,14 +616,6 @@ where 's: 't,
   pub id: IdT<'s, 't>,
   pub templatas: TemplatasStoreT<'s, 't>,
 }
-
-impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
-}
 /*
 case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   globalEnv: GlobalEnvironment,
@@ -628,8 +624,12 @@ case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   id: IdT[T],
   templatas: TemplatasStore
 ) extends IInDenizenEnvironmentT {
+*/
+/*
   vassert(templatas.templatasStoreName == id)
 
+*/
+/*
   override def denizenId: IdT[INameT] = templateId
   override def denizenTemplateId: IdT[ITemplateNameT] = templateId
 
@@ -691,6 +691,14 @@ override def hashCode(): Int = hash;
   }
 }
 */
+
+impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 fn child_of() {
   panic!("Unimplemented: child_of");
 }
@@ -722,14 +730,6 @@ where 's: 't,
   pub template_id: IdT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas: TemplatasStoreT<'s, 't>,
-}
-
-impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
 /*
 case class ExportEnvironmentT(
@@ -763,6 +763,14 @@ case class ExportEnvironmentT(
   }
 }
 */
+
+impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 #[derive(Debug)]
 pub struct ExternEnvironmentT<'s, 't>
 where 's: 't,
@@ -774,13 +782,6 @@ where 's: 't,
   pub templatas: TemplatasStoreT<'s, 't>,
 }
 
-impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
-}
-impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
-}
 /*
 case class ExternEnvironmentT(
     globalEnv: GlobalEnvironment,
@@ -813,6 +814,14 @@ case class ExternEnvironmentT(
   }
 }
 */
+
+impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+}
+impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+}
 #[derive(Debug)]
 pub struct GeneralEnvironmentT<'s, 't>
 where 's: 't,
@@ -822,17 +831,6 @@ where 's: 't,
   pub template_id: IdT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub templatas: TemplatasStoreT<'s, 't>,
-}
-
-// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
-impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
-}
-impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
-impl<'s, 't> std::hash::Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
-    panic!("vcurious: GeneralEnvironmentT.hash")
-  }
 }
 /*
 case class GeneralEnvironmentT[+T <: INameT](
@@ -876,6 +874,17 @@ case class GeneralEnvironmentT[+T <: INameT](
   }
 }
 */
+
+// Scala `override def equals/hashCode = vcurious()` — mirror with panic.
+impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
+}
+impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
+impl<'s, 't> std::hash::Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
+  fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
+    panic!("vcurious: GeneralEnvironmentT.hash")
+  }
+}
 
 // Concrete → IEnvironmentT
 impl<'s, 't> From<&'t PackageEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {

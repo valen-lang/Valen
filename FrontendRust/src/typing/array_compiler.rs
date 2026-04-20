@@ -53,8 +53,12 @@ class ArrayCompiler(
     destructorCompiler: DestructorCompiler,
     templataCompiler: TemplataCompiler) {
 
+*/
+/*
   val runeTypeSolver = new RuneTypeSolver(interner)
 
+*/
+/*
   vassert(overloadResolver != null)
 */
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>

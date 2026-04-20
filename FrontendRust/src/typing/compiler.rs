@@ -116,8 +116,14 @@ where 's: 't,
     pub keywords: &'ctx Keywords<'s>,
     pub opts: &'ctx TypingPassOptions<'s>,
 }
+/*
+class Compiler(
+    opts: TypingPassOptions,
+    interner: Interner,
+    keywords: Keywords) {
+*/
 
-// (no direct Scala counterpart — derived from `class Compiler(opts, interner, keywords)` in the Scala block below)
+// (no direct Scala counterpart — derived from `class Compiler(opts, interner, keywords)` in the Scala block above)
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -133,10 +139,6 @@ where 's: 't,
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't> {
 /*
-class Compiler(
-    opts: TypingPassOptions,
-    interner: Interner,
-    keywords: Keywords) {
   val debugOut = opts.debugOut
   val globalOptions = opts.globalOptions
 

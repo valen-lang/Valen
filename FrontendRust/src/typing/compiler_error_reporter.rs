@@ -277,6 +277,8 @@ override def hashCode(): Int = vcurious() }
 /*
 case class AbstractMethodOutsideOpenInterface(range: List[RangeS]) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
+*/
+/*
 //case class NotEnoughToSolveError(range: List[RangeS], conclusions: Map[IRuneS, ITemplata[ITemplataType]], unknownRunes: Iterable[IRuneS]) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 */
@@ -300,6 +302,8 @@ case class TypingPassDefiningError(range: List[RangeS], inner: IDefiningError) e
 override def hashCode(): Int = vcurious()
   vpass()
 }
+*/
+/*
 //case class CompilerSolverConflict(range: List[RangeS], conclusions: Map[IRuneS, ITemplata[ITemplataType]], rune: IRuneS, conflictingNewConclusion: ITemplata[ITemplataType]) extends ICompileErrorT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 */
@@ -316,8 +320,12 @@ override def hashCode(): Int = vcurious() }
 case class RangedInternalErrorT(range: List[RangeS], message: String) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()
+*/
+/*
   vbreak()
 }
+*/
+/*
 
 object ErrorReporter {
 */
