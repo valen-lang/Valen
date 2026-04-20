@@ -1,4 +1,19 @@
 use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::patterns::patterns::AtomSP;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler_outputs::*;
+use std::collections::HashMap;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.expression
@@ -47,8 +62,23 @@ class PatternCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_pattern_list_pattern(&self) {
-        panic!("Unimplemented: translate_pattern_list_pattern");
+    pub fn translate_pattern_list_pattern(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        patterns_a: &[&'s AtomSP<'s>],
+        pattern_inputs_te: &[&'t ReferenceExpressionTE<'s, 't>],
+        region: RegionT,
+        after_patterns_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   // Note: This will unlet/drop the input expressions. Be warned.
@@ -86,8 +116,24 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn iterate_translate_list_and_maybe_continue(&self) {
-        panic!("Unimplemented: iterate_translate_list_and_maybe_continue");
+    pub fn iterate_translate_list_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        live_capture_locals: &[ILocalVariableT<'s, 't>],
+        patterns_a: &[&'s AtomSP<'s>],
+        pattern_inputs_te: &[&'t ReferenceExpressionTE<'s, 't>],
+        region: RegionT,
+        after_patterns_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   def iterateTranslateListAndMaybeContinue(
@@ -132,8 +178,26 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn infer_and_translate_pattern(&self) {
-        panic!("Unimplemented: infer_and_translate_pattern");
+    pub fn infer_and_translate_pattern(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        rules_with_implicitly_coercing_lookups_s: &[&'s IRulexSR<'s>],
+        rune_a_to_type_with_implicitly_coercing_lookups_s: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        pattern: &'s AtomSP<'s>,
+        unconverted_input_expr: &'t ReferenceExpressionTE<'s, 't>,
+        region: RegionT,
+        after_patterns_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   // Note: This will unlet/drop the input expression. Be warned.
@@ -226,8 +290,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn inner_translate_sub_pattern_and_maybe_continue(&self) {
-        panic!("Unimplemented: inner_translate_sub_pattern_and_maybe_continue");
+    pub fn inner_translate_sub_pattern_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        pattern: &'s AtomSP<'s>,
+        previous_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        input_expr: &'t ReferenceExpressionTE<'s, 't>,
+        region: RegionT,
+        after_sub_pattern_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def innerTranslateSubPatternAndMaybeContinue(
@@ -341,8 +422,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn destructure_owning(&self) {
-        panic!("Unimplemented: destructure_owning");
+    pub fn destructure_owning(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        input_expr: &'t ReferenceExpressionTE<'s, 't>,
+        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        region: RegionT,
+        after_destructure_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def destructureOwning(
@@ -415,8 +513,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn destructure_non_owning_and_maybe_continue(&self) {
-        panic!("Unimplemented: destructure_non_owning_and_maybe_continue");
+    pub fn destructure_non_owning_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        live_capture_locals: &[ILocalVariableT<'s, 't>],
+        container_te: &'t ReferenceExpressionTE<'s, 't>,
+        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        region: RegionT,
+        after_destructure_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def destructureNonOwningAndMaybeContinue(
@@ -451,8 +566,27 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn iterate_destructure_non_owning_and_maybe_continue(&self) {
-        panic!("Unimplemented: iterate_destructure_non_owning_and_maybe_continue");
+    pub fn iterate_destructure_non_owning_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        live_capture_locals: &[ILocalVariableT<'s, 't>],
+        expected_container_coord: CoordT<'s, 't>,
+        container_aliasing_expr_te: &'t ReferenceExpressionTE<'s, 't>,
+        member_index: i32,
+        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        region: RegionT,
+        after_destructure_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def iterateDestructureNonOwningAndMaybeContinue(
@@ -539,8 +673,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_destroy_struct_inner_and_maybe_continue(&self) {
-        panic!("Unimplemented: translate_destroy_struct_inner_and_maybe_continue");
+    pub fn translate_destroy_struct_inner_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        inner_patterns: &[&'s AtomSP<'s>],
+        input_struct_expr: &'t ReferenceExpressionTE<'s, 't>,
+        region: RegionT,
+        after_destroy_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def translateDestroyStructInnerAndMaybeContinue(
@@ -609,8 +760,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_lets_for_own_and_maybe_continue(&self) {
-        panic!("Unimplemented: make_lets_for_own_and_maybe_continue");
+    pub fn make_lets_for_own_and_maybe_continue(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        member_local_variables: &[ILocalVariableT<'s, 't>],
+        inner_patterns: &[&'s AtomSP<'s>],
+        region: RegionT,
+        after_lets_success_continuation: impl FnOnce(
+            &mut CompilerOutputs<'s, 't>,
+            &mut NodeEnvironmentBuilder<'s, 't>,
+            LocationInFunctionEnvironmentT<'s>,
+            &[ILocalVariableT<'s, 't>],
+        ) -> &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def makeLetsForOwnAndMaybeContinue(
@@ -657,8 +825,11 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn load_result_ownership(&self) {
-        panic!("Unimplemented: load_result_ownership");
+    pub fn load_result_ownership(
+        &self,
+        member_ownership_in_struct: OwnershipT,
+    ) -> OwnershipT {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def loadResultOwnership(memberOwnershipInStruct: OwnershipT): OwnershipT = {
@@ -676,8 +847,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn load_from_struct(&self) {
-        panic!("Unimplemented: load_from_struct");
+    pub fn load_from_struct(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        load_range: RangeS<'s>,
+        region: RegionT,
+        container_alias: &'t ReferenceExpressionTE<'s, 't>,
+        struct_tt: StructTT<'s, 't>,
+        index: i32,
+    ) -> &'t AddressExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def loadFromStruct(
@@ -726,8 +906,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn load_from_static_sized_array(&self) {
-        panic!("Unimplemented: load_from_static_sized_array");
+    pub fn load_from_static_sized_array(
+        &self,
+        range: RangeS<'s>,
+        static_sized_array_t: StaticSizedArrayTT<'s, 't>,
+        local_coord: CoordT<'s, 't>,
+        struct_ownership: OwnershipT,
+        container_alias: &'t ReferenceExpressionTE<'s, 't>,
+        index: i32,
+    ) -> &'t AddressExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def loadFromStaticSizedArray(

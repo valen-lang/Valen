@@ -1,4 +1,20 @@
 use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::{LocationInDenizen, FunctionS};
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::expressions::*;
+use crate::postparsing::patterns::patterns::AtomSP;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::higher_typing::ast::FunctionA;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler_outputs::*;
+use crate::parsing::ast::*;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.expression
@@ -135,7 +151,18 @@ class ExpressionCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_and_coerce_to_reference_expressions(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expressions"); }
+    pub fn evaluate_and_coerce_to_reference_expressions(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        exprs_1: &[&'s IExpressionSE<'s>],
+    ) -> (Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateAndCoerceToReferenceExpressions(
     coutputs: CompilerOutputs,
@@ -160,7 +187,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_lookup_for_load(&self) { panic!("Unimplemented: evaluate_lookup_for_load"); }
+    pub fn evaluate_lookup_for_load(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        name: IVarNameT<'s, 't>,
+        target_ownership: LoadAsP,
+    ) -> Option<ExpressionTE<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateLookupForLoad(
     coutputs: CompilerOutputs,
@@ -192,7 +230,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_addressible_lookup_for_mutate(&self) { panic!("Unimplemented: evaluate_addressible_lookup_for_mutate"); }
+    pub fn evaluate_addressible_lookup_for_mutate(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        region: RegionT,
+        load_range: RangeS<'s>,
+        name_a: IVarNameS<'s>,
+    ) -> Option<&'t AddressExpressionTE<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateAddressibleLookupForMutate(
       coutputs: CompilerOutputs,
@@ -283,7 +331,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_addressible_lookup(&self) { panic!("Unimplemented: evaluate_addressible_lookup"); }
+    pub fn evaluate_addressible_lookup(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        ranges: &[RangeS<'s>],
+        region: RegionT,
+        name_2: IVarNameT<'s, 't>,
+    ) -> Option<&'t AddressExpressionTE<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateAddressibleLookup(
     coutputs: CompilerOutputs,
@@ -379,7 +436,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_closure_struct_construct_expression(&self) { panic!("Unimplemented: make_closure_struct_construct_expression"); }
+    pub fn make_closure_struct_construct_expression(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        range: &[RangeS<'s>],
+        region: RegionT,
+        closure_struct_ref: StructTT<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def makeClosureStructConstructExpression(
       coutputs: CompilerOutputs,
@@ -451,7 +517,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_and_coerce_to_reference_expression(&self) { panic!("Unimplemented: evaluate_and_coerce_to_reference_expression"); }
+    pub fn evaluate_and_coerce_to_reference_expression(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        expr_1: &'s IExpressionSE<'s>,
+    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateAndCoerceToReferenceExpression(
     coutputs: CompilerOutputs,
@@ -482,7 +559,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn coerce_to_reference_expression(&self) { panic!("Unimplemented: coerce_to_reference_expression"); }
+    pub fn coerce_to_reference_expression(
+        &self,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        expr_2: ExpressionTE<'s, 't>,
+        region: RegionT,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def coerceToReferenceExpression(
     nenv: NodeEnvironmentBox,
@@ -505,7 +590,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_expected_address_expression(&self) { panic!("Unimplemented: evaluate_expected_address_expression"); }
+    pub fn evaluate_expected_address_expression(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        expr_1: &'s IExpressionSE<'s>,
+    ) -> (&'t AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateExpectedAddressExpression(
     coutputs: CompilerOutputs,
@@ -533,7 +629,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_expression(&self) { panic!("Unimplemented: evaluate_expression"); }
+    pub fn evaluate_expression(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        outer_call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        expr_1: &'s IExpressionSE<'s>,
+    ) -> (ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // returns:
   // - resulting expression
@@ -1613,7 +1720,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn check_array(&self) { panic!("Unimplemented: check_array"); }
+    pub fn check_array(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        array_mutability: MutabilityT,
+        element_coord: CoordT<'s, 't>,
+        generator_prototype: PrototypeT<'s, 't>,
+        generator_type: CoordT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def checkArray(
       coutputs: CompilerOutputs,
@@ -1651,7 +1768,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_option(&self) { panic!("Unimplemented: get_option"); }
+    pub fn get_option(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &'t FunctionEnvironmentT<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
+        contained_coord: CoordT<'s, 't>,
+    ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getOption(
     coutputs: CompilerOutputs,
@@ -1727,7 +1854,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_result(&self) { panic!("Unimplemented: get_result"); }
+    pub fn get_result(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &'t FunctionEnvironmentT<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        contained_success_coord: CoordT<'s, 't>,
+        contained_fail_coord: CoordT<'s, 't>,
+    ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getResult(
     coutputs: CompilerOutputs,
@@ -1822,7 +1960,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn weak_alias(&self) { panic!("Unimplemented: weak_alias"); }
+    pub fn weak_alias(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        expr: &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
     expr.kind match {
@@ -1849,7 +1993,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn dot_borrow(&self) { panic!("Unimplemented: dot_borrow"); }
+    pub fn dot_borrow(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        context_region: RegionT,
+        undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.
   // If it receives an owning address, that's fine, just borrowsoftload from it.
@@ -1893,7 +2048,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_closure(&self) { panic!("Unimplemented: evaluate_closure"); }
+    pub fn evaluate_closure(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        name: IFunctionDeclarationNameS<'s>,
+        function_s: &'s FunctionS<'s>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
   // returns:
@@ -1944,7 +2110,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn new_global_function_group_expression(&self) { panic!("Unimplemented: new_global_function_group_expression"); }
+    pub fn new_global_function_group_expression(
+        &self,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        region: RegionT,
+        name: IImpreciseNameS<'s>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def newGlobalFunctionGroupExpression(
     env: IInDenizenEnvironmentT,
@@ -1967,7 +2141,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_block_statements(&self) { panic!("Unimplemented: evaluate_block_statements"); }
+    pub fn evaluate_block_statements(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        starting_nenv: &'t NodeEnvironmentT<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        block: &'s BlockSE<'s>,
+    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateBlockStatements(
     coutputs: CompilerOutputs,
@@ -1989,7 +2175,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_pattern_list(&self) { panic!("Unimplemented: translate_pattern_list"); }
+    pub fn translate_pattern_list(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        patterns_1: &[&'s AtomSP<'s>],
+        pattern_input_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
+        region: RegionT,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def translatePatternList(
     coutputs: CompilerOutputs,
@@ -2012,7 +2210,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn astronomize_lambda(&self) { panic!("Unimplemented: astronomize_lambda"); }
+    pub fn astronomize_lambda(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        function_s: &'s FunctionS<'s>,
+    ) -> &'s FunctionA<'s> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def astronomizeLambda(
     coutputs: CompilerOutputs,
@@ -2090,7 +2296,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn drop_since(&self) { panic!("Unimplemented: drop_since"); }
+    pub fn drop_since(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        starting_nenv: &'t NodeEnvironmentT<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        region: RegionT,
+        expr_te: &'t ReferenceExpressionTE<'s, 't>,
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def dropSince(
     coutputs: CompilerOutputs,
@@ -2163,7 +2381,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resultify_expressions(&self) { panic!("Unimplemented: resultify_expressions"); }
+    pub fn resultify_expressions(
+        &self,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        expr: &'t ReferenceExpressionTE<'s, 't>,
+    ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Makes the last expression stored in a variable.
   // Dont call this for void or never or no expressions.

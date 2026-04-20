@@ -1,4 +1,15 @@
 use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::expressions::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler_outputs::*;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.expression
@@ -60,8 +71,17 @@ class BlockCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_block(&self) {
-        panic!("Unimplemented: evaluate_block");
+    pub fn evaluate_block(
+        &self,
+        parent_fate: &mut FunctionEnvironmentBuilder<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        block_1: &'s BlockSE<'s>,
+    ) -> (&'t BlockTE<'s, 't>, HashSet<IVarNameT<'s, 't>>, HashSet<IVarNameT<'s, 't>>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   // This is NOT USED FOR EVERY BLOCK!
@@ -100,8 +120,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_block_statements_block(&self) {
-        panic!("Unimplemented: evaluate_block_statements_block");
+    pub fn evaluate_block_statements_block(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        starting_nenv: &'t NodeEnvironmentT<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        region: RegionT,
+        block_se: &'s BlockSE<'s>,
+    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   def evaluateBlockStatements(

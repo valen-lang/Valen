@@ -1,4 +1,15 @@
 use crate::typing::compiler::Compiler;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::utils::range::RangeS;
+use crate::postparsing::names::*;
+use crate::postparsing::rules::rules::IRulexSR;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::names::names::*;
+use crate::typing::types::types::*;
+use crate::typing::compiler_outputs::*;
 
 /*
 package dev.vale.typing.expression
@@ -34,7 +45,21 @@ class CallCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_call(&self) { panic!("Unimplemented: evaluate_call"); }
+    pub fn evaluate_call(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
+        callable_expr: &'t ReferenceExpressionTE<'s, 't>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateCall(
     coutputs: CompilerOutputs,
@@ -134,7 +159,22 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_custom_call(&self) { panic!("Unimplemented: evaluate_custom_call"); }
+    pub fn evaluate_custom_call(
+        &self,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
+        kind: KindT<'s, 't>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        given_callable_unborrowed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
+        given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
+    ) -> &'t FunctionCallTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateCustomCall(
     nenv: NodeEnvironmentBox,
@@ -228,7 +268,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn check_types(&self) { panic!("Unimplemented: check_types"); }
+    pub fn check_types(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        params: &[CoordT<'s, 't>],
+        args: &[CoordT<'s, 't>],
+        exact: bool,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def checkTypes(
     coutputs: CompilerOutputs,
@@ -282,7 +333,21 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_prefix_call(&self) { panic!("Unimplemented: evaluate_prefix_call"); }
+    pub fn evaluate_prefix_call(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        callable_reference_expr_2: &'t ReferenceExpressionTE<'s, 't>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluatePrefixCall(
     coutputs: CompilerOutputs,
