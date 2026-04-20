@@ -1,4 +1,14 @@
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::{LocationInDenizen, ParameterS};
+use crate::postparsing::expressions::BodySE;
+use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
+use crate::typing::ast::expressions::{BlockTE, ReferenceExpressionTE};
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::env::function_environment_t::{FunctionEnvironmentBuilder, NodeEnvironmentBuilder};
+use crate::typing::types::types::{CoordT, RegionT};
+use crate::utils::range::RangeS;
+use std::collections::HashSet;
 
 /*
 package dev.vale.typing.function
@@ -65,7 +75,20 @@ class BodyCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn declare_and_evaluate_function_body(&self) { panic!("Unimplemented: declare_and_evaluate_function_body"); }
+    pub fn declare_and_evaluate_function_body(
+        &self,
+        func_outer_env: &mut FunctionEnvironmentBuilder<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_1: &'s FunctionA<'s>,
+        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
+        params_2: &[&'t ParameterT<'s, 't>],
+        is_destructor: bool,
+    ) -> (Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Returns:
   // - IF we had to infer it, the return type.
@@ -186,7 +209,22 @@ override def equals(obj: Any): Boolean = vcurious();
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_function_body(&self) { panic!("Unimplemented: evaluate_function_body"); }
+    pub fn evaluate_function_body(
+        &self,
+        func_outer_env: &mut FunctionEnvironmentBuilder<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        parent_ranges: &[RangeS<'s>],
+        region: RegionT,
+        call_location: LocationInDenizen<'s>,
+        params_1: &[&'s ParameterS<'s>],
+        params_2: &[&'t ParameterT<'s, 't>],
+        body_1: &'s BodySE<'s>,
+        is_destructor: bool,
+        maybe_expected_result_type: Option<CoordT<'s, 't>>,
+    ) -> Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def evaluateFunctionBody(
     funcOuterEnv: FunctionEnvironmentBoxT,
@@ -280,7 +318,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_lets(&self) { panic!("Unimplemented: evaluate_lets"); }
+    pub fn evaluate_lets(
+        &self,
+        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        region: RegionT,
+        params_1: &[&'s ParameterS<'s>],
+        params_2: &[&'t ParameterT<'s, 't>],
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Produce the lets at the start of a function.
   private def evaluateLets(

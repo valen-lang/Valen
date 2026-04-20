@@ -152,8 +152,6 @@ case class ReturnTypeConflict(range: List[RangeS], expectedReturnType: CoordT, a
 case class InternalSolverError(range: List[RangeS], err: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends ITypingPassSolverError
 
 */
-// vestigial: kept until Step 8 cleanup because fn signatures still reference `IInfererDelegate<'s, 't>` as a param type
-pub trait IInfererDelegate<'s, 't> {}
 /*
 trait IInfererDelegate {
 //  def lookupMemberTypes(
@@ -442,8 +440,7 @@ where 's: 't,
         env: InferEnv<'s>,
         state: CompilerOutputs<'s, 't>,
         solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        delegate: &dyn IInfererDelegate<'s, 't>,
-) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+    ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: advance_infer");
 }
 /*
@@ -541,7 +538,6 @@ object CompilerRuleSolver {
 }
 
 pub fn sanity_check_conclusion<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     rune: IRuneS<'s>,
@@ -556,7 +552,6 @@ pub fn sanity_check_conclusion<'s, 't>(
 
 */
 fn complex_solve<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -576,7 +571,6 @@ fn complex_solve<'s, 't>(
 
 */
 fn complex_solve_inner<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -684,7 +678,6 @@ fn complex_solve_inner<'s, 't>(
 
 */
 fn solve_receives<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     senders: Vec<(IRuneS<'s>, CoordT<'s, 't>)>,
@@ -756,7 +749,6 @@ fn solve_receives<'s, 't>(
 
 */
 fn narrow<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     env: InferEnv<'s>,
     state: CompilerOutputs<'s, 't>,
     kinds: HashSet<KindT<'s, 't>>,
@@ -788,7 +780,6 @@ fn narrow<'s, 't>(
 
 */
 fn solve<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -814,7 +805,6 @@ fn solve<'s, 't>(
 
 */
 fn solve_rule<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     rule_index: i32,
@@ -1244,7 +1234,6 @@ fn solve_rule<'s, 't>(
 
 */
 fn solve_call_rule<'s, 't>(
-    delegate: &dyn IInfererDelegate<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     env: InferEnv<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,

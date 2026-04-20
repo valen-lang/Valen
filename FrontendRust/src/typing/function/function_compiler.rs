@@ -1,4 +1,15 @@
+use crate::higher_typing::ast::FunctionA;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::{IFunctionDeclarationNameS, IVarNameS};
+use crate::typing::ast::ast::FunctionHeaderT;
+use crate::typing::ast::citizens::NormalStructMemberT;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::env::environment::IInDenizenEnvironmentT;
+use crate::typing::env::function_environment_t::NodeEnvironmentT;
+use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
+use crate::typing::types::types::{CoordT, RegionT, StructTT};
+use crate::utils::range::RangeS;
 
 /*
 package dev.vale.typing.function
@@ -194,7 +205,15 @@ class FunctionCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_generic_function_from_non_call(&self) { panic!("Unimplemented: evaluate_generic_function_from_non_call"); }
+    pub fn evaluate_generic_function_from_non_call(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_templata: FunctionTemplataT<'s, 't>,
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // We would want only the prototype instead of the entire header if, for example,
   // we were calling the function. This is necessary for a recursive function like
@@ -223,7 +242,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_templated_light_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_templated_light_function_from_call_for_prototype"); }
+    pub fn evaluate_templated_light_function_from_call_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_templata: FunctionTemplataT<'s, 't>,
+        already_specified_template_args: &[ITemplataT<'s, 't>],
+        context_region: RegionT,
+        arg_types: &[CoordT<'s, 't>],
+    ) -> IEvaluateFunctionResult<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateTemplatedLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -251,7 +282,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_templated_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype"); }
+    pub fn evaluate_templated_function_from_call_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_templata: FunctionTemplataT<'s, 't>,
+        already_specified_template_args: &[ITemplataT<'s, 't>],
+        context_region: RegionT,
+        arg_types: &[CoordT<'s, 't>],
+    ) -> IEvaluateFunctionResult<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -299,7 +342,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_templated_function_from_call_for_prototype_ext(&self) { panic!("Unimplemented: evaluate_templated_function_from_call_for_prototype"); }
+    pub fn evaluate_templated_function_from_call_for_prototype_ext(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        function_templata: FunctionTemplataT<'s, 't>,
+        explicit_template_args: &[ITemplataT<'s, 't>],
+        context_region: RegionT,
+        arg_types: &[CoordT<'s, 't>],
+    ) -> IEvaluateFunctionResult<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -341,7 +396,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(&self) { panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype"); }
+    pub fn evaluate_generic_virtual_dispatcher_function_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        function_templata: FunctionTemplataT<'s, 't>,
+        args: &[Option<CoordT<'s, 't>>],
+    ) -> IDefineFunctionResult<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     coutputs: CompilerOutputs,
@@ -364,7 +429,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_generic_light_function_from_call_for_prototype(&self) { panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype"); }
+    pub fn evaluate_generic_light_function_from_call_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        function_templata: FunctionTemplataT<'s, 't>,
+        explicit_template_args: &[ITemplataT<'s, 't>],
+        context_region: RegionT,
+        args: &[CoordT<'s, 't>],
+    ) -> IResolveFunctionResult<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
@@ -390,7 +467,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_closure_struct(&self) { panic!("Unimplemented: evaluate_closure_struct"); }
+    pub fn evaluate_closure_struct(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        containing_node_env: &'t NodeEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        name: IFunctionDeclarationNameS<'s>,
+        function_a: &'s FunctionA<'s>,
+        verify_conclusions: bool,
+    ) -> StructTT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def evaluateClosureStruct(
     coutputs: CompilerOutputs,
@@ -423,7 +511,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn determine_closure_variable_member(&self) { panic!("Unimplemented: determine_closure_variable_member"); }
+    pub fn determine_closure_variable_member(
+        &self,
+        env: &'t NodeEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        name: IVarNameS<'s>,
+    ) -> &'t NormalStructMemberT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def determineClosureVariableMember(
     env: NodeEnvironmentT,

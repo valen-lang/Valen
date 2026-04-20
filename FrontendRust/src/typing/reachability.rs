@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+use crate::typing::compiler::Compiler;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
 use crate::typing::compiler_outputs::*;
@@ -40,7 +42,7 @@ impl<'s, 't> Reachables<'s, 't> {
 //) {
 */
 pub fn size(&self) -> usize {
-    panic!("Unimplemented: size");
+    panic!("Unimplemented: Slab 14 — body migration");
 }
 /*
 //  def size = functions.size + structs.size + staticSizedArrays.size + runtimeSizedArrays.size + interfaces.size + edges.size
@@ -49,9 +51,18 @@ pub fn size(&self) -> usize {
 //object Reachability {
 */
 }
-pub fn find_reachables<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>) -> Reachables<'s, 't> {
-    panic!("Unimplemented: find_reachables");
-}
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn find_reachables(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+    ) -> Reachables<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def findReachables(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]]): Reachables = {
 //    val structs = program.getAllStructs()
@@ -82,9 +93,21 @@ pub fn find_reachables<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[Int
 //    reachables
 //  }
 */
-fn visit_function<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT<'s, 't>], edges: &std::collections::HashMap<InterfaceTT<'s, 't>, std::collections::HashMap<StructTT<'s, 't>, Vec<PrototypeT<'s, 't>>>>, reachables: &mut Reachables<'s, 't>, callee_signature: SignatureT<'s, 't>) {
-    panic!("Unimplemented: visit_function");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_function(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        callee_signature: SignatureT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitFunction(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, calleeSignature: SignatureT): Unit = {
 //    if (reachables.functions.contains(calleeSignature)) {
@@ -118,9 +141,21 @@ fn visit_function<'s, 't>(program: &CompilerOutputs, edge_blueprints: &[Interfac
 //  }
 //
 */
-fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, struct_tt: StructTT) {
-    panic!("Unimplemented: visit_struct");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_struct(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        struct_tt: StructTT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitStruct(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, structTT: StructTT): Unit = {
 //    if (reachables.structs.contains(structTT)) {
@@ -163,9 +198,21 @@ fn visit_struct(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBluep
 //  }
 //
 */
-fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT) {
-    panic!("Unimplemented: visit_interface");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_interface(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        interface_tt: InterfaceTT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitInterface(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, interfaceTT: InterfaceTT): Unit = {
 //    if (reachables.interfaces.contains(interfaceTT)) {
@@ -208,9 +255,23 @@ fn visit_interface(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBl
 //  }
 //
 */
-fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, interface_tt: InterfaceTT, struct_tt: StructTT, methods: &[PrototypeT]) {
-    panic!("Unimplemented: visit_impl");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_impl(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        interface_tt: InterfaceTT<'s, 't>,
+        struct_tt: StructTT<'s, 't>,
+        methods: &[&'t PrototypeT<'s, 't>],
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitImpl(
 //      program: CompilerOutputs,
@@ -234,9 +295,21 @@ fn visit_impl(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBluepri
 //  }
 //
 */
-fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, ssa: StaticSizedArrayTT) {
-    panic!("Unimplemented: visit_static_sized_array");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_static_sized_array(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        ssa: StaticSizedArrayTT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitStaticSizedArray(
 //    program: CompilerOutputs,
@@ -268,9 +341,21 @@ fn visit_static_sized_array(program: &CompilerOutputs, edge_blueprints: &[Interf
 //  }
 //
 */
-fn visit_runtime_sized_array(program: &CompilerOutputs, edge_blueprints: &[InterfaceEdgeBlueprintT], edges: &std::collections::HashMap<InterfaceTT, std::collections::HashMap<StructTT, Vec<PrototypeT>>>, reachables: &mut Reachables, rsa: RuntimeSizedArrayTT) {
-    panic!("Unimplemented: visit_runtime_sized_array");
 }
+
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    pub fn visit_runtime_sized_array(
+        &self,
+        program: &CompilerOutputs<'s, 't>,
+        edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
+        edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
+        reachables: &mut Reachables<'s, 't>,
+        rsa: RuntimeSizedArrayTT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
 //  def visitRuntimeSizedArray(
 //    program: CompilerOutputs,
@@ -302,3 +387,4 @@ fn visit_runtime_sized_array(program: &CompilerOutputs, edge_blueprints: &[Inter
 //  }
 //}
 */
+}

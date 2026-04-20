@@ -1,4 +1,19 @@
+use std::collections::HashMap;
 use crate::typing::compiler::Compiler;
+use crate::utils::range::RangeS;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::names::*;
+use crate::postparsing::rules::rules::*;
+use crate::postparsing::*;
+use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::compiler_outputs::*;
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::FunctionEnvironmentT;
+use crate::typing::function::function_compiler::StampFunctionSuccess;
+use crate::typing::names::names::*;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
 
 /*
 package dev.vale.typing
@@ -146,7 +161,22 @@ class OverloadResolver(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn find_function(&self) { panic!("Unimplemented: find_function"); }
+    pub fn find_function(
+        &self,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_name: IImpreciseNameS<'s>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        context_region: RegionT,
+        args: &[CoordT<'s, 't>],
+        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        exact: bool,
+    ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def findFunction(
     callingEnv: IInDenizenEnvironmentT,
@@ -191,7 +221,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn params_match(&self) { panic!("Unimplemented: params_match"); }
+    pub fn params_match(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        desired_params: &[CoordT<'s, 't>],
+        candidate_params: &[CoordT<'s, 't>],
+        exact: bool,
+    ) -> Result<(), IFindFunctionFailureReason<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def paramsMatch(
     coutputs: CompilerOutputs,
@@ -239,7 +280,19 @@ pub struct SearchedEnvironment;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_candidate_banners(&self) { panic!("Unimplemented: get_candidate_banners"); }
+    pub fn get_candidate_banners(
+        &self,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        function_name: IImpreciseNameS<'s>,
+        param_filters: &[CoordT<'s, 't>],
+        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        searched_envs: &mut Vec<SearchedEnvironment>,
+        results: &mut Vec<ICalleeCandidate<'s, 't>>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def getCandidateBanners(
     env: IInDenizenEnvironmentT,
@@ -264,7 +317,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_candidate_banners_inner(&self) { panic!("Unimplemented: get_candidate_banners_inner"); }
+    pub fn get_candidate_banners_inner(
+        &self,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        function_name: IImpreciseNameS<'s>,
+        searched_envs: &mut Vec<SearchedEnvironment>,
+        results: &mut Vec<ICalleeCandidate<'s, 't>>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def getCandidateBannersInner(
     env: IInDenizenEnvironmentT,
@@ -319,7 +382,21 @@ pub struct AttemptedCandidate;
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn attempt_candidate_banner(&self) { panic!("Unimplemented: attempt_candidate_banner"); }
+    pub fn attempt_candidate_banner(
+        &self,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        context_region: RegionT,
+        args: &[CoordT<'s, 't>],
+        candidate: ICalleeCandidate<'s, 't>,
+        exact: bool,
+    ) -> Result<AttemptedCandidate, IFindFunctionFailureReason<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def attemptCandidateBanner(
     callingEnv: IInDenizenEnvironmentT,
@@ -526,7 +603,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_param_environments(&self) { panic!("Unimplemented: get_param_environments"); }
+    pub fn get_param_environments(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        param_filters: &[CoordT<'s, 't>],
+    ) -> Vec<&'t IInDenizenEnvironmentT<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Gets all the environments for all the arguments.
   private def getParamEnvironments(coutputs: CompilerOutputs, range: List[RangeS], paramFilters: Vector[CoordT]):
@@ -547,7 +631,22 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn find_potential_function(&self) { panic!("Unimplemented: find_potential_function"); }
+    pub fn find_potential_function(
+        &self,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_name: IImpreciseNameS<'s>,
+        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_runes_s: &[IRuneS<'s>],
+        context_region: RegionT,
+        args: &[CoordT<'s, 't>],
+        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        exact: bool,
+    ) -> Result<AttemptedCandidate, FindFunctionFailure<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Checks to see if there's a function that *could*
   // exist that takes in these parameter types, and returns what the signature *would* look like.
@@ -601,7 +700,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_banner_param_scores(&self) { panic!("Unimplemented: get_banner_param_scores"); }
+    pub fn get_banner_param_scores(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        candidate: &'t PrototypeT<'s, 't>,
+        arg_types: &[CoordT<'s, 't>],
+    ) -> Option<Vec<bool>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // Returns either:
   // - None if banners incompatible
@@ -644,7 +753,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn narrow_down_callable_overloads(&self) { panic!("Unimplemented: narrow_down_callable_overloads"); }
+    pub fn narrow_down_callable_overloads(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        unfiltered_banners: &[AttemptedCandidate],
+        arg_types: &[CoordT<'s, 't>],
+    ) -> (AttemptedCandidate, HashMap<AttemptedCandidate, IFindFunctionFailureReason<'s, 't>>) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def narrowDownCallableOverloads(
     coutputs: CompilerOutputs,
@@ -856,7 +975,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_array_generator_prototype(&self) { panic!("Unimplemented: get_array_generator_prototype"); }
+    pub fn get_array_generator_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
+        context_region: RegionT,
+    ) -> &'t PrototypeT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getArrayGeneratorPrototype(
     coutputs: CompilerOutputs,
@@ -885,7 +1014,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_array_consumer_prototype(&self) { panic!("Unimplemented: get_array_consumer_prototype"); }
+    pub fn get_array_consumer_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        fate: &FunctionEnvironmentT<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
+        element_type: CoordT<'s, 't>,
+        context_region: RegionT,
+    ) -> &'t PrototypeT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getArrayConsumerPrototype(
     coutputs: CompilerOutputs,

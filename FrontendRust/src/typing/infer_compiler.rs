@@ -1,4 +1,21 @@
+use std::collections::HashMap;
+use crate::utils::range::RangeS;
+use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::names::*;
+use crate::postparsing::rules::rules::*;
+use crate::typing::ast::ast::*;
+use crate::typing::citizen::struct_compiler::ResolveFailure;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::*;
+use crate::typing::env::environment::*;
+use crate::typing::hinputs_t::*;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+use crate::typing::names::names::*;
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::solver::solver::FailedSolve;
+use crate::solver::simple_solver_state::SimpleSolverState;
 
 /*
 package dev.vale.typing
@@ -193,7 +210,20 @@ class InferCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn solve_for_defining(&self) { panic!("Unimplemented: solve_for_defining"); }
+    pub fn solve_for_defining(
+        &self,
+        envs: InferEnv<'s>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        rules: &[&'s IRulexSR<'s>],
+        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        invocation_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_knowns: &[InitialKnown],
+        initial_sends: &[InitialSend],
+        include_reachable_bounds_for_runes: &[IRuneS<'s>],
+    ) -> Result<CompleteDefineSolve, IDefiningError> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def solveForDefining(
     envs: InferEnv, // See CSSNCE
@@ -232,7 +262,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn solve_for_resolving(&self) { panic!("Unimplemented: solve_for_resolving"); }
+    pub fn solve_for_resolving(
+        &self,
+        envs: InferEnv<'s>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        rules: &[&'s IRulexSR<'s>],
+        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        invocation_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_knowns: &[InitialKnown],
+        initial_sends: &[InitialSend],
+    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
@@ -260,7 +302,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn partial_solve(&self) { panic!("Unimplemented: partial_solve"); }
+    pub fn partial_solve(
+        &self,
+        envs: InferEnv<'s>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        rules: &[&'s IRulexSR<'s>],
+        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        invocation_range: &[RangeS<'s>],
+        initial_knowns: &[InitialKnown],
+        initial_sends: &[InitialSend],
+    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def partialSolve(
       envs: InferEnv, // See CSSNCE
@@ -286,7 +339,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_solver_state(&self) { panic!("Unimplemented: make_solver_state"); }
+    pub fn make_solver_state(
+        &self,
+        envs: InferEnv<'s>,
+        state: &mut CompilerOutputs<'s, 't>,
+        initial_rules: &[&'s IRulexSR<'s>],
+        initial_rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        invocation_range: &[RangeS<'s>],
+        initial_knowns: &[InitialKnown],
+        initial_sends: &[InitialSend],
+    ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def makeSolverState(
     envs: InferEnv, // See CSSNCE
@@ -334,7 +398,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn r#continue(&self) { panic!("Unimplemented: r#continue"); }
+    pub fn r#continue(
+        &self,
+        envs: InferEnv<'s>,
+        state: &mut CompilerOutputs<'s, 't>,
+        solver: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def continue(
     envs: InferEnv, // See CSSNCE
@@ -350,7 +421,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn check_resolving_conclusions_and_resolve(&self) { panic!("Unimplemented: check_resolving_conclusions_and_resolve"); }
+    pub fn check_resolving_conclusions_and_resolve(
+        &self,
+        envs: InferEnv<'s>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        rules: &[&'s IRulexSR<'s>],
+        include_reachable_bounds_for_runes: &[IRuneS<'s>],
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def checkResolvingConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
@@ -481,7 +564,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn interpret_results(&self) { panic!("Unimplemented: interpret_results"); }
+    pub fn interpret_results(
+        &self,
+        rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
@@ -506,7 +595,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn check_defining_conclusions_and_resolve(&self) { panic!("Unimplemented: check_defining_conclusions_and_resolve"); }
+    pub fn check_defining_conclusions_and_resolve(
+        &self,
+        envs: InferEnv<'s>,
+        state: &mut CompilerOutputs<'s, 't>,
+        invocation_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        initial_rules: &[&'s IRulexSR<'s>],
+        include_reachable_bounds_for_runes: &[IRuneS<'s>],
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def checkDefiningConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
@@ -589,7 +689,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn import_reachable_bounds(&self) { panic!("Unimplemented: import_reachable_bounds"); }
+    pub fn import_reachable_bounds(
+        &self,
+        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
+    ) -> GeneralEnvironmentT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def importReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -613,7 +719,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn import_conclusions_and_reachable_bounds(&self) { panic!("Unimplemented: import_conclusions_and_reachable_bounds"); }
+    pub fn import_conclusions_and_reachable_bounds(
+        &self,
+        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
+    ) -> GeneralEnvironmentT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def importConclusionsAndReachableBounds(
       originalCallingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -643,7 +756,19 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resolve_conclusions_for_define(&self) { panic!("Unimplemented: resolve_conclusions_for_define"); }
+    pub fn resolve_conclusions_for_define(
+        &self,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        context_region: RegionT,
+        rules: &[&'s IRulexSR<'s>],
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
+    ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   private def resolveConclusionsForDefine(
     env: IInDenizenEnvironmentT, // See CSSNCE
@@ -717,7 +842,18 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resolve_function_call_conclusion(&self) { panic!("Unimplemented: resolve_function_call_conclusion"); }
+    pub fn resolve_function_call_conclusion(
+        &self,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        c: ResolveSR<'s>,
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+        context_region: RegionT,
+    ) -> Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def resolveFunctionCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -763,7 +899,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resolve_impl_conclusion(&self) { panic!("Unimplemented: resolve_impl_conclusion"); }
+    pub fn resolve_impl_conclusion(
+        &self,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        c: CallSiteCoordIsaSR<'s>,
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def resolveImplConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -807,7 +953,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resolve_template_call_conclusion(&self) { panic!("Unimplemented: resolve_template_call_conclusion"); }
+    pub fn resolve_template_call_conclusion(
+        &self,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        c: CallSR<'s>,
+        conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<(), ResolveFailure<'s, 't, KindT<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def resolveTemplateCallConclusion(
     callingEnv: IInDenizenEnvironmentT,
@@ -878,7 +1034,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn incrementally_solve(&self) { panic!("Unimplemented: incrementally_solve"); }
+    pub fn incrementally_solve(
+        &self,
+        envs: InferEnv<'s>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        on_incomplete_solve: impl FnMut(&mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
+    ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def incrementallySolve(
     envs: InferEnv,

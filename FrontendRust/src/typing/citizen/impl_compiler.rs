@@ -1,8 +1,12 @@
+use std::collections::HashMap;
 use crate::typing::compiler::Compiler;
 use crate::typing::infer_compiler::*;
+use crate::solver::solver::*;
+use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::*;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::*;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
@@ -84,7 +88,17 @@ class ImplCompiler(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn resolve_impl(&self) { panic!("Unimplemented: resolve_impl"); }
+    pub fn resolve_impl(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        initial_knowns: &[InitialKnown],
+        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def resolveImpl(
       coutputs: CompilerOutputs,
@@ -157,7 +171,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn partial_resolve_impl(&self) { panic!("Unimplemented: partial_resolve_impl"); }
+    pub fn partial_resolve_impl(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        initial_knowns: &[InitialKnown],
+        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+    ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // WARNING: Doesn't verify conclusions to make sure that any bounds are satisfied!
   def partialResolveImpl(
@@ -218,7 +242,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn compile_impl(&self) { panic!("Unimplemented: compile_impl"); }
+    pub fn compile_impl(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_location: LocationInDenizen<'s>,
+        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+    ) {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   // This will just figure out the struct template and interface template,
   // so we can add it to the temputs.
@@ -363,7 +394,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn calculate_runes_independence(&self) { panic!("Unimplemented: calculate_runes_independence"); }
+    pub fn calculate_runes_independence(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_location: LocationInDenizen<'s>,
+        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_outer_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        interface: InterfaceTT<'s, 't>,
+    ) -> Vec<bool> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def calculateRunesIndependence(
     coutputs: CompilerOutputs,
@@ -413,7 +453,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn assemble_impl_name(&self) { panic!("Unimplemented: assemble_impl_name"); }
+    pub fn assemble_impl_name(
+        &self,
+        template_name: IdT<'s, 't>,
+        template_args: &[ITemplataT<'s, 't>],
+        sub_citizen: ICitizenTT<'s, 't>,
+    ) -> IdT<'s, 't> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def assembleImplName(
     templateName: IdT[IImplTemplateNameT],
@@ -587,7 +634,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn is_descendant(&self) { panic!("Unimplemented: is_descendant"); }
+    pub fn is_descendant(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        kind: ISubKindTT<'s, 't>,
+    ) -> bool {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def isDescendant(
     coutputs: CompilerOutputs,
@@ -630,7 +686,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_impl_parent_given_sub_citizen(&self) { panic!("Unimplemented: get_impl_parent_given_sub_citizen"); }
+    pub fn get_impl_parent_given_sub_citizen(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        child: ICitizenTT<'s, 't>,
+    ) -> Result<InterfaceTT<'s, 't>, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getImplParentGivenSubCitizen(
     coutputs: CompilerOutputs,
@@ -665,7 +731,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_parents(&self) { panic!("Unimplemented: get_parents"); }
+    pub fn get_parents(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        sub_kind: ISubKindTT<'s, 't>,
+    ) -> Vec<ISuperKindTT<'s, 't>> {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def getParents(
     coutputs: CompilerOutputs,
@@ -733,7 +808,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn is_parent(&self) { panic!("Unimplemented: is_parent"); }
+    pub fn is_parent(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        sub_kind_tt: ISubKindTT<'s, 't>,
+        super_kind_tt: ISuperKindTT<'s, 't>,
+    ) -> IsParentResult {
+        panic!("Unimplemented: Slab 14 — body migration");
+    }
 /*
   def isParent(
     coutputs: CompilerOutputs,

@@ -1,4 +1,7 @@
 use crate::higher_typing::ast::*;
+use crate::postparsing::ast::NormalStructMemberS;
+use crate::postparsing::names::{AnonymousSubstructTemplateNameS, IRuneS};
+use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::typing::names::names::*;
 use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler::Compiler;
@@ -171,8 +174,12 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn map_runes_anonymous_interface(&self) {
-        panic!("Unimplemented: map_runes_anonymous_interface");
+    pub fn map_runes_anonymous_interface(
+        &self,
+        rule: IRulexSR<'s>,
+        func: impl Fn(IRuneS<'s>) -> IRuneS<'s>,
+    ) -> IRulexSR<'s> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def mapRunes(rule: IRulexSR, func: IRuneS => IRuneS): IRulexSR = {
@@ -218,8 +225,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn inherited_method_rune_anonymous_interface(&self) {
-        panic!("Unimplemented: inherited_method_rune_anonymous_interface");
+    pub fn inherited_method_rune_anonymous_interface(
+        &self,
+        interface_a: &'s InterfaceA<'s>,
+        method: &'s FunctionA<'s>,
+        rune: IRuneS<'s>,
+    ) -> IRuneS<'s> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   // These are how the forwarder function refers to runes from the abstract function it's overriding. After all, the
@@ -235,8 +247,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_struct_anonymous_interface(&self) {
-        panic!("Unimplemented: make_struct_anonymous_interface");
+    pub fn make_struct_anonymous_interface(
+        &self,
+        interface_a: &'s InterfaceA<'s>,
+        member_runes: &[RuneUsage<'s>],
+        members: &[NormalStructMemberS<'s>],
+        struct_template_name_s: AnonymousSubstructTemplateNameS<'s>,
+    ) -> &'s StructA<'s> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def makeStruct(interfaceA: InterfaceA, memberRunes: Vector[RuneUsage], members: Vector[NormalStructMemberS], structTemplateNameS: AnonymousSubstructTemplateNameS) = {
@@ -450,8 +468,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_forwarder_function_anonymous_interface(&self) {
-        panic!("Unimplemented: make_forwarder_function_anonymous_interface");
+    pub fn make_forwarder_function_anonymous_interface(
+        &self,
+        struct_name_s: AnonymousSubstructTemplateNameS<'s>,
+        interface: &'s InterfaceA<'s>,
+        struct_: &'s StructA<'s>,
+        method: &'s FunctionA<'s>,
+        method_index: i32,
+    ) -> &'s FunctionA<'s> {
+        panic!("Unimplemented: Slab 14 — body migration");
     }
 /*
   private def makeForwarderFunction(
