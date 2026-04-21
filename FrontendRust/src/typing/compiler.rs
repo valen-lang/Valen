@@ -62,26 +62,28 @@ import scala.collection.mutable
 import scala.util.control.Breaks._
 
 */
-pub trait IFunctionGenerator<'s, 't> {
+#[derive(Copy, Clone, Debug, PartialEq, Eq)]
+pub enum IFunctionGenerator {
+    StructConstructor,
+    StructDrop,
+    InterfaceDrop,
+    RsaDropInto,
+    RsaImmutableNew,
+    RsaLen,
+    RsaMutableCapacity,
+    RsaMutableNew,
+    RsaMutablePop,
+    RsaMutablePush,
+    SsaDropInto,
+    SsaLen,
+    LockWeak,
+    SameInstance,
+    AsSubtype,
+    AbstractBody,
+}
 /*
 trait IFunctionGenerator {
 */
-fn generate(
-    &self,
-    function_compiler_core: (), // FunctionCompilerCore
-    struct_compiler: (),
-    destructor_compiler: (),
-    array_compiler: (),
-    env: (),
-    coutputs: (),
-    life: (),
-    call_range: Vec<()>,
-    origin_function: Option<()>,
-    param_coords: Vec<()>,
-    maybe_ret_coord: Option<()>,
-) -> () {
-    panic!("Unimplemented: generate");
-}
 /*
   def generate(
     // These serve as the API that a function generator can use.
@@ -104,10 +106,7 @@ fn generate(
 }
 
 */
-}
 
-// TODO: placeholder PhantomData — replace with real fields during body migration
-pub struct DefaultPrintyThing<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
 /*
 object DefaultPrintyThing {
 */
@@ -119,7 +118,7 @@ where 's: 't,
         // TODO: Slab 14 — Scala uses a by-name parameter here; pick impl Display or &str as the Rust equivalent when porting the body.
         x: (),
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -850,7 +849,7 @@ where 's: 't,
         code_map: &FileCoordinateMap<'s, String>,
         package_to_program_a: &'s PackageCoordinateMap<'s, ProgramA<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1555,7 +1554,7 @@ where 's: 't,
         struct_name_t: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1583,7 +1582,7 @@ where 's: 't,
         interface_name_t: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1617,7 +1616,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         attributes: &[&'s ICitizenAttributeS<'s>],
     ) -> Vec<T> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1654,7 +1653,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1762,7 +1761,7 @@ where 's: 't,
         &self,
         function_a: &'s FunctionA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1787,7 +1786,7 @@ where 's: 't,
         &self,
         struct_a: &'s StructA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1804,7 +1803,7 @@ where 's: 't,
         &self,
         interface_a: &'s InterfaceA<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1824,7 +1823,7 @@ where 's: 't,
         &self,
         exprs: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1862,7 +1861,7 @@ where 's: 't,
         &self,
         kind: KindT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1887,7 +1886,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         concrete_values2: &[KindT<'s, 't>],
     ) -> Vec<ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -1905,7 +1904,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         concrete_value2: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*

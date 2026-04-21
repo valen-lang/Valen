@@ -21,7 +21,8 @@ import scala.collection.immutable.Map
 */
 
 pub enum CitizenDefinitionT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    Struct(&'t StructDefinitionT<'s, 't>),
+    Interface(&'t InterfaceDefinitionT<'s, 't>),
 }
 /*
 trait CitizenDefinitionT {
@@ -54,7 +55,7 @@ fn citizen_definition_default_region() -> RegionT {
 pub struct StructDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_citizen: StructTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
+    pub attributes: Vec<ICitizenAttributeT<'s>>,
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
     pub members: Vec<IStructMemberT<'s, 't>>,
@@ -136,7 +137,8 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 */
 }
 pub enum IStructMemberT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    Normal(NormalStructMemberT<'s, 't>),
+    Variadic(VariadicStructMemberT<'s, 't>),
 }
 /*
 sealed trait IStructMemberT {
@@ -176,7 +178,8 @@ case class VariadicStructMemberT(
 }
 */
 pub enum IMemberTypeT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    Address(AddressMemberTypeT<'s, 't>),
+    Reference(ReferenceMemberTypeT<'s, 't>),
 }
 /*
 sealed trait IMemberTypeT  {
@@ -226,7 +229,7 @@ pub struct InterfaceDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_interface: InterfaceTT<'s, 't>,
     pub ref_: InterfaceTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s, 't>>,
+    pub attributes: Vec<ICitizenAttributeT<'s>>,
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
     pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,

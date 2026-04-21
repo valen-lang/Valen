@@ -92,7 +92,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         param_kind: &KindT<'s, 't>,
         maybe_virtuality: Option<&AbstractSP<'s>>,
-    ) -> Option<AbstractT<'s, 't>> {
+    ) -> Option<AbstractT> {
         panic!("Unimplemented: evaluate_maybe_virtuality");
     }
 

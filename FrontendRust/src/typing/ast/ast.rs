@@ -387,13 +387,13 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {
 }
 */
 }
-pub struct AbstractT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct AbstractT;
 /*
 case class AbstractT()
 */
 pub struct ParameterT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
-    pub virtuality: Option<AbstractT<'s, 't>>,
+    pub virtuality: Option<AbstractT>,
     pub pre_checked: bool,
     pub tyype: CoordT<'s, 't>,
 }
@@ -431,7 +431,9 @@ impl<'s, 't> ParameterT<'s, 't> {
 */
 }
 pub enum ICalleeCandidate<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    Function(FunctionCalleeCandidate<'s, 't>),
+    Header(&'t HeaderCalleeCandidate<'s, 't>),
+    PrototypeTemplata(PrototypeTemplataCalleeCandidate<'s, 't>),
 }
 /*
 sealed trait ICalleeCandidate
@@ -647,23 +649,29 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 }
 */
 }
-pub enum IFunctionAttributeT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+pub enum IFunctionAttributeT<'s> {
+    Extern(ExternT<'s>),
+    Pure,
+    Additive,
+    UserFunction,
 }
 /*
 sealed trait IFunctionAttributeT
 */
-pub enum ICitizenAttributeT<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+pub enum ICitizenAttributeT<'s> {
+    Extern(ExternT<'s>),
+    Sealed,
 }
 /*
 sealed trait ICitizenAttributeT
 */
-pub struct ExternT<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct ExternT<'s> {
+    pub package_coord: PackageCoordinate<'s>,
+}
 /*
 case class ExternT(packageCoord: PackageCoordinate) extends IFunctionAttributeT with ICitizenAttributeT { // For optimization later
 */
-impl<'s, 't> ExternT<'s, 't> {
+impl<'s> ExternT<'s> {
     fn hash_code(&self) -> i32 { panic!("Unimplemented: hash_code"); }
 /*
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -689,7 +697,7 @@ case object UserFunctionT extends IFunctionAttributeT // Whether it was written 
 }
 pub struct FunctionHeaderT<'s, 't> {
     pub id: IdT<'s, 't>,
-    pub attributes: Vec<IFunctionAttributeT<'s, 't>>,
+    pub attributes: Vec<IFunctionAttributeT<'s>>,
     pub params: Vec<ParameterT<'s, 't>>,
     pub return_type: CoordT<'s, 't>,
     pub maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
@@ -713,7 +721,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 impl<'s, 't> FunctionHeaderT<'s, 't> {
     fn new(
         id: IdT<'s, 't>,
-        attributes: Vec<IFunctionAttributeT<'s, 't>>,
+        attributes: Vec<IFunctionAttributeT<'s>>,
         params: Vec<ParameterT<'s, 't>>,
         return_type: CoordT<'s, 't>,
         maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,

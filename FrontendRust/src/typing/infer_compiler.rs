@@ -42,7 +42,10 @@ import scala.collection.immutable._
 //ISolverOutcome[IRulexSR, IRuneS, ITemplata[ITemplataType], ITypingPassSolverError]
 
 */
-pub struct CompleteResolveSolve;
+pub struct CompleteResolveSolve<'s, 't> {
+    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
+}
 /*
 case class CompleteResolveSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
@@ -50,7 +53,10 @@ case class CompleteResolveSolve(
 )
 
 */
-pub struct CompleteDefineSolve;
+pub struct CompleteDefineSolve<'s, 't> {
+    pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
+}
 /*
 case class CompleteDefineSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
@@ -58,7 +64,20 @@ case class CompleteDefineSolve(
 
 */
 pub enum IConclusionResolveError<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    CouldntFindImplForConclusionResolve {
+        range: &'t [RangeS<'s>],
+        fail: crate::typing::citizen::impl_compiler::IsntParent<'s, 't>,
+    },
+    CouldntFindKindForConclusionResolve(ResolveFailure<'s, 't, KindT<'s, 't>>),
+    CouldntFindFunctionForConclusionResolve {
+        range: &'t [RangeS<'s>],
+        fff: crate::typing::overload_resolver::FindFunctionFailure<'s, 't>,
+    },
+    ReturnTypeConflictInConclusionResolve {
+        range: &'t [RangeS<'s>],
+        expected_return_type: CoordT<'s, 't>,
+        actual: &'t PrototypeT<'s, 't>,
+    },
 }
 /*
 sealed trait IConclusionResolveError
@@ -77,7 +96,8 @@ case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedRe
 
 */
 pub enum IResolvingError<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    ResolvingSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
+    ResolvingResolveConclusionError(Box<IConclusionResolveError<'s, 't>>),
 }
 /*
 sealed trait IResolvingError
@@ -89,7 +109,10 @@ case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS,
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
 */
-pub enum IDefiningError {}
+pub enum IDefiningError<'s, 't> {
+    DefiningSolveFailedOrIncomplete(FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>),
+    DefiningResolveConclusionError(IConclusionResolveError<'s, 't>),
+}
 /*
 sealed trait IDefiningError
 */
@@ -100,7 +123,13 @@ case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, 
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
 */
-pub struct InferEnv<'s>(pub std::marker::PhantomData<&'s ()>);
+pub struct InferEnv<'s, 't> {
+    pub original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+    pub parent_ranges: &'t [RangeS<'s>],
+    pub call_location: LocationInDenizen<'s>,
+    pub self_env: IEnvironmentT<'s, 't>,
+    pub context_region: RegionT,
+}
 /*
 case class InferEnv(
   // This is the only one that matters when checking template instantiations.
@@ -120,7 +149,11 @@ case class InferEnv(
 )
 
 */
-pub struct InitialSend;
+pub struct InitialSend<'s, 't> {
+    pub sender_rune: RuneUsage<'s>,
+    pub receiver_rune: RuneUsage<'s>,
+    pub send_templata: ITemplataT<'s, 't>,
+}
 /*
 case class InitialSend(
   senderRune: RuneUsage,
@@ -128,7 +161,10 @@ case class InitialSend(
   sendTemplata: ITemplataT[ITemplataType])
 
 */
-pub struct InitialKnown;
+pub struct InitialKnown<'s, 't> {
+    pub rune: RuneUsage<'s>,
+    pub templata: ITemplataT<'s, 't>,
+}
 /*
 case class InitialKnown(
   rune: RuneUsage,
@@ -212,7 +248,7 @@ where 's: 't,
 {
     pub fn solve_for_defining(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[&'s IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -221,8 +257,8 @@ where 's: 't,
         initial_knowns: &[InitialKnown],
         initial_sends: &[InitialSend],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
-    ) -> Result<CompleteDefineSolve, IDefiningError> {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> Result<CompleteDefineSolve<'s, 't>, IDefiningError<'s, 't>> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def solveForDefining(
@@ -264,7 +300,7 @@ where 's: 't,
 {
     pub fn solve_for_resolving(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[&'s IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -272,8 +308,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         initial_knowns: &[InitialKnown],
         initial_sends: &[InitialSend],
-    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def solveForResolving(
@@ -304,7 +340,7 @@ where 's: 't,
 {
     pub fn partial_solve(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         rules: &[&'s IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -312,7 +348,7 @@ where 's: 't,
         initial_knowns: &[InitialKnown],
         initial_sends: &[InitialSend],
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def partialSolve(
@@ -341,7 +377,7 @@ where 's: 't,
 {
     pub fn make_solver_state(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         initial_rules: &[&'s IRulexSR<'s>],
         initial_rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -349,7 +385,7 @@ where 's: 't,
         initial_knowns: &[InitialKnown],
         initial_sends: &[InitialSend],
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def makeSolverState(
@@ -400,11 +436,11 @@ where 's: 't,
 {
     pub fn r#continue(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         solver: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def continue(
@@ -423,7 +459,7 @@ where 's: 't,
 {
     pub fn check_resolving_conclusions_and_resolve(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -431,8 +467,8 @@ where 's: 't,
         rules: &[&'s IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def checkResolvingConclusionsAndResolve(
@@ -569,7 +605,7 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def interpretResults(
@@ -597,7 +633,7 @@ where 's: 't,
 {
     pub fn check_defining_conclusions_and_resolve(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -605,7 +641,7 @@ where 's: 't,
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def checkDefiningConclusionsAndResolve(
@@ -694,7 +730,7 @@ where 's: 't,
         original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> GeneralEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def importReachableBounds(
@@ -725,7 +761,7 @@ where 's: 't,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> GeneralEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def importConclusionsAndReachableBounds(
@@ -767,7 +803,7 @@ where 's: 't,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def resolveConclusionsForDefine(
@@ -852,7 +888,7 @@ where 's: 't,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         context_region: RegionT,
     ) -> Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveFunctionCallConclusion(
@@ -908,7 +944,7 @@ where 's: 't,
         c: CallSiteCoordIsaSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveImplConclusion(
@@ -962,7 +998,7 @@ where 's: 't,
         c: CallSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), ResolveFailure<'s, 't, KindT<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveTemplateCallConclusion(
@@ -1036,12 +1072,12 @@ where 's: 't,
 {
     pub fn incrementally_solve(
         &self,
-        envs: InferEnv<'s>,
+        envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
         on_incomplete_solve: impl FnMut(&mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def incrementallySolve(

@@ -22,6 +22,9 @@ use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
 use crate::typing::infer_compiler::InferEnv;
+use crate::typing::overload_resolver::FindFunctionFailure;
+use crate::typing::citizen::impl_compiler::IsntParent;
+use crate::typing::citizen::struct_compiler::ResolveFailure;
 
 /*
 package dev.vale.typing.infer
@@ -51,7 +54,36 @@ import scala.collection.immutable.{HashSet, Map}
 import scala.collection.mutable
 
 */
-pub enum ITypingPassSolverError<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
+pub enum ITypingPassSolverError<'s, 't> {
+    KindIsNotConcrete { kind: KindT<'s, 't> },
+    KindIsNotInterface { kind: KindT<'s, 't> },
+    KindIsNotStruct { kind: KindT<'s, 't> },
+    CouldntFindFunction { range: &'t [RangeS<'s>], fff: FindFunctionFailure<'s, 't> },
+    CouldntFindImpl { range: &'t [RangeS<'s>], fail: &'t IsntParent<'s, 't> },
+    CouldntResolveKind { rf: &'t ResolveFailure<'s, 't, KindT<'s, 't>> },
+    CantShareMutable { kind: KindT<'s, 't> },
+    CantSharePlaceholder { kind: KindT<'s, 't> },
+    BadIsaSubKind { kind: KindT<'s, 't> },
+    BadIsaSuperKind { kind: KindT<'s, 't> },
+    SendingNonCitizen { kind: KindT<'s, 't> },
+    CantCheckPlaceholder { range: &'t [RangeS<'s>] },
+    ReceivingDifferentOwnerships { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
+    SendingNonIdenticalKinds { send_coord: CoordT<'s, 't>, receive_coord: CoordT<'s, 't> },
+    NoCommonAncestors { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
+    LookupFailed { name: IImpreciseNameS<'s> },
+    NoAncestorsSatisfyCall { params: &'t [(IRuneS<'s>, CoordT<'s, 't>)] },
+    CantDetermineNarrowestKind { kinds: &'t [KindT<'s, 't>] },
+    OwnershipDidntMatch { coord: CoordT<'s, 't>, expected_ownership: OwnershipT },
+    CallResultWasntExpectedType { expected: ITemplataT<'s, 't>, actual: ITemplataT<'s, 't> },
+    CallResultIsntCallable { result: ITemplataT<'s, 't> },
+    OneOfFailed { rule: OneOfSR<'s> },
+    IsaFailed { sub: KindT<'s, 't>, suuper: KindT<'s, 't> },
+    WrongNumberOfTemplateArgs { expected_min_num_args: i32, expected_max_num_args: i32 },
+    FunctionDoesntHaveName { range: &'t [RangeS<'s>], name: IFunctionNameT<'s, 't> },
+    CantGetComponentsOfPlaceholderPrototype { range: &'t [RangeS<'s>] },
+    ReturnTypeConflict { range: &'t [RangeS<'s>], expected_return_type: CoordT<'s, 't>, actual: PrototypeT<'s, 't> },
+    InternalSolverError { range: &'t [RangeS<'s>], err: &'t ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>> },
+}
 /*
 sealed trait ITypingPassSolverError
 */
@@ -376,7 +408,7 @@ where 's: 't,
     pub fn make_solver_state_solver(
         &self,
         range: Vec<RangeS<'s>>,
-        env: InferEnv<'s>,
+        env: InferEnv<'s, 't>,
         state: CompilerOutputs<'s, 't>,
         rules: Vec<IRulexSR<'s>>,
         initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
@@ -437,7 +469,7 @@ where 's: 't,
 {
     pub fn advance_infer(
         &self,
-        env: InferEnv<'s>,
+        env: InferEnv<'s, 't>,
         state: CompilerOutputs<'s, 't>,
         solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
@@ -506,7 +538,7 @@ where 's: 't,
 {
     pub fn continue_solver(
         &self,
-        env: InferEnv<'s>,
+        env: InferEnv<'s, 't>,
         state: CompilerOutputs<'s, 't>,
         solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
@@ -538,7 +570,7 @@ object CompilerRuleSolver {
 }
 
 pub fn sanity_check_conclusion<'s, 't>(
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     rune: IRuneS<'s>,
     conclusion: ITemplataT<'s, 't>,
@@ -553,7 +585,7 @@ pub fn sanity_check_conclusion<'s, 't>(
 */
 fn complex_solve<'s, 't>(
     state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
 ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: complex_solve");
@@ -572,7 +604,7 @@ fn complex_solve<'s, 't>(
 */
 fn complex_solve_inner<'s, 't>(
     state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
 ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: complex_solve_inner");
@@ -678,7 +710,7 @@ fn complex_solve_inner<'s, 't>(
 
 */
 fn solve_receives<'s, 't>(
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     senders: Vec<(IRuneS<'s>, CoordT<'s, 't>)>,
     call_templates: Vec<ITemplataT<'s, 't>>,
@@ -749,7 +781,7 @@ fn solve_receives<'s, 't>(
 
 */
 fn narrow<'s, 't>(
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     state: CompilerOutputs<'s, 't>,
     kinds: HashSet<KindT<'s, 't>>,
 ) -> Result<KindT<'s, 't>, ITypingPassSolverError<'s, 't>> {
@@ -781,7 +813,7 @@ fn narrow<'s, 't>(
 */
 fn solve<'s, 't>(
     state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     rule_index: i32,
     rule: IRulexSR<'s>,
@@ -806,7 +838,7 @@ fn solve<'s, 't>(
 */
 fn solve_rule<'s, 't>(
     state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     rule_index: i32,
     rule: IRulexSR<'s>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -1235,7 +1267,7 @@ fn solve_rule<'s, 't>(
 */
 fn solve_call_rule<'s, 't>(
     state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s>,
+    env: InferEnv<'s, 't>,
     solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     rule_index: i32,
     range: RangeS<'s>,

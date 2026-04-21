@@ -179,7 +179,7 @@ where 's: 't,
         rule: IRulexSR<'s>,
         func: impl Fn(IRuneS<'s>) -> IRuneS<'s>,
     ) -> IRulexSR<'s> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def mapRunes(rule: IRulexSR, func: IRuneS => IRuneS): IRulexSR = {
@@ -231,7 +231,7 @@ where 's: 't,
         method: &'s FunctionA<'s>,
         rune: IRuneS<'s>,
     ) -> IRuneS<'s> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // These are how the forwarder function refers to runes from the abstract function it's overriding. After all, the
@@ -254,7 +254,7 @@ where 's: 't,
         members: &[NormalStructMemberS<'s>],
         struct_template_name_s: AnonymousSubstructTemplateNameS<'s>,
     ) -> &'s StructA<'s> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def makeStruct(interfaceA: InterfaceA, memberRunes: Vector[RuneUsage], members: Vector[NormalStructMemberS], structTemplateNameS: AnonymousSubstructTemplateNameS) = {
@@ -476,7 +476,7 @@ where 's: 't,
         method: &'s FunctionA<'s>,
         method_index: i32,
     ) -> &'s FunctionA<'s> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def makeForwarderFunction(

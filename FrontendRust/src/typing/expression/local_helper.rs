@@ -386,7 +386,7 @@ where 's: 't,
         mutability: ITemplataT<'s, 't>,
         local_a: &'s LocalS<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -410,7 +410,7 @@ where 's: 't,
         &self,
         local_a: &'s LocalS<'s>,
     ) -> VariabilityT {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*

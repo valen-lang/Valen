@@ -52,7 +52,7 @@ import scala.collection.mutable
 import scala.collection.mutable.ArrayBuffer
 
 */
-pub struct TookWeakRefOfNonWeakableError<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct TookWeakRefOfNonWeakableError;
 
 /*
 case class TookWeakRefOfNonWeakableError() extends Throwable {
@@ -161,7 +161,7 @@ where 's: 't,
         region: RegionT,
         exprs_1: &[&'s IExpressionSE<'s>],
     ) -> (Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateAndCoerceToReferenceExpressions(
@@ -197,7 +197,7 @@ where 's: 't,
         name: IVarNameT<'s, 't>,
         target_ownership: LoadAsP,
     ) -> Option<ExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def evaluateLookupForLoad(
@@ -239,7 +239,7 @@ where 's: 't,
         load_range: RangeS<'s>,
         name_a: IVarNameS<'s>,
     ) -> Option<&'t AddressExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def evaluateAddressibleLookupForMutate(
@@ -339,7 +339,7 @@ where 's: 't,
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
     ) -> Option<&'t AddressExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def evaluateAddressibleLookup(
@@ -444,7 +444,7 @@ where 's: 't,
         region: RegionT,
         closure_struct_ref: StructTT<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def makeClosureStructConstructExpression(
@@ -527,7 +527,7 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateAndCoerceToReferenceExpression(
@@ -566,7 +566,7 @@ where 's: 't,
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def coerceToReferenceExpression(
@@ -600,7 +600,7 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> (&'t AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def evaluateExpectedAddressExpression(
@@ -639,7 +639,7 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> (ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // returns:
@@ -1729,7 +1729,7 @@ where 's: 't,
         generator_prototype: PrototypeT<'s, 't>,
         generator_type: CoordT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def checkArray(
@@ -1777,7 +1777,7 @@ where 's: 't,
         context_region: RegionT,
         contained_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getOption(
@@ -1864,7 +1864,7 @@ where 's: 't,
         contained_success_coord: CoordT<'s, 't>,
         contained_fail_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getResult(
@@ -1965,7 +1965,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def weakAlias(coutputs: CompilerOutputs, expr: ReferenceExpressionTE): ReferenceExpressionTE = {
@@ -2003,7 +2003,7 @@ where 's: 't,
         context_region: RegionT,
         undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.
@@ -2058,7 +2058,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
@@ -2117,7 +2117,7 @@ where 's: 't,
         region: RegionT,
         name: IImpreciseNameS<'s>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def newGlobalFunctionGroupExpression(
@@ -2152,7 +2152,7 @@ where 's: 't,
         region: RegionT,
         block: &'s BlockSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateBlockStatements(
@@ -2186,7 +2186,7 @@ where 's: 't,
         pattern_input_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def translatePatternList(
@@ -2217,7 +2217,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionA<'s> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def astronomizeLambda(
@@ -2307,7 +2307,7 @@ where 's: 't,
         region: RegionT,
         expr_te: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def dropSince(
@@ -2387,7 +2387,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Makes the last expression stored in a variable.

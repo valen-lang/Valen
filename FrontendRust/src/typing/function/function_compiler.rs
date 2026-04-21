@@ -88,13 +88,18 @@ trait IFunctionCompilerDelegate {
 
 */
 pub enum IEvaluateFunctionResult<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    EvaluateFunctionSuccess(EvaluateFunctionSuccess<'s, 't>),
+    EvaluateFunctionFailure(EvaluateFunctionFailure<'s, 't>),
 }
 /*
 trait IEvaluateFunctionResult
 
 */
-pub struct EvaluateFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct EvaluateFunctionSuccess<'s, 't> {
+    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub instantiation_bound_args: &'t crate::typing::hinputs_t::InstantiationBoundArgumentsT<'s, 't>,
+}
 /*
 case class EvaluateFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -103,7 +108,9 @@ case class EvaluateFunctionSuccess(
 ) extends IEvaluateFunctionResult
 
 */
-pub struct EvaluateFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct EvaluateFunctionFailure<'s, 't> {
+    pub reason: crate::typing::infer_compiler::IDefiningError<'s, 't>,
+}
 /*
 case class EvaluateFunctionFailure(
     reason: IDefiningError
@@ -111,13 +118,18 @@ case class EvaluateFunctionFailure(
 
 */
 pub enum IDefineFunctionResult<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    DefineFunctionSuccess(DefineFunctionSuccess<'s, 't>),
+    DefineFunctionFailure(DefineFunctionFailure<'s, 't>),
 }
 /*
 trait IDefineFunctionResult
 
 */
-pub struct DefineFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct DefineFunctionSuccess<'s, 't> {
+    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+    pub instantiation_bound_params: &'t crate::typing::hinputs_t::InstantiationBoundArgumentsT<'s, 't>,
+}
 /*
 case class DefineFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -126,7 +138,9 @@ case class DefineFunctionSuccess(
 ) extends IDefineFunctionResult
 
 */
-pub struct DefineFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct DefineFunctionFailure<'s, 't> {
+    pub reason: crate::typing::infer_compiler::IDefiningError<'s, 't>,
+}
 /*
 case class DefineFunctionFailure(
     reason: IDefiningError
@@ -135,13 +149,17 @@ case class DefineFunctionFailure(
 
 */
 pub enum IResolveFunctionResult<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    ResolveFunctionSuccess(ResolveFunctionSuccess<'s, 't>),
+    ResolveFunctionFailure(ResolveFunctionFailure<'s, 't>),
 }
 /*
 trait IResolveFunctionResult
 
 */
-pub struct ResolveFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct ResolveFunctionSuccess<'s, 't> {
+    pub prototype: &'t crate::typing::templata::templata::PrototypeTemplataT<'s, 't>,
+    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+}
 /*
 case class ResolveFunctionSuccess(
     prototype: PrototypeTemplataT[IFunctionNameT],
@@ -149,7 +167,9 @@ case class ResolveFunctionSuccess(
 ) extends IResolveFunctionResult
 
 */
-pub struct ResolveFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct ResolveFunctionFailure<'s, 't> {
+    pub reason: crate::typing::infer_compiler::IResolvingError<'s, 't>,
+}
 /*
 case class ResolveFunctionFailure(
     reason: IResolvingError
@@ -158,13 +178,17 @@ case class ResolveFunctionFailure(
 
 */
 pub enum IStampFunctionResult<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    StampFunctionSuccess(StampFunctionSuccess<'s, 't>),
+    StampFunctionFailure(StampFunctionFailure<'s, 't>),
 }
 /*
 trait IStampFunctionResult
 
 */
-pub struct StampFunctionSuccess<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct StampFunctionSuccess<'s, 't> {
+    pub prototype: &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
+    pub inferences: std::collections::HashMap<crate::postparsing::names::IRuneS<'s>, ITemplataT<'s, 't>>,
+}
 /*
 case class StampFunctionSuccess(
   prototype: PrototypeT[IFunctionNameT],
@@ -172,7 +196,9 @@ case class StampFunctionSuccess(
 ) extends IStampFunctionResult
 
 */
-pub struct StampFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct StampFunctionFailure<'s, 't> {
+    pub reason: crate::typing::overload_resolver::IFindFunctionFailureReason<'s, 't>,
+}
 /*
 case class StampFunctionFailure(
   reason: IFindFunctionFailureReason
@@ -212,7 +238,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
     ) -> &'t FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // We would want only the prototype instead of the entire header if, for example,
@@ -253,7 +279,7 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateTemplatedLightFunctionFromCallForPrototype(
@@ -293,7 +319,7 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -353,7 +379,7 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateTemplatedFunctionFromCallForPrototype(
@@ -405,7 +431,7 @@ where 's: 't,
         function_templata: FunctionTemplataT<'s, 't>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> IDefineFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
@@ -440,7 +466,7 @@ where 's: 't,
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
     ) -> IResolveFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype(
@@ -477,7 +503,7 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
         verify_conclusions: bool,
     ) -> StructTT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def evaluateClosureStruct(
@@ -517,7 +543,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         name: IVarNameS<'s>,
     ) -> &'t NormalStructMemberT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def determineClosureVariableMember(

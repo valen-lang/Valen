@@ -241,7 +241,7 @@ pub fn humanize<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> Strin
     errorStrBody + "\n"
   }
 */
-pub fn humanize_defining_error<'s>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError) -> String {
+pub fn humanize_defining_error<'s, 't>(verbose: bool, code_map: &dyn Fn(CodeLocationS) -> String, lines_between: &dyn Fn(CodeLocationS, CodeLocationS) -> Vec<RangeS<'s>>, line_range_containing: &dyn Fn(CodeLocationS) -> RangeS<'s>, line_containing: &dyn Fn(CodeLocationS) -> String, err: IDefiningError<'s, 't>) -> String {
   panic!("Unimplemented: humanize_defining_error");
 }
 /*

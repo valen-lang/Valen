@@ -408,7 +408,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_attributes(&self) -> Vec<IFunctionAttributeT<'s, 't>> {
+    pub fn translate_attributes(&self) -> Vec<IFunctionAttributeT<'s>> {
         panic!("Unimplemented: translate_attributes");
     }
 /*
@@ -485,7 +485,7 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_function_attributes(&self) -> Vec<IFunctionAttributeT<'s, 't>> {
+    pub fn translate_function_attributes(&self) -> Vec<IFunctionAttributeT<'s>> {
     panic!("Unimplemented: translate_function_attributes");
 }
 /*

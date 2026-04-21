@@ -47,8 +47,9 @@ import scala.collection.immutable.Set
 
 */
 
-pub enum IsParentResult {
-    _Phantom,
+pub enum IsParentResult<'s, 't> {
+    IsParent(IsParent<'s, 't>),
+    IsntParent(IsntParent<'s, 't>),
 }
 /*
 sealed trait IsParentResult
@@ -96,8 +97,8 @@ where 's: 't,
         calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         initial_knowns: &[InitialKnown],
         impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
-    ) -> Result<CompleteResolveSolve, IResolvingError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveImpl(
@@ -180,7 +181,7 @@ where 's: 't,
         initial_knowns: &[InitialKnown],
         impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // WARNING: Doesn't verify conclusions to make sure that any bounds are satisfied!
@@ -248,7 +249,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // This will just figure out the struct template and interface template,
@@ -402,7 +403,7 @@ where 's: 't,
         impl_outer_env: &'t IInDenizenEnvironmentT<'s, 't>,
         interface: InterfaceTT<'s, 't>,
     ) -> Vec<bool> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def calculateRunesIndependence(
@@ -459,7 +460,7 @@ where 's: 't,
         template_args: &[ITemplataT<'s, 't>],
         sub_citizen: ICitizenTT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def assembleImplName(
@@ -642,7 +643,7 @@ where 's: 't,
         calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         kind: ISubKindTT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def isDescendant(
@@ -695,7 +696,7 @@ where 's: 't,
         impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
         child: ICitizenTT<'s, 't>,
     ) -> Result<InterfaceTT<'s, 't>, IResolvingError<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getImplParentGivenSubCitizen(
@@ -739,7 +740,7 @@ where 's: 't,
         calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         sub_kind: ISubKindTT<'s, 't>,
     ) -> Vec<ISuperKindTT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getParents(
@@ -816,8 +817,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         sub_kind_tt: ISubKindTT<'s, 't>,
         super_kind_tt: ISuperKindTT<'s, 't>,
-    ) -> IsParentResult {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> IsParentResult<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def isParent(

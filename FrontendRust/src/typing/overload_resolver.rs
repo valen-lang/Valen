@@ -1,10 +1,12 @@
 use std::collections::HashMap;
 use crate::typing::compiler::Compiler;
 use crate::utils::range::RangeS;
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::*;
+use crate::postparsing::rune_type_solver::RuneTypeSolveError;
 use crate::postparsing::*;
+use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compiler_outputs::*;
@@ -57,7 +59,21 @@ object OverloadResolver {
 
 */
 pub enum IFindFunctionFailureReason<'s, 't> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t ())>),
+    WrongNumberOfArguments { supplied: i32, expected: i32 },
+    WrongNumberOfTemplateArguments { supplied: i32, expected: i32 },
+    SpecificParamDoesntSend { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
+    SpecificParamDoesntMatchExactly { index: i32, argument: CoordT<'s, 't>, parameter: CoordT<'s, 't> },
+    SpecificParamRegionDoesntMatch {
+        rune: IRuneS<'s>,
+        supplied_mutability: IRegionMutabilityS,
+        callee_mutability: IRegionMutabilityS,
+    },
+    SpecificParamVirtualityDoesntMatch { index: i32 },
+    Outscored,
+    RuleTypeSolveFailure { reason: RuneTypeSolveError<'s> },
+    InferFailure { reason: FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, crate::typing::infer::compiler_solver::ITypingPassSolverError<'s, 't>> },
+    FindFunctionResolveFailure { reason: crate::typing::infer_compiler::IResolvingError<'s, 't> },
+    CouldntEvaluateTemplateError { reason: crate::typing::infer_compiler::IDefiningError<'s, 't> },
 }
 /*
   sealed trait IFindFunctionFailureReason
@@ -118,7 +134,11 @@ override def hashCode(): Int = vcurious() }
 
 
 */
-pub struct FindFunctionFailure<'s, 't>(pub std::marker::PhantomData<(&'s (), &'t ())>);
+pub struct FindFunctionFailure<'s, 't> {
+    pub name: IImpreciseNameS<'s>,
+    pub args: &'t [CoordT<'s, 't>],
+    pub rejected_callee_to_reason: &'t [(ICalleeCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>)],
+}
 /*
   case class FindFunctionFailure(
     name: IImpreciseNameS,
@@ -175,7 +195,7 @@ where 's: 't,
         extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def findFunction(
@@ -231,7 +251,7 @@ where 's: 't,
         candidate_params: &[CoordT<'s, 't>],
         exact: bool,
     ) -> Result<(), IFindFunctionFailureReason<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def paramsMatch(
@@ -291,7 +311,7 @@ where 's: 't,
         searched_envs: &mut Vec<SearchedEnvironment>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def getCandidateBanners(
@@ -326,7 +346,7 @@ where 's: 't,
         searched_envs: &mut Vec<SearchedEnvironment>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def getCandidateBannersInner(
@@ -395,7 +415,7 @@ where 's: 't,
         candidate: ICalleeCandidate<'s, 't>,
         exact: bool,
     ) -> Result<AttemptedCandidate, IFindFunctionFailureReason<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def attemptCandidateBanner(
@@ -609,7 +629,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         param_filters: &[CoordT<'s, 't>],
     ) -> Vec<&'t IInDenizenEnvironmentT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Gets all the environments for all the arguments.
@@ -645,7 +665,7 @@ where 's: 't,
         extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<AttemptedCandidate, FindFunctionFailure<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Checks to see if there's a function that *could*
@@ -709,7 +729,7 @@ where 's: 't,
         candidate: &'t PrototypeT<'s, 't>,
         arg_types: &[CoordT<'s, 't>],
     ) -> Option<Vec<bool>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Returns either:
@@ -762,7 +782,7 @@ where 's: 't,
         unfiltered_banners: &[AttemptedCandidate],
         arg_types: &[CoordT<'s, 't>],
     ) -> (AttemptedCandidate, HashMap<AttemptedCandidate, IFindFunctionFailureReason<'s, 't>>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def narrowDownCallableOverloads(
@@ -984,7 +1004,7 @@ where 's: 't,
         callable_te: ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getArrayGeneratorPrototype(
@@ -1024,7 +1044,7 @@ where 's: 't,
         element_type: CoordT<'s, 't>,
         context_region: RegionT,
     ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getArrayConsumerPrototype(

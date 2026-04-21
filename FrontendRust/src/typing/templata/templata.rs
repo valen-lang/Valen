@@ -413,12 +413,11 @@ impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
   }
 }
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub enum IContainer<'s, 't> {
+pub enum IContainer<'s> {
   Interface(ContainerInterface<'s>),
   Struct(ContainerStruct<'s>),
   Function(ContainerFunction<'s>),
   Impl(ContainerImpl<'s>),
-  _Phantom(std::marker::PhantomData<&'t ()>),
 }
 /*
 sealed trait IContainer

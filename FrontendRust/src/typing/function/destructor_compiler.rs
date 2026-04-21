@@ -56,7 +56,7 @@ where 's: 't,
         context_region: RegionT,
         type_2: CoordT<'s, 't>,
     ) -> StampFunctionSuccess<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def getDropFunction(
@@ -90,7 +90,7 @@ where 's: 't,
         context_region: RegionT,
         undestructed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def drop(

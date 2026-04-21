@@ -41,23 +41,70 @@ import scala.collection.immutable.{List, Map, Set}
 // to get those new bounds from.
 */
 
-pub trait IBoundArgumentsSource<'s, 't> {}
+#[derive(Copy, Clone)]
+pub enum IBoundArgumentsSource<'s, 't> {
+    InheritBoundsFromTypeItself,
+    UseBoundsFromContainer {
+        instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+        instantiation_bound_arguments: &'t InstantiationBoundArgumentsT<'s, 't>,
+    },
+}
 /*
 sealed trait IBoundArgumentsSource
 */
-pub struct InheritBoundsFromTypeItself;
 /*
 case object InheritBoundsFromTypeItself extends IBoundArgumentsSource
 */
-impl<'s, 't> IBoundArgumentsSource<'s, 't> for InheritBoundsFromTypeItself {}
-pub struct UseBoundsFromContainer;
 /*
 case class UseBoundsFromContainer(
   instantiationBoundParams: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT],
   instantiationBoundArguments: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
 ) extends IBoundArgumentsSource
 */
-impl<'s, 't> IBoundArgumentsSource<'s, 't> for UseBoundsFromContainer {}
+
+// IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
+// so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
+// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). Context fields come in Slab 15.
+pub struct IPlaceholderSubstituter<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
+impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
+    pub fn substitute_for_coord(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        coord_t: CoordT<'s, 't>,
+    ) -> CoordT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_interface(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        interface_tt: InterfaceTT<'s, 't>,
+    ) -> InterfaceTT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_templata(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        templata: ITemplataT<'s, 't>,
+    ) -> ITemplataT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        proto: &'t PrototypeT<'s, 't>,
+    ) -> &'t PrototypeT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_impl_id(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        impl_id: IdT<'s, 't>,
+    ) -> IdT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+}
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait ITemplataCompilerDelegate {
@@ -535,7 +582,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         coord: CoordT<'s, 't>,
     ) -> CoordT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -584,7 +631,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         kind: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -668,7 +715,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         struct_tt: &'t StructTT<'s, 't>,
     ) -> &'t StructTT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -730,7 +777,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> InstantiationBoundArgumentsT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -844,7 +891,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         impl_id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -904,7 +951,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> InstantiationBoundArgumentsT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -953,7 +1000,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         interface_tt: &'t InterfaceTT<'s, 't>,
     ) -> &'t InterfaceTT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -1007,7 +1054,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         templata: ITemplataT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -1058,7 +1105,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         original_prototype: &'t PrototypeT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -1121,7 +1168,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         original: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
@@ -1208,14 +1255,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    // TODO: Slab 10 — return &'t dyn IPlaceholderSubstituter<'s, 't> after defining the trait
     pub fn get_placeholder_substituter(
         &self,
         sanity_check: bool,
         original_calling_denizen_id: IdT<'s, 't>,
         name: IdT<'s, 't>,
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
-    ) {
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
+    ) -> IPlaceholderSubstituter<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
 }
@@ -1247,15 +1293,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    // TODO: Slab 10 — return &'t dyn IPlaceholderSubstituter<'s, 't> after defining the trait
     pub fn get_placeholder_substituter_ext(
         &self,
         sanity_check: bool,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
-    ) {
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
+    ) -> IPlaceholderSubstituter<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
 }
@@ -1449,7 +1494,7 @@ where 's: 't,
         source_pointer_type: CoordT<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def isTypeConvertible(
@@ -1536,7 +1581,7 @@ where 's: 't,
         region: RegionT,
         ownership_if_mutable: OwnershipT,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def pointifyKind(
@@ -1642,7 +1687,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         name: INameT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def lookupTemplata(
@@ -1669,7 +1714,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         name: IImpreciseNameS<'s>,
     ) -> Option<ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def lookupTemplata(
@@ -1699,7 +1744,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
         region: RegionT,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def coerceKindToCoord(coutputs: CompilerOutputs, kind: KindT, region: RegionT):
@@ -1728,7 +1773,7 @@ where 's: 't,
         templata: ITemplataT<'s, 't>,
         region: RegionT,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def coerceToCoord(
@@ -1800,7 +1845,7 @@ where 's: 't,
         &self,
         struct_templata: &'t StructDefinitionTemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveStructTemplate(structTemplata: StructDefinitionTemplataT): IdT[IStructTemplateNameT] = {
@@ -1817,7 +1862,7 @@ where 's: 't,
         &self,
         interface_templata: &'t InterfaceDefinitionTemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveInterfaceTemplate(interfaceTemplata: InterfaceDefinitionTemplataT): IdT[IInterfaceTemplateNameT] = {
@@ -1834,7 +1879,7 @@ where 's: 't,
         &self,
         citizen_templata: &'t CitizenDefinitionTemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def resolveCitizenTemplate(citizenTemplata: CitizenDefinitionTemplataT): IdT[ICitizenTemplateNameT] = {
@@ -1854,7 +1899,7 @@ where 's: 't,
         actual_citizen_ref: ICitizenTT<'s, 't>,
         expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def citizenIsFromTemplate(actualCitizenRef: ICitizenTT, expectedCitizenTemplata: ITemplataT[ITemplataType]): Boolean = {
@@ -1885,7 +1930,7 @@ where 's: 't,
         current_height: Option<i32>,
         register_with_compiler_outputs: bool,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def createPlaceholder(
@@ -1956,7 +2001,7 @@ where 's: 't,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def createCoordPlaceholderInner(
@@ -1994,7 +2039,7 @@ where 's: 't,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> KindTemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def createKindPlaceholderInner(
@@ -2044,7 +2089,7 @@ where 's: 't,
         rune: IRuneS<'s>,
         tyype: ITemplataType<'s>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def createNonKindNonRegionPlaceholderInner[T <: ITemplataType](

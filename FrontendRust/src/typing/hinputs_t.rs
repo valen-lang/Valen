@@ -117,6 +117,23 @@ pub struct HinputsT<'s, 't> {
         std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
     >,
 }
+impl<'s, 't> HinputsT<'s, 't> {
+    pub fn new() -> Self {
+        HinputsT {
+            interfaces: Vec::new(),
+            structs: Vec::new(),
+            functions: Vec::new(),
+            interface_to_edge_blueprints: std::collections::HashMap::new(),
+            interface_to_sub_citizen_to_edge: std::collections::HashMap::new(),
+            instantiation_name_to_instantiation_bounds: std::collections::HashMap::new(),
+            kind_exports: Vec::new(),
+            function_exports: Vec::new(),
+            kind_externs: Vec::new(),
+            function_externs: Vec::new(),
+            sub_citizen_to_interface_to_edge: std::collections::HashMap::new(),
+        }
+    }
+}
 /*
 case class HinputsT(
   interfaces: Vector[InterfaceDefinitionT],

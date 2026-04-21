@@ -60,7 +60,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         struct_a: &'s StructA<'s>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def compileStruct(
@@ -200,8 +200,8 @@ where 's: 't,
     pub fn translate_citizen_attributes(
         &self,
         attrs: &[ICitizenAttributeS<'s>],
-    ) -> Vec<ICitizenAttributeT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+    ) -> Vec<ICitizenAttributeT<'s>> {
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
@@ -228,7 +228,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         interface_a: &'s InterfaceA<'s>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Takes a IEnvironment because we might be inside a:
@@ -314,7 +314,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         members: &[IStructMemberS<'s>],
     ) -> Vec<IStructMemberT<'s, 't>> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def makeStructMembers(
@@ -337,7 +337,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         member: IStructMemberS<'s>,
     ) -> IStructMemberT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def makeStructMember(
@@ -389,7 +389,7 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Makes a struct to back a closure

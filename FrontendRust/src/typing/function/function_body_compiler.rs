@@ -87,7 +87,7 @@ where 's: 't,
         params_2: &[&'t ParameterT<'s, 't>],
         is_destructor: bool,
     ) -> (Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Returns:
@@ -223,7 +223,7 @@ where 's: 't,
         is_destructor: bool,
         maybe_expected_result_type: Option<CoordT<'s, 't>>,
     ) -> Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   private def evaluateFunctionBody(
@@ -329,7 +329,7 @@ where 's: 't,
         params_1: &[&'s ParameterS<'s>],
         params_2: &[&'t ParameterT<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
   // Produce the lets at the start of a function.

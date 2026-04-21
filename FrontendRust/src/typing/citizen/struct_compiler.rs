@@ -73,7 +73,7 @@ override def equals(obj: Any): Boolean = vcurious(); }
 */
 }
 pub struct UncheckedDefiningConclusions<'s, 't> {
-    pub envs: InferEnv<'s>,
+    pub envs: InferEnv<'s, 't>,
     pub ranges: Vec<RangeS<'s>>,
     pub call_location: LocationInDenizen<'s>,
     pub definition_rules: Vec<IRulexSR<'s>>,
@@ -117,7 +117,8 @@ trait IStructCompilerDelegate {
 */
 
 pub enum IResolveOutcome<'s, 't, T> {
-    _Phantom(std::marker::PhantomData<(&'s (), &'t (), T)>),
+    ResolveSuccess(ResolveSuccess<'s, 't, T>),
+    ResolveFailure(ResolveFailure<'s, 't, T>),
 }
 /*
 sealed trait IResolveOutcome[+T <: KindT] {
@@ -534,7 +535,7 @@ where 's: 't,
         &self,
         member_types: &[CoordT<'s, 't>],
     ) -> MutabilityT {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*
@@ -555,9 +556,9 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         region: RegionT,
         struct_tt: StructTT<'s, 't>,
-        bound_arguments_source: &'t dyn IBoundArgumentsSource<'s, 't>,
+        bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 }
 /*

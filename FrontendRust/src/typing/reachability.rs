@@ -42,7 +42,7 @@ impl<'s, 't> Reachables<'s, 't> {
 //) {
 */
 pub fn size(&self) -> usize {
-    panic!("Unimplemented: Slab 14 — body migration");
+    panic!("Unimplemented: Slab 15 — body migration");
 }
 /*
 //  def size = functions.size + structs.size + staticSizedArrays.size + runtimeSizedArrays.size + interfaces.size + edges.size
@@ -61,7 +61,7 @@ where 's: 't,
         edge_blueprints: &[&'t InterfaceEdgeBlueprintT<'s, 't>],
         edges: &HashMap<InterfaceTT<'s, 't>, HashMap<StructTT<'s, 't>, Vec<&'t PrototypeT<'s, 't>>>>,
     ) -> Reachables<'s, 't> {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def findReachables(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]]): Reachables = {
@@ -106,7 +106,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         callee_signature: SignatureT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitFunction(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, calleeSignature: SignatureT): Unit = {
@@ -154,7 +154,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         struct_tt: StructTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitStruct(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, structTT: StructTT): Unit = {
@@ -211,7 +211,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         interface_tt: InterfaceTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitInterface(program: CompilerOutputs, edgeBlueprints: Vector[InterfaceEdgeBlueprint], edges: Map[InterfaceTT, Map[StructTT, Vector[PrototypeT]]], reachables: Reachables, interfaceTT: InterfaceTT): Unit = {
@@ -270,7 +270,7 @@ where 's: 't,
         struct_tt: StructTT<'s, 't>,
         methods: &[&'t PrototypeT<'s, 't>],
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitImpl(
@@ -308,7 +308,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         ssa: StaticSizedArrayTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitStaticSizedArray(
@@ -354,7 +354,7 @@ where 's: 't,
         reachables: &mut Reachables<'s, 't>,
         rsa: RuntimeSizedArrayTT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 14 — body migration");
+        panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
 //  def visitRuntimeSizedArray(

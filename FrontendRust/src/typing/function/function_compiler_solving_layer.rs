@@ -356,9 +356,9 @@ where 's: 't,
 {
     pub fn assemble_known_templatas(
         &self,
-        function: &FunctionA,
-        explicit_template_args: &[ITemplataT],
-    ) -> Vec<InitialKnown> {
+        function: &FunctionA<'s>,
+        explicit_template_args: &[ITemplataT<'s, 't>],
+    ) -> Vec<InitialKnown<'s, 't>> {
         panic!("Unimplemented: assemble_known_templatas");
     }
 
@@ -824,10 +824,10 @@ where 's: 't,
 {
     pub fn assemble_initial_sends_from_args(
         &self,
-        call_range: RangeS,
-        function: &FunctionA,
-        args: &[Option<CoordT>],
-    ) -> Vec<InitialSend> {
+        call_range: RangeS<'s>,
+        function: &FunctionA<'s>,
+        args: &[Option<CoordT<'s, 't>>],
+    ) -> Vec<InitialSend<'s, 't>> {
         panic!("Unimplemented: assemble_initial_sends_from_args");
     }
 
