@@ -17,14 +17,25 @@ import scala.io.Source
 
 class CompilerOwnershipTests extends FunSuite with Matchers {
   // TODO: pull all of the typingpass specific stuff out, the unit test-y stuff
-
+*/
+// mig: fn read_code_from_resource
+fn read_code_from_resource(resource_filename: &str) -> String {
+    panic!("Unimplemented: read_code_from_resource");
+}
+/*
   def readCodeFromResource(resourceFilename: String): String = {
     val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
     vassert(is != null)
     is.mkString("")
   }
 
-
+*/
+// mig: fn parenthesized_method_syntax_will_move_instead_of_borrow
+#[test]
+fn parenthesized_method_syntax_will_move_instead_of_borrow() {
+    panic!("Unmigrated test: parenthesized_method_syntax_will_move_instead_of_borrow");
+}
+/*
   test("Parenthesized method syntax will move instead of borrow") {
     val compile = CompilerTestCompilation.test(
       """
@@ -40,7 +51,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg
+#[test]
+fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
+    panic!("Unmigrated test: calling_a_method_on_a_returned_own_ref_will_supply_owning_arg");
+}
+/*
   test("Calling a method on a returned own ref will supply owning arg") {
     val compile = CompilerTestCompilation.test(
       """
@@ -55,7 +72,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn explicit_borrow_method_call
+#[test]
+fn explicit_borrow_method_call() {
+    panic!("Unmigrated test: explicit_borrow_method_call");
+}
+/*
   test("Explicit borrow method call") {
     val compile = CompilerTestCompilation.test(
       """
@@ -70,7 +93,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn calling_a_method_on_a_local_will_supply_borrow_ref
+#[test]
+fn calling_a_method_on_a_local_will_supply_borrow_ref() {
+    panic!("Unmigrated test: calling_a_method_on_a_local_will_supply_borrow_ref");
+}
+/*
   test("Calling a method on a local will supply borrow ref") {
     val compile = CompilerTestCompilation.test(
       """
@@ -86,7 +115,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn calling_a_method_on_a_member_will_supply_borrow_ref
+#[test]
+fn calling_a_method_on_a_member_will_supply_borrow_ref() {
+    panic!("Unmigrated test: calling_a_method_on_a_member_will_supply_borrow_ref");
+}
+/*
   test("Calling a method on a member will supply borrow ref") {
     val compile = CompilerTestCompilation.test(
       """
@@ -103,7 +138,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn no_derived_or_custom_drop_gives_error
+#[test]
+fn no_derived_or_custom_drop_gives_error() {
+    panic!("Unmigrated test: no_derived_or_custom_drop_gives_error");
+}
+/*
   test("No derived or custom drop gives error") {
     val compile = CompilerTestCompilation.test(
       """
@@ -120,7 +161,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
       case CouldntFindFunctionToCallT(_, FindFunctionFailure(CodeNameS(StrI("drop")), _, _)) =>
     }
   }
-
+*/
+// mig: fn opt_with_undroppable_contents
+#[test]
+fn opt_with_undroppable_contents() {
+    panic!("Unmigrated test: opt_with_undroppable_contents");
+}
+/*
   test("Opt with undroppable contents") {
     val compile = CompilerTestCompilation.test(
       """
@@ -159,7 +206,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn opt_with_undroppable_mutable_ref_contents
+#[test]
+fn opt_with_undroppable_mutable_ref_contents() {
+    panic!("Unmigrated test: opt_with_undroppable_mutable_ref_contents");
+}
+/*
   test("Opt with undroppable mutable ref contents") {
     // This is here because we had a bug where if we had a Opt<&T> and there was no drop(T)
     // it would error. It should be fine dropping a &T because any borrow is droppable.
@@ -205,7 +258,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn restackify
+#[test]
+fn restackify() {
+    panic!("Unmigrated test: restackify");
+}
+/*
   test("Restackify") {
     // Allow set on variables that have been moved already, which is useful for linear style.
     val compile =
@@ -215,7 +274,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
       case RestackifyTE(ReferenceLocalVariableT(CodeVarNameT(StrI("ship")), _, _), _) =>
     })
   }
-
+*/
+// mig: fn loop_restackify
+#[test]
+fn loop_restackify() {
+    panic!("Unmigrated test: loop_restackify");
+}
+/*
   test("Loop restackify") {
     // Allow set on variables that have been moved already, which is useful for linear style.
     val compile =
@@ -225,7 +290,13 @@ class CompilerOwnershipTests extends FunSuite with Matchers {
       case RestackifyTE(ReferenceLocalVariableT(CodeVarNameT(StrI("ship")), _, _), _) =>
     })
   }
-
+*/
+// mig: fn destructure_restackify
+#[test]
+fn destructure_restackify() {
+    panic!("Unmigrated test: destructure_restackify");
+}
+/*
   test("Destructure restackify") {
     // Allow set on variables that have been moved already, which is useful for linear style.
     val compile =

@@ -102,7 +102,6 @@ These shields define the rules enforced during migration:
 @../../Luz/shields/NeverRecoverAlwaysFail-NRAFX.md
 @../../Luz/shields/NoGlobalStateAnywhere-NGSAX.md
 @../../Luz/shields/FailFastFailLoud-FFFLX.md
-@../../Luz/shields/SameHelperCallsNoExceptions-SHCNEX.md
 @../../Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md
 @../../Luz/shields/ImmediateInterningDiscipline-IIDX.md
 @../../Luz/shields/CloserToScalaNotFurther-CSTNFX.md

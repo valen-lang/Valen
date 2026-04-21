@@ -8,7 +8,7 @@ import scala.collection.immutable.Map
 
 class SolverTests extends FunSuite with Matchers with Collector {
 */
-use crate::solver::{SimpleSolverState, FailedSolve, make_solver_state};
+use crate::solver::{SimpleSolverState, FailedSolve, ISolverError, make_solver_state};
 use super::test_rules::TestRule;
 // mig: const complex_rule_set
 const COMPLEX_RULE_SET_RULES: Vec<()> = vec![];

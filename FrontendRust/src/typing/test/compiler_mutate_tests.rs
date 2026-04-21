@@ -22,13 +22,24 @@ import scala.io.Source
 
 class CompilerMutateTests extends FunSuite with Matchers {
   // TODO: pull all of the typingpass specific stuff out, the unit test-y stuff
-
+*/
+// mig: fn read_code_from_resource
+pub fn read_code_from_resource(resource_filename: &str) -> String {
+  panic!("Unimplemented: read_code_from_resource");
+}
+/*
   def readCodeFromResource(resourceFilename: String): String = {
     val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
     vassert(is != null)
     is.mkString("")
   }
-
+*/
+// mig: fn test_mutating_a_local_var
+#[test]
+fn test_mutating_a_local_var() {
+  panic!("Unmigrated test: test_mutating_a_local_var");
+}
+/*
   test("Test mutating a local var") {
     val compile = CompilerTestCompilation.test(
       """
@@ -43,7 +54,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
     val resultCoord = lookup.result.coord
     resultCoord shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
   }
-
+*/
+// mig: fn test_mutable_member_permission
+#[test]
+fn test_mutable_member_permission() {
+  panic!("Unmigrated test: test_mutable_member_permission");
+}
+/*
   test("Test mutable member permission") {
     val compile =
       CompilerTestCompilation.test(
@@ -67,7 +84,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       case x => vfail(x.toString)
     }
   }
-
+*/
+// mig: fn local_set_upcasts
+#[test]
+fn local_set_upcasts() {
+  panic!("Unmigrated test: local_set_upcasts");
+}
+/*
   test("Local-set upcasts") {
     val compile = CompilerTestCompilation.test(
       """
@@ -91,7 +114,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       case MutateTE(_, UpcastTE(_, _, _)) =>
     })
   }
-
+*/
+// mig: fn expr_set_upcasts
+#[test]
+fn expr_set_upcasts() {
+  panic!("Unmigrated test: expr_set_upcasts");
+}
+/*
   test("Expr-set upcasts") {
     val compile = CompilerTestCompilation.test(
       """
@@ -118,7 +147,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       case MutateTE(_, UpcastTE(_, _, _)) =>
     })
   }
-
+*/
+// mig: fn reports_when_we_try_to_mutate_an_imm_struct
+#[test]
+fn reports_when_we_try_to_mutate_an_imm_struct() {
+  panic!("Unmigrated test: reports_when_we_try_to_mutate_an_imm_struct");
+}
+/*
   test("Reports when we try to mutate an imm struct") {
     val compile = CompilerTestCompilation.test(
       """
@@ -140,7 +175,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn reports_when_we_try_to_mutate_a_final_member_in_a_struct
+#[test]
+fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
+  panic!("Unmigrated test: reports_when_we_try_to_mutate_a_final_member_in_a_struct");
+}
+/*
   test("Reports when we try to mutate a final member in a struct") {
     val compile = CompilerTestCompilation.test(
       """
@@ -162,7 +203,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array
+#[test]
+fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
+  panic!("Unmigrated test: reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array");
+}
+/*
   test("Reports when we try to mutate an element in an imm static-sized array") {
     val compile = CompilerTestCompilation.test(
       """
@@ -183,7 +230,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type
+#[test]
+fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
+  panic!("Unmigrated test: reports_when_we_try_to_mutate_a_local_variable_with_wrong_type");
+}
+/*
   test("Reports when we try to mutate a local variable with wrong type") {
     val compile = CompilerTestCompilation.test(
       """
@@ -198,7 +251,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       case _ => vfail()
     }
   }
-
+*/
+// mig: fn reports_when_we_try_to_override_a_non_interface
+#[test]
+fn reports_when_we_try_to_override_a_non_interface() {
+  panic!("Unmigrated test: reports_when_we_try_to_override_a_non_interface");
+}
+/*
   test("Reports when we try to override a non-interface") {
     val compile = CompilerTestCompilation.test(
       """
@@ -214,7 +273,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
       case _ => vfail()
     }
   }
-
+*/
+// mig: fn can_mutate_an_element_in_a_runtime_sized_array
+#[test]
+fn can_mutate_an_element_in_a_runtime_sized_array() {
+  panic!("Unmigrated test: can_mutate_an_element_in_a_runtime_sized_array");
+}
+/*
   test("Can mutate an element in a runtime-sized array") {
     val compile = CompilerTestCompilation.test(
       """
@@ -232,7 +297,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn can_restackify_in_destructure_pattern
+#[test]
+fn can_restackify_in_destructure_pattern() {
+  panic!("Unmigrated test: can_restackify_in_destructure_pattern");
+}
+/*
   test("Can restackify in destructure pattern") {
     val compile = CompilerTestCompilation.test(
       """
@@ -256,7 +327,13 @@ class CompilerMutateTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn humanize_errors
+#[test]
+fn humanize_errors() {
+  panic!("Unmigrated test: humanize_errors");
+}
+/*
   test("Humanize errors") {
     val interner = new Interner()
     val keywords = new Keywords(interner)

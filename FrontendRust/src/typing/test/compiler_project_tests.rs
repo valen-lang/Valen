@@ -13,7 +13,13 @@ import org.scalatest._
 import scala.collection.immutable.List
 
 class CompilerProjectTests extends FunSuite with Matchers {
-
+*/
+// mig: fn function_has_correct_name
+#[test]
+fn function_has_correct_name() {
+    panic!("Unmigrated test: function_has_correct_name");
+}
+/*
   test("Function has correct name") {
     val compile =
       CompilerTestCompilation.test(
@@ -28,7 +34,13 @@ class CompilerProjectTests extends FunSuite with Matchers {
     val id = IdT(packageCoord, Vector(), mainName)
     vassertSome(coutputs.functions.headOption).header.id shouldEqual id
   }
-
+*/
+// mig: fn lambda_has_correct_name
+#[test]
+fn lambda_has_correct_name() {
+    panic!("Unmigrated test: lambda_has_correct_name");
+}
+/*
   test("Lambda has correct name") {
     val compile =
       CompilerTestCompilation.test(
@@ -55,7 +67,13 @@ class CompilerProjectTests extends FunSuite with Matchers {
     val lamFunc = coutputs.lookupLambdaIn("main")
     lamFunc.header.id shouldEqual lambdaFuncId
   }
-
+*/
+// mig: fn struct_has_correct_name
+#[test]
+fn struct_has_correct_name() {
+    panic!("Unmigrated test: struct_has_correct_name");
+}
+/*
   test("Struct has correct name") {
     val compile =
       CompilerTestCompilation.test(

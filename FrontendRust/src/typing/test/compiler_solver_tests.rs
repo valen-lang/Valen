@@ -28,14 +28,24 @@ import scala.io.Source
 
 class CompilerSolverTests extends FunSuite with Matchers {
   // TODO: pull all of the typingpass specific stuff out, the unit test-y stuff
-
+*/
+// mig: fn read_code_from_resource
+fn read_code_from_resource(resource_filename: &str) -> String {
+    panic!("Unimplemented: read_code_from_resource");
+}
+/*
   def readCodeFromResource(resourceFilename: String): String = {
     val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
     vassert(is != null)
     is.mkString("")
   }
-
-
+*/
+// mig: fn test_simple_generic_function
+#[test]
+fn test_simple_generic_function() {
+    panic!("Unmigrated test: test_simple_generic_function");
+}
+/*
   test("Test simple generic function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -45,7 +55,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
 
     vassert(coutputs.getAllUserFunctions.size == 1)
   }
-
+*/
+// mig: fn test_lacking_drop_function
+#[test]
+fn test_lacking_drop_function() {
+    panic!("Unmigrated test: test_lacking_drop_function");
+}
+/*
   test("Test lacking drop function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -55,7 +71,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case CouldntFindFunctionToCallT(_, FindFunctionFailure(CodeNameS(StrI("drop")), _, _)) =>
     }
   }
-
+*/
+// mig: fn test_having_drop_function_concept_function
+#[test]
+fn test_having_drop_function_concept_function() {
+    panic!("Unmigrated test: test_having_drop_function_concept_function");
+}
+/*
   test("Test having drop function concept function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -94,7 +116,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
         _) =>
     }
   }
-
+*/
+// mig: fn test_calling_a_generic_function_with_a_concept_function
+#[test]
+fn test_calling_a_generic_function_with_a_concept_function() {
+    panic!("Unmigrated test: test_calling_a_generic_function_with_a_concept_function");
+}
+/*
   test("Test calling a generic function with a concept function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -122,7 +150,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
         _) =>
     }
   }
-
+*/
+// mig: fn test_rune_type_in_generic_param
+#[test]
+fn test_rune_type_in_generic_param() {
+    panic!("Unmigrated test: test_rune_type_in_generic_param");
+}
+/*
   test("Test rune type in generic param") {
     val compile = CompilerTestCompilation.test(
       """
@@ -134,7 +168,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case Vector(PlaceholderTemplataT(_, IntegerTemplataType())) =>
     }
   }
-
+*/
+// mig: fn test_single_parameter_function
+#[test]
+fn test_single_parameter_function() {
+    panic!("Unmigrated test: test_single_parameter_function");
+}
+/*
   test("Test single parameter function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -152,7 +192,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       """.stripMargin)
 
   }
-
+*/
+// mig: fn test_calling_a_generic_function_with_a_drop_concept_function
+#[test]
+fn test_calling_a_generic_function_with_a_drop_concept_function() {
+    panic!("Unmigrated test: test_calling_a_generic_function_with_a_drop_concept_function");
+}
+/*
   test("Test calling a generic function with a drop concept function") {
     val compile = CompilerTestCompilation.test(
       """
@@ -198,7 +244,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       }
     }
   }
-
+*/
+// mig: fn humanize_errors
+#[test]
+fn humanize_errors() {
+    panic!("Unmigrated test: humanize_errors");
+}
+/*
   test("Humanize errors") {
     val interner = new Interner()
     val keywords = new Keywords(interner)
@@ -228,7 +280,19 @@ class CompilerSolverTests extends FunSuite with Matchers {
 
     val codeStr = "Hello I am A large piece Of code [that has An error]"
     val filenamesAndSources = FileCoordinateMap.test(interner, codeStr)
+*/
+// mig: fn make_loc
+fn make_loc(pos: i32) {
+    panic!("Unimplemented: make_loc");
+}
+/*
     def makeLoc(pos: Int) = CodeLocationS(FileCoordinate.test(interner), pos)
+*/
+// mig: fn make_range
+fn make_range(begin: i32, end: i32) {
+    panic!("Unimplemented: make_range");
+}
+/*
     def makeRange(begin: Int, end: Int) = RangeS(makeLoc(begin), makeLoc(end))
 
     val humanizePos = (x: CodeLocationS) => SourceCodeUtils.humanizePos(filenamesAndSources, x)
@@ -288,7 +352,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     vassert(errorText.contains("\n      ^ I: (unknown)"))
     vassert(errorText.contains("\n                                 ^^^^^^^^^^^^^^^^^^^ _7: (unknown)"))
   }
-
+*/
+// mig: fn simple_int_rule
+#[test]
+fn simple_int_rule() {
+    panic!("Unmigrated test: simple_int_rule");
+}
+/*
   test("Simple int rule") {
     val compile = CompilerTestCompilation.test(
       """
@@ -301,7 +371,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     Collector.only(coutputs.lookupFunction("main"), { case ConstantIntTE(IntegerTemplataT(3), 32, _) => })
   }
-
+*/
+// mig: fn equals_transitive
+#[test]
+fn equals_transitive() {
+    panic!("Unmigrated test: equals_transitive");
+}
+/*
   test("Equals transitive") {
     val compile = CompilerTestCompilation.test(
       """
@@ -314,7 +390,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     Collector.only(coutputs.lookupFunction("main"), { case ConstantIntTE(IntegerTemplataT(3), 32, _) => })
   }
-
+*/
+// mig: fn one_of
+#[test]
+fn one_of() {
+    panic!("Unmigrated test: one_of");
+}
+/*
   test("OneOf") {
     val compile = CompilerTestCompilation.test(
       """
@@ -327,7 +409,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     Collector.only(coutputs.lookupFunction("main"), { case ConstantIntTE(IntegerTemplataT(3), 32, _) => })
   }
-
+*/
+// mig: fn components
+#[test]
+fn components() {
+    panic!("Unmigrated test: components");
+}
+/*
   test("Components") {
     val compile = CompilerTestCompilation.test(
       """
@@ -346,7 +434,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case CoordT(BorrowT, _, StructTT(_)) =>
     }
   }
-
+*/
+// mig: fn prototype_rule_call_via_rune
+#[test]
+fn prototype_rule_call_via_rune() {
+    panic!("Unmigrated test: prototype_rule_call_via_rune");
+}
+/*
   test("Prototype rule, call via rune") {
     val compile = CompilerTestCompilation.test(
       """
@@ -364,7 +458,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case FunctionCallTE(PrototypeT(simpleNameT("moo"), _), _, _) =>
     })
   }
-
+*/
+// mig: fn prototype_rule_call_directly
+#[test]
+fn prototype_rule_call_directly() {
+    panic!("Unmigrated test: prototype_rule_call_directly");
+}
+/*
   test("Prototype rule, call directly") {
     val compile = CompilerTestCompilation.test(
       """
@@ -382,7 +482,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case FunctionCallTE(PrototypeT(simpleNameT("moo"), _), _, _) =>
     })
   }
-
+*/
+// mig: fn send_struct_to_struct
+#[test]
+fn send_struct_to_struct() {
+    panic!("Unmigrated test: send_struct_to_struct");
+}
+/*
   test("Send struct to struct") {
     val compile = CompilerTestCompilation.test(
       """
@@ -396,7 +502,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     )
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn send_struct_to_interface
+#[test]
+fn send_struct_to_interface() {
+    panic!("Unmigrated test: send_struct_to_interface");
+}
+/*
   test("Send struct to interface") {
     val compile = CompilerTestCompilation.test(
       """
@@ -412,7 +524,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     )
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn assume_most_specific_generic_param
+#[test]
+fn assume_most_specific_generic_param() {
+    panic!("Unmigrated test: assume_most_specific_generic_param");
+}
+/*
   test("Assume most specific generic param") {
     val compile = CompilerTestCompilation.test(
       """
@@ -436,7 +554,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case CoordT(_, _, StructTT(_)) =>
     }
   }
-
+*/
+// mig: fn assume_most_specific_common_ancestor
+#[test]
+fn assume_most_specific_common_ancestor() {
+    panic!("Unmigrated test: assume_most_specific_common_ancestor");
+}
+/*
   test("Assume most specific common ancestor") {
     val compile = CompilerTestCompilation.test(
       """
@@ -466,7 +590,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case UpcastTE(_, _, _) =>
     }).size shouldEqual 2
   }
-
+*/
+// mig: fn descendant_satisfying_call
+#[test]
+fn descendant_satisfying_call() {
+    panic!("Unmigrated test: descendant_satisfying_call");
+}
+/*
   test("Descendant satisfying call") {
     val compile = CompilerTestCompilation.test(
       """
@@ -497,7 +627,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
         _) =>
     }
   }
-
+*/
+// mig: fn reports_incomplete_solve
+#[test]
+fn reports_incomplete_solve() {
+    panic!("Unmigrated test: reports_incomplete_solve");
+}
+/*
   test("Reports incomplete solve") {
     val interner = new Interner()
     val compile = CompilerTestCompilation.test(
@@ -514,8 +650,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       }
     }
   }
-
-
+*/
+// mig: fn stamps_an_interface_template_via_a_function_return
+#[test]
+fn stamps_an_interface_template_via_a_function_return() {
+    panic!("Unmigrated test: stamps_an_interface_template_via_a_function_return");
+}
+/*
   test("Stamps an interface template via a function return") {
     val compile = CompilerTestCompilation.test(
       """
@@ -538,7 +679,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     )
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn pointer_becomes_share_if_kind_is_immutable
+#[test]
+fn pointer_becomes_share_if_kind_is_immutable() {
+    panic!("Unmigrated test: pointer_becomes_share_if_kind_is_immutable");
+}
+/*
   test("Pointer becomes share if kind is immutable") {
     val compile = CompilerTestCompilation.test(
       """
@@ -558,7 +705,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     coutputs.lookupFunction("bork").header.params.head.tyype.ownership shouldEqual ShareT
   }
-
+*/
+// mig: fn detects_conflict_between_types
+#[test]
+fn detects_conflict_between_types() {
+    panic!("Unmigrated test: detects_conflict_between_types");
+}
+/*
   test("Detects conflict between types") {
     val compile = CompilerTestCompilation.test(
       """
@@ -579,7 +732,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case other => vfail(other)
     }
   }
-
+*/
+// mig: fn can_match_kind_templata_type_against_struct_env_entry_struct_templata
+#[test]
+fn can_match_kind_templata_type_against_struct_env_entry_struct_templata() {
+    panic!("Unmigrated test: can_match_kind_templata_type_against_struct_env_entry_struct_templata");
+}
+/*
   test("Can match KindTemplataType() against StructEnvEntry / StructTemplata") {
     val compile = CompilerTestCompilation.test(
       """
@@ -601,7 +760,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
     coutputs.lookupFunction("bork").header.id.localName.templateArgs.last shouldEqual CoordTemplataT(CoordT(ShareT, RegionT(), IntT(32)))
   }
-
+*/
+// mig: fn can_destructure_and_assemble_static_sized_array
+#[test]
+fn can_destructure_and_assemble_static_sized_array() {
+    panic!("Unmigrated test: can_destructure_and_assemble_static_sized_array");
+}
+/*
   test("Can destructure and assemble static sized array") {
     val compile = CompilerTestCompilation.test(
       """
@@ -635,7 +800,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       case CoordTemplataT(CoordT(ShareT, _, IntT(32))) =>
     }
   }
-
+*/
+// mig: fn test_equivalent_identifying_runes_in_functions
+#[test]
+fn test_equivalent_identifying_runes_in_functions() {
+    panic!("Unmigrated test: test_equivalent_identifying_runes_in_functions");
+}
+/*
   test("Test equivalent identifying runes in functions") {
     // Previously, the compiler would populate placeholders for all identifying runes at once.
     // This meant that it added a placeholder $T and a placeholder $Y at the same time.
@@ -651,7 +822,13 @@ class CompilerSolverTests extends FunSuite with Matchers {
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
   }
-
+*/
+// mig: fn iragp_test_equivalent_identifying_runes_in_struct
+#[test]
+fn iragp_test_equivalent_identifying_runes_in_struct() {
+    panic!("Unmigrated test: iragp_test_equivalent_identifying_runes_in_struct");
+}
+/*
   test("IRAGP: Test equivalent identifying runes in struct") {
     // See IRAGP, the original problem was for functions but we use the same solution for structs.
     val compile = CompilerTestCompilation.test(

@@ -14,17 +14,32 @@ import org.scalatest._
 
 import scala.collection.immutable.List
 import scala.io.Source
-
+*/
+// mig: struct CompilerGenericsTests
+pub struct CompilerGenericsTests;
+// mig: impl CompilerGenericsTests
+impl CompilerGenericsTests {}
+/*
 class CompilerGenericsTests extends FunSuite with Matchers {
   // TODO: pull all of the typingpass specific stuff out, the unit test-y stuff
-
+*/
+// mig: fn read_code_from_resource
+fn read_code_from_resource(resource_filename: &str) -> String {
+    panic!("Unimplemented: read_code_from_resource");
+}
+/*
   def readCodeFromResource(resourceFilename: String): String = {
     val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
     vassert(is != null)
     is.mkString("")
   }
-
-
+*/
+// mig: fn upcasting_with_generic_bounds
+#[test]
+fn upcasting_with_generic_bounds() {
+    panic!("Unmigrated test: upcasting_with_generic_bounds");
+}
+/*
   test("Upcasting with generic bounds") {
 
     val compile = CompilerTestCompilation.test(

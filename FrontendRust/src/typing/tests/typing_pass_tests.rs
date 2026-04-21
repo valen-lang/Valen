@@ -17,8 +17,8 @@ import org.scalatest._
 class TypingPassTests extends FunSuite with Matchers  {
 */
 
-fn compile_program_to_hinputs<'s, 'ctx, 'p>(
-    compilation: &mut TypingPassCompilation<'s, 'ctx, 'p>,
+fn compile_program_to_hinputs<'s, 'ctx, 't, 'p>(
+    compilation: &mut TypingPassCompilation<'s, 'ctx, 't, 'p>,
 ) -> ()
 {
     match compilation.get_compiler_outputs() {
@@ -42,7 +42,7 @@ fn setup_test<'s, 'ctx, 'p>(
     parser_keywords: &'ctx Keywords<'p>,
     parse_arena: &'ctx ParseArena<'p>,
     resolver: &'ctx dyn IPackageResolver<'p, HashMap<String, String>>,
-) -> TypingPassCompilation<'s, 'ctx, 'p> {
+) -> TypingPassCompilation<'s, 'ctx, 's, 'p> {
     let options = GlobalOptions {
         sanity_check: true,
         use_overload_index: true,

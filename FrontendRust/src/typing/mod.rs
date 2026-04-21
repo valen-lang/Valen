@@ -46,4 +46,6 @@ pub mod macros;
 // Tests
 #[cfg(test)]
 pub mod tests;
+#[cfg(test)]
+mod test;
 

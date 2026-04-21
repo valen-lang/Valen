@@ -8,23 +8,57 @@ agentic_smart_model = "claude-opus-4-20250514"
 agentic_medium_model = "claude-sonnet-4-20250514"
 agentic_small_model = "claude-haiku-4-5-20251001"
 exclude_shields = [
-  "AvoidIfMatchesInTestsIfPossible-AIMITIPX.md",
-  "BaseDirPathDiscipline-BDPDX.md",
-  "DocumentPublicAPIs-DPAPIX.md",
-  "ExtractMagicNumbersIntoNamedConstants-EMNINCX.md",
-  "IntegrationTestsBehaveLikeUsers-ITBLUX.md",
-  "DontConvenientlyChangeRequirements-DCCRX.md", # would be good as follower
-  "ExplicitArgumentsNoOptionalOrDefaultedValues-EANODVX.md",
+    "AvoidIfMatchesInTestsIfPossible-AIMITIPX.md",
+    "BaseDirPathDiscipline-BDPDX.md",
+    "DocumentPublicAPIs-DPAPIX.md",
+    "ExtractMagicNumbersIntoNamedConstants-EMNINCX.md",
+    "IntegrationTestsBehaveLikeUsers-ITBLUX.md",
+    "DontConvenientlyChangeRequirements-DCCRX.md", # would be good as follower
+    "ExplicitArgumentsNoOptionalOrDefaultedValues-EANODVX.md",
     "NeverRecoverAlwaysFail-NRAFX.md", # add some filters for this... can train async in review
     "FailFastFailLoud-FFFLX.md", # add some filters for this... can train async in review
 
+
+    "SameHelperCallsNoExceptions-SHCNEX.md", # fold this into scalaparity
+    "ScalaCommentParity-SCPX.md", # fold this into scalaparity
+    "AllTestsAreExtremelyImportantAndShouldPass-ATEISPX.md",
+    "NoAddingScalaComments-NASCX.md",
+    "NoStringlyTypedData-NSTDX.md",
+    "ReturningResultIsFine-RRIFX.md",
+    "UseCollectMacrosToRecursivelySearch-UCMTRSX.md", # get rid
 ]
 
 [slice_mode]
 include_shields = [
-  { name = "SliceInTheRightPlaces-SITRPX.md" },
-  { name = "MigImplsMustBeEmpty-MIMBEX.md" },
+    { name = "SliceInTheRightPlaces-SITRPX.md" },
+    { name = "MigImplsMustBeEmpty-MIMBEX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
+
+    { name = "PythonScriptMutation-PSMX.md" },
+    { name = "ValidateReadonlyBash-VRBX.md" },
+]
+
+[migrate_mode]
+include_shields = [
+    { name = "ScalaParityDuringMigration-SPDMX.md" },
+    { name = "ImmediateInterningDiscipline-IIDX.md" }, # do we need this anymore?
+    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+
+    { name = "NoChangesWithoutScalaReference-NCWSRX.md" }, # do we need this anymore? enforced, right? or do other shields assume this one ran?
+    { name = "NoGlobalStateAnywhere-NGSAX.md" }, # lets rustify this
+    { name = "NoNewDefinitions-NNDX.md" }, # lets rustify this
+    { name = "NoAddingGuardianDirectives-NAGDX.md" }, # lets rustify this
+    { name = "NoRenamedDefinitions-NRDX.md" }, # lets rustify this
+    { name = "NoMovedDefinitions-NMDX.md" }, # lets rustify this
+    { name = "TypesFitIntoTheseCategories-TFITCX.md" },
+    { name = "NeverDowncastTraits-NEDCX.md" },
+
+    { name = "KeepInlineComparisonsInline-KICIX.md" }, # gate this on test-only
+    { name = "NeverHaveConditionalsInTests-NHCITX.md" }, # gate this on test-only
+    { name = "NoModificationsToShieldFiles-NMSFX.md" },
+
+    { name = "PythonScriptMutation-PSMX.md" },
+    { name = "ValidateReadonlyBash-VRBX.md" },
 ]
 
 [guard_mode]
@@ -46,29 +80,35 @@ include_shields = [
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "OutputAndLoggingZenDiscipline-OALZDX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
+
+    { name = "PythonScriptMutation-PSMX.md" },
+    { name = "ValidateReadonlyBash-VRBX.md" },
 ]
 
 [review_mode]
 include_shields = [
-  { name = "ScalaParityDuringMigration-SPDMX.md" },
-  { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
-  { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
-  { name = "NoExpensiveClones-NECX.md" },
-  { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
-  { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
-  { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
-  { name = "MigrateAllCommentsToo-MACTX.md" },
-  { name = "NeverRecoverAlwaysFail-NRAFX.md" },
-  { name = "NoGlobalStateAnywhere-NGSAX.md" },
-  { name = "FailFastFailLoud-FFFLX.md" },
-  { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
-  { name = "ImmediateInterningDiscipline-IIDX.md" },
-  { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
-  { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },
-  { name = "NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md" },
-  { name = "TestsPreferUnwrapToExpectForConciseness-TPUTEFCX.md" },
-  { name = "PreferSingleMatchOverNestedMatches-PSMONMX.md" },
-  { name = "ArenaTypesDontClone-ATDCX.md" },
-  { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
+    { name = "ScalaParityDuringMigration-SPDMX.md" },
+    { name = "ArenaAllocatedStructsShouldNotContainMallocdCollections-AASSNCMCX.md" },
+    { name = "ScalaSealedTraitsToRustEnums-SSTREX.md" },
+    { name = "NoExpensiveClones-NECX.md" },
+    { name = "SuffixWhenDealingWithMultipleStages-SWDWMSX.md" },
+    { name = "EnumsShouldntContainComplexData-ESCCDX.md" },
+    { name = "TodosAndUnimplementedCodeMustPanic-TUCMPX.md" },
+    { name = "MigrateAllCommentsToo-MACTX.md" },
+    { name = "NeverRecoverAlwaysFail-NRAFX.md" },
+    { name = "NoGlobalStateAnywhere-NGSAX.md" },
+    { name = "FailFastFailLoud-FFFLX.md" },
+    { name = "NoChangesWithoutScalaReference-NCWSRX.md" },
+    { name = "ImmediateInterningDiscipline-IIDX.md" },
+    { name = "UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md" },
+    { name = "NeverRepeatImplementationCodeInTests-NRICITX.md" },
+    { name = "NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md" },
+    { name = "TestsPreferUnwrapToExpectForConciseness-TPUTEFCX.md" },
+    { name = "PreferSingleMatchOverNestedMatches-PSMONMX.md" },
+    { name = "ArenaTypesDontClone-ATDCX.md" },
+    { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
+
+    { name = "PythonScriptMutation-PSMX.md" },
+    { name = "ValidateReadonlyBash-VRBX.md" },
 ]
