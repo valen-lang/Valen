@@ -19,6 +19,7 @@ import dev.vale.typing.types._
 
 import scala.collection.immutable.List
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum OwnershipT {
     Share,
@@ -54,6 +55,7 @@ case object WeakT extends OwnershipT {
   override def toString: String = "weak"
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum MutabilityT {
     Mutable,
@@ -75,6 +77,7 @@ case object ImmutableT extends MutabilityT {
   override def toString: String = "imm"
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum VariabilityT {
     Final,
@@ -96,6 +99,7 @@ case object VaryingT extends VariabilityT {
   override def toString: String = "vary"
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum LocationT {
     Inline,
@@ -117,11 +121,13 @@ case object YonderT extends LocationT {
   override def toString: String = "heap"
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RegionT;
 /*
 case class RegionT()
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordT<'s, 't> {
   pub ownership: OwnershipT,
@@ -152,8 +158,8 @@ case class CoordT(
 */
 // KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
 // (StructTT, InterfaceTT, etc.) are arena-interned and held as &'t refs here.
-// Primitives (NeverT, VoidT, IntT, BoolT, StrT, FloatT) inline by value —
-// they're small enough to skip arena indirection.
+// Primitives inline by value; compound types use &'t to keep the enum small (see @WVSBIZ).
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
   Never(NeverT),
@@ -199,6 +205,7 @@ sealed trait KindT {
   def isPrimitive: Boolean
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NeverT {
   pub from_break: bool,
@@ -215,6 +222,7 @@ case class NeverT(
   override def isPrimitive: Boolean = true
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VoidT;
 /*
@@ -233,6 +241,7 @@ object IntT {
 }
 */
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntT {
   pub bits: i32,
@@ -242,6 +251,7 @@ case class IntT(bits: Int) extends KindT {
   override def isPrimitive: Boolean = true
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BoolT;
 /*
@@ -250,6 +260,7 @@ case class BoolT() extends KindT {
 
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StrT;
 /*
@@ -258,6 +269,7 @@ case class StrT() extends KindT {
 
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FloatT;
 /*
@@ -277,6 +289,7 @@ object contentsStaticSizedArrayTT {
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
@@ -309,6 +322,7 @@ object contentsRuntimeSizedArrayTT {
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
@@ -333,6 +347,7 @@ object ICitizenTT {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -348,6 +363,7 @@ sealed trait ISubKindTT extends KindT {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindTT<'s, 't> {
   Interface(&'t InterfaceTT<'s, 't>),
@@ -360,6 +376,7 @@ sealed trait ISuperKindTT extends KindT {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -370,6 +387,7 @@ sealed trait ICitizenTT extends ISubKindTT with IInterning {
   def id: IdT[ICitizenNameT]
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTT<'s, 't> {
   pub id: IdT<'s, 't>,
@@ -384,6 +402,7 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
   pub id: IdT<'s, 't>,
@@ -397,6 +416,7 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
   pub env: &'t IInDenizenEnvironmentT<'s, 't>,
@@ -416,6 +436,7 @@ case class OverloadSetT(
 
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderT<'s, 't> {
   pub id: IdT<'s, 't>,
@@ -446,8 +467,9 @@ case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT wi
 // sealed-trait family with a tagged-union Val key. These mirror scout's
 // INameValS/INameS pattern.
 //
-// All 6 variants are "simple" (struct is its own Val, no 'tmp lifetime).
-
+// Dispatch enums for kind interning — these types are interned per @WVSBIZ
+// (enum budget: KindT stores them behind &'t to stay small and Copy).
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadValT<'s, 't>
 where 's: 't,
@@ -460,6 +482,7 @@ where 's: 't,
   OverloadSet(OverloadSetT<'s, 't>),
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadT<'s, 't>
 where 's: 't,

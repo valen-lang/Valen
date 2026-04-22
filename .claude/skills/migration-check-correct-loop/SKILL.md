@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/migration-check-correct-loop.md
+../../../docs/skills/migration-check-correct-loop.md

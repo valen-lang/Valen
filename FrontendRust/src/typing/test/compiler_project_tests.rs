@@ -1,3 +1,4 @@
+use super::compiler_test_compilation::compiler_test_compilation;
 /*
 package dev.vale.typing
 
@@ -17,7 +18,7 @@ class CompilerProjectTests extends FunSuite with Matchers {
 // mig: fn function_has_correct_name
 #[test]
 fn function_has_correct_name() {
-    panic!("Unmigrated test: function_has_correct_name");
+    compiler_test_compilation("exported func main() { }");
 }
 /*
   test("Function has correct name") {

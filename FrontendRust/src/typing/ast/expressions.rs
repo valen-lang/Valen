@@ -22,6 +22,7 @@ import dev.vale.typing.types._
 import dev.vale.typing.templata._
 */
 
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IExpressionResultT<'s, 't> {
     Reference(ReferenceResultT<'s, 't>),
@@ -57,6 +58,7 @@ fn expression_result_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: ki
   def kind: KindT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 /*
@@ -87,6 +89,7 @@ impl<'s, 't> AddressResultT<'s, 't> {
 }
 */
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceResultT<'s, 't> { pub coord: CoordT<'s, 't> }
 /*
@@ -117,6 +120,7 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 }
 */
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Debug)]
 pub enum ExpressionTE<'s, 't> {
     Reference(&'t ReferenceExpressionTE<'s, 't>),
@@ -134,6 +138,7 @@ fn expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
   def kind: KindT
 }
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub enum ReferenceExpressionTE<'s, 't> {
     LetAndLend(LetAndLendTE<'s, 't>),
@@ -197,6 +202,7 @@ fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented:
   override def kind = result.coord.kind
 }
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub enum AddressExpressionTE<'s, 't> {
     LocalLookup(LocalLookupTE<'s, 't>),
@@ -229,6 +235,7 @@ fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: var
 }
 
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct LetAndLendTE<'s, 't>
 where 's: 't,
@@ -288,6 +295,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct LockWeakTE<'s, 't>
 where 's: 't,
@@ -341,6 +349,7 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct BorrowToWeakTE<'s, 't>
 where 's: 't,
@@ -383,6 +392,7 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct LetNormalTE<'s, 't>
 where 's: 't,
@@ -433,6 +443,7 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct UnletTE<'s, 't> {
     pub variable: ILocalVariableT<'s, 't>,
@@ -463,6 +474,7 @@ impl<'s, 't> UnletTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DiscardTE<'s, 't>
 where 's: 't,
@@ -520,6 +532,7 @@ impl<'s, 't> DiscardTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DeferTE<'s, 't>
 where 's: 't,
@@ -565,6 +578,7 @@ impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct IfTE<'s, 't>
 where 's: 't,
@@ -624,6 +638,7 @@ impl<'s, 't> IfTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct WhileTE<'s, 't>
 where 's: 't,
@@ -667,6 +682,7 @@ impl<'s, 't> WhileTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct MutateTE<'s, 't>
 where 's: 't,
@@ -700,6 +716,7 @@ impl<'s, 't> MutateTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct RestackifyTE<'s, 't>
 where 's: 't,
@@ -733,6 +750,7 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct TransmigrateTE<'s, 't>
 where 's: 't,
@@ -768,6 +786,7 @@ impl<'s, 't> TransmigrateTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ReturnTE<'s, 't>
 where 's: 't,
@@ -801,6 +820,7 @@ impl<'s, 't> ReturnTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct BreakTE<'s, 't> {
     pub region: RegionT,
@@ -831,6 +851,7 @@ impl<'s, 't> BreakTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct BlockTE<'s, 't>
 where 's: 't,
@@ -868,6 +889,7 @@ impl<'s, 't> BlockTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct PureTE<'s, 't>
 where 's: 't,
@@ -915,6 +937,7 @@ impl<'s, 't> PureTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConsecutorTE<'s, 't>
 where 's: 't,
@@ -999,6 +1022,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct TupleTE<'s, 't>
 where 's: 't,
@@ -1044,6 +1068,7 @@ override def hashCode(): Int = vcurious()
 //}
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct StaticArrayFromValuesTE<'s, 't>
 where 's: 't,
@@ -1079,6 +1104,7 @@ impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ArraySizeTE<'s, 't>
 where 's: 't,
@@ -1108,6 +1134,7 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct IsSameInstanceTE<'s, 't>
 where 's: 't,
@@ -1146,6 +1173,7 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct AsSubtypeTE<'s, 't>
 where 's: 't,
@@ -1204,6 +1232,7 @@ impl<'s, 't> AsSubtypeTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct VoidLiteralTE<'s, 't> {
     pub region: RegionT,
@@ -1232,6 +1261,7 @@ impl<'s, 't> VoidLiteralTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConstantIntTE<'s, 't> {
     pub value: ITemplataT<'s, 't>,
@@ -1263,6 +1293,7 @@ impl<'s, 't> ConstantIntTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConstantBoolTE<'s, 't> {
     pub value: bool,
@@ -1292,6 +1323,7 @@ impl<'s, 't> ConstantBoolTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConstantStrTE<'s, 't> {
     pub value: StrI<'s>,
@@ -1321,6 +1353,7 @@ impl<'s, 't> ConstantStrTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConstantFloatTE<'s, 't> {
     pub value: f64,
@@ -1350,6 +1383,7 @@ impl<'s, 't> ConstantFloatTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct LocalLookupTE<'s, 't> {
     pub range: RangeS<'s>,
@@ -1388,6 +1422,7 @@ impl<'s, 't> LocalLookupTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ArgLookupTE<'s, 't> {
     pub param_index: i32,
@@ -1419,6 +1454,7 @@ impl<'s, 't> ArgLookupTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct StaticSizedArrayLookupTE<'s, 't>
 where 's: 't,
@@ -1465,6 +1501,7 @@ impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct RuntimeSizedArrayLookupTE<'s, 't>
 where 's: 't,
@@ -1521,6 +1558,7 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ArrayLengthTE<'s, 't>
 where 's: 't,
@@ -1550,6 +1588,7 @@ impl<'s, 't> ArrayLengthTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ReferenceMemberLookupTE<'s, 't>
 where 's: 't,
@@ -1594,6 +1633,7 @@ impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
 }
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct AddressMemberLookupTE<'s, 't>
 where 's: 't,
@@ -1632,6 +1672,7 @@ impl<'s, 't> AddressMemberLookupTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct InterfaceFunctionCallTE<'s, 't>
 where 's: 't,
@@ -1668,6 +1709,7 @@ impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ExternFunctionCallTE<'s, 't>
 where 's: 't,
@@ -1713,6 +1755,7 @@ impl<'s, 't> ExternFunctionCallTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct FunctionCallTE<'s, 't>
 where 's: 't,
@@ -1765,6 +1808,7 @@ impl<'s, 't> FunctionCallTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ReinterpretTE<'s, 't>
 where 's: 't,
@@ -1820,6 +1864,7 @@ impl<'s, 't> ReinterpretTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct ConstructTE<'s, 't>
 where 's: 't,
@@ -1857,6 +1902,7 @@ impl<'s, 't> ConstructTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct NewMutRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
@@ -1904,6 +1950,7 @@ impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct StaticArrayFromCallableTE<'s, 't>
 where 's: 't,
@@ -1951,6 +1998,7 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DestroyStaticSizedArrayIntoFunctionTE<'s, 't>
 where 's: 't,
@@ -2014,6 +2062,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsTE<'s, 't>
 where 's: 't,
@@ -2066,6 +2115,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DestroyMutRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
@@ -2087,6 +2137,7 @@ impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct RuntimeSizedArrayCapacityTE<'s, 't>
 where 's: 't,
@@ -2106,6 +2157,7 @@ impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct PushRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
@@ -2129,6 +2181,7 @@ impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct PopRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
@@ -2153,6 +2206,7 @@ impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct InterfaceToInterfaceUpcastTE<'s, 't>
 where 's: 't,
@@ -2191,6 +2245,7 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct UpcastTE<'s, 't>
 where 's: 't,
@@ -2239,6 +2294,7 @@ impl<'s, 't> UpcastTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct SoftLoadTE<'s, 't>
 where 's: 't,
@@ -2289,6 +2345,7 @@ impl<'s, 't> SoftLoadTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DestroyTE<'s, 't>
 where 's: 't,
@@ -2335,6 +2392,7 @@ impl<'s, 't> DestroyTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct DestroyImmRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
@@ -2397,6 +2455,7 @@ impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
 
 */
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(PartialEq, Debug)]
 pub struct NewImmRuntimeSizedArrayTE<'s, 't>
 where 's: 't,

@@ -14,6 +14,7 @@ import dev.vale.typing.types.InterfaceTT
 import dev.vale.vpass
 */
 
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub enum IEnvEntryT<'s, 't>
 where 's: 't,

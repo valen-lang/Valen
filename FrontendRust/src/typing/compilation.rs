@@ -30,6 +30,7 @@ import dev.vale.postparsing.ICompileErrorS
 import scala.collection.immutable.{List, ListMap, Map, Set}
 import scala.collection.mutable
 */
+/// Miscellaneous (see @TFITCX)
 pub struct TypingPassOptions<'s> {
   pub global_options: GlobalOptions,
   pub debug_out: Arc<dyn Fn(&str) + Send + Sync>,
@@ -62,6 +63,7 @@ where 's: 't,
     panic!("Unimplemented: run_typing_pass — Slab 8");
 }
 
+/// Miscellaneous (see @TFITCX)
 pub struct TypingPassCompilation<'s, 'ctx, 't, 'p> {
   higher_typing_compilation: HigherTypingCompilation<'s, 'ctx, 'p>,
   hinputs_cache: Option<()>,

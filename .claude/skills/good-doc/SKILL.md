@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/good-doc.md
+../../../docs/skills/good-doc.md

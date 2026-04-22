@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/guardian-curate.md
+../../../docs/skills/guardian-curate.md

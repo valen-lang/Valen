@@ -10,6 +10,12 @@ import scala.collection.immutable.{List, ListMap, Map, Set}
 import scala.collection.mutable
 
 object CompilerTestCompilation {
+*/
+// mig: fn test
+pub fn compiler_test_compilation(_code: &str) -> ! {
+    panic!("Unimplemented: CompilerTestCompilation.test")
+}
+/*
   def test(code: String, interner: Interner = new Interner()): TypingPassCompilation = {
     val keywords = new Keywords(interner)
     new TypingPassCompilation(

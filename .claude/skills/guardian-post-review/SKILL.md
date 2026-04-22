@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/guardian-post-review.md
+../../../docs/skills/guardian-post-review.md

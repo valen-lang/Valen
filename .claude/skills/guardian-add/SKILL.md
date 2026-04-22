@@ -1,1 +1,1 @@
-../../../Guardian/docs/skills/guardian-add.md
+../../../docs/skills/guardian-add.md

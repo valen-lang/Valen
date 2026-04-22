@@ -27,6 +27,7 @@ import dev.vale.typing.types._
 // Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md`. Scala's
 // `IdT[+T <: INameT]` phantom outer parameter is erased in Rust — callers
 // pattern-match on `local_name` at the point they need narrowing.
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct IdT<'s, 't>
 where 's: 't,
@@ -149,6 +150,7 @@ impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
 // Callers that need a specific leaf-name pattern-match on `local_name` directly,
 // like Scala does. See `docs/reasoning/idt-typed-view-alternatives.md`.
 
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum INameT<'s, 't> {
     ExportTemplate(&'t ExportTemplateNameT<'s, 't>),
@@ -227,6 +229,7 @@ pub enum INameT<'s, 't> {
 /*
 sealed trait INameT extends IInterning
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplateNameT<'s, 't> {
     ExportTemplate(&'t ExportTemplateNameT<'s, 't>),
@@ -255,6 +258,7 @@ pub enum ITemplateNameT<'s, 't> {
 /*
 sealed trait ITemplateNameT extends INameT
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IFunctionTemplateNameT<'s, 't> {
     OverrideDispatcherTemplate(&'t OverrideDispatcherTemplateNameT<'s, 't>),
@@ -272,6 +276,7 @@ sealed trait IFunctionTemplateNameT extends ITemplateNameT {
   def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplataT[ITemplataType]], params: Vector[CoordT]): IFunctionNameT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInstantiationNameT<'s, 't> {
     Export(&'t ExportNameT<'s, 't>),
@@ -302,6 +307,7 @@ sealed trait IInstantiationNameT extends INameT {
   def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IFunctionNameT<'s, 't> {
     OverrideDispatcher(&'t OverrideDispatcherNameT<'s, 't>),
@@ -320,6 +326,7 @@ sealed trait IFunctionNameT extends IInstantiationNameT {
   def parameters: Vector[CoordT]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindTemplateNameT<'s, 't> {
     KindPlaceholderTemplate(&'t KindPlaceholderTemplateNameT<'s, 't>),
@@ -328,6 +335,7 @@ pub enum ISuperKindTemplateNameT<'s, 't> {
 /*
 sealed trait ISuperKindTemplateNameT extends ITemplateNameT
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindTemplateNameT<'s, 't> {
     StaticSizedArrayTemplate(&'t StaticSizedArrayTemplateNameT<'s, 't>),
@@ -341,6 +349,7 @@ pub enum ISubKindTemplateNameT<'s, 't> {
 /*
 sealed trait ISubKindTemplateNameT extends ITemplateNameT
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTemplateNameT<'s, 't> {
     StaticSizedArrayTemplate(&'t StaticSizedArrayTemplateNameT<'s, 't>),
@@ -355,6 +364,7 @@ sealed trait ICitizenTemplateNameT extends ISubKindTemplateNameT {
   def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IStructTemplateNameT<'s, 't> {
     LambdaCitizenTemplate(&'t LambdaCitizenTemplateNameT<'s, 't>),
@@ -370,6 +380,7 @@ sealed trait IStructTemplateNameT extends ICitizenTemplateNameT {
   }
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInterfaceTemplateNameT<'s, 't> {
     InterfaceTemplate(&'t InterfaceTemplateNameT<'s, 't>),
@@ -379,6 +390,7 @@ sealed trait IInterfaceTemplateNameT extends ICitizenTemplateNameT with ISuperKi
   def makeInterfaceName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): IInterfaceNameT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindNameT<'s, 't> {
     KindPlaceholder(&'t KindPlaceholderNameT<'s, 't>),
@@ -390,6 +402,7 @@ sealed trait ISuperKindNameT extends IInstantiationNameT {
   def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindNameT<'s, 't> {
     StaticSizedArray(&'t StaticSizedArrayNameT<'s, 't>),
@@ -406,6 +419,7 @@ sealed trait ISubKindNameT extends IInstantiationNameT {
   def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenNameT<'s, 't> {
     StaticSizedArray(&'t StaticSizedArrayNameT<'s, 't>),
@@ -421,6 +435,7 @@ sealed trait ICitizenNameT extends ISubKindNameT {
   def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IStructNameT<'s, 't> {
     Struct(&'t StructNameT<'s, 't>),
@@ -433,6 +448,7 @@ sealed trait IStructNameT extends ICitizenNameT with ISubKindNameT {
   override def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInterfaceNameT<'s, 't> {
     Interface(&'t InterfaceNameT<'s, 't>),
@@ -443,6 +459,7 @@ sealed trait IInterfaceNameT extends ICitizenNameT with ISubKindNameT with ISupe
   override def templateArgs: Vector[ITemplataT[ITemplataType]]
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IImplTemplateNameT<'s, 't> {
     ImplTemplate(&'t ImplTemplateNameT<'s, 't>),
@@ -454,6 +471,7 @@ sealed trait IImplTemplateNameT extends ITemplateNameT {
   def makeImplName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]], subCitizen: ICitizenTT): IImplNameT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IImplNameT<'s, 't> {
     Impl(&'t ImplNameT<'s, 't>),
@@ -467,11 +485,13 @@ sealed trait IImplNameT extends IInstantiationNameT {
 
 */
 // TODO: placeholder PhantomData — replace with real fields during body migration
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IRegionNameT<'s, 't> { _Phantom(std::marker::PhantomData<(&'s (), &'t ())>) }
 /*
 sealed trait IRegionNameT extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportTemplateNameT<'s, 't> {
     pub code_loc: CodeLocationS<'s>,
@@ -480,6 +500,7 @@ pub struct ExportTemplateNameT<'s, 't> {
 /*
 case class ExportTemplateNameT(codeLoc: CodeLocationS) extends ITemplateNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportNameT<'s, 't> {
     pub template: &'t ExportTemplateNameT<'s, 't>,
@@ -491,6 +512,7 @@ case class ExportNameT(template: ExportTemplateNameT, region: RegionT) extends I
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplTemplateNameT<'s, 't> {
     pub code_location_s: CodeLocationS<'s>,
@@ -504,6 +526,7 @@ case class ImplTemplateNameT(codeLocationS: CodeLocationS) extends IImplTemplate
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplNameT<'s, 't> {
     pub template: &'t ImplTemplateNameT<'s, 't>,
@@ -522,6 +545,7 @@ case class ImplNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplBoundTemplateNameT<'s, 't> {
     pub code_location_s: CodeLocationS<'s>,
@@ -534,6 +558,7 @@ case class ImplBoundTemplateNameT(codeLocationS: CodeLocationS) extends IImplTem
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplBoundNameT<'s, 't> {
     pub template: &'t ImplBoundTemplateNameT<'s, 't>,
@@ -559,6 +584,7 @@ case class ImplBoundNameT(
 //case class ImplAugmentingSubCitizenNameT(subCitizen: FullNameT[ICitizenTemplateNameT]) extends IImplTemplateNameT
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LetNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -567,6 +593,7 @@ pub struct LetNameT<'s, 't> {
 /*
 case class LetNameT(codeLocation: CodeLocationS) extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExportAsNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -575,6 +602,7 @@ pub struct ExportAsNameT<'s, 't> {
 /*
 case class ExportAsNameT(codeLocation: CodeLocationS) extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RawArrayNameT<'s, 't> {
     pub mutability: ITemplataT<'s, 't>,
@@ -590,6 +618,7 @@ case class RawArrayNameT(
 
 // This num is really just here to disambiguate it from other reachable prototypes in the environment
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReachablePrototypeNameT<'s, 't> {
     pub num: i32,
@@ -598,6 +627,7 @@ pub struct ReachablePrototypeNameT<'s, 't> {
 /*
 case class ReachablePrototypeNameT(num: Int) extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTemplateNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -615,6 +645,7 @@ case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayNameT<'s, 't> {
     pub template: &'t StaticSizedArrayTemplateNameT<'s, 't>,
@@ -634,6 +665,7 @@ case class StaticSizedArrayNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTemplateNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -650,6 +682,7 @@ case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayNameT<'s, 't> {
     pub template: &'t RuntimeSizedArrayTemplateNameT<'s, 't>,
@@ -663,6 +696,7 @@ case class RuntimeSizedArrayNameT(template: RuntimeSizedArrayTemplateNameT, arr:
 }
 
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IPlaceholderNameT<'s, 't> {
     KindPlaceholder(&'t KindPlaceholderNameT<'s, 't>),
@@ -678,6 +712,7 @@ sealed trait IPlaceholderNameT extends INameT {
 // in call/overload resolution. Environments are associated with templates, so it makes
 // some sense to have a "placeholder template" notion.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderTemplateNameT<'s, 't> {
     pub index: i32,
@@ -687,6 +722,7 @@ pub struct KindPlaceholderTemplateNameT<'s, 't> {
 /*
 case class KindPlaceholderTemplateNameT(index: Int, rune: IRuneS) extends ISubKindTemplateNameT with ISuperKindTemplateNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderNameT<'s, 't> {
     pub template: &'t KindPlaceholderTemplateNameT<'s, 't>,
@@ -701,6 +737,7 @@ case class KindPlaceholderNameT(template: KindPlaceholderTemplateNameT) extends 
 // This exists because we need a different way to refer to a coord generic param's other components,
 // see MNRFGC.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct NonKindNonRegionPlaceholderNameT<'s, 't> {
     pub index: i32,
@@ -712,6 +749,7 @@ case class NonKindNonRegionPlaceholderNameT(index: Int, rune: IRuneS) extends IP
 
 // See NNSPAFOC.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherTemplateNameT<'s, 't> {
     pub impl_id: IdT<'s, 't>,
@@ -731,6 +769,7 @@ case class OverrideDispatcherTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherNameT<'s, 't> {
     pub template: &'t OverrideDispatcherTemplateNameT<'s, 't>,
@@ -748,6 +787,7 @@ case class OverrideDispatcherNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherCaseNameT<'s, 't> {
     pub independent_impl_template_args: &'t [ITemplataT<'s, 't>],
@@ -763,6 +803,7 @@ case class OverrideDispatcherCaseNameT(
 }
 
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IVarNameT<'s, 't> {
     TypingPassBlockResultVar(&'t TypingPassBlockResultVarNameT<'s, 't>),
@@ -786,6 +827,7 @@ pub enum IVarNameT<'s, 't> {
 /*
 sealed trait IVarNameT extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassBlockResultVarNameT<'s, 't> {
     pub life: &'s LocationInFunctionEnvironmentT<'s>,
@@ -794,6 +836,7 @@ pub struct TypingPassBlockResultVarNameT<'s, 't> {
 /*
 case class TypingPassBlockResultVarNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassFunctionResultVarNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -801,6 +844,7 @@ pub struct TypingPassFunctionResultVarNameT<'s, 't> {
 /*
 case class TypingPassFunctionResultVarNameT() extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassTemporaryVarNameT<'s, 't> {
     pub life: &'s LocationInFunctionEnvironmentT<'s>,
@@ -809,6 +853,7 @@ pub struct TypingPassTemporaryVarNameT<'s, 't> {
 /*
 case class TypingPassTemporaryVarNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternMemberNameT<'s, 't> {
     pub life: &'s LocationInFunctionEnvironmentT<'s>,
@@ -817,6 +862,7 @@ pub struct TypingPassPatternMemberNameT<'s, 't> {
 /*
 case class TypingPassPatternMemberNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingIgnoredParamNameT<'s, 't> {
     pub num: i32,
@@ -825,6 +871,7 @@ pub struct TypingIgnoredParamNameT<'s, 't> {
 /*
 case class TypingIgnoredParamNameT(num: Int) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternDestructureeNameT<'s, 't> {
     pub life: &'s LocationInFunctionEnvironmentT<'s>,
@@ -833,6 +880,7 @@ pub struct TypingPassPatternDestructureeNameT<'s, 't> {
 /*
 case class TypingPassPatternDestructureeNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct UnnamedLocalNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -841,6 +889,7 @@ pub struct UnnamedLocalNameT<'s, 't> {
 /*
 case class UnnamedLocalNameT(codeLocation: CodeLocationS) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ClosureParamNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -849,6 +898,7 @@ pub struct ClosureParamNameT<'s, 't> {
 /*
 case class ClosureParamNameT(codeLocation: CodeLocationS) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructingMemberNameT<'s, 't> {
     pub name: StrI<'s>,
@@ -857,6 +907,7 @@ pub struct ConstructingMemberNameT<'s, 't> {
 /*
 case class ConstructingMemberNameT(name: StrI) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct WhileCondResultNameT<'s, 't> {
     pub range: RangeS<'s>,
@@ -865,6 +916,7 @@ pub struct WhileCondResultNameT<'s, 't> {
 /*
 case class WhileCondResultNameT(range: RangeS) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterableNameT<'s, 't> {
     pub range: RangeS<'s>,
@@ -873,6 +925,7 @@ pub struct IterableNameT<'s, 't> {
 /*
 case class IterableNameT(range: RangeS) extends IVarNameT {  }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IteratorNameT<'s, 't> {
     pub range: RangeS<'s>,
@@ -881,6 +934,7 @@ pub struct IteratorNameT<'s, 't> {
 /*
 case class IteratorNameT(range: RangeS) extends IVarNameT {  }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IterationOptionNameT<'s, 't> {
     pub range: RangeS<'s>,
@@ -889,6 +943,7 @@ pub struct IterationOptionNameT<'s, 't> {
 /*
 case class IterationOptionNameT(range: RangeS) extends IVarNameT {  }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct MagicParamNameT<'s, 't> {
     pub code_location2: CodeLocationS<'s>,
@@ -897,6 +952,7 @@ pub struct MagicParamNameT<'s, 't> {
 /*
 case class MagicParamNameT(codeLocation2: CodeLocationS) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CodeVarNameT<'s, 't> {
     pub name: StrI<'s>,
@@ -906,6 +962,7 @@ pub struct CodeVarNameT<'s, 't> {
 case class CodeVarNameT(name: StrI) extends IVarNameT
 // We dont use CodeVarName2(0), CodeVarName2(1) etc because we dont want the user to address these members directly.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructMemberNameT<'s, 't> {
     pub index: i32,
@@ -914,6 +971,7 @@ pub struct AnonymousSubstructMemberNameT<'s, 't> {
 /*
 case class AnonymousSubstructMemberNameT(index: Int) extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrimitiveNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -923,6 +981,7 @@ pub struct PrimitiveNameT<'s, 't> {
 case class PrimitiveNameT(humanName: StrI) extends INameT
 // Only made in typingpass
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PackageTopLevelNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -930,6 +989,7 @@ pub struct PackageTopLevelNameT<'s, 't> {
 /*
 case class PackageTopLevelNameT() extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ProjectNameT<'s, 't> {
     pub name: StrI<'s>,
@@ -938,6 +998,7 @@ pub struct ProjectNameT<'s, 't> {
 /*
 case class ProjectNameT(name: StrI) extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PackageNameT<'s, 't> {
     pub name: StrI<'s>,
@@ -946,6 +1007,7 @@ pub struct PackageNameT<'s, 't> {
 /*
 case class PackageNameT(name: StrI) extends INameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuneNameT<'s, 't> {
     pub rune: IRuneS<'s>,
@@ -957,6 +1019,7 @@ case class RuneNameT(rune: IRuneS) extends INameT
 // This is the name of a function that we're still figuring out in the function typingpass.
 // We have its closured variables, but are still figuring out its template args and params.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BuildingFunctionNameWithClosuredsT<'s, 't> {
     pub template_name: IFunctionTemplateNameT<'s, 't>,
@@ -971,6 +1034,7 @@ case class BuildingFunctionNameWithClosuredsT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternTemplateNameT<'s, 't> {
     pub code_loc: CodeLocationS<'s>,
@@ -981,6 +1045,7 @@ case class ExternTemplateNameT(
   codeLoc: CodeLocationS,
 ) extends ITemplateNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternNameT<'s, 't> {
     pub template: &'t ExternTemplateNameT<'s, 't>,
@@ -995,6 +1060,7 @@ case class ExternNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ExternFunctionNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -1018,6 +1084,7 @@ case class ExternFunctionNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionNameT<'s, 't> {
     pub template: &'t FunctionTemplateNameT<'s, 't>,
@@ -1032,6 +1099,7 @@ case class FunctionNameT(
 ) extends IFunctionNameT
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ForwarderFunctionNameT<'s, 't> {
     pub template: &'t ForwarderFunctionTemplateNameT<'s, 't>,
@@ -1047,6 +1115,7 @@ case class ForwarderFunctionNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionBoundTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -1071,6 +1140,7 @@ case class FunctionBoundTemplateNameT(
 // declared on the params' kind struct/interfaces' definitions).
 // See RFNTIOB for why we reverted that.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionBoundNameT<'s, 't> {
     pub template: &'t FunctionBoundTemplateNameT<'s, 't>,
@@ -1089,6 +1159,7 @@ case class FunctionBoundNameT(
 // runes. At the end of solving, just afterward, they're turned into actual FunctionBoundNameT
 // or resolved from the calling environment.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PredictedFunctionTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -1104,6 +1175,7 @@ case class PredictedFunctionTemplateNameT(
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PredictedFunctionNameT<'s, 't> {
     pub template: &'t PredictedFunctionTemplateNameT<'s, 't>,
@@ -1118,6 +1190,7 @@ case class PredictedFunctionNameT(
 ) extends IFunctionNameT
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -1136,6 +1209,7 @@ case class FunctionTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCallFunctionTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -1154,6 +1228,7 @@ case class LambdaCallFunctionTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCallFunctionNameT<'s, 't> {
     pub template: &'t LambdaCallFunctionTemplateNameT<'s, 't>,
@@ -1168,6 +1243,7 @@ case class LambdaCallFunctionNameT(
 ) extends IFunctionNameT
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ForwarderFunctionTemplateNameT<'s, 't> {
     pub inner: IFunctionTemplateNameT<'s, 't>,
@@ -1232,6 +1308,7 @@ case class ForwarderFunctionTemplateNameT(
 //  }
 //}
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ConstructorTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -1302,6 +1379,7 @@ case class ConstructorTemplateNameT(
 // Vale has no Self, its just a convenient first name parameter.
 // See also SelfNameS.
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SelfNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -1309,6 +1387,7 @@ pub struct SelfNameT<'s, 't> {
 /*
 case class SelfNameT() extends IVarNameT
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ArbitraryNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -1316,6 +1395,7 @@ pub struct ArbitraryNameT<'s, 't> {
 /*
 case class ArbitraryNameT() extends INameT
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CitizenNameT<'s, 't> {
     Struct(&'t StructNameT<'s, 't>),
@@ -1340,6 +1420,7 @@ object CitizenNameT {
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructNameT<'s, 't> {
     pub template: IStructTemplateNameT<'s, 't>,
@@ -1354,6 +1435,7 @@ case class StructNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceNameT<'s, 't> {
     pub template: &'t InterfaceTemplateNameT<'s, 't>,
@@ -1368,6 +1450,7 @@ case class InterfaceNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCitizenTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
@@ -1384,6 +1467,7 @@ case class LambdaCitizenTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LambdaCitizenNameT<'s, 't> {
     pub template: &'t LambdaCitizenTemplateNameT<'s, 't>,
@@ -1397,6 +1481,7 @@ case class LambdaCitizenNameT(
 }
 
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CitizenTemplateNameT<'s, 't> {
     StructTemplate(&'t StructTemplateNameT<'s, 't>),
@@ -1431,6 +1516,7 @@ object CitizenTemplateNameT {
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTemplateNameT<'s, 't> {
     pub human_name: StrI<'s>,
@@ -1454,6 +1540,7 @@ case class StructTemplateNameT(
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTemplateNameT<'s, 't> {
     pub human_namee: StrI<'s>,
@@ -1479,6 +1566,7 @@ case class InterfaceTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructImplTemplateNameT<'s, 't> {
     pub interface: IInterfaceTemplateNameT<'s, 't>,
@@ -1492,6 +1580,7 @@ case class AnonymousSubstructImplTemplateNameT(
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructImplNameT<'s, 't> {
     pub template: &'t AnonymousSubstructImplTemplateNameT<'s, 't>,
@@ -1507,6 +1596,7 @@ case class AnonymousSubstructImplNameT(
 
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructTemplateNameT<'s, 't> {
     pub interface: IInterfaceTemplateNameT<'s, 't>,
@@ -1522,6 +1612,7 @@ case class AnonymousSubstructTemplateNameT(
   }
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructConstructorTemplateNameT<'s, 't> {
     pub substruct: ICitizenTemplateNameT<'s, 't>,
@@ -1536,6 +1627,7 @@ case class AnonymousSubstructConstructorTemplateNameT(
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructConstructorNameT<'s, 't> {
     pub template: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>,
@@ -1550,6 +1642,7 @@ case class AnonymousSubstructConstructorNameT(
 ) extends IFunctionNameT
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AnonymousSubstructNameT<'s, 't> {
     pub template: &'t AnonymousSubstructTemplateNameT<'s, 't>,
@@ -1571,6 +1664,7 @@ case class AnonymousSubstructNameT(
 //}
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ResolvingEnvNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -1581,6 +1675,7 @@ case class ResolvingEnvNameT() extends INameT {
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CallEnvNameT<'s, 't> {
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -2873,6 +2968,7 @@ impl<'s, 't> TryFrom<INameT<'s, 't>> for CitizenTemplateNameT<'s, 't> {
 // the hash must be consistent whether the Val's slice is 'tmp-borrowed (query)
 // or 't-arena-allocated (stored). Pointer-based hashing would fail to match
 // structurally-equal Vals with different slice pointers.
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct IdValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2884,6 +2980,7 @@ where 's: 't, 't: 'tmp,
 
 // Query wrapper for heterogeneous lookup (IdValT<'s, 't, 'tmp> against stored
 // IdValT<'s, 't, 't>). Mirrors postparsing::names::RuneValQuery.
+/// Interning transient (see @TFITCX)
 pub struct IdValQuery<'a, 's, 't, 'tmp>(pub &'a IdValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
 
@@ -2907,6 +3004,7 @@ where 's: 't, 't: 'tmp,
 // Fields match the permanent struct verbatim, except each `&'t [...]` slice
 // is replaced by `&'tmp [...]`.
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ImplNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2916,6 +3014,7 @@ where 's: 't, 't: 'tmp,
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ImplBoundNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2924,6 +3023,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct OverrideDispatcherNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2933,6 +3033,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct OverrideDispatcherCaseNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2940,6 +3041,7 @@ where 's: 't, 't: 'tmp,
     pub independent_impl_template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct ExternFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2948,6 +3050,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct FunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2957,6 +3060,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct FunctionBoundNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2966,6 +3070,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct PredictedFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2975,6 +3080,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct LambdaCallFunctionTemplateNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2983,6 +3089,7 @@ where 's: 't, 't: 'tmp,
     pub param_types: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct LambdaCallFunctionNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -2992,6 +3099,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct StructNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3000,6 +3108,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct InterfaceNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3008,6 +3117,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructImplNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3017,6 +3127,7 @@ where 's: 't, 't: 'tmp,
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructConstructorNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3026,6 +3137,7 @@ where 's: 't, 't: 'tmp,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct AnonymousSubstructNameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3155,6 +3267,7 @@ transient_name_val_impls!(AnonymousSubstructNameValT, AnonymousSubstructNameValQ
 // provides heterogeneous lookup (`'tmp` → `'t`) via Equivalent.
 // ============================================================================
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum INameValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3233,6 +3346,7 @@ where 's: 't, 't: 'tmp,
     CallEnv(CallEnvNameT<'s, 't>),
 }
 
+/// Interning transient (see @TFITCX)
 pub struct INameValQuery<'a, 's, 't, 'tmp>(pub &'a INameValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
 

@@ -34,6 +34,7 @@ import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
 
+/// Arena-allocated (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>
 where 's: 't,
@@ -119,6 +120,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
   def id: IdT[INameT]
 }
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInDenizenEnvironmentT<'s, 't>
 where 's: 't,
@@ -151,6 +153,7 @@ trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
   def id: IdT[INameT]
 }
 */
+/// Miscellaneous (see @TFITCX)
 pub enum ILookupContext {
   TemplataLookupContext,
   ExpressionLookupContext,
@@ -167,6 +170,7 @@ case object ExpressionLookupContext extends ILookupContext
 // Macro-dispatch fields (functorHelper, *Macro, nameToStructDefinedMacro, etc.)
 // from the Scala case class below are omitted here; they moved to `Compiler` as
 // part of the god-struct refactor. See docs/migration/handoff-god-struct-progress.md.
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GlobalEnvironmentT<'s, 't>
 where 's: 't,
@@ -328,6 +332,7 @@ fn code_locations_match() {
   }
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct TemplatasStoreT<'s, 't>
 where 's: 't,
@@ -351,6 +356,7 @@ impl<'s, 't> std::hash::Hash for TemplatasStoreT<'s, 't> where 's: 't {
 
 // (no scala counterpart — builder for TemplatasStoreT. Heap Vec/HashMap during
 // construction, frozen to arena slices at build_in.)
+/// Temporary state (see @TFITCX)
 pub struct TemplatasStoreBuilder<'s, 't>
 where 's: 't,
 {
@@ -529,6 +535,7 @@ object PackageEnvironmentT {
   }
 }
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct PackageEnvironmentT<'s, 't>
 where 's: 't,
@@ -606,6 +613,7 @@ impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct CitizenEnvironmentT<'s, 't>
 where 's: 't,
@@ -721,6 +729,7 @@ object GeneralEnvironmentT {
   }
 }
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ExportEnvironmentT<'s, 't>
 where 's: 't,
@@ -771,6 +780,7 @@ impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct ExternEnvironmentT<'s, 't>
 where 's: 't,
@@ -822,6 +832,7 @@ impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GeneralEnvironmentT<'s, 't>
 where 's: 't,
@@ -983,6 +994,7 @@ impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
 // an arena-allocated &'t FooEnvironmentT.
 // ============================================================================
 
+/// Temporary state (see @TFITCX)
 pub struct PackageEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
@@ -1007,6 +1019,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct CitizenEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
@@ -1035,6 +1048,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct ExportEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
@@ -1063,6 +1077,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct ExternEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
@@ -1091,6 +1106,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct GeneralEnvironmentBuilder<'s, 't>
 where 's: 't,
 {

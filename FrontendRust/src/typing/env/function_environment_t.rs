@@ -29,6 +29,7 @@ import scala.collection.immutable.{List, Map, Set}
 
 */
 
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct BuildingFunctionEnvironmentWithClosuredsT<'s, 't>
 where 's: 't,
@@ -114,6 +115,7 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 
 impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>
 where 's: 't,
@@ -203,6 +205,7 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s,
 impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
 }
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct NodeEnvironmentT<'s, 't>
 where 's: 't,
@@ -624,6 +627,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
+/// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct FunctionEnvironmentT<'s, 't>
 where 's: 't,
@@ -860,6 +864,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IVariableT<'s, 't>
 where 's: 't,
@@ -876,6 +881,7 @@ sealed trait IVariableT  {
   def coord: CoordT
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ILocalVariableT<'s, 't>
 where 's: 't,
@@ -895,6 +901,7 @@ sealed trait ILocalVariableT extends IVariableT {
 // Lucky for us, the parser figured out if any of our child closures did
 // any mutates/moves/borrows.
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressibleLocalVariableT<'s, 't>
 where 's: 't,
@@ -915,6 +922,7 @@ override def equals(obj: Any): Boolean = vcurious();
 
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceLocalVariableT<'s, 't>
 where 's: 't,
@@ -935,6 +943,7 @@ override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressibleClosureVariableT<'s, 't>
 where 's: 't,
@@ -954,6 +963,7 @@ case class AddressibleClosureVariableT(
   vpass()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ReferenceClosureVariableT<'s, 't>
 where 's: 't,
@@ -1107,6 +1117,7 @@ fn lookup_with_imprecise_name_inner() {
 // Builders — see environment.rs for the Package/Citizen/Export/Extern/General
 // builders; these 4 finish out the set for the function-env family.
 
+/// Temporary state (see @TFITCX)
 pub struct BuildingFunctionEnvironmentWithClosuredsBuilder<'s, 't>
 where 's: 't,
 {
@@ -1140,6 +1151,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsBuilder<'s, 't>
 where 's: 't,
 {
@@ -1178,6 +1190,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct FunctionEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
@@ -1217,6 +1230,7 @@ where 's: 't,
   }
 }
 
+/// Temporary state (see @TFITCX)
 pub struct NodeEnvironmentBuilder<'s, 't>
 where 's: 't,
 {

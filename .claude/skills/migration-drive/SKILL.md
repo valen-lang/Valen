@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/migration-drive.md
+../../../docs/skills/migration-drive.md

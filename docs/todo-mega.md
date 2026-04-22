@@ -159,7 +159,6 @@ FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need de
 - `zen/PostParserSynthesizesParserASTNodes-PPSPASTNZ.md` → `FrontendRust/src/postparsing/docs/arcana/PostParserSynthesizesParserASTNodes-PPSPASTNZ.md`
 
 ### Migration docs
-- `zen/migration_process.md` → `FrontendRust/docs/migration/process.md`
 - `zen/migration_principles.md` → `FrontendRust/docs/migration/principles.md`
 - `zen/migration_differences.md` → `FrontendRust/docs/migration/differences.md`
 - `zen/migration_prompt.md` → `FrontendRust/docs/skills/migration-prompt.md` (#8, AI workflow)
@@ -178,7 +177,6 @@ FrontendRust/docs/reasoning/arena-deterministic-maps.md  — (#7) why we need de
 ## Phase 4: Sort Remaining FrontendRust Docs (Day 2-3, ~2 hours)
 
 ### FrontendRust/docs/ (non-arena, already partially addressed in Phase 2)
-- `migration-audit-process.md` → `FrontendRust/docs/skills/migration-audit.md` (#8, AI workflow)
 - `migration-audit-report.md` → Check if the 26 NEEDS_WORK items were fixed. If yes, archive/delete. If no, `FrontendRust/docs/migration/audit-report.md`
 
 ### FrontendRust/todo/

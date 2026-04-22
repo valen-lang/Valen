@@ -12,11 +12,11 @@ Type these directly in Claude Code.
 | `/good-doc` | Categorize information and write it to the correct `docs/` directories per `docs/meta.md`. Handles arcana (@ID references) and shields. |
 
 ### Migration — Driving Work Forward
-| Command | What it does |
-|---|---|
-| `/migration-drive` | Make minimal, iterative parity-only changes. Adds `panic!` placeholders liberally. No novel logic. |
-| `/migration-test-fixer` | Run a failing test, use `migrate-director` to diagnose and scope, migrate Scala code until it passes. Stops after 5 consecutive failures. |
-| `/slice-pipeline` | Run the full slice pipeline on a file: start → rustify → placehold → reconcile (mark/copy/delete). |
+| Command | What it does                                                                                                                   |
+|---|--------------------------------------------------------------------------------------------------------------------------------|
+| `/migration-drive` | Make minimal, iterative parity-only changes. Adds `panic!` placeholders liberally. No novel logic.                             |
+| `/migration-test-fixer` | Run a failing test, uses agents to diagnose and scope, migrate Scala code until it passes. Stops after 5 consecutive failures. |
+| `/slice-pipeline` | Run the full slice pipeline on a file: start → rustify → placehold → reconcile (mark/copy/delete).                             |
 
 ### Migration — Reviewing & Checking
 | Command | What it does |
@@ -58,8 +58,7 @@ These are invoked by skills or by Claude via the Agent tool. You don't call them
 | Agent | Role |
 |---|---|
 | `migrate-diagnoser` | Diagnose what missing migration causes a test failure. Writes `migrate-direction.md`. |
-| `migrate-director` | Orchestrate diagnosis + scoping. Tells Claude what to implement next. |
-| `migrate-scoper` | Generate implementation instructions from diagnoser findings. Internal to migrate-director. |
+| `migrate-scoper` | Generate implementation instructions from diagnoser findings. |
 | `migration-migrate` | Bring over minimum Scala code to make changes compile. Uses `panic!` heavily. |
 
 ### Slice Pipeline

@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/migration-test-fixer.md
+../../../docs/skills/migration-test-fixer.md

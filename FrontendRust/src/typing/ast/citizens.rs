@@ -20,6 +20,7 @@ import scala.collection.immutable.Map
 // A "citizen" is a struct or an interface.
 */
 
+/// Value-type (see @TFITCX)
 pub enum CitizenDefinitionT<'s, 't> {
     Struct(&'t StructDefinitionT<'s, 't>),
     Interface(&'t InterfaceDefinitionT<'s, 't>),
@@ -52,6 +53,7 @@ fn citizen_definition_default_region() -> RegionT {
   def defaultRegion: RegionT
 }
 */
+/// Arena-allocated (see @TFITCX)
 pub struct StructDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_citizen: StructTT<'s, 't>,
@@ -136,6 +138,7 @@ impl<'s, 't> StructDefinitionT<'s, 't> {
 }
 */
 }
+/// Arena-allocated (see @TFITCX)
 pub enum IStructMemberT<'s, 't> {
     Normal(NormalStructMemberT<'s, 't>),
     Variadic(VariadicStructMemberT<'s, 't>),
@@ -150,6 +153,7 @@ fn struct_member_name<'s, 't>() -> IVarNameT<'s, 't> {
   def name: IVarNameT
 }
 */
+/// Arena-allocated (see @TFITCX)
 pub struct NormalStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub variability: VariabilityT,
@@ -165,6 +169,7 @@ case class NormalStructMemberT(
   vpass()
 }
 */
+/// Arena-allocated (see @TFITCX)
 pub struct VariadicStructMemberT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub tyype: PlaceholderTemplataT<'s, 't>,
@@ -177,6 +182,7 @@ case class VariadicStructMemberT(
   vpass()
 }
 */
+/// Arena-allocated (see @TFITCX)
 pub enum IMemberTypeT<'s, 't> {
     Address(AddressMemberTypeT<'s, 't>),
     Reference(ReferenceMemberTypeT<'s, 't>),
@@ -213,18 +219,21 @@ fn member_type_expect_address_member<'s, 't>() -> AddressMemberTypeT<'s, 't> {
   }
 }
 */
+/// Arena-allocated (see @TFITCX)
 pub struct AddressMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
 }
 /*
 case class AddressMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
+/// Arena-allocated (see @TFITCX)
 pub struct ReferenceMemberTypeT<'s, 't> {
     pub reference: CoordT<'s, 't>,
 }
 /*
 case class ReferenceMemberTypeT(reference: CoordT) extends IMemberTypeT
 */
+/// Arena-allocated (see @TFITCX)
 pub struct InterfaceDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_interface: InterfaceTT<'s, 't>,

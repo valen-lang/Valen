@@ -1,7 +1,7 @@
 shields_dirs = ["../Luz/shields", "docs/shields"]
 backend = "claude"
 port = 7878
-simple_smart_config = "../Guardian/gpt-oss-20b.config.json"
+simple_smart_config = "../Guardian/kimi.config.json"
 simple_medium_config = "../Guardian/gpt-oss-20b.config.json"
 simple_small_config = "../Guardian/gpt-oss-20b.config.json"
 agentic_smart_model = "claude-opus-4-20250514"
@@ -21,12 +21,8 @@ exclude_shields = [
 
     # To triage
 
-    "SameHelperCallsNoExceptions-SHCNEX.md", # fold this into scalaparity
-    "AllTestsAreExtremelyImportantAndShouldPass-ATEISPX.md",
     "NoAddingScalaComments-NASCX.md",
     "NoStringlyTypedData-NSTDX.md",
-    "ReturningResultIsFine-RRIFX.md",
-    "UseCollectMacrosToRecursivelySearch-UCMTRSX.md", # get rid
     "EliminateAllWarnings-EAWX.md",
     "ErrorsMustCarryTheirLogFilePath-EMCTLFPX.md",
     "NeverLoseErrorInformation-NLEIX.md",

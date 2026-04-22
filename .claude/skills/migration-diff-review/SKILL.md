@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/migration-diff-review.md
+../../../docs/skills/migration-diff-review.md

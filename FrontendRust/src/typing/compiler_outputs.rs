@@ -37,6 +37,7 @@ import dev.vale.typing.types.InterfaceTT
 import scala.collection.immutable.{List, Map}
 import scala.collection.mutable
 */
+/// Temporary state (see @TFITCX)
 pub enum DeferredActionT<'s, 't>
 where 's: 't,
 {
@@ -62,6 +63,7 @@ case class DeferredEvaluatingFunction(
   name: IdT[INameT],
   call: (CompilerOutputs) => Unit)
 */
+/// Temporary state (see @TFITCX)
 pub struct CompilerOutputs<'s, 't>
 where 's: 't,
 {

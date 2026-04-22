@@ -1,5 +1,6 @@
 use std::hash::{Hash, Hasher};
 
+/// Value-type (see @TFITCX)
 pub struct PtrKey<'t, T: ?Sized>(pub &'t T);
 
 impl<'t, T: ?Sized> PartialEq for PtrKey<'t, T> {

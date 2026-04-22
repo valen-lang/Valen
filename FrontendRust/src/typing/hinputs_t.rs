@@ -13,6 +13,7 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 */
+/// Arena-allocated (see @TFITCX)
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
     pub citizen_rune_to_reachable_prototype: Vec<(
         crate::postparsing::names::IRuneS<'s>,
@@ -50,6 +51,7 @@ pub fn make<'s, 't>(
 */
 // TODO: stub — Vec pairs stand in for Scala's HashMap; revisit (arena slice, sorted?) during body migration.
 // Also: Scala's [BF <: IFunctionNameT, BI <: IImplNameT] generics collapsed to the enums directly.
+/// Arena-allocated (see @TFITCX)
 pub struct InstantiationBoundArgumentsT<'s, 't> {
     pub rune_to_bound_prototype: Vec<(
         crate::postparsing::names::IRuneS<'s>,
@@ -88,6 +90,7 @@ case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
 // HinputsT is 't-arena-allocated, which per AASSNCMCX means these should later become
 // arena slices, not std Vec/HashMap. Keeping Vec/HashMap for now to match Scala shape;
 // revisit during body migration.
+/// Temporary state (see @TFITCX)
 pub struct HinputsT<'s, 't> {
     pub interfaces: Vec<crate::typing::ast::citizens::InterfaceDefinitionT<'s, 't>>,
     pub structs: Vec<crate::typing::ast::citizens::StructDefinitionT<'s, 't>>,

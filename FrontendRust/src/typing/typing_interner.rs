@@ -17,10 +17,11 @@ use crate::typing::types::types::{
     RuntimeSizedArrayTT, StaticSizedArrayTT, StructTT,
 };
 
-// Per handoff-slab-4.md Gotcha 2: 6-family HashMap design mirroring scout_arena.rs.
-// Each sealed-trait family has one HashMap keyed by a tagged-union Val enum.
+// 6-family HashMap design mirroring scout_arena.rs. Values with subcollections
+// or that need to fit behind &'t in a Copy enum are interned here (see @WVSBIZ).
 // Per-concrete intern methods are thin wrappers that dispatch through the
 // family method and unwrap the result.
+/// Temporary state (see @TFITCX)
 pub struct TypingInterner<'s, 't>
 where 's: 't,
 {

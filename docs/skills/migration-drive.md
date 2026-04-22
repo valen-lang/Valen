@@ -3,7 +3,7 @@ name: migration-drive
 description: Drive Scala-to-Rust migration by making minimal, iterative parity-only changes with no novel logic, adding panic/assert placeholders until compile/test paths are implemented.
 ---
 
-Go ahead and fix. However, you *cannot use your own novel code* to fix. The only way to make this better is to bring the rust code closer to the old scala code. Look at migration_process.md again, it may have changed.
+Go ahead and fix. However, you *cannot use your own novel code* to fix. The only way to make this better is to bring the rust code closer to the old scala code.
 
 Implement anything in src/postparsing that is directly and immediately needed to make it work. The unimplemented parts will only be in src/postparsing.
 

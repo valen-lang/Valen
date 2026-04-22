@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/write-pretooluse-hook.md
+../../../docs/skills/write-pretooluse-hook.md

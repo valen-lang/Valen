@@ -1,21 +1,22 @@
 ---
-description: Every struct and enum must have a doc comment categorizing it as arena-allocated, value-type, interned, temporary state, or miscellaneous.
+description: Every struct and enum must have a doc comment categorizing it as arena-allocated, value-type, interned, interning transient, temporary state, or miscellaneous.
 g_model: SimpleSmall
 g_context: definition
-primary: rust
-program: TypesFitIntoTheseCategories-TFITCX
-defs: struct, enum
+g_primary: rust
+g_program: TypesFitIntoTheseCategories-TFITCX
+g_defs: struct, enum
 ---
 
 # Types Fit Into These Categories (TFITCX)
 
-Every struct and enum definition must have a `///` doc comment above it (before any `#[derive(...)]` or other attributes) categorizing it into exactly one of these five categories:
+Every struct and enum definition must have a `///` doc comment above it (before any `#[derive(...)]` or other attributes) categorizing it into exactly one of these six categories:
 
-- `/// Arena-allocated (see @TFITCX)` — stored as `&'s T` or `&'p T` via `arena.alloc()`, immutable after construction, no Clone
-- `/// Value-type (see @TFITCX)` — derives Copy, stored inline in slices or struct fields
-- `/// Interned (see @TFITCX)` — a canonical deduplicated handle returned by an intern method
+- `/// Arena-allocated (see @TFITCX)` — identity-bearing output of a pass, or definitional component of one; stored as `&'s T` or `&'t T` via `arena.alloc()`, immutable after construction, no Clone
+- `/// Value-type (see @TFITCX)` — derives Copy, stored inline in slices or struct fields; no identity, no subcollections
+- `/// Interned (see @TFITCX)` — a canonical deduplicated handle returned by an intern method (see @WVSBIZ for when to intern)
+- `/// Interning transient (see @TFITCX)` — ephemeral lookup key for intern methods; never stored, discarded after hit/miss check
 - `/// Temporary state (see @TFITCX)` — mutable working data during a pass (environments, builders, accumulators), may Clone
-- `/// Miscellaneous type (see @TFITCX)` — doesn't fit the above (errors, solver state, test infrastructure)
+- `/// Miscellaneous type (see @TFITCX)` — doesn't fit the above (errors, solver state, test infrastructure, configuration)
 
 ## Examples
 
@@ -65,3 +66,7 @@ pub struct StackFrame<'s> {
 A. Structs inside `/* ... */` Scala block comments (commented-out Scala code, not active Rust).
 
 B. Test-only structs (inside `#[cfg(test)]` modules).
+
+## See also
+
+- @WVSBIZ — decision framework for when a value-type should be promoted to interned.

@@ -1,16 +1,4 @@
 
-# Rust should mirror Scala as close as possible (RSMSCP)
-
-Keep making sure that everything in the rust version mirrors almost exactly whats in the scala version. Down to the functions, their positions relative to each other, their names, their logic, and if possible variable names too.
-
-Note that it's fine to leave panic!s/assert!s for anything unimplemented. Those differences are okay.
-
-
-# TODOS + unimplemented code MUST panic (TUCMP)
-
-If you must leave todos or unimplemented things, ensure they panic (or assert) with a unique message that will make it immediately clear when failures are from not-yet-brought-over code.
-
-
 # Don't conveniently change requirements (DCCR)
 
 If the implementation has a bug, or a test fails, do not change the requirements of the implementation or test.
@@ -24,155 +12,14 @@ Figure out where the Rust version's logic doesn't match the scala version's logi
 Ensure that all Rust code/test requirements exactly match the old Scala code/test requirements.
 
 
-# Migrate all comments too (MACT)
+# P2: Rust Code Should Be Above its Scala Code (RCSBASC)
 
-Ensure that all comments in the Scala version are also in the Rust version.
+I've left the old Scala code in as comments.
 
-Rust may have extra comments that Scala doesn't have, that's fine.
+IMPORTANT: For every new Rust definition (function, type, etc.), put it directly above the old Scala definition comment. New Rust definitions should be interleaved with old Scala definition comments.
 
-(You can ignore MIGALLOW comments though)
+IMPORTANT: Do not change or remove any Scala comments. But feel free to split any comment into two comments so you can put rust code between them.
 
+If there's no equivalent Scala code, please write a "// NOVEL CODE" comment and explain what the closest equivalent Scala code in the old compiler was. You can find the old compiler in /Frontend.
 
-# Enums Shouldn't Contain Complex Data (ESCCD)
-
-We generally don't like enums that contain complex data as direct fields. We prefer the enum variant to contain a struct with the fields. This is so that data can be in a NodeRefP entry, so it's easier for tests to look directly for them. It also makes it so we can more easily make a cast! macro to "cast" an enum to its inner type.
-Also, enums themselves should never be interned; only their contents should be interned.
-
-
-# Avoid `if matches!(...` in tests if possible (AIMITIP)
-
-Here we have an unnecessary `if matches!(`:
-
-```
-let mutability_literal_rule = crate::collect_only_sstruct!(
-  imoo,
-  NodeRefS::LiteralRule(literal_rule)
-    if matches!(
-      &literal_rule.literal,
-      ILiteralSL::MutabilityLiteral(mutability_literal)
-        if mutability_literal.mutability == crate::parsing::ast::MutabilityP::Mutable
-    ) => Some(literal_rule)
-);
-assert_eq!(mutability_literal_rule.rune, imoo.mutability_rune);
-```
-
-When possible, combine these into the original pattern like this:
-
-```
-crate::collect_only_sstruct!(
-  imoo,
-  NodeRefS::LiteralRule(
-    literal_rule @ LiteralSR {
-      literal: ILiteralSL::MutabilityLiteral(mutability_literal),
-      ..
-    }
-  ) if mutability_literal.mutability == crate::parsing::ast::MutabilityP::Mutable
-    && literal_rule.rune == imoo.mutability_rune => Some(())
-);
-```
-
-This rule only really matters for tests. Implementation can do whatever it wants.
-
-
-# Suffix When Dealing With Multiple Stages (SWDWMS)
-
-In functions that handle two different stages of data (which is common, most functions transform data from the last stage to the next stage), suffix your local variables so it's clear whether it's pointing to the old data or the new data.
-
-For example, the old Scala did this well:
-
-```scala
-  def scoutFunction(
-    file: FileCoordinate,
-    functionP: FunctionP,
-    maybeParent: IFunctionParent):
-  (FunctionS, VariableUses) = {
-    val FunctionP(range, headerP, maybeBody0) = functionP;
-    val FunctionHeaderP(headerRange, maybeName, attrsP, maybeGenericParametersP, templateRulesP, maybeParamsP, returnP) = headerP
-    val FunctionReturnP(retRange, maybeRetType) = returnP
-
-    val headerRangeS = PostParser.evalRange(file, headerRange)
-    val rangeS = PostParser.evalRange(file, range)
-    val codeLocation = rangeS.begin
-    val retRangeS = PostParser.evalRange(file, retRange)
-```
-
-
-# Keep inline comparisons inline (KICI)
-
-This is not a style preference. It is a Scala-parity requirement.
-If Scala has an inline comparison/check inside a `match`/`case`, keep that check inline in the Rust pattern itself.
-Do NOT move it into a guard.
-Do NOT move it outside the match.
-
-Look for these and change them to match the Scala shape:
-
-Scala source shape:
-```scala
-node match {
-  case NameS(StrI("x")) =>
-}
-```
-
-Wrong (moved into guard):
-```rust
-match node {
-  Node::Name(name) if name.as_str() == "x" => {}
-  _ => panic!("expected x"),
-}
-```
-
-Right (inline in pattern):
-```rust
-match node {
-  Node::Name(StrI("x")) => {}
-  _ => panic!("expected x"),
-}
-```
-
-Scala source shape:
-```scala
-node match {
-  case NameS(StrI("x")) =>
-}
-```
-
-Wrong (moved outside match):
-```rust
-let name = match node {
-  Node::Name(name) => name,
-  _ => panic!("expected name"),
-};
-assert_eq!(name.as_str(), "x");
-```
-
-Right (inline in pattern):
-```rust
-match node {
-  Node::Name(StrI("x")) => {}
-  _ => panic!("expected x"),
-}
-```
-
-Scala source shape:
-```scala
-Collector.only(program, {
-  case LocalLoadSE(_, _, UseP) =>
-})
-```
-
-Wrong (property checked later):
-```rust
-let load = collect_only!(program, Node::LocalLoad(load) => Some(load));
-assert_eq!(load.target_ownership, LoadAsP::Move);
-```
-
-Right (property checked inline):
-```rust
-collect_only!(
-  program,
-  Node::LocalLoad(LocalLoadSE {
-    target_ownership: LoadAsP::Move,
-    ..
-  }) => Some(())
-);
-```
+Ensure that each Rust definition is either above its corresponding old Scala definition comment, or preceded with a `// NOVEL CODE` comment.

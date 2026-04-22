@@ -1,0 +1,1 @@
+../../../docs/skills/critique-plan-testing.md

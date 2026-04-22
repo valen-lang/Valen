@@ -1,1 +1,1 @@
-/Volumes/V/Sylvan/docs/skills/slice-pipeline.md
+../../../docs/skills/slice-pipeline.md

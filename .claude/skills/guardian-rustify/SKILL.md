@@ -1,1 +1,1 @@
-../../../Guardian/docs/skills/guardian-rustify.md
+../../../docs/skills/guardian-rustify.md

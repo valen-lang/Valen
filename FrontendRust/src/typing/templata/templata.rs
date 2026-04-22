@@ -165,8 +165,8 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 }
 */
 // Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
-// outer phantom parameter is erased in Rust. Interned payloads are held as
-// &'t refs; Copy-value variants are held inline.
+// Interned payloads behind &'t; scalar variants inline. See @WVSBIZ for why.
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),
@@ -195,6 +195,7 @@ sealed trait ITemplataT[+T <: ITemplataType]  {
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordTemplataT<'s, 't> {
   pub coord: CoordT<'s, 't>,
@@ -208,6 +209,7 @@ case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
   vpass()
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PlaceholderTemplataT<'s, 't> {
   pub id: IdT<'s, 't>,
@@ -227,6 +229,7 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
   override def hashCode(): Int = hash;
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindTemplataT<'s, 't> {
   pub kind: KindT<'s, 't>,
@@ -238,6 +241,7 @@ case class KindTemplataT(kind: KindT) extends ITemplataT[KindTemplataType] {
   override def tyype: KindTemplataType = KindTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTemplateTemplataT<'s, 't> {
   pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -249,6 +253,7 @@ case class RuntimeSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempl
   override def tyype: TemplateTemplataType = TemplateTemplataType(Vector(MutabilityTemplataType(), CoordTemplataType()), KindTemplataType())
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTemplateTemplataT<'s, 't> {
   pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -263,6 +268,7 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: &'t IEnvironmentT<'s, 't>,
@@ -342,6 +348,7 @@ impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
     std::ptr::hash(self.function, state);
   }
 }
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
@@ -412,6 +419,7 @@ impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
     std::ptr::hash(self.origin_struct, state);
   }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IContainer<'s> {
   Interface(ContainerInterface<'s>),
@@ -422,6 +430,7 @@ pub enum IContainer<'s> {
 /*
 sealed trait IContainer
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerInterface<'s> {
   pub interface: &'s InterfaceA<'s>,
@@ -438,6 +447,7 @@ impl<'s> Eq for ContainerInterface<'s> {}
 impl<'s> std::hash::Hash for ContainerInterface<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.interface, state); }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerStruct<'s> {
   pub struct_: &'s StructA<'s>,
@@ -454,6 +464,7 @@ impl<'s> Eq for ContainerStruct<'s> {}
 impl<'s> std::hash::Hash for ContainerStruct<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.struct_, state); }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerFunction<'s> {
   pub function: &'s FunctionA<'s>,
@@ -470,6 +481,7 @@ impl<'s> Eq for ContainerFunction<'s> {}
 impl<'s> std::hash::Hash for ContainerFunction<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.function, state); }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct ContainerImpl<'s> {
   pub impl_: &'s ImplA<'s>,
@@ -487,6 +499,7 @@ impl<'s> Eq for ContainerImpl<'s> {}
 impl<'s> std::hash::Hash for ContainerImpl<'s> {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.impl_, state); }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CitizenDefinitionTemplataT<'s, 't> {
   Struct(&'t StructDefinitionTemplataT<'s, 't>),
@@ -514,6 +527,7 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
@@ -587,6 +601,7 @@ impl<'s, 't> std::hash::Hash for InterfaceDefinitionTemplataT<'s, 't> {
     std::ptr::hash(self.origin_interface, state);
   }
 }
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: &'t IEnvironmentT<'s, 't>,
@@ -626,6 +641,7 @@ impl<'s, 't> std::hash::Hash for ImplDefinitionTemplataT<'s, 't> {
     std::ptr::hash(self.impl_, state);
   }
 }
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OwnershipTemplataT {
     pub ownership: OwnershipT,
@@ -637,6 +653,7 @@ case class OwnershipTemplataT(ownership: OwnershipT) extends ITemplataT[Ownershi
   override def tyype: OwnershipTemplataType = OwnershipTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct VariabilityTemplataT {
     pub variability: VariabilityT,
@@ -648,6 +665,7 @@ case class VariabilityTemplataT(variability: VariabilityT) extends ITemplataT[Va
   override def tyype: VariabilityTemplataType = VariabilityTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct MutabilityTemplataT {
     pub mutability: MutabilityT,
@@ -659,6 +677,7 @@ case class MutabilityTemplataT(mutability: MutabilityT) extends ITemplataT[Mutab
   override def tyype: MutabilityTemplataType = MutabilityTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct LocationTemplataT {
     pub location: LocationT,
@@ -671,6 +690,7 @@ case class LocationTemplataT(location: LocationT) extends ITemplataT[LocationTem
 }
 
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct BooleanTemplataT {
     pub value: bool,
@@ -682,6 +702,7 @@ case class BooleanTemplataT(value: Boolean) extends ITemplataT[BooleanTemplataTy
   override def tyype: BooleanTemplataType = BooleanTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IntegerTemplataT {
     pub value: i64,
@@ -693,6 +714,7 @@ case class IntegerTemplataT(value: Long) extends ITemplataT[IntegerTemplataType]
   override def tyype: IntegerTemplataType = IntegerTemplataType()
 }
 */
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StringTemplataT<'s> {
     pub value: StrI<'s>,
@@ -704,6 +726,7 @@ case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType]
   override def tyype: StringTemplataType = StringTemplataType()
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeTemplataT<'s, 't> {
   pub prototype: &'t PrototypeT<'s, 't>,
@@ -720,6 +743,7 @@ case class PrototypeTemplataT[+T <: IFunctionNameT](
   override def tyype: PrototypeTemplataType = PrototypeTemplataType()
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IsaTemplataT<'s, 't> {
   pub declaration_range: RangeS<'s>,
@@ -734,6 +758,7 @@ case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], sub
   override def tyype: ImplTemplataType = ImplTemplataType()
 }
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordListTemplataT<'s, 't> {
   pub coords: &'t [CoordT<'s, 't>],
@@ -742,6 +767,7 @@ pub struct CoordListTemplataT<'s, 't> {
 // Transient Val for interning: holds a stack-borrowed slice (&'tmp) instead of
 // the canonical &'t slice. Per @DSAUIMZ / IDEPFL, this lets callers construct a
 // lookup key without arena-allocating the coords Vec on a HashMap hit.
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub struct CoordListTemplataValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -749,6 +775,7 @@ where 's: 't, 't: 'tmp,
   pub coords: &'tmp [CoordT<'s, 't>],
 }
 
+/// Interning transient (see @TFITCX)
 pub struct CoordListTemplataValQuery<'a, 's, 't, 'tmp>(pub &'a CoordListTemplataValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
 
@@ -781,6 +808,7 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 // by plugins, but theyre also used internally.
 
 */
+/// Interned (see @TFITCX)
 #[derive(Copy, Clone)]
 pub struct ExternFunctionTemplataT<'s, 't> {
   pub header: &'t FunctionHeaderT<'s, 't>,
@@ -812,6 +840,7 @@ impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
 // Per handoff-slab-4.md Gotcha 2. Mirrors the Kind-payload pattern but with
 // one transient variant (CoordListTemplataT has a slice, so it carries 'tmp).
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedTemplataPayloadValT<'s, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -824,6 +853,7 @@ where 's: 't, 't: 'tmp,
   CoordList(CoordListTemplataValT<'s, 't, 'tmp>),
 }
 
+/// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedTemplataPayloadT<'s, 't>
 where 's: 't,
@@ -839,6 +869,7 @@ where 's: 't,
 // Query wrapper for heterogeneous HashMap lookup: 'tmp-borrowed query against
 // 't-canonicalized stored keys. Equivalence compares each variant's payload;
 // for the transient CoordList variant we delegate to CoordListTemplataValQuery.
+/// Interning transient (see @TFITCX)
 pub struct InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>(
   pub &'a InternedTemplataPayloadValT<'s, 't, 'tmp>,
 ) where 's: 't, 't: 'tmp;
