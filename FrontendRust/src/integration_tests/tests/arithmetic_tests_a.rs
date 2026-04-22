@@ -1,6 +1,4 @@
 /*
-VISTODO: rename
-
 package dev.vale
 
 import dev.vale.simplifying.VonHammer

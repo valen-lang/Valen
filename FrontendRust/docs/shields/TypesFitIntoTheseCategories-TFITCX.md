@@ -1,6 +1,7 @@
 ---
 description: Every struct and enum must have a doc comment categorizing it as arena-allocated, value-type, interned, temporary state, or miscellaneous.
-model: SimpleSmall
+g_model: SimpleSmall
+g_context: definition
 primary: rust
 program: TypesFitIntoTheseCategories-TFITCX
 defs: struct, enum

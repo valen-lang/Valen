@@ -1,7 +1,7 @@
 /*
 package dev.vale.solver
 
-import dev.vale.{Collector, Err, Interner, Ok, RangeS, vassert, vfail}
+import dev.vale.{Collector, Err, Interner, Ok, RangeS, Result, vassert, vfail}
 import org.scalatest._
 
 import scala.collection.immutable.Map
@@ -94,7 +94,7 @@ fn advance(
     Ok(false)
 }
 /*
-  // Local advance helper, inlined from the former generic Solver.advance.
+  // Local advance helper. This shows how one would normally interact with the solver state.
   // Returns true if there's more to be done, false if we've gotten as far as we can.
   def advance(
       solverState: SimpleSolverState[IRule, Long, String]):
@@ -115,7 +115,7 @@ fn advance(
         }
         val stepsAfter = solverState.getSteps().size
         vassert(stepsAfter == stepsBefore + 1)
-        vassert(solverState.ruleIsSolved(solvingRuleIndex))
+        vassert(solverState.ruleIsSolved(solvingRuleIndex)) // Per @CSCDSRZ, only true after simple solve.
         solverState.sanityCheck()
         // Go back to the beginning. Next step, if there's no simple rule ready to solve, then
         // it'll start doing a complex solve if available, or just finish.
@@ -123,6 +123,7 @@ fn advance(
       }
     }
     // Stage 2: Do a complex solve if available.
+    // Per @CSCDSRZ, complex solve only adds conclusions — we check conclusion count for progress.
     if (solverState.getUnsolvedRules().nonEmpty) {
       val conclusionsBefore = solverState.getConclusions().toMap.size
       TestRuleSolver.complexSolveInner(Unit, Unit, solverState) match {
@@ -131,10 +132,11 @@ fn advance(
       }
       solverState.sanityCheck()
       val conclusionsAfter = solverState.getConclusions().toMap.size
+      // Per @CSCDSRZ, check conclusion count (not rules solved) for progress.
       if (conclusionsAfter == conclusionsBefore) {
         // There's nothing more to be done. Let's continue on to stage 3.
       } else {
-        return Ok(true) // Go back to stage 1
+        return Ok(true) // Go back to stage 1 where the new conclusions may unblock simple solves.
       }
     } else {
       // No more rules to solve, so continue to the wrapping up stages of the solve.
@@ -639,7 +641,7 @@ fn advance(
         Literal(-2L, "ISpaceship"),
         Send(-2L, -1L))
     expectSolveFailure(rules) match {
-      case FailedSolve(steps, unsolvedRules, err) => {
+      case FailedSolve(steps, conclusions, unsolvedRules, unsolvedRunes, err) => {
         steps.flatMap(_.conclusions).toSet shouldEqual
           Set((-1,"Firefly"), (-2,"ISpaceship"), (-2,"Firefly"))
         unsolvedRules.toSet shouldEqual Set(Send(-2, -1))
@@ -905,37 +907,34 @@ fn advance(
         Call(-3, -1, -2)) // We dont know the template, -1, yet
 
 
-    val solver =
-      new Solver(
-        true,
-        true,
-        interner,
-        (rule: IRule) => rule.allPuzzles,
-        (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
-        rules,
-        Map(),
-        rules.flatMap(_.allRunes).distinct)
+    val solverState =
+        Solver.makeSolverState[IRule, Long, String](
+          true,
+          true,
+          (rule: IRule) => rule.allPuzzles,
+          (rule: IRule) => rule.allRunes.toVector,
+          rules,
+          Map(),
+          rules.flatMap(_.allRunes).distinct)
 
     while ( {
-      solver.advance(Unit, Unit) match {
+      advance(solverState) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
-    val firstConclusions = solver.userifyConclusions().toMap
+    val firstConclusions = solverState.userifyConclusions().toMap
 
     firstConclusions.toMap shouldEqual Map(-2 -> "A")
-    solver.markRulesSolved(Vector(), Map(solver.getCanonicalRune(-1) -> "Firefly"))
+    solverState.commitStep[String](false, Vector(), Map(-1L -> "Firefly"), Vector()).getOrDie()
 
     while ( {
-      solver.advance(Unit, Unit) match {
+      advance(solverState) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
-    val secondConclusions = solver.userifyConclusions().toMap
+    val secondConclusions = solverState.userifyConclusions().toMap
 
     secondConclusions.toMap shouldEqual
       Map(-1 -> "Firefly", -2 -> "A", -3 -> "Firefly:A")
@@ -1044,27 +1043,24 @@ fn advance(
           Literal(-2, "1337"),
           Call(-3, -1, -2)) // X = Firefly<A>
 
-      val solver =
-        new Solver[IRule, Long, Unit, Unit, String, String](
+      val solverState =
+        Solver.makeSolverState[IRule, Long, String](
           true,
           true,
-          interner,
           puzzler,
           (rule: IRule) => rule.allRunes.toVector,
-          new TestRuleSolver(interner),
-          List(RangeS.testZero(interner)),
           rules,
           Map(),
           rules.flatMap(_.allRunes).distinct)
 
 
       while ( {
-        solver.advance(Unit, Unit) match {
+        advance(solverState) match {
           case Ok(continue) => continue
           case Err(e) => vfail(e)
         }
       }) {}
-      val conclusions = solver.userifyConclusions().toMap
+      val conclusions = solverState.userifyConclusions().toMap
       conclusions
     }
 
@@ -1117,7 +1113,7 @@ fn advance(
         Literal(-1L, "1448"),
         Literal(-1L, "1337"))
     expectSolveFailure(rules) match {
-      case FailedSolve(_, _, SolverConflict(_, conclusionA, conclusionB)) => {
+      case FailedSolve(_, _, _, _, SolverConflict(_, conclusionA, conclusionB)) => {
         Vector(conclusionA, conclusionB).sorted shouldEqual Vector("1337", "1448").sorted
       }
     }
@@ -1170,20 +1166,18 @@ fn advance(
   FailedSolve[IRule, Long, String, String] = {
     val interner = new Interner()
 
-    val solver =
-      new Solver[IRule, Long, Unit, Unit, String, String](
+    val solverState =
+      Solver.makeSolverState[IRule, Long, String](
         true,
         true,
-        interner,
         (rule: IRule) => rule.allPuzzles,
         (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
         rules,
         Map(),
         rules.flatMap(_.allRunes).distinct.toVector)
+
     while ( {
-      solver.advance(Unit, Unit) match {
+      advance(solverState) match {
         case Ok(continue) => continue
         case Err(e) => return e
       }
@@ -1245,30 +1239,111 @@ fn advance(
   Map[Long, String] = {
     val interner = new Interner()
 
-    val solver =
-      new Solver[IRule, Long, Unit, Unit, String, String](
+    val solverState =
+      Solver.makeSolverState[IRule, Long, String](
         true,
         true,
-        interner,
         (r: IRule) => r.allPuzzles,
         (rule: IRule) => rule.allRunes.toVector,
-        new TestRuleSolver(interner),
-        List(RangeS.testZero(interner)),
         rules,
         initiallyKnownRunes,
         (rules.flatMap(_.allRunes) ++ initiallyKnownRunes.keys).distinct.toVector)
 
+
     while ( {
-      solver.advance(Unit, Unit) match {
+      advance(solverState) match {
         case Ok(continue) => continue
         case Err(e) => vfail(e)
       }
     }) {}
     // If we get here, then there's nothing more the solver can do.
-    val conclusionsMap = solver.userifyConclusions().toMap
+    val conclusionsMap = solverState.userifyConclusions().toMap
 
     vassert(expectCompleteSolve == (conclusionsMap.keySet == rules.flatMap(_.allRunes).toSet))
     conclusionsMap
+  }
+
+  // --- TDD tests: these document expected Step behavior ---
+
+  test("Simple solve produces exactly one step per rule") {
+    // A single Literal rule should produce:
+    //   1 initial step (from constructor's commitStep for initiallyKnownRunes)
+    //   + 1 solve step (from solving the Literal rule)
+    //   = 2 total steps
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+
+    while (advance(solverState) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solverState.getSteps()
+    steps.size shouldEqual 2
+  }
+
+  test("No duplicate solvedRules entries across steps") {
+    // Each rule index should appear in solvedRules of at most one step.
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+
+    while (advance(solverState) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solverState.getSteps()
+    val allSolvedRuleIndices = steps.flatMap(_.solvedRules.map(_._1))
+    allSolvedRuleIndices shouldEqual allSolvedRuleIndices.distinct
+  }
+
+  test("Multi-rule solve has correct step count") {
+    // Two Literal rules + one Equals:
+    //   1 initial step
+    //   + 3 solve steps (one per rule)
+    //   = 4 total
+    val interner = new Interner()
+    val rules = Vector(
+      Literal(-1L, "1337"),
+      Literal(-2L, "1337"),
+      Equals(-1L, -2L))
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+
+    while (advance(solverState) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solverState.getSteps()
+    // initial + 3 solves = 4
+    steps.size shouldEqual 4
+  }
+
+  test("Solve step records its conclusions") {
+    // The step that solves a Literal rule should contain the conclusion
+    // from that solve, not an empty map.
+    val interner = new Interner()
+    val rules = Vector(Literal(-1L, "1337"))
+    val solverState = Solver.makeSolverState[IRule, Long, String](
+      true, true,
+      (r: IRule) => r.allPuzzles,
+      (rule: IRule) => rule.allRunes.toVector,
+      rules, Map(), rules.flatMap(_.allRunes).distinct)
+
+    while (advance(solverState) match { case Ok(c) => c case Err(e) => vfail(e) }) {}
+
+    val steps = solverState.getSteps()
+    // Find the step(s) that solved rule 0
+    val solveSteps = steps.filter(_.solvedRules.exists(_._1 == 0))
+    // There should be exactly one step that solved this rule
+    solveSteps.size shouldEqual 1
+    // And it should contain the conclusion
+    solveSteps.head.conclusions shouldEqual Map(-1L -> "1337")
   }
 }
 */

@@ -1,6 +1,7 @@
 ---
 description: Use collect_only!/collect_where! macros for recursive AST search — not manual traversal.
-model: SimpleSmall
+g_model: SimpleSmall
+g_context: definition
 ---
 
 # Use collect_ Macros To Recursively Search (UCMTRSX)

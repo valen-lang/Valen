@@ -1,6 +1,7 @@
 ---
 description: Output data must be Copy or behind &'s — Clone-without-Copy on output data is a smell.
-model: AgenticSmall
+g_model: SimpleSmall
+g_context: definition
 assumes: TFITCX
 when_mentioned: "Arena-allocated"
 ---

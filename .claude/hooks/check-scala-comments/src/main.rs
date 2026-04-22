@@ -2,6 +2,7 @@ use once_cell::sync::Lazy;
 use regex::Regex;
 use serde::Deserialize;
 use similar::TextDiff;
+use std::collections::HashSet;
 use std::fs;
 use std::io::Read;
 use std::path::{Path, PathBuf};
@@ -111,6 +112,10 @@ const FILE_MAP: &[(&str, &str)] = &[
     ("src/solver/optimized_solver_state.rs", "Solver/src/dev/vale/solver/OptimizedSolverState.scala"),
     ("src/solver/simple_solver_state.rs", "Solver/src/dev/vale/solver/SimpleSolverState.scala"),
     ("src/solver/solver_error_humanizer.rs", "Solver/src/dev/vale/solver/SolverErrorHumanizer.scala"),
+    // === Solver (tests) ===
+    ("src/solver/test/solver_tests.rs", "Solver/test/dev/vale/solver/SolverTests.scala"),
+    ("src/solver/test/test_rule_solver.rs", "Solver/test/dev/vale/solver/TestRuleSolver.scala"),
+    ("src/solver/test/test_rules.rs", "Solver/test/dev/vale/solver/TestRules.scala"),
     // === Utils ===
     ("src/utils/code_hierarchy.rs", "Utils/src/dev/vale/CodeHierarchy.scala"),
     ("src/utils/collector.rs", "Utils/src/dev/vale/Collector.scala"),
@@ -242,6 +247,20 @@ const FILE_MAP: &[(&str, &str)] = &[
     ("src/typing/templata/templata.rs", "TypingPass/src/dev/vale/typing/templata/templata.scala"),
     ("src/typing/templata/templata_utils.rs", "TypingPass/src/dev/vale/typing/templata/TemplataUtils.scala"),
     ("src/typing/types/types.rs", "TypingPass/src/dev/vale/typing/types/types.scala"),
+    // === Typing (tests) ===
+    ("src/typing/test/after_regions_error_tests.rs", "TypingPass/test/dev/vale/typing/AfterRegionsErrorTests.scala"),
+    ("src/typing/test/after_regions_tests.rs", "TypingPass/test/dev/vale/typing/AfterRegionsTests.scala"),
+    ("src/typing/test/compiler_generics_tests.rs", "TypingPass/test/dev/vale/typing/CompilerGenericsTests.scala"),
+    ("src/typing/test/compiler_lambda_tests.rs", "TypingPass/test/dev/vale/typing/CompilerLambdaTests.scala"),
+    ("src/typing/test/compiler_mutate_tests.rs", "TypingPass/test/dev/vale/typing/CompilerMutateTests.scala"),
+    ("src/typing/test/compiler_ownership_tests.rs", "TypingPass/test/dev/vale/typing/CompilerOwnershipTests.scala"),
+    ("src/typing/test/compiler_project_tests.rs", "TypingPass/test/dev/vale/typing/CompilerProjectTests.scala"),
+    ("src/typing/test/compiler_solver_tests.rs", "TypingPass/test/dev/vale/typing/CompilerSolverTests.scala"),
+    ("src/typing/test/compiler_test_compilation.rs", "TypingPass/test/dev/vale/typing/CompilerTestCompilation.scala"),
+    ("src/typing/test/compiler_tests.rs", "TypingPass/test/dev/vale/typing/CompilerTests.scala"),
+    ("src/typing/test/compiler_virtual_tests.rs", "TypingPass/test/dev/vale/typing/CompilerVirtualTests.scala"),
+    ("src/typing/test/in_progress_tests.rs", "TypingPass/test/dev/vale/typing/InProgressTests.scala"),
+    ("src/typing/test/todo_tests.rs", "TypingPass/test/dev/vale/typing/TodoTests.scala"),
     // === TestVM ===
     ("src/TestVM/call.rs", "TestVM/src/dev/vale/testvm/Call.scala"),
     ("src/TestVM/expression_vivem.rs", "TestVM/src/dev/vale/testvm/ExpressionVivem.scala"),
@@ -252,6 +271,10 @@ const FILE_MAP: &[(&str, &str)] = &[
     ("src/TestVM/vivem_externs.rs", "TestVM/src/dev/vale/testvm/VivemExterns.scala"),
     // === Integration Tests ===
     ("src/tests/tests.rs", "Tests/src/dev/vale/Tests.scala"),
+    ("src/integration_tests/tests/after_regions_integration_tests.rs", "IntegrationTests/test/dev/vale/AfterRegionsIntegrationTests.scala"),
+    ("src/integration_tests/tests/arithmetic_tests_a.rs", "IntegrationTests/test/dev/vale/ArithmeticTestsA.scala"),
+    ("src/integration_tests/tests/array_list_test.rs", "IntegrationTests/test/dev/vale/ArrayListTest.scala"),
+    ("src/integration_tests/tests/benchmark/benchmark.rs", "IntegrationTests/test/dev/vale/benchmark/Benchmark.scala"),
 ];
 
 static MIGALLOW_SUFFIX_RE: Lazy<Regex> =
@@ -478,6 +501,31 @@ fn find_project_dir() -> PathBuf {
     }
 }
 
+fn walk_rs_files(dir: &Path) -> Vec<PathBuf> {
+    let mut result = Vec::new();
+    walk_rs_files_inner(dir, &mut result);
+    result
+}
+
+fn walk_rs_files_inner(dir: &Path, result: &mut Vec<PathBuf>) {
+    let entries = match fs::read_dir(dir) {
+        Ok(e) => e,
+        Err(_) => return,
+    };
+    for entry in entries {
+        let entry = match entry {
+            Ok(e) => e,
+            Err(_) => continue,
+        };
+        let path = entry.path();
+        if path.is_dir() {
+            walk_rs_files_inner(&path, result);
+        } else if path.extension().and_then(|e| e.to_str()) == Some("rs") {
+            result.push(path);
+        }
+    }
+}
+
 fn run_check_all() {
     let project_dir = find_project_dir();
     let frontend_rust = project_dir.join("FrontendRust");
@@ -515,20 +563,76 @@ fn run_check_all() {
         }
     }
 
-    if failures.is_empty() {
-        println!("All {} files OK ({} skipped)", checked, skipped);
-        process::exit(0);
-    } else {
+    // Second pass: detect unregistered files with Scala block comments
+    let registered: HashSet<&str> = FILE_MAP.iter().map(|&(rust_rel, _)| rust_rel).collect();
+    let src_dir = frontend_rust.join("src");
+    let mut unregistered: Vec<String> = Vec::new();
+
+    for rs_path in walk_rs_files(&src_dir) {
+        let rel = match rs_path.strip_prefix(&frontend_rust) {
+            Ok(r) => r,
+            Err(_) => continue,
+        };
+        let rel_str = match rel.to_str() {
+            Some(s) => s,
+            None => continue,
+        };
+        if registered.contains(rel_str) {
+            continue;
+        }
+
+        let content = match fs::read_to_string(&rs_path) {
+            Ok(c) => c,
+            Err(_) => continue,
+        };
+
+        let comments = extract_block_comments(&content, &rs_path.to_string_lossy());
+        if comments.is_empty() {
+            continue;
+        }
+
+        let extracted = comments.join("\n");
+        let extracted = filter_migration_annotations(&extracted);
+        let extracted_lines = normalize(&extracted);
+
+        if !extracted_lines.is_empty() {
+            unregistered.push(rel_str.to_string());
+        }
+    }
+
+    unregistered.sort();
+
+    let has_mismatches = !failures.is_empty();
+    let has_unregistered = !unregistered.is_empty();
+
+    if has_mismatches || has_unregistered {
         for (rust_rel, diff) in &failures {
             eprintln!("MISMATCH: {}\n{}\n", rust_rel, diff);
         }
+        if has_unregistered {
+            eprintln!("UNREGISTERED files with Scala block comments (not in FILE_MAP):");
+            for rel in &unregistered {
+                eprintln!("  {}", rel);
+            }
+            eprintln!(
+                "\nAdd these to FILE_MAP with their corresponding Scala source paths,\n\
+                 or remove the block comments if they are not Scala code.\n"
+            );
+        }
+        if has_mismatches {
+            eprintln!("{} mismatches", failures.len());
+        }
+        if has_unregistered {
+            eprintln!("{} unregistered", unregistered.len());
+        }
         eprintln!(
-            "{} of {} files have mismatches ({} skipped)",
-            failures.len(),
-            checked,
-            skipped
+            "{} registered files checked ({} skipped)",
+            checked, skipped
         );
         process::exit(1);
+    } else {
+        println!("All {} files OK ({} skipped), no unregistered files with Scala comments", checked, skipped);
+        process::exit(0);
     }
 }
 

@@ -9,11 +9,10 @@ import dev.vale.typing.types._
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules._
-import dev.vale.solver.RuleError
+import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverConflict, Step}
 import OverloadResolver.{FindFunctionFailure, InferFailure, SpecificParamDoesntSend, WrongNumberOfArguments}
 import dev.vale.Collector.ProgramWithExpect
 import dev.vale.postparsing._
-import dev.vale.solver.{FailedSolve, IncompleteSolve, RuleError, SolverConflict, Step}
 import dev.vale.typing.ast._
 import dev.vale.typing.infer._
 import dev.vale.typing.names._
@@ -315,7 +314,7 @@ fn make_range(begin: i32, end: i32) {
     vassert(CompilerErrorHumanizer.humanize(false, humanizePos, linesBetween, lineRangeContaining, lineContaining,
       TypingPassSolverError(
         tz,
-        FailedCompilerSolve(
+        FailedSolve(
           Vector(
             Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](
               false,
@@ -323,7 +322,9 @@ fn make_range(begin: i32, end: i32) {
               Vector(),
               Map(
                 CodeRuneS(interner.intern(StrI("A"))) -> OwnershipTemplataT(OwnT)))).toStream,
+          Map(),
           unsolvedRules,
+          Vector(),
           RuleError(KindIsNotConcrete(ispaceshipKind)))))
       .nonEmpty)
 
@@ -331,7 +332,7 @@ fn make_range(begin: i32, end: i32) {
       CompilerErrorHumanizer.humanize(false, humanizePos, linesBetween, lineRangeContaining, lineContaining,
         TypingPassSolverError(
           tz,
-          IncompleteCompilerSolve(
+          FailedSolve(
             Vector(
               Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](
                 false,
@@ -339,13 +340,15 @@ fn make_range(begin: i32, end: i32) {
                 Vector(),
                 Map(
                   CodeRuneS(interner.intern(StrI("A"))) -> OwnershipTemplataT(OwnT)))).toStream,
+            Map(
+              CodeRuneS(interner.intern(StrI("A"))) -> OwnershipTemplataT(OwnT)),
             unsolvedRules,
-            Set(
+            Vector(
               CodeRuneS(interner.intern(StrI("I"))),
               CodeRuneS(interner.intern(StrI("Of"))),
               CodeRuneS(interner.intern(StrI("An"))),
               ImplicitRuneS(LocationInDenizen(Vector(7)))),
-            Map())))
+            SolveIncomplete())))
     println(errorText)
     vassert(errorText.nonEmpty)
     vassert(errorText.contains("\n           ^ A: own"))
@@ -645,8 +648,8 @@ fn reports_incomplete_solve() {
         |""".stripMargin,
       interner)
     compile.getCompilerOutputs() match {
-      case Err(TypingPassSolverError(_,IncompleteCompilerSolve(_,Vector(),unsolved, _))) => {
-        unsolved shouldEqual Set(CodeRuneS(interner.intern(interner.intern(StrI("N")))))
+      case Err(TypingPassSolverError(_,FailedSolve(_,_,Vector(),unsolved, SolveIncomplete()))) => {
+        unsolved.toSet shouldEqual Set(CodeRuneS(interner.intern(interner.intern(StrI("N")))))
       }
     }
   }
@@ -723,12 +726,12 @@ fn detects_conflict_between_types() {
         |""".stripMargin
     )
     compile.getCompilerOutputs() match {
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))))))) =>
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))))))) =>
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipB")),Vector()))))))))) =>
-      case Err(TypingPassSolverError(_, FailedCompilerSolve(_, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipA")),Vector()))))))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipB"), _), _, _, _, _, _, _, _, _, _, _, _)), StructDefinitionTemplataT(_, StructA(_, TopLevelStructDeclarationNameS(StrI("ShipA"), _), _, _, _, _, _, _, _, _, _, _, _)))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, SolverConflict(_, KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipB")),_)))), KindTemplataT(StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("ShipA")),_)))))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipB")),Vector()))))))))) =>
+      case Err(TypingPassSolverError(_, FailedSolve(_, _, _, _, RuleError(CallResultWasntExpectedType(_,KindTemplataT(StructTT(IdT(_,Vector(),StructNameT(StructTemplateNameT(StrI("ShipA")),Vector()))))))))) =>
       case other => vfail(other)
     }
   }
