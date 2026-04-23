@@ -844,10 +844,10 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate(
+    pub fn evaluate<'p>(
         &self,
-        code_map: &FileCoordinateMap<'s, String>,
-        package_to_program_a: &'s PackageCoordinateMap<'s, ProgramA<'s>>,
+        code_map: &FileCoordinateMap<'p, String>,
+        package_to_program_a: &PackageCoordinateMap<'s, ProgramA<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
         panic!("Unimplemented: Slab 15 — body migration");
     }

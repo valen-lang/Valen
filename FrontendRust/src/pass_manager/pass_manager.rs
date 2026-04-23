@@ -709,6 +709,7 @@ where
   // V: should we reference some docs here about how our arenas work
   // VA: (documentation task — see docs/background/arenas.md and docs/architecture/arenas.md)
   let scout_bump = bumpalo::Bump::new();
+  let typing_bump = bumpalo::Bump::new();
   let scout_arena = ScoutArena::new(&scout_bump);
   let scout_keywords = Keywords::new_for_scout(&scout_arena);
   let parser_keywords = Keywords::new_for_parse(parse_arena);
@@ -720,6 +721,7 @@ where
     packages_to_build,
     &resolver,
     options,
+    &typing_bump,
   );
 
   // From PassManager.scala line 255

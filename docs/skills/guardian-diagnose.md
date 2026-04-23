@@ -129,41 +129,72 @@ These create:
 ## Phase 4: Fix Shields (Inline Curate)
 
 For shields with new `cases/need-shield-amendment/` cases (false positives):
-1. Read the shield markdown and all human cases
-2. Propose prompt changes (clarifications, examples, exceptions)
-3. Get human approval, edit the shield
-4. Re-run shield against the cases:
+
+**Before the fix:**
+1. Reproduce the problem — run `check-direct` against the case and confirm it currently gives the wrong verdict:
    ```bash
    guardian check-direct --input <NNN.diff> --referenced-defs <NNN.referenced_defs.txt> \
      --file-path <file> --check <shield> --cache-dir /tmp/cache --backend opencode \
      --log-dir /tmp/logs --format human --log-level overview
    ```
-5. Iterate until cases pass
+2. Run all existing tests for the shield to confirm they pass (baseline is green):
+   ```bash
+   guardian check-direct ...  # for each existing test case
+   ```
+3. Read the shield markdown and all human cases
+4. Propose prompt changes (clarifications, examples, exceptions)
+5. Get human approval, edit the shield
+
+**After the fix:**
+6. Re-run `check-direct` against the new case — confirm it now gives the correct verdict
+7. Re-run all existing tests for the shield — confirm they still pass (no regressions)
+8. Iterate until both the new case and all existing tests pass
 
 For shields with new `tests/` cases (false negatives):
-1. Run shield against the new case to confirm it currently fails (doesn't catch it)
-2. Propose prompt changes to catch the violation
-3. Get human approval, edit the shield
-4. Re-run to verify
+
+**Before the fix:**
+1. Run `check-direct` against the new case to confirm the shield currently misses it (doesn't catch the violation)
+2. Run all existing tests for the shield to confirm they pass (baseline is green)
+3. Propose prompt changes to catch the violation
+4. Get human approval, edit the shield
+
+**After the fix:**
+5. Re-run `check-direct` against the new case — confirm it now catches the violation
+6. Re-run all existing tests — confirm they still pass
 
 ---
 
 ## Phase 5: Fix Rust Companion Programs
 
 For shields with `primary: rust`:
-1. Run the Rust program against all `tests/cases/` test cases
-2. If failures: propose a fix to the Rust program
-3. Add a **unit test in the program's `main.rs`** targeting the specific logic bug (e.g., wrong regex, missed pattern) — not a full-diff integration test
-4. Run `cargo test` to verify
-5. Ask the human whether to also promote to `tests/cases/` as an integration test
-6. **Update the shield markdown** to reflect any new rules the program now enforces (see below)
+
+**Before the fix:**
+1. Reproduce the problem — run `check-direct` against the failing case and confirm the wrong verdict
+2. Run the Rust program against all existing `tests/cases/` test cases — confirm they pass (baseline is green)
+3. Add a **unit test in the program's `main.rs`** calling the dark-box API (`run()`) — not internal helpers (see @DBAPIZ). Target the specific logic bug (e.g., wrong regex, missed pattern)
+4. Run `cargo test` — confirm the new test **fails** (TDD red)
+5. Propose a fix to the Rust program, get human approval
+
+**After the fix:**
+6. Run `cargo test` — confirm the new test now passes
+7. Run `check-direct` against the failing case — confirm it now gives the correct verdict
+8. Run all existing `tests/cases/` — confirm they still pass (no regressions)
+9. Ask the human whether to also promote to `tests/cases/` as an integration test
+10. **Update the shield markdown** to reflect any new rules the program now enforces (see below)
 
 For Category D (missing auto-allow on `primary: rust` shields):
+
+**Before the fix:**
 1. Discuss the desired behavior with the human — what should be auto-allowed and what shouldn't
-2. Write failing unit tests in `main.rs` first (TDD)
-3. Implement the logic change in the companion program
-4. Run `cargo test` to verify all tests pass (old and new)
-5. **Update the shield markdown** to document the new behavior (see below)
+2. Run all existing tests — confirm they pass (baseline is green)
+3. Write failing unit tests in `main.rs` first (TDD), calling the dark-box API (`run()`) — see @DBAPIZ
+4. Run `cargo test` — confirm the new tests **fail** (TDD red)
+5. Implement the logic change in the companion program
+
+**After the fix:**
+6. Run `cargo test` — confirm all tests pass (old and new)
+7. Run `check-direct` against the original case — confirm it now gives the correct verdict
+8. **Update the shield markdown** to document the new behavior (see below)
 
 ### Shield Markdown ↔ Companion Program Sync
 

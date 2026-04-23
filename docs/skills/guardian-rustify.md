@@ -49,13 +49,29 @@ The program receives a JSON object on stdin with two fields:
 - `file_path` — the absolute path of the file being edited
 - `diff` — the contextified diff (same text the LLM would see)
 
-It must print JSON to stdout. Separate the checking logic into a `check` function so unit tests can call it directly without spawning a subprocess.
+It must print JSON to stdout. Structure the program using the **dark-box API pattern** (see @DBAPIZ): `main()` is a trivially thin layer that reads stdin and prints the result; a `run()` function takes structured inputs and returns a structured output. Tests call `run()` — never internal helpers, never `main()`.
 
 ```rust
-fn check(diff: &str) -> Vec<String> {
+use serde::Deserialize;
+
+#[derive(Deserialize)]
+struct ProgramInput {
+    #[serde(default)]
+    diff: String,
+    #[serde(default)]
+    file_path: String,
+}
+
+struct ProgramOutput {
+    violations: Vec<String>,
+}
+
+/// Dark-box API: takes structured input, returns structured output.
+/// Tests call this function directly.
+fn run(input: &ProgramInput) -> ProgramOutput {
     let mut violations = Vec::new();
 
-    for line in diff.lines() {
+    for line in input.diff.lines() {
         if !line.starts_with('+') || line.starts_with("+++") {
             continue;
         }
@@ -64,21 +80,20 @@ fn check(diff: &str) -> Vec<String> {
         // if bad: violations.push("description of violation".to_string());
     }
 
-    violations
+    ProgramOutput { violations }
 }
 
 fn main() {
-    let input = std::io::read_to_string(std::io::stdin()).expect("failed to read stdin");
-    let parsed: serde_json::Value = serde_json::from_str(&input).expect("invalid JSON input from Guardian");
-    let diff = parsed["diff"].as_str().expect("missing 'diff' field in Guardian input");
+    let raw = std::io::read_to_string(std::io::stdin()).expect("failed to read stdin");
+    let input: ProgramInput = serde_json::from_str(&raw).expect("invalid JSON from Guardian");
 
-    let violations = check(diff);
+    let output = run(&input);
 
-    if violations.is_empty() {
+    if output.violations.is_empty() {
         println!("{{\"violations\":[]}}");
     } else {
         let result = serde_json::json!({
-            "violations": violations.iter()
+            "violations": output.violations.iter()
                 .map(|r: &String| serde_json::json!({"reason": r}))
                 .collect::<Vec<_>>()
         });
@@ -87,7 +102,7 @@ fn main() {
 }
 ```
 
-If your check is path-based rather than diff-based, use `parsed["file_path"]` instead of `parsed["diff"]`.
+If your check is path-based rather than diff-based, use `input.file_path` instead of `input.diff`.
 
 Output format: `{"violations": []}` for pass, `{"violations": [{"reason": "..."}]}` for deny.
 
@@ -108,40 +123,44 @@ g_program: MyShield-MSX
 
 ### 4. Write unit tests
 
-Add `#[cfg(test)]` unit tests directly in `main.rs`. These are far more valuable than manual testing — they run instantly, cover edge cases, and document expected behavior. Call `check()` directly with diff strings (or file paths) — no subprocess needed:
+Add `#[cfg(test)]` unit tests directly in `main.rs`. These are far more valuable than manual testing — they run instantly, cover edge cases, and document expected behavior. Tests call `run()` (the dark-box API) with a `ProgramInput` — never internal helpers:
 
 ```rust
 #[cfg(test)]
 mod tests {
     use super::*;
 
+    fn check(diff: &str) -> ProgramOutput {
+        run(&ProgramInput { diff: diff.to_string(), file_path: String::new() })
+    }
+
     #[test]
     fn allow_with_category() {
-        let diff = "+/// Arena-allocated (see @TFITCX)\n+pub struct Foo {}";
-        assert!(check(diff).is_empty());
+        let output = check("+/// Arena-allocated (see @TFITCX)\n+pub struct Foo {}");
+        assert!(output.violations.is_empty());
     }
 
     #[test]
     fn deny_without_category() {
-        let diff = "+pub struct Foo {}";
-        assert!(!check(diff).is_empty());
+        let output = check("+pub struct Foo {}");
+        assert!(!output.violations.is_empty());
     }
 
     #[test]
     fn allow_with_attributes_between() {
-        let diff = "+/// Value-type (see @TFITCX)\n+#[derive(Copy, Clone)]\n+pub struct Bar {}";
-        assert!(check(diff).is_empty());
+        let output = check("+/// Value-type (see @TFITCX)\n+#[derive(Copy, Clone)]\n+pub struct Bar {}");
+        assert!(output.violations.is_empty());
     }
 
     #[test]
     fn skip_block_comments() {
-        let diff = "+/*\n+pub struct ScalaCode {}\n+*/";
-        assert!(check(diff).is_empty());
+        let output = check("+/*\n+pub struct ScalaCode {}\n+*/");
+        assert!(output.violations.is_empty());
     }
 }
 ```
 
-Aim for at least 5-10 tests covering: basic ALLOW, basic DENY, attributes between category and definition, block comment skipping, and any edge cases specific to your shield.
+Aim for at least 5-10 tests covering: basic ALLOW, basic DENY, attributes between category and definition, block comment skipping, and any edge cases specific to your shield. See @DBAPIZ for why tests must call `run()` (the dark-box API) rather than internal helpers.
 
 ### 5. Build and run tests
 

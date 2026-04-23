@@ -28,7 +28,7 @@ Here's what I want you to do:
     * If it all passes, good! Stop, you're done.
     * If it fails, proceed to step 3.
  4. Pick a the simplest-looking failing test, say it out loud like "The next simplest failing test is compiler_tests.rs's simple_program_returning_an_int_explicit test", and then run just that specific test.
- 5. Run the "migrate-diagnoser" agent and give it the command line you used to run the specific test. It should report a status. Verify it made a migrate-direction.md file, but DON'T look at it. It will report one of:
+ 5. Run the "migrate-diagnoser" agent and give it the command line you used to run the specific test. It should report a status. Verify it made a tmp/migrate-direction.md file, but DON'T look at it. It will report one of:
     * `INCONCLUSIVE`: please stop and tell me what's going on.
     * `QUESTION`: please stop and ask me that question.
     * `FINDINGS` (something that needs to be migrated further): please proceed to step 6.
@@ -56,3 +56,6 @@ Here's what I want you to do:
     * If it fails:
        * If this is at least the fifth failure in a row, please pause and ask me for help.
        * If this isn't the fifth failure in a row, go to step 4.
+
+
+Note: Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.

@@ -57,7 +57,7 @@ These are invoked by skills or by Claude via the Agent tool. You don't call them
 ### Migration Pipeline
 | Agent | Role |
 |---|---|
-| `migrate-diagnoser` | Diagnose what missing migration causes a test failure. Writes `migrate-direction.md`. |
+| `migrate-diagnoser` | Diagnose what missing migration causes a test failure. Writes `tmp/migrate-direction.md`. |
 | `migrate-scoper` | Generate implementation instructions from diagnoser findings. |
 | `migration-migrate` | Bring over minimum Scala code to make changes compile. Uses `panic!` heavily. |
 
