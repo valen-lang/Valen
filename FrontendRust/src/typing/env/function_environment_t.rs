@@ -109,11 +109,11 @@ override def hashCode(): Int = hash;
 */
 
 impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -199,11 +199,11 @@ override def hashCode(): Int = hash;
 */
 
 impl<'s, 't> PartialEq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -524,14 +524,14 @@ impl<'s, 't> PartialEq for NodeEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, other: &Self) -> bool {
     self.parent_function_env.id == other.parent_function_env.id
       && self.life == other.life
-  }
+  } // VI: invalid
 }
 impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for NodeEnvironmentT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
     self.parent_function_env.id.hash(state);
     self.life.hash(state);
-  }
+  } // VI: invalid
 }
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
@@ -791,11 +791,11 @@ override def hashCode(): Int = hash;
 */
 
 impl<'s, 't> PartialEq for FunctionEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for FunctionEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
@@ -992,23 +992,23 @@ object EnvironmentHelper {
 */
 
 impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
-  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Addressible(v) }
+  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Addressible(v) } // VI: invalid
 }
 impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
-  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Reference(v) }
+  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { ILocalVariableT::Reference(v) } // VI: invalid
 }
 
 impl<'s, 't> From<AddressibleLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { IVariableT::AddressibleLocal(v) }
+  fn from(v: AddressibleLocalVariableT<'s, 't>) -> Self { IVariableT::AddressibleLocal(v) } // VI: invalid
 }
 impl<'s, 't> From<ReferenceLocalVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { IVariableT::ReferenceLocal(v) }
+  fn from(v: ReferenceLocalVariableT<'s, 't>) -> Self { IVariableT::ReferenceLocal(v) } // VI: invalid
 }
 impl<'s, 't> From<AddressibleClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: AddressibleClosureVariableT<'s, 't>) -> Self { IVariableT::AddressibleClosure(v) }
+  fn from(v: AddressibleClosureVariableT<'s, 't>) -> Self { IVariableT::AddressibleClosure(v) } // VI: invalid
 }
 impl<'s, 't> From<ReferenceClosureVariableT<'s, 't>> for IVariableT<'s, 't> {
-  fn from(v: ReferenceClosureVariableT<'s, 't>) -> Self { IVariableT::ReferenceClosure(v) }
+  fn from(v: ReferenceClosureVariableT<'s, 't>) -> Self { IVariableT::ReferenceClosure(v) } // VI: invalid
 }
 
 impl<'s, 't> From<ILocalVariableT<'s, 't>> for IVariableT<'s, 't> {
@@ -1017,7 +1017,7 @@ impl<'s, 't> From<ILocalVariableT<'s, 't>> for IVariableT<'s, 't> {
       ILocalVariableT::Addressible(a) => IVariableT::AddressibleLocal(a),
       ILocalVariableT::Reference(r) => IVariableT::ReferenceLocal(r),
     }
-  }
+  } // VI: invalid
 }
 
 impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
@@ -1028,45 +1028,45 @@ impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ILocalVariableT<'s, 't> {
       IVariableT::ReferenceLocal(r) => Ok(ILocalVariableT::Reference(r)),
       other => Err(other),
     }
-  }
+  } // VI: invalid
 }
 
 impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
   type Error = IVariableT<'s, 't>;
   fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { IVariableT::AddressibleLocal(a) => Ok(a), other => Err(other) }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
   type Error = IVariableT<'s, 't>;
   fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { IVariableT::ReferenceLocal(r) => Ok(r), other => Err(other) }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<IVariableT<'s, 't>> for AddressibleClosureVariableT<'s, 't> {
   type Error = IVariableT<'s, 't>;
   fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { IVariableT::AddressibleClosure(a) => Ok(a), other => Err(other) }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<IVariableT<'s, 't>> for ReferenceClosureVariableT<'s, 't> {
   type Error = IVariableT<'s, 't>;
   fn try_from(v: IVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { IVariableT::ReferenceClosure(r) => Ok(r), other => Err(other) }
-  }
+  } // VI: invalid
 }
 
 impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for AddressibleLocalVariableT<'s, 't> {
   type Error = ILocalVariableT<'s, 't>;
   fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { ILocalVariableT::Addressible(a) => Ok(a), other => Err(other) }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't> {
   type Error = ILocalVariableT<'s, 't>;
   fn try_from(v: ILocalVariableT<'s, 't>) -> Result<Self, Self::Error> {
     match v { ILocalVariableT::Reference(r) => Ok(r), other => Err(other) }
-  }
+  } // VI: invalid
 }
 
 fn lookup_with_name_inner() {
@@ -1148,7 +1148,7 @@ where 's: 't,
       variables,
       is_root_compiling_denizen: self.is_root_compiling_denizen,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1187,7 +1187,7 @@ where 's: 't,
       is_root_compiling_denizen: self.is_root_compiling_denizen,
       default_region: self.default_region,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1227,7 +1227,7 @@ where 's: 't,
       is_root_compiling_denizen: self.is_root_compiling_denizen,
       default_region: self.default_region,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1267,5 +1267,5 @@ where 's: 't,
       restackified_locals,
       default_region: self.default_region,
     })
-  }
+  } // VI: invalid
 }

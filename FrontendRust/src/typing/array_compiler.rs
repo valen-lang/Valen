@@ -10,9 +10,12 @@ use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
+use crate::postparsing::itemplatatype::{IntegerTemplataType, MutabilityTemplataType, VariabilityTemplataType, ITemplataType};
 use crate::postparsing::rules::rules::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::names::names::*;
+use crate::utils::code_hierarchy::PackageCoordinate;
 
 /*
 package dev.vale.typing
@@ -627,10 +630,139 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn compile_static_sized_array(&self, global_env: &GlobalEnvironmentT, coutputs: &mut CompilerOutputs<'s, 't>) {
-        panic!("Unimplemented: compile_static_sized_array");
+    pub fn compile_static_sized_array(&self, global_env: &'t GlobalEnvironmentT<'s, 't>, coutputs: &mut CompilerOutputs<'s, 't>) {
+        // val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
+        let builtin_package: &'s PackageCoordinate<'s> =
+            self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
+        // val templateId =
+        //   IdT(builtinPackage, Vector.empty, interner.intern(StaticSizedArrayTemplateNameT()))
+        let template_name = self.typing_interner.intern_static_sized_array_template_name(
+            StaticSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+        );
+        let template_id = self.typing_interner.intern_id(IdValT {
+            package_coord: builtin_package,
+            init_steps: &[],
+            local_name: INameT::StaticSizedArrayTemplate(template_name),
+        });
+
+        // See CSFMSEO and SAFHE.
+        // val arrayOuterEnv =
+        //   CitizenEnvironmentT(
+        //     globalEnv,
+        //     PackageEnvironmentT(globalEnv, templateId, globalEnv.nameToTopLevelEnvironment.values.toVector),
+        //     templateId,
+        //     templateId,
+        //     TemplatasStore(templateId, Map(), Map()))
+        let global_namespaces: Vec<TemplatasStoreT<'s, 't>> =
+            global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
+        let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
+        let parent_env = self.typing_interner.alloc(PackageEnvironmentT {
+            global_env,
+            id: *template_id,
+            global_namespaces,
+        });
+        let empty_templatas = TemplatasStoreBuilder::new(template_id).build_in(self.typing_interner);
+        let array_outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env,
+            parent_env: IEnvironmentT::Package(parent_env),
+            template_id: *template_id,
+            id: *template_id,
+            templatas: empty_templatas,
+        });
+        // coutputs.declareType(templateId)
+        coutputs.declare_type(template_id);
+        // coutputs.declareTypeOuterEnv(templateId, arrayOuterEnv)
+        let array_outer_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_outer_env));
+        coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
+
+        // val TemplateTemplataType(types, _) = StaticSizedArrayTemplateTemplataT().tyype
+        // val Vector(IntegerTemplataType(), MutabilityTemplataType(), VariabilityTemplataType(), CoordTemplataType()) = types
+        // (assertion only — types are verified by the placeholder calls below)
+
+        // val sizePlaceholder =
+        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
+        //     templateId, 0, CodeRuneS(interner.intern(StrI("N"))), IntegerTemplataType())
+        let rune_n = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: self.scout_arena.intern_str("N"),
+        }));
+        let size_placeholder = self.create_non_kind_non_region_placeholder_inner(
+            *template_id, 0, rune_n, ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+        );
+        // val mutabilityPlaceholder =
+        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
+        //     templateId, 1, CodeRuneS(interner.intern(StrI("M"))), MutabilityTemplataType())
+        let rune_m = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: self.scout_arena.intern_str("M"),
+        }));
+        let mutability_placeholder = self.create_non_kind_non_region_placeholder_inner(
+            *template_id, 1, rune_m, ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+        );
+        // val variabilityPlaceholder =
+        //   templataCompiler.createNonKindNonRegionPlaceholderInner(
+        //     templateId, 2, CodeRuneS(interner.intern(StrI("V"))), VariabilityTemplataType())
+        let rune_v = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: self.scout_arena.intern_str("V"),
+        }));
+        let variability_placeholder = self.create_non_kind_non_region_placeholder_inner(
+            *template_id, 2, rune_v, ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+        );
+        // val elementPlaceholder =
+        //   templataCompiler.createCoordPlaceholderInner(
+        //     coutputs, arrayOuterEnv, templateId, 3, CodeRuneS(interner.intern(StrI("E"))), None, ReadOnlyRegionS, OwnT, true)
+        let rune_e = self.scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+            name: self.scout_arena.intern_str("E"),
+        }));
+        let element_placeholder = self.create_coord_placeholder_inner(
+            coutputs,
+            array_outer_env_ref,
+            *template_id, 3, rune_e, None,
+            IRegionMutabilityS::ReadOnlyRegion, OwnershipT::Own, true,
+        );
+
+        // val placeholders =
+        //   Vector(sizePlaceholder, mutabilityPlaceholder, variabilityPlaceholder, elementPlaceholder)
+        // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
+        // Inlining StaticSizedArrayTemplateNameT.makeCitizenName:
+        //   interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, RegionT()))))
+        let raw_array_name = self.typing_interner.intern_raw_array_name(RawArrayNameT {
+            mutability: mutability_placeholder,
+            element_type: element_placeholder.coord,
+            self_region: RegionT,
+        });
+        let ssa_name = self.typing_interner.intern_static_sized_array_name(StaticSizedArrayNameT {
+            template: template_name,
+            size: size_placeholder,
+            variability: variability_placeholder,
+            arr: raw_array_name,
+        });
+        let id = self.typing_interner.intern_id(IdValT {
+            package_coord: builtin_package,
+            init_steps: &[],
+            local_name: INameT::StaticSizedArray(ssa_name),
+        });
+        // vassert(TemplataCompiler.getTemplate(id) == templateId)
+        assert!(self.get_template(*id) == *template_id);
+
+        // val arrayInnerEnv =
+        //   arrayOuterEnv.copy(
+        //     id = id,
+        //     templatas = arrayOuterEnv.templatas.copy(templatasStoreName = id))
+        let inner_templatas = TemplatasStoreBuilder::new(id).build_in(self.typing_interner);
+        let array_inner_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env,
+            parent_env: array_outer_env.parent_env,
+            template_id: array_outer_env.template_id,
+            id: *id,
+            templatas: inner_templatas,
+        });
+        let array_inner_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_inner_env));
+        // coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
+        coutputs.declare_type_inner_env(*template_id, array_inner_env_ref);
     }
 /*
+Guardian: temp-disable: NNDX — This is NOT a new function. It already exists as a panic stub at line 630-631. We are replacing the panic body with the actual migration from the Scala comment below it. — FrontendRust/guardian-logs/request-1776989829306/hook-1776989829306/compile_static_sized_array--632.0.NoNewDefinitions-NNDX.NoNewDefinitions-NNDX.verdict.md
   def compileStaticSizedArray(globalEnv: GlobalEnvironment, coutputs: CompilerOutputs): Unit = {
     val builtinPackage = PackageCoordinate.BUILTIN(interner, keywords)
     val templateId =

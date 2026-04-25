@@ -13,11 +13,21 @@ import dev.vale.typing.types._
 
 import scala.collection.mutable
 */
-/// Arena-allocated (see @TFITCX)
+use std::collections::HashMap;
+use crate::postparsing::names::IRuneS;
+use crate::typing::ast::ast::{
+    EdgeT, FunctionDefinitionT, FunctionExportT, FunctionExternT,
+    InterfaceEdgeBlueprintT, KindExportT, KindExternT, PrototypeT, SignatureT,
+};
+use crate::typing::ast::citizens::{CitizenDefinitionT, InterfaceDefinitionT, StructDefinitionT};
+use crate::typing::names::names::{
+    FunctionTemplateNameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
+};
+// mig: struct InstantiationReachableBoundArgumentsT
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
     pub citizen_rune_to_reachable_prototype: Vec<(
-        crate::postparsing::names::IRuneS<'s>,
-        &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
+        IRuneS<'s>,
+        &'t PrototypeT<'s, 't>,
     )>,
 }
 /*
@@ -29,10 +39,11 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 
 object InstantiationBoundArgumentsT {
 */
+// mig: fn make
 pub fn make<'s, 't>(
-    _rune_to_bound_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, &'t crate::typing::ast::ast::PrototypeT<'s, 't>)>,
-    _rune_to_citizen_rune_to_reachable_prototype: Vec<(crate::postparsing::names::IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
-    _rune_to_bound_impl: Vec<(crate::postparsing::names::IRuneS<'s>, crate::typing::names::names::IdT<'s, 't>)>,
+    _rune_to_bound_prototype: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)>,
+    _rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
+    _rune_to_bound_impl: Vec<(IRuneS<'s>, IdT<'s, 't>)>,
 ) -> InstantiationBoundArgumentsT<'s, 't> {
     panic!("Unimplemented: InstantiationBoundArgumentsT::make");
 }
@@ -49,21 +60,19 @@ pub fn make<'s, 't>(
   }
 }
 */
-// TODO: stub — Vec pairs stand in for Scala's HashMap; revisit (arena slice, sorted?) during body migration.
-// Also: Scala's [BF <: IFunctionNameT, BI <: IImplNameT] generics collapsed to the enums directly.
-/// Arena-allocated (see @TFITCX)
+// mig: struct InstantiationBoundArgumentsT
 pub struct InstantiationBoundArgumentsT<'s, 't> {
     pub rune_to_bound_prototype: Vec<(
-        crate::postparsing::names::IRuneS<'s>,
-        &'t crate::typing::ast::ast::PrototypeT<'s, 't>,
+        IRuneS<'s>,
+        &'t PrototypeT<'s, 't>,
     )>,
     pub rune_to_citizen_rune_to_reachable_prototype: Vec<(
-        crate::postparsing::names::IRuneS<'s>,
+        IRuneS<'s>,
         InstantiationReachableBoundArgumentsT<'s, 't>,
     )>,
     pub rune_to_bound_impl: Vec<(
-        crate::postparsing::names::IRuneS<'s>,
-        crate::typing::names::names::IdT<'s, 't>,
+        IRuneS<'s>,
+        IdT<'s, 't>,
     )>,
 }
 /*
@@ -82,60 +91,46 @@ case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
 //  println(runeToBoundPrototype.size)
 //  println(runeToCitizenRuneToReachablePrototype.size)
 //  println(runeToBoundImpl.size)
-
+*/
+// mig: impl InstantiationBoundArgumentsT
+impl<'s, 't> InstantiationBoundArgumentsT<'s, 't> {
+    pub fn new() -> Self {
+        panic!("Unimplemented: new");
+    }
+/*
   vassert(!runeToCitizenRuneToReachablePrototype.exists(_._2.citizenRuneToReachablePrototype.isEmpty))
 }
 */
-// TODO: stub — Vec/HashMap fields mirror the Scala case class. Per quest.md §1.5
-// HinputsT is 't-arena-allocated, which per AASSNCMCX means these should later become
-// arena slices, not std Vec/HashMap. Keeping Vec/HashMap for now to match Scala shape;
-// revisit during body migration.
-/// Temporary state (see @TFITCX)
+}
+// mig: struct HinputsT
 pub struct HinputsT<'s, 't> {
-    pub interfaces: Vec<crate::typing::ast::citizens::InterfaceDefinitionT<'s, 't>>,
-    pub structs: Vec<crate::typing::ast::citizens::StructDefinitionT<'s, 't>>,
-    pub functions: Vec<crate::typing::ast::ast::FunctionDefinitionT<'s, 't>>,
+    pub interfaces: Vec<InterfaceDefinitionT<'s, 't>>,
+    pub structs: Vec<StructDefinitionT<'s, 't>>,
+    pub functions: Vec<FunctionDefinitionT<'s, 't>>,
 
-    pub interface_to_edge_blueprints: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't>,
-        crate::typing::ast::ast::InterfaceEdgeBlueprintT<'s, 't>,
+    pub interface_to_edge_blueprints: HashMap<
+        IdT<'s, 't>,
+        InterfaceEdgeBlueprintT<'s, 't>,
     >,
-    pub interface_to_sub_citizen_to_edge: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't>,
-        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+    pub interface_to_sub_citizen_to_edge: HashMap<
+        IdT<'s, 't>,
+        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
     >,
 
-    pub instantiation_name_to_instantiation_bounds: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't>,
+    pub instantiation_name_to_instantiation_bounds: HashMap<
+        IdT<'s, 't>,
         InstantiationBoundArgumentsT<'s, 't>,
     >,
 
-    pub kind_exports: Vec<crate::typing::ast::ast::KindExportT<'s, 't>>,
-    pub function_exports: Vec<crate::typing::ast::ast::FunctionExportT<'s, 't>>,
-    pub kind_externs: Vec<crate::typing::ast::ast::KindExternT<'s, 't>>,
-    pub function_externs: Vec<crate::typing::ast::ast::FunctionExternT<'s, 't>>,
+    pub kind_exports: Vec<KindExportT<'s, 't>>,
+    pub function_exports: Vec<FunctionExportT<'s, 't>>,
+    pub kind_externs: Vec<KindExternT<'s, 't>>,
+    pub function_externs: Vec<FunctionExternT<'s, 't>>,
 
-    pub sub_citizen_to_interface_to_edge: std::collections::HashMap<
-        crate::typing::names::names::IdT<'s, 't>,
-        std::collections::HashMap<crate::typing::names::names::IdT<'s, 't>, crate::typing::ast::ast::EdgeT<'s, 't>>,
+    pub sub_citizen_to_interface_to_edge: HashMap<
+        IdT<'s, 't>,
+        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
     >,
-}
-impl<'s, 't> HinputsT<'s, 't> {
-    pub fn new() -> Self {
-        HinputsT {
-            interfaces: Vec::new(),
-            structs: Vec::new(),
-            functions: Vec::new(),
-            interface_to_edge_blueprints: std::collections::HashMap::new(),
-            interface_to_sub_citizen_to_edge: std::collections::HashMap::new(),
-            instantiation_name_to_instantiation_bounds: std::collections::HashMap::new(),
-            kind_exports: Vec::new(),
-            function_exports: Vec::new(),
-            kind_externs: Vec::new(),
-            function_externs: Vec::new(),
-            sub_citizen_to_interface_to_edge: std::collections::HashMap::new(),
-        }
-    }
 }
 /*
 case class HinputsT(
@@ -155,193 +150,313 @@ case class HinputsT(
   kindExterns: Vector[KindExternT],
   functionExterns: Vector[FunctionExternT],
 ) {
+*/
+// mig: impl HinputsT
+impl<'s, 't> HinputsT<'s, 't> {
+    pub fn new() -> Self {
+        panic!("Unimplemented: new");
+    }
+    /*
+      private val subCitizenToInterfaceToEdgeMutable = mutable.HashMap[IdT[ICitizenNameT], mutable.HashMap[IdT[IInterfaceNameT], EdgeT]]()
+      interfaceToSubCitizenToEdge.foreach({ case (interface, subCitizenToEdge) =>
+        subCitizenToEdge.foreach({ case (subCitizen, edge) =>
+          subCitizenToInterfaceToEdgeMutable
+            .getOrElseUpdate(subCitizen, mutable.HashMap[IdT[IInterfaceNameT], EdgeT]())
+            .put(interface, edge)
+        })
+      })
+      val subCitizenToInterfaceToEdge: Map[IdT[ICitizenNameT], Map[IdT[IInterfaceNameT], EdgeT]] =
+        subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
-  private val subCitizenToInterfaceToEdgeMutable = mutable.HashMap[IdT[ICitizenNameT], mutable.HashMap[IdT[IInterfaceNameT], EdgeT]]()
-  interfaceToSubCitizenToEdge.foreach({ case (interface, subCitizenToEdge) =>
-    subCitizenToEdge.foreach({ case (subCitizen, edge) =>
-      subCitizenToInterfaceToEdgeMutable
-        .getOrElseUpdate(subCitizen, mutable.HashMap[IdT[IInterfaceNameT], EdgeT]())
-        .put(interface, edge)
-    })
-  })
-  val subCitizenToInterfaceToEdge: Map[IdT[ICitizenNameT], Map[IdT[IInterfaceNameT], EdgeT]] =
-    subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
-
-*/
-/*
-  override def equals(obj: Any): Boolean = vcurious();
-*/
-/*
-  override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
-*/
-/*
-  def lookupStruct(structId: IdT[IStructNameT]): StructDefinitionT = {
-    vassertSome(structs.find(_.instantiatedCitizen.id == structId))
-  }
-*/
-/*
-  def lookupStructByTemplate(structTemplateName: IStructTemplateNameT): StructDefinitionT = {
-    vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
-  }
-*/
-/*
-  def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameT): InterfaceDefinitionT = {
-    vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
-  }
-*/
-/*
-  def lookupImplByTemplate(implTemplateName: IImplTemplateNameT): EdgeT = {
-    vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
-  }
-*/
-/*
-  def lookupInterface(interfaceId: IdT[IInterfaceNameT]): InterfaceDefinitionT = {
-    vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
-  }
-*/
-/*
-  def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
-    vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
-  }
-*/
-/*
-  def getInstantiationBoundArgs(instantiationName: IdT[IInstantiationNameT]): InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT] = {
-    vassertSome(instantiationNameToInstantiationBounds.get(instantiationName))
-  }
-*/
-/*
-  def lookupStructByTemplateId(structTemplateId: IdT[IStructTemplateNameT]): StructDefinitionT = {
-    vassertSome(structs.find(_.templateName == structTemplateId))
-  }
-*/
-/*
-  def lookupInterfaceByTemplateId(interfaceTemplateId: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
-    vassertSome(interfaces.find(_.templateName == interfaceTemplateId))
-  }
-*/
-/*
-  def lookupCitizenByTemplateId(interfaceTemplateId: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
-    interfaceTemplateId match {
-      case IdT(packageCoord, initSteps, t: IStructTemplateNameT) => {
-        lookupStructByTemplateId(IdT(packageCoord, initSteps, t))
+    */
+    // mig: fn equals
+    pub fn equals(&self, obj: &HinputsT) -> bool {
+        panic!("Unimplemented: equals");
+    }
+    /*
+      override def equals(obj: Any): Boolean = vcurious();
+    */
+    // mig: fn hash_code
+    pub fn hash_code(&self) -> i32 {
+        panic!("Unimplemented: hash_code");
+    }
+    /*
+      override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+    */
+    // mig: fn lookup_struct
+    pub fn lookup_struct(&self, struct_id: IdT) -> StructDefinitionT {
+        panic!("Unimplemented: lookup_struct");
+    }
+    /*
+      def lookupStruct(structId: IdT[IStructNameT]): StructDefinitionT = {
+        vassertSome(structs.find(_.instantiatedCitizen.id == structId))
       }
-      case IdT(packageCoord, initSteps, t: IInterfaceTemplateNameT) => {
-        lookupInterfaceByTemplateId(IdT(packageCoord, initSteps, t))
+    */
+    // mig: fn lookup_struct_by_template
+    pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
+        panic!("Unimplemented: lookup_struct_by_template");
+    }
+    /*
+      def lookupStructByTemplate(structTemplateName: IStructTemplateNameT): StructDefinitionT = {
+        vassertSome(structs.find(_.instantiatedCitizen.id.localName.template == structTemplateName))
+      }
+    */
+    // mig: fn lookup_interface_by_template
+    pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
+        panic!("Unimplemented: lookup_interface_by_template");
+    }
+    /*
+      def lookupInterfaceByTemplate(interfaceTemplateName: IInterfaceTemplateNameT): InterfaceDefinitionT = {
+        vassertSome(interfaces.find(_.instantiatedCitizen.id.localName.template == interfaceTemplateName))
+      }
+    */
+    // mig: fn lookup_impl_by_template
+    pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT {
+        panic!("Unimplemented: lookup_impl_by_template");
+    }
+    /*
+      def lookupImplByTemplate(implTemplateName: IImplTemplateNameT): EdgeT = {
+        vassertSome(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId.localName.template == implTemplateName))
+      }
+    */
+    // mig: fn lookup_interface
+    pub fn lookup_interface(&self, interface_id: IdT) -> InterfaceDefinitionT {
+        panic!("Unimplemented: lookup_interface");
+    }
+    /*
+      def lookupInterface(interfaceId: IdT[IInterfaceNameT]): InterfaceDefinitionT = {
+        vassertSome(interfaces.find(_.instantiatedCitizen.id == interfaceId))
+      }
+    */
+    // mig: fn lookup_edge
+    pub fn lookup_edge(&self, impl_id: IdT) -> EdgeT {
+        panic!("Unimplemented: lookup_edge");
+    }
+    /*
+      def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
+        vassertOne(interfaceToSubCitizenToEdge.flatMap(_._2.values).find(_.edgeId == implId))
+      }
+    */
+    // mig: fn get_instantiation_bound_args
+    pub fn get_instantiation_bound_args(&self, instantiation_name: IdT) -> InstantiationBoundArgumentsT {
+        panic!("Unimplemented: get_instantiation_bound_args");
+    }
+    /*
+      def getInstantiationBoundArgs(instantiationName: IdT[IInstantiationNameT]): InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT] = {
+        vassertSome(instantiationNameToInstantiationBounds.get(instantiationName))
+      }
+    */
+    // mig: fn lookup_struct_by_template_id
+    pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT) -> StructDefinitionT {
+        panic!("Unimplemented: lookup_struct_by_template_id");
+    }
+    /*
+      def lookupStructByTemplateId(structTemplateId: IdT[IStructTemplateNameT]): StructDefinitionT = {
+        vassertSome(structs.find(_.templateName == structTemplateId))
+      }
+    */
+    // mig: fn lookup_interface_by_template_id
+    pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT) -> InterfaceDefinitionT {
+        panic!("Unimplemented: lookup_interface_by_template_id");
+    }
+    /*
+      def lookupInterfaceByTemplateId(interfaceTemplateId: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
+        vassertSome(interfaces.find(_.templateName == interfaceTemplateId))
+      }
+    */
+    // mig: fn lookup_citizen_by_template_id
+    pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT) -> CitizenDefinitionT {
+        panic!("Unimplemented: lookup_citizen_by_template_id");
+    }
+    /*
+      def lookupCitizenByTemplateId(interfaceTemplateId: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
+        interfaceTemplateId match {
+          case IdT(packageCoord, initSteps, t: IStructTemplateNameT) => {
+            lookupStructByTemplateId(IdT(packageCoord, initSteps, t))
+          }
+          case IdT(packageCoord, initSteps, t: IInterfaceTemplateNameT) => {
+            lookupInterfaceByTemplateId(IdT(packageCoord, initSteps, t))
+          }
+        }
+      }
+    */
+    // mig: fn lookup_struct_by_template_name
+    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
+        panic!("Unimplemented: lookup_struct_by_template_name");
+    }
+    /*
+      def lookupStructByTemplateName(structTemplateName: StructTemplateNameT): StructDefinitionT = {
+        vassertOne(structs.filter(_.templateName.localName == structTemplateName))
+      }
+    */
+    // mig: fn lookup_interface_by_template_name
+    pub fn lookup_interface_by_template_name(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
+        panic!("Unimplemented: lookup_interface_by_template_name");
+    }
+    /*
+      def lookupInterfaceByTemplateName(interfaceTemplateName: InterfaceTemplateNameT): InterfaceDefinitionT = {
+        vassertSome(interfaces.find(_.templateName.localName == interfaceTemplateName))
+      }
+    */
+    // mig: fn lookup_function
+    pub fn lookup_function_by_signature(&self, signature: SignatureT) -> Option<FunctionDefinitionT> {
+        panic!("Unimplemented: lookup_function_by_signature");
+    }
+    /*
+      def lookupFunction(signature2: SignatureT): Option[FunctionDefinitionT] = {
+        functions.find(_.header.toSignature == signature2).headOption
+      }
+    */
+    // mig: fn lookup_function
+    pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<FunctionDefinitionT> {
+        panic!("Unimplemented: lookup_function_by_template");
+    }
+    /*
+      def lookupFunction(funcTemplateName: IFunctionTemplateNameT): Option[FunctionDefinitionT] = {
+        functions.find(_.header.id.localName.template == funcTemplateName).headOption
+      }
+    */
+    // mig: fn lookup_function
+    pub fn lookup_function_by_human_name(&self, human_name: &str) -> FunctionDefinitionT {
+        panic!("Unimplemented: lookup_function_by_human_name");
+    }
+    /*
+      def lookupFunction(humanName: String): FunctionDefinitionT = {
+        val matches = functions.filter(f => {
+          f.header.id.localName match {
+            case FunctionNameT(n, _, _) if n.humanName.str == humanName => true
+            case _ => false
+          }
+        })
+        if (matches.size == 0) {
+          vfail("Function \"" + humanName + "\" not found!")
+        } else if (matches.size > 1) {
+          vfail("Multiple found!")
+        }
+        matches.head
+      }
+    */
+    // mig: fn lookup_struct
+    pub fn lookup_struct_by_human_name(&self, human_name: &str) -> StructDefinitionT {
+        panic!("Unimplemented: lookup_struct_by_human_name");
+    }
+    /*
+      def lookupStruct(humanName: String): StructDefinitionT = {
+        val matches = structs.filter(s => {
+          s.templateName.localName match {
+            case StructTemplateNameT(n) if n.str == humanName => true
+            case _ => false
+          }
+        })
+        if (matches.size == 0) {
+          vfail("Struct \"" + humanName + "\" not found!")
+        } else if (matches.size > 1) {
+          vfail("Multiple found!")
+        }
+        matches.head
+      }
+    */
+    // mig: fn lookup_impl
+    pub fn lookup_impl(&self, sub_citizen_tt: IdT, interface_tt: IdT) -> EdgeT {
+        panic!("Unimplemented: lookup_impl");
+    }
+    /*
+      def lookupImpl(
+        subCitizenTT: IdT[ICitizenNameT],
+        interfaceTT: IdT[IInterfaceNameT]):
+      EdgeT = {
+        vassertSome(
+          vassertSome(interfaceToSubCitizenToEdge.get(interfaceTT))
+            .get(subCitizenTT))
+      }
+    */
+    // mig: fn lookup_interface
+    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> InterfaceDefinitionT {
+        panic!("Unimplemented: lookup_interface_by_human_name");
+    }
+    /*
+      def lookupInterface(humanName: String): InterfaceDefinitionT = {
+        val matches = interfaces.filter(s => {
+          s.templateName.localName match {
+            case InterfaceTemplateNameT(n) if n.str == humanName => true
+            case _ => false
+          }
+        })
+        if (matches.size == 0) {
+          vfail("Interface \"" + humanName + "\" not found!")
+        } else if (matches.size > 1) {
+          vfail("Multiple found!")
+        }
+        matches.head
+      }
+    */
+    // mig: fn lookup_user_function
+    pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT {
+        panic!("Unimplemented: lookup_user_function");
+    }
+    /*
+      def lookupUserFunction(humanName: String): FunctionDefinitionT = {
+        val matches =
+          functions
+            .filter(function => simpleNameT.unapply(function.header.id).contains(humanName))
+            .filter(_.header.isUserFunction)
+        if (matches.size == 0) {
+          vfail("Not found!")
+        } else if (matches.size > 1) {
+          vfail("Multiple found!")
+        }
+        matches.head
+      }
+    */
+    // mig: fn name_is_lambda_in
+    pub fn name_is_lambda_in(&self, name: IdT, needle_function_human_name: &str) -> bool {
+        panic!("Unimplemented: name_is_lambda_in");
+    }
+    /*
+      def nameIsLambdaIn(name: IdT[IFunctionNameT], needleFunctionHumanName: String): Boolean = {
+        val first = name.steps.head
+        val lastTwo = name.steps.slice(name.steps.size - 2, name.steps.size)
+        (first, lastTwo) match {
+          case (
+            FunctionNameT(FunctionTemplateNameT(StrI(hayFunctionHumanName), _), _, _),
+            Vector(
+              LambdaCitizenTemplateNameT(_),
+              LambdaCallFunctionNameT(LambdaCallFunctionTemplateNameT(_, _), _, _)))
+            if hayFunctionHumanName == needleFunctionHumanName => true
+          case _ => false
+        }
+      }
+    */
+    // mig: fn lookup_lambdas_in
+    pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<FunctionDefinitionT> {
+        panic!("Unimplemented: lookup_lambdas_in");
+    }
+    /*
+      def lookupLambdasIn(needleFunctionHumanName: String): Vector[FunctionDefinitionT] = {
+        functions.filter(f => nameIsLambdaIn(f.header.id, needleFunctionHumanName)).toVector
+      }
+    */
+    // mig: fn lookup_lambda_in
+    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> FunctionDefinitionT {
+        panic!("Unimplemented: lookup_lambda_in");
+    }
+    /*
+      def lookupLambdaIn(needleFunctionHumanName: String): FunctionDefinitionT = {
+        vassertOne(lookupLambdasIn(needleFunctionHumanName))
+      }
+    */
+    // mig: fn get_all_user_functions
+    pub fn get_all_user_functions(&self) -> Vec<FunctionDefinitionT> {
+        panic!("Unimplemented: get_all_user_functions");
+    }
+    /*
+      // def getAllNonExternFunctions: Iterable[FunctionDefinitionT] = {
+      //   functions.filter(!_.header.isExtern)
+      // }
+
+      def getAllUserFunctions: Iterable[FunctionDefinitionT] = {
+        functions.filter(_.header.isUserFunction)
       }
     }
-  }
-
-  def lookupStructByTemplateName(structTemplateName: StructTemplateNameT): StructDefinitionT = {
-    vassertOne(structs.filter(_.templateName.localName == structTemplateName))
-  }
-
-  def lookupInterfaceByTemplateName(interfaceTemplateName: InterfaceTemplateNameT): InterfaceDefinitionT = {
-    vassertSome(interfaces.find(_.templateName.localName == interfaceTemplateName))
-  }
-
-  def lookupFunction(signature2: SignatureT): Option[FunctionDefinitionT] = {
-    functions.find(_.header.toSignature == signature2).headOption
-  }
-
-  def lookupFunction(funcTemplateName: IFunctionTemplateNameT): Option[FunctionDefinitionT] = {
-    functions.find(_.header.id.localName.template == funcTemplateName).headOption
-  }
-
-  def lookupFunction(humanName: String): FunctionDefinitionT = {
-    val matches = functions.filter(f => {
-      f.header.id.localName match {
-        case FunctionNameT(n, _, _) if n.humanName.str == humanName => true
-        case _ => false
-      }
-    })
-    if (matches.size == 0) {
-      vfail("Function \"" + humanName + "\" not found!")
-    } else if (matches.size > 1) {
-      vfail("Multiple found!")
-    }
-    matches.head
-  }
-
-  def lookupStruct(humanName: String): StructDefinitionT = {
-    val matches = structs.filter(s => {
-      s.templateName.localName match {
-        case StructTemplateNameT(n) if n.str == humanName => true
-        case _ => false
-      }
-    })
-    if (matches.size == 0) {
-      vfail("Struct \"" + humanName + "\" not found!")
-    } else if (matches.size > 1) {
-      vfail("Multiple found!")
-    }
-    matches.head
-  }
-
-  def lookupImpl(
-    subCitizenTT: IdT[ICitizenNameT],
-    interfaceTT: IdT[IInterfaceNameT]):
-  EdgeT = {
-    vassertSome(
-      vassertSome(interfaceToSubCitizenToEdge.get(interfaceTT))
-        .get(subCitizenTT))
-  }
-
-  def lookupInterface(humanName: String): InterfaceDefinitionT = {
-    val matches = interfaces.filter(s => {
-      s.templateName.localName match {
-        case InterfaceTemplateNameT(n) if n.str == humanName => true
-        case _ => false
-      }
-    })
-    if (matches.size == 0) {
-      vfail("Interface \"" + humanName + "\" not found!")
-    } else if (matches.size > 1) {
-      vfail("Multiple found!")
-    }
-    matches.head
-  }
-
-  def lookupUserFunction(humanName: String): FunctionDefinitionT = {
-    val matches =
-      functions
-        .filter(function => simpleNameT.unapply(function.header.id).contains(humanName))
-        .filter(_.header.isUserFunction)
-    if (matches.size == 0) {
-      vfail("Not found!")
-    } else if (matches.size > 1) {
-      vfail("Multiple found!")
-    }
-    matches.head
-  }
-
-  def nameIsLambdaIn(name: IdT[IFunctionNameT], needleFunctionHumanName: String): Boolean = {
-    val first = name.steps.head
-    val lastTwo = name.steps.slice(name.steps.size - 2, name.steps.size)
-    (first, lastTwo) match {
-      case (
-        FunctionNameT(FunctionTemplateNameT(StrI(hayFunctionHumanName), _), _, _),
-        Vector(
-          LambdaCitizenTemplateNameT(_),
-          LambdaCallFunctionNameT(LambdaCallFunctionTemplateNameT(_, _), _, _)))
-        if hayFunctionHumanName == needleFunctionHumanName => true
-      case _ => false
-    }
-  }
-
-  def lookupLambdasIn(needleFunctionHumanName: String): Vector[FunctionDefinitionT] = {
-    functions.filter(f => nameIsLambdaIn(f.header.id, needleFunctionHumanName)).toVector
-  }
-
-  def lookupLambdaIn(needleFunctionHumanName: String): FunctionDefinitionT = {
-    vassertOne(lookupLambdasIn(needleFunctionHumanName))
-  }
-
-  // def getAllNonExternFunctions: Iterable[FunctionDefinitionT] = {
-  //   functions.filter(!_.header.isExtern)
-  // }
-
-  def getAllUserFunctions: Iterable[FunctionDefinitionT] = {
-    functions.filter(_.header.isUserFunction)
-  }
+    */
 }
-*/

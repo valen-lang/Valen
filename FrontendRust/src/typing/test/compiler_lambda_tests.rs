@@ -31,7 +31,7 @@ class CompilerLambdaTests extends FunSuite with Matchers {
 // mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
-}
+} // VI: invalid
 
 /*
   def readCodeFromResource(resourceFilename: String): String = {
@@ -44,7 +44,7 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 #[test]
 fn simple_lambda() {
     panic!("Unmigrated test: simple_lambda");
-}
+} // VI: invalid
 
 /*
   test("Simple lambda") {
@@ -63,7 +63,7 @@ fn simple_lambda() {
 #[test]
 fn lambda_with_one_magic_arg() {
     panic!("Unmigrated test: lambda_with_one_magic_arg");
-}
+} // VI: invalid
 
 /*
   test("Lambda with one magic arg") {
@@ -86,7 +86,7 @@ fn lambda_with_one_magic_arg() {
 #[test]
 fn lambda_is_reused() {
     panic!("Unmigrated test: lambda_is_reused");
-}
+} // VI: invalid
 
 /*
   test("Lambda is reused") {
@@ -112,7 +112,7 @@ fn lambda_is_reused() {
 #[test]
 fn lambda_called_with_different_types() {
     panic!("Unmigrated test: lambda_called_with_different_types");
-}
+} // VI: invalid
 
 /*
   test("Lambda called with different types") {
@@ -138,7 +138,7 @@ fn lambda_called_with_different_types() {
 #[test]
 fn curried_lambda() {
     panic!("Unmigrated test: curried_lambda");
-}
+} // VI: invalid
 
 /*
   test("Curried lambda") {
@@ -168,7 +168,7 @@ fn curried_lambda() {
 #[test]
 fn lambda_with_a_type_specified_param() {
     panic!("Unmigrated test: lambda_with_a_type_specified_param");
-}
+} // VI: invalid
 
 /*
   test("Lambda with a type specified param") {
@@ -196,7 +196,7 @@ fn lambda_with_a_type_specified_param() {
 #[test]
 fn tests_lambda_and_concept_function() {
     panic!("Unmigrated test: tests_lambda_and_concept_function");
-}
+} // VI: invalid
 
 /*
   test("Tests lambda and concept function") {
@@ -221,7 +221,7 @@ fn tests_lambda_and_concept_function() {
 #[test]
 fn lambda_inside_different_function_with_same_name() {
     panic!("Unmigrated test: lambda_inside_different_function_with_same_name");
-}
+} // VI: invalid
 
 /*
   test("Lambda inside different function with same name") {
@@ -251,7 +251,7 @@ fn lambda_inside_different_function_with_same_name() {
 #[test]
 fn lambda_inside_template() {
     panic!("Unmigrated test: lambda_inside_template");
-}
+} // VI: invalid
 
 /*
   test("Lambda inside template") {
@@ -281,7 +281,7 @@ fn lambda_inside_template() {
 #[test]
 fn curried_lambda_inside_template() {
     panic!("Unmigrated test: curried_lambda_inside_template");
-}
+} // VI: invalid
 
 /*
   test("Curried lambda inside template") {

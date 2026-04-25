@@ -44,7 +44,7 @@ where 's: 't,
       (IEnvEntryT::Templata(a), IEnvEntryT::Templata(b)) => a == b,
       _ => false,
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> Eq for IEnvEntryT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for IEnvEntryT<'s, 't>
@@ -59,7 +59,7 @@ where 's: 't,
       IEnvEntryT::Impl(a) => (*a as *const ImplA<'s>).hash(state),
       IEnvEntryT::Templata(t) => t.hash(state),
     }
-  }
+  } // VI: invalid
 }
 /*
 // We dont have the unevaluatedContainers in here because see TMRE

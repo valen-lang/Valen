@@ -66,7 +66,7 @@ pub fn run_typing_pass<'s, 'ctx, 't>(
 where 's: 't,
 {
     panic!("Unimplemented: run_typing_pass — Slab 8");
-}
+} // VI: invalid
 
 /// Miscellaneous (see @TFITCX)
 pub struct TypingPassCompilation<'s, 'ctx, 't, 'p>
@@ -132,7 +132,7 @@ where 's: 't,
       options: typing_options,
       typing_interner,
     }
-  }
+  } // VI: invalid
 
 pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_code_map()
@@ -198,7 +198,7 @@ pub fn get_compiler_outputs(&mut self) -> Result<HinputsT<'s, 't>, ICompileError
       }
     }
   }
-}
+} // VI: invalid
 pub fn expect_compiler_outputs(&mut self) -> HinputsT<'s, 't> {
 /*
   def expectCompilerOutputs(): HinputsT = {
@@ -228,5 +228,5 @@ pub fn expect_compiler_outputs(&mut self) -> HinputsT<'s, 't> {
 */
     Ok(x) => x,
   }
-}
+} // VI: invalid
 }

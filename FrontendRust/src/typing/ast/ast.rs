@@ -606,7 +606,7 @@ where 's: 't, 't: 'tmp;
 impl<'a, 's, 't, 'tmp> std::hash::Hash for SignatureValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); } // VI: invalid
 }
 
 impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<SignatureValT<'s, 't, 't>> for SignatureValQuery<'a, 's, 't, 'tmp>
@@ -614,7 +614,7 @@ where 's: 't, 't: 'tmp,
 {
     fn equivalent(&self, key: &SignatureValT<'s, 't, 't>) -> bool {
         crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
-    }
+    } // VI: invalid
 }
 /// Value-type (see @TFITCX)
 pub struct FunctionBannerT<'s, 't> {
@@ -1001,7 +1001,7 @@ where 's: 't, 't: 'tmp;
 impl<'a, 's, 't, 'tmp> std::hash::Hash for PrototypeValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,
 {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); } // VI: invalid
 }
 
 impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<PrototypeValT<'s, 't, 't>> for PrototypeValQuery<'a, 's, 't, 'tmp>
@@ -1010,5 +1010,5 @@ where 's: 't, 't: 'tmp,
     fn equivalent(&self, key: &PrototypeValT<'s, 't, 't>) -> bool {
         crate::typing::names::names::IdValQuery(&self.0.id).equivalent(&key.id)
             && self.0.return_type == key.return_type
-    }
+    } // VI: invalid
 }

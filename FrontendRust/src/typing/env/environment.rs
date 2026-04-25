@@ -345,13 +345,13 @@ where 's: 't,
 
 // Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") }
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") } // VI: invalid
 }
 impl<'s, 't> Eq for TemplatasStoreT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for TemplatasStoreT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
     panic!("vcurious: TemplatasStoreT.hash")
-  }
+  } // VI: invalid
 }
 
 // (no scala counterpart — builder for TemplatasStoreT. Heap Vec/HashMap during
@@ -375,7 +375,7 @@ where 's: 't,
       name_to_entry: Vec::new(),
       imprecise_to_entries: StdHashMap::new(),
     }
-  }
+  } // VI: invalid
 
   pub fn build_in(
     self,
@@ -394,7 +394,7 @@ where 's: 't,
       name_to_entry,
       imprecise_to_entries,
     }
-  }
+  } // VI: invalid
 }
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
@@ -607,11 +607,11 @@ override def hashCode(): Int = hash;
 
 // Id-based Hash/PartialEq per Gotcha 13.
 impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -701,11 +701,11 @@ override def hashCode(): Int = hash;
 */
 
 impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 fn child_of() {
   panic!("Unimplemented: child_of");
@@ -774,11 +774,11 @@ case class ExportEnvironmentT(
 */
 
 impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for ExportEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for ExportEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -826,11 +826,11 @@ case class ExternEnvironmentT(
 */
 
 impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
 }
 impl<'s, 't> Eq for ExternEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for ExternEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -888,70 +888,70 @@ case class GeneralEnvironmentT[+T <: INameT](
 
 // Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") }
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: GeneralEnvironmentT.eq") } // VI: invalid
 }
 impl<'s, 't> Eq for GeneralEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for GeneralEnvironmentT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
     panic!("vcurious: GeneralEnvironmentT.hash")
-  }
+  } // VI: invalid
 }
 
 // Concrete → IEnvironmentT
 impl<'s, 't> From<&'t PackageEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t PackageEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Package(e) }
+  fn from(e: &'t PackageEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Package(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Citizen(e) }
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Citizen(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Function(e) }
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Function(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Node(e) }
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Node(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IEnvironmentT<'s, 't> {
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
     IEnvironmentT::BuildingWithClosureds(e)
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IEnvironmentT<'s, 't> {
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
     IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IEnvironmentT::General(e) }
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IEnvironmentT::General(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t ExportEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Export(e) }
+  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Export(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
-  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Extern(e) }
+  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IEnvironmentT::Extern(e) } // VI: invalid
 }
 
 // Concrete → IInDenizenEnvironmentT (6 variants; no Package/Export/Extern)
 impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Citizen(e) }
+  fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Citizen(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t FunctionEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Function(e) }
+  fn from(e: &'t FunctionEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Function(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t NodeEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Node(e) }
+  fn from(e: &'t NodeEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Node(e) } // VI: invalid
 }
 impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>) -> Self {
     IInDenizenEnvironmentT::BuildingWithClosureds(e)
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
   fn from(e: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>) -> Self {
     IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e)
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
-  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::General(e) }
+  fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::General(e) } // VI: invalid
 }
 
 // Widening: IInDenizenEnvironmentT → IEnvironmentT (always succeeds)
@@ -966,7 +966,7 @@ impl<'s, 't> From<IInDenizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
         IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b),
       IInDenizenEnvironmentT::General(g) => IEnvironmentT::General(g),
     }
-  }
+  } // VI: invalid
 }
 
 // Narrowing: IEnvironmentT → IInDenizenEnvironmentT (errors on Package/Export/Extern)
@@ -985,7 +985,7 @@ impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
         | IEnvironmentT::Export(_)
         | IEnvironmentT::Extern(_)) => Err(other),
     }
-  }
+  } // VI: invalid
 }
 
 // ============================================================================
@@ -1016,7 +1016,7 @@ where 's: 't,
       id: self.id,
       global_namespaces,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1045,7 +1045,7 @@ where 's: 't,
       id: self.id,
       templatas,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1074,7 +1074,7 @@ where 's: 't,
       id: self.id,
       templatas,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1103,7 +1103,7 @@ where 's: 't,
       id: self.id,
       templatas,
     })
-  }
+  } // VI: invalid
 }
 
 /// Temporary state (see @TFITCX)
@@ -1132,5 +1132,5 @@ where 's: 't,
       id: self.id,
       templatas,
     })
-  }
+  } // VI: invalid
 }

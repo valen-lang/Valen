@@ -147,7 +147,7 @@ where 's: 't,
             finished_deferred_function_body_compiles: HashSet::new(),
             finished_deferred_function_compiles: HashSet::new(),
         }
-    }
+    } // VI: invalid
 }
 /*
 case class CompilerOutputs() {
@@ -234,7 +234,7 @@ where 's: 't,
 {
     pub fn count_denizens(&self) -> i32 {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def countDenizens(): Int = {
@@ -250,7 +250,7 @@ where 's: 't,
 {
     pub fn peek_next_deferred_function_body_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
@@ -265,7 +265,7 @@ where 's: 't,
         prototype_t: &'t PrototypeT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
@@ -279,7 +279,7 @@ where 's: 't,
 {
     pub fn peek_next_deferred_function_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
@@ -294,7 +294,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
@@ -310,7 +310,7 @@ where 's: 't,
         &self,
     ) -> HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
@@ -325,7 +325,7 @@ where 's: 't,
         signature: &'t SignatureT<'s, 't>,
     ) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
@@ -340,7 +340,7 @@ where 's: 't,
         instantiation_id: IdT<'s, 't>,
     ) -> Option<&'t InstantiationBoundArgumentsT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getInstantiationBounds(
@@ -361,7 +361,7 @@ where 's: 't,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addInstantiationBounds(
@@ -497,7 +497,7 @@ where 's: 't,
         return_type_2: CoordT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
@@ -519,7 +519,7 @@ where 's: 't,
         function: &'t FunctionDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addFunction(function: FunctionDefinitionT): Unit = {
@@ -558,7 +558,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
@@ -576,10 +576,13 @@ where 's: 't,
 {
     pub fn declare_type(
         &mut self,
-        template_name: IdT<'s, 't>,
+        template_name: &'t IdT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
-    }
+        // vassert(!typeDeclaredNames.contains(templateName))
+        assert!(!self.type_declared_names.contains(&PtrKey(template_name)));
+        // typeDeclaredNames += templateName
+        self.type_declared_names.insert(PtrKey(template_name));
+    } // VI: invalid
 }
 /*
   // We can't declare the struct at the same time as we declare its mutability or environment,
@@ -598,7 +601,7 @@ where 's: 't,
         mutability: ITemplataT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareTypeMutability(
@@ -619,7 +622,7 @@ where 's: 't,
         sealed: bool,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareTypeSealed(
@@ -640,7 +643,7 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareFunctionInnerEnv(
@@ -663,7 +666,7 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareFunctionOuterEnv(
@@ -680,11 +683,18 @@ where 's: 't,
 {
     pub fn declare_type_outer_env(
         &mut self,
-        name_t: IdT<'s, 't>,
+        name_t: &'t IdT<'s, 't>,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
-    }
+        // vassert(typeDeclaredNames.contains(nameT))
+        assert!(self.type_declared_names.contains(&PtrKey(name_t)));
+        // vassert(!typeNameToOuterEnv.contains(nameT))
+        assert!(!self.type_name_to_outer_env.contains_key(&PtrKey(name_t)));
+        // vassert(nameT == env.id)
+        // (skipped — requires pattern-matching all IInDenizenEnvironmentT variants to extract id)
+        // typeNameToOuterEnv += (nameT -> env)
+        self.type_name_to_outer_env.insert(PtrKey(name_t), env);
+    } // VI: invalid
 }
 /*
   def declareTypeOuterEnv(
@@ -706,7 +716,7 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def declareTypeInnerEnv(
@@ -730,7 +740,7 @@ where 's: 't,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addStruct(structDef: StructDefinitionT): Unit = {
@@ -762,7 +772,7 @@ where 's: 't,
         interface_def: &'t InterfaceDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addInterface(interfaceDef: InterfaceDefinitionT): Unit = {
@@ -790,7 +800,7 @@ where 's: 't,
         impl_t: &'t ImplT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addImpl(impl: ImplT): Unit = {
@@ -812,7 +822,7 @@ where 's: 't,
         sub_citizen_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getParentImplsForSubCitizenTemplate(subCitizenTemplate: IdT[ICitizenTemplateNameT]): Vector[ImplT] = {
@@ -827,7 +837,7 @@ where 's: 't,
         super_interface_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
@@ -845,7 +855,7 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {
@@ -863,7 +873,7 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
@@ -881,7 +891,7 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addKindExtern(kind: KindT, packageCoord: PackageCoordinate, exportedName: StrI): Unit = {
@@ -899,7 +909,7 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
@@ -914,7 +924,7 @@ where 's: 't,
         devf: DeferredActionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
@@ -929,7 +939,7 @@ where 's: 't,
         devf: DeferredActionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {
@@ -944,7 +954,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def structDeclared(templateName: IdT[IStructTemplateNameT]): Boolean = {
@@ -973,7 +983,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
@@ -992,7 +1002,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
@@ -1018,7 +1028,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def interfaceDeclared(templateName: IdT[ITemplateNameT]): Boolean = {
@@ -1034,7 +1044,7 @@ where 's: 't,
         struct_tt: IdT<'s, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
@@ -1049,7 +1059,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
@@ -1064,7 +1074,7 @@ where 's: 't,
         interface_tt: InterfaceTT<'s, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupInterface(interfaceTT: InterfaceTT): InterfaceDefinitionT = {
@@ -1079,7 +1089,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
@@ -1094,7 +1104,7 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
@@ -1114,7 +1124,7 @@ where 's: 't,
         citizen_tt: ICitizenTT<'s, 't>,
     ) -> &'t CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
@@ -1129,7 +1139,7 @@ where 's: 't,
 {
     pub fn get_all_structs(&self) -> Vec<&'t StructDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
@@ -1139,7 +1149,7 @@ where 's: 't,
 {
     pub fn get_all_interfaces(&self) -> Vec<&'t InterfaceDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
@@ -1149,7 +1159,7 @@ where 's: 't,
 {
     pub fn get_all_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
@@ -1159,7 +1169,7 @@ where 's: 't,
 {
     pub fn get_all_impls(&self) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getAllImpls(): Iterable[ImplT] = allImpls.values
@@ -1179,7 +1189,7 @@ where 's: 't,
         sig: &'t SignatureT<'s, 't>,
     ) -> &'t FunctionEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getEnvForFunctionSignature(sig: SignatureT): FunctionEnvironmentT = {
@@ -1195,7 +1205,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
@@ -1215,7 +1225,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
@@ -1230,7 +1240,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getInnerEnvForFunction(name: IdT[INameT]): IInDenizenEnvironmentT = {
@@ -1245,7 +1255,7 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {
@@ -1260,7 +1270,7 @@ where 's: 't,
         sig: &'t SignatureT<'s, 't>,
     ) -> Option<CoordT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getReturnTypeForSignature(sig: SignatureT): Option[CoordT] = {
@@ -1281,7 +1291,7 @@ where 's: 't,
 {
     pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getKindExports: Vector[KindExportT] = {
@@ -1293,7 +1303,7 @@ where 's: 't,
 {
     pub fn get_function_exports(&self) -> Vec<&'t FunctionExportT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getFunctionExports: Vector[FunctionExportT] = {
@@ -1305,7 +1315,7 @@ where 's: 't,
 {
     pub fn get_kind_externs(&self) -> Vec<&'t KindExternT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getKindExterns: Vector[KindExternT] = {
@@ -1317,7 +1327,7 @@ where 's: 't,
 {
     pub fn get_function_externs(&self) -> Vec<&'t FunctionExternT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getFunctionExterns: Vector[FunctionExternT] = {

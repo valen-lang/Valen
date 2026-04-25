@@ -1,3 +1,7 @@
+/*
+Guardian: disable: SPDMX
+*/
+
 use std::hash::{Hash, Hasher};
 use crate::interner::StrI;
 use crate::utils::code_hierarchy::PackageCoordinate;

@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use std::marker::PhantomData;
 use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
@@ -9,13 +10,18 @@ use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
+use crate::typing::env::environment::{GlobalEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
-use crate::typing::names::names::IdT;
-use crate::typing::templata::templata::ITemplataT;
-use crate::typing::types::types::KindT;
+use crate::typing::names::names::{
+    IdT, IdValT, INameT, IFunctionTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
+};
+use crate::typing::templata::templata::{
+    ITemplataT, KindTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
+};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
-use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinateMap};
+use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
 
 /*
@@ -119,7 +125,7 @@ where 's: 't,
         x: (),
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def print(x: => Object) = {
@@ -156,7 +162,7 @@ where 's: 't,
         opts: &'ctx TypingPassOptions<'s>,
     ) -> Self {
         Compiler { scout_arena, typing_interner, keywords, opts }
-    }
+    } // VI: invalid
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -168,7 +174,7 @@ where 's: 't,
         program_a: &'s ProgramA<'s>,
     ) -> Result<(), ICompileErrorT<'s, 't>> {
         panic!("Unimplemented: Compiler::compile_program — Slab 8");
-    }
+    } // VI: invalid
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
@@ -179,7 +185,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
         panic!("Unimplemented: Compiler::drain_all_deferred — Slab 8");
-    }
+    } // VI: invalid
 }
 
 /*
@@ -846,13 +852,180 @@ where 's: 't,
 {
     pub fn evaluate<'p>(
         &self,
-        code_map: &FileCoordinateMap<'p, String>,
+        _code_map: &FileCoordinateMap<'p, String>,
         package_to_program_a: &PackageCoordinateMap<'s, ProgramA<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
+        let mut id_and_env_entry: Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
+        for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
+            let pkg_top_level_name =
+                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
+            let pkg_top_level = INameT::PackageTopLevel(pkg_top_level_name);
+            for _struct_a in program_a.structs.iter() {
+                panic!("Unimplemented: struct entries in evaluate");
+            }
+            for _interface_a in program_a.interfaces.iter() {
+                panic!("Unimplemented: interface entries in evaluate");
+            }
+            for _impl_a in program_a.impls.iter() {
+                panic!("Unimplemented: impl entries in evaluate");
+            }
+            for function_a in program_a.functions.iter() {
+                let function_template_name =
+                    self.translate_generic_function_name(function_a.name);
+                let function_name_local: INameT<'s, 't> = match function_template_name {
+                    IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+                    IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+                    IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+                    IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+                    IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+                    IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+                    IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+                    IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+                    IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+                };
+                let init_steps = [pkg_top_level];
+                let function_name_t = self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &init_steps,
+                    local_name: function_name_local,
+                });
+                id_and_env_entry.push((function_name_t, IEnvEntryT::Function(function_a)));
+            }
+        }
+
+        let pkg_top_level_for_group = INameT::PackageTopLevel(
+            self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData })
+        );
+        let mut namespace_name_to_entries: HashMap<&'t IdT<'s, 't>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> = HashMap::new();
+        for (name, env_entry) in &id_and_env_entry {
+            let package_id = self.typing_interner.intern_id(IdValT {
+                package_coord: name.package_coord,
+                init_steps: name.init_steps,
+                local_name: pkg_top_level_for_group,
+            });
+            namespace_name_to_entries
+                .entry(package_id)
+                .or_insert_with(Vec::new)
+                .push((name.local_name, *env_entry));
+        }
+        let mut namespace_name_to_templatas_vec: Vec<(&'t IdT<'s, 't>, TemplatasStoreT<'s, 't>)> = Vec::new();
+        for (package_id, entries) in namespace_name_to_entries {
+            let mut builder = TemplatasStoreBuilder::new(package_id);
+            for (local_name, env_entry) in entries {
+                builder.name_to_entry.push((local_name, env_entry));
+            }
+            namespace_name_to_templatas_vec.push((package_id, builder.build_in(self.typing_interner)));
+        }
+
+        let builtin_coord: &'s PackageCoordinate<'s> =
+            self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
+        let builtin_id = self.typing_interner.intern_id(IdValT {
+            package_coord: builtin_coord,
+            init_steps: &[],
+            local_name: INameT::PackageTopLevel(
+                self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData })
+            ),
+        });
+        let mut builtins_builder = TemplatasStoreBuilder::new(builtin_id);
+        let primitives: &[(StrI<'s>, KindT<'s, 't>)] = &[
+            (self.keywords.int, KindT::Int(IntT::I32)),
+            (self.keywords.i64, KindT::Int(IntT::I64)),
+            (self.keywords.bool, KindT::Bool(BoolT)),
+            (self.keywords.float, KindT::Float(FloatT)),
+            (self.keywords.__never, KindT::Never(NeverT { from_break: false })),
+            (self.keywords.str, KindT::Str(StrT)),
+            (self.keywords.void, KindT::Void(VoidT)),
+        ];
+        for (human_name, kind) in primitives {
+            let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
+                PrimitiveNameT { human_name: *human_name, _phantom: PhantomData }
+            ));
+            let kind_t = ITemplataT::Kind(self.typing_interner.intern_kind_templata(KindTemplataT { kind: *kind }));
+            builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(kind_t)));
+        }
+        {
+            let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
+                PrimitiveNameT { human_name: self.keywords.array, _phantom: PhantomData }
+            ));
+            builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(
+                ITemplataT::RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT { _phantom: PhantomData })
+            )));
+        }
+        {
+            let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
+                PrimitiveNameT { human_name: self.keywords.static_array, _phantom: PhantomData }
+            ));
+            builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(
+                ITemplataT::StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT { _phantom: PhantomData })
+            )));
+        }
+        let builtins = builtins_builder.build_in(self.typing_interner);
+
+        let name_to_top_level_environment =
+            self.typing_interner.alloc_slice_from_vec(namespace_name_to_templatas_vec);
+        let global_env: &'t GlobalEnvironmentT<'s, 't> = self.typing_interner.alloc(GlobalEnvironmentT {
+            name_to_top_level_environment,
+            builtins,
+        });
+
+        let mut coutputs = CompilerOutputs::new();
+
+        self.compile_static_sized_array(global_env, &mut coutputs);
+        self.compile_runtime_sized_array(global_env, &mut coutputs);
+
+        // Indexing phase
+        for (_package_id, templatas) in global_env.name_to_top_level_environment {
+            for (_name, entry) in templatas.name_to_entry {
+                match entry {
+                    IEnvEntryT::Struct(_) => panic!("Unimplemented: struct precompile in evaluate"),
+                    IEnvEntryT::Interface(_) => panic!("Unimplemented: interface precompile in evaluate"),
+                    _ => {}
+                }
+            }
+        }
+
+        // Compiling phase
+        for (_package_id, templatas) in global_env.name_to_top_level_environment {
+            for (_name, entry) in templatas.name_to_entry {
+                match entry {
+                    IEnvEntryT::Struct(_) => panic!("Unimplemented: struct compile in evaluate"),
+                    IEnvEntryT::Interface(_) => panic!("Unimplemented: interface compile in evaluate"),
+                    _ => {}
+                }
+            }
+        }
+
+        // Impl compile phase
+        for (_package_id, templatas) in global_env.name_to_top_level_environment {
+            for (_name, entry) in templatas.name_to_entry {
+                match entry {
+                    IEnvEntryT::Impl(_) => panic!("Unimplemented: impl compile in evaluate"),
+                    _ => {}
+                }
+            }
+        }
+
+        // Function compile phase
+        for (package_id, templatas) in global_env.name_to_top_level_environment {
+            if !package_id.init_steps.is_empty() {
+                continue;
+            }
+            for (_name, entry) in templatas.name_to_entry {
+                match entry {
+                    IEnvEntryT::Function(_function_a) => {
+                        panic!("Unimplemented: function compile in evaluate");
+                    }
+                    _ => {}
+                }
+            }
+        }
+
+        panic!("Unimplemented: evaluate — export phase and beyond");
+    } // VI: invalid
 }
 /*
+Guardian: temp-disable: TUCMPX — The `_ => {}` arms correspond exactly to Scala's `case _ =>` (empty wildcard arms in match expressions that are intentionally no-ops, not unimplemented code). For example, in the indexing phase, FunctionEnvEntry and other non-struct/interface entries are correctly handled by doing nothing. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776983820959/hook/evaluate--853.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
+Guardian: temp-disable: SPDMX — The 9-arm match converting IFunctionTemplateNameT to INameT is the Rust equivalent of Scala's implicit subtype relationship (IFunctionTemplateNameT extends INameT); it's unavoidable boilerplate. The IdValT construction is the Rust equivalent of Scala's packageName.addStep(...) — addStep is not yet implemented in Rust names.rs. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776983820959/hook/evaluate--853.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluate(
       codeMap: FileCoordinateMap[String],
       packageToProgramA: PackageCoordinateMap[ProgramA]):
@@ -1555,7 +1728,7 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   private def preprocessStruct(
@@ -1583,7 +1756,7 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   private def preprocessInterface(
@@ -1617,7 +1790,7 @@ where 's: 't,
         attributes: &[&'s ICitizenAttributeS<'s>],
     ) -> Vec<T> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   private def determineMacrosToCall[T](
@@ -1654,7 +1827,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
@@ -1762,7 +1935,7 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
@@ -1787,7 +1960,7 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
@@ -1804,7 +1977,7 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   // Returns whether we should eagerly compile this and anything it depends on.
@@ -1824,7 +1997,7 @@ where 's: 't,
         exprs: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   // Flattens any nested ConsecutorTEs
@@ -1862,7 +2035,7 @@ where 's: 't,
         kind: KindT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def isPrimitive(kind: KindT): Boolean = {
@@ -1887,7 +2060,7 @@ where 's: 't,
         concrete_values2: &[KindT<'s, 't>],
     ) -> Vec<ITemplataT<'s, 't>> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):
@@ -1905,7 +2078,7 @@ where 's: 't,
         concrete_value2: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):

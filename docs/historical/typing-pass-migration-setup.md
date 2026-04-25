@@ -1,4 +1,12 @@
-# Typing Pass Migration Design
+# DO NOT FOLLOW — Folded Into TL-HANDOFF.md
+
+> **This document's still-correct content has been folded into `TL-HANDOFF.md` at the repository root.** TL-HANDOFF is now the single authoritative source for the typing-pass design and operating spec.
+>
+> This file is preserved for audit-trail (it was the design-of-record from 2026-04-14 to 2026-04-24, with TL-HANDOFF acting as the override layer until the merge). Reading it directly is no longer necessary; the TL-HANDOFF version has all corrections applied (Slab-4 lifetimes, post-Slab-9 status, the phantom-`+T`-erasure principle for monomorphic types) integrated into a single coherent doc.
+
+---
+
+# Typing Pass Migration Design (folded into TL-HANDOFF.md)
 
 This document describes the architectural decisions for migrating `src/typing/` from Scala to Rust.
 

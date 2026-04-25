@@ -1,4 +1,14 @@
-# Typing Pass Migration Design (v2)
+# DO NOT FOLLOW — Historical, Obsolete (v2)
+
+> **This document is historical and obsolete.** It described a four-arena model (`'p, 's, 'e, 't`) with a separate env arena, generic `IdT<'t, T>`, interned `KindT` / `ITemplataT`, env-arena allocation, and IDs-not-refs in heavy templatas. **Every one of those decisions was reversed during Slabs 2–4.**
+>
+> The current authoritative design lives in **`TL-HANDOFF.md` at the repository root**. Specifically: three arenas (`'p, 's, 't`) with envs in `'t`, monomorphic `IdT<'s, 't>`, inline-owned `KindT` / `ITemplataT` wrappers over interned payloads, and heavy templatas holding direct scout refs. See also `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` and `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
+>
+> Preserved only for audit-trail. **Do not use this doc to guide implementation work — it will lead you in the wrong direction on every major question.**
+
+---
+
+# Typing Pass Migration Design (v2, obsolete)
 
 This document describes the architectural decisions for migrating `src/typing/` from Scala to Rust. It supersedes `typing-pass-design.md` (v1), which was written before the per-pass-arena split (commit `10082060`) and contains outdated lifetime model details.
 

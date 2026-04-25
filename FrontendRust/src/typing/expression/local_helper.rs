@@ -387,7 +387,7 @@ where 's: 't,
         local_a: &'s LocalS<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   // See ClosureTests for requirements here
@@ -411,7 +411,7 @@ where 's: 't,
         local_a: &'s LocalS<'s>,
     ) -> VariabilityT {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def determineLocalVariability(localA: LocalS): VariabilityT = {

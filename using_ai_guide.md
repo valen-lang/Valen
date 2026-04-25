@@ -38,7 +38,7 @@ Type these directly in Claude Code.
 
 | Scenario | Skill | Under the hood |
 |---|---|---|
-| Guardian hook just blocked your commit and you want to fix it now | `/guardian-diagnose` | Reads `guardian-logs/`, calls `post-hook-allow` / `post-hook-deny`, then runs inline curate (`check-direct`, `cargo nextest run`) |
+| Guardian hook just blocked your commit and you want to fix it now | `/guardian-diagnose` | Reads `guardian-logs/`, calls `expect-allow` / `expect-deny`, then runs inline curate (`check-direct`, `cargo nextest run`) |
 | You're reviewing code and spot a violation Guardian missed | `/guardian-teach` | Calls `guardian contextified-diff`, `guardian check`, creates test case in `tests/` |
 | You applied a Guardian review and marked false positives with `//f` | `/guardian-post-review` | Calls `guardian feedback-line` for each annotation |
 | Weekly triage of accumulated disagreements | `/guardian-curate` | Calls `guardian check`, `cargo test`, moves cases between `disagreements/` and `tests/` |

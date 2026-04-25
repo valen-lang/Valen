@@ -48,7 +48,7 @@ where 's: 't,
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
         panic!("Unimplemented: generate_function_body_ssa_drop_into");
-    }
+    } // VI: invalid
 
 /*
   def generateFunctionBody(

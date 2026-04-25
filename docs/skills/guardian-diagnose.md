@@ -2,7 +2,7 @@
 name: guardian-diagnose
 description: "Diagnose and resolve Guardian shield failures or unwanted prompts from hook output. Reads logs, classifies issues (violations, false positives, pipeline bugs, missing auto-allows), creates test cases, fixes shields/companion programs, and validates — all in one session."
 argument-hint: "[paste Guardian hook stdout, or provide log dir path]"
-allowed-tools: Bash(guardian post-hook-allow *), Bash(guardian post-hook-deny *), Bash(guardian check-direct *), Bash(guardian check *), Bash(cargo build *), Bash(cargo nextest run *), Bash(ls *), Read, Grep, Glob, Edit, Write
+allowed-tools: Bash(guardian expect-allow *), Bash(guardian expect-deny *), Bash(guardian check-direct *), Bash(guardian check *), Bash(cargo build *), Bash(cargo nextest run *), Bash(ls *), Read, Grep, Glob, Edit, Write
 read-when: Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.
 mention-in:
   - CLAUDE.md
@@ -99,11 +99,13 @@ Read the actual shield markdown file. Pay attention to:
 
 ## Phase 2: Triage with Human
 
-Present each classification to the human. Human confirms or overrides:
+Present each classification to the human, **propose** the fix you intend to make (which shield text to add/change, which exception to add, which companion program logic to update), and **wait for explicit approval before making any changes**. Do not proceed to Phases 3–6 until the human confirms.
+
+Human confirms or overrides:
 - **True violation** → skip (human fixes code)
-- **LLM false positive** → proceed with post-hook-allow
+- **LLM false positive** → proceed with expect-allow
 - **Pipeline bug** → report bug location, still create test case if shield prompt can be improved
-- **Missing denial** (human spotted something the hook missed) → proceed with post-hook-deny
+- **Missing denial** (human spotted something the hook missed) → proceed with expect-deny
 - **Missing auto-allow** → proceed to Phase 5 (update shield rules and companion program)
 
 ---
@@ -112,17 +114,17 @@ Present each classification to the human. Human confirms or overrides:
 
 For each false positive:
 ```bash
-guardian post-hook-allow --log-dir <def-level-dir> --shield <CODE>
+guardian expect-allow --log-dir <def-level-dir> --shield <CODE>
 ```
 
 For each missing denial:
 ```bash
-guardian post-hook-deny --log-dir <hook-dir> --shield <CODE> [--def <name>]
+guardian expect-deny --log-dir <hook-dir> --shield <CODE> [--def <name>]
 ```
 
 These create:
-- `post-hook-allow` → `NNN.diff` + `NNN.expected.json` (empty violations) in `cases/need-shield-amendment/`
-- `post-hook-deny` → `NNN.diff` + `NNN.expected.json` (with violations) in `tests/`
+- `expect-allow` → `NNN.diff` + `NNN.expected.json` (empty violations) in `cases/need-shield-amendment/`
+- `expect-deny` → `NNN.diff` + `NNN.expected.json` (with violations) in `tests/`
 
 ---
 
@@ -134,8 +136,8 @@ For shields with new `cases/need-shield-amendment/` cases (false positives):
 1. Reproduce the problem — run `check-direct` against the case and confirm it currently gives the wrong verdict:
    ```bash
    guardian check-direct --input <NNN.diff> --referenced-defs <NNN.referenced_defs.txt> \
-     --file-path <file> --check <shield> --cache-dir /tmp/cache --backend opencode \
-     --log-dir /tmp/logs --format human --log-level overview
+     --file-path <file> --config <guardian.toml> --mode <mode> --check-filter <SHIELD_CODE> \
+     --cache-dir /tmp/cache --log-dir /tmp/logs --format json --log-level overview
    ```
 2. Run all existing tests for the shield to confirm they pass (baseline is green):
    ```bash

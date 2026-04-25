@@ -498,54 +498,54 @@ where 's: 't,
 // -- From bridges: concrete payload → each wrapper enum it belongs to --------
 
 impl<'s, 't> From<&'t StructTT<'s, 't>> for ICitizenTT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { ICitizenTT::Struct(x) }
+  fn from(x: &'t StructTT<'s, 't>) -> Self { ICitizenTT::Struct(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t StructTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { ISubKindTT::Struct(x) }
+  fn from(x: &'t StructTT<'s, 't>) -> Self { ISubKindTT::Struct(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t StructTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t StructTT<'s, 't>) -> Self { KindT::Struct(x) }
+  fn from(x: &'t StructTT<'s, 't>) -> Self { KindT::Struct(x) } // VI: invalid
 }
 
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ICitizenTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ICitizenTT::Interface(x) }
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ICitizenTT::Interface(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISubKindTT::Interface(x) }
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISubKindTT::Interface(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for ISuperKindTT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISuperKindTT::Interface(x) }
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { ISuperKindTT::Interface(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { KindT::Interface(x) }
+  fn from(x: &'t InterfaceTT<'s, 't>) -> Self { KindT::Interface(x) } // VI: invalid
 }
 
 impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { ISubKindTT::StaticSizedArray(x) }
+  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { ISubKindTT::StaticSizedArray(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { KindT::StaticSizedArray(x) }
+  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { KindT::StaticSizedArray(x) } // VI: invalid
 }
 
 impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { ISubKindTT::RuntimeSizedArray(x) }
+  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { ISubKindTT::RuntimeSizedArray(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { KindT::RuntimeSizedArray(x) }
+  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { KindT::RuntimeSizedArray(x) } // VI: invalid
 }
 
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISubKindTT::KindPlaceholder(x) }
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISubKindTT::KindPlaceholder(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for ISuperKindTT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISuperKindTT::KindPlaceholder(x) }
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { ISuperKindTT::KindPlaceholder(x) } // VI: invalid
 }
 impl<'s, 't> From<&'t KindPlaceholderT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { KindT::KindPlaceholder(x) }
+  fn from(x: &'t KindPlaceholderT<'s, 't>) -> Self { KindT::KindPlaceholder(x) } // VI: invalid
 }
 
 impl<'s, 't> From<&'t OverloadSetT<'s, 't>> for KindT<'s, 't> {
-  fn from(x: &'t OverloadSetT<'s, 't>) -> Self { KindT::OverloadSet(x) }
+  fn from(x: &'t OverloadSetT<'s, 't>) -> Self { KindT::OverloadSet(x) } // VI: invalid
 }
 
 // -- From bridges: narrow sub-enum → wider sub-enum / KindT ------------------
@@ -556,7 +556,7 @@ impl<'s, 't> From<ICitizenTT<'s, 't>> for ISubKindTT<'s, 't> {
       ICitizenTT::Struct(x) => ISubKindTT::Struct(x),
       ICitizenTT::Interface(x) => ISubKindTT::Interface(x),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<ICitizenTT<'s, 't>> for KindT<'s, 't> {
   fn from(c: ICitizenTT<'s, 't>) -> Self {
@@ -564,7 +564,7 @@ impl<'s, 't> From<ICitizenTT<'s, 't>> for KindT<'s, 't> {
       ICitizenTT::Struct(x) => KindT::Struct(x),
       ICitizenTT::Interface(x) => KindT::Interface(x),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
   fn from(s: ISubKindTT<'s, 't>) -> Self {
@@ -575,7 +575,7 @@ impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
       ISubKindTT::RuntimeSizedArray(x) => KindT::RuntimeSizedArray(x),
       ISubKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> From<ISuperKindTT<'s, 't>> for KindT<'s, 't> {
   fn from(s: ISuperKindTT<'s, 't>) -> Self {
@@ -583,7 +583,7 @@ impl<'s, 't> From<ISuperKindTT<'s, 't>> for KindT<'s, 't> {
       ISuperKindTT::Interface(x) => KindT::Interface(x),
       ISuperKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
     }
-  }
+  } // VI: invalid
 }
 
 // -- TryFrom bridges: wider → narrower ---------------------------------------
@@ -596,7 +596,7 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ICitizenTT<'s, 't> {
       KindT::Interface(x) => Ok(ICitizenTT::Interface(x)),
       _ => Err(()),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
   type Error = ();
@@ -609,7 +609,7 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
       KindT::KindPlaceholder(x) => Ok(ISubKindTT::KindPlaceholder(x)),
       _ => Err(()),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<KindT<'s, 't>> for ISuperKindTT<'s, 't> {
   type Error = ();
@@ -619,7 +619,7 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ISuperKindTT<'s, 't> {
       KindT::KindPlaceholder(x) => Ok(ISuperKindTT::KindPlaceholder(x)),
       _ => Err(()),
     }
-  }
+  } // VI: invalid
 }
 impl<'s, 't> TryFrom<ISubKindTT<'s, 't>> for ICitizenTT<'s, 't> {
   type Error = ();
@@ -629,5 +629,5 @@ impl<'s, 't> TryFrom<ISubKindTT<'s, 't>> for ICitizenTT<'s, 't> {
       ISubKindTT::Interface(x) => Ok(ICitizenTT::Interface(x)),
       _ => Err(()),
     }
-  }
+  } // VI: invalid
 }

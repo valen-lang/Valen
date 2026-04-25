@@ -1,4 +1,14 @@
-# Typing Pass Migration Design
+# DO NOT FOLLOW — Historical, Obsolete (v1)
+
+> **This document is historical and obsolete.** It was the first-cut typing-pass design (the `'a` interner arena + `'t` typing arena, two-lifetime model) and was superseded by v2 (Apr 14, 2026), then by `typing-pass-migration-setup.md` (Apr 20, 2026), and finally by the current authoritative design in **`TL-HANDOFF.md` at the repository root**.
+>
+> Its arena model, lifetime conventions, type families, and slab plan are all wrong relative to the shipping code. Do not consult this doc for current architecture.
+>
+> Preserved only for audit-trail of how the design evolved.
+
+---
+
+# Typing Pass Migration Design (v1, obsolete)
 
 This document describes the architectural decisions for migrating `src/typing/` from Scala to Rust. It was produced by analyzing the full Scala codebase (in block comments) and identifying patterns that need special treatment in Rust.
 

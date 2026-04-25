@@ -54,7 +54,7 @@ macro_rules! impl_intern_name_wrapper_simple {
                 INameT::$variant(r) => r,
                 _ => unreachable!(),
             }
-        }
+        } // VI: invalid
     };
 }
 
@@ -65,7 +65,7 @@ macro_rules! impl_intern_name_wrapper_transient {
                 INameT::$variant(r) => r,
                 _ => unreachable!(),
             }
-        }
+        } // VI: invalid
     };
 }
 
@@ -76,7 +76,7 @@ macro_rules! impl_intern_kind_wrapper {
                 InternedKindPayloadT::$variant(r) => r,
                 _ => unreachable!(),
             }
-        }
+        } // VI: invalid
     };
 }
 
@@ -87,7 +87,7 @@ macro_rules! impl_intern_templata_wrapper_simple {
                 InternedTemplataPayloadT::$variant(r) => r,
                 _ => unreachable!(),
             }
-        }
+        } // VI: invalid
     };
 }
 
@@ -106,17 +106,17 @@ where 's: 't,
                 templata_payload_val_to_ref: hashbrown::HashMap::new(),
             }),
         }
-    }
+    } // VI: invalid
 
     // --- Arena access ---
-    pub fn bump(&self) -> &'t Bump { self.bump }
-    pub fn alloc<T>(&self, val: T) -> &'t mut T { self.bump.alloc(val) }
+    pub fn bump(&self) -> &'t Bump { self.bump } // VI: invalid
+    pub fn alloc<T>(&self, val: T) -> &'t mut T { self.bump.alloc(val) } // VI: invalid
     pub fn alloc_slice_copy<T: Copy>(&self, src: &[T]) -> &'t [T] {
         self.bump.alloc_slice_copy(src)
-    }
+    } // VI: invalid
     pub fn alloc_slice_from_vec<T>(&self, vec: Vec<T>) -> &'t [T] {
         self.bump.alloc_slice_fill_iter(vec.into_iter())
-    }
+    } // VI: invalid
 
     // =========================================================================
     // Family 1: Name interning
@@ -134,7 +134,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.name_val_to_ref.insert(stored_key, canonical);
         canonical
-    }
+    } // VI: invalid
 
     fn alloc_name_canonical<'tmp>(
         &self,
@@ -299,7 +299,7 @@ where 's: 't,
             V::ResolvingEnv(p) => (V::ResolvingEnv(p), T::ResolvingEnv(self.bump.alloc(p))),
             V::CallEnv(p) => (V::CallEnv(p), T::CallEnv(self.bump.alloc(p))),
         }
-    }
+    } // VI: invalid
 
     // =========================================================================
     // Family 2-4: Id / Prototype / Signature (singletons, no dispatch needed)
@@ -327,7 +327,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.id_val_to_ref.insert(stored_key, canonical);
         canonical
-    }
+    } // VI: invalid
 
     pub fn intern_prototype<'tmp>(&self, val: PrototypeValT<'s, 't, 'tmp>) -> &'t PrototypeT<'s, 't> {
         {
@@ -353,7 +353,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.prototype_val_to_ref.insert(stored_key, canonical);
         canonical
-    }
+    } // VI: invalid
 
     pub fn intern_signature<'tmp>(&self, val: SignatureValT<'s, 't, 'tmp>) -> &'t SignatureT<'s, 't> {
         {
@@ -375,7 +375,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.signature_val_to_ref.insert(stored_key, canonical);
         canonical
-    }
+    } // VI: invalid
 
     // =========================================================================
     // Family 5: Kind-payload interning (all 6 variants simple)
@@ -404,7 +404,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.kind_payload_val_to_ref.insert(val, canonical);
         canonical
-    }
+    } // VI: invalid
 
     // =========================================================================
     // Family 6: Interned-templata-payload interning (5 simple + 1 transient)
@@ -439,7 +439,7 @@ where 's: 't,
         let mut inner = self.inner.borrow_mut();
         inner.templata_payload_val_to_ref.insert(stored_key, canonical);
         canonical
-    }
+    } // VI: invalid
 
     // =========================================================================
     // ~75 per-concrete wrappers (dispatch into family methods, unwrap).
@@ -552,7 +552,7 @@ where 's: 't,
             InternedTemplataPayloadT::CoordList(r) => r,
             _ => unreachable!(),
         }
-    }
+    } // VI: invalid
 }
 
 // KindT and ITemplataT are inline-owned (not arena-interned), so they have no

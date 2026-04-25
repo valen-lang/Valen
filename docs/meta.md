@@ -200,7 +200,7 @@ Known `g_` fields:
 | Field | Purpose |
 |---|---|
 | `g_model` | LLM tier (`SimpleSmall`, `AgenticSmall`, `AgenticSmart`) |
-| `g_context` | What Guardian passes to the LLM (`diff`, `definition`, `command`) |
+| `g_context` | What Guardian passes to the LLM (`diff`, `definition`, `definition-with-refs`, `command`) |
 | `g_program` | Companion Rust program name (for Rust-mode shields) |
 | `g_defs` | Definition kinds to filter on (`fn`, `struct`, `enum`, …) |
 | `g_when_mentioned` | Pattern expression; shield fires only when matched |

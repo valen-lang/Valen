@@ -28,6 +28,13 @@ import org.scalatest._
 import scala.collection.immutable.List
 import scala.io.Source
 */
+use super::compiler_test_compilation::compiler_test_compilation;
+use bumpalo::Bump;
+use crate::keywords::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
+use std::collections::HashMap;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -51,7 +58,23 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 // mig: fn simple_program_returning_an_int_explicit
 #[test]
 fn simple_program_returning_an_int_explicit() {
-    panic!("Unmigrated test: simple_program_returning_an_int_explicit");
+    // We had a bug once looking up "int" in the environment, hence this test.
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "func main() int { return 3; }";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let _main = coutputs.lookup_function_by_human_name("main");
+    panic!("Not yet implemented: simple_program_returning_an_int_explicit assertions");
 }
 /*
   test("Simple program returning an int, explicit") {

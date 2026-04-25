@@ -537,15 +537,15 @@ where 's: 't,
     ) -> MutabilityT {
         panic!("Unimplemented: Slab 15 — body migration");
     }
+    /*
+      def getCompoundTypeMutability(memberTypes2: Vector[CoordT])
+      : MutabilityT = {
+        val membersOwnerships = memberTypes2.map(_.ownership)
+        val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
+        if (allMembersImmutable) ImmutableT else MutableT
+      }
+    */
 }
-/*
-  def getCompoundTypeMutability(memberTypes2: Vector[CoordT])
-  : MutabilityT = {
-    val membersOwnerships = memberTypes2.map(_.ownership)
-    val allMembersImmutable = membersOwnerships.isEmpty || membersOwnerships.toSet == Set(ShareT)
-    if (allMembersImmutable) ImmutableT else MutableT
-  }
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -559,7 +559,7 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    }
+    } // VI: invalid
 }
 /*
   def getMutability(
