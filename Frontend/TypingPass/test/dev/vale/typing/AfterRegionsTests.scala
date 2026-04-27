@@ -173,28 +173,28 @@ class AfterRegionsTests extends FunSuite with Matchers {
   }
 
   test("Can turn a borrow coord into an owning coord") {
-    vimpl()
-    // not sure this test ever really tested what it was supposed to.
-    // perhaps we wanted a &SomeStruct() instead?
-
     val compile = CompilerTestCompilation.test(
       """
-        |
+        |import v.builtins.panicutils.*;
         |
         |struct SomeStruct { }
         |
-        |func bork<T>(x T) ^T {
-        |  return SomeStruct();
+        |func inner<T>() T {
+        |  panic("never");
+        |}
+        |
+        |func bork() ^&SomeStruct {
+        |  return inner<^&SomeStruct>();
         |}
         |
         |exported func main() {
-        |  bork(SomeStruct());
+        |  bork();
         |}
         |""".stripMargin
     )
     val coutputs = compile.expectCompilerOutputs()
-    coutputs.lookupFunction("bork").header.id.localName.templateArgs.last match {
-      case CoordTemplataT(CoordT(OwnT, _, _)) =>
+    coutputs.lookupFunction("bork").header.returnType match {
+      case CoordT(OwnT, _, StructTT(IdT(_, _, StructNameT(StructTemplateNameT(StrI("SomeStruct")), _)))) =>
     }
   }
 
