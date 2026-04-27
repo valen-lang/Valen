@@ -113,6 +113,38 @@ class AfterRegionsTests extends FunSuite with Matchers {
 //    }
 //  }
 
+  ignore("Tuple with all imm fields is imm") {
+    // Aspirational. The Builtins ship Tup2<T0, T1> as unconditionally `mut` (see
+    // Builtins/src/dev/vale/resources/tup2.vale). A tuple constructed from imm-able
+    // primitives like `(true, 42)` therefore produces a `mut` Tup2<bool, int>. To
+    // make this test pass, one of:
+    //   (a) Tup2 (and Tup3, Tup4...) gain conditional-imm declarations — `imm if all
+    //       T0..Tn are imm`, paralleling how Tup0 is unconditionally `imm`.
+    //   (b) The compiler auto-promotes a mut tuple struct to imm at instantiation time
+    //       when every field-type templata is imm-able.
+    //
+    // History: variadic `Tup<T RefList>` (pre-Sept-2022) may have had this property;
+    // commit c1f24496 ("Found the Milano case, attempting to fix") replaced it with
+    // hand-written mut Tup2/Tup3, dropping any imm inference. See Family 4.1 in
+    // quest.md.
+    val compile = CompilerTestCompilation.test(
+      """
+        |import v.builtins.tup2.*;
+        |import v.builtins.drop.*;
+        |
+        |exported func main() int {
+        |  t = (true, 42);
+        |  return t.1;
+        |}
+        |""".stripMargin
+    )
+    val coutputs = compile.expectCompilerOutputs()
+
+    vassertOne(coutputs.structs.collectFirst({
+      case sd @ StructDefinitionT(simpleNameT("Tup2"), _, _, _, MutabilityTemplataT(ImmutableT), _, _, _) => sd
+    }))
+  }
+
   test("Can destructure and assemble tuple") {
     val compile = CompilerTestCompilation.test(
       """

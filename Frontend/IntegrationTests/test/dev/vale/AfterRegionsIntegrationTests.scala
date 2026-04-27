@@ -70,7 +70,6 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
   }
 
   test("imm tuple access") {
-    vfail() // these tuples are actually mutable
     val compile = RunCompilation.test(Tests.loadExpected("programs/tuples/immtupleaccess.vale"))
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
