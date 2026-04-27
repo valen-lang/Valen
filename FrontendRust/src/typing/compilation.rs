@@ -86,10 +86,6 @@ class TypingPassCompilation(
   packagesToBuild: Vector[PackageCoordinate],
   packageToContentsResolver: IPackageResolver[Map[String, String]],
   options: TypingPassOptions = TypingPassOptions()) {
-  var higherTypingCompilation =
-    new HigherTypingCompilation(
-      options.globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
-  var hinputsCache: Option[HinputsT] = None
 */
 impl<'s, 'ctx, 't, 'p> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
@@ -132,7 +128,13 @@ where 's: 't,
       options: typing_options,
       typing_interner,
     }
-  } // VI: invalid
+  }
+  /*
+    var higherTypingCompilation =
+      new HigherTypingCompilation(
+        options.globalOptions, interner, keywords, packagesToBuild, packageToContentsResolver)
+    var hinputsCache: Option[HinputsT] = None
+  */
 
 pub fn get_code_map(&mut self) -> Result<FileCoordinateMap<'p, String>, FailedParse<'p>> {
   self.higher_typing_compilation.get_code_map()
@@ -165,27 +167,6 @@ pub fn get_astrouts(&mut self) -> Result<(), String> {
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = higherTypingCompilation.getAstrouts()
 */
 pub fn get_compiler_outputs(&mut self) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-/*
-  def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = {
-    hinputsCache match {
-      case Some(coutputs) => Ok(coutputs)
-      case None => {
-        val compiler =
-          new Compiler(
-            options,
-            interner,
-            keywords)
-        compiler.evaluate(getCodeMap().getOrDie(), higherTypingCompilation.expectAstrouts()) match {
-          case Err(e) => Err(e)
-          case Ok(hinputs) => {
-            hinputsCache = Some(hinputs)
-            Ok(hinputs)
-          }
-        }
-      }
-    }
-  }
-*/
   match self.hinputs_cache {
     Some(_coutputs) => panic!("not yet: return cached hinputs"),
     None => {
@@ -198,7 +179,28 @@ pub fn get_compiler_outputs(&mut self) -> Result<HinputsT<'s, 't>, ICompileError
       }
     }
   }
-} // VI: invalid
+}
+  /*
+    def getCompilerOutputs(): Result[HinputsT, ICompileErrorT] = {
+      hinputsCache match {
+        case Some(coutputs) => Ok(coutputs)
+        case None => {
+          val compiler =
+            new Compiler(
+              options,
+              interner,
+              keywords)
+          compiler.evaluate(getCodeMap().getOrDie(), higherTypingCompilation.expectAstrouts()) match {
+            case Err(e) => Err(e)
+            case Ok(hinputs) => {
+              hinputsCache = Some(hinputs)
+              Ok(hinputs)
+            }
+          }
+        }
+      }
+    }
+  */
 pub fn expect_compiler_outputs(&mut self) -> HinputsT<'s, 't> {
 /*
   def expectCompilerOutputs(): HinputsT = {
@@ -228,5 +230,7 @@ pub fn expect_compiler_outputs(&mut self) -> HinputsT<'s, 't> {
 */
     Ok(x) => x,
   }
-} // VI: invalid
+}
+  /*
+  */
 }

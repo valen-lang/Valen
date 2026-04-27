@@ -464,7 +464,6 @@ fn test_infer_pack_from_empty_result() {
     );
 }
 /*
-Guardian: temp-disable: NRAFX — The .or() pattern is pre-existing test infrastructure code, not introduced by this edit. My edit only changes Box::new to arena alloc for ITemplataType Copy migration. — FrontendRust/guardian-logs/request-1774923341941/hook/test_infer_pack_from_empty_result--441.0.NeverRecoverAlwaysFail-NRAFX.NeverRecoverAlwaysFail-NRAFX.verdict.md
   test("Test infer Pack from empty result") {
     val compilation =
       HigherTypingTestCompilation.test(

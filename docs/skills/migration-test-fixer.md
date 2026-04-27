@@ -3,8 +3,6 @@ name: migration-test-fixer
 description: Migrate Scala code to Rust verbatim until a given test passes
 ---
 
-You were pointed at a Rust test that is currently failing.
-
 Here's what I want you to do:
 
  1. First, look at these files:
@@ -54,8 +52,11 @@ Here's what I want you to do:
  8. Run the test again.
     * If it passes, stop here, you're done.
     * If it fails:
-       * If this is at least the fifth failure in a row, please pause and ask me for help.
+       * If this is at least the fifth failure in a row with no progress, please pause and ask me for help.
        * If this isn't the fifth failure in a row, go to step 4.
 
 
-Note: Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.
+Notes:
+
+ * **temp-disable:** Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.
+ * **Scaffolding gap escalation:** If you need to call a method that doesn't exist yet on a Rust enum, but the Scala trait *does* have the corresponding `def` (e.g. `parentEnv.globalEnv` where `def globalEnv` exists on the Scala trait but no `fn global_env()` exists on the Rust enum) — this is a scaffolding gap from the slice pipeline. **Do NOT add the method yourself** (Guardian NNDX will rightly block you) and **do NOT temp-disable NNDX**. Instead, STOP and escalate: report what method is missing, which Scala trait defines it, and which Rust enum needs it. The TL will add it.

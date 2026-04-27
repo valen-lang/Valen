@@ -1,8 +1,10 @@
+use std::collections::{HashMap, HashSet};
 use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
 use crate::typing::compilation::TypingPassOptions;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::infer_compiler::{InitialKnown, InitialSend};
+use crate::typing::infer_compiler::{include_rule_in_definition_solve, InitialKnown, InitialSend, InferEnv};
+use crate::postparsing::itemplatatype::ITemplataType;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::ast::*;
@@ -382,9 +384,17 @@ where 's: 't,
 {
     pub fn check_closure_concerns_handled(
         &self,
-        near_env: &BuildingFunctionEnvironmentWithClosuredsT,
+        near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
     ) {
-        panic!("Unimplemented: check_closure_concerns_handled");
+        let function = near_env.function;
+        match &function.body {
+            IBodyS::CodeBody(code_body) => {
+                for _name in code_body.body.closured_names.iter() {
+                    panic!("Unimplemented: check_closure_concerns_handled — closured name assertion");
+                }
+            }
+            _ => {}
+        }
     }
 
 /*
@@ -715,11 +725,101 @@ where 's: 't,
     pub fn evaluate_generic_function_from_non_call_solving(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-    ) -> FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: evaluate_generic_function_from_non_call");
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        let function = near_env.function;
+
+        let mut range: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
+        range.push(function.range);
+        range.extend_from_slice(parent_ranges);
+        self.check_closure_concerns_handled(near_env);
+
+        let function_template_name = self.translate_generic_function_name(function.name);
+        let function_name_local: INameT<'s, 't> = match function_template_name {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+            IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+            IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+            IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        };
+        let _function_template_id = near_env.parent_env.id().add_step(self.typing_interner, function_name_local);
+
+        let definition_rules: Vec<&'s IRulexSR<'s>> = function.rules.iter()
+            .filter(|r| include_rule_in_definition_solve(*r))
+            .collect();
+
+        let mut seen = HashSet::new();
+        let mut param_and_return_runes: Vec<IRuneS<'s>> = Vec::new();
+        for param in function.params.iter() {
+            if let Some(coord_rune) = param.pattern.coord_rune {
+                if seen.insert(coord_rune.rune) {
+                    param_and_return_runes.push(coord_rune.rune);
+                }
+            }
+        }
+        if let Some(ret_coord_rune) = function.maybe_ret_coord_rune {
+            if seen.insert(ret_coord_rune.rune) {
+                param_and_return_runes.push(ret_coord_rune.rune);
+            }
+        }
+
+        let parent_ranges_alloc = self.typing_interner.alloc_slice_from_vec(parent_ranges.to_vec());
+        let near_env_as_in_denizen = self.typing_interner.alloc(
+            IInDenizenEnvironmentT::BuildingWithClosureds(near_env));
+        let near_env_as_env = IEnvironmentT::BuildingWithClosureds(near_env);
+        let envs = InferEnv {
+            original_calling_env: near_env_as_in_denizen,
+            parent_ranges: parent_ranges_alloc,
+            call_location,
+            self_env: near_env_as_env,
+            context_region: RegionT,
+        };
+
+        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> = function.rune_to_type.iter()
+            .map(|(k, v)| (*k, *v))
+            .collect();
+        let mut solver = self.make_solver_state(
+            envs, coutputs, &definition_rules, &rune_to_type, &range, &[], &[]);
+
+        let result = self.incrementally_solve(
+            envs, coutputs, &mut solver,
+            |_solver_state| { panic!("Unimplemented: incrementally_solve on_incomplete callback") });
+        match result {
+            Err(_f) => { panic!("Unimplemented: FailedSolve handling in evaluate_generic_function_from_non_call_solving") }
+            Ok(true) => {}
+            Ok(false) => {} // Incomplete, will be detected in checkDefiningConclusionsAndResolve
+        }
+
+        let inferences = match self.interpret_results(&rune_to_type, &mut solver) {
+            Err(_e) => { panic!("Unimplemented: interpretResults error handling") }
+            Ok(conclusions) => conclusions,
+        };
+
+        let instantiation_bound_params = match self.check_defining_conclusions_and_resolve(
+            envs, coutputs, &range, call_location, &definition_rules, &param_and_return_runes, &inferences,
+        ) {
+            Err(_f) => { panic!("Unimplemented: checkDefiningConclusionsAndResolve error handling") }
+            Ok(c) => c,
+        };
+
+        let identifying_runes: Vec<IRuneS<'s>> = function.generic_parameters.iter()
+            .map(|gp| gp.rune.rune)
+            .collect();
+        let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
+            panic!("Unimplemented: compute reachable_bounds from instantiation_bound_params");
+        let runed_env = self.add_runed_data_to_near_env(
+            near_env, &identifying_runes, &inferences, &reachable_bounds);
+
+        let header = self.get_or_evaluate_function_for_header(
+            near_env, &runed_env, coutputs, parent_ranges, call_location, function, &instantiation_bound_params);
+
+        self.typing_interner.alloc(header)
     }
 
 /*

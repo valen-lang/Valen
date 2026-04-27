@@ -339,13 +339,28 @@ where 's: 't,
 {
     pub fn evaluate_generic_light_function_from_non_call(
         &self,
-        parent_env: IEnvironmentT,
-        coutputs: CompilerOutputs,
-        parent_ranges: Vec<RangeS>,
-        call_location: LocationInDenizen,
-        function: FunctionA,
-    ) -> FunctionHeaderT<'_, '_> {
-        panic!("Unimplemented: evaluate_generic_light_function_from_non_call");
+        parent_env: &'t IEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function: &'s FunctionA<'s>,
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        let function_template_name = self.translate_generic_function_name(function.name);
+        let function_name_local: INameT<'s, 't> = match function_template_name {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+            IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+            IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+            IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        };
+        let outer_env_id = parent_env.id().add_step(self.typing_interner, function_name_local);
+        let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, true);
+        self.evaluate_generic_function_from_non_call_solving(
+            coutputs, outer_env, parent_ranges, call_location)
     }
 /*
   def evaluateGenericLightFunctionFromNonCall(
@@ -603,12 +618,21 @@ where 's: 't,
 {
     fn make_env_without_closure_stuff(
         &self,
-        outer_env: IEnvironmentT,
-        function: FunctionA,
-        template_id: IdT<'s, 't>,
+        outer_env: &'t IEnvironmentT<'s, 't>,
+        function: &'s FunctionA<'s>,
+        template_id: &'t IdT<'s, 't>,
         is_root_compiling_denizen: bool,
-    ) -> BuildingFunctionEnvironmentWithClosuredsT<'_, '_> {
-        panic!("Unimplemented: make_env_without_closure_stuff");
+    ) -> &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't> {
+        let templatas = TemplatasStoreBuilder::new(template_id).build_in(self.typing_interner);
+        self.typing_interner.alloc(BuildingFunctionEnvironmentWithClosuredsT {
+            global_env: outer_env.global_env(),
+            parent_env: *outer_env,
+            id: *template_id,
+            templatas,
+            function,
+            variables: &[],
+            is_root_compiling_denizen,
+        })
     }
 /*
   private def makeEnvWithoutClosureStuff(

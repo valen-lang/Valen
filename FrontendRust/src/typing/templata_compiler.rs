@@ -367,8 +367,18 @@ where 's: 't,
     pub fn get_template(
         &self,
         id: IdT<'s, 't>,
-    ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+    ) -> &'t IdT<'s, 't> {
+        // val IdT(packageCoord, initSteps, last) = id
+        // IdT(packageCoord, initSteps, last.template)
+        let template_name = match id.local_name {
+            INameT::StaticSizedArray(ssa) => INameT::StaticSizedArrayTemplate(ssa.template),
+            _ => panic!("get_template: not yet implemented for {:?}", id.local_name),
+        };
+        self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: template_name,
+        })
     }
 }
 /*
@@ -520,7 +530,17 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // val IdT(packageCoord, initSteps, last) = id
+        // IdT(packageCoord, initSteps, last.template)
+        let template_name = match id.local_name {
+            INameT::KindPlaceholder(kp) => INameT::KindPlaceholderTemplate(kp.template),
+            _ => panic!("get_placeholder_template: unexpected local_name"),
+        };
+        IdT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: template_name,
+        }
     }
 }
 /*
@@ -2001,7 +2021,23 @@ where 's: 't,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> CoordTemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val regionPlaceholderTemplata = RegionT()
+        let region_placeholder_templata = RegionT;
+
+        // val kindPlaceholderT =
+        //   createKindPlaceholderInner(
+        //     coutputs, env, namePrefix, index, rune, kindOwnership, registerWithCompilerOutputs)
+        let kind_placeholder_t = self.create_kind_placeholder_inner(
+            coutputs, env, name_prefix, index, rune, kind_ownership, register_with_compiler_outputs);
+
+        // CoordTemplataT(CoordT(kindOwnership, regionPlaceholderTemplata, kindPlaceholderT.kind))
+        CoordTemplataT {
+            coord: CoordT {
+                ownership: kind_ownership,
+                region: region_placeholder_templata,
+                kind: kind_placeholder_t.kind,
+            }
+        }
     }
 /*
   def createCoordPlaceholderInner(
@@ -2039,7 +2075,65 @@ where 's: 't,
         kind_ownership: OwnershipT,
         register_with_compiler_outputs: bool,
     ) -> KindTemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val kindPlaceholderId =
+        //   namePrefix.addStep(
+        //     interner.intern(KindPlaceholderNameT(
+        //       interner.intern(KindPlaceholderTemplateNameT(index, rune)))))
+        let template_name = self.typing_interner.intern_kind_placeholder_template_name(
+            KindPlaceholderTemplateNameT { index, rune, _phantom: std::marker::PhantomData });
+        let placeholder_name = self.typing_interner.intern_kind_placeholder_name(
+            KindPlaceholderNameT { template: template_name });
+        let kind_placeholder_id = name_prefix.add_step(
+            self.typing_interner, INameT::KindPlaceholder(placeholder_name));
+
+        // val kindPlaceholderTemplateId =
+        //   TemplataCompiler.getPlaceholderTemplate(kindPlaceholderId)
+        let kind_placeholder_template_id_val = self.get_placeholder_template(*kind_placeholder_id);
+        let kind_placeholder_template_id = self.typing_interner.intern_id(IdValT {
+            package_coord: kind_placeholder_template_id_val.package_coord,
+            init_steps: kind_placeholder_template_id_val.init_steps,
+            local_name: kind_placeholder_template_id_val.local_name,
+        });
+
+        // if (registerWithCompilerOutputs) {
+        if register_with_compiler_outputs {
+            // coutputs.declareType(kindPlaceholderTemplateId)
+            coutputs.declare_type(kind_placeholder_template_id);
+
+            // val mutability = MutabilityTemplataT(kindOwnership match {
+            //   case OwnT => MutableT
+            //   case ShareT => ImmutableT
+            // })
+            let mutability = ITemplataT::Mutability(MutabilityTemplataT {
+                mutability: match kind_ownership {
+                    OwnershipT::Own => MutabilityT::Mutable,
+                    OwnershipT::Share => MutabilityT::Immutable,
+                    _ => panic!("create_kind_placeholder_inner: unexpected ownership"),
+                },
+            });
+            // coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)
+            coutputs.declare_type_mutability(kind_placeholder_template_id, mutability);
+
+            // val placeholderEnv = GeneralEnvironmentT.childOf(interner, env, kindPlaceholderTemplateId, kindPlaceholderTemplateId)
+            let placeholder_env = child_of(
+                self.typing_interner,
+                *env,
+                *kind_placeholder_template_id,
+                kind_placeholder_template_id,
+                vec![],
+            );
+            let placeholder_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
+                self.typing_interner.alloc(IInDenizenEnvironmentT::General(placeholder_env));
+            // coutputs.declareTypeOuterEnv(kindPlaceholderTemplateId, placeholderEnv)
+            coutputs.declare_type_outer_env(kind_placeholder_template_id, placeholder_env_ref);
+            // coutputs.declareTypeInnerEnv(kindPlaceholderTemplateId, placeholderEnv)
+            coutputs.declare_type_inner_env(kind_placeholder_template_id, placeholder_env_ref);
+        }
+
+        // KindTemplataT(KindPlaceholderT(kindPlaceholderId))
+        let kind_placeholder = self.typing_interner.intern_kind_placeholder(
+            KindPlaceholderT { id: *kind_placeholder_id });
+        KindTemplataT { kind: KindT::KindPlaceholder(kind_placeholder) }
     }
 /*
   def createKindPlaceholderInner(
@@ -2089,7 +2183,19 @@ where 's: 't,
         rune: IRuneS<'s>,
         tyype: ITemplataType<'s>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val idT = namePrefix.addStep(interner.intern(NonKindNonRegionPlaceholderNameT(index, rune)))
+        let placeholder_name = self.typing_interner.intern_non_kind_non_region_placeholder_name(
+            NonKindNonRegionPlaceholderNameT { index, rune, _phantom: std::marker::PhantomData }
+        );
+        let id_t = name_prefix.add_step(
+            self.typing_interner,
+            INameT::NonKindNonRegionPlaceholder(placeholder_name),
+        );
+        // PlaceholderTemplataT(idT, tyype)
+        ITemplataT::Placeholder(self.typing_interner.intern_placeholder_templata(PlaceholderTemplataT {
+            id: *id_t,
+            tyype,
+        }))
     }
 /*
   def createNonKindNonRegionPlaceholderInner[T <: ITemplataType](

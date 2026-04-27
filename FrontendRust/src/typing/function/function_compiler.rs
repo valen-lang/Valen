@@ -238,7 +238,17 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
     ) -> &'t FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let env = function_templata.outer_env;
+        let function = function_templata.function;
+        if function.is_light() {
+            let mut new_ranges: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
+            new_ranges.push(function.range);
+            new_ranges.extend_from_slice(parent_ranges);
+            self.evaluate_generic_light_function_from_non_call(
+                env, coutputs, &new_ranges, call_location, function)
+        } else {
+            panic!("vfail: I think we need a call to evaluate a lambda?")
+        }
     }
 /*
   // We would want only the prototype instead of the entire header if, for example,

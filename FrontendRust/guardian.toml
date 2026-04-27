@@ -21,7 +21,6 @@ exclude_shields = [
 
     # To triage
 
-    "NoAddingScalaComments-NASCX.md",
     "NoStringlyTypedData-NSTDX.md",
     "EliminateAllWarnings-EAWX.md",
     "ErrorsMustCarryTheirLogFilePath-EMCTLFPX.md",
@@ -64,6 +63,8 @@ include_shields = [
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
+    { name = "NoAddingScalaComments-NASCX.md" },
+    { name = "NeverUseStaticLifetime-NUSLX.md" },
 ]
 
 [guard_mode]
@@ -86,6 +87,7 @@ include_shields = [
     { name = "NeverDowncastTraits-NEDCX.md" },
     { name = "OutputAndLoggingZenDiscipline-OALZDX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
+    { name = "NeverUseStaticLifetime-NUSLX.md" },
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
@@ -114,6 +116,7 @@ include_shields = [
     { name = "ArenaTypesDontClone-ATDCX.md" },
     { name = "UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md" },
     { name = "NoModificationsToShieldFiles-NMSFX.md" },
+    { name = "NeverUseStaticLifetime-NUSLX.md" },
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },

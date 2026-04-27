@@ -18,10 +18,6 @@ use crate::scout_arena::ScoutArena;
 use crate::solver::{FailedSolve, ISolverError, SimpleSolverState, SolveIncomplete, RuleError, make_solver_state};
 use crate::utils::range::RangeS;
 
-// Const ITemplataType values for use in solve_rule where no arena is available.
-// These are simple unit-struct variants with no 's data, so 'static works and coerces to any 's.
-pub const COORD_TYPE: ITemplataType<'static> = ITemplataType::CoordTemplataType(CoordTemplataType {});
-pub const KIND_TYPE: ITemplataType<'static> = ITemplataType::KindTemplataType(KindTemplataType {});
 
 // mig: struct RuneTypeSolveError
 pub struct RuneTypeSolveError<'s> {
@@ -321,7 +317,7 @@ impl<'s, 'ctx> RuneTypeSolver<'s, 'ctx> {
     std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>,
     RuneTypeSolveError<'s>,
   > {
-    solve_rune_type(sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
+    solve_rune_type(self.scout_arena, sanity_check, env, range, predicting, rules_s, additional_runes, expect_complete_solve, unpreprocessed_initially_known_runes)
   }
   /* Guardian: disable-all */
 }
@@ -497,6 +493,7 @@ fn get_puzzles_rune_type<'s>(
 // mig: fn solve_rule
 
 fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
+  scout_arena: &ScoutArena<'s>,
   env: &E,
   rule_index: i32,
   rule: &IRulexSR<'s>,
@@ -525,7 +522,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::PrototypeComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: &COORD_TYPE })),
+        (x.params_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
@@ -541,21 +538,21 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::Resolve(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: &COORD_TYPE })),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
     IRulexSR::CallSiteFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.prototype_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: &COORD_TYPE })),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
     IRulexSR::DefinitionFunc(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::PrototypeTemplataType(PrototypeTemplataType {})),
-        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: &COORD_TYPE })),
+        (x.params_list_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) })),
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
@@ -622,7 +619,7 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       let mut conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = x.members.iter()
         .map(|m| (m.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})))
         .collect();
-      conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: &COORD_TYPE }));
+      conclusions.insert(x.result_rune.rune.clone(), ITemplataType::PackTemplataType(PackTemplataType { element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})) }));
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![])
     }
     IRulexSR::CoordSend(_) => panic!("IRulexSR::CoordSend not yet migrated in rune_type solve_rule"),
@@ -876,6 +873,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
   // VA: and rule_scout.rs are entirely free functions with no struct. The RuneTypeSolver struct is
   // VA: the exception — it could be removed to match the peer files, or the free functions could be
   // VA: moved into it to match Scala's class structure. Currently inconsistent.
+  scout_arena: &ScoutArena<'s>,
   sanity_check: bool,
   env: &E,
   range: Vec<RangeS<'s>>,
@@ -1010,7 +1008,7 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
       Some(rule_index) => {
         let rule = solver_state.get_rule(rule_index).clone();
         let steps_before = solver_state.get_steps().len();
-        match solve_rule(env, rule_index, &rule, &mut solver_state) {
+        match solve_rule(scout_arena, env, rule_index, &rule, &mut solver_state) {
           Ok(()) => {}
           Err(e) => {
             return Err(RuneTypeSolveError {

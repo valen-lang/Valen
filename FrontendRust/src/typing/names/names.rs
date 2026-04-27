@@ -8,8 +8,9 @@ use crate::utils::code_hierarchy::PackageCoordinate;
 use crate::utils::range::{CodeLocationS, RangeS};
 use crate::postparsing::names::IRuneS;
 use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
-use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
+use crate::typing::typing_interner::TypingInterner;
 
 /*
 package dev.vale.typing.names
@@ -47,84 +48,121 @@ case class IdT[+T <: INameT](
   localName: T
 )  {
 */
-/*
-  this match {
-    case _ =>
-  }
+impl<'s, 't> IdT<'s, 't> {
+    pub fn new() -> Self {
+        panic!("Unimplemented IdT new");
+    }
+    /*
+      this match {
+        case _ =>
+      }
 
-  // Placeholders should only be the last name, getPlaceholdersInKind assumes it
-  initSteps.foreach({
-    case KindPlaceholderNameT(_) => vfail()
-    case KindPlaceholderTemplateNameT(_, _) => vfail()
-    case _ =>
-  })
-  // Placeholders are under the template name.
-  // There's really no other way; we make the placeholders before knowing the function's
-  // instantated name.
-  localName match {
-    case KindPlaceholderNameT(_) => {
-      initSteps.last match {
-        case _ : ITemplateNameT =>
-        case OverrideDispatcherNameT(_, _, _) => {
-          initSteps.init.last match {
+      // Placeholders should only be the last name, getPlaceholdersInKind assumes it
+      initSteps.foreach({
+        case KindPlaceholderNameT(_) => vfail()
+        case KindPlaceholderTemplateNameT(_, _) => vfail()
+        case _ =>
+      })
+      // Placeholders are under the template name.
+      // There's really no other way; we make the placeholders before knowing the function's
+      // instantated name.
+      localName match {
+        case KindPlaceholderNameT(_) => {
+          initSteps.last match {
             case _ : ITemplateNameT =>
+            case OverrideDispatcherNameT(_, _, _) => {
+              initSteps.init.last match {
+                case _ : ITemplateNameT =>
+                case other => vfail(other)
+              }
+            }
             case other => vfail(other)
           }
         }
-        case other => vfail(other)
+        case _ =>
+      }
+
+      // PackageTopLevelName2 is just here because names have to have a last step.
+      vassert(initSteps.collectFirst({ case PackageTopLevelNameT() => }).isEmpty)
+
+      vcurious(initSteps.distinct == initSteps)
+
+    */
+    /*
+      override def equals(obj: Any): Boolean = {
+        obj match {
+          case IdT(thatPackageCoord, thatInitSteps, thatLast) => {
+            packageCoord == thatPackageCoord && initSteps == thatInitSteps && localName == thatLast
+          }
+          case _ => false
+        }
+      }
+    */
+    fn package_id() {
+        panic!("Unimplemented IdT package ID");
+    }
+    /*
+      def packageId(interner: Interner): IdT[PackageTopLevelNameT] = {
+        IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
+      }
+    */
+    fn init_id() {
+        panic!("Unimplemented IdT init");
+    }
+    /*
+      def initId(interner: Interner): IdT[INameT] = {
+        if (initSteps.isEmpty) {
+          IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
+        } else {
+          IdT(packageCoord, initSteps.init, initSteps.last)
+        }
+      }
+    */
+    fn init_non_package_id() {
+        panic!("Unimplemented IdT init-non-package ID");
+    }
+    /*
+      def initNonPackageId(): Option[IdT[INameT]] = {
+        if (initSteps.isEmpty) {
+          None
+        } else {
+          Some(IdT(packageCoord, initSteps.init, initSteps.last))
+        }
+      }
+    */
+    fn steps(&self) -> Vec<INameT<'s, 't>> {
+        match self.local_name {
+            INameT::PackageTopLevel(_) => self.init_steps.to_vec(),
+            _ => {
+                let mut v = self.init_steps.to_vec();
+                v.push(self.local_name);
+                v
+            }
+        }
+    }
+    /*
+      def steps: Vector[INameT] = {
+        localName match {
+          case PackageTopLevelNameT() => initSteps
+          case _ => initSteps :+ localName
+        }
+      }
+    */
+    pub fn add_step(&self, interner: &TypingInterner<'s, 't>, new_last: INameT<'s, 't>) -> &'t IdT<'s, 't> {
+        let steps = self.steps();
+        interner.intern_id(IdValT {
+            package_coord: self.package_coord,
+            init_steps: &steps,
+            local_name: new_last,
+        })
+    }
+    /*
+      def addStep[Y <: INameT](newLast: Y): IdT[Y] = {
+        IdT[Y](packageCoord, steps, newLast)
       }
     }
-    case _ =>
-  }
-
-  // PackageTopLevelName2 is just here because names have to have a last step.
-  vassert(initSteps.collectFirst({ case PackageTopLevelNameT() => }).isEmpty)
-
-  vcurious(initSteps.distinct == initSteps)
-
-*/
-/*
-  override def equals(obj: Any): Boolean = {
-    obj match {
-      case IdT(thatPackageCoord, thatInitSteps, thatLast) => {
-        packageCoord == thatPackageCoord && initSteps == thatInitSteps && localName == thatLast
-      }
-      case _ => false
-    }
-  }
-
-  def packageId(interner: Interner): IdT[PackageTopLevelNameT] = {
-    IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
-  }
-
-  def initId(interner: Interner): IdT[INameT] = {
-    if (initSteps.isEmpty) {
-      IdT(packageCoord, Vector(), interner.intern(PackageTopLevelNameT()))
-    } else {
-      IdT(packageCoord, initSteps.init, initSteps.last)
-    }
-  }
-
-  def initNonPackageId(): Option[IdT[INameT]] = {
-    if (initSteps.isEmpty) {
-      None
-    } else {
-      Some(IdT(packageCoord, initSteps.init, initSteps.last))
-    }
-  }
-
-  def steps: Vector[INameT] = {
-    localName match {
-      case PackageTopLevelNameT() => initSteps
-      case _ => initSteps :+ localName
-    }
-  }
-  def addStep[Y <: INameT](newLast: Y): IdT[Y] = {
-    IdT[Y](packageCoord, steps, newLast)
-  }
+    */
 }
-
-*/
 
 // (no scala counterpart — custom Hash/PartialEq/Eq: pointer-eq on package_coord
 // and init_steps slice (canonicalized by the typing interner per IDEPFL),
@@ -365,9 +403,37 @@ pub enum ICitizenTemplateNameT<'s, 't> {
 }
 /*
 sealed trait ICitizenTemplateNameT extends ISubKindTemplateNameT {
+*/
+
+impl<'s, 't> ICitizenTemplateNameT<'s, 't> {
+    pub fn make_citizen_name(
+        &self,
+        interner: &TypingInterner<'s, 't>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> INameT<'s, 't> {
+        match self {
+            ICitizenTemplateNameT::StaticSizedArrayTemplate(t) =>
+                t.make_citizen_name(interner, template_args),
+            ICitizenTemplateNameT::RuntimeSizedArrayTemplate(t) =>
+                t.make_citizen_name(interner, template_args),
+            ICitizenTemplateNameT::LambdaCitizenTemplate(_) =>
+                panic!("Unimplemented: LambdaCitizenTemplateNameT.make_citizen_name"),
+            ICitizenTemplateNameT::StructTemplate(_) =>
+                panic!("Unimplemented: StructTemplateNameT.make_citizen_name"),
+            ICitizenTemplateNameT::InterfaceTemplate(_) =>
+                panic!("Unimplemented: InterfaceTemplateNameT.make_citizen_name"),
+            ICitizenTemplateNameT::AnonymousSubstructTemplate(_) =>
+                panic!("Unimplemented: AnonymousSubstructTemplateNameT.make_citizen_name"),
+        }
+    }
+/*
   def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT
+*/
+}
+/*
 }
 */
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IStructTemplateNameT<'s, 't> {
@@ -638,6 +704,40 @@ pub struct StaticSizedArrayTemplateNameT<'s, 't> {
 }
 /*
 case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
+*/
+impl<'s, 't> StaticSizedArrayTemplateNameT<'s, 't> {
+    pub fn make_citizen_name(
+        &self,
+        interner: &TypingInterner<'s, 't>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> INameT<'s, 't> {
+        // vassert(templateArgs.size == 4)
+        assert!(template_args.len() == 4);
+        // val size = expectInteger(templateArgs(0))
+        let size = expect_integer(template_args[0]);
+        // val mutability = expectMutability(templateArgs(1))
+        let mutability = expect_mutability(template_args[1]);
+        // val variability = expectVariability(templateArgs(2))
+        let variability = expect_variability(template_args[2]);
+        // val elementType = expectCoordTemplata(templateArgs(3)).coord
+        let element_type = expect_coord_templata(template_args[3]).coord;
+        // val selfRegion = vregionmut(RegionT())
+        let self_region = RegionT;
+        // interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
+        let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
+            mutability,
+            element_type,
+            self_region,
+        });
+        let ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
+            template: interner.alloc(*self),
+            size,
+            variability,
+            arr: raw_array_name,
+        });
+        INameT::StaticSizedArray(ssa_name)
+    }
+/*
   override def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT = {
     vassert(templateArgs.size == 4)
     val size = expectInteger(templateArgs(0))
@@ -647,8 +747,12 @@ case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     val selfRegion = vregionmut(RegionT())
     interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
   }
-}
 */
+}
+/*
+    }
+    */
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayNameT<'s, 't> {
@@ -676,6 +780,34 @@ pub struct RuntimeSizedArrayTemplateNameT<'s, 't> {
 }
 /*
 case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
+*/
+impl<'s, 't> RuntimeSizedArrayTemplateNameT<'s, 't> {
+    pub fn make_citizen_name(
+        &self,
+        interner: &TypingInterner<'s, 't>,
+        template_args: &[ITemplataT<'s, 't>],
+    ) -> INameT<'s, 't> {
+        // vassert(templateArgs.size == 2)
+        assert!(template_args.len() == 2);
+        // val mutability = expectMutability(templateArgs(0))
+        let mutability = expect_mutability(template_args[0]);
+        // val elementType = expectCoordTemplata(templateArgs(1)).coord
+        let element_type = expect_coord_templata(template_args[1]).coord;
+        // val region = vregionmut(RegionT())
+        let region = RegionT;
+        // interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
+        let raw_array_name = interner.intern_raw_array_name(RawArrayNameT {
+            mutability,
+            element_type: element_type,
+            self_region: region,
+        });
+        let rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
+            template: interner.alloc(*self),
+            arr: raw_array_name,
+        });
+        INameT::RuntimeSizedArray(rsa_name)
+    }
+/*
   override def makeCitizenName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): ICitizenNameT = {
     vassert(templateArgs.size == 2)
     val mutability = expectMutability(templateArgs(0))
@@ -683,9 +815,12 @@ case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     val region = vregionmut(RegionT())
     interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
   }
-}
-
 */
+}
+/*
+}
+*/
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayNameT<'s, 't> {
@@ -3002,6 +3137,7 @@ where 's: 't, 't: 'tmp,
             && self.0.init_steps == key.init_steps
             && self.0.local_name == key.local_name
     }
+    /* Guardian: disable-all */
 }
 
 // -- Transient-with-'tmp Val types for the 15 concrete names with slices ----
@@ -3224,6 +3360,7 @@ macro_rules! transient_name_val_impls {
                 $( ok = ok && self.0.$i == key.$i; )*
                 ok
             }
+            /* Guardian: disable-all */
         }
     };
 }
@@ -3443,4 +3580,5 @@ where 's: 't, 't: 'tmp,
             _ => false,
         }
     }
+    /* Guardian: disable-all */
 }

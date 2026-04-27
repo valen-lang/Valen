@@ -305,7 +305,11 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
-        panic!("Unimplemented: get_runes");
+        let result: Vec<IRuneS<'s>> = rule.rune_usages().iter().map(|ru| ru.rune).collect();
+        if self.opts.global_options.sanity_check {
+            panic!("Unimplemented: get_runes sanity check");
+        }
+        result
     }
 /*
   def getRunes(rule: IRulexSR): Vector[IRuneS] = {
@@ -407,14 +411,50 @@ where 's: 't,
 {
     pub fn make_solver_state_solver(
         &self,
-        range: Vec<RangeS<'s>>,
-        env: InferEnv<'s, 't>,
-        state: CompilerOutputs<'s, 't>,
-        rules: Vec<IRulexSR<'s>>,
+        _range: Vec<RangeS<'s>>,
+        _env: InferEnv<'s, 't>,
+        _state: &mut CompilerOutputs<'s, 't>,
+        rules: Vec<&'s IRulexSR<'s>>,
         initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
         initially_known_rune_to_templata: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        panic!("Unimplemented: make_solver_state");
+        for rule in &rules {
+            for rune_usage in rule.rune_usages() {
+                assert!(initial_rune_to_type.contains_key(&rune_usage.rune));
+            }
+        }
+
+        // These two shouldn't both be in the rules, see SROACSD.
+        assert!(
+            rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteFunc(_))) ||
+            rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionFunc(_))));
+        // These two shouldn't both be in the rules, see SROACSD.
+        assert!(
+            rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteCoordIsa(_))) ||
+            rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionCoordIsa(_))));
+
+        for (_rune, _templata) in &initially_known_rune_to_templata {
+            panic!("Unimplemented: make_solver_state_solver — initiallyKnownRuneToTemplata sanity check");
+        }
+
+        let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
+
+        let rule_to_puzzles: Box<dyn Fn(&IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>>> =
+            Box::new(|_rule| panic!("Unimplemented: get_puzzles"));
+        let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> =
+            &|_rule| panic!("Unimplemented: get_runes");
+
+        let initial_rules: Vec<IRulexSR<'s>> = rules.into_iter().copied().collect();
+
+        crate::solver::solver::make_solver_state(
+            self.opts.global_options.sanity_check,
+            self.opts.global_options.use_optimized_solver,
+            rule_to_puzzles,
+            rule_to_runes,
+            initial_rules,
+            initially_known_rune_to_templata,
+            all_runes,
+        )
     }
 /*
   def makeSolverState(

@@ -3,21 +3,21 @@ use std::marker::PhantomData;
 use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
-use crate::postparsing::ast::{ICitizenAttributeS, MacroCallS};
+use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
-use crate::typing::env::environment::{GlobalEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
+use crate::typing::env::environment::{GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::names::names::{
     IdT, IdValT, INameT, IFunctionTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    ITemplataT, KindTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
+    FunctionTemplataT, ITemplataT, KindTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
 };
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
@@ -125,17 +125,17 @@ where 's: 't,
         x: (),
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def print(x: => Object) = {
+        println("###: " + x)
+      }
+    }
+
+
+
+    */
 }
-/*
-  def print(x: => Object) = {
-    println("###: " + x)
-  }
-}
-
-
-
-*/
 pub struct Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -162,33 +162,8 @@ where 's: 't,
         opts: &'ctx TypingPassOptions<'s>,
     ) -> Self {
         Compiler { scout_arena, typing_interner, keywords, opts }
-    } // VI: invalid
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
-    pub fn compile_program(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        program_a: &'s ProgramA<'s>,
-    ) -> Result<(), ICompileErrorT<'s, 't>> {
-        panic!("Unimplemented: Compiler::compile_program — Slab 8");
-    } // VI: invalid
-}
-
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
-    pub fn drain_all_deferred(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-    ) {
-        panic!("Unimplemented: Compiler::drain_all_deferred — Slab 8");
-    } // VI: invalid
-}
-
-/*
+    }
+    /*
   val debugOut = opts.debugOut
   val globalOptions = opts.globalOptions
 
@@ -845,8 +820,9 @@ where 's: 't,
     new AnonymousInterfaceMacro(
       opts, interner, keywords, nameTranslator, overloadResolver, structCompiler, structConstructorMacro, structDropMacro)
 
+    */
+}
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -883,12 +859,12 @@ where 's: 't,
                     IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
                     IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
                 };
-                let init_steps = [pkg_top_level];
-                let function_name_t = self.typing_interner.intern_id(IdValT {
+                let package_name = self.typing_interner.intern_id(IdValT {
                     package_coord: coord,
-                    init_steps: &init_steps,
-                    local_name: function_name_local,
+                    init_steps: &[],
+                    local_name: pkg_top_level,
                 });
+                let function_name_t = package_name.add_step(self.typing_interner, function_name_local);
                 id_and_env_entry.push((function_name_t, IEnvEntryT::Function(function_a)));
             }
         }
@@ -1010,10 +986,25 @@ where 's: 't,
             if !package_id.init_steps.is_empty() {
                 continue;
             }
+            let global_namespaces: Vec<TemplatasStoreT<'s, 't>> =
+                global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
+            let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
+            let package_env = self.typing_interner.alloc(PackageEnvironmentT {
+                global_env,
+                id: **package_id,
+                global_namespaces,
+            });
+            let package_env_t: &'t IEnvironmentT<'s, 't> =
+                self.typing_interner.alloc(IEnvironmentT::Package(package_env));
             for (_name, entry) in templatas.name_to_entry {
                 match entry {
-                    IEnvEntryT::Function(_function_a) => {
-                        panic!("Unimplemented: function compile in evaluate");
+                    IEnvEntryT::Function(function_a) => {
+                        let templata = FunctionTemplataT {
+                            outer_env: package_env_t,
+                            function: function_a,
+                        };
+                        self.evaluate_generic_function_from_non_call(
+                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
                     }
                     _ => {}
                 }
@@ -1024,8 +1015,6 @@ where 's: 't,
     } // VI: invalid
 }
 /*
-Guardian: temp-disable: TUCMPX — The `_ => {}` arms correspond exactly to Scala's `case _ =>` (empty wildcard arms in match expressions that are intentionally no-ops, not unimplemented code). For example, in the indexing phase, FunctionEnvEntry and other non-struct/interface entries are correctly handled by doing nothing. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776983820959/hook/evaluate--853.0.TodosAndUnimplementedCodeMustPanic-TUCMPX.TodosAndUnimplementedCodeMustPanic-TUCMPX.verdict.md
-Guardian: temp-disable: SPDMX — The 9-arm match converting IFunctionTemplateNameT to INameT is the Rust equivalent of Scala's implicit subtype relationship (IFunctionTemplateNameT extends INameT); it's unavoidable boilerplate. The IdValT construction is the Rust equivalent of Scala's packageName.addStep(...) — addStep is not yet implemented in Rust names.rs. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776983820959/hook/evaluate--853.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluate(
       codeMap: FileCoordinateMap[String],
       packageToProgramA: PackageCoordinateMap[ProgramA]):
@@ -1728,24 +1717,24 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  private def preprocessStruct(
-    nameToStructDefinedMacro: Map[StrI, IOnStructDefinedMacro],
-    structNameT: IdT[INameT],
-    structA: StructA): Vector[(IdT[INameT], IEnvEntry)] = {
-    val defaultCalledMacros =
-      Vector(
-        MacroCallS(structA.range, CallMacroP, keywords.DeriveStructConstructor),
-        MacroCallS(structA.range, CallMacroP, keywords.DeriveStructDrop))//,
-//        MacroCallS(structA.range, CallMacroP, keywords.DeriveStructFree),
-//        MacroCallS(structA.range, CallMacroP, keywords.DeriveImplFree))
-    determineMacrosToCall(nameToStructDefinedMacro, defaultCalledMacros, List(structA.range), structA.attributes)
-      .flatMap(_.getStructSiblingEntries(structNameT, structA))
-  }
+    }
+    /*
+      private def preprocessStruct(
+        nameToStructDefinedMacro: Map[StrI, IOnStructDefinedMacro],
+        structNameT: IdT[INameT],
+        structA: StructA): Vector[(IdT[INameT], IEnvEntry)] = {
+        val defaultCalledMacros =
+          Vector(
+            MacroCallS(structA.range, CallMacroP, keywords.DeriveStructConstructor),
+            MacroCallS(structA.range, CallMacroP, keywords.DeriveStructDrop))//,
+    //        MacroCallS(structA.range, CallMacroP, keywords.DeriveStructFree),
+    //        MacroCallS(structA.range, CallMacroP, keywords.DeriveImplFree))
+        determineMacrosToCall(nameToStructDefinedMacro, defaultCalledMacros, List(structA.range), structA.attributes)
+          .flatMap(_.getStructSiblingEntries(structNameT, structA))
+      }
 
-*/
+    */
+}
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1756,29 +1745,29 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  private def preprocessInterface(
-    nameToInterfaceDefinedMacro: Map[StrI, IOnInterfaceDefinedMacro],
-    interfaceNameT: IdT[INameT],
-    interfaceA: InterfaceA):
-  Vector[(IdT[INameT], IEnvEntry)] = {
-    val defaultCalledMacros =
-      Vector(
-        MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveInterfaceDrop),
-//        MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveInterfaceFree),
-        MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveAnonymousSubstruct))
-    val macrosToCall =
-      determineMacrosToCall(nameToInterfaceDefinedMacro, defaultCalledMacros, List(interfaceA.range), interfaceA.attributes)
-    vpass()
-    val results =
-      macrosToCall.flatMap(_.getInterfaceSiblingEntries(interfaceNameT, interfaceA))
-    vpass()
-    results
-  }
+    }
+    /*
+      private def preprocessInterface(
+        nameToInterfaceDefinedMacro: Map[StrI, IOnInterfaceDefinedMacro],
+        interfaceNameT: IdT[INameT],
+        interfaceA: InterfaceA):
+      Vector[(IdT[INameT], IEnvEntry)] = {
+        val defaultCalledMacros =
+          Vector(
+            MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveInterfaceDrop),
+    //        MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveInterfaceFree),
+            MacroCallS(interfaceA.range, CallMacroP, keywords.DeriveAnonymousSubstruct))
+        val macrosToCall =
+          determineMacrosToCall(nameToInterfaceDefinedMacro, defaultCalledMacros, List(interfaceA.range), interfaceA.attributes)
+        vpass()
+        val results =
+          macrosToCall.flatMap(_.getInterfaceSiblingEntries(interfaceNameT, interfaceA))
+        vpass()
+        results
+      }
 
-*/
+    */
+}
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1790,35 +1779,35 @@ where 's: 't,
         attributes: &[&'s ICitizenAttributeS<'s>],
     ) -> Vec<T> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  private def determineMacrosToCall[T](
-    nameToMacro: Map[StrI, T],
-    defaultCalledMacros: Vector[MacroCallS],
-    parentRanges: List[RangeS],
-    attributes: Vector[ICitizenAttributeS]):
-  Vector[T] = {
-    attributes.foldLeft(defaultCalledMacros)({
-      case (macrosToCall, mc@MacroCallS(range, CallMacroP, macroName)) => {
-        if (macrosToCall.exists(_.macroName == macroName)) {
-          throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, "Calling macro twice: " + macroName))
-        }
-        macrosToCall :+ mc
+    }
+    /*
+      private def determineMacrosToCall[T](
+        nameToMacro: Map[StrI, T],
+        defaultCalledMacros: Vector[MacroCallS],
+        parentRanges: List[RangeS],
+        attributes: Vector[ICitizenAttributeS]):
+      Vector[T] = {
+        attributes.foldLeft(defaultCalledMacros)({
+          case (macrosToCall, mc@MacroCallS(range, CallMacroP, macroName)) => {
+            if (macrosToCall.exists(_.macroName == macroName)) {
+              throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, "Calling macro twice: " + macroName))
+            }
+            macrosToCall :+ mc
+          }
+          case (macrosToCall, MacroCallS(_, DontCallMacroP, macroName)) => macrosToCall.filter(_.macroName != macroName)
+          case (macrosToCall, _) => macrosToCall
+        }).map(macroCall => {
+          nameToMacro.get(macroCall.macroName) match {
+            case None => {
+              throw CompileErrorExceptionT(RangedInternalErrorT(macroCall.range :: parentRanges, "Macro not found: " + macroCall.macroName))
+            }
+            case Some(m) => m
+          }
+        })
       }
-      case (macrosToCall, MacroCallS(_, DontCallMacroP, macroName)) => macrosToCall.filter(_.macroName != macroName)
-      case (macrosToCall, _) => macrosToCall
-    }).map(macroCall => {
-      nameToMacro.get(macroCall.macroName) match {
-        case None => {
-          throw CompileErrorExceptionT(RangedInternalErrorT(macroCall.range :: parentRanges, "Macro not found: " + macroCall.macroName))
-        }
-        case Some(m) => m
-      }
-    })
-  }
 
-*/
+    */
+}
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1827,106 +1816,106 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
-    val packageToKindToExport =
-      coutputs.getKindExports
-        .map(kindExport => (kindExport.id.packageCoord, kindExport.tyype, kindExport))
-        .groupBy(_._1)
-        .mapValues(
-          _.map(x => (x._2, x._3))
+    }
+    /*
+      def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
+        val packageToKindToExport =
+          coutputs.getKindExports
+            .map(kindExport => (kindExport.id.packageCoord, kindExport.tyype, kindExport))
             .groupBy(_._1)
-            .mapValues({
-              case Vector() => vwat()
-              case Vector(only) => only
-              case multiple => {
-                val exports = multiple.map(_._2)
+            .mapValues(
+              _.map(x => (x._2, x._3))
+                .groupBy(_._1)
+                .mapValues({
+                  case Vector() => vwat()
+                  case Vector(only) => only
+                  case multiple => {
+                    val exports = multiple.map(_._2)
+                    throw CompileErrorExceptionT(
+                      TypeExportedMultipleTimes(
+                        List(exports.head.range),
+                        exports.head.id.packageCoord,
+                        exports))
+                  }
+                }))
+
+        coutputs.getFunctionExports.foreach(funcExport => {
+          val exportedKindToExport = packageToKindToExport.getOrElse(funcExport.exportId.packageCoord, Map())
+          (Vector(funcExport.prototype.returnType) ++ funcExport.prototype.paramTypes)
+            .foreach(paramType => {
+              if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
                 throw CompileErrorExceptionT(
-                  TypeExportedMultipleTimes(
-                    List(exports.head.range),
-                    exports.head.id.packageCoord,
-                    exports))
-              }
-            }))
-
-    coutputs.getFunctionExports.foreach(funcExport => {
-      val exportedKindToExport = packageToKindToExport.getOrElse(funcExport.exportId.packageCoord, Map())
-      (Vector(funcExport.prototype.returnType) ++ funcExport.prototype.paramTypes)
-        .foreach(paramType => {
-          if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
-            throw CompileErrorExceptionT(
-              ExportedFunctionDependedOnNonExportedKind(
-                List(funcExport.range), funcExport.exportId.packageCoord, funcExport.prototype.toSignature, paramType.kind))
-          }
-        })
-    })
-    coutputs.getFunctionExterns.foreach(functionExtern => {
-      val exportedKindToExport = packageToKindToExport.getOrElse(functionExtern.externPlaceholderedId.packageCoord, Map())
-      (Vector(functionExtern.prototype.returnType) ++ functionExtern.prototype.paramTypes)
-        .foreach(paramType => {
-          if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
-            throw CompileErrorExceptionT(
-              ExternFunctionDependedOnNonExportedKind(
-                List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
-          }
-        })
-    })
-    packageToKindToExport.foreach({ case (packageCoord, exportedKindToExport) =>
-      exportedKindToExport.foreach({ case (exportedKind, (kind, export)) =>
-        exportedKind match {
-          case sr@StructTT(_) => {
-            val structDef = coutputs.lookupStruct(sr.id)
-
-            val substituter =
-              TemplataCompiler.getPlaceholderSubstituter(
-                opts.globalOptions.sanityCheck,
-                interner,
-                keywords,
-                structDef.templateName,
-                sr.id,
-                InheritBoundsFromTypeItself)
-
-            structDef.members.foreach({
-              case VariadicStructMemberT(name, tyype) => {
-                vimpl()
-              }
-              case NormalStructMemberT(name, variability, AddressMemberTypeT(reference)) => {
-                vimpl()
-              }
-              case NormalStructMemberT(_, _, ReferenceMemberTypeT(unsubstitutedMemberCoord)) => {
-                val memberCoord = substituter.substituteForCoord(coutputs, unsubstitutedMemberCoord)
-                val memberKind = memberCoord.kind
-                if (structDef.mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(memberKind) && !exportedKindToExport.contains(memberKind)) {
-                  throw CompileErrorExceptionT(
-                    vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
-                      List(export.range), packageCoord, exportedKind, memberKind))
-                }
+                  ExportedFunctionDependedOnNonExportedKind(
+                    List(funcExport.range), funcExport.exportId.packageCoord, funcExport.prototype.toSignature, paramType.kind))
               }
             })
-          }
-          case contentsStaticSizedArrayTT(_, mutability, _, CoordT(_, _, elementKind), _) => {
-            if (mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(elementKind) && !exportedKindToExport.contains(elementKind)) {
-              throw CompileErrorExceptionT(
-                vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
-                  List(export.range), packageCoord, exportedKind, elementKind))
-            }
-          }
-          case contentsRuntimeSizedArrayTT(mutability, CoordT(_, _, elementKind), _) => {
-            if (mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(elementKind) && !exportedKindToExport.contains(elementKind)) {
-              throw CompileErrorExceptionT(
-                vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
-                  List(export.range), packageCoord, exportedKind, elementKind))
-            }
-          }
-          case InterfaceTT(_) =>
-        }
-      })
-    })
-  }
+        })
+        coutputs.getFunctionExterns.foreach(functionExtern => {
+          val exportedKindToExport = packageToKindToExport.getOrElse(functionExtern.externPlaceholderedId.packageCoord, Map())
+          (Vector(functionExtern.prototype.returnType) ++ functionExtern.prototype.paramTypes)
+            .foreach(paramType => {
+              if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
+                throw CompileErrorExceptionT(
+                  ExternFunctionDependedOnNonExportedKind(
+                    List(functionExtern.range), functionExtern.externPlaceholderedId.packageCoord, functionExtern.prototype.toSignature, paramType.kind))
+              }
+            })
+        })
+        packageToKindToExport.foreach({ case (packageCoord, exportedKindToExport) =>
+          exportedKindToExport.foreach({ case (exportedKind, (kind, export)) =>
+            exportedKind match {
+              case sr@StructTT(_) => {
+                val structDef = coutputs.lookupStruct(sr.id)
 
-*/
+                val substituter =
+                  TemplataCompiler.getPlaceholderSubstituter(
+                    opts.globalOptions.sanityCheck,
+                    interner,
+                    keywords,
+                    structDef.templateName,
+                    sr.id,
+                    InheritBoundsFromTypeItself)
+
+                structDef.members.foreach({
+                  case VariadicStructMemberT(name, tyype) => {
+                    vimpl()
+                  }
+                  case NormalStructMemberT(name, variability, AddressMemberTypeT(reference)) => {
+                    vimpl()
+                  }
+                  case NormalStructMemberT(_, _, ReferenceMemberTypeT(unsubstitutedMemberCoord)) => {
+                    val memberCoord = substituter.substituteForCoord(coutputs, unsubstitutedMemberCoord)
+                    val memberKind = memberCoord.kind
+                    if (structDef.mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(memberKind) && !exportedKindToExport.contains(memberKind)) {
+                      throw CompileErrorExceptionT(
+                        vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
+                          List(export.range), packageCoord, exportedKind, memberKind))
+                    }
+                  }
+                })
+              }
+              case contentsStaticSizedArrayTT(_, mutability, _, CoordT(_, _, elementKind), _) => {
+                if (mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(elementKind) && !exportedKindToExport.contains(elementKind)) {
+                  throw CompileErrorExceptionT(
+                    vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
+                      List(export.range), packageCoord, exportedKind, elementKind))
+                }
+              }
+              case contentsRuntimeSizedArrayTT(mutability, CoordT(_, _, elementKind), _) => {
+                if (mutability == MutabilityTemplataT(ImmutableT) && !Compiler.isPrimitive(elementKind) && !exportedKindToExport.contains(elementKind)) {
+                  throw CompileErrorExceptionT(
+                    vale.typing.ExportedImmutableKindDependedOnNonExportedKind(
+                      List(export.range), packageCoord, exportedKind, elementKind))
+                }
+              }
+              case InterfaceTT(_) =>
+            }
+          })
+        })
+      }
+    */
+}
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1935,23 +1924,23 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  // Returns whether we should eagerly compile this and anything it depends on.
-  def isRootFunction(functionA: FunctionA): Boolean = {
-    functionA.name match {
-      case FunctionNameS(StrI("main"), _) => return true
-      case _ =>
     }
-    functionA.attributes.exists({
-      case ExportS(_) => true
-      case ExternS(_) => true
-      case _ => false
-    })
-  }
+    /*
+      // Returns whether we should eagerly compile this and anything it depends on.
+      def isRootFunction(functionA: FunctionA): Boolean = {
+        functionA.name match {
+          case FunctionNameS(StrI("main"), _) => return true
+          case _ =>
+        }
+        functionA.attributes.exists({
+          case ExportS(_) => true
+          case ExternS(_) => true
+          case _ => false
+        })
+      }
+    */
+}
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1960,15 +1949,15 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
+    }
+    /*
+      // Returns whether we should eagerly compile this and anything it depends on.
+      def isRootStruct(structA: StructA): Boolean = {
+        structA.attributes.exists({ case ExportS(_) => true case _ => false })
+      }
+    */
 }
-/*
-  // Returns whether we should eagerly compile this and anything it depends on.
-  def isRootStruct(structA: StructA): Boolean = {
-    structA.attributes.exists({ case ExportS(_) => true case _ => false })
-  }
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1977,18 +1966,19 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  // Returns whether we should eagerly compile this and anything it depends on.
-  def isRootInterface(interfaceA: InterfaceA): Boolean = {
-    interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
-  }
-}
+    }
+    /*
+      // Returns whether we should eagerly compile this and anything it depends on.
+      def isRootInterface(interfaceA: InterfaceA): Boolean = {
+        interfaceA.attributes.exists({ case ExportS(_) => true case _ => false })
+      }
+    }
 
 
-object Compiler {
-*/
+    object Compiler {
+    */
+}
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -1997,36 +1987,36 @@ where 's: 't,
         exprs: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  // Flattens any nested ConsecutorTEs
-  def consecutive(exprs: Vector[ReferenceExpressionTE]): ReferenceExpressionTE = {
-    exprs match {
-      case Vector() => vwat("Shouldn't have zero-element consecutors!")
-      case Vector(only) => only
-      case _ => {
-        val flattened =
-          exprs.flatMap({
-            case ConsecutorTE(exprs) => exprs
-            case other => Vector(other)
-          })
-
-        val withoutInitVoids =
-          flattened.init
-            .filter({ case VoidLiteralTE(_) => false case _ => true }) :+
-            flattened.last
-
-        withoutInitVoids match {
+    }
+    /*
+      // Flattens any nested ConsecutorTEs
+      def consecutive(exprs: Vector[ReferenceExpressionTE]): ReferenceExpressionTE = {
+        exprs match {
           case Vector() => vwat("Shouldn't have zero-element consecutors!")
           case Vector(only) => only
-          case _ => ConsecutorTE(withoutInitVoids)
+          case _ => {
+            val flattened =
+              exprs.flatMap({
+                case ConsecutorTE(exprs) => exprs
+                case other => Vector(other)
+              })
+
+            val withoutInitVoids =
+              flattened.init
+                .filter({ case VoidLiteralTE(_) => false case _ => true }) :+
+                flattened.last
+
+            withoutInitVoids match {
+              case Vector() => vwat("Shouldn't have zero-element consecutors!")
+              case Vector(only) => only
+              case _ => ConsecutorTE(withoutInitVoids)
+            }
+          }
         }
       }
-    }
-  }
+    */
+}
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2035,22 +2025,22 @@ where 's: 't,
         kind: KindT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  def isPrimitive(kind: KindT): Boolean = {
-    kind match {
-      case VoidT() | IntT(_) | BoolT() | StrT() | NeverT(_) | FloatT() => true
-//      case TupleTT(_, understruct) => isPrimitive(understruct)
-      case KindPlaceholderT(_) => false
-      case StructTT(_) => false
-      case InterfaceTT(_) => false
-      case contentsStaticSizedArrayTT(_, _, _, _, _) => false
-      case contentsRuntimeSizedArrayTT(_, _, _) => false
     }
-  }
+    /*
+      def isPrimitive(kind: KindT): Boolean = {
+        kind match {
+          case VoidT() | IntT(_) | BoolT() | StrT() | NeverT(_) | FloatT() => true
+    //      case TupleTT(_, understruct) => isPrimitive(understruct)
+          case KindPlaceholderT(_) => false
+          case StructTT(_) => false
+          case InterfaceTT(_) => false
+          case contentsStaticSizedArrayTT(_, _, _, _, _) => false
+          case contentsRuntimeSizedArrayTT(_, _, _) => false
+        }
+      }
+    */
+}
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2060,15 +2050,15 @@ where 's: 't,
         concrete_values2: &[KindT<'s, 't>],
     ) -> Vec<ITemplataT<'s, 't>> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):
+      Vector[ITemplataT[MutabilityTemplataType]] = {
+        concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
+      }
+    */
 }
-/*
-  def getMutabilities(coutputs: CompilerOutputs, concreteValues2: Vector[KindT]):
-  Vector[ITemplataT[MutabilityTemplataType]] = {
-    concreteValues2.map(concreteValue2 => getMutability(coutputs, concreteValue2))
-  }
 
-*/
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -2078,30 +2068,30 @@ where 's: 't,
         concrete_value2: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
-}
-/*
-  def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):
-  ITemplataT[MutabilityTemplataType] = {
-    concreteValue2 match {
-      case KindPlaceholderT(id) => coutputs.lookupMutability(TemplataCompiler.getPlaceholderTemplate(id))
-      case NeverT(_) => MutabilityTemplataT(ImmutableT)
-      case IntT(_) => MutabilityTemplataT(ImmutableT)
-      case FloatT() => MutabilityTemplataT(ImmutableT)
-      case BoolT() => MutabilityTemplataT(ImmutableT)
-      case StrT() => MutabilityTemplataT(ImmutableT)
-      case VoidT() => MutabilityTemplataT(ImmutableT)
-      case contentsRuntimeSizedArrayTT(mutability, _, _) => mutability
-      case contentsStaticSizedArrayTT(_, mutability, _, _, _) => mutability
-      case sr @ StructTT(name) => coutputs.lookupMutability(TemplataCompiler.getStructTemplate(name))
-      case ir @ InterfaceTT(name) => coutputs.lookupMutability(TemplataCompiler.getInterfaceTemplate(name))
-//      case PackTT(_, sr) => coutputs.lookupMutability(sr)
-//      case TupleTT(_, sr) => coutputs.lookupMutability(sr)
-      case OverloadSetT(_, _) => {
-        // Just like FunctionT2
-        MutabilityTemplataT(ImmutableT)
+    }
+    /*
+      def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):
+      ITemplataT[MutabilityTemplataType] = {
+        concreteValue2 match {
+          case KindPlaceholderT(id) => coutputs.lookupMutability(TemplataCompiler.getPlaceholderTemplate(id))
+          case NeverT(_) => MutabilityTemplataT(ImmutableT)
+          case IntT(_) => MutabilityTemplataT(ImmutableT)
+          case FloatT() => MutabilityTemplataT(ImmutableT)
+          case BoolT() => MutabilityTemplataT(ImmutableT)
+          case StrT() => MutabilityTemplataT(ImmutableT)
+          case VoidT() => MutabilityTemplataT(ImmutableT)
+          case contentsRuntimeSizedArrayTT(mutability, _, _) => mutability
+          case contentsStaticSizedArrayTT(_, mutability, _, _, _) => mutability
+          case sr @ StructTT(name) => coutputs.lookupMutability(TemplataCompiler.getStructTemplate(name))
+          case ir @ InterfaceTT(name) => coutputs.lookupMutability(TemplataCompiler.getInterfaceTemplate(name))
+    //      case PackTT(_, sr) => coutputs.lookupMutability(sr)
+    //      case TupleTT(_, sr) => coutputs.lookupMutability(sr)
+          case OverloadSetT(_, _) => {
+            // Just like FunctionT2
+            MutabilityTemplataT(ImmutableT)
+          }
+        }
       }
     }
-  }
+    */
 }
-*/

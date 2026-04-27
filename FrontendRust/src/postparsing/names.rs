@@ -1164,6 +1164,7 @@ impl<'a, 's, 'tmp> hashbrown::Equivalent<IRuneValS<'s, 's>> for RuneValQuery<'a,
       _ => false,
     }
   }
+  /* Guardian: disable-all */
 }
 
 /*

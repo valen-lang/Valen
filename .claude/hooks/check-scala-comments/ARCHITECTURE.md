@@ -1,1 +1,0 @@
-/Volumes/V/Sylvan/FrontendRust/docs/architecture/check-scala-comments-hook.md

@@ -753,7 +753,10 @@ pub fn equals(&self, _obj: &dyn std::any::Any) -> bool {
 */
 // mig: fn is_light
 pub fn is_light(&self) -> bool {
-    panic!("Unimplemented: is_light");
+    match &self.body {
+        IBodyS::ExternBody(_) | IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => true,
+        IBodyS::CodeBody(code_body) => code_body.body.closured_names.is_empty(),
+    }
 }
 /*
   def isLight(): Boolean = {

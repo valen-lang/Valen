@@ -37,6 +37,11 @@ strict):
 **Appeal-LLM says deny** (Opus sides against implementor):
 - Move case to `cases/need-implementor-changes/`
 
+After routing a case, remove its `Guardian: temp-disable: ...` comment
+from the source file. These live inside `/* ... */` Scala comment blocks.
+Use `grep -rn "Guardian: temp-disable:"` to find them. It mentions a log
+filename that should match the one we're currently processing.
+
 ### Step 2: Tune Shield Prompts
 
 For each shield with cases in `cases/need-shield-tuning/`:
@@ -115,6 +120,31 @@ For each shield with cases in `cases/need-implementor-changes/`:
      AI prompt improvement
    - **Override Opus** — if the human disagrees with Opus's reading, move
      the case to `cases/need-shield-amendment/`
+
+### Step 7: Sweep Stale Temp-Disables
+
+Run `grep -rn "temp-disable:" FrontendRust/src/` to find any `Guardian:
+temp-disable:` annotations left in source files from previous sessions
+that didn't finish cleanup. These live inside `/* ... */` Scala comment
+blocks.
+
+For each annotation found, present it to the human with the surrounding
+code and Scala reference. Process it the same way as Steps 1–6: evaluate
+whether the override was correct, strip the annotation if so, flag for
+code changes if not. If the annotation references a pattern now covered
+by a shield exception, just strip it.
+
+## Strictness Principle
+
+Be strict. These shields exist because they encode important rules, and
+strictness makes them easier for LLMs to follow. A shield with strict
+guidelines, strict clarifications, and strict exceptions is far more
+effective than one that's loose and hand-wavy. When evaluating overrides,
+default toward siding with the shield — the implementor should have a
+clear, specific reason why the shield is wrong, not just "it's probably
+fine." When tuning shields, add narrow, precise exceptions rather than
+broad carve-outs. The goal is rules that are unambiguous enough that an
+LLM can follow them mechanically.
 
 ## Notes
 

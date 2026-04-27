@@ -45,7 +45,7 @@ pub struct VariableDeclarations<'s> {
 
 impl<'s> VariableDeclarations<'s> {
   // MIGALLOW: empty -> empty
-  pub fn empty() -> VariableDeclarations<'static> {
+  pub fn empty() -> VariableDeclarations<'s> {
     VariableDeclarations { vars: Vec::new() }
   }
 

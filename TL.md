@@ -613,6 +613,10 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
 - Replace the empty Rust stub in-place with the real definition. Keep the Scala `/* ... */` block below unchanged.
 - Never move a Rust definition away from its Scala block.
 - A Rust definition grown to need helper structs (e.g. an IdValT companion for an IdT) gets its companion block **adjacent to** the main definition, with a `// (no scala counterpart — …)` note.
+- **After any change that touches Scala comment blocks** (splitting, moving, adding new impl blocks between them), run the SCPX shield to verify structural integrity:
+  ```
+  cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all
+  ```
 
 ---
 
@@ -661,6 +665,45 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
 2. **Body migration is test-driven.** Pick a test from `src/typing/test/`, run it, see which panic stub it hits first, implement that body, repeat. Start with the simplest bodies (trivial CompilerOutputs one-liners), then TemplataCompiler id-transforms, then the substitution engine, then sub-compiler bodies.
 3. **Don't commit.** The human handles all commits and tags. Hand back uncommitted working trees at batch boundaries.
 4. **Group related bodies** into coherent batches for review. Each batch gets a handoff doc listing target methods, driving test(s), and Scala translation gotchas.
+
+## Good Partial Implementing
+
+When replacing a `panic!` stub with real logic, write just the shallow structure of that scope — straight-line variable bindings, function calls, match expressions with all arms — but put `panic!` inside every new branch body, loop body, closure/lambda body, and match arm. Then only fill in the specific arms/branches the driving test actually hits. This applies recursively: when a test hits one of those inner panics, replace *that* panic with its own skeleton-with-panics, fill in only what the test needs, and so on. Each iteration expands one panic into a new layer of structure. **Aggressively panic for anything that might not be executed by current tests.** This minimizes each batch's diff and ensures untested paths crash loudly rather than silently returning wrong results.
+
+## NNDX Escalation Pattern
+
+**When a junior is blocked by NNDX on a legitimate Scala counterpart**, the issue is incomplete scaffolding, not a bad shield. The TL adds the missing definition directly — don't temp-disable NNDX. NNDX exists to route definition-creation to the right authority level; the junior escalating is the system working correctly.
+
+Example: Scala's `def globalEnv` on `IEnvironmentT` trait (line 60) becomes a `fn global_env()` match-dispatch method on the Rust enum (per SSTREX). If the slice pipeline didn't generate it, the junior hits NNDX when they try to add it. Correct response: junior stops and escalates; TL adds the accessor.
+
+**How to slice in a missing Rust definition.** The Scala comment blocks are the audit trail — every Rust definition must sit directly above its Scala counterpart. When adding a missing definition:
+
+1. Find the Scala `def` inside its `/* ... */` comment block.
+2. Split the comment block: close `*/` just before the target `def`, insert the Rust `impl` block, then reopen `/*` to resume the remaining Scala.
+3. The Scala `def` line must end up **inside** the Rust `impl` block, as an inline `/* ... */` comment immediately after the Rust `fn` body — not after the `}` that closes the `impl`. This keeps the Scala counterpart visually adjacent to its Rust translation.
+
+```rust
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
+    match self {
+      IEnvironmentT::Package(e) => e.global_env,
+      // ...
+    }
+  }
+  /*
+    def globalEnv: GlobalEnvironment
+  */
+}
+```
+
+Not like this (Scala comment stranded outside the impl):
+```rust
+  // WRONG — comment is after the impl's closing brace
+}
+/*
+  def globalEnv: GlobalEnvironment
+*/
+```
 
 ## Suggested process for the incoming TL
 

@@ -147,116 +147,116 @@ where 's: 't,
             finished_deferred_function_body_compiles: HashSet::new(),
             finished_deferred_function_compiles: HashSet::new(),
         }
-    } // VI: invalid
+    }
+    /*
+    case class CompilerOutputs() {
+      // Not all signatures/banners will have a return type here, it might not have been processed yet.
+      private val returnTypesBySignature: mutable.HashMap[SignatureT, CoordT] = mutable.HashMap()
+
+      // Not all signatures/banners or even return types will have a function here, it might not have
+      // been processed yet.
+      private val signatureToFunction: mutable.HashMap[SignatureT, FunctionDefinitionT] = mutable.HashMap()
+    //  private val functionsByPrototype: mutable.HashMap[PrototypeT, FunctionT] = mutable.HashMap()
+      private val envByFunctionSignature: mutable.HashMap[SignatureT, FunctionEnvironmentT] = mutable.HashMap()
+
+      // declaredNames is the structs that we're currently in the process of defining
+      // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
+      // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
+      // This will be the instantiated name, not just the template name, see UINIT.
+      private val functionDeclaredNames: mutable.HashMap[IdT[INameT], RangeS] = mutable.HashMap()
+      // Outer env is the env that contains the template.
+      // This will be the instantiated name, not just the template name, see UINIT.
+      private val functionNameToOuterEnv: mutable.HashMap[IdT[IFunctionTemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+      // Inner env is the env that contains the solved rules for the declaration, given placeholders.
+      // This will be the instantiated name, not just the template name, see UINIT.
+      private val functionNameToInnerEnv: mutable.HashMap[IdT[INameT], IInDenizenEnvironmentT] = mutable.HashMap()
+
+
+      // declaredNames is the structs that we're currently in the process of defining
+      // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
+      // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
+      private val typeDeclaredNames: mutable.HashSet[IdT[ITemplateNameT]] = mutable.HashSet()
+      // Outer env is the env that contains the template.
+      private val typeNameToOuterEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+      // Inner env is the env that contains the solved rules for the declaration, given placeholders.
+      // We can key by template name here because there's only one inner env per template. This is the env
+      // that has placeholders and stuff.
+      // Also, if it's keyed by template name, we can access it earlier, before the definition is even made.
+      // This is important for when we want to be compiling a struct/interface and one of its internal methods
+      // wants to look in its inner env to get some bounds.
+      private val typeNameToInnerEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+      // One must fill this in when putting things into declaredNames.
+      private val typeNameToMutability: mutable.HashMap[IdT[ITemplateNameT], ITemplataT[MutabilityTemplataType]] = mutable.HashMap()
+      // One must fill this in when putting things into declaredNames.
+      private val interfaceNameToSealed: mutable.HashMap[IdT[IInterfaceTemplateNameT], Boolean] = mutable.HashMap()
+
+
+      private val structTemplateNameToDefinition: mutable.HashMap[IdT[IStructTemplateNameT], StructDefinitionT] = mutable.HashMap()
+      private val interfaceTemplateNameToDefinition: mutable.HashMap[IdT[IInterfaceTemplateNameT], InterfaceDefinitionT] = mutable.HashMap()
+
+      private val allImpls: mutable.HashMap[IdT[IImplTemplateNameT], ImplT] = mutable.HashMap()
+      private val subCitizenTemplateToImpls: mutable.HashMap[IdT[ICitizenTemplateNameT], Vector[ImplT]] = mutable.HashMap()
+      private val superInterfaceTemplateToImpls: mutable.HashMap[IdT[IInterfaceTemplateNameT], Vector[ImplT]] = mutable.HashMap()
+
+      private val kindExports: mutable.ArrayBuffer[KindExportT] = mutable.ArrayBuffer()
+      private val functionExports: mutable.ArrayBuffer[FunctionExportT] = mutable.ArrayBuffer()
+      private val kindExterns: mutable.ArrayBuffer[KindExternT] = mutable.ArrayBuffer()
+      private val functionExterns: mutable.ArrayBuffer[FunctionExternT] = mutable.ArrayBuffer()
+
+      // When we call a function, for example this one:
+      //   abstract func drop<T>(virtual opt Opt<T>) where func drop(T)void;
+      // and we instantiate it, drop<int>(Opt<int>), we need to figure out the bounds, ensure that
+      // drop(int) exists. Then we have to remember it for the instantiator.
+      // This map is how we remember it.
+      // Here, we'd remember: [drop<int>(Opt<int>), [Rune1337, drop(int)]].
+      // We also do this for structs and interfaces too.
+      private val instantiationNameToInstantiationBounds: mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] =
+        mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]]()
+
+    //  // Only ArrayCompiler can make an RawArrayT2.
+    //  private val staticSizedArrayTypes:
+    //    mutable.HashMap[(ITemplata[IntegerTemplataType], ITemplata[MutabilityTemplataType], ITemplata[VariabilityTemplataType], CoordT), StaticSizedArrayTT] =
+    //    mutable.HashMap()
+    //  // Only ArrayCompiler can make an RawArrayT2.
+    //  private val runtimeSizedArrayTypes: mutable.HashMap[(ITemplata[MutabilityTemplataType], CoordT), RuntimeSizedArrayTT] = mutable.HashMap()
+
+      // A queue of functions that our code uses, but we don't need to compile them right away.
+      // We can compile them later. Perhaps in parallel, someday!
+      private val deferredFunctionBodyCompiles: mutable.LinkedHashMap[PrototypeT[IFunctionNameT], DeferredEvaluatingFunctionBody] = mutable.LinkedHashMap()
+      private val finishedDeferredFunctionBodyCompiles: mutable.LinkedHashSet[PrototypeT[IFunctionNameT]] = mutable.LinkedHashSet()
+
+      private val deferredFunctionCompiles: mutable.LinkedHashMap[IdT[INameT], DeferredEvaluatingFunction] = mutable.LinkedHashMap()
+      private val finishedDeferredFunctionCompiles: mutable.LinkedHashSet[IdT[INameT]] = mutable.LinkedHashSet()
+    */
 }
-/*
-case class CompilerOutputs() {
-  // Not all signatures/banners will have a return type here, it might not have been processed yet.
-  private val returnTypesBySignature: mutable.HashMap[SignatureT, CoordT] = mutable.HashMap()
-
-  // Not all signatures/banners or even return types will have a function here, it might not have
-  // been processed yet.
-  private val signatureToFunction: mutable.HashMap[SignatureT, FunctionDefinitionT] = mutable.HashMap()
-//  private val functionsByPrototype: mutable.HashMap[PrototypeT, FunctionT] = mutable.HashMap()
-  private val envByFunctionSignature: mutable.HashMap[SignatureT, FunctionEnvironmentT] = mutable.HashMap()
-
-  // declaredNames is the structs that we're currently in the process of defining
-  // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
-  // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
-  // This will be the instantiated name, not just the template name, see UINIT.
-  private val functionDeclaredNames: mutable.HashMap[IdT[INameT], RangeS] = mutable.HashMap()
-  // Outer env is the env that contains the template.
-  // This will be the instantiated name, not just the template name, see UINIT.
-  private val functionNameToOuterEnv: mutable.HashMap[IdT[IFunctionTemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-  // Inner env is the env that contains the solved rules for the declaration, given placeholders.
-  // This will be the instantiated name, not just the template name, see UINIT.
-  private val functionNameToInnerEnv: mutable.HashMap[IdT[INameT], IInDenizenEnvironmentT] = mutable.HashMap()
-
-
-  // declaredNames is the structs that we're currently in the process of defining
-  // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
-  // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
-  private val typeDeclaredNames: mutable.HashSet[IdT[ITemplateNameT]] = mutable.HashSet()
-  // Outer env is the env that contains the template.
-  private val typeNameToOuterEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-  // Inner env is the env that contains the solved rules for the declaration, given placeholders.
-  // We can key by template name here because there's only one inner env per template. This is the env
-  // that has placeholders and stuff.
-  // Also, if it's keyed by template name, we can access it earlier, before the definition is even made.
-  // This is important for when we want to be compiling a struct/interface and one of its internal methods
-  // wants to look in its inner env to get some bounds.
-  private val typeNameToInnerEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-  // One must fill this in when putting things into declaredNames.
-  private val typeNameToMutability: mutable.HashMap[IdT[ITemplateNameT], ITemplataT[MutabilityTemplataType]] = mutable.HashMap()
-  // One must fill this in when putting things into declaredNames.
-  private val interfaceNameToSealed: mutable.HashMap[IdT[IInterfaceTemplateNameT], Boolean] = mutable.HashMap()
-
-
-  private val structTemplateNameToDefinition: mutable.HashMap[IdT[IStructTemplateNameT], StructDefinitionT] = mutable.HashMap()
-  private val interfaceTemplateNameToDefinition: mutable.HashMap[IdT[IInterfaceTemplateNameT], InterfaceDefinitionT] = mutable.HashMap()
-
-  private val allImpls: mutable.HashMap[IdT[IImplTemplateNameT], ImplT] = mutable.HashMap()
-  private val subCitizenTemplateToImpls: mutable.HashMap[IdT[ICitizenTemplateNameT], Vector[ImplT]] = mutable.HashMap()
-  private val superInterfaceTemplateToImpls: mutable.HashMap[IdT[IInterfaceTemplateNameT], Vector[ImplT]] = mutable.HashMap()
-
-  private val kindExports: mutable.ArrayBuffer[KindExportT] = mutable.ArrayBuffer()
-  private val functionExports: mutable.ArrayBuffer[FunctionExportT] = mutable.ArrayBuffer()
-  private val kindExterns: mutable.ArrayBuffer[KindExternT] = mutable.ArrayBuffer()
-  private val functionExterns: mutable.ArrayBuffer[FunctionExternT] = mutable.ArrayBuffer()
-
-  // When we call a function, for example this one:
-  //   abstract func drop<T>(virtual opt Opt<T>) where func drop(T)void;
-  // and we instantiate it, drop<int>(Opt<int>), we need to figure out the bounds, ensure that
-  // drop(int) exists. Then we have to remember it for the instantiator.
-  // This map is how we remember it.
-  // Here, we'd remember: [drop<int>(Opt<int>), [Rune1337, drop(int)]].
-  // We also do this for structs and interfaces too.
-  private val instantiationNameToInstantiationBounds: mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] =
-    mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]]()
-
-//  // Only ArrayCompiler can make an RawArrayT2.
-//  private val staticSizedArrayTypes:
-//    mutable.HashMap[(ITemplata[IntegerTemplataType], ITemplata[MutabilityTemplataType], ITemplata[VariabilityTemplataType], CoordT), StaticSizedArrayTT] =
-//    mutable.HashMap()
-//  // Only ArrayCompiler can make an RawArrayT2.
-//  private val runtimeSizedArrayTypes: mutable.HashMap[(ITemplata[MutabilityTemplataType], CoordT), RuntimeSizedArrayTT] = mutable.HashMap()
-
-  // A queue of functions that our code uses, but we don't need to compile them right away.
-  // We can compile them later. Perhaps in parallel, someday!
-  private val deferredFunctionBodyCompiles: mutable.LinkedHashMap[PrototypeT[IFunctionNameT], DeferredEvaluatingFunctionBody] = mutable.LinkedHashMap()
-  private val finishedDeferredFunctionBodyCompiles: mutable.LinkedHashSet[PrototypeT[IFunctionNameT]] = mutable.LinkedHashSet()
-
-  private val deferredFunctionCompiles: mutable.LinkedHashMap[IdT[INameT], DeferredEvaluatingFunction] = mutable.LinkedHashMap()
-  private val finishedDeferredFunctionCompiles: mutable.LinkedHashSet[IdT[INameT]] = mutable.LinkedHashSet()
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn count_denizens(&self) -> i32 {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def countDenizens(): Int = {
+    //    staticSizedArrayTypes.size +
+    //      runtimeSizedArrayTypes.size +
+          signatureToFunction.size +
+          structTemplateNameToDefinition.size +
+          interfaceTemplateNameToDefinition.size
+      }
+    */
 }
-/*
-  def countDenizens(): Int = {
-//    staticSizedArrayTypes.size +
-//      runtimeSizedArrayTypes.size +
-      signatureToFunction.size +
-      structTemplateNameToDefinition.size +
-      interfaceTemplateNameToDefinition.size
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn peek_next_deferred_function_body_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
+        deferredFunctionBodyCompiles.headOption.map(_._2)
+      }
+    */
 }
-/*
-  def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
-    deferredFunctionBodyCompiles.headOption.map(_._2)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -265,27 +265,27 @@ where 's: 't,
         prototype_t: &'t PrototypeT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
+        vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
+        finishedDeferredFunctionBodyCompiles += prototypeT
+        deferredFunctionBodyCompiles -= prototypeT
+      }
+    */
 }
-/*
-  def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
-    vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
-    finishedDeferredFunctionBodyCompiles += prototypeT
-    deferredFunctionBodyCompiles -= prototypeT
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn peek_next_deferred_function_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
+        deferredFunctionCompiles.headOption.map(_._2)
+      }
+    */
 }
-/*
-  def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
-    deferredFunctionCompiles.headOption.map(_._2)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -294,15 +294,15 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
+        vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
+        finishedDeferredFunctionCompiles += name
+        deferredFunctionCompiles -= name
+      }
+    */
 }
-/*
-  def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
-    vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
-    finishedDeferredFunctionCompiles += name
-    deferredFunctionCompiles -= name
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -310,13 +310,13 @@ where 's: 't,
         &self,
     ) -> HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
+        instantiationNameToInstantiationBounds.toMap
+      }
+    */
 }
-/*
-  def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
-    instantiationNameToInstantiationBounds.toMap
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -325,13 +325,13 @@ where 's: 't,
         signature: &'t SignatureT<'s, 't>,
     ) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
+        signatureToFunction.get(signature)
+      }
+    */
 }
-/*
-  def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
-    signatureToFunction.get(signature)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -340,15 +340,15 @@ where 's: 't,
         instantiation_id: IdT<'s, 't>,
     ) -> Option<&'t InstantiationBoundArgumentsT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getInstantiationBounds(
+        instantiationId: IdT[IInstantiationNameT]):
+      Option[InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
+        instantiationNameToInstantiationBounds.get(instantiationId)
+      }
+    */
 }
-/*
-  def getInstantiationBounds(
-    instantiationId: IdT[IInstantiationNameT]):
-  Option[InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
-    instantiationNameToInstantiationBounds.get(instantiationId)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -361,133 +361,133 @@ where 's: 't,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def addInstantiationBounds(
-    sanityCheck: Boolean,
-    interner: Interner,
-    originalCallingTemplateId: IdT[ITemplateNameT],
-    instantiationId: IdT[IInstantiationNameT],
-    instantiationBoundArgs: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]):
-  Unit = {
-    val InstantiationBoundArgumentsT(
-    runeToBoundPrototype,
-    runeToCitizenRuneToReachablePrototype,
-    runeToBoundImpl) = instantiationBoundArgs
-
-    instantiationId match {
-      case IdT(_,Vector(),FunctionNameT(FunctionTemplateNameT(StrI("Bork"),_),Vector(CoordTemplataT(CoordT(_,RegionT(),IntT(32)))),Vector(CoordT(_,RegionT(),IntT(32))))) => {
-        vpass()
-      }
-      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("XOpt")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(InterfaceTemplateNameT(StrI("XOpt")), FunctionTemplateNameT(StrI("harvest"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
-        vpass()
-      }
-      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("IXOption")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(FunctionTemplateNameT(StrI("drop"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
-        vpass()
-      }
-      case _ =>
     }
+    /*
+      def addInstantiationBounds(
+        sanityCheck: Boolean,
+        interner: Interner,
+        originalCallingTemplateId: IdT[ITemplateNameT],
+        instantiationId: IdT[IInstantiationNameT],
+        instantiationBoundArgs: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]):
+      Unit = {
+        val InstantiationBoundArgumentsT(
+        runeToBoundPrototype,
+        runeToCitizenRuneToReachablePrototype,
+        runeToBoundImpl) = instantiationBoundArgs
 
-    // We do this so that there's no random selection of where we get a particular bound from, see MFBFDP.
-    // Keeps things nice and consistent so we dont run into any oddities with the overload index.
-    runeToCitizenRuneToReachablePrototype.foreach({ case (callerRUne, reachableBoundArgs) =>
-      val InstantiationReachableBoundArgumentsT(citizenAndRuneAndReachablePrototypes) =
-        reachableBoundArgs
-      citizenAndRuneAndReachablePrototypes.foreach({
-        case (calleeRune, reachablePrototype) => {
-          reachablePrototype.id.localName match {
+        instantiationId match {
+          case IdT(_,Vector(),FunctionNameT(FunctionTemplateNameT(StrI("Bork"),_),Vector(CoordTemplataT(CoordT(_,RegionT(),IntT(32)))),Vector(CoordT(_,RegionT(),IntT(32))))) => {
+            vpass()
+          }
+          case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("XOpt")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(InterfaceTemplateNameT(StrI("XOpt")), FunctionTemplateNameT(StrI("harvest"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
+            vpass()
+          }
+          case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("IXOption")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(FunctionTemplateNameT(StrI("drop"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
+            vpass()
+          }
+          case _ =>
+        }
+
+        // We do this so that there's no random selection of where we get a particular bound from, see MFBFDP.
+        // Keeps things nice and consistent so we dont run into any oddities with the overload index.
+        runeToCitizenRuneToReachablePrototype.foreach({ case (callerRUne, reachableBoundArgs) =>
+          val InstantiationReachableBoundArgumentsT(citizenAndRuneAndReachablePrototypes) =
+            reachableBoundArgs
+          citizenAndRuneAndReachablePrototypes.foreach({
+            case (calleeRune, reachablePrototype) => {
+              reachablePrototype.id.localName match {
+                case FunctionBoundNameT(_, _, _) => {
+                  val reachableFuncSuperTemplateIdInitSteps =
+                    TemplataCompiler.getSuperTemplate(reachablePrototype.id).initSteps
+                  val originalCallingSuperTemplateIdInitSteps =
+                    TemplataCompiler.getSuperTemplate(originalCallingTemplateId).initSteps
+                  vassert(reachableFuncSuperTemplateIdInitSteps.startsWith(originalCallingSuperTemplateIdInitSteps))
+                }
+                case _ =>
+              }
+            }
+          })
+        })
+        // If we're instantiating with a bound, then make sure that it's one that comes from our root compiling denizen env;
+        // make sure we imported it correctly, see MFBFDP.
+        // That'll help ensure that we're not doing anything tricky, and ensure we don't trigger any mismatches below.
+        runeToBoundPrototype.foreach({ case (rune, callerBoundArgFunction) =>
+          callerBoundArgFunction.id.localName match {
             case FunctionBoundNameT(_, _, _) => {
-              val reachableFuncSuperTemplateIdInitSteps =
-                TemplataCompiler.getSuperTemplate(reachablePrototype.id).initSteps
-              val originalCallingSuperTemplateIdInitSteps =
-                TemplataCompiler.getSuperTemplate(originalCallingTemplateId).initSteps
-              vassert(reachableFuncSuperTemplateIdInitSteps.startsWith(originalCallingSuperTemplateIdInitSteps))
+              if (sanityCheck) {
+                val callerBoundArgFuncSuperTemplateIdInitSteps =
+                  TemplataCompiler.getSuperTemplate(callerBoundArgFunction.id).steps
+                val originalCallingSuperTemplateIdInitSteps =
+                  TemplataCompiler.getRootSuperTemplate(interner, originalCallingTemplateId).steps
+                vassert(callerBoundArgFuncSuperTemplateIdInitSteps.startsWith(originalCallingSuperTemplateIdInitSteps))
+              }
             }
             case _ =>
           }
+        })
+        // TODO: have asserts for the impls too. Might become moot if we don't need to register
+        //   bounds with coutputs one day.
+
+        // If there are any placeholders in the thing we're calling, make sure they're from the original calling template,
+        // otherwise we probably forgot to do a substitution or something.
+        if (sanityCheck) {
+          Collector.all(instantiationId, {
+            case id@IdT(_, initSteps, KindPlaceholderNameT(_)) => {
+              val x: IdT[INameT] = id
+              vassert(
+                TemplataCompiler.getSuperTemplate(x).initSteps
+                    .startsWith(TemplataCompiler.getRootSuperTemplate(interner, originalCallingTemplateId).initSteps))
+            }
+          })
         }
-      })
-    })
-    // If we're instantiating with a bound, then make sure that it's one that comes from our root compiling denizen env;
-    // make sure we imported it correctly, see MFBFDP.
-    // That'll help ensure that we're not doing anything tricky, and ensure we don't trigger any mismatches below.
-    runeToBoundPrototype.foreach({ case (rune, callerBoundArgFunction) =>
-      callerBoundArgFunction.id.localName match {
-        case FunctionBoundNameT(_, _, _) => {
-          if (sanityCheck) {
-            val callerBoundArgFuncSuperTemplateIdInitSteps =
-              TemplataCompiler.getSuperTemplate(callerBoundArgFunction.id).steps
-            val originalCallingSuperTemplateIdInitSteps =
-              TemplataCompiler.getRootSuperTemplate(interner, originalCallingTemplateId).steps
-            vassert(callerBoundArgFuncSuperTemplateIdInitSteps.startsWith(originalCallingSuperTemplateIdInitSteps))
+
+        // We'll do this when we can cache instantiations from StructTemplar etc.
+        // // We should only add instantiation bounds in exactly one place: the place that makes the
+        // // PrototypeT/StructTT/InterfaceTT.
+        // vassert(!instantiationNameToInstantiationBounds.contains(instantiationFullName))
+        instantiationNameToInstantiationBounds.get(instantiationId) match {
+          case Some(existing) => {
+            // Theres some ambiguities or something here. sometimes when we evaluate
+            // the same thing twice we get different results.
+            // It's gonna be especially tricky because we get each function bounds from the overload
+            // resolver which only returns one.
+            // We avoid this by merging all sorts of function bounds, see MFBFDP.
+            vassert(existing == instantiationBoundArgs)
           }
+          case None =>
         }
-        case _ =>
-      }
-    })
-    // TODO: have asserts for the impls too. Might become moot if we don't need to register
-    //   bounds with coutputs one day.
 
-    // If there are any placeholders in the thing we're calling, make sure they're from the original calling template,
-    // otherwise we probably forgot to do a substitution or something.
-    if (sanityCheck) {
-      Collector.all(instantiationId, {
-        case id@IdT(_, initSteps, KindPlaceholderNameT(_)) => {
-          val x: IdT[INameT] = id
-          vassert(
-            TemplataCompiler.getSuperTemplate(x).initSteps
-                .startsWith(TemplataCompiler.getRootSuperTemplate(interner, originalCallingTemplateId).initSteps))
+        instantiationId match {
+          case IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("ifunction"))),Vector(),AnonymousSubstructNameT(AnonymousSubstructTemplateNameT(InterfaceTemplateNameT(StrI("IFunction1"))),Vector(MutabilityTemplataT(MutableT), CoordTemplataT(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))), CoordTemplataT(CoordT(ShareT,RegionT(),BoolT())), CoordTemplataT(CoordT(ShareT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(FunctionNameT(FunctionTemplateNameT(StrI("parseSlice"),_),Vector(),Vector(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("path"))),Vector(),StructNameT(StructTemplateNameT(StrI("Path")),Vector())))), CoordT(OwnT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("NotesCollector")),Vector())))), CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))))),LambdaCitizenNameT(LambdaCitizenTemplateNameT(_))))))))) => {
+    //        println(instantiationBoundArgs.runeToBoundPrototype.size)
+    //        println(instantiationBoundArgs.runeToBoundImpl.size)
+    //        println(instantiationBoundArgs.runeToCitizenRuneToReachablePrototype.size)
+    //        start here // just run it. it seems to die after 83rd, and we set the pass count to 83.
+    //        // it should break when we're adding the broken thing.
+
+            vpass() // InstantiationBoundArgumentsT@5134
+          }
+          case _ =>
         }
-      })
-    }
-
-    // We'll do this when we can cache instantiations from StructTemplar etc.
-    // // We should only add instantiation bounds in exactly one place: the place that makes the
-    // // PrototypeT/StructTT/InterfaceTT.
-    // vassert(!instantiationNameToInstantiationBounds.contains(instantiationFullName))
-    instantiationNameToInstantiationBounds.get(instantiationId) match {
-      case Some(existing) => {
-        // Theres some ambiguities or something here. sometimes when we evaluate
-        // the same thing twice we get different results.
-        // It's gonna be especially tricky because we get each function bounds from the overload
-        // resolver which only returns one.
-        // We avoid this by merging all sorts of function bounds, see MFBFDP.
-        vassert(existing == instantiationBoundArgs)
+        instantiationNameToInstantiationBounds.put(instantiationId, instantiationBoundArgs)
       }
-      case None =>
-    }
 
-    instantiationId match {
-      case IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("ifunction"))),Vector(),AnonymousSubstructNameT(AnonymousSubstructTemplateNameT(InterfaceTemplateNameT(StrI("IFunction1"))),Vector(MutabilityTemplataT(MutableT), CoordTemplataT(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))), CoordTemplataT(CoordT(ShareT,RegionT(),BoolT())), CoordTemplataT(CoordT(ShareT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(FunctionNameT(FunctionTemplateNameT(StrI("parseSlice"),_),Vector(),Vector(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("path"))),Vector(),StructNameT(StructTemplateNameT(StrI("Path")),Vector())))), CoordT(OwnT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("NotesCollector")),Vector())))), CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))))),LambdaCitizenNameT(LambdaCitizenTemplateNameT(_))))))))) => {
-//        println(instantiationBoundArgs.runeToBoundPrototype.size)
-//        println(instantiationBoundArgs.runeToBoundImpl.size)
-//        println(instantiationBoundArgs.runeToCitizenRuneToReachablePrototype.size)
-//        start here // just run it. it seems to die after 83rd, and we set the pass count to 83.
-//        // it should break when we're adding the broken thing.
-
-        vpass() // InstantiationBoundArgumentsT@5134
-      }
-      case _ =>
-    }
-    instantiationNameToInstantiationBounds.put(instantiationId, instantiationBoundArgs)
-  }
-
-//  // This means we've at least started to evaluate this function's body.
-//  // We use this to cut short any infinite looping that might happen when,
-//  // for example, there's a recursive function call.
-//  def declareFunctionSignature(range: RangeS, signature: SignatureT, maybeEnv: Option[FunctionEnvironment]): Unit = {
-//    // The only difference between this and declareNonGlobalFunctionSignature is
-//    // that we put an environment in here.
-//
-//    // This should have been checked outside
-//    vassert(!declaredSignatures.contains(signature))
-//
-//    declaredSignatures += signature -> range
-//    envByFunctionSignature ++= maybeEnv.map(env => Map(signature -> env)).getOrElse(Map())
-//    this
-//  }
-*/
+    //  // This means we've at least started to evaluate this function's body.
+    //  // We use this to cut short any infinite looping that might happen when,
+    //  // for example, there's a recursive function call.
+    //  def declareFunctionSignature(range: RangeS, signature: SignatureT, maybeEnv: Option[FunctionEnvironment]): Unit = {
+    //    // The only difference between this and declareNonGlobalFunctionSignature is
+    //    // that we put an environment in here.
+    //
+    //    // This should have been checked outside
+    //    vassert(!declaredSignatures.contains(signature))
+    //
+    //    declaredSignatures += signature -> range
+    //    envByFunctionSignature ++= maybeEnv.map(env => Map(signature -> env)).getOrElse(Map())
+    //    this
+    //  }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -497,20 +497,20 @@ where 's: 't,
         return_type_2: CoordT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
-    returnTypesBySignature.get(signature) match {
-      case None =>
-      case Some(existingReturnType2) => vassert(existingReturnType2 == returnType2)
     }
-//    if (!declaredSignatures.contains(signature)) {
-//      vfail("wot")
-//    }
-    returnTypesBySignature += (signature -> returnType2)
-  }
-*/
+    /*
+      def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
+        returnTypesBySignature.get(signature) match {
+          case None =>
+          case Some(existingReturnType2) => vassert(existingReturnType2 == returnType2)
+        }
+    //    if (!declaredSignatures.contains(signature)) {
+    //      vfail("wot")
+    //    }
+        returnTypesBySignature += (signature -> returnType2)
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -519,36 +519,36 @@ where 's: 't,
         function: &'t FunctionDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def addFunction(function: FunctionDefinitionT): Unit = {
-//    vassert(declaredSignatures.contains(function.header.toSignature))
-    vassert(
-      function.body.result.coord.kind == NeverT(false) ||
-      function.body.result.coord == function.header.returnType)
-
-//    if (!useOptimization) {
-//      Collector.all(function, {
-//        case ReturnTE(innerExpr) => {
-//          vassert(
-//            innerExpr.result.reference.kind == NeverT(false) ||
-//              innerExpr.result.reference == function.header.returnType)
-//        }
-//      })
-//    }
-
-//    if (functionsByPrototype.contains(function.header.toPrototype)) {
-//      vfail("wot")
-//    }
-    if (signatureToFunction.contains(function.header.toSignature)) {
-      vfail("wot")
     }
+    /*
+      def addFunction(function: FunctionDefinitionT): Unit = {
+    //    vassert(declaredSignatures.contains(function.header.toSignature))
+        vassert(
+          function.body.result.coord.kind == NeverT(false) ||
+          function.body.result.coord == function.header.returnType)
 
-    signatureToFunction.put(function.header.toSignature, function)
-//    functionsByPrototype.put(function.header.toPrototype, function)
-  }
-*/
+    //    if (!useOptimization) {
+    //      Collector.all(function, {
+    //        case ReturnTE(innerExpr) => {
+    //          vassert(
+    //            innerExpr.result.reference.kind == NeverT(false) ||
+    //              innerExpr.result.reference == function.header.returnType)
+    //        }
+    //      })
+    //    }
+
+    //    if (functionsByPrototype.contains(function.header.toPrototype)) {
+    //      vfail("wot")
+    //    }
+        if (signatureToFunction.contains(function.header.toSignature)) {
+          vfail("wot")
+        }
+
+        signatureToFunction.put(function.header.toSignature, function)
+    //    functionsByPrototype.put(function.header.toPrototype, function)
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -558,19 +558,19 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
-    functionDeclaredNames.get(name) match {
-      case Some(oldFunctionRange) => {
-        throw CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))
-      }
-      case None =>
     }
-    functionDeclaredNames.put(name, callRanges.head)
-  }
-*/
+    /*
+      def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
+        functionDeclaredNames.get(name) match {
+          case Some(oldFunctionRange) => {
+            throw CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))
+          }
+          case None =>
+        }
+        functionDeclaredNames.put(name, callRanges.head)
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -582,37 +582,42 @@ where 's: 't,
         assert!(!self.type_declared_names.contains(&PtrKey(template_name)));
         // typeDeclaredNames += templateName
         self.type_declared_names.insert(PtrKey(template_name));
-    } // VI: invalid
+    }
+    /*
+      // We can't declare the struct at the same time as we declare its mutability or environment,
+      // see MFDBRE.
+      def declareType(templateName: IdT[ITemplateNameT]): Unit = {
+        vassert(!typeDeclaredNames.contains(templateName))
+        typeDeclaredNames += templateName
+      }
+    */
 }
-/*
-  // We can't declare the struct at the same time as we declare its mutability or environment,
-  // see MFDBRE.
-  def declareType(templateName: IdT[ITemplateNameT]): Unit = {
-    vassert(!typeDeclaredNames.contains(templateName))
-    typeDeclaredNames += templateName
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn declare_type_mutability(
         &mut self,
-        template_name: IdT<'s, 't>,
+        template_name: &'t IdT<'s, 't>,
         mutability: ITemplataT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+        // vassert(typeDeclaredNames.contains(templateName))
+        assert!(self.type_declared_names.contains(&PtrKey(template_name)));
+        // vassert(!typeNameToMutability.contains(templateName))
+        assert!(!self.type_name_to_mutability.contains_key(&PtrKey(template_name)));
+        // typeNameToMutability += (templateName -> mutability)
+        self.type_name_to_mutability.insert(PtrKey(template_name), mutability);
+    }
+    /*
+      def declareTypeMutability(
+        templateName: IdT[ITemplateNameT],
+        mutability: ITemplataT[MutabilityTemplataType]
+      ): Unit = {
+        vassert(typeDeclaredNames.contains(templateName))
+        vassert(!typeNameToMutability.contains(templateName))
+        typeNameToMutability += (templateName -> mutability)
+      }
+    */
 }
-/*
-  def declareTypeMutability(
-    templateName: IdT[ITemplateNameT],
-    mutability: ITemplataT[MutabilityTemplataType]
-  ): Unit = {
-    vassert(typeDeclaredNames.contains(templateName))
-    vassert(!typeNameToMutability.contains(templateName))
-    typeNameToMutability += (templateName -> mutability)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -622,18 +627,18 @@ where 's: 't,
         sealed: bool,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def declareTypeSealed(
+        templateName: IdT[IInterfaceTemplateNameT],
+        seealed: Boolean
+      ): Unit = {
+        vassert(typeDeclaredNames.contains(templateName))
+        vassert(!interfaceNameToSealed.contains(templateName))
+        interfaceNameToSealed += (templateName -> seealed)
+      }
+    */
 }
-/*
-  def declareTypeSealed(
-    templateName: IdT[IInterfaceTemplateNameT],
-    seealed: Boolean
-  ): Unit = {
-    vassert(typeDeclaredNames.contains(templateName))
-    vassert(!interfaceNameToSealed.contains(templateName))
-    interfaceNameToSealed += (templateName -> seealed)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -643,20 +648,20 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def declareFunctionInnerEnv(
+        nameT: IdT[IFunctionNameT],
+        env: IInDenizenEnvironmentT,
+      ): Unit = {
+        vassert(functionDeclaredNames.contains(nameT))
+        // One should declare the outer env first
+        vassert(!functionNameToInnerEnv.contains(nameT))
+    //    vassert(nameT == env.fullName)
+        functionNameToInnerEnv += (nameT -> env)
+      }
+    */
 }
-/*
-  def declareFunctionInnerEnv(
-    nameT: IdT[IFunctionNameT],
-    env: IInDenizenEnvironmentT,
-  ): Unit = {
-    vassert(functionDeclaredNames.contains(nameT))
-    // One should declare the outer env first
-    vassert(!functionNameToInnerEnv.contains(nameT))
-//    vassert(nameT == env.fullName)
-    functionNameToInnerEnv += (nameT -> env)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -666,18 +671,18 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def declareFunctionOuterEnv(
+        nameT: IdT[IFunctionTemplateNameT],
+        env: IInDenizenEnvironmentT,
+      ): Unit = {
+        vassert(!functionNameToOuterEnv.contains(nameT))
+        //    vassert(nameT == env.fullName)
+        functionNameToOuterEnv += (nameT -> env)
+      }
+    */
 }
-/*
-  def declareFunctionOuterEnv(
-    nameT: IdT[IFunctionTemplateNameT],
-    env: IInDenizenEnvironmentT,
-  ): Unit = {
-    vassert(!functionNameToOuterEnv.contains(nameT))
-    //    vassert(nameT == env.fullName)
-    functionNameToOuterEnv += (nameT -> env)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -694,44 +699,52 @@ where 's: 't,
         // (skipped — requires pattern-matching all IInDenizenEnvironmentT variants to extract id)
         // typeNameToOuterEnv += (nameT -> env)
         self.type_name_to_outer_env.insert(PtrKey(name_t), env);
-    } // VI: invalid
+    }
+    /*
+      def declareTypeOuterEnv(
+        nameT: IdT[ITemplateNameT],
+        env: IInDenizenEnvironmentT,
+      ): Unit = {
+        vassert(typeDeclaredNames.contains(nameT))
+        vassert(!typeNameToOuterEnv.contains(nameT))
+        vassert(nameT == env.id)
+        typeNameToOuterEnv += (nameT -> env)
+      }
+    */
 }
-/*
-  def declareTypeOuterEnv(
-    nameT: IdT[ITemplateNameT],
-    env: IInDenizenEnvironmentT,
-  ): Unit = {
-    vassert(typeDeclaredNames.contains(nameT))
-    vassert(!typeNameToOuterEnv.contains(nameT))
-    vassert(nameT == env.id)
-    typeNameToOuterEnv += (nameT -> env)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn declare_type_inner_env(
         &mut self,
-        template_id: IdT<'s, 't>,
+        template_id: &'t IdT<'s, 't>,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+        // vassert(typeDeclaredNames.contains(templateId))
+        assert!(self.type_declared_names.contains(&PtrKey(template_id)));
+        // One should declare the outer env first
+        // vassert(typeNameToOuterEnv.contains(templateId))
+        assert!(self.type_name_to_outer_env.contains_key(&PtrKey(template_id)));
+        // vassert(!typeNameToInnerEnv.contains(templateId))
+        assert!(!self.type_name_to_inner_env.contains_key(&PtrKey(template_id)));
+        // typeNameToInnerEnv += (templateId -> env)
+        self.type_name_to_inner_env.insert(PtrKey(template_id), env);
+    }
+    /*
+      def declareTypeInnerEnv(
+        templateId: IdT[ITemplateNameT],
+        env: IInDenizenEnvironmentT,
+      ): Unit = {
+    //    val templateFullName = TemplataCompiler.getTemplate(nameT)
+        vassert(typeDeclaredNames.contains(templateId))
+        // One should declare the outer env first
+        vassert(typeNameToOuterEnv.contains(templateId))
+        vassert(!typeNameToInnerEnv.contains(templateId))
+        //    vassert(nameT == env.fullName)
+        typeNameToInnerEnv += (templateId -> env)
+      }
+    */
 }
-/*
-  def declareTypeInnerEnv(
-    templateId: IdT[ITemplateNameT],
-    env: IInDenizenEnvironmentT,
-  ): Unit = {
-//    val templateFullName = TemplataCompiler.getTemplate(nameT)
-    vassert(typeDeclaredNames.contains(templateId))
-    // One should declare the outer env first
-    vassert(typeNameToOuterEnv.contains(templateId))
-    vassert(!typeNameToInnerEnv.contains(templateId))
-    //    vassert(nameT == env.fullName)
-    typeNameToInnerEnv += (templateId -> env)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -740,30 +753,30 @@ where 's: 't,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def addStruct(structDef: StructDefinitionT): Unit = {
-    if (structDef.mutability == MutabilityTemplataT(ImmutableT)) {
-      structDef.members.foreach({
-        case NormalStructMemberT(name, variability, AddressMemberTypeT(reference)) => {
-          vwat() // Immutable structs cant contain address members
-        }
-        case NormalStructMemberT(name, variability, ReferenceMemberTypeT(reference)) => {
-          if (reference.ownership != ShareT) {
-            vfail("ImmutableP contains a non-immutable!")
-          }
-        }
-        case VariadicStructMemberT(name, tyype) => {
-          vimpl() // We dont yet have immutable structs with variadic members
-        }
-      })
     }
-    vassert(typeNameToMutability.contains(structDef.templateName))
-    vassert(!structTemplateNameToDefinition.contains(structDef.templateName))
-    structTemplateNameToDefinition += (structDef.templateName -> structDef)
-  }
-*/
+    /*
+      def addStruct(structDef: StructDefinitionT): Unit = {
+        if (structDef.mutability == MutabilityTemplataT(ImmutableT)) {
+          structDef.members.foreach({
+            case NormalStructMemberT(name, variability, AddressMemberTypeT(reference)) => {
+              vwat() // Immutable structs cant contain address members
+            }
+            case NormalStructMemberT(name, variability, ReferenceMemberTypeT(reference)) => {
+              if (reference.ownership != ShareT) {
+                vfail("ImmutableP contains a non-immutable!")
+              }
+            }
+            case VariadicStructMemberT(name, tyype) => {
+              vimpl() // We dont yet have immutable structs with variadic members
+            }
+          })
+        }
+        vassert(typeNameToMutability.contains(structDef.templateName))
+        vassert(!structTemplateNameToDefinition.contains(structDef.templateName))
+        structTemplateNameToDefinition += (structDef.templateName -> structDef)
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -772,26 +785,26 @@ where 's: 't,
         interface_def: &'t InterfaceDefinitionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def addInterface(interfaceDef: InterfaceDefinitionT): Unit = {
-    vassert(typeNameToMutability.contains(interfaceDef.templateName))
-    vassert(interfaceNameToSealed.contains(interfaceDef.templateName))
-    vassert(!interfaceTemplateNameToDefinition.contains(interfaceDef.templateName))
-    interfaceTemplateNameToDefinition += (interfaceDef.templateName -> interfaceDef)
-  }
+    }
+    /*
+      def addInterface(interfaceDef: InterfaceDefinitionT): Unit = {
+        vassert(typeNameToMutability.contains(interfaceDef.templateName))
+        vassert(interfaceNameToSealed.contains(interfaceDef.templateName))
+        vassert(!interfaceTemplateNameToDefinition.contains(interfaceDef.templateName))
+        interfaceTemplateNameToDefinition += (interfaceDef.templateName -> interfaceDef)
+      }
 
-//  def addStaticSizedArray(ssaTT: StaticSizedArrayTT): Unit = {
-//    val contentsStaticSizedArrayTT(size, elementType, mutability, variability) = ssaTT
-//    staticSizedArrayTypes += ((size, elementType, mutability, variability) -> ssaTT)
-//  }
-//
-//  def addRuntimeSizedArray(rsaTT: RuntimeSizedArrayTT): Unit = {
-//    val contentsRuntimeSizedArrayTT(elementType, mutability) = rsaTT
-//    runtimeSizedArrayTypes += ((elementType, mutability) -> rsaTT)
-//  }
-*/
+    //  def addStaticSizedArray(ssaTT: StaticSizedArrayTT): Unit = {
+    //    val contentsStaticSizedArrayTT(size, elementType, mutability, variability) = ssaTT
+    //    staticSizedArrayTypes += ((size, elementType, mutability, variability) -> ssaTT)
+    //  }
+    //
+    //  def addRuntimeSizedArray(rsaTT: RuntimeSizedArrayTT): Unit = {
+    //    val contentsRuntimeSizedArrayTT(elementType, mutability) = rsaTT
+    //    runtimeSizedArrayTypes += ((elementType, mutability) -> rsaTT)
+    //  }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -800,20 +813,20 @@ where 's: 't,
         impl_t: &'t ImplT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def addImpl(impl: ImplT): Unit = {
+        vassert(!allImpls.contains(impl.templateId))
+        allImpls.put(impl.templateId, impl)
+        subCitizenTemplateToImpls.put(
+          impl.subCitizenTemplateId,
+          subCitizenTemplateToImpls.getOrElse(impl.subCitizenTemplateId, Vector()) :+ impl)
+        superInterfaceTemplateToImpls.put(
+          impl.superInterfaceTemplateId,
+          superInterfaceTemplateToImpls.getOrElse(impl.superInterfaceTemplateId, Vector()) :+ impl)
+      }
+    */
 }
-/*
-  def addImpl(impl: ImplT): Unit = {
-    vassert(!allImpls.contains(impl.templateId))
-    allImpls.put(impl.templateId, impl)
-    subCitizenTemplateToImpls.put(
-      impl.subCitizenTemplateId,
-      subCitizenTemplateToImpls.getOrElse(impl.subCitizenTemplateId, Vector()) :+ impl)
-    superInterfaceTemplateToImpls.put(
-      impl.superInterfaceTemplateId,
-      superInterfaceTemplateToImpls.getOrElse(impl.superInterfaceTemplateId, Vector()) :+ impl)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -822,13 +835,13 @@ where 's: 't,
         sub_citizen_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getParentImplsForSubCitizenTemplate(subCitizenTemplate: IdT[ICitizenTemplateNameT]): Vector[ImplT] = {
+        subCitizenTemplateToImpls.getOrElse(subCitizenTemplate, Vector[ImplT]())
+      }
+    */
 }
-/*
-  def getParentImplsForSubCitizenTemplate(subCitizenTemplate: IdT[ICitizenTemplateNameT]): Vector[ImplT] = {
-    subCitizenTemplateToImpls.getOrElse(subCitizenTemplate, Vector[ImplT]())
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -837,13 +850,13 @@ where 's: 't,
         super_interface_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
+        superInterfaceTemplateToImpls.getOrElse(superInterfaceTemplate, Vector[ImplT]())
+      }
+    */
 }
-/*
-  def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
-    superInterfaceTemplateToImpls.getOrElse(superInterfaceTemplate, Vector[ImplT]())
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -855,13 +868,13 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {
+        kindExports += KindExportT(range, kind, id, exportedName)
+      }
+    */
 }
-/*
-  def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {
-    kindExports += KindExportT(range, kind, id, exportedName)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -873,14 +886,14 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
+        vassert(getInstantiationBounds(function.id).nonEmpty)
+        functionExports += FunctionExportT(range, function, exportId, exportedName)
+      }
+    */
 }
-/*
-  def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
-    vassert(getInstantiationBounds(function.id).nonEmpty)
-    functionExports += FunctionExportT(range, function, exportId, exportedName)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -891,13 +904,13 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def addKindExtern(kind: KindT, packageCoord: PackageCoordinate, exportedName: StrI): Unit = {
+        kindExterns += KindExternT(kind, packageCoord, exportedName)
+      }
+    */
 }
-/*
-  def addKindExtern(kind: KindT, packageCoord: PackageCoordinate, exportedName: StrI): Unit = {
-    kindExterns += KindExternT(kind, packageCoord, exportedName)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -909,13 +922,13 @@ where 's: 't,
         exported_name: StrI<'s>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
+        functionExterns += FunctionExternT(range, externPlaceholderedId, function, exportedName)
+      }
+    */
 }
-/*
-  def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {
-    functionExterns += FunctionExternT(range, externPlaceholderedId, function, exportedName)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -924,13 +937,13 @@ where 's: 't,
         devf: DeferredActionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
+        deferredFunctionBodyCompiles.put(devf.prototypeT, devf)
+      }
+    */
 }
-/*
-  def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
-    deferredFunctionBodyCompiles.put(devf.prototypeT, devf)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -939,13 +952,13 @@ where 's: 't,
         devf: DeferredActionT<'s, 't>,
     ) {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {
+        deferredFunctionCompiles.put(devf.name, devf)
+      }
+    */
 }
-/*
-  def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {
-    deferredFunctionCompiles.put(devf.name, devf)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -954,27 +967,27 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def structDeclared(templateName: IdT[IStructTemplateNameT]): Boolean = {
-    // This is the only place besides StructDefinition2 and declareStruct thats allowed to make one of these
-//    val templateName = StructTT(fullName)
-    typeDeclaredNames.contains(templateName)
-  }
+    }
+    /*
+      def structDeclared(templateName: IdT[IStructTemplateNameT]): Boolean = {
+        // This is the only place besides StructDefinition2 and declareStruct thats allowed to make one of these
+    //    val templateName = StructTT(fullName)
+        typeDeclaredNames.contains(templateName)
+      }
 
-//  def prototypeDeclared(fullName: FullNameT[IFunctionNameT]): Option[PrototypeT] = {
-//    declaredSignatures.find(_._1.fullName == fullName) match {
-//      case None => None
-//      case Some((sig, _)) => {
-//        returnTypesBySignature.get(sig) match {
-//          case None => None
-//          case Some(ret) => Some(ast.PrototypeT(sig.fullName, ret))
-//        }
-//      }
-//    }
-//  }
-*/
+    //  def prototypeDeclared(fullName: FullNameT[IFunctionNameT]): Option[PrototypeT] = {
+    //    declaredSignatures.find(_._1.fullName == fullName) match {
+    //      case None => None
+    //      case Some((sig, _)) => {
+    //        returnTypesBySignature.get(sig) match {
+    //          case None => None
+    //          case Some(ret) => Some(ast.PrototypeT(sig.fullName, ret))
+    //        }
+    //      }
+    //    }
+    //  }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -983,17 +996,17 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
-    // If it has a structTT, then we've at least started to evaluate this citizen
-    typeNameToMutability.get(templateName) match {
-      case None => vfail("Still figuring out mutability for struct: " + templateName) // See MFDBRE
-      case Some(m) => m
     }
-  }
-*/
+    /*
+      def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
+        // If it has a structTT, then we've at least started to evaluate this citizen
+        typeNameToMutability.get(templateName) match {
+          case None => vfail("Still figuring out mutability for struct: " + templateName) // See MFDBRE
+          case Some(m) => m
+        }
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1002,24 +1015,24 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
-    // If it has a structTT, then we've at least started to evaluate this citizen
-    interfaceNameToSealed.get(templateName) match {
-      case None => vfail("Still figuring out sealed for struct: " + templateName) // See MFDBRE
-      case Some(m) => m
     }
-  }
+    /*
+      def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
+        // If it has a structTT, then we've at least started to evaluate this citizen
+        interfaceNameToSealed.get(templateName) match {
+          case None => vfail("Still figuring out sealed for struct: " + templateName) // See MFDBRE
+          case Some(m) => m
+        }
+      }
 
-//  def lookupCitizen(citizenRef: CitizenRefT): CitizenDefinitionT = {
-//    citizenRef match {
-//      case s @ StructTT(_) => lookupStruct(s)
-//      case i @ InterfaceTT(_) => lookupInterface(i)
-//    }
-//  }
-*/
+    //  def lookupCitizen(citizenRef: CitizenRefT): CitizenDefinitionT = {
+    //    citizenRef match {
+    //      case s @ StructTT(_) => lookupStruct(s)
+    //      case i @ InterfaceTT(_) => lookupInterface(i)
+    //    }
+    //  }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1028,14 +1041,14 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> bool {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def interfaceDeclared(templateName: IdT[ITemplateNameT]): Boolean = {
+        // This is the only place besides InterfaceDefinition2 and declareInterface thats allowed to make one of these
+        typeDeclaredNames.contains(templateName)
+      }
+    */
 }
-/*
-  def interfaceDeclared(templateName: IdT[ITemplateNameT]): Boolean = {
-    // This is the only place besides InterfaceDefinition2 and declareInterface thats allowed to make one of these
-    typeDeclaredNames.contains(templateName)
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1044,13 +1057,13 @@ where 's: 't,
         struct_tt: IdT<'s, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
+        lookupStructTemplate(TemplataCompiler.getStructTemplate(structTT))
+      }
+    */
 }
-/*
-  def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
-    lookupStructTemplate(TemplataCompiler.getStructTemplate(structTT))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1059,13 +1072,13 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
+        vassertSome(structTemplateNameToDefinition.get(templateName))
+      }
+    */
 }
-/*
-  def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
-    vassertSome(structTemplateNameToDefinition.get(templateName))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1074,13 +1087,13 @@ where 's: 't,
         interface_tt: InterfaceTT<'s, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def lookupInterface(interfaceTT: InterfaceTT): InterfaceDefinitionT = {
+        lookupInterface(TemplataCompiler.getInterfaceTemplate(interfaceTT.id))
+      }
+    */
 }
-/*
-  def lookupInterface(interfaceTT: InterfaceTT): InterfaceDefinitionT = {
-    lookupInterface(TemplataCompiler.getInterfaceTemplate(interfaceTT.id))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1089,13 +1102,13 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
+        vassertSome(interfaceTemplateNameToDefinition.get(templateName))
+      }
+    */
 }
-/*
-  def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
-    vassertSome(interfaceTemplateNameToDefinition.get(templateName))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1104,18 +1117,18 @@ where 's: 't,
         template_name: IdT<'s, 't>,
     ) -> &'t CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
-    val IdT(packageCoord, initSteps, last) = templateName
-    last match {
-      case s @ AnonymousSubstructTemplateNameT(_) => lookupStructTemplate(IdT(packageCoord, initSteps, s))
-      case s @ StructTemplateNameT(_) => lookupStructTemplate(IdT(packageCoord, initSteps, s))
-      case s @ InterfaceTemplateNameT(_) => lookupInterface(IdT(packageCoord, initSteps, s))
     }
-  }
-*/
+    /*
+      def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
+        val IdT(packageCoord, initSteps, last) = templateName
+        last match {
+          case s @ AnonymousSubstructTemplateNameT(_) => lookupStructTemplate(IdT(packageCoord, initSteps, s))
+          case s @ StructTemplateNameT(_) => lookupStructTemplate(IdT(packageCoord, initSteps, s))
+          case s @ InterfaceTemplateNameT(_) => lookupInterface(IdT(packageCoord, initSteps, s))
+        }
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1124,63 +1137,63 @@ where 's: 't,
         citizen_tt: ICitizenTT<'s, 't>,
     ) -> &'t CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
-    citizenTT match {
-      case s @ StructTT(_) => lookupStruct(s.id)
-      case s @ InterfaceTT(_) => lookupInterface(s)
     }
-  }
-*/
+    /*
+      def lookupCitizen(citizenTT: ICitizenTT): CitizenDefinitionT = {
+        citizenTT match {
+          case s @ StructTT(_) => lookupStruct(s.id)
+          case s @ InterfaceTT(_) => lookupInterface(s)
+        }
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_structs(&self) -> Vec<&'t StructDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
+    */
 }
-/*
-  def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_interfaces(&self) -> Vec<&'t InterfaceDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
+    */
 }
-/*
-  def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
+    */
 }
-/*
-  def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_impls(&self) -> Vec<&'t ImplT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def getAllImpls(): Iterable[ImplT] = allImpls.values
-//  def getAllStaticSizedArrays(): Iterable[StaticSizedArrayTT] = staticSizedArrayTypes.values
-//  def getAllRuntimeSizedArrays(): Iterable[RuntimeSizedArrayTT] = runtimeSizedArrayTypes.values
-//  def getKindToDestructorMap(): Map[KindT, PrototypeT] = kindToDestructor.toMap
+    }
+    /*
+      def getAllImpls(): Iterable[ImplT] = allImpls.values
+    //  def getAllStaticSizedArrays(): Iterable[StaticSizedArrayTT] = staticSizedArrayTypes.values
+    //  def getAllRuntimeSizedArrays(): Iterable[RuntimeSizedArrayTT] = runtimeSizedArrayTypes.values
+    //  def getKindToDestructorMap(): Map[KindT, PrototypeT] = kindToDestructor.toMap
 
-//  def getStaticSizedArrayType(size: ITemplata[IntegerTemplataType], mutability: ITemplata[MutabilityTemplataType], variability: ITemplata[VariabilityTemplataType], elementType: CoordT): Option[StaticSizedArrayTT] = {
-//    staticSizedArrayTypes.get((size, mutability, variability, elementType))
-//  }
-*/
+    //  def getStaticSizedArrayType(size: ITemplata[IntegerTemplataType], mutability: ITemplata[MutabilityTemplataType], variability: ITemplata[VariabilityTemplataType], elementType: CoordT): Option[StaticSizedArrayTT] = {
+    //    staticSizedArrayTypes.get((size, mutability, variability, elementType))
+    //  }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1189,13 +1202,13 @@ where 's: 't,
         sig: &'t SignatureT<'s, 't>,
     ) -> &'t FunctionEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getEnvForFunctionSignature(sig: SignatureT): FunctionEnvironmentT = {
+        vassertSome(envByFunctionSignature.get(sig))
+      }
+    */
 }
-/*
-  def getEnvForFunctionSignature(sig: SignatureT): FunctionEnvironmentT = {
-    vassertSome(envByFunctionSignature.get(sig))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1205,18 +1218,18 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
-}
-/*
-  def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
-    typeNameToOuterEnv.get(name) match {
-      case None => {
-        throw CompileErrorExceptionT(RangedInternalErrorT(range, "No outer env for type: " + name))
-      }
-      case Some(x) => x
     }
-  }
-*/
+    /*
+      def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
+        typeNameToOuterEnv.get(name) match {
+          case None => {
+            throw CompileErrorExceptionT(RangedInternalErrorT(range, "No outer env for type: " + name))
+          }
+          case Some(x) => x
+        }
+      }
+    */
+}
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1225,13 +1238,13 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
+        vassertSome(typeNameToInnerEnv.get(name))
+      }
+    */
 }
-/*
-  def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
-    vassertSome(typeNameToInnerEnv.get(name))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1240,13 +1253,13 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getInnerEnvForFunction(name: IdT[INameT]): IInDenizenEnvironmentT = {
+        vassertSome(functionNameToInnerEnv.get(name))
+      }
+    */
 }
-/*
-  def getInnerEnvForFunction(name: IdT[INameT]): IInDenizenEnvironmentT = {
-    vassertSome(functionNameToInnerEnv.get(name))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1255,13 +1268,13 @@ where 's: 't,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {
+        vassertSome(functionNameToOuterEnv.get(name))
+      }
+    */
 }
-/*
-  def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {
-    vassertSome(functionNameToOuterEnv.get(name))
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
@@ -1270,68 +1283,68 @@ where 's: 't,
         sig: &'t SignatureT<'s, 't>,
     ) -> Option<CoordT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getReturnTypeForSignature(sig: SignatureT): Option[CoordT] = {
+        returnTypesBySignature.get(sig)
+      }
+    //  def getDeclaredSignatureOrigin(sig: SignatureT): Option[RangeS] = {
+    //    declaredSignatures.get(sig)
+    //  }
+    //  def getDeclaredSignatureOrigin(name: FullNameT[IFunctionNameT]): Option[RangeS] = {
+    //    declaredSignatures.get(ast.SignatureT(name))
+    //  }
+    //  def getRuntimeSizedArray(mutabilityT: ITemplata[MutabilityTemplataType], elementType: CoordT): Option[RuntimeSizedArrayTT] = {
+    //    runtimeSizedArrayTypes.get((mutabilityT, elementType))
+    //  }
+    */
 }
-/*
-  def getReturnTypeForSignature(sig: SignatureT): Option[CoordT] = {
-    returnTypesBySignature.get(sig)
-  }
-//  def getDeclaredSignatureOrigin(sig: SignatureT): Option[RangeS] = {
-//    declaredSignatures.get(sig)
-//  }
-//  def getDeclaredSignatureOrigin(name: FullNameT[IFunctionNameT]): Option[RangeS] = {
-//    declaredSignatures.get(ast.SignatureT(name))
-//  }
-//  def getRuntimeSizedArray(mutabilityT: ITemplata[MutabilityTemplataType], elementType: CoordT): Option[RuntimeSizedArrayTT] = {
-//    runtimeSizedArrayTypes.get((mutabilityT, elementType))
-//  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getKindExports: Vector[KindExportT] = {
+        kindExports.toVector
+      }
+    */
 }
-/*
-  def getKindExports: Vector[KindExportT] = {
-    kindExports.toVector
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_function_exports(&self) -> Vec<&'t FunctionExportT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getFunctionExports: Vector[FunctionExportT] = {
+        functionExports.toVector
+      }
+    */
 }
-/*
-  def getFunctionExports: Vector[FunctionExportT] = {
-    functionExports.toVector
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_kind_externs(&self) -> Vec<&'t KindExternT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getKindExterns: Vector[KindExternT] = {
+        kindExterns.toVector
+      }
+    */
 }
-/*
-  def getKindExterns: Vector[KindExternT] = {
-    kindExterns.toVector
-  }
-*/
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_function_externs(&self) -> Vec<&'t FunctionExternT<'s, 't>> {
         panic!("Unimplemented: Slab 10 — body migration");
-    } // VI: invalid
+    }
+    /*
+      def getFunctionExterns: Vector[FunctionExternT] = {
+        functionExterns.toVector
+      }
+    }
+    */
 }
-/*
-  def getFunctionExterns: Vector[FunctionExternT] = {
-    functionExterns.toVector
-  }
-}
-*/

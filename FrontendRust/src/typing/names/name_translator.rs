@@ -85,7 +85,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's ConstructorNameS.tlcd was ICitizenDeclarationNameS (which includes AnonymousSubstructTemplateNameS), so Scala needed two match arms. The Rust ConstructorNameS.tlcd is narrowed to TopLevelCitizenDeclarationNameS, so AnonymousSubstructTemplateNameS is unreachable by type — the inner match on TopLevelCitizenDeclarationNameS exhausts all cases and the AnonymousSubstruct branch cannot occur. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776984934624/hook/translate_generic_function_name--48.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateGenericFunctionName(functionName: IFunctionDeclarationNameS): IFunctionTemplateNameT = {
     functionName match {
       case LambdaDeclarationNameS(codeLocation) => {
@@ -226,8 +225,6 @@ where 's: 't,
         s
     }
 /*
-Guardian: temp-disable: NNDX — This is not a new definition — the stub was already present before this edit. The Scala reference `def translateCodeLocation` exists in the comment block at lines 191-196 directly below this function. Guardian may have missed it due to the placement of the Scala comment below rather than above the Rust stub. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776984711947/hook/translate_code_location--188.0.NoNewDefinitions-NNDX.NoNewDefinitions-NNDX.verdict.md
-Guardian: temp-disable: SPDMX — Scala destructures and reconstructs CodeLocationS(line, col) as a trivial identity. In Rust, CodeLocationS is Copy with fields file and offset (not line/col), so returning s directly is the exact same semantics — the struct is passed by value and returned unchanged. Structural parity is preserved in spirit. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1776984711947/hook/translate_code_location--188.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateCodeLocation(s: CodeLocationS): CodeLocationS = {
     val CodeLocationS(line, col) = s
     CodeLocationS(line, col)

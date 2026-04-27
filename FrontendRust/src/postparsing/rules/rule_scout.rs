@@ -107,7 +107,7 @@ fn translate_rulex<'s, 'p>(
           scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val())))
         }
       };
-      let tyype = translate_type(typed_rule.tyype);
+      let tyype = translate_type(scout_arena, typed_rule.tyype);
       rune_to_explicit_type.push((rune.clone(), tyype));
       RuneUsage {
         range: PostParser::eval_range(file, typed_rule.range),
@@ -264,7 +264,7 @@ fn translate_rulex<'s, 'p>(
         range: PostParser::eval_range(file, *range),
         rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(rune_child_lidb.borrow_val()))),
       };
-      rune_to_explicit_type.push((rune.rune.clone(), translate_type(*tyype)));
+      rune_to_explicit_type.push((rune.rune.clone(), translate_type(scout_arena, *tyype)));
       match tyype {
         ITypePR::CoordType => {
           // vregionmut() // Put back in with regions
@@ -514,7 +514,7 @@ fn translate_rulex<'s, 'p>(
 
 object RuleScout {
 */
-pub fn translate_type<'s>(tyype: ITypePR) -> ITemplataType<'s> {
+pub fn translate_type<'s>(scout_arena: &ScoutArena<'s>, tyype: ITypePR) -> ITemplataType<'s> {
   match tyype {
     ITypePR::PrototypeType => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
     ITypePR::IntType => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
@@ -525,7 +525,7 @@ pub fn translate_type<'s>(tyype: ITypePR) -> ITemplataType<'s> {
     ITypePR::LocationType => ITemplataType::LocationTemplataType(LocationTemplataType {}),
     ITypePR::CoordType => ITemplataType::CoordTemplataType(CoordTemplataType {}),
     ITypePR::CoordListType => ITemplataType::PackTemplataType(PackTemplataType {
-      element_type: &crate::postparsing::rune_type_solver::COORD_TYPE,
+      element_type: scout_arena.alloc(ITemplataType::CoordTemplataType(CoordTemplataType {})),
     }),
     ITypePR::KindType => ITemplataType::KindTemplataType(KindTemplataType {}),
     ITypePR::RegionType => ITemplataType::RegionTemplataType(RegionTemplataType {}),
@@ -535,7 +535,6 @@ pub fn translate_type<'s>(tyype: ITypePR) -> ITemplataType<'s> {
   }
 }
 /*
-Guardian: temp-disable: SPDMX — Scala's CoordTemplataType() is a case class with no fields — effectively a singleton. A Rust const for a unit struct is the semantic equivalent, not a novel optimization. Arena-allocating a zero-sized type every call would be wasteful and further from Scala semantics. — FrontendRust/guardian-logs/request-1774924244462/hook/translate_type--517.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateType(tyype: ITypePR): ITemplataType = {
     tyype match {
       case PrototypeTypePR => PrototypeTemplataType()

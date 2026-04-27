@@ -123,6 +123,7 @@ case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, 
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
 */
+#[derive(Copy, Clone)]
 pub struct InferEnv<'s, 't> {
     pub original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
     pub parent_ranges: &'t [RangeS<'s>],
@@ -385,7 +386,23 @@ where 's: 't,
         initial_knowns: &[InitialKnown],
         initial_sends: &[InitialSend],
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mut rune_to_type = initial_rune_to_type.clone();
+        for _send in initial_sends {
+            panic!("Unimplemented: make_solver_state — initialSends runeToType extension");
+        }
+        let mut rules: Vec<&'s IRulexSR<'s>> = initial_rules.to_vec();
+        for _send in initial_sends {
+            panic!("Unimplemented: make_solver_state — initialSends rules extension");
+        }
+        let mut already_known: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = HashMap::new();
+        for _known in initial_knowns {
+            panic!("Unimplemented: make_solver_state — initialKnowns processing");
+        }
+        for _send in initial_sends {
+            panic!("Unimplemented: make_solver_state — initialSends alreadyKnown extension");
+        }
+        self.make_solver_state_solver(
+            invocation_range.to_vec(), envs, state, rules, rune_to_type, already_known)
     }
 /*
   def makeSolverState(
@@ -1127,7 +1144,14 @@ pub fn include_rule_in_call_site_solve() { panic!("Unimplemented: include_rule_i
 
   // Some rules should be excluded from the call site, see SROACSD.
 */
-pub fn include_rule_in_definition_solve() { panic!("Unimplemented: include_rule_in_definition_solve"); }
+pub fn include_rule_in_definition_solve(rule: &IRulexSR) -> bool {
+    match rule {
+        IRulexSR::CallSiteCoordIsa(_) => false,
+        IRulexSR::CallSiteFunc(_) => false,
+        IRulexSR::Resolve(_) => false,
+        _ => true,
+    }
+}
 /*
   def includeRuleInDefinitionSolve(rule: IRulexSR): Boolean = {
     rule match {

@@ -466,7 +466,7 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
         ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ]),
-      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
+      return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     }));
     primitives.insert(keywords.static_array, ITemplataType::TemplateTemplataType(TemplateTemplataType {
       param_types: scout_arena.alloc_slice_copy(&[
@@ -475,7 +475,7 @@ impl<'s, 'ctx> HigherTypingPass<'s, 'ctx> {
         ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
         ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ]),
-      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
+      return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     }));
     HigherTypingPass {
       global_options,

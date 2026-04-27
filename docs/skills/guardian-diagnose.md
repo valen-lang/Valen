@@ -97,6 +97,18 @@ Read the actual shield markdown file. Pay attention to:
 
 ---
 
+## Strictness Principle
+
+Be strict. These shields exist because they encode important rules, and
+strictness makes them easier for LLMs to follow. A shield with strict
+guidelines, strict clarifications, and strict exceptions is far more
+effective than one that's loose and hand-wavy. When classifying failures,
+default toward "true violation" — the implementor should have a clear,
+specific reason why the shield is wrong, not just "it's probably fine."
+When fixing shields, add narrow, precise exceptions rather than broad
+carve-outs. The goal is rules that are unambiguous enough that an LLM can
+follow them mechanically.
+
 ## Phase 2: Triage with Human
 
 Present each classification to the human, **propose** the fix you intend to make (which shield text to add/change, which exception to add, which companion program logic to update), and **wait for explicit approval before making any changes**. Do not proceed to Phases 3–6 until the human confirms.

@@ -28,7 +28,7 @@ use crate::postparsing::ast::{
 use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
-  CoordTemplataType, ITemplataType, MutabilityTemplataType, PackTemplataType,
+  CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, PackTemplataType,
   TemplateTemplataType,
 };
 use crate::postparsing::names::{
@@ -747,7 +747,7 @@ pub(crate) fn scout_generic_parameter(
 
   let type_s = match &generic_param_p.maybe_type {
     None => ITemplataType::CoordTemplataType(CoordTemplataType {}),
-    Some(type_p) => translate_type(type_p.tyype),
+    Some(type_p) => translate_type(self.scout_arena, type_p.tyype),
   };
   rune_to_explicit_type.push((rune_s.rune.clone(), type_s.clone()));
 
@@ -1403,7 +1403,7 @@ fn scout_impl(
       .collect();
   let tyype = ITemplataType::TemplateTemplataType(TemplateTemplataType {
     param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
-    return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
+    return_type: self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
   });
 
   Ok(ImplS {
@@ -1911,7 +1911,7 @@ fn predict_mutability(
         .collect();
     let tyype = TemplateTemplataType {
       param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
-      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
+      return_type: self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     };
     let weakable = head
       .attributes
@@ -2458,7 +2458,7 @@ pub(crate) fn check_identifiability(
     let param_types_vec: Vec<ITemplataType<'s>> = generic_parameters_s.iter().map(|x| x.tyype.tyype()).collect();
     let tyype = TemplateTemplataType {
       param_types: self.scout_arena.alloc_slice_copy(&param_types_vec),
-      return_type: &crate::postparsing::rune_type_solver::KIND_TYPE,
+      return_type: self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
     };
 
     let mut internal_methods = Vec::new();

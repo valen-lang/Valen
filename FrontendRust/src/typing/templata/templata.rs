@@ -1,5 +1,6 @@
 use crate::interner::StrI;
 use crate::higher_typing::ast::*;
+use crate::postparsing::itemplatatype::ITemplataType;
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
@@ -27,8 +28,15 @@ import scala.collection.immutable.List
 object ITemplataT {
 */
 
-fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
-  panic!("Unimplemented: expect_mutability");
+pub fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
+  match templata {
+    // case t @ MutabilityTemplataT(_) => t
+    t @ ITemplataT::Mutability(_) => t,
+    // case PlaceholderTemplataT(idT, MutabilityTemplataType()) => PlaceholderTemplataT(idT, MutabilityTemplataType())
+    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::MutabilityTemplataType(_)) => templata,
+    // case _ => vfail()
+    _ => panic!("expect_mutability: not a mutability"),
+  }
 }
 /*
   def expectMutability(templata: ITemplataT[ITemplataType]): ITemplataT[MutabilityTemplataType] = {
@@ -40,8 +48,15 @@ fn expect_mutability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't>
   }
 
 */
-fn expect_variability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
-  panic!("Unimplemented: expect_variability");
+pub fn expect_variability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
+  match templata {
+    // case t @ VariabilityTemplataT(_) => t
+    t @ ITemplataT::Variability(_) => t,
+    // case PlaceholderTemplataT(idT, VariabilityTemplataType()) => PlaceholderTemplataT(idT, VariabilityTemplataType())
+    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::VariabilityTemplataType(_)) => templata,
+    // case _ => vfail()
+    _ => panic!("expect_variability: not a variability"),
+  }
 }
 /*
   def expectVariability(templata: ITemplataT[ITemplataType]): ITemplataT[VariabilityTemplataType] = {
@@ -53,8 +68,15 @@ fn expect_variability<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't
   }
 
 */
-fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
-  panic!("Unimplemented: expect_integer");
+pub fn expect_integer<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
+  match templata {
+    // case t @ IntegerTemplataT(_) => t
+    t @ ITemplataT::Integer(_) => t,
+    // case PlaceholderTemplataT(idT, IntegerTemplataType()) => PlaceholderTemplataT(idT, IntegerTemplataType())
+    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => templata,
+    // case other => vfail(other)
+    _ => panic!("expect_integer: not an integer"),
+  }
 }
 /*
   def expectInteger(templata: ITemplataT[ITemplataType]): ITemplataT[IntegerTemplataType] = {
@@ -79,8 +101,13 @@ fn expect_coord<'s, 't>(templata: ITemplataT<'s, 't>) -> ITemplataT<'s, 't> {
   }
 
 */
-fn expect_coord_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> CoordTemplataT<'s, 't> {
-  panic!("Unimplemented: expect_coord_templata");
+pub fn expect_coord_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> CoordTemplataT<'s, 't> {
+  match templata {
+    // case t @ CoordTemplataT(_) => t
+    ITemplataT::Coord(t) => *t,
+    // case other => vfail(other)
+    _ => panic!("expect_coord_templata: not a coord"),
+  }
 }
 /*
   def expectCoordTemplata(templata: ITemplataT[ITemplataType]): CoordTemplataT = {
@@ -213,7 +240,7 @@ case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PlaceholderTemplataT<'s, 't> {
   pub id: IdT<'s, 't>,
-  pub tyype: ITemplataT<'s, 't>,
+  pub tyype: ITemplataType<'s>,
 }
 /*
 case class PlaceholderTemplataT[+T <: ITemplataType](
@@ -789,7 +816,8 @@ where 's: 't, 't: 'tmp,
 {
   fn equivalent(&self, key: &CoordListTemplataValT<'s, 't, 't>) -> bool {
     self.0.coords == key.coords
-  } // VI: invalid
+  }
+  /* Guardian: disable-all */
 }
 /*
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
@@ -895,5 +923,6 @@ where 's: 't, 't: 'tmp,
       (CoordList(a), CoordList(b)) => CoordListTemplataValQuery(a).equivalent(b),
       _ => false,
     }
-  } // VI: invalid
+  }
+  /* Guardian: disable-all */
 }
