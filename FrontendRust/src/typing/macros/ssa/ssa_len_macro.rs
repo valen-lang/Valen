@@ -52,8 +52,7 @@ where 's: 't,
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
         panic!("Unimplemented: generate_function_body_ssa_len");
-    } // VI: invalid
-
+    }
 /*
   def generateFunctionBody(
     env: FunctionEnvironmentT,

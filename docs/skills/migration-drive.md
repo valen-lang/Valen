@@ -31,6 +31,7 @@ Here's what I want you to do:
     * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
     * Anything you add should be *directly immediately above* the Scala comment. NOT below the comment. NOT in a different file. Feel free to slice scala comments apart so the new rust code can be directly above the corresponding old scala code.
     * Do NOT add `// Scala:` comments in the Rust code. The Scala reference is already right there in the block comment below — no need to duplicate it inline.
+    * Do NOT copy old Scala code into the Rust code as `//` comments above the new Rust code (e.g. `//   val results = env.lookupFoo(...)`). The Scala is already preserved in the `/* ... */` block below so you don't need to copy those into the new Rust. However, DO bring over any *explanatory* comments from the Scala (e.g. `// Changed this from AnythingLookupContext to TemplataLookupContext because...`) — those are real comments that belong in the Rust code too.
     * Only implement the bare minimum that you need to make it compile. Add panic!/assert! placeholders until it compiles, then implement only the panic!s/assert!s your test runs into.
         * Every new `match` arm or `if` branch you add should simply have `panic!` in it. We'll fill it out later if the tests actually trigger them.
         * Every new loop you add should simply have `panic!`s in the body. We'll fill it out later if the tests actually trigger them.

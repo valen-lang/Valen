@@ -1,4 +1,7 @@
-use std::collections::HashMap as StdHashMap;
+use std::collections::{HashMap as StdHashMap, HashSet};
+
+use crate::typing::templata::templata::ITemplataT;
+use crate::utils::range::CodeLocationS;
 
 use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::env::function_environment_t::{
@@ -51,10 +54,24 @@ where 's: 't,
 }
 /*
 trait IEnvironmentT {
-  override def toString: String = {
-    "#Environment:" + id
+*/
+// mig: fn to_string
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn to_string(&self) -> String {
+    panic!("Unimplemented: to_string");
   }
+  /*
+    override def toString: String = {
+      "#Environment:" + id
+    }
+  */
+}
+// mig: fn eq
+/*
   override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+/*
 override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 */
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
@@ -75,52 +92,141 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
     def globalEnv: GlobalEnvironment
   */
 }
+// mig: fn templatas
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn templatas(&self) -> TemplatasStoreT<'s, 't> {
+    panic!("Unimplemented: templatas");
+  }
+  /*
+    def templatas: TemplatasStore
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    match self {
+      IEnvironmentT::Package(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::Citizen(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::Function(_) => { panic!("Unimplemented: lookup_with_imprecise_name_inner for Function"); }
+      IEnvironmentT::Node(_) => { panic!("Unimplemented: lookup_with_imprecise_name_inner for Node"); }
+      IEnvironmentT::BuildingWithClosureds(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(_) => { panic!("Unimplemented: lookup_with_imprecise_name_inner for BuildingWithClosuredsAndTemplateArgs"); }
+      IEnvironmentT::General(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::Export(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::Extern(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+    }
+  }
+  /*
+    private[env] def lookupWithImpreciseNameInner(
+      nameS: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]]
+  */
+}
+// mig: fn lookup_with_name_inner
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name_s: INameT<'s, 't>,
+    lookup_filter: HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    private[env] def lookupWithNameInner(
+      nameS: INameT,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]]
+  */
+}
+// mig: fn lookup_all_with_imprecise_name
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_all_with_imprecise_name(
+    &self,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: HashSet<ILookupContext>,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_all_with_imprecise_name");
+  }
+  /*
+    def lookupAllWithImpreciseName(
+      nameS: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext]):
+    Array[ITemplataT[ITemplataType]] = {
+      Profiler.frame(() => {
+        lookupWithImpreciseNameInner(nameS, lookupFilter, false)
+      })
+    }
+  */
+}
+// mig: fn lookup_all_with_name
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_all_with_name(
+    &self,
+    name_s: INameT<'s, 't>,
+    lookup_filter: HashSet<ILookupContext>,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_all_with_name");
+  }
+  /*
+    def lookupAllWithName(
+      nameS: INameT,
+      lookupFilter: Set[ILookupContext]):
+    Iterable[ITemplataT[ITemplataType]] = {
+      Profiler.frame(() => {
+        lookupWithNameInner(nameS, lookupFilter, false)
+      })
+    }
+  */
+}
+// mig: fn lookup_nearest_with_name
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_nearest_with_name(
+    &self,
+    name_s: INameT<'s, 't>,
+    lookup_filter: HashSet<ILookupContext>,
+  ) -> Option<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_nearest_with_name");
+  }
+  /*
+    def lookupNearestWithName(
+      nameS: INameT,
+      lookupFilter: Set[ILookupContext]):
+    Option[ITemplataT[ITemplataType]] = {
+      Profiler.frame(() => {
+        lookupWithNameInner(nameS, lookupFilter, true).toList match {
+          case List() => None
+          case List(only) => Some(only)
+          case multiple => vfail("Too many with name " + nameS + ": " + multiple)
+        }
+      })
+    }
+  */
+}
+// mig: fn lookup_nearest_with_imprecise_name
+impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_nearest_with_imprecise_name(
+    &self,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: HashSet<ILookupContext>,
+  ) -> Option<ITemplataT<'s, 't>> {
+    let results = self.lookup_with_imprecise_name_inner(name_s, lookup_filter, true);
+    match results.len() {
+      0 => None,
+      1 => Some(results.into_iter().next().unwrap()),
+      _ => panic!("Too many with name: {:?}", name_s),
+    }
+  }
+}
 /*
-  def templatas: TemplatasStore
-
-  private[env] def lookupWithImpreciseNameInner(
-    nameS: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]]
-
-  private[env] def lookupWithNameInner(
-    nameS: INameT,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]]
-
-  def lookupAllWithImpreciseName(
-    nameS: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext]):
-  Array[ITemplataT[ITemplataType]] = {
-    Profiler.frame(() => {
-      lookupWithImpreciseNameInner(nameS, lookupFilter, false)
-    })
-  }
-
-  def lookupAllWithName(
-    nameS: INameT,
-    lookupFilter: Set[ILookupContext]):
-  Iterable[ITemplataT[ITemplataType]] = {
-    Profiler.frame(() => {
-      lookupWithNameInner(nameS, lookupFilter, false)
-    })
-  }
-
-  def lookupNearestWithName(
-    nameS: INameT,
-    lookupFilter: Set[ILookupContext]):
-  Option[ITemplataT[ITemplataType]] = {
-    Profiler.frame(() => {
-      lookupWithNameInner(nameS, lookupFilter, true).toList match {
-        case List() => None
-        case List(only) => Some(only)
-        case multiple => vfail("Too many with name " + nameS + ": " + multiple)
-      }
-    })
-  }
-
   def lookupNearestWithImpreciseName(
     nameS: IImpreciseNameS,
     lookupFilter: Set[ILookupContext]):
@@ -171,15 +277,29 @@ where 's: 't,
 trait IInDenizenEnvironmentT extends IEnvironmentT {
   // This is the denizen that we're currently compiling.
   // If we're compiling a generic, it's the denizen that currently has placeholders defined.
+*/
+// mig: fn root_compiling_denizen_env
+/*
   def rootCompilingDenizenEnv: IInDenizenEnvironmentT
-
+*/
+// mig: fn denizen_id
+/*
   def denizenId: IdT[INameT]
+*/
+// mig: fn denizen_template_id
+/*
   def denizenTemplateId: IdT[ITemplateNameT]
 }
 */
 /*
 trait IDenizenEnvironmentBoxT extends IInDenizenEnvironmentT {
+*/
+// mig: fn snapshot
+/*
   def snapshot: IInDenizenEnvironmentT
+*/
+// mig: fn to_string
+/*
   override def toString: String = {
     "#Environment:" + id
   }
@@ -216,6 +336,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   */
 }
 /// Miscellaneous (see @TFITCX)
+#[derive(Clone, Copy, PartialEq, Eq, Hash)]
 pub enum ILookupContext {
   TemplataLookupContext,
   ExpressionLookupContext,
@@ -265,11 +386,17 @@ case class GlobalEnvironment(
   builtins: TemplatasStore
 )
 */
-fn entry_matches_filter() {
+// mig: fn entry_matches_filter
+pub fn entry_matches_filter<'s, 't>(
+  entry: &IEnvEntryT<'s, 't>,
+  contexts: &HashSet<ILookupContext>,
+) -> bool {
   panic!("Unimplemented: entry_matches_filter");
 }
 /*
 object TemplatasStore {
+*/
+/*
   def entryMatchesFilter(entry: IEnvEntry, contexts: Set[ILookupContext]): Boolean = {
     entry match {
       case FunctionEnvEntry(_) => contexts.contains(ExpressionLookupContext)
@@ -305,7 +432,11 @@ object TemplatasStore {
     }
   }
 */
-fn entry_to_templata() {
+// mig: fn entry_to_templata
+pub fn entry_to_templata<'s, 't>(
+  defining_env: IEnvironmentT<'s, 't>,
+  entry: IEnvEntryT<'s, 't>,
+) -> ITemplataT<'s, 't> {
   panic!("Unimplemented: entry_to_templata");
 }
 /*
@@ -320,7 +451,11 @@ fn entry_to_templata() {
     }
   }
 */
-fn get_imprecise_name() {
+// mig: fn get_imprecise_name
+pub fn get_imprecise_name<'s, 't>(
+  interner: &TypingInterner<'s, 't>,
+  name_t: INameT<'s, 't>,
+) -> Option<IImpreciseNameS<'s>> {
   panic!("Unimplemented: get_imprecise_name");
 }
 /*
@@ -383,7 +518,11 @@ fn get_imprecise_name() {
     }
   }
 */
-fn code_locations_match() {
+// mig: fn code_locations_match
+pub fn code_locations_match<'s>(
+  code_location_a: &CodeLocationS<'s>,
+  code_location_b: &CodeLocationS<'s>,
+) -> bool {
   panic!("Unimplemented: code_locations_match");
 }
 /*
@@ -407,13 +546,15 @@ where 's: 't,
 
 // Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for TemplatasStoreT<'s, 't> where 's: 't {
-  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") } // VI: invalid
+  fn eq(&self, _other: &Self) -> bool { panic!("vcurious: TemplatasStoreT.eq") }
+  /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for TemplatasStoreT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for TemplatasStoreT<'s, 't> where 's: 't {
   fn hash<H: std::hash::Hasher>(&self, _state: &mut H) {
     panic!("vcurious: TemplatasStoreT.hash")
-  } // VI: invalid
+  }
+  /* Guardian: disable-all */
 }
 
 // (no scala counterpart — builder for TemplatasStoreT. Heap Vec/HashMap during
@@ -437,7 +578,8 @@ where 's: 't,
       name_to_entry: Vec::new(),
       imprecise_to_entries: StdHashMap::new(),
     }
-  } // VI: invalid
+  }
+  /* Guardian: disable-all */
 
   pub fn build_in(
     self,
@@ -456,7 +598,8 @@ where 's: 't,
       name_to_entry,
       imprecise_to_entries,
     }
-  } // VI: invalid
+  }
+  /* Guardian: disable-all */
 }
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
@@ -469,7 +612,13 @@ case class TemplatasStore(
   // Vector because multiple things can share an INameS; function overloads.
   entriesByImpreciseNameS: Map[IImpreciseNameS, Vector[IEnvEntry]]
 ) {
+*/
+// mig: fn eq
+/*
   override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+/*
 override def hashCode(): Int = vcurious()
 
   entriesByNameT.values.foreach({
@@ -481,7 +630,18 @@ override def hashCode(): Int = vcurious()
 
   //  // The above map, indexed by human name. If it has no human name, it won't be in here.
   //  private var entriesByHumanName = Map[String, Vector[IEnvEntry]]()
-
+*/
+// mig: fn add_entries
+impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  pub fn add_entries(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    new_entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
+  ) -> TemplatasStoreT<'s, 't> {
+    panic!("Unimplemented: add_entries");
+  }
+}
+/*
   def addEntries(interner: Interner, newEntriesList: Vector[(INameT, IEnvEntry)]): TemplatasStore = {
     val newEntries = newEntriesList.toMap
     vassert(newEntries.size == newEntriesList.size)
@@ -553,40 +713,82 @@ override def hashCode(): Int = vcurious()
 
     TemplatasStore(templatasStoreName, combinedEntries, combinedEntriesByNameS)
   }
-
+*/
+// mig: fn add_entry
+impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  pub fn add_entry(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    name: INameT<'s, 't>,
+    entry: IEnvEntryT<'s, 't>,
+  ) -> TemplatasStoreT<'s, 't> {
+    panic!("Unimplemented: add_entry");
+  }
+}
+/*
   def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): TemplatasStore = {
     addEntries(interner, Vector(name -> entry))
   }
-
-  private[env] def lookupWithNameInner(
-    definingEnv: IEnvironmentT,
-
-    name: INameT,
-    lookupFilter: Set[ILookupContext]):
-  Option[ITemplataT[ITemplataType]] = {
-    entriesByNameT.get(name)
-      .filter(entryMatchesFilter(_, lookupFilter))
-      .map(entryToTemplata(definingEnv, _))
-  }
-
-  private[env] def lookupWithImpreciseNameInner(
-    definingEnv: IEnvironmentT,
-
-    name: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext]):
-  Array[ITemplataT[ITemplataType]] = {
-    val a1 = entriesByImpreciseNameS.getOrElse(name, Vector())
-    val a2 = a1.filter(entryMatchesFilter(_, lookupFilter))
-    val a3 = a2.map(entryToTemplata(definingEnv, _))
-    a3.toArray
-  }
-}
 */
-fn make_top_level_environment() {
-  panic!("Unimplemented: make_top_level_environment");
+// mig: fn lookup_with_name_inner
+impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    defining_env: IEnvironmentT<'s, 't>,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+  ) -> Option<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    private[env] def lookupWithNameInner(
+      definingEnv: IEnvironmentT,
+
+      name: INameT,
+      lookupFilter: Set[ILookupContext]):
+    Option[ITemplataT[ITemplataType]] = {
+      entriesByNameT.get(name)
+        .filter(entryMatchesFilter(_, lookupFilter))
+        .map(entryToTemplata(definingEnv, _))
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    defining_env: IEnvironmentT<'s, 't>,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    private[env] def lookupWithImpreciseNameInner(
+      definingEnv: IEnvironmentT,
+
+      name: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext]):
+    Array[ITemplataT[ITemplataType]] = {
+      val a1 = entriesByImpreciseNameS.getOrElse(name, Vector())
+      val a2 = a1.filter(entryMatchesFilter(_, lookupFilter))
+      val a3 = a2.map(entryToTemplata(definingEnv, _))
+      a3.toArray
+    }
+  }
+  */
 }
 /*
 object PackageEnvironmentT {
+*/
+// mig: fn make_top_level_environment
+pub fn make_top_level_environment<'s, 't>(
+  global_env: &'t GlobalEnvironmentT<'s, 't>,
+  namespace_name: IdT<'s, 't>,
+) -> &'t PackageEnvironmentT<'s, 't> {
+  panic!("Unimplemented: make_top_level_environment");
+}
+/*
   // THIS IS TEMPORARY, it pulls in all global namespaces!
   // See https://github.com/ValeLang/Vale/issues/356
   def makeTopLevelEnvironment(globalEnv: GlobalEnvironment, namespaceName: IdT[INameT]): PackageEnvironmentT[INameT] = {
@@ -614,66 +816,105 @@ case class PackageEnvironmentT[+T <: INameT](
   // These are ones that the user imports (or the ancestors that we implicitly import)
   globalNamespaces: Vector[TemplatasStore]
 ) extends IEnvironmentT {
+*/
+// mig: fn hash_code
+// (Realized by `impl Hash for PackageEnvironmentT` below.)
+/*
   val hash = runtime.ScalaRunTime._hashCode(id);
 override def hashCode(): Int = hash;
-
-  override def templatas: TemplatasStore = {
-    vimpl()
+*/
+// mig: fn templatas
+impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
+  pub fn templatas(&self) -> TemplatasStoreT<'s, 't> {
+    panic!("Unimplemented: templatas");
   }
+  /*
+    override def templatas: TemplatasStore = {
+      vimpl()
+    }
 
-//  override def rootCompilingDenizenEnv: IInDenizenEnvironment = vwat()
-
+  //  override def rootCompilingDenizenEnv: IInDenizenEnvironment = vwat()
+  */
+}
+// mig: fn eq
+/*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[PackageEnvironmentT[T]]) {
       return false
     }
     return id.equals(obj.asInstanceOf[PackageEnvironmentT[T]].id)
   }
-
-  private[env] override def lookupWithNameInner(
-    name: INameT,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    globalEnv.builtins.lookupWithNameInner(this, name, lookupFilter).toArray ++
-    globalNamespaces
-        .toArray
-        .flatMap(ns => {
-      val env = PackageEnvironmentT(globalEnv, ns.templatasStoreName, globalNamespaces)
-      ns.lookupWithNameInner(env, name, lookupFilter)
-    })
-  }
-
-  private[env] override def lookupWithImpreciseNameInner(
-    name: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    val result = mutable.ArrayBuffer[ITemplataT[ITemplataType]]();
-    U.foreachArr[ITemplataT[ITemplataType]](
-      globalEnv.builtins.lookupWithImpreciseNameInner(this, name, lookupFilter),
-      (a) => result += a)
-    U.foreach[TemplatasStore](globalNamespaces, globalNamespace => {
-      U.foreachIterable[ITemplataT[ITemplataType]](
-        globalNamespace.lookupWithImpreciseNameInner(
-          PackageEnvironmentT(globalEnv, globalNamespace.templatasStoreName, globalNamespaces),
-          name, lookupFilter),
-        thing => {
-          result += thing
-    })
-    })
-    result.toArray
-  }
-}
 */
+// mig: fn lookup_with_name_inner
+impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    private[env] override def lookupWithNameInner(
+      name: INameT,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      globalEnv.builtins.lookupWithNameInner(this, name, lookupFilter).toArray ++
+      globalNamespaces
+          .toArray
+          .flatMap(ns => {
+        val env = PackageEnvironmentT(globalEnv, ns.templatasStoreName, globalNamespaces)
+        ns.lookupWithNameInner(env, name, lookupFilter)
+      })
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    private[env] override def lookupWithImpreciseNameInner(
+      name: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      val result = mutable.ArrayBuffer[ITemplataT[ITemplataType]]();
+      U.foreachArr[ITemplataT[ITemplataType]](
+        globalEnv.builtins.lookupWithImpreciseNameInner(this, name, lookupFilter),
+        (a) => result += a)
+      U.foreach[TemplatasStore](globalNamespaces, globalNamespace => {
+        U.foreachIterable[ITemplataT[ITemplataType]](
+          globalNamespace.lookupWithImpreciseNameInner(
+            PackageEnvironmentT(globalEnv, globalNamespace.templatasStoreName, globalNamespaces),
+            name, lookupFilter),
+          thing => {
+            result += thing
+      })
+      })
+      result.toArray
+    }
+  }
+  */
+}
 
 // Id-based Hash/PartialEq per Gotcha 13.
 impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for PackageEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for PackageEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  /* Guardian: disable-all */
 }
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
@@ -699,75 +940,127 @@ case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   vassert(templatas.templatasStoreName == id)
 
 */
+// mig: fn denizen_id
+impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_id");
+  }
+  /*
+    override def denizenId: IdT[INameT] = templateId
+  */
+}
+// mig: fn denizen_template_id
+impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_template_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_template_id");
+  }
+  /*
+    override def denizenTemplateId: IdT[ITemplateNameT] = templateId
+  */
+}
+// mig: fn hash_code
 /*
-  override def denizenId: IdT[INameT] = templateId
-  override def denizenTemplateId: IdT[ITemplateNameT] = templateId
-
   val hash = runtime.ScalaRunTime._hashCode(id);
 override def hashCode(): Int = hash;
+*/
+// mig: fn eq
+/*
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[IInDenizenEnvironmentT]) {
       return false
     }
     return id.equals(obj.asInstanceOf[IInDenizenEnvironmentT].id)
   }
-
-  override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
-    (id.localName, parentEnv.id.localName) match {
-      case (_ : IInstantiationNameT, _ : ITemplateNameT) => this
-      case (_, PackageTopLevelNameT()) => this
-      case _ => {
-        parentEnv match {
-          case parentInDenizenEnv : IInDenizenEnvironmentT => {
-            val result = parentInDenizenEnv.rootCompilingDenizenEnv
-            result.id.localName match {
-              case _ : IInstantiationNameT =>
-              case other => vwat(other)
+*/
+// mig: fn root_compiling_denizen_env
+impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+    panic!("Unimplemented: root_compiling_denizen_env");
+  }
+  /*
+    override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
+      (id.localName, parentEnv.id.localName) match {
+        case (_ : IInstantiationNameT, _ : ITemplateNameT) => this
+        case (_, PackageTopLevelNameT()) => this
+        case _ => {
+          parentEnv match {
+            case parentInDenizenEnv : IInDenizenEnvironmentT => {
+              val result = parentInDenizenEnv.rootCompilingDenizenEnv
+              result.id.localName match {
+                case _ : IInstantiationNameT =>
+                case other => vwat(other)
+              }
+              result
             }
-            result
+            case _ => vwat()
           }
-          case _ => vwat()
         }
       }
     }
-  }
-
-  private[env] override def lookupWithNameInner(
-
-    name: INameT,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    val result = templatas.lookupWithNameInner(this, name, lookupFilter).toArray
-    if (result.nonEmpty && getOnlyNearest) {
-      result
-    } else {
-      result ++ parentEnv.lookupWithNameInner(name, lookupFilter, getOnlyNearest)
-    }
-  }
-
-  private[env] override def lookupWithImpreciseNameInner(
-
-    name: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    val result = templatas.lookupWithImpreciseNameInner(this, name, lookupFilter)
-    if (result.nonEmpty && getOnlyNearest) {
-      result
-    } else {
-      result ++ parentEnv.lookupWithImpreciseNameInner(name, lookupFilter, getOnlyNearest)
-    }
-  }
+  */
 }
-*/
+// mig: fn lookup_with_name_inner
+impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    private[env] override def lookupWithNameInner(
+
+      name: INameT,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      val result = templatas.lookupWithNameInner(this, name, lookupFilter).toArray
+      if (result.nonEmpty && getOnlyNearest) {
+        result
+      } else {
+        result ++ parentEnv.lookupWithNameInner(name, lookupFilter, getOnlyNearest)
+      }
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    private[env] override def lookupWithImpreciseNameInner(
+
+      name: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      val result = templatas.lookupWithImpreciseNameInner(this, name, lookupFilter)
+      if (result.nonEmpty && getOnlyNearest) {
+        result
+      } else {
+        result ++ parentEnv.lookupWithImpreciseNameInner(name, lookupFilter, getOnlyNearest)
+      }
+    }
+  }
+  */
+}
 
 impl<'s, 't> PartialEq for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn eq(&self, other: &Self) -> bool { self.id == other.id } // VI: invalid
+  fn eq(&self, other: &Self) -> bool { self.id == other.id }
+  /* Guardian: disable-all */
 }
 impl<'s, 't> Eq for CitizenEnvironmentT<'s, 't> where 's: 't {}
 impl<'s, 't> std::hash::Hash for CitizenEnvironmentT<'s, 't> where 's: 't {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); } // VI: invalid
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.id.hash(state); }
+  /* Guardian: disable-all */
 }
 pub fn child_of<'s, 't>(
   interner: &TypingInterner<'s, 't>,
@@ -792,6 +1085,8 @@ where 's: 't,
 }
 /*
 object GeneralEnvironmentT {
+*/
+/*
   def childOf[Y <: INameT](
     interner: Interner,
     parentEnv: IInDenizenEnvironmentT,
@@ -829,29 +1124,77 @@ case class ExportEnvironmentT(
     //  defaultRegion: ITemplata[RegionTemplataType],
     templatas: TemplatasStore
 ) extends IInDenizenEnvironmentT {
-  override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
-  override def denizenId: IdT[INameT] = id
-  override def denizenTemplateId: IdT[ITemplateNameT] = templateId
-
-  override def lookupWithNameInner(
-      name: INameT,
-      lookupFilter: Set[ILookupContext],
-      getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-
-  override def lookupWithImpreciseNameInner(
-      name: IImpreciseNameS,
-      lookupFilter: Set[ILookupContext],
-      getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithImpreciseNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-}
 */
+// mig: fn root_compiling_denizen_env
+impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+    panic!("Unimplemented: root_compiling_denizen_env");
+  }
+  /*
+    override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
+  */
+}
+// mig: fn denizen_id
+impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_id");
+  }
+  /*
+    override def denizenId: IdT[INameT] = id
+  */
+}
+// mig: fn denizen_template_id
+impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_template_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_template_id");
+  }
+  /*
+    override def denizenTemplateId: IdT[ITemplateNameT] = templateId
+  */
+}
+// mig: fn lookup_with_name_inner
+impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    override def lookupWithNameInner(
+        name: INameT,
+        lookupFilter: Set[ILookupContext],
+        getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    override def lookupWithImpreciseNameInner(
+        name: IImpreciseNameS,
+        lookupFilter: Set[ILookupContext],
+        getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithImpreciseNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  }
+  */
+}
 
 impl<'s, 't> PartialEq for ExportEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, other: &Self) -> bool { self.id == other.id }
@@ -883,29 +1226,77 @@ case class ExternEnvironmentT(
     //  defaultRegion: ITemplata[RegionTemplataType],
     templatas: TemplatasStore
 ) extends IInDenizenEnvironmentT {
-  override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
-  override def denizenId: IdT[INameT] = id
-  override def denizenTemplateId: IdT[ITemplateNameT] = templateId
-
-  override def lookupWithNameInner(
-      name: INameT,
-      lookupFilter: Set[ILookupContext],
-      getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-
-  override def lookupWithImpreciseNameInner(
-      name: IImpreciseNameS,
-      lookupFilter: Set[ILookupContext],
-      getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithImpreciseNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-}
 */
+// mig: fn root_compiling_denizen_env
+impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+    panic!("Unimplemented: root_compiling_denizen_env");
+  }
+  /*
+    override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = this
+  */
+}
+// mig: fn denizen_id
+impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_id");
+  }
+  /*
+    override def denizenId: IdT[INameT] = id
+  */
+}
+// mig: fn denizen_template_id
+impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_template_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_template_id");
+  }
+  /*
+    override def denizenTemplateId: IdT[ITemplateNameT] = templateId
+  */
+}
+// mig: fn lookup_with_name_inner
+impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    override def lookupWithNameInner(
+        name: INameT,
+        lookupFilter: Set[ILookupContext],
+        getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    override def lookupWithImpreciseNameInner(
+        name: IImpreciseNameS,
+        lookupFilter: Set[ILookupContext],
+        getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithImpreciseNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  }
+  */
+}
 
 impl<'s, 't> PartialEq for ExternEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, other: &Self) -> bool { self.id == other.id }
@@ -935,40 +1326,91 @@ case class GeneralEnvironmentT[+T <: INameT](
   id: IdT[T],
   templatas: TemplatasStore
 ) extends IInDenizenEnvironmentT {
-  override def denizenId: IdT[INameT] = id
-  override def denizenTemplateId: IdT[ITemplateNameT] = templateId
-
-  override def equals(obj: Any): Boolean = vcurious();
-
-  override def hashCode(): Int = vcurious()
-
-  override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
-//    parentEnv match {
-//      case PackageEnvironment(_, _, _) => this
-//      case _ => parentEnv.rootCompilingDenizenEnv
-//    }
-    parentEnv.rootCompilingDenizenEnv
-  }
-
-  override def lookupWithNameInner(
-    name: INameT,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-
-  override def lookupWithImpreciseNameInner(
-    name: IImpreciseNameS,
-    lookupFilter: Set[ILookupContext],
-    getOnlyNearest: Boolean):
-  Array[ITemplataT[ITemplataType]] = {
-    EnvironmentHelper.lookupWithImpreciseNameInner(
-      this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
-  }
-}
 */
+// mig: fn denizen_id
+impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_id");
+  }
+  /*
+    override def denizenId: IdT[INameT] = id
+  */
+}
+// mig: fn denizen_template_id
+impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  pub fn denizen_template_id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: denizen_template_id");
+  }
+  /*
+    override def denizenTemplateId: IdT[ITemplateNameT] = templateId
+  */
+}
+// mig: fn eq
+/*
+  override def equals(obj: Any): Boolean = vcurious();
+*/
+// mig: fn hash_code
+/*
+  override def hashCode(): Int = vcurious()
+*/
+// mig: fn root_compiling_denizen_env
+impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+    panic!("Unimplemented: root_compiling_denizen_env");
+  }
+  /*
+    override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
+  //    parentEnv match {
+  //      case PackageEnvironment(_, _, _) => this
+  //      case _ => parentEnv.rootCompilingDenizenEnv
+  //    }
+      parentEnv.rootCompilingDenizenEnv
+    }
+  */
+}
+// mig: fn lookup_with_name_inner
+impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    name: INameT<'s, 't>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
+  /*
+    override def lookupWithNameInner(
+      name: INameT,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  */
+}
+// mig: fn lookup_with_imprecise_name_inner
+impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    name: IImpreciseNameS<'s>,
+    lookup_filter: &HashSet<ILookupContext>,
+    get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
+  /*
+    override def lookupWithImpreciseNameInner(
+      name: IImpreciseNameS,
+      lookupFilter: Set[ILookupContext],
+      getOnlyNearest: Boolean):
+    Array[ITemplataT[ITemplataType]] = {
+      EnvironmentHelper.lookupWithImpreciseNameInner(
+        this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    }
+  }
+  */
+}
 
 // Scala `override def equals/hashCode = vcurious()` — mirror with panic.
 impl<'s, 't> PartialEq for GeneralEnvironmentT<'s, 't> where 's: 't {

@@ -559,28 +559,29 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> ITemplataT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
-    } // VI: invalid
+    }
+    /* Guardian: disable-all */
+    /*
+      def getMutability(
+        sanityCheck: Boolean,
+        interner: Interner,
+        keywords: Keywords,
+        coutputs: CompilerOutputs,
+        originalCallingDenizenId: IdT[ITemplateNameT],
+        region: RegionT,
+        structTT: StructTT,
+        boundArgumentsSource: IBoundArgumentsSource):
+      ITemplataT[MutabilityTemplataType] = {
+        val definition = coutputs.lookupStruct(structTT.id)
+        val transformer =
+          TemplataCompiler.getPlaceholderSubstituter(
+            sanityCheck,
+            interner, keywords,
+            originalCallingDenizenId,
+            structTT.id, boundArgumentsSource)
+        val result = transformer.substituteForTemplata(coutputs, definition.mutability)
+        ITemplataT.expectMutability(result)
+      }
+    }
+    */
 }
-/*
-  def getMutability(
-    sanityCheck: Boolean,
-    interner: Interner,
-    keywords: Keywords,
-    coutputs: CompilerOutputs,
-    originalCallingDenizenId: IdT[ITemplateNameT],
-    region: RegionT,
-    structTT: StructTT,
-    boundArgumentsSource: IBoundArgumentsSource):
-  ITemplataT[MutabilityTemplataType] = {
-    val definition = coutputs.lookupStruct(structTT.id)
-    val transformer =
-      TemplataCompiler.getPlaceholderSubstituter(
-        sanityCheck,
-        interner, keywords,
-        originalCallingDenizenId,
-        structTT.id, boundArgumentsSource)
-    val result = transformer.substituteForTemplata(coutputs, definition.mutability)
-    ITemplataT.expectMutability(result)
-  }
-}
-*/

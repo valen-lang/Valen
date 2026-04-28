@@ -1702,7 +1702,7 @@ where 's: 't,
 {
     pub fn lookup_templata_by_name(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         name: INameT<'s, 't>,
@@ -1729,12 +1729,21 @@ where 's: 't,
 {
     pub fn lookup_templata_by_rune(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         name: IImpreciseNameS<'s>,
     ) -> Option<ITemplataT<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // Changed this from AnythingLookupContext to TemplataLookupContext
+        // because this is called from StructCompiler to figure out its members.
+        // We could instead pipe a lookup context through, if this proves problematic.
+        let mut lookup_filter = std::collections::HashSet::new();
+        lookup_filter.insert(ILookupContext::TemplataLookupContext);
+        let results = env.lookup_nearest_with_imprecise_name(name, lookup_filter);
+        if results.iter().count() > 1 {
+            panic!("vfail");
+        }
+        results
     }
 /*
   def lookupTemplata(

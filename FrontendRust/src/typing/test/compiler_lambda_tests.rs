@@ -31,8 +31,7 @@ class CompilerLambdaTests extends FunSuite with Matchers {
 // mig: fn read_code_from_resource
 fn read_code_from_resource(resource_filename: &str) -> String {
     panic!("Unimplemented: read_code_from_resource");
-} // VI: invalid
-
+}
 /*
   def readCodeFromResource(resourceFilename: String): String = {
     val is = Source.fromInputStream(getClass().getClassLoader().getResourceAsStream(resourceFilename))
@@ -44,8 +43,7 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 #[test]
 fn simple_lambda() {
     panic!("Unmigrated test: simple_lambda");
-} // VI: invalid
-
+}
 /*
   test("Simple lambda") {
     val compile = CompilerTestCompilation.test(
@@ -63,8 +61,7 @@ fn simple_lambda() {
 #[test]
 fn lambda_with_one_magic_arg() {
     panic!("Unmigrated test: lambda_with_one_magic_arg");
-} // VI: invalid
-
+} 
 /*
   test("Lambda with one magic arg") {
     val compile =
@@ -86,8 +83,7 @@ fn lambda_with_one_magic_arg() {
 #[test]
 fn lambda_is_reused() {
     panic!("Unmigrated test: lambda_is_reused");
-} // VI: invalid
-
+} 
 /*
   test("Lambda is reused") {
     // Since we call it with an int both times, the template generic should only generate one generic.
@@ -112,8 +108,7 @@ fn lambda_is_reused() {
 #[test]
 fn lambda_called_with_different_types() {
     panic!("Unmigrated test: lambda_called_with_different_types");
-} // VI: invalid
-
+} 
 /*
   test("Lambda called with different types") {
     // Since we call it with an int both times, the template generic should only generate one generic.
@@ -138,8 +133,7 @@ fn lambda_called_with_different_types() {
 #[test]
 fn curried_lambda() {
     panic!("Unmigrated test: curried_lambda");
-} // VI: invalid
-
+} 
 /*
   test("Curried lambda") {
     val compile = CompilerTestCompilation.test(
@@ -168,8 +162,7 @@ fn curried_lambda() {
 #[test]
 fn lambda_with_a_type_specified_param() {
     panic!("Unmigrated test: lambda_with_a_type_specified_param");
-} // VI: invalid
-
+} 
 /*
   test("Lambda with a type specified param") {
     val compile = CompilerTestCompilation.test(
@@ -196,8 +189,7 @@ fn lambda_with_a_type_specified_param() {
 #[test]
 fn tests_lambda_and_concept_function() {
     panic!("Unmigrated test: tests_lambda_and_concept_function");
-} // VI: invalid
-
+} 
 /*
   test("Tests lambda and concept function") {
     val compile = CompilerTestCompilation.test(
@@ -221,8 +213,7 @@ fn tests_lambda_and_concept_function() {
 #[test]
 fn lambda_inside_different_function_with_same_name() {
     panic!("Unmigrated test: lambda_inside_different_function_with_same_name");
-} // VI: invalid
-
+} 
 /*
   test("Lambda inside different function with same name") {
     // This originally didn't work because both helperFunc(:Int) and helperFunc(:Str)
@@ -251,8 +242,7 @@ fn lambda_inside_different_function_with_same_name() {
 #[test]
 fn lambda_inside_template() {
     panic!("Unmigrated test: lambda_inside_template");
-} // VI: invalid
-
+} 
 /*
   test("Lambda inside template") {
     // This originally didn't work because both helperFunc<int> and helperFunc<Str>
@@ -281,8 +271,7 @@ fn lambda_inside_template() {
 #[test]
 fn curried_lambda_inside_template() {
     panic!("Unmigrated test: curried_lambda_inside_template");
-} // VI: invalid
-
+} 
 /*
   test("Curried lambda inside template") {
     val compile = CompilerTestCompilation.test(

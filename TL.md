@@ -8,6 +8,10 @@ For historical slab-by-slab progress (Slabs 0–14b), see `docs/historical/slab-
 
 **1:1 Scala parity is the highest priority.** Every design decision defers to matching Scala's structure, naming, and behavior. No novel logic, no reorganization, no Rust-idiomatic "improvements" beyond what Rust strictly requires to compile. Where Rust can't directly mirror Scala, prefer `panic!`/`assert!` placeholders over inventing alternatives. When in doubt, port Scala verbatim.
 
+**This applies to bodies as much as to types.** When porting a Scala function body, translate every line literally — including assertions, size checks, intermediate bindings, redundant-looking branches, and code paths that appear dead. Do **not** simplify, collapse, flatten, inline, or "optimize away" anything on the way over, even if you can prove the simplification is semantically equivalent. The Scala source is the spec; your job is transcription, not refactoring. If the Scala writes `if (results.size > 1) vfail()` over a value whose size can never exceed 1, the Rust writes the same check. If the Scala binds an intermediate variable that's used once, the Rust binds the same intermediate. If the Scala has a `match` arm that pattern-matches a case the caller "couldn't reach," the Rust has the same arm. Parity-preserving translation is a narrow target — keep the diff against Scala visually obvious so reviewers can verify line-for-line.
+
+**TLs and reviewers: enforce this on hand-offs.** When suggesting a body translation to a junior, never propose a simplification of the Scala — quote the Scala verbatim and tell them to mirror it. When reviewing a junior's diff, flag any place where the Rust shape diverges from the Scala shape, even when the divergence "obviously works." The migration's value comes from the audit trail; a clever translation that nobody can verify against the Scala is worse than a verbose one that anyone can.
+
 ## Where we are
 
 The scaffolding phase is complete. Slabs 0–14b built out every type definition, all ~210 method signatures with proper lifetimes, and all placeholder types (only `IRegionNameT` retains `_Phantom` — 0 Scala implementors found). `cargo check --lib` is clean (0 errors, 22 warnings — all minor lifetime elision).
@@ -164,6 +168,15 @@ Dispatch is via a small Copy unit-variant enum per Scala macro trait — `Functi
 ### 2.4 Delegate Traits Eliminated
 
 In Scala, sub-compilers were wired via anonymous delegate traits (IExpressionCompilerDelegate, IFunctionCompilerDelegate, IInfererDelegate, etc.). With the god struct, these are unnecessary — every method calls `self.method(...)` directly.
+
+### 2.5 Method vs Free Function Under The Collapse
+
+When porting a Scala `def`, decide method-on-`Compiler` vs free function by inspecting two things: what the **Scala body uses**, and whether the Rust port has to be **stored in a closure**.
+
+- **Scala body uses no `this`** (no field reads, no method calls on `this` — pure on its arguments) → may become a Rust free function. *Must* become one when the function is stored in a `Box<dyn Fn>` whose `'static` default would otherwise force a lifetime workaround. Mirror the function name and file location; only the receiver drops. SPDMX exception Q codifies this. Example: `getPuzzles` in the typing-pass solver, `get_puzzles_rune_type` and `get_runes_rune_type` in the postparser solvers.
+- **Scala body uses `this`** (reads fields, calls methods on the same class) → must stay a method on `Compiler`, even if the Scala class itself disappears (collapsed by §2.1) or had its methods forwarded through a `delegate: ISomethingDelegate` parameter. The delegate parameter disappears in Rust because §2.4 puts everything on `Compiler`. Example: `solveRule` (was `private def` on `object CompilerRuleSolver`, takes `delegate`; in Rust it's `Compiler::solve_rule(&self, ...)`).
+
+**Common mistake.** Modeling a typing-pass piece after a postparser solver without checking the body. The postparser solvers (`identifiability_solver.rs`, `rune_type_solver.rs`) have free-function `solve_rule_impl` because they have no `Compiler` and no delegate. Typing-pass code touches the delegate methods constantly — those have to be `&self` methods on `Compiler`. Don't generalize the postparser's free-function shape to the typing pass.
 
 ---
 
@@ -603,6 +616,8 @@ For quick review during implementation:
 11. **Scala `+T <: SomeTrait` parameters erase to monomorphic widest-form.** No leaf-type generic parameter on the Rust port; pattern-match at use sites.
 12. **Val types use content-based Hash/Eq.** Canonical `&'t` refs use `ptr::eq`. Don't mix the two.
 13. **Heavy-templata env refs are `&'t`, payload (FunctionA / StructA / etc.) refs are `&'s`.** Don't put env refs in `&'s`.
+14. **Never use `'static`.** All data must live in `'p`, `'s`, or `'t` (or on the stack). `'static` bypasses the arena system: a `&'static T` has a different pointer than a structurally identical `&'s T`, breaking pointer equality for interned types and creating a latent bug for any type that gets interned later. See `Luz/shields/NeverUseStaticLifetime-NUSLX.md`.
+15. **Don't try to fix a `Box<dyn Fn> + &self` deferred-borrow with a lifetime parameter.** A boxed closure that captures `&self` keeps that shared borrow live for the full lifetime of the box, not just for closure construction. Holding the box across other `&self` calls on the same struct deadlocks the borrow checker — and threading a closure-lifetime parameter through the storage type (e.g. `'fn_lt` on `SimpleSolverState`) only sidesteps the `'static` default; it does not resolve the underlying conflict. The fix is always to drop the receiver: convert the captured method to a free function (per §2.5), or pass the data the closure needs by value into the closure body. Don't propose lifetime-threading as a fix without first checking whether the closure's call sites hold the box across other `&self` calls.
 
 ---
 
@@ -669,6 +684,60 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
 ## Good Partial Implementing
 
 When replacing a `panic!` stub with real logic, write just the shallow structure of that scope — straight-line variable bindings, function calls, match expressions with all arms — but put `panic!` inside every new branch body, loop body, closure/lambda body, and match arm. Then only fill in the specific arms/branches the driving test actually hits. This applies recursively: when a test hits one of those inner panics, replace *that* panic with its own skeleton-with-panics, fill in only what the test needs, and so on. Each iteration expands one panic into a new layer of structure. **Aggressively panic for anything that might not be executed by current tests.** This minimizes each batch's diff and ensures untested paths crash loudly rather than silently returning wrong results.
+
+## Run Solutions By The Architect First
+
+**Before implementing any structural fix or design change, propose the solution to the architect and wait for approval.** This includes lifetime-parameter additions, signature changes that propagate across many files, new abstractions, and any choice between alternatives. Don't start editing — even for fixes that look mechanical — until the architect has signed off on the approach. The cost of a quick check is small; the cost of unwinding a wrong-direction change across ~20 call sites is large.
+
+## Don't Simplify Scala On The Way Over
+
+Restating the guiding principle as an operating rule because TLs slip on it: **when handing a body off to a junior, quote the Scala verbatim and instruct them to translate every line.** Do not flatten redundant checks, do not collapse impossible branches, do not inline single-use bindings, do not reason "well in Rust we can just…". If you find yourself writing "the Rust method already returns `Option`, so it's a direct return" or "we can skip this size check because it can't happen" in a hand-off, stop — that's a parity violation in the making. The whole migration's auditability rests on the diff being a literal line-for-line port. A junior who follows a verbatim Scala translation produces a reviewable patch; a junior who follows a TL's "smarter" translation produces a patch nobody can compare against the source.
+
+## Cleaning Up After The Slice Pipeline
+
+The slice pipeline (`slice-start` → `slice-rustify` → `slice-placehold` → reconcile) is the right tool for bringing a file with raw `/* scala */` comments up to SCPX parity. It's also incomplete in known ways. After running it on a non-trivial typing-pass file, plan on a manual cleanup pass before `cargo check` will be clean. These are the lessons from running it on `env/environment.rs`.
+
+### `slice-placehold` doesn't infer struct context
+
+For each `// mig: fn foo` it emits `pub fn foo<'s, 't>(&self, …) { panic!() }` at **module scope**. It does not look at what Scala class the `def` is inside, and it does not wrap the stub in an `impl SomeT<'s, 't>` block.
+
+Two failure modes follow:
+
+1. **Cross-variant name collisions.** A Scala trait method overridden by N case classes (e.g. `lookupWithNameInner` overridden by `PackageEnvironmentT`, `CitizenEnvironmentT`, `ExportEnvironmentT`, `ExternEnvironmentT`, `GeneralEnvironmentT`) becomes N module-level `pub fn lookup_with_name_inner` stubs that all collide (`E0428`).
+2. **Invalid `&self`.** `&self` outside an `impl`/`trait` is not valid Rust (`E0061`-style) and the per-fn `<'s, 't>` generics on a free fn don't have anywhere to come from in a real method dispatch.
+
+**Cleanup**: wrap each stub in the right `impl<'s, 't> SomeT<'s, 't> where 's: 't { … }` block, **drop the per-fn `<'s, 't>` generics** (the impl provides them), and indent the existing Scala `/* … */` to live inside the impl alongside the Rust fn (per the SCPX adjacency rule, §"Preserve The `/* scala */` Audit Trail"). One impl block per stub matches the rest of the file's pattern; consolidating multiple methods into one impl is allowed but not required.
+
+### `slice-placehold` emits bogus `eq`/`hash_code` stubs
+
+Scala's `override def equals/hashCode` is realized in Rust by `impl PartialEq`/`impl Hash`, not by methods named `eq`/`hash_code`. The placehold agent will sometimes emit `pub fn hash_code(&self) -> i32 { panic!() }` stubs that don't correspond to any real Rust dispatch.
+
+**Cleanup**: replace the bogus `pub fn` body with a one-line marker comment:
+```rust
+// mig: fn hash_code
+// (Realized by `impl Hash for FooT` below.)
+/*
+  override def hashCode(): Int = …
+*/
+```
+Keep the `// mig:` marker (preserves the audit trail) and the Scala `/* … */` block (SCPX). Just don't pretend there's a Rust method.
+
+### NRDX blocks multi-fn diffs — go one fn at a time
+
+The `NoRenamedDefinitions-NRDX` shield's heuristic flags consecutive context-swaps as renames. An Edit that wraps **two adjacent** `// mig: fn foo` and `// mig: fn bar` stubs in their impl blocks in one shot will trip the shield with "fn foo renamed to bar" — even though no rename is happening.
+
+**Cleanup**: do one stub per Edit. Slow but predictable.
+
+### Verify with cargo + SCPX after
+
+After cleanup, two checks:
+
+1. `cargo check --manifest-path FrontendRust/Cargo.toml --lib > tmp/<session>.txt 2>&1` — must be 0 errors. Pre-existing warnings are fine; new ones aren't.
+2. `cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all` — must report `All 230 files OK`. SCPX is the canary that the audit trail is intact through the wrap.
+
+### Don't dispatch the orchestrator on a hand-edited file
+
+The slice-orchestrator runs all six steps. If the file already has hand-written Rust impls (like `env/environment.rs` did before this session), reconcile-mark only catches the matching-name old definitions and leaves the rest in place. The colliding fresh placehold stubs then need the manual `impl`-wrap cleanup above. Plan for it; don't expect the orchestrator alone to leave a compile-clean file when the input was mid-state.
 
 ## NNDX Escalation Pattern
 

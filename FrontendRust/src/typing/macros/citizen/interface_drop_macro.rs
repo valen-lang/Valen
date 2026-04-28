@@ -49,8 +49,7 @@ where 's: 't,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: get_interface_sibling_entries_interface_drop");
-    } // VI: invalid
-
+    }
 /*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], FunctionEnvEntry)] = {
     def range(n: Int) = RangeS.internal(interner, n)

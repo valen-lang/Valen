@@ -53,25 +53,58 @@ For each shield with cases in `cases/need-shield-tuning/`:
 4. Present proposed changes to the human for approval
 5. Edit the shield file with approved changes
 
-Validate prompt changes with `guardian check-direct`:
+Validate prompt changes by running `guardian check-direct` via `cargo
+run`. The Guardian binary lives in `./Guardian/` with its own `Cargo.toml`
+and exposes two binaries (`guardian`, `guardian_benchmark`), so you must
+pass `--bin guardian`.
+
+Use `--config ./FrontendRust/guardian.toml` so the tier configs
+(simple_smart_config etc.) and backend are pulled from the toml. With
+`--config`, `--check` is rejected; scope to one shield via
+`--check-filter <SHIELD_CODE>` (e.g. `--check-filter SPDMX`). `--mode`
+is required and must match a section in the toml that includes the
+shield (e.g. `migrate_mode`, `guard_mode`, `review_mode`).
+
+Use relative paths in `cargo` commands per repo convention.
+
 ```
-guardian check-direct \
+cargo run --manifest-path ./Guardian/Cargo.toml --release --bin guardian \
+  -- check-direct \
+  --config ./FrontendRust/guardian.toml \
+  --mode migrate_mode \
+  --check-filter <SHIELD_CODE> \
   --input <NNN.diff> \
   --referenced-defs <NNN.referenced_defs.txt> \
   --file-path <file_path from NNN.context.json> \
-  --check <shield_path> \
   --cache-dir /tmp/guardian-cache \
-  --backend claude \
   --log-dir /tmp/guardian-logs \
   --format human \
-  --log-level overview
+  --log-level overview \
+  > ./tmp/guardian-curate.txt 2>&1
 ```
+
+A passing run prints `✓ Review complete: N/N definitions passed` and
+exits 0. A failure prints the per-shield denial reason and exits non-zero.
 
 Report results — which cases now pass, which still fail. Iterate with the
 human until satisfied.
 
 If tuning is insufficient (the issue is a rule gap, not an ambiguity),
 escalate: move the case to `cases/need-shield-amendment/`.
+
+Once a shield edit lands, any other case in any queue that flags **the
+same situation** the edit just addressed is out-of-date — the new
+shield prompt would no longer have raised it. For the rest of the
+session, discard those cases without re-running the appeal-LLM and
+without re-running `guardian check-direct`. Same situation means same
+shield code AND the same false-positive class (e.g. a method-to-free-
+function conversion of a different function in the same diff, or a
+cascading call-site update that exists only because the parent
+definition changed). Mention which cases you're discarding to the
+human, then `rm` them and strip any matching
+`Guardian: temp-disable:` annotations from source. Don't promote stale
+cases to `tests/` — the test bank should reflect the current shield,
+not a snapshot mid-edit.
 
 ### Step 3: Process Shield Amendments
 

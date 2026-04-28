@@ -4,11 +4,13 @@ use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
+use crate::postparsing::names::IImpreciseNameS;
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::infer_compiler::InferEnv;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
 use crate::typing::env::environment::{GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
@@ -374,10 +376,23 @@ where 's: 't,
         ITemplataT[ITemplataType] = {
           templataCompiler.coerceToCoord(state, envs.originalCallingEnv, range, templata, region)
         }
-
+*/
+    // mig: fn lookup_templata_imprecise
+    pub fn lookup_templata_imprecise(
+        &self,
+        envs: InferEnv<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        name: IImpreciseNameS<'s>,
+    ) -> Option<ITemplataT<'s, 't>> {
+        self.lookup_templata_by_rune(envs.self_env, state, range, name)
+    }
+    /*
         override def lookupTemplataImprecise(envs: InferEnv, state: CompilerOutputs, range: List[RangeS], name: IImpreciseNameS): Option[ITemplataT[ITemplataType]] = {
           templataCompiler.lookupTemplata(envs.selfEnv, state, range, name)
         }
+    */
+    /*
 
         override def getMutability(state: CompilerOutputs, kind: KindT): ITemplataT[MutabilityTemplataType] = {
             Compiler.getMutability(state, kind)
@@ -1012,8 +1027,7 @@ where 's: 't,
         }
 
         panic!("Unimplemented: evaluate — export phase and beyond");
-    } // VI: invalid
-}
+    }
 /*
   def evaluate(
       codeMap: FileCoordinateMap[String],
@@ -1705,8 +1719,9 @@ where 's: 't,
       case CompileErrorExceptionT(err) => Err(err)
     }
   }
-
 */
+}
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {

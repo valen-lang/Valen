@@ -49,8 +49,7 @@ where 's: 't,
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
         panic!("Unimplemented: generate_function_body_abstract_body");
-    } // VI: invalid
-
+    }
 /*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,

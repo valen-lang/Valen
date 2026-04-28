@@ -33,23 +33,6 @@ pub fn compiler_test_compilation<'s, 'ctx, 't, 'p>(
 ) -> TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
-/*
-  def test(code: String, interner: Interner = new Interner()): TypingPassCompilation = {
-    val keywords = new Keywords(interner)
-    new TypingPassCompilation(
-      interner,
-      keywords,
-      Vector(PackageCoordinate.TEST_TLD(interner, keywords)),
-      Builtins.getModulizedCodeMap(interner, keywords)
-        .or(FileCoordinateMap.test(interner, code))
-        .or(Tests.getPackageToResourceResolver),
-      TypingPassOptions(
-        GlobalOptions(true, true, true, true, true),
-        x => println(x),
-        false))
-  }
-}
-*/
     let test_module = parse_arena.intern_str("test");
     let test_tld = parse_arena.intern_package_coordinate(test_module, &[]);
     let global_options = GlobalOptions {
@@ -73,4 +56,21 @@ where 's: 't,
         instantiator_options,
         typing_bump,
     )
-} // VI: invalid
+}
+/*
+  def test(code: String, interner: Interner = new Interner()): TypingPassCompilation = {
+    val keywords = new Keywords(interner)
+    new TypingPassCompilation(
+      interner,
+      keywords,
+      Vector(PackageCoordinate.TEST_TLD(interner, keywords)),
+      Builtins.getModulizedCodeMap(interner, keywords)
+        .or(FileCoordinateMap.test(interner, code))
+        .or(Tests.getPackageToResourceResolver),
+      TypingPassOptions(
+        GlobalOptions(true, true, true, true, true),
+        x => println(x),
+        false))
+  }
+}
+*/

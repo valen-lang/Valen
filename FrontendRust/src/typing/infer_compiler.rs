@@ -457,7 +457,8 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         solver: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        //   compilerSolver.continue(envs, state, solver)
+        self.continue_solver(envs, state, solver)
     }
 /*
   def continue(
@@ -1092,9 +1093,38 @@ where 's: 't,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        on_incomplete_solve: impl FnMut(&mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
+        mut on_incomplete_solve: impl FnMut(&mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // See IRAGP for why we have this incremental solving/placeholdering.
+        //   while ( {
+        loop {
+            //     continue(envs, coutputs, solverState) match {
+            //       case Ok(()) =>
+            //       case Err(f) => return Err(f)
+            //     }
+            self.r#continue(envs, coutputs, solver_state)?;
+
+            //     // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+            //     // Caller should remember to do that!
+            //     if (!solverState.isComplete()) {
+            if !solver_state.is_complete() {
+                //       val continue = onIncompleteSolve(solverState)
+                let should_continue = on_incomplete_solve(solver_state);
+                //       if (!continue) {
+                //         return Ok(false)
+                //       }
+                if !should_continue {
+                    return Ok(false);
+                }
+                //       true
+            } else {
+                //     } else {
+                //       return Ok(true)
+                return Ok(true);
+            }
+        }
+        //   }) {}
+        //   vfail() // Shouldnt get here
     }
 /*
   def incrementallySolve(

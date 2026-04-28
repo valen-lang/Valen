@@ -69,8 +69,7 @@ where 's: 't,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
         panic!("Unimplemented: get_struct_sibling_entries_struct_constructor");
-    } // VI: invalid
-
+    }
 /*
   override def getStructSiblingEntries(structName: IdT[INameT], structA: StructA):
   Vector[(IdT[INameT], FunctionEnvEntry)] = {
@@ -164,8 +163,7 @@ where 's: 't,
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
         panic!("Unimplemented: generate_function_body_struct_constructor");
-    } // VI: invalid
-
+    }
 /*
   override def generateFunctionBody(
     env: FunctionEnvironmentT,

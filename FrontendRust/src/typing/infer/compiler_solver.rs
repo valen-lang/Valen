@@ -307,7 +307,73 @@ where 's: 't,
     pub fn get_runes(&self, rule: IRulexSR<'s>) -> Vec<IRuneS<'s>> {
         let result: Vec<IRuneS<'s>> = rule.rune_usages().iter().map(|ru| ru.rune).collect();
         if self.opts.global_options.sanity_check {
-            panic!("Unimplemented: get_runes sanity check");
+            // val sanityChecked: Vector[RuneUsage] =
+            //   rule match {
+            let sanity_checked: Vec<RuneUsage<'s>> =
+                match rule {
+                    //     case LookupSR(range, rune, literal) => Vector(rune)
+                    IRulexSR::Lookup(r) => vec![r.rune],
+                    //     case RuneParentEnvLookupSR(range, rune) => Vector(rune)
+                    IRulexSR::RuneParentEnvLookup(r) => vec![r.rune],
+                    //     case EqualsSR(range, left, right) => Vector(left, right)
+                    IRulexSR::Equals(r) => vec![r.left, r.right],
+                    //     case DefinitionCoordIsaSR(range, result, sub, suuper) => Vector(result, sub, suuper)
+                    IRulexSR::DefinitionCoordIsa(r) => vec![r.result_rune, r.sub_rune, r.super_rune],
+                    //     case CallSiteCoordIsaSR(range, result, sub, suuper) => result.toVector ++ Vector(sub, suuper)
+                    IRulexSR::CallSiteCoordIsa(r) => {
+                        let mut v: Vec<RuneUsage<'s>> = r.result_rune.into_iter().collect();
+                        v.push(r.sub_rune);
+                        v.push(r.super_rune);
+                        v
+                    }
+                    //     case KindComponentsSR(range, resultRune, mutabilityRune) => Vector(resultRune, mutabilityRune)
+                    IRulexSR::KindComponents(r) => vec![r.kind_rune, r.mutability_rune],
+                    //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(resultRune, ownershipRune, kindRune)
+                    IRulexSR::CoordComponents(r) => vec![r.result_rune, r.ownership_rune, r.kind_rune],
+                    //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(resultRune, paramsRune, returnRune)
+                    IRulexSR::PrototypeComponents(r) => vec![r.result_rune, r.params_rune, r.return_rune],
+                    //     case DefinitionFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+                    IRulexSR::DefinitionFunc(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
+                    //     case CallSiteFuncSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+                    IRulexSR::CallSiteFunc(r) => vec![r.prototype_rune, r.params_list_rune, r.return_rune],
+                    //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(resultRune, paramsListRune, returnRune)
+                    IRulexSR::Resolve(r) => vec![r.result_rune, r.params_list_rune, r.return_rune],
+                    //     case OneOfSR(range, rune, literals) => Vector(rune)
+                    IRulexSR::OneOf(r) => vec![r.rune],
+                    //     case IsConcreteSR(range, rune) => Vector(rune)
+                    IRulexSR::IsConcrete(r) => vec![r.rune],
+                    //     case IsInterfaceSR(range, rune) => Vector(rune)
+                    IRulexSR::IsInterface(r) => vec![r.rune],
+                    //     case IsStructSR(range, rune) => Vector(rune)
+                    IRulexSR::IsStruct(r) => vec![r.rune],
+                    //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(coordRune, kindRune)
+                    IRulexSR::CoerceToCoord(r) => vec![r.coord_rune, r.kind_rune],
+                    //     case LiteralSR(range, rune, literal) => Vector(rune)
+                    IRulexSR::Literal(r) => vec![r.rune],
+                    //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(resultRune, innerRune)
+                    IRulexSR::Augment(r) => vec![r.result_rune, r.inner_rune],
+                    //     case CallSR(range, resultRune, templateRune, args) => Vector(resultRune, templateRune) ++ args
+                    IRulexSR::Call(r) => {
+                        let mut v = vec![r.result_rune, r.template_rune];
+                        v.extend_from_slice(r.args);
+                        v
+                    }
+                    //     case PackSR(range, resultRune, members) => Vector(resultRune) ++ members
+                    IRulexSR::Pack(r) => {
+                        let mut v = vec![r.result_rune];
+                        v.extend_from_slice(r.members);
+                        v
+                    }
+                    //     case CoordSendSR(range, senderRune, receiverRune) => Vector(senderRune, receiverRune)
+                    IRulexSR::CoordSend(r) => vec![r.sender_rune, r.receiver_rune],
+                    //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(resultRune, coordListRune)
+                    IRulexSR::RefListCompoundMutability(r) => vec![r.result_rune, r.coord_list_rune],
+                    //     case other => vimpl(other)
+                    other => panic!("get_runes sanity check: unhandled rule {:?}", other),
+                };
+            //   vassert(result sameElements sanityChecked.map(_.rune))
+            let sanity_runes: Vec<IRuneS<'s>> = sanity_checked.iter().map(|ru| ru.rune).collect();
+            assert!(result.iter().zip(sanity_runes.iter()).all(|(a, b)| a == b) && result.len() == sanity_runes.len());
         }
         result
     }
@@ -355,11 +421,68 @@ where 's: 't,
 */
 }
 
-impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
-{
-    pub fn get_puzzles(&self, rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
-        panic!("Unimplemented: get_puzzles");
+pub fn get_puzzles<'s>(rule: IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
+    //   rule match {
+    match rule {
+            //     // This means we can solve this puzzle and dont need anything to do it.
+            //     case LookupSR(range, _, _) => Vector(Vector())
+            IRulexSR::Lookup(_) => vec![vec![]],
+            //     case RuneParentEnvLookupSR(range, rune) => Vector(Vector())
+            IRulexSR::RuneParentEnvLookup(_) => vec![vec![]],
+            //     case CallSR(range, resultRune, templateRune, args) => {
+            //       Vector(
+            //         Vector(templateRune.rune) ++ args.map(_.rune),
+            //         Vector(resultRune.rune, templateRune.rune))
+            //     }
+            IRulexSR::Call(r) => {
+                let mut first = vec![r.template_rune.rune];
+                first.extend(r.args.iter().map(|a| a.rune));
+                vec![first, vec![r.result_rune.rune, r.template_rune.rune]]
+            }
+            //     case PackSR(range, resultRune, members) => Vector(Vector(resultRune.rune), members.map(_.rune))
+            IRulexSR::Pack(r) => {
+                vec![vec![r.result_rune.rune], r.members.iter().map(|m| m.rune).collect()]
+            }
+            //     case KindComponentsSR(range, kindRune, mutabilityRune) => Vector(Vector(kindRune.rune))
+            IRulexSR::KindComponents(r) => vec![vec![r.kind_rune.rune]],
+            //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => Vector(Vector(resultRune.rune), Vector(ownershipRune.rune, kindRune.rune))
+            IRulexSR::CoordComponents(r) => vec![vec![r.result_rune.rune], vec![r.ownership_rune.rune, r.kind_rune.rune]],
+            //     case PrototypeComponentsSR(range, resultRune, paramsRune, returnRune) => Vector(Vector(resultRune.rune))
+            IRulexSR::PrototypeComponents(r) => vec![vec![r.result_rune.rune]],
+            //     case CallSiteFuncSR(range, resultRune, name, paramListRune, returnRune) => Vector(Vector(resultRune.rune))
+            IRulexSR::CallSiteFunc(r) => vec![vec![r.prototype_rune.rune]],
+            //     // Definition doesn't need the placeholder to be present, it's what populates the placeholder.
+            //     case DefinitionFuncSR(range, placeholderRune, name, paramListRune, returnRune) => Vector(Vector(paramListRune.rune, returnRune.rune))
+            IRulexSR::DefinitionFunc(r) => vec![vec![r.params_list_rune.rune, r.return_rune.rune]],
+            //     case ResolveSR(range, resultRune, name, paramsListRune, returnRune) => Vector(Vector(paramsListRune.rune, returnRune.rune))
+            IRulexSR::Resolve(r) => vec![vec![r.params_list_rune.rune, r.return_rune.rune]],
+            //     case OneOfSR(range, rune, literals) => Vector(Vector(rune.rune))
+            IRulexSR::OneOf(r) => vec![vec![r.rune.rune]],
+            //     case EqualsSR(range, leftRune, rightRune) => Vector(Vector(leftRune.rune), Vector(rightRune.rune))
+            IRulexSR::Equals(r) => vec![vec![r.left.rune], vec![r.right.rune]],
+            //     case IsConcreteSR(range, rune) => Vector(Vector(rune.rune))
+            IRulexSR::IsConcrete(r) => vec![vec![r.rune.rune]],
+            //     case IsInterfaceSR(range, rune) => Vector(Vector(rune.rune))
+            IRulexSR::IsInterface(r) => vec![vec![r.rune.rune]],
+            //     case IsStructSR(range, rune) => Vector(Vector(rune.rune))
+            IRulexSR::IsStruct(r) => vec![vec![r.rune.rune]],
+            //     case CoerceToCoordSR(range, coordRune, kindRune) => Vector(Vector(coordRune.rune), Vector(kindRune.rune))
+            IRulexSR::CoerceToCoord(r) => vec![vec![r.coord_rune.rune], vec![r.kind_rune.rune]],
+            //     case LiteralSR(range, rune, literal) => Vector(Vector())
+            IRulexSR::Literal(_) => vec![vec![]],
+            //     case AugmentSR(range, resultRune, ownership, innerRune) => Vector(Vector(innerRune.rune), Vector(resultRune.rune))
+            IRulexSR::Augment(r) => vec![vec![r.inner_rune.rune], vec![r.result_rune.rune]],
+            //     // See SAIRFU, this will replace itself with other rules.
+            //     case CoordSendSR(range, senderRune, receiverRune) => Vector(Vector(senderRune.rune), Vector(receiverRune.rune))
+            IRulexSR::CoordSend(r) => vec![vec![r.sender_rune.rune], vec![r.receiver_rune.rune]],
+            //     case DefinitionCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
+            IRulexSR::DefinitionCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
+            //     case CallSiteCoordIsaSR(range, resultRune, senderRune, receiverRune) => Vector(Vector(senderRune.rune, receiverRune.rune))
+            IRulexSR::CallSiteCoordIsa(r) => vec![vec![r.sub_rune.rune, r.super_rune.rune]],
+            //     case RefListCompoundMutabilitySR(range, resultRune, coordListRune) => Vector(Vector(coordListRune.rune))
+            IRulexSR::RefListCompoundMutability(r) => vec![vec![r.coord_list_rune.rune]],
+            other => panic!("get_puzzles: unhandled rule {:?}", other),
+        }
     }
 /*
   def getPuzzles(rule: IRulexSR): Vector[Vector[IRuneS]] = {
@@ -404,7 +527,6 @@ where 's: 't,
   }
 
 */
-}
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
@@ -440,9 +562,9 @@ where 's: 't,
         let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
 
         let rule_to_puzzles: Box<dyn Fn(&IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>>> =
-            Box::new(|_rule| panic!("Unimplemented: get_puzzles"));
+            Box::new(|rule| get_puzzles(*rule));
         let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> =
-            &|_rule| panic!("Unimplemented: get_runes");
+            &|rule| self.get_runes(*rule);
 
         let initial_rules: Vec<IRulexSR<'s>> = rules.into_iter().copied().collect();
 
@@ -510,12 +632,67 @@ where 's: 't,
     pub fn advance_infer(
         &self,
         env: InferEnv<'s, 't>,
-        state: CompilerOutputs<'s, 't>,
-        solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        state: &mut CompilerOutputs<'s, 't>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-    panic!("Unimplemented: advance_infer");
-}
+        //   solverState.sanityCheck()
+        solver_state.sanity_check();
+        for (_rune, _conclusion) in solver_state.userify_conclusions() {
+            panic!("Unimplemented: advance_infer sanity check conclusion");
+        }
+        // Stage 1: Do simple solves
+        match solver_state.get_next_solvable() {
+            None => {}
+            Some(solving_rule_index) => {
+                let rule = *solver_state.get_rule(solving_rule_index);
+                let steps_before = solver_state.get_steps().len();
+                match self.solve(state, env, solver_state, solving_rule_index, rule) {
+                    Ok(()) => {}
+                    Err(e) => return Err(FailedSolve {
+                        steps: solver_state.get_steps(),
+                        conclusions: solver_state.get_conclusions().into_iter().collect(),
+                        unsolved_rules: solver_state.get_unsolved_rules(),
+                        unsolved_runes: solver_state.get_unsolved_runes(),
+                        error: e,
+                    }),
+                }
+                let steps_after = solver_state.get_steps().len();
+                assert!(steps_after == steps_before + 1);
+                // Per @CSCDSRZ, only true after simple solve.
+                assert!(solver_state.rule_is_solved(solving_rule_index));
+                solver_state.sanity_check();
+                return Ok(true);
+            }
+        }
+        // Stage 2: Do a complex solve if available.
+        if !solver_state.get_unsolved_rules().is_empty() {
+            let conclusions_before = solver_state.get_conclusions().len();
+            match complex_solve(state, env, solver_state) {
+                Ok(()) => {}
+                Err(e) => return Err(FailedSolve {
+                    steps: solver_state.get_steps(),
+                    conclusions: solver_state.get_conclusions().into_iter().collect(),
+                    unsolved_rules: solver_state.get_unsolved_rules(),
+                    unsolved_runes: solver_state.get_unsolved_runes(),
+                    error: e,
+                }),
+            }
+            solver_state.sanity_check();
+            let conclusions_after = solver_state.get_conclusions().len();
+            // Per @CSCDSRZ, check conclusion count (not rules solved) for progress.
+            if conclusions_after == conclusions_before {
+                // There's nothing more to be done. Let's continue on to stage 3.
+            } else {
+                return Ok(true);
+            }
+        } else {
+            // No more rules to solve, so continue to the wrapping up stages of the solve.
+        }
+        // Stage 3: We're done!
+        Ok(false)
+    }
 /*
+Guardian: temp-disable: SPDMX — Free-fn → method-on-Compiler conversion to match Scala's def solveRule(delegate, ...) shape under the god-struct delegate-collapse pattern (TL.md Part 2.4). Scala's solve/solveRule take delegate as a parameter only because CompilerRuleSolver is a companion object; in the Rust god-struct, self replaces delegate. TL explicitly authorized this conversion. — FrontendRust/guardian-logs/request-262-1777316329775/hook-262/advance_infer--632.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // Returns true if there's more to be done, false if we've gotten as far as we can.
   def advanceInfer(
       env: InferEnv,
@@ -579,10 +756,22 @@ where 's: 't,
     pub fn continue_solver(
         &self,
         env: InferEnv<'s, 't>,
-        state: CompilerOutputs<'s, 't>,
-        solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        state: &mut CompilerOutputs<'s, 't>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: continue");
+        //   while ( {
+        while {
+            //     advanceInfer(
+            //       env, state, solverState, delegate
+            //     ) match {
+            //       case Ok(continue) => continue
+            //       case Err(f@FailedSolve(_, _, _, _, _)) => return Err(f)
+            //     }
+            self.advance_infer(env, state, solver_state)?
+        } {}
+        //   // If we get here, then there's nothing more the solver can do.
+        //   Ok(Unit)
+        Ok(())
     }
 /*
   // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
@@ -624,9 +813,9 @@ pub fn sanity_check_conclusion<'s, 't>(
 
 */
 fn complex_solve<'s, 't>(
-    state: CompilerOutputs<'s, 't>,
+    state: &mut CompilerOutputs<'s, 't>,
     env: InferEnv<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
 ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
     panic!("Unimplemented: complex_solve");
 }
@@ -851,14 +1040,26 @@ fn narrow<'s, 't>(
   }
 
 */
-fn solve<'s, 't>(
-    state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    rule_index: i32,
-    rule: IRulexSR<'s>,
-) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-    panic!("Unimplemented: solve");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn solve(
+        &self,
+        state: &mut CompilerOutputs<'s, 't>,
+        env: InferEnv<'s, 't>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        rule_index: i32,
+        rule: IRulexSR<'s>,
+    ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        //   solveRule(delegate, state, env, ruleIndex, rule, solverState) match {
+        //     case Ok(x) => Ok(x)
+        //     case Err(e) => Err(RuleError(e))
+        //   }
+        match self.solve_rule(state, env, rule_index, rule, solver_state) {
+            Ok(x) => Ok(x),
+            Err(e) => Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+        }
+    }
 }
 /*
   def solve(
@@ -876,14 +1077,78 @@ fn solve<'s, 't>(
   }
 
 */
-fn solve_rule<'s, 't>(
-    state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    rule_index: i32,
-    rule: IRulexSR<'s>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-) -> Result<(), ITypingPassSolverError<'s, 't>> {
-    panic!("Unimplemented: solve_rule");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn solve_rule(
+        &self,
+        state: &mut CompilerOutputs<'s, 't>,
+        env: InferEnv<'s, 't>,
+        rule_index: i32,
+        rule: IRulexSR<'s>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    ) -> Result<(), ITypingPassSolverError<'s, 't>> {
+        //   rule match {
+        match rule {
+            //     case KindComponentsSR(...) =>
+            IRulexSR::KindComponents(_) => { panic!("Unimplemented: solve_rule KindComponents"); }
+            //     case CoordComponentsSR(...) =>
+            IRulexSR::CoordComponents(_) => { panic!("Unimplemented: solve_rule CoordComponents"); }
+            //     case PrototypeComponentsSR(...) =>
+            IRulexSR::PrototypeComponents(_) => { panic!("Unimplemented: solve_rule PrototypeComponents"); }
+            //     case ResolveSR(...) =>
+            IRulexSR::Resolve(_) => { panic!("Unimplemented: solve_rule Resolve"); }
+            //     case CallSiteFuncSR(...) =>
+            IRulexSR::CallSiteFunc(_) => { panic!("Unimplemented: solve_rule CallSiteFunc"); }
+            //     case DefinitionFuncSR(...) =>
+            IRulexSR::DefinitionFunc(_) => { panic!("Unimplemented: solve_rule DefinitionFunc"); }
+            //     case CallSiteCoordIsaSR(...) =>
+            IRulexSR::CallSiteCoordIsa(_) => { panic!("Unimplemented: solve_rule CallSiteCoordIsa"); }
+            //     case DefinitionCoordIsaSR(...) =>
+            IRulexSR::DefinitionCoordIsa(_) => { panic!("Unimplemented: solve_rule DefinitionCoordIsa"); }
+            //     case EqualsSR(...) =>
+            IRulexSR::Equals(_) => { panic!("Unimplemented: solve_rule Equals"); }
+            //     case CoordSendSR(...) =>
+            IRulexSR::CoordSend(_) => { panic!("Unimplemented: solve_rule CoordSend"); }
+            //     case OneOfSR(...) =>
+            IRulexSR::OneOf(_) => { panic!("Unimplemented: solve_rule OneOf"); }
+            //     case IsConcreteSR(...) =>
+            IRulexSR::IsConcrete(_) => { panic!("Unimplemented: solve_rule IsConcrete"); }
+            //     case IsInterfaceSR(...) =>
+            IRulexSR::IsInterface(_) => { panic!("Unimplemented: solve_rule IsInterface"); }
+            //     case IsStructSR(...) =>
+            IRulexSR::IsStruct(_) => { panic!("Unimplemented: solve_rule IsStruct"); }
+            //     case CoerceToCoordSR(...) =>
+            IRulexSR::CoerceToCoord(_) => { panic!("Unimplemented: solve_rule CoerceToCoord"); }
+            //     case LiteralSR(...) =>
+            IRulexSR::Literal(_) => { panic!("Unimplemented: solve_rule Literal"); }
+            //     case LookupSR(...) =>
+            IRulexSR::Lookup(r) => {
+                let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                let result = match self.lookup_templata_imprecise(env, state, &ranges, r.name) {
+                    None => return Err(ITypingPassSolverError::LookupFailed { name: r.name }),
+                    Some(x) => x,
+                };
+                let mut conclusions = std::collections::HashMap::new();
+                conclusions.insert(r.rune.rune, result);
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(_e) => { panic!("Unimplemented: solve_rule Lookup InternalSolverError wrapping"); }
+                }
+            }
+            //     case RuneParentEnvLookupSR(...) =>
+            IRulexSR::RuneParentEnvLookup(_) => { panic!("Unimplemented: solve_rule RuneParentEnvLookup"); }
+            //     case AugmentSR(...) =>
+            IRulexSR::Augment(_) => { panic!("Unimplemented: solve_rule Augment"); }
+            //     case PackSR(...) =>
+            IRulexSR::Pack(_) => { panic!("Unimplemented: solve_rule Pack"); }
+            //     case CallSR(...) =>
+            IRulexSR::Call(_) => { panic!("Unimplemented: solve_rule Call"); }
+            //     case RefListCompoundMutabilitySR(...) =>
+            IRulexSR::RefListCompoundMutability(_) => { panic!("Unimplemented: solve_rule RefListCompoundMutability"); }
+            other => panic!("Unimplemented: solve_rule {:?}", other),
+        }
+    }
 }
 /*
   private def solveRule(

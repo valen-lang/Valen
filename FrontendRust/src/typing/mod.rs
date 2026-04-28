@@ -2,7 +2,7 @@
 
 // Core entry point
 pub mod compilation;
-pub use compilation::{run_typing_pass, TypingPassCompilation, TypingPassOptions};
+pub use compilation::{TypingPassCompilation, TypingPassOptions};
 
 // Type system and core data structures (high priority - needed for all others)
 pub mod types;
