@@ -40,7 +40,7 @@ import scala.collection.mutable
 */
 
 /// Arena-allocated (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum IEnvironmentT<'s, 't>
 where 's: 't,
 {
@@ -53,6 +53,18 @@ where 's: 't,
     General(&'t GeneralEnvironmentT<'s, 't>),
     Export(&'t ExportEnvironmentT<'s, 't>),
     Extern(&'t ExternEnvironmentT<'s, 't>),
+}
+
+// Identity equality per @IEOIBZ — `IEnvironmentT` is arena-allocated and
+// accessed via `&'t IEnvironmentT`; ptr-eq is the right semantic.
+impl<'s, 't> PartialEq for IEnvironmentT<'s, 't> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> Eq for IEnvironmentT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for IEnvironmentT<'s, 't> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
 }
 /*
 trait IEnvironmentT {
@@ -1173,7 +1185,10 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   */
 }
 
-// Id-based Hash/PartialEq per Gotcha 13.
+// Id-based Hash/PartialEq — documented exception to @IEOIBZ. Compared via
+// `self.id == other.id` (where `id: IdT` is sealed/canonical, so this is
+// itself ptr-eq) instead of `std::ptr::eq(self, other)`. Comparisons via
+// `&'t IEnvironmentT` go through that enum's ptr-eq impl directly.
 impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, other: &Self) -> bool { self.id == other.id }
   /* Guardian: disable-all */

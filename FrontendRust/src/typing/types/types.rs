@@ -293,6 +293,7 @@ object contentsStaticSizedArrayTT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StaticSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
+  pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
 /*
 case class StaticSizedArrayTT(
@@ -326,6 +327,7 @@ object contentsRuntimeSizedArrayTT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTT<'s, 't> {
   pub name: IdT<'s, 't>,
+  pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
 /*
 case class RuntimeSizedArrayTT(
@@ -391,6 +393,7 @@ sealed trait ICitizenTT extends ISubKindTT with IInterning {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructTT<'s, 't> {
   pub id: IdT<'s, 't>,
+  pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
 /*
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
@@ -406,6 +409,7 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
   pub id: IdT<'s, 't>,
+  pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
 /*
 case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperKindTT {
@@ -421,6 +425,7 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
 pub struct OverloadSetT<'s, 't> {
   pub env: &'t IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
+  pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
 /*
 // Represents a bunch of functions that have the same name.
@@ -436,7 +441,7 @@ case class OverloadSetT(
 
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderT<'s, 't> {
   pub id: IdT<'s, 't>,

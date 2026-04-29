@@ -223,7 +223,7 @@ sealed trait ITemplataT[+T <: ITemplataType]  {
 }
 
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordTemplataT<'s, 't> {
   pub coord: CoordT<'s, 't>,
@@ -237,7 +237,7 @@ case class CoordTemplataT(coord: CoordT) extends ITemplataT[CoordTemplataType] {
   vpass()
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PlaceholderTemplataT<'s, 't> {
   pub id: IdT<'s, 't>,
@@ -257,7 +257,7 @@ case class PlaceholderTemplataT[+T <: ITemplataType](
   override def hashCode(): Int = hash;
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindTemplataT<'s, 't> {
   pub kind: KindT<'s, 't>,
@@ -296,8 +296,8 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 
 */
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: &'t IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
@@ -364,22 +364,8 @@ case class FunctionTemplataT(
 }
 
 */
-impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.outer_env, other.outer_env) && std::ptr::eq(self.function, other.function)
-  }
-  /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.outer_env, state);
-    std::ptr::hash(self.function, state);
-  }
-  /* Guardian: disable-all */
-}
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
@@ -437,20 +423,6 @@ case class StructDefinitionTemplataT(
 }
 
 */
-impl<'s, 't> PartialEq for StructDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_struct, other.origin_struct)
-  }
-  /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for StructDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for StructDefinitionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.declaring_env, state);
-    std::ptr::hash(self.origin_struct, state);
-  }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IContainer<'s> {
@@ -463,7 +435,7 @@ pub enum IContainer<'s> {
 sealed trait IContainer
 */
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerInterface<'s> {
   pub interface: &'s InterfaceA<'s>,
 }
@@ -472,17 +444,8 @@ case class ContainerInterface(interface: InterfaceA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-impl<'s> PartialEq for ContainerInterface<'s> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.interface, other.interface) }
-  /* Guardian: disable-all */
-}
-impl<'s> Eq for ContainerInterface<'s> {}
-impl<'s> std::hash::Hash for ContainerInterface<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.interface, state); }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerStruct<'s> {
   pub struct_: &'s StructA<'s>,
 }
@@ -491,17 +454,8 @@ case class ContainerStruct(struct: StructA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-impl<'s> PartialEq for ContainerStruct<'s> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.struct_, other.struct_) }
-  /* Guardian: disable-all */
-}
-impl<'s> Eq for ContainerStruct<'s> {}
-impl<'s> std::hash::Hash for ContainerStruct<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.struct_, state); }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerFunction<'s> {
   pub function: &'s FunctionA<'s>,
 }
@@ -510,17 +464,8 @@ case class ContainerFunction(function: FunctionA) extends IContainer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash; }
 */
-impl<'s> PartialEq for ContainerFunction<'s> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.function, other.function) }
-  /* Guardian: disable-all */
-}
-impl<'s> Eq for ContainerFunction<'s> {}
-impl<'s> std::hash::Hash for ContainerFunction<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.function, state); }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ContainerImpl<'s> {
   pub impl_: &'s ImplA<'s>,
 }
@@ -530,15 +475,6 @@ case class ContainerImpl(impl: ImplA) extends IContainer {
 override def hashCode(): Int = hash; }
 
 */
-impl<'s> PartialEq for ContainerImpl<'s> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.impl_, other.impl_) }
-  /* Guardian: disable-all */
-}
-impl<'s> Eq for ContainerImpl<'s> {}
-impl<'s> std::hash::Hash for ContainerImpl<'s> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.impl_, state); }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum CitizenDefinitionTemplataT<'s, 't> {
@@ -567,8 +503,8 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 */
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
   pub declaring_env: &'t IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
@@ -629,22 +565,8 @@ case class InterfaceDefinitionTemplataT(
 }
 
 */
-impl<'s, 't> PartialEq for InterfaceDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.declaring_env, other.declaring_env) && std::ptr::eq(self.origin_interface, other.origin_interface)
-  }
-  /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for InterfaceDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for InterfaceDefinitionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.declaring_env, state);
-    std::ptr::hash(self.origin_interface, state);
-  }
-  /* Guardian: disable-all */
-}
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
   pub env: &'t IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
@@ -671,20 +593,6 @@ case class ImplDefinitionTemplataT(
 }
 
 */
-impl<'s, 't> PartialEq for ImplDefinitionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool {
-    std::ptr::eq(self.env, other.env) && std::ptr::eq(self.impl_, other.impl_)
-  }
-  /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for ImplDefinitionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for ImplDefinitionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
-    std::ptr::hash(self.env, state);
-    std::ptr::hash(self.impl_, state);
-  }
-  /* Guardian: disable-all */
-}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OwnershipTemplataT {
@@ -770,7 +678,7 @@ case class StringTemplataT(value: String) extends ITemplataT[StringTemplataType]
   override def tyype: StringTemplataType = StringTemplataType()
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeTemplataT<'s, 't> {
   pub prototype: &'t PrototypeT<'s, 't>,
@@ -787,7 +695,7 @@ case class PrototypeTemplataT[+T <: IFunctionNameT](
   override def tyype: PrototypeTemplataType = PrototypeTemplataType()
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct IsaTemplataT<'s, 't> {
   pub declaration_range: RangeS<'s>,
@@ -802,7 +710,7 @@ case class IsaTemplataT(declarationRange: RangeS, implName: IdT[IImplNameT], sub
   override def tyype: ImplTemplataType = ImplTemplataType()
 }
 */
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct CoordListTemplataT<'s, 't> {
   pub coords: &'t [CoordT<'s, 't>],
@@ -854,8 +762,8 @@ case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTem
 // by plugins, but theyre also used internally.
 
 */
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone)]
+/// Value-type (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct ExternFunctionTemplataT<'s, 't> {
   pub header: &'t FunctionHeaderT<'s, 't>,
 }
@@ -866,15 +774,6 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
   override def tyype: ITemplataType = vfail()
 }
 */
-impl<'s, 't> PartialEq for ExternFunctionTemplataT<'s, 't> {
-  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self.header, other.header) }
-  /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for ExternFunctionTemplataT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for ExternFunctionTemplataT<'s, 't> {
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self.header, state); }
-  /* Guardian: disable-all */
-}
 // FunctionHeaderT doesn't derive Debug yet; treat the header as an opaque ptr.
 impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

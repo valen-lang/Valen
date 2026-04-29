@@ -10,7 +10,7 @@ use crate::postparsing::names::IRuneS;
 use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
-use crate::typing::typing_interner::{InternToken, TypingInterner};
+use crate::typing::typing_interner::{MustIntern, TypingInterner};
 use crate::Keywords;
 
 /*
@@ -41,7 +41,7 @@ where 's: 't,
     pub package_coord: &'s PackageCoordinate<'s>,
     pub init_steps: &'t [INameT<'s, 't>],
     pub local_name: INameT<'s, 't>,
-    pub _seal: InternToken,
+    pub _must_intern: MustIntern,
 }
 /*
 case class IdT[+T <: INameT](
@@ -179,6 +179,9 @@ where 's: 't,
         self.local_name.hash(state);
     }
 }
+// Per @IEOIBZ, identity-equality on the canonical slice pointer. Soundness
+// requires `init_steps` to come from the canonical arena allocation in
+// `intern_id` — guaranteed by sealing per @SICZ.
 impl<'s, 't> PartialEq for IdT<'s, 't>
 where 's: 't,
 {
@@ -776,6 +779,7 @@ pub struct ImplNameT<'s, 't> {
     pub template: &'t ImplTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub sub_citizen: ICitizenTT<'s, 't>,
+    pub _must_intern: MustIntern,
 }
 /*
 case class ImplNameT(
@@ -807,6 +811,7 @@ case class ImplBoundTemplateNameT(codeLocationS: CodeLocationS) extends IImplTem
 pub struct ImplBoundNameT<'s, 't> {
     pub template: &'t ImplBoundTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class ImplBoundNameT(
@@ -1088,6 +1093,7 @@ pub struct OverrideDispatcherNameT<'s, 't> {
     pub template: &'t OverrideDispatcherTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class OverrideDispatcherNameT(
@@ -1104,6 +1110,7 @@ case class OverrideDispatcherNameT(
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverrideDispatcherCaseNameT<'s, 't> {
     pub independent_impl_template_args: &'t [ITemplataT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class OverrideDispatcherCaseNameT(
@@ -1378,6 +1385,7 @@ case class ExternNameT(
 pub struct ExternFunctionNameT<'s, 't> {
     pub human_name: StrI<'s>,
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class ExternFunctionNameT(
@@ -1403,6 +1411,7 @@ pub struct FunctionNameT<'s, 't> {
     pub template: &'t FunctionTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class FunctionNameT(
@@ -1459,6 +1468,7 @@ pub struct FunctionBoundNameT<'s, 't> {
     pub template: &'t FunctionBoundTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class FunctionBoundNameT(
@@ -1494,6 +1504,7 @@ pub struct PredictedFunctionNameT<'s, 't> {
     pub template: &'t PredictedFunctionTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class PredictedFunctionNameT(
@@ -1527,6 +1538,7 @@ case class FunctionTemplateNameT(
 pub struct LambdaCallFunctionTemplateNameT<'s, 't> {
     pub code_location: CodeLocationS<'s>,
     pub param_types: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class LambdaCallFunctionTemplateNameT(
@@ -1547,6 +1559,7 @@ pub struct LambdaCallFunctionNameT<'s, 't> {
     pub template: &'t LambdaCallFunctionTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class LambdaCallFunctionNameT(
@@ -1738,6 +1751,7 @@ object CitizenNameT {
 pub struct StructNameT<'s, 't> {
     pub template: IStructTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class StructNameT(
@@ -1753,6 +1767,7 @@ case class StructNameT(
 pub struct InterfaceNameT<'s, 't> {
     pub template: &'t InterfaceTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class InterfaceNameT(
@@ -1899,6 +1914,7 @@ pub struct AnonymousSubstructImplNameT<'s, 't> {
     pub template: &'t AnonymousSubstructImplTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub sub_citizen: ICitizenTT<'s, 't>,
+    pub _must_intern: MustIntern,
 }
 /*
 case class AnonymousSubstructImplNameT(
@@ -1946,6 +1962,7 @@ pub struct AnonymousSubstructConstructorNameT<'s, 't> {
     pub template: &'t AnonymousSubstructConstructorTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
     pub parameters: &'t [CoordT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class AnonymousSubstructConstructorNameT(
@@ -1960,6 +1977,7 @@ case class AnonymousSubstructConstructorNameT(
 pub struct AnonymousSubstructNameT<'s, 't> {
     pub template: &'t AnonymousSubstructTemplateNameT<'s, 't>,
     pub template_args: &'t [ITemplataT<'s, 't>],
+    pub _must_intern: MustIntern,
 }
 /*
 case class AnonymousSubstructNameT(

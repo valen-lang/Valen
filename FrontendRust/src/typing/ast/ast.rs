@@ -567,7 +567,7 @@ override def equals(obj: Any): Boolean = vcurious();
 
 */
 }
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct SignatureT<'s, 't> {
     pub id: IdT<'s, 't>,
@@ -729,6 +729,17 @@ pub struct FunctionHeaderT<'s, 't> {
     pub params: Vec<ParameterT<'s, 't>>,
     pub return_type: CoordT<'s, 't>,
     pub maybe_origin_function_templata: Option<FunctionTemplataT<'s, 't>>,
+}
+
+// Identity equality per @IEOIBZ — `FunctionHeaderT` is arena-allocated.
+impl<'s, 't> PartialEq for FunctionHeaderT<'s, 't> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> Eq for FunctionHeaderT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FunctionHeaderT<'s, 't> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
 }
 /*
 case class FunctionHeaderT(
@@ -956,7 +967,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 // Monomorphic per `docs/reasoning/idt-typed-view-alternatives.md` (same
 // treatment as IdT). Scala's `PrototypeT[+T <: IFunctionNameT]` phantom
 // parameter is erased in Rust.
-/// Interned (see @TFITCX)
+/// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct PrototypeT<'s, 't>
 where 's: 't,

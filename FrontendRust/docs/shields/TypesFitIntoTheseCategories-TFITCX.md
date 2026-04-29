@@ -13,7 +13,7 @@ Every struct and enum definition must have a `///` doc comment above it (before 
 
 - `/// Arena-allocated (see @TFITCX)` — identity-bearing output of a pass, or definitional component of one; stored as `&'s T` or `&'t T` via `arena.alloc()`, immutable after construction, no Clone
 - `/// Value-type (see @TFITCX)` — derives Copy, stored inline in slices or struct fields; no identity, no subcollections
-- `/// Interned (see @TFITCX)` — a canonical deduplicated handle returned by an intern method (see @WVSBIZ for when to intern)
+- `/// Interned (see @TFITCX)` — a canonical deduplicated handle returned by an intern method (see @WVSBIZ for when to intern). Must include a `pub _must_intern: MustIntern` field per @SICZ, sealing construction to the interner module.
 - `/// Interning transient (see @TFITCX)` — ephemeral lookup key for intern methods; never stored, discarded after hit/miss check
 - `/// Temporary state (see @TFITCX)` — mutable working data during a pass (environments, builders, accumulators), may Clone
 - `/// Miscellaneous type (see @TFITCX)` — doesn't fit the above (errors, solver state, test infrastructure, configuration)
@@ -61,6 +61,16 @@ pub struct StackFrame<'s> {
 }
 ```
 
+**ALLOW** (Interned with seal field per @SICZ):
+```rust
+/// Interned (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructTT<'s, 't> {
+  pub id: IdT<'s, 't>,
+  pub _must_intern: MustIntern,
+}
+```
+
 ## Exceptions
 
 A. Structs inside `/* ... */` Scala block comments (commented-out Scala code, not active Rust).
@@ -70,3 +80,5 @@ B. Test-only structs (inside `#[cfg(test)]` modules).
 ## See also
 
 - @WVSBIZ — decision framework for when a value-type should be promoted to interned.
+- @SICZ — how Interned types are sealed against external construction via `MustIntern`.
+- @IEOIBZ — identity-bearing Arena-allocated types implement `PartialEq`/`Hash` via `std::ptr::eq`/`std::ptr::hash`.

@@ -5,7 +5,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
-use crate::typing::typing_interner::InternToken;
+use crate::typing::typing_interner::MustIntern;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::{GenericParameterS, IRegionMutabilityS, LocationInDenizen};

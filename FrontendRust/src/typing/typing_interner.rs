@@ -4,14 +4,15 @@ use std::collections::HashMap as StdHashMap;
 
 use bumpalo::Bump;
 
-/// Construction-witness token for [`IdT`]. The inner unit field is private
-/// to this module, so only code in `typing_interner` can construct one
-/// (specifically, `intern_id`). Stored as `IdT::_seal`, this makes it a
-/// compile error to build an `IdT` literal anywhere outside the interner —
-/// every `IdT` in the program is therefore canonical, which is what
-/// `IdT::eq`'s pointer-comparison semantics require.
-#[derive(Copy, Clone, Debug)]
-pub struct InternToken(());
+/// Construction-witness token for interned types (per @SICZ). The inner
+/// unit field is private to this module, so only code in `typing_interner`
+/// can construct one (specifically, the `intern_*` methods). Stored as a
+/// `_must_intern` field on every TFITCX-Interned type, this makes it a
+/// compile error to build such a literal anywhere outside the interner —
+/// every instance is therefore canonical, which is what pointer-comparison
+/// equality semantics (e.g. `IdT::eq`) require.
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct MustIntern(());
 
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::ast::ast::{
@@ -167,97 +168,97 @@ where 's: 't,
             // 15 transient variants: promote slices, build canonical + stored_key.
             V::Impl(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = ImplNameT { template: v.template, template_args, sub_citizen: v.sub_citizen };
+                let canonical = ImplNameT { template: v.template, template_args, sub_citizen: v.sub_citizen, _must_intern: MustIntern(()) };
                 let key = ImplNameValT { template: v.template, template_args, sub_citizen: v.sub_citizen };
                 (V::Impl(key), T::Impl(self.bump.alloc(canonical)))
             }
             V::ImplBound(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = ImplBoundNameT { template: v.template, template_args };
+                let canonical = ImplBoundNameT { template: v.template, template_args, _must_intern: MustIntern(()) };
                 let key = ImplBoundNameValT { template: v.template, template_args };
                 (V::ImplBound(key), T::ImplBound(self.bump.alloc(canonical)))
             }
             V::OverrideDispatcher(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = OverrideDispatcherNameT { template: v.template, template_args, parameters };
+                let canonical = OverrideDispatcherNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = OverrideDispatcherNameValT { template: v.template, template_args, parameters };
                 (V::OverrideDispatcher(key), T::OverrideDispatcher(self.bump.alloc(canonical)))
             }
             V::OverrideDispatcherCase(v) => {
                 let independent_impl_template_args = self.bump.alloc_slice_copy(v.independent_impl_template_args);
-                let canonical = OverrideDispatcherCaseNameT { independent_impl_template_args };
+                let canonical = OverrideDispatcherCaseNameT { independent_impl_template_args, _must_intern: MustIntern(()) };
                 let key = OverrideDispatcherCaseNameValT { independent_impl_template_args };
                 (V::OverrideDispatcherCase(key), T::OverrideDispatcherCase(self.bump.alloc(canonical)))
             }
             V::ExternFunction(v) => {
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = ExternFunctionNameT { human_name: v.human_name, parameters };
+                let canonical = ExternFunctionNameT { human_name: v.human_name, parameters, _must_intern: MustIntern(()) };
                 let key = ExternFunctionNameValT { human_name: v.human_name, parameters };
                 (V::ExternFunction(key), T::ExternFunction(self.bump.alloc(canonical)))
             }
             V::Function(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = FunctionNameT { template: v.template, template_args, parameters };
+                let canonical = FunctionNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = FunctionNameValT { template: v.template, template_args, parameters };
                 (V::Function(key), T::Function(self.bump.alloc(canonical)))
             }
             V::FunctionBound(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = FunctionBoundNameT { template: v.template, template_args, parameters };
+                let canonical = FunctionBoundNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = FunctionBoundNameValT { template: v.template, template_args, parameters };
                 (V::FunctionBound(key), T::FunctionBound(self.bump.alloc(canonical)))
             }
             V::PredictedFunction(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = PredictedFunctionNameT { template: v.template, template_args, parameters };
+                let canonical = PredictedFunctionNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = PredictedFunctionNameValT { template: v.template, template_args, parameters };
                 (V::PredictedFunction(key), T::PredictedFunction(self.bump.alloc(canonical)))
             }
             V::LambdaCallFunctionTemplate(v) => {
                 let param_types = self.bump.alloc_slice_copy(v.param_types);
-                let canonical = LambdaCallFunctionTemplateNameT { code_location: v.code_location, param_types };
+                let canonical = LambdaCallFunctionTemplateNameT { code_location: v.code_location, param_types, _must_intern: MustIntern(()) };
                 let key = LambdaCallFunctionTemplateNameValT { code_location: v.code_location, param_types };
                 (V::LambdaCallFunctionTemplate(key), T::LambdaCallFunctionTemplate(self.bump.alloc(canonical)))
             }
             V::LambdaCallFunction(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = LambdaCallFunctionNameT { template: v.template, template_args, parameters };
+                let canonical = LambdaCallFunctionNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = LambdaCallFunctionNameValT { template: v.template, template_args, parameters };
                 (V::LambdaCallFunction(key), T::LambdaCallFunction(self.bump.alloc(canonical)))
             }
             V::Struct(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = StructNameT { template: v.template, template_args };
+                let canonical = StructNameT { template: v.template, template_args, _must_intern: MustIntern(()) };
                 let key = StructNameValT { template: v.template, template_args };
                 (V::Struct(key), T::Struct(self.bump.alloc(canonical)))
             }
             V::Interface(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = InterfaceNameT { template: v.template, template_args };
+                let canonical = InterfaceNameT { template: v.template, template_args, _must_intern: MustIntern(()) };
                 let key = InterfaceNameValT { template: v.template, template_args };
                 (V::Interface(key), T::Interface(self.bump.alloc(canonical)))
             }
             V::AnonymousSubstructImpl(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = AnonymousSubstructImplNameT { template: v.template, template_args, sub_citizen: v.sub_citizen };
+                let canonical = AnonymousSubstructImplNameT { template: v.template, template_args, sub_citizen: v.sub_citizen, _must_intern: MustIntern(()) };
                 let key = AnonymousSubstructImplNameValT { template: v.template, template_args, sub_citizen: v.sub_citizen };
                 (V::AnonymousSubstructImpl(key), T::AnonymousSubstructImpl(self.bump.alloc(canonical)))
             }
             V::AnonymousSubstructConstructor(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
                 let parameters = self.bump.alloc_slice_copy(v.parameters);
-                let canonical = AnonymousSubstructConstructorNameT { template: v.template, template_args, parameters };
+                let canonical = AnonymousSubstructConstructorNameT { template: v.template, template_args, parameters, _must_intern: MustIntern(()) };
                 let key = AnonymousSubstructConstructorNameValT { template: v.template, template_args, parameters };
                 (V::AnonymousSubstructConstructor(key), T::AnonymousSubstructConstructor(self.bump.alloc(canonical)))
             }
             V::AnonymousSubstruct(v) => {
                 let template_args = self.bump.alloc_slice_copy(v.template_args);
-                let canonical = AnonymousSubstructNameT { template: v.template, template_args };
+                let canonical = AnonymousSubstructNameT { template: v.template, template_args, _must_intern: MustIntern(()) };
                 let key = AnonymousSubstructNameValT { template: v.template, template_args };
                 (V::AnonymousSubstruct(key), T::AnonymousSubstruct(self.bump.alloc(canonical)))
             }
@@ -339,7 +340,7 @@ where 's: 't,
             package_coord: val.package_coord,
             init_steps,
             local_name: val.local_name,
-            _seal: InternToken(()),
+            _must_intern: MustIntern(()),
         });
         let stored_key = IdValT {
             package_coord: val.package_coord,
@@ -544,12 +545,49 @@ where 's: 't,
     impl_intern_name_wrapper_simple!(intern_call_env_name, CallEnv, CallEnvNameT);
 
     // --- 6 Kind-payload wrappers ---
-    impl_intern_kind_wrapper!(intern_struct_tt, StructTT, StructTT);
-    impl_intern_kind_wrapper!(intern_interface_tt, InterfaceTT, InterfaceTT);
-    impl_intern_kind_wrapper!(intern_static_sized_array_tt, StaticSizedArrayTT, StaticSizedArrayTT);
-    impl_intern_kind_wrapper!(intern_runtime_sized_array_tt, RuntimeSizedArrayTT, RuntimeSizedArrayTT);
+    // 5 are sealed (StructTT/InterfaceTT/SSA/RSA/OverloadSet) — take fields and
+    // construct the canonical with `_must_intern: MustIntern(())` here. KindPlaceholderT
+    // is reclassified to Value-type and uses the macro form unchanged.
+    pub fn intern_struct_tt(&self, id: IdT<'s, 't>) -> &'t StructTT<'s, 't> {
+        let val = StructTT { id, _must_intern: MustIntern(()) };
+        match self.intern_kind_payload(InternedKindPayloadValT::StructTT(val)) {
+            InternedKindPayloadT::StructTT(r) => r,
+            _ => unreachable!(),
+        }
+    }
+    pub fn intern_interface_tt(&self, id: IdT<'s, 't>) -> &'t InterfaceTT<'s, 't> {
+        let val = InterfaceTT { id, _must_intern: MustIntern(()) };
+        match self.intern_kind_payload(InternedKindPayloadValT::InterfaceTT(val)) {
+            InternedKindPayloadT::InterfaceTT(r) => r,
+            _ => unreachable!(),
+        }
+    }
+    pub fn intern_static_sized_array_tt(&self, name: IdT<'s, 't>) -> &'t StaticSizedArrayTT<'s, 't> {
+        let val = StaticSizedArrayTT { name, _must_intern: MustIntern(()) };
+        match self.intern_kind_payload(InternedKindPayloadValT::StaticSizedArrayTT(val)) {
+            InternedKindPayloadT::StaticSizedArrayTT(r) => r,
+            _ => unreachable!(),
+        }
+    }
+    pub fn intern_runtime_sized_array_tt(&self, name: IdT<'s, 't>) -> &'t RuntimeSizedArrayTT<'s, 't> {
+        let val = RuntimeSizedArrayTT { name, _must_intern: MustIntern(()) };
+        match self.intern_kind_payload(InternedKindPayloadValT::RuntimeSizedArrayTT(val)) {
+            InternedKindPayloadT::RuntimeSizedArrayTT(r) => r,
+            _ => unreachable!(),
+        }
+    }
     impl_intern_kind_wrapper!(intern_kind_placeholder, KindPlaceholder, KindPlaceholderT);
-    impl_intern_kind_wrapper!(intern_overload_set, OverloadSet, OverloadSetT);
+    pub fn intern_overload_set(
+        &self,
+        env: &'t crate::typing::env::environment::IInDenizenEnvironmentT<'s, 't>,
+        name: &'s crate::postparsing::names::IImpreciseNameS<'s>,
+    ) -> &'t OverloadSetT<'s, 't> {
+        let val = OverloadSetT { env, name, _must_intern: MustIntern(()) };
+        match self.intern_kind_payload(InternedKindPayloadValT::OverloadSet(val)) {
+            InternedKindPayloadT::OverloadSet(r) => r,
+            _ => unreachable!(),
+        }
+    }
 
     // --- 6 Templata-payload wrappers (5 simple + 1 transient) ---
     impl_intern_templata_wrapper_simple!(intern_coord_templata, Coord, CoordTemplataT);

@@ -780,3 +780,47 @@ pub fn is_lambda(&self) -> bool {
   }
 }
 */
+
+// Identity-equality impls per @IEOIBZ. These types are arena-allocated and
+// accessed by reference; two distinct allocations are distinct identities,
+// so `==` and `Hash` use `std::ptr::eq`/`std::ptr::hash` on `&self`.
+
+impl<'s> PartialEq for StructA<'s> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s> Eq for StructA<'s> {}
+impl<'s> std::hash::Hash for StructA<'s> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
+}
+
+impl<'s> PartialEq for InterfaceA<'s> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s> Eq for InterfaceA<'s> {}
+impl<'s> std::hash::Hash for InterfaceA<'s> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
+}
+
+impl<'s> PartialEq for ImplA<'s> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s> Eq for ImplA<'s> {}
+impl<'s> std::hash::Hash for ImplA<'s> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
+}
+
+impl<'s> PartialEq for FunctionA<'s> {
+    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+    /* Guardian: disable-all */
+}
+impl<'s> Eq for FunctionA<'s> {}
+impl<'s> std::hash::Hash for FunctionA<'s> {
+    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+    /* Guardian: disable-all */
+}

@@ -15,7 +15,7 @@ use crate::postparsing::ast::{LocationInDenizen, ParameterS};
 use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compiler::Compiler;
-use crate::typing::typing_interner::InternToken;
+use crate::typing::typing_interner::MustIntern;
 
 /*
 package dev.vale.typing.function
