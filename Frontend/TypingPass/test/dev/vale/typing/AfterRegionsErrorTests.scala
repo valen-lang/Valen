@@ -142,30 +142,6 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
 //    }
 //  }
 
-  // Interface bounds, downcasting
-  // This test does not pass yet, use #[ignore].
-  test("Report when downcasting to interface") {
-    vimpl() // can we solve this by putting an impl in the environment for that placeholder?
-
-    val compile = CompilerTestCompilation.test(
-      """
-        |import v.builtins.as.*;
-        |import panicutils.*;
-        |
-        |interface ISuper { }
-        |interface ISub { }
-        |impl ISuper for ISub;
-        |
-        |exported func main() {
-        |  ship = __pretend<ISuper>();
-        |  ship.as<ISub>();
-        |}
-        |""".stripMargin)
-    compile.getCompilerOutputs() match {
-      case Err(CantDowncastToInterface(_, _)) =>
-    }
-  }
-
   // This test does not pass yet, use #[ignore].
   test("Report when downcasting between unrelated types") {
     val compile = CompilerTestCompilation.test(

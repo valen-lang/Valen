@@ -227,6 +227,35 @@ class AfterRegionsTests extends FunSuite with Matchers {
     }
   }
 
+  test("Can downcast interface to interface through registered impl") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |import v.builtins.as.*;
+        |import v.builtins.result.*;
+        |import v.builtins.logic.*;
+        |import v.builtins.drop.*;
+        |import panicutils.*;
+        |
+        |sealed interface ISuper { }
+        |sealed interface ISub { }
+        |impl ISuper for ISub;
+        |
+        |func tryDowncast(ship ISuper) bool {
+        |  result Result<&ISub, &ISuper> = (&ship).as<ISub>();
+        |  return result.is_ok();
+        |}
+        |
+        |exported func main() bool {
+        |  return tryDowncast(__pretend<ISuper>());
+        |}
+        |""".stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+
+    coutputs.lookupFunction("tryDowncast").header.returnType match {
+      case CoordT(ShareT, _, BoolT()) =>
+    }
+  }
+
   test("Test two instantiations of anonymous-param lambda") {
     val compile = CompilerTestCompilation.test(
       """

@@ -521,7 +521,7 @@ So, we'll need to do #2.
 
 A few places we'll need to do this:
 
- * At the beginning of the current denizen, where we introduce the placeholders. We scour all of the requirements imposed by all of the parameters (like the `BorkForwarder<LamT>` that requires `__call(&LamT)int`) and create prototypes for them. (See also [Rust #2089](https://github.com/rust-lang/rfcs/pull/2089))
+ * At the beginning of the current function, when the defining solve finishes, we scout each citizen-typed parameter for their requirement prototypes (like the `BorkForwarder<LamT>` that requires `__call(&LamT)int`) (which appear as FunctionBoundNameT), re-phrase them in terms of the current defining function, and stash them in the current function's near env. (See also [Rust #2089](https://github.com/rust-lang/rfcs/pull/2089))
  * When an abstract function is "calling" an override, we'll need to incorporate the bounds for the overriding struct. (See ONBIFS)
  * In a match's case statement, when we mention a type, we need to incorporate the bounds from that type.
 
@@ -643,9 +643,9 @@ This failed while trying to assemble the itables.
 
 When we were figuring out the vtable for `BorkForwarder<Lam1>`, we were trying to find its override for `bork`.
 
-We looked for a `bork(BorkForwarder<Lam1>)`. (Aside: because of NAFEWRO we looked from the perspective of `bork(Bork)`, we used its environment.)
+We looked for a `bork(&BorkForwarder<Lam1>)`. (Aside: because of NAFEWRO we looked from the perspective of `bork(Bork)`, we used its environment.)
 
-However, `func bork(BorkForwarder<Lam1>)` has a requirement that there's a `func __call(&Lam)int`, but the call site (the abstract function `bork(Bork)`) had no knowledge of such a function, so it failed.
+However, `func bork(&BorkForwarder<Lam1>)` has a requirement that there's a `func __call(&Lam)int`, but the call site (the abstract function `bork(Bork)`) had no knowledge of such a function, so it failed.
 
 This reinforces that we need to solve NBIFPR by gathering information from elsewhere (parameters).
 
