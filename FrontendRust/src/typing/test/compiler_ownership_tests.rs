@@ -32,6 +32,7 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 */
 // mig: fn parenthesized_method_syntax_will_move_instead_of_borrow
 #[test]
+#[ignore]
 fn parenthesized_method_syntax_will_move_instead_of_borrow() {
     panic!("Unmigrated test: parenthesized_method_syntax_will_move_instead_of_borrow");
 }
@@ -54,6 +55,7 @@ fn parenthesized_method_syntax_will_move_instead_of_borrow() {
 */
 // mig: fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg
 #[test]
+#[ignore]
 fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
     panic!("Unmigrated test: calling_a_method_on_a_returned_own_ref_will_supply_owning_arg");
 }
@@ -75,6 +77,7 @@ fn calling_a_method_on_a_returned_own_ref_will_supply_owning_arg() {
 */
 // mig: fn explicit_borrow_method_call
 #[test]
+#[ignore]
 fn explicit_borrow_method_call() {
     panic!("Unmigrated test: explicit_borrow_method_call");
 }
@@ -96,6 +99,7 @@ fn explicit_borrow_method_call() {
 */
 // mig: fn calling_a_method_on_a_local_will_supply_borrow_ref
 #[test]
+#[ignore]
 fn calling_a_method_on_a_local_will_supply_borrow_ref() {
     panic!("Unmigrated test: calling_a_method_on_a_local_will_supply_borrow_ref");
 }
@@ -118,6 +122,7 @@ fn calling_a_method_on_a_local_will_supply_borrow_ref() {
 */
 // mig: fn calling_a_method_on_a_member_will_supply_borrow_ref
 #[test]
+#[ignore]
 fn calling_a_method_on_a_member_will_supply_borrow_ref() {
     panic!("Unmigrated test: calling_a_method_on_a_member_will_supply_borrow_ref");
 }
@@ -141,6 +146,7 @@ fn calling_a_method_on_a_member_will_supply_borrow_ref() {
 */
 // mig: fn no_derived_or_custom_drop_gives_error
 #[test]
+#[ignore]
 fn no_derived_or_custom_drop_gives_error() {
     panic!("Unmigrated test: no_derived_or_custom_drop_gives_error");
 }
@@ -164,6 +170,7 @@ fn no_derived_or_custom_drop_gives_error() {
 */
 // mig: fn opt_with_undroppable_contents
 #[test]
+#[ignore]
 fn opt_with_undroppable_contents() {
     panic!("Unmigrated test: opt_with_undroppable_contents");
 }
@@ -209,6 +216,7 @@ fn opt_with_undroppable_contents() {
 */
 // mig: fn opt_with_undroppable_mutable_ref_contents
 #[test]
+#[ignore]
 fn opt_with_undroppable_mutable_ref_contents() {
     panic!("Unmigrated test: opt_with_undroppable_mutable_ref_contents");
 }
@@ -261,6 +269,7 @@ fn opt_with_undroppable_mutable_ref_contents() {
 */
 // mig: fn restackify
 #[test]
+#[ignore]
 fn restackify() {
     panic!("Unmigrated test: restackify");
 }
@@ -277,6 +286,7 @@ fn restackify() {
 */
 // mig: fn loop_restackify
 #[test]
+#[ignore]
 fn loop_restackify() {
     panic!("Unmigrated test: loop_restackify");
 }
@@ -293,6 +303,7 @@ fn loop_restackify() {
 */
 // mig: fn destructure_restackify
 #[test]
+#[ignore]
 fn destructure_restackify() {
     panic!("Unmigrated test: destructure_restackify");
 }

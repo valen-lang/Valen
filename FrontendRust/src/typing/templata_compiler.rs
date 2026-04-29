@@ -62,50 +62,6 @@ case class UseBoundsFromContainer(
 ) extends IBoundArgumentsSource
 */
 
-// IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
-// so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
-// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). Context fields come in Slab 15.
-pub struct IPlaceholderSubstituter<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
-}
-impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
-    pub fn substitute_for_coord(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        coord_t: CoordT<'s, 't>,
-    ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
-    pub fn substitute_for_interface(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        interface_tt: InterfaceTT<'s, 't>,
-    ) -> InterfaceTT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
-    pub fn substitute_for_templata(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        templata: ITemplataT<'s, 't>,
-    ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
-    pub fn substitute_for_prototype(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        proto: &'t PrototypeT<'s, 't>,
-    ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
-    pub fn substitute_for_impl_id(
-        &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        impl_id: IdT<'s, 't>,
-    ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
-    }
-}
-// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
 trait ITemplataCompilerDelegate {
 */
@@ -1253,9 +1209,54 @@ where 's: 't,
   // }
 */
 // deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
+
+// IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
+// so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
+// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). Context fields come in Slab 15.
+pub struct IPlaceholderSubstituter<'s, 't> {
+    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+}
+impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
+    pub fn substitute_for_coord(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        coord_t: CoordT<'s, 't>,
+    ) -> CoordT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_interface(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        interface_tt: InterfaceTT<'s, 't>,
+    ) -> InterfaceTT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_templata(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        templata: ITemplataT<'s, 't>,
+    ) -> ITemplataT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_prototype(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        proto: &'t PrototypeT<'s, 't>,
+    ) -> &'t PrototypeT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+    pub fn substitute_for_impl_id(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        impl_id: IdT<'s, 't>,
+    ) -> IdT<'s, 't> {
+        panic!("Unimplemented: Slab 15 — body migration");
+    }
+}
 /*
   trait IPlaceholderSubstituter {
 */
+// deleted: delegate trait removed per god-struct refactor (Compiler now holds all methods directly)
 /*
     def substituteForCoord(coutputs: CompilerOutputs, coordT: CoordT): CoordT
 */
@@ -1773,7 +1774,14 @@ where 's: 't,
         kind: KindT<'s, 't>,
         region: RegionT,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mutability = self.get_mutability(coutputs, kind);
+        let ownership = match mutability {
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+            ITemplataT::Placeholder(_) => OwnershipT::Own,
+            other => unreachable!("Unexpected mutability templata: {:?}", other),
+        };
+        CoordT { ownership, region, kind }
     }
 /*
   def coerceKindToCoord(coutputs: CompilerOutputs, kind: KindT, region: RegionT):
@@ -1802,7 +1810,17 @@ where 's: 't,
         templata: ITemplataT<'s, 't>,
         region: RegionT,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match templata {
+            ITemplataT::Kind(kind_templata) => {
+                ITemplataT::Coord(self.typing_interner.intern_coord_templata(
+                    CoordTemplataT { coord: self.coerce_kind_to_coord(coutputs, kind_templata.kind, region) }
+                ))
+            }
+            ITemplataT::Coord(_) => { panic!("vcurious"); }
+            ITemplataT::StructDefinition(_) => { panic!("vcurious"); }
+            ITemplataT::InterfaceDefinition(_) => { panic!("vcurious"); }
+            _ => { panic!("Unimplemented: coerce_to_coord for {:?}", templata); }
+        }
     }
 /*
   def coerceToCoord(
@@ -2126,6 +2144,7 @@ where 's: 't,
             // val placeholderEnv = GeneralEnvironmentT.childOf(interner, env, kindPlaceholderTemplateId, kindPlaceholderTemplateId)
             let placeholder_env = child_of(
                 self.typing_interner,
+                self.scout_arena,
                 *env,
                 *kind_placeholder_template_id,
                 kind_placeholder_template_id,

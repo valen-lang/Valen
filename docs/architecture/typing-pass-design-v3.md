@@ -1,24 +1,8 @@
-# Typing Pass Migration — TL Design Spec
+# Typing Pass Design — v3
 
-**Taking this over?** Read this doc top-to-bottom. It is the single authoritative source for the typing-pass migration: architecture, design decisions, and current operating instructions.
+Architecture and design decisions for the Scala-to-Rust typing-pass migration. This is the authoritative design reference; operational handoff instructions are in `tl-handoff.md` at the repo root.
 
 For historical slab-by-slab progress (Slabs 0–14b), see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
-
-## Guiding principle
-
-**1:1 Scala parity is the highest priority.** Every design decision defers to matching Scala's structure, naming, and behavior. No novel logic, no reorganization, no Rust-idiomatic "improvements" beyond what Rust strictly requires to compile. Where Rust can't directly mirror Scala, prefer `panic!`/`assert!` placeholders over inventing alternatives. When in doubt, port Scala verbatim.
-
-**This applies to bodies as much as to types.** When porting a Scala function body, translate every line literally — including assertions, size checks, intermediate bindings, redundant-looking branches, and code paths that appear dead. Do **not** simplify, collapse, flatten, inline, or "optimize away" anything on the way over, even if you can prove the simplification is semantically equivalent. The Scala source is the spec; your job is transcription, not refactoring. If the Scala writes `if (results.size > 1) vfail()` over a value whose size can never exceed 1, the Rust writes the same check. If the Scala binds an intermediate variable that's used once, the Rust binds the same intermediate. If the Scala has a `match` arm that pattern-matches a case the caller "couldn't reach," the Rust has the same arm. Parity-preserving translation is a narrow target — keep the diff against Scala visually obvious so reviewers can verify line-for-line.
-
-**TLs and reviewers: enforce this on hand-offs.** When suggesting a body translation to a junior, never propose a simplification of the Scala — quote the Scala verbatim and tell them to mirror it. When reviewing a junior's diff, flag any place where the Rust shape diverges from the Scala shape, even when the divergence "obviously works." The migration's value comes from the audit trail; a clever translation that nobody can verify against the Scala is worse than a verbose one that anyone can.
-
-## Where we are
-
-The scaffolding phase is complete. Slabs 0–14b built out every type definition, all ~210 method signatures with proper lifetimes, and all placeholder types (only `IRegionNameT` retains `_Phantom` — 0 Scala implementors found). `cargo check --lib` is clean (0 errors, 22 warnings — all minor lifetime elision).
-
-**Current work: body migration (Slab 15+).** 141 panic-stubbed method bodies across 17 files, plus 88 stale stubs from earlier slabs. All are functionally equivalent — they need real Scala-parity implementations. Work is test-driven: pick a test, run it, implement the body it hits, repeat.
-
-Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (compiler_tests 91, compiler_solver_tests 27, compiler_virtual_tests 18, compiler_mutate_tests 12, compiler_lambda_tests 10, compiler_ownership_tests 11, compiler_project_tests 3, compiler_generics_tests 1). All currently panic at the first method body they exercise.
 
 ---
 
@@ -26,7 +10,7 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 
 The approach is **pragmatic arena retention**: scout data lives past the typing pass, so typing output can reference it directly. Output types carry `<'s, 't>` — they can hold `&'s` refs into the scout arena. Heavy templatas hold `&'s FunctionA` / `&'s StructA` directly. No re-interning, no side tables for origin data. Envs allocate into the typing arena.
 
-**The trade.** Cost: scout arena memory (FunctionA/StructA/etc.) retained through instantiation; typing arena memory (envs, typing-pass output) retained through instantiation. Rough estimate: hundreds of MB to a few GB for large programs. Fine for batch compilation; reconsider for long-running LSP-style use (see Open Questions). Benefit: the port maps to Scala line-for-line in most places. No side-table plumbing. Faster to implement, easier to review for Scala parity.
+**The trade.** Cost: scout arena memory (FunctionA/StructA/etc.) retained through instantiation; typing arena memory (envs, typing-pass output) retained through instantiation. Rough estimate: hundreds of MB to a few GB for large programs. Fine for batch compilation; reconsider for long-running LSP-style use (see Risks / Open Questions). Benefit: the port maps to Scala line-for-line in most places. No side-table plumbing. Faster to implement, easier to review for Scala parity.
 
 ### 1.1 Three Arenas
 
@@ -109,7 +93,7 @@ A complete per-type checklist.
 - `InstantiationBoundArgumentsT<'s, 't>`
 - Heavy templata payloads: `FunctionTemplataT`, `StructDefinitionTemplataT`, `InterfaceDefinitionTemplataT`, `ImplDefinitionTemplataT`, `ExternFunctionTemplataT`
 - `HinputsT<'s, 't>` (pass output)
-- **Environments:** 9 concrete variants, plus `GlobalEnvironmentT<'s, 't>` (one per pass). `TemplatasStoreT<'s, 't>` is held inline-by-value inside envs (not independently arena-allocated).
+- **Environments:** 9 concrete variants, plus `GlobalEnvironmentT<'s, 't>` (one per pass). `TemplatasStoreT<'s, 't>` is held inline inside envs (arena-allocated, non-Copy — uses `ArenaIndexMap`).
 
 **Inline Copy, NOT interned (Scala-verbatim structural equality):**
 - Name sub-enum families (22 of them): each is a 16-byte inline Copy value (tag + 8-byte concrete ref).
@@ -212,32 +196,32 @@ Every env variant carries `global_env: &'t GlobalEnvironmentT<'s, 't>` as a back
 
 `IEnvEntryT<'s, 't>` is a 5-variant inline Copy enum: `Function(&'s FunctionA<'s>)`, `Struct(&'s StructA<'s>)`, `Interface(&'s InterfaceA<'s>)`, `Impl(&'s ImplA<'s>)`, `Templata(ITemplataT<'s, 't>)`. Not interned. Lives inline in `TemplatasStoreT.name_to_entry`.
 
-Env Hash/PartialEq/Eq are **manual impls**, not derived — they match Scala's `id`-based identity (or `(id, life)` for `NodeEnvironmentT`, `panic!("vcurious")` for `GeneralEnvironmentT`). Deriving would walk into `TemplatasStoreT`'s slices and diverge from Scala.
+Env Hash/PartialEq/Eq are **manual impls**, not derived — they match Scala's `id`-based identity (or `(id, life)` for `NodeEnvironmentT`, `panic!("vcurious")` for `GeneralEnvironmentT`). Deriving would walk into `TemplatasStoreT`'s maps and diverge from Scala.
 
-### 3.2 `TemplatasStoreT` Uses Arena-Backed Slice Pairs
+### 3.2 `TemplatasStoreT` Uses `ArenaIndexMap`
 
-Following AASSNCMCX, we avoid heap HashMap inside arena types. Slices live in `'t`:
+For 1:1 Scala parity, `TemplatasStoreT` uses `ArenaIndexMap` (the AASSNCMCX-blessed arena-backed hash map) to mirror Scala's `Map[INameT, IEnvEntry]` and `Map[IImpreciseNameS, Vector[IEnvEntry]]`:
 
 ```
 pub struct TemplatasStoreT<'s, 't> {
     pub templatas_store_name: &'t IdT<'s, 't>,
-    pub name_to_entry: &'t [(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
-    pub imprecise_to_entries: &'t [(&'s IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>])],
+    pub name_to_entry: ArenaIndexMap<'t, INameT<'s, 't>, IEnvEntryT<'s, 't>>,
+    pub imprecise_to_entries: ArenaIndexMap<'t, &'s IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>]>,
 }
 ```
 
-- **`name_to_entry`** — unsorted arena slice. Linear scan in lookup.
-- **`imprecise_to_entries`** — nested-slice layout: outer slice of `(key, inner_slice)` pairs; each inner slice is its own arena allocation containing the (1-3 typical, occasionally more) entries sharing that imprecise name.
+- **`name_to_entry`** — `ArenaIndexMap` keyed by `INameT`. Each Scala `entriesByNameT.get(name)` translates to `name_to_entry.get(&name)`.
+- **`imprecise_to_entries`** — `ArenaIndexMap` keyed by `&'s IImpreciseNameS`. Values are `&'t [IEnvEntryT]` slices (the per-imprecise-name overload buckets), matching Scala's `Map[IImpreciseNameS, Vector[IEnvEntry]]`.
 
-Unsorted slices, linear-scan lookup. Common-case scope size is small (~5–10 entries), where linear scan beats binary search on cache behavior and avoids the sort cost at construction. If profiling later identifies a hot slow scope, switch that specific env kind — but not as a default.
+`ArenaIndexMap` is not `Copy`/`Clone`, so `TemplatasStoreT` is `/// Arena-allocated` (not value-type). Lives inline in env structs (~80 bytes: two `ArenaIndexMap`s + the `&'t IdT` back-ref).
 
-Lives inline-by-value in env structs (about 48 bytes: 3 slice-pointers + the `&'t IdT` back-ref).
+> **Future exploration:** Once body migration is complete and benchmarks exist, profile lookup-heavy paths (overload resolution, name-imprecise lookups during scout-name-to-typing-pass-name resolution). For env kinds where scope sizes are consistently small (block-local, function-local, node) and lookups are frequent, evaluate switching back to unsorted slice-of-pairs with linear scan on a per-env-kind basis.
 
 ### 3.3 Mutable Building Phase
 
 During construction, an env is mutable. Builders live on the stack with heap `Vec`s (and heap `HashMap`s for the imprecise-name index); freeze into the typing arena when done. No `&mut FooEnvironmentT` over arena-allocated envs — once a `&'t FooEnvironmentT` is created, it's immutable. Child scopes and mutations produce a fresh builder → fresh arena allocation → fresh `&'t` ref (matches Scala's `NodeEnvironmentBox`, which also allocates a new env per mutation).
 
-`TemplatasStoreBuilder<'s, 't>` is its own stack builder with `Vec<(INameT, IEnvEntryT)>` for the name-to-entry mapping and `HashMap<&'s IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>` for the imprecise index (heap during construction, frozen to nested arena slices on `build_in`).
+`TemplatasStoreBuilder<'s, 't>` is its own stack builder with `Vec<(INameT, IEnvEntryT)>` for the name-to-entry mapping and `HashMap<&'s IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>` for the imprecise index (heap during construction, frozen to `ArenaIndexMap` on `build_in`).
 
 Child-scope API: each env has a `make_child(...)` returning a fresh builder (not a `&mut` over arena-allocated data). `NodeEnvironmentBox`, `FunctionEnvironmentBoxT`, `IDenizenEnvironmentBoxT` (Scala's mutable wrappers and trait) are deleted in Rust — the builder-freeze pattern subsumes them.
 
@@ -314,7 +298,7 @@ let env_t: &'t IInDenizenEnvironmentT<'s, 't> =
 self.do_stuff(coutputs, env_t, ...);  // OK; env_t is Copy'd out
 ```
 
-**Invariant: most HashMap values in `CompilerOutputs` are pointer-sized `Copy` types** (`&'s T`, `&'t T`) — enables the copy-out-then-mutate pattern.
+**Invariant: most HashMap values in `CompilerOutputs` are pointer-sized Copy refs** (`&'s T`, `&'t T`) — enables the copy-out-then-mutate pattern.
 
 **Two exceptions:** `sub_citizen_template_to_impls` and `super_interface_template_to_impls` hold `Vec<&'t ImplT>` because the reverse-index lookups return multiple impls per key. Access these with `mem::take` / `drain` + reinsert, not by-reference read.
 
@@ -621,27 +605,15 @@ For quick review during implementation:
 
 ---
 
-## Preserve The `/* scala */` Audit Trail
+## Risks / Open Questions
 
-The typing/ skeleton has a `/* ... */` block with the Scala source directly below every Rust definition. The `.claude/hooks/check-scala-comments` pre-commit hook does exact-match comparison and rejects any edit inside those blocks. Rules:
-
-- Replace the empty Rust stub in-place with the real definition. Keep the Scala `/* ... */` block below unchanged.
-- Never move a Rust definition away from its Scala block.
-- A Rust definition grown to need helper structs (e.g. an IdValT companion for an IdT) gets its companion block **adjacent to** the main definition, with a `// (no scala counterpart — …)` note.
-- **After any change that touches Scala comment blocks** (splitting, moving, adding new impl blocks between them), run the SCPX shield to verify structural integrity:
-  ```
-  cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all
-  ```
-
----
-
-## Known Residual Items
-
-- **141 panic-stubbed method bodies** across 17 files (top: expression_compiler.rs 21, templata_compiler.rs 20, infer_compiler.rs 15). Plus 88 stale stubs labeled "Slab 10" in compiler_outputs.rs (52) and templata_compiler.rs (36).
-- **dispatch_function_body_macro** and friends not wired.
-- **LocationInFunctionEnvironmentT.path: Vec<i32>** in `ast/ast.rs` violates AASSNCMCX. Future cleanup turns into `&'t [i32]`.
-- **IRegionNameT** retains `_Phantom` — 0 Scala implementors found, deferred.
-- **22 cargo warnings** — all minor lifetime elision suggestions.
+- **LSP / long-running use**: scout arena retention through instantiation is memory-heavy; single-arena typing makes batch-only the safe mode. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
+- **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time "this IdT's local_name is a FunctionName" assertions. See `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`.
+- **TypingInterner perf**: six hashbrown HashMap maps with heterogeneous `'tmp`→`'t` lookup via Equivalent. Works today but hasn't been measured. Profile before optimizing.
+- **Body migration ordering**: the 141 panic stubs have implicit dependency ordering — some bodies call other stubbed methods. The test-driven approach naturally discovers this, but expect some batches to require implementing a chain of 3-5 bodies before a test passes end-to-end.
+- **Incremental compilation**: serializing HinputsT to disk requires a serialization boundary that breaks `'s` refs. Batch compilation only for now.
+- **Parallelization**: single-threaded design (`!Sync` arenas, stack CompilerOutputs). Per-function parallelization is a later topic.
+- **Typing storage → two-tier per-denizen arenas**: scheduled as a post-body-migration redesign. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
 
 ---
 
@@ -649,7 +621,8 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
 
 | Path | Purpose |
 |---|---|
-| `TL.md` | this doc — architecture + design + current work |
+| `tl-handoff.md` | operational handoff — process, principles, current work |
+| `docs/architecture/typing-pass-design-v3.md` | this doc — architecture + design decisions |
 | `docs/historical/slab-chronicle.md` | slab-by-slab history (Slabs 0–14b) |
 | `FrontendRust/docs/migration/handoff-slab-*.md` | per-slab handoff docs (translation tables, gotchas) |
 | `FrontendRust/docs/architecture/typing-pass-arenas.md` | typing-pass arena architecture |
@@ -673,125 +646,3 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
 | `FrontendRust/src/typing/env/i_env_entry.rs` | IEnvEntryT 5-variant enum |
 | `FrontendRust/src/typing/test/` | 14 test files; 173 test bodies ready to drive body migration |
 | `.claude/hooks/check-scala-comments` | pre-commit hook guarding `/* scala */` blocks |
-
-## How to continue
-
-1. **Read this doc top to bottom.** Also read `docs/architecture/typing-pass-arenas.md` for the current arena shape.
-2. **Body migration is test-driven.** Pick a test from `src/typing/test/`, run it, see which panic stub it hits first, implement that body, repeat. Start with the simplest bodies (trivial CompilerOutputs one-liners), then TemplataCompiler id-transforms, then the substitution engine, then sub-compiler bodies.
-3. **Don't commit.** The human handles all commits and tags. Hand back uncommitted working trees at batch boundaries.
-4. **Group related bodies** into coherent batches for review. Each batch gets a handoff doc listing target methods, driving test(s), and Scala translation gotchas.
-
-## Good Partial Implementing
-
-When replacing a `panic!` stub with real logic, write just the shallow structure of that scope — straight-line variable bindings, function calls, match expressions with all arms — but put `panic!` inside every new branch body, loop body, closure/lambda body, and match arm. Then only fill in the specific arms/branches the driving test actually hits. This applies recursively: when a test hits one of those inner panics, replace *that* panic with its own skeleton-with-panics, fill in only what the test needs, and so on. Each iteration expands one panic into a new layer of structure. **Aggressively panic for anything that might not be executed by current tests.** This minimizes each batch's diff and ensures untested paths crash loudly rather than silently returning wrong results.
-
-## Run Solutions By The Architect First
-
-**Before implementing any structural fix or design change, propose the solution to the architect and wait for approval.** This includes lifetime-parameter additions, signature changes that propagate across many files, new abstractions, and any choice between alternatives. Don't start editing — even for fixes that look mechanical — until the architect has signed off on the approach. The cost of a quick check is small; the cost of unwinding a wrong-direction change across ~20 call sites is large.
-
-## Don't Simplify Scala On The Way Over
-
-Restating the guiding principle as an operating rule because TLs slip on it: **when handing a body off to a junior, quote the Scala verbatim and instruct them to translate every line.** Do not flatten redundant checks, do not collapse impossible branches, do not inline single-use bindings, do not reason "well in Rust we can just…". If you find yourself writing "the Rust method already returns `Option`, so it's a direct return" or "we can skip this size check because it can't happen" in a hand-off, stop — that's a parity violation in the making. The whole migration's auditability rests on the diff being a literal line-for-line port. A junior who follows a verbatim Scala translation produces a reviewable patch; a junior who follows a TL's "smarter" translation produces a patch nobody can compare against the source.
-
-## Cleaning Up After The Slice Pipeline
-
-The slice pipeline (`slice-start` → `slice-rustify` → `slice-placehold` → reconcile) is the right tool for bringing a file with raw `/* scala */` comments up to SCPX parity. It's also incomplete in known ways. After running it on a non-trivial typing-pass file, plan on a manual cleanup pass before `cargo check` will be clean. These are the lessons from running it on `env/environment.rs`.
-
-### `slice-placehold` doesn't infer struct context
-
-For each `// mig: fn foo` it emits `pub fn foo<'s, 't>(&self, …) { panic!() }` at **module scope**. It does not look at what Scala class the `def` is inside, and it does not wrap the stub in an `impl SomeT<'s, 't>` block.
-
-Two failure modes follow:
-
-1. **Cross-variant name collisions.** A Scala trait method overridden by N case classes (e.g. `lookupWithNameInner` overridden by `PackageEnvironmentT`, `CitizenEnvironmentT`, `ExportEnvironmentT`, `ExternEnvironmentT`, `GeneralEnvironmentT`) becomes N module-level `pub fn lookup_with_name_inner` stubs that all collide (`E0428`).
-2. **Invalid `&self`.** `&self` outside an `impl`/`trait` is not valid Rust (`E0061`-style) and the per-fn `<'s, 't>` generics on a free fn don't have anywhere to come from in a real method dispatch.
-
-**Cleanup**: wrap each stub in the right `impl<'s, 't> SomeT<'s, 't> where 's: 't { … }` block, **drop the per-fn `<'s, 't>` generics** (the impl provides them), and indent the existing Scala `/* … */` to live inside the impl alongside the Rust fn (per the SCPX adjacency rule, §"Preserve The `/* scala */` Audit Trail"). One impl block per stub matches the rest of the file's pattern; consolidating multiple methods into one impl is allowed but not required.
-
-### `slice-placehold` emits bogus `eq`/`hash_code` stubs
-
-Scala's `override def equals/hashCode` is realized in Rust by `impl PartialEq`/`impl Hash`, not by methods named `eq`/`hash_code`. The placehold agent will sometimes emit `pub fn hash_code(&self) -> i32 { panic!() }` stubs that don't correspond to any real Rust dispatch.
-
-**Cleanup**: replace the bogus `pub fn` body with a one-line marker comment:
-```rust
-// mig: fn hash_code
-// (Realized by `impl Hash for FooT` below.)
-/*
-  override def hashCode(): Int = …
-*/
-```
-Keep the `// mig:` marker (preserves the audit trail) and the Scala `/* … */` block (SCPX). Just don't pretend there's a Rust method.
-
-### NRDX blocks multi-fn diffs — go one fn at a time
-
-The `NoRenamedDefinitions-NRDX` shield's heuristic flags consecutive context-swaps as renames. An Edit that wraps **two adjacent** `// mig: fn foo` and `// mig: fn bar` stubs in their impl blocks in one shot will trip the shield with "fn foo renamed to bar" — even though no rename is happening.
-
-**Cleanup**: do one stub per Edit. Slow but predictable.
-
-### Verify with cargo + SCPX after
-
-After cleanup, two checks:
-
-1. `cargo check --manifest-path FrontendRust/Cargo.toml --lib > tmp/<session>.txt 2>&1` — must be 0 errors. Pre-existing warnings are fine; new ones aren't.
-2. `cargo run --manifest-path Luz/shields/ScalaCommentParity-SCPX/Cargo.toml --release -- --check-all` — must report `All 230 files OK`. SCPX is the canary that the audit trail is intact through the wrap.
-
-### Don't dispatch the orchestrator on a hand-edited file
-
-The slice-orchestrator runs all six steps. If the file already has hand-written Rust impls (like `env/environment.rs` did before this session), reconcile-mark only catches the matching-name old definitions and leaves the rest in place. The colliding fresh placehold stubs then need the manual `impl`-wrap cleanup above. Plan for it; don't expect the orchestrator alone to leave a compile-clean file when the input was mid-state.
-
-## NNDX Escalation Pattern
-
-**When a junior is blocked by NNDX on a legitimate Scala counterpart**, the issue is incomplete scaffolding, not a bad shield. The TL adds the missing definition directly — don't temp-disable NNDX. NNDX exists to route definition-creation to the right authority level; the junior escalating is the system working correctly.
-
-Example: Scala's `def globalEnv` on `IEnvironmentT` trait (line 60) becomes a `fn global_env()` match-dispatch method on the Rust enum (per SSTREX). If the slice pipeline didn't generate it, the junior hits NNDX when they try to add it. Correct response: junior stops and escalates; TL adds the accessor.
-
-**How to slice in a missing Rust definition.** The Scala comment blocks are the audit trail — every Rust definition must sit directly above its Scala counterpart. When adding a missing definition:
-
-1. Find the Scala `def` inside its `/* ... */` comment block.
-2. Split the comment block: close `*/` just before the target `def`, insert the Rust `impl` block, then reopen `/*` to resume the remaining Scala.
-3. The Scala `def` line must end up **inside** the Rust `impl` block, as an inline `/* ... */` comment immediately after the Rust `fn` body — not after the `}` that closes the `impl`. This keeps the Scala counterpart visually adjacent to its Rust translation.
-
-```rust
-impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
-  pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
-    match self {
-      IEnvironmentT::Package(e) => e.global_env,
-      // ...
-    }
-  }
-  /*
-    def globalEnv: GlobalEnvironment
-  */
-}
-```
-
-Not like this (Scala comment stranded outside the impl):
-```rust
-  // WRONG — comment is after the impl's closing brace
-}
-/*
-  def globalEnv: GlobalEnvironment
-*/
-```
-
-## Suggested process for the incoming TL
-
-- Spawn a junior for each batch. Write a handoff listing the target methods, the test(s) that exercise them, and any Scala translation gotchas for those specific bodies.
-- When a design diverges from this doc, record the divergence in `FrontendRust/docs/reasoning/<topic>.md`. Then update this doc.
-- **Never commit.** Juniors and TLs finish a batch, run `cargo check --lib` clean, self-review their diff, then hand back to the human with uncommitted changes.
-- **Expect and invite push-back.** Handoffs are proposals, not spec.
-- **Scope discipline.** If edits land in `TL.md` or reasoning docs, announce in the hand-back summary, not folded silently into the diff. TLs revert off-scope edits before review.
-
-## Risks / Open Questions
-
-- **LSP / long-running use**: scout arena retention through instantiation is memory-heavy; single-arena typing makes batch-only the safe mode. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
-- **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time "this IdT's local_name is a FunctionName" assertions. See `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`.
-- **TypingInterner perf**: six hashbrown HashMap maps with heterogeneous `'tmp`→`'t` lookup via Equivalent. Works today but hasn't been measured. Profile before optimizing.
-- **Body migration ordering**: the 141 panic stubs have implicit dependency ordering — some bodies call other stubbed methods. The test-driven approach naturally discovers this, but expect some batches to require implementing a chain of 3-5 bodies before a test passes end-to-end.
-- **Incremental compilation**: serializing HinputsT to disk requires a serialization boundary that breaks `'s` refs. Batch compilation only for now.
-- **Parallelization**: single-threaded design (`!Sync` arenas, stack CompilerOutputs). Per-function parallelization is a later topic.
-- **Typing storage → two-tier per-denizen arenas**: scheduled as a post-body-migration redesign. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
-
----
-
-Questions? The reasoning docs + the per-slab handoffs have additional context. When in doubt, prefer Scala parity over Rust-idiomatic optimization — that's the guiding principle.

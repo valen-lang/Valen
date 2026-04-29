@@ -653,7 +653,7 @@ where 's: 't,
         //     templateId,
         //     templateId,
         //     TemplatasStore(templateId, Map(), Map()))
-        let global_namespaces: Vec<TemplatasStoreT<'s, 't>> =
+        let global_namespaces: Vec<&TemplatasStoreT<'s, 't>> =
             global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
         let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
         let parent_env = self.typing_interner.alloc(PackageEnvironmentT {
@@ -864,7 +864,7 @@ where 's: 't,
         //     templateId,
         //     templateId,
         //     TemplatasStore(templateId, Map(), Map()))
-        let global_namespaces: Vec<TemplatasStoreT<'s, 't>> =
+        let global_namespaces: Vec<&TemplatasStoreT<'s, 't>> =
             global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
         let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
         let parent_env = self.typing_interner.alloc(PackageEnvironmentT {

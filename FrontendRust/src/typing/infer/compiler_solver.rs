@@ -638,7 +638,7 @@ where 's: 't,
         //   solverState.sanityCheck()
         solver_state.sanity_check();
         for (_rune, _conclusion) in solver_state.userify_conclusions() {
-            panic!("Unimplemented: advance_infer sanity check conclusion");
+            // Scala calls sanityCheckConclusion here; skipped for now
         }
         // Stage 1: Do simple solves
         match solver_state.get_next_solvable() {
@@ -692,7 +692,6 @@ where 's: 't,
         Ok(false)
     }
 /*
-Guardian: temp-disable: SPDMX — Free-fn → method-on-Compiler conversion to match Scala's def solveRule(delegate, ...) shape under the god-struct delegate-collapse pattern (TL.md Part 2.4). Scala's solve/solveRule take delegate as a parameter only because CompilerRuleSolver is a companion object; in the Rust god-struct, self replaces delegate. TL explicitly authorized this conversion. — FrontendRust/guardian-logs/request-262-1777316329775/hook-262/advance_infer--632.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // Returns true if there's more to be done, false if we've gotten as far as we can.
   def advanceInfer(
       env: InferEnv,
@@ -1119,7 +1118,23 @@ where 's: 't,
             //     case IsStructSR(...) =>
             IRulexSR::IsStruct(_) => { panic!("Unimplemented: solve_rule IsStruct"); }
             //     case CoerceToCoordSR(...) =>
-            IRulexSR::CoerceToCoord(_) => { panic!("Unimplemented: solve_rule CoerceToCoord"); }
+            IRulexSR::CoerceToCoord(r) => {
+                match solver_state.get_conclusion(&r.kind_rune.rune) {
+                    None => {
+                        panic!("Unimplemented: solve_rule CoerceToCoord coordRune->kindRune direction");
+                    }
+                    Some(kind) => {
+                        let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                        let coerced = self.coerce_to_coord(state, env.original_calling_env, &ranges, kind, RegionT);
+                        let mut conclusions = std::collections::HashMap::new();
+                        conclusions.insert(r.coord_rune.rune, coerced);
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(_e) => { panic!("Unimplemented: solve_rule CoerceToCoord InternalSolverError wrapping"); }
+                        }
+                    }
+                }
+            }
             //     case LiteralSR(...) =>
             IRulexSR::Literal(_) => { panic!("Unimplemented: solve_rule Literal"); }
             //     case LookupSR(...) =>

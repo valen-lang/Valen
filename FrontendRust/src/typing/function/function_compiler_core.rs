@@ -1,6 +1,17 @@
+use std::collections::HashSet;
+
+use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
+use crate::postparsing::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
+use crate::typing::env::environment::*;
+use crate::typing::env::function_environment_t::*;
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
+use crate::typing::names::names::*;
+use crate::typing::templata::templata::*;
+use crate::utils::range::RangeS;
 
 /*
 package dev.vale.typing.function
@@ -81,8 +92,113 @@ class FunctionCompilerCore(
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn evaluate_function_for_header_core(&self) -> FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: evaluate_function_for_header");
+    // Preconditions:
+    // - already spawned local env
+    // - either no template args, or they were already added to the env.
+    // - either no closured vars, or they were already added to the env.
+    pub fn evaluate_function_for_header_core(
+        &self,
+        full_env: &'t FunctionEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        params2: &[ParameterT<'s, 't>],
+        _instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+    ) -> FunctionHeaderT<'s, 't> {
+        // fullEnv.id match { case IdT(...drop...) => vpass(); case _ => }
+        // (debug pattern match, not functionally needed)
+
+        let _life = LocationInFunctionEnvironmentT { path: Vec::new(), _phantom: std::marker::PhantomData };
+
+        let is_destructor =
+            !params2.is_empty() &&
+            params2[0].tyype.ownership == OwnershipT::Own &&
+            match full_env.id.local_name {
+                INameT::Function(func_name) if func_name.template.human_name == self.keywords.drop => true,
+                _ => false,
+            };
+
+        let _maybe_export =
+            full_env.function.attributes.iter().find_map(|a| {
+                match a {
+                    IFunctionAttributeS::Export(e) => Some(e),
+                    _ => None,
+                }
+            });
+
+        let signature2 = self.typing_interner.intern_signature(SignatureValT {
+            id: IdValT {
+                package_coord: full_env.id.package_coord,
+                init_steps: full_env.id.init_steps,
+                local_name: full_env.id.local_name,
+            },
+        });
+
+        let maybe_ret_templata =
+            match &full_env.function.maybe_ret_coord_rune {
+                None => None,
+                Some(ret_coord_rune) => {
+                    let imprecise_name = self.scout_arena.intern_imprecise_name(
+                        IImpreciseNameValS::RuneName(RuneNameValS { rune: ret_coord_rune.rune }));
+                    let mut lookup_filter = HashSet::new();
+                    lookup_filter.insert(ILookupContext::TemplataLookupContext);
+                    let full_env_as_i = IEnvironmentT::Function(full_env);
+                    full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter)
+                }
+            };
+
+        let maybe_ret_coord =
+            match maybe_ret_templata {
+                None => None,
+                Some(ITemplataT::Coord(coord_templata)) => {
+                    let ret_coord = coord_templata.coord;
+                    coutputs.declare_function_return_type(signature2, ret_coord);
+                    Some(ret_coord)
+                }
+                _ => panic!("Must be a coord!"),
+            };
+
+        let header =
+            match &full_env.function.body {
+                IBodyS::CodeBody(_body) => {
+                    let attributes_without_export: Vec<&IFunctionAttributeS<'s>> =
+                        full_env.function.attributes.iter().filter(|a| {
+                            !matches!(a, IFunctionAttributeS::Export(_))
+                        }).collect();
+                    let attributes_t = self.translate_attributes(&attributes_without_export);
+
+                    match maybe_ret_coord {
+                        Some(return_coord) => {
+                            let header =
+                                self.finalize_header(full_env, coutputs, attributes_t, params2, return_coord);
+
+                            coutputs.defer_evaluating_function_body(
+                                DeferredActionT::EvaluateFunctionBody {
+                                    prototype: self.typing_interner.alloc(header.to_prototype()),
+                                    function_env: full_env,
+                                    origin: full_env.function,
+                                });
+
+                            header
+                        }
+                        None => {
+                            panic!("implement: CodeBodyS with no return coord");
+                        }
+                    }
+                }
+                IBodyS::ExternBody(_) => {
+                    panic!("implement: ExternBodyS");
+                }
+                IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => {
+                    panic!("implement: AbstractBodyS | GeneratedBodyS");
+                }
+            };
+
+        if header.attributes.iter().any(|a| matches!(a, IFunctionAttributeT::Pure)) {
+            // (Scala has commented-out purity checks here)
+        }
+
+        header
     }
 /*
   // Preconditions:
@@ -316,8 +432,27 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn finalize_header(&self) -> FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: finalize_header");
+    pub fn finalize_header(
+        &self,
+        full_env: &'t FunctionEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        attributes_t: Vec<IFunctionAttributeT<'s>>,
+        params_t: &[ParameterT<'s, 't>],
+        return_coord: CoordT<'s, 't>,
+    ) -> FunctionHeaderT<'s, 't> {
+        let header = FunctionHeaderT {
+            id: full_env.id,
+            attributes: attributes_t,
+            params: params_t.to_vec(),
+            return_type: return_coord,
+            maybe_origin_function_templata: Some(FunctionTemplataT {
+                outer_env: self.typing_interner.alloc(full_env.parent_env),
+                function: full_env.function,
+            }),
+        };
+        let sig_ref = self.typing_interner.alloc(header.to_signature());
+        coutputs.declare_function_return_type(sig_ref, return_coord);
+        header
     }
 /*
   def finalizeHeader(
@@ -408,8 +543,15 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_attributes(&self) -> Vec<IFunctionAttributeT<'s>> {
-        panic!("Unimplemented: translate_attributes");
+    pub fn translate_attributes(&self, attributes_a: &[&IFunctionAttributeS<'s>]) -> Vec<IFunctionAttributeT<'s>> {
+        attributes_a.iter().map(|a| {
+            match a {
+                IFunctionAttributeS::UserFunction(_) => IFunctionAttributeT::UserFunction,
+                IFunctionAttributeS::Pure(_) => IFunctionAttributeT::Pure,
+                IFunctionAttributeS::Additive(_) => IFunctionAttributeT::Additive,
+                _ => panic!("implement: translate other function attributes"),
+            }
+        }).collect()
     }
 /*
   def translateAttributes(attributesA: Vector[IFunctionAttributeS]): Vector[IFunctionAttributeT] = {

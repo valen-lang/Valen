@@ -2,13 +2,15 @@
 name: guardian-diagnose
 description: "Diagnose and resolve Guardian shield failures or unwanted prompts from hook output. Reads logs, classifies issues (violations, false positives, pipeline bugs, missing auto-allows), creates test cases, fixes shields/companion programs, and validates — all in one session."
 argument-hint: "[paste Guardian hook stdout, or provide log dir path]"
-allowed-tools: Bash(guardian expect-allow *), Bash(guardian expect-deny *), Bash(guardian check-direct *), Bash(guardian check *), Bash(cargo build *), Bash(cargo nextest run *), Bash(ls *), Read, Grep, Glob, Edit, Write
+allowed-tools: Bash(guardian expect-allow *), Bash(guardian expect-deny *), Bash(guardian check-direct *), Bash(guardian test-shield *), Bash(guardian check *), Bash(cargo build *), Bash(cargo nextest run *), Bash(ls *), Read, Grep, Glob, Edit, Write
 read-when: Read when a Guardian shield just fired or failed at hook time and you need to diagnose it.
 mention-in:
   - CLAUDE.md
 ---
 
 # Diagnose and Resolve Guardian Failures
+
+**Do not delegate this skill to a spawned agent.** Execute all phases directly in the main conversation.
 
 When Guardian hook output shows shield failures, systematically investigate each failure, classify it, and resolve it — creating test cases, fixing shield prompts, and fixing Rust companion programs as needed.
 
@@ -126,13 +128,15 @@ Human confirms or overrides:
 
 For each false positive:
 ```bash
-guardian expect-allow --log-dir <def-level-dir> --shield <CODE>
+guardian expect-allow --log-dir <hook-dir> --shield <CODE> --def <def-name>
 ```
 
 For each missing denial:
 ```bash
-guardian expect-deny --log-dir <hook-dir> --shield <CODE> [--def <name>]
+guardian expect-deny --log-dir <hook-dir> --shield <CODE> --def <def-name>
 ```
+
+Both `--def` flags are required. The def name is the full prefix from the log artifacts (e.g. `coerce_kind_to_coord--1771.0`).
 
 These create:
 - `expect-allow` → `NNN.diff` + `NNN.expected.json` (empty violations) in `cases/need-shield-amendment/`
@@ -145,36 +149,28 @@ These create:
 For shields with new `cases/need-shield-amendment/` cases (false positives):
 
 **Before the fix:**
-1. Reproduce the problem — run `check-direct` against the case and confirm it currently gives the wrong verdict:
+1. Run `test-shield` to confirm the new case currently fails and existing tests pass (baseline):
    ```bash
-   guardian check-direct --input <NNN.diff> --referenced-defs <NNN.referenced_defs.txt> \
-     --file-path <file> --config <guardian.toml> --mode <mode> --check-filter <SHIELD_CODE> \
-     --cache-dir /tmp/cache --log-dir /tmp/logs --format json --log-level overview
+   guardian test-shield --shield <shield.md> --config <guardian.toml> \
+     --cache-dir /tmp/cache --log-level overview
    ```
-2. Run all existing tests for the shield to confirm they pass (baseline is green):
-   ```bash
-   guardian check-direct ...  # for each existing test case
-   ```
-3. Read the shield markdown and all human cases
-4. Propose prompt changes (clarifications, examples, exceptions)
-5. Get human approval, edit the shield
+2. Read the shield markdown and all human cases
+3. Propose prompt changes (clarifications, examples, exceptions)
+4. Get human approval, edit the shield
 
 **After the fix:**
-6. Re-run `check-direct` against the new case — confirm it now gives the correct verdict
-7. Re-run all existing tests for the shield — confirm they still pass (no regressions)
-8. Iterate until both the new case and all existing tests pass
+5. Re-run `test-shield` — confirm the new case now passes and existing tests still pass (no regressions)
+6. Iterate until all cases pass
 
 For shields with new `tests/` cases (false negatives):
 
 **Before the fix:**
-1. Run `check-direct` against the new case to confirm the shield currently misses it (doesn't catch the violation)
-2. Run all existing tests for the shield to confirm they pass (baseline is green)
-3. Propose prompt changes to catch the violation
-4. Get human approval, edit the shield
+1. Run `test-shield` to confirm the new case currently fails and existing tests pass (baseline)
+2. Propose prompt changes to catch the violation
+3. Get human approval, edit the shield
 
 **After the fix:**
-5. Re-run `check-direct` against the new case — confirm it now catches the violation
-6. Re-run all existing tests — confirm they still pass
+4. Re-run `test-shield` — confirm the new case now passes and existing tests still pass
 
 ---
 
@@ -183,31 +179,30 @@ For shields with new `tests/` cases (false negatives):
 For shields with `primary: rust`:
 
 **Before the fix:**
-1. Reproduce the problem — run `check-direct` against the failing case and confirm the wrong verdict
-2. Run the Rust program against all existing `tests/cases/` test cases — confirm they pass (baseline is green)
+1. Run `test-shield` to confirm the failing case and verify existing tests pass (baseline)
+2. Run the Rust program's unit tests — confirm they pass (baseline is green)
 3. Add a **unit test in the program's `main.rs`** calling the dark-box API (`run()`) — not internal helpers (see @DBAPIZ). Target the specific logic bug (e.g., wrong regex, missed pattern)
 4. Run `cargo test` — confirm the new test **fails** (TDD red)
 5. Propose a fix to the Rust program, get human approval
 
 **After the fix:**
 6. Run `cargo test` — confirm the new test now passes
-7. Run `check-direct` against the failing case — confirm it now gives the correct verdict
-8. Run all existing `tests/cases/` — confirm they still pass (no regressions)
-9. Ask the human whether to also promote to `tests/cases/` as an integration test
-10. **Update the shield markdown** to reflect any new rules the program now enforces (see below)
+7. Run `test-shield` — confirm the failing case now passes and existing tests still pass (no regressions)
+8. Ask the human whether to also promote to `tests/cases/` as an integration test
+9. **Update the shield markdown** to reflect any new rules the program now enforces (see below)
 
 For Category D (missing auto-allow on `primary: rust` shields):
 
 **Before the fix:**
 1. Discuss the desired behavior with the human — what should be auto-allowed and what shouldn't
-2. Run all existing tests — confirm they pass (baseline is green)
+2. Run `test-shield` to confirm existing tests pass (baseline is green)
 3. Write failing unit tests in `main.rs` first (TDD), calling the dark-box API (`run()`) — see @DBAPIZ
 4. Run `cargo test` — confirm the new tests **fail** (TDD red)
 5. Implement the logic change in the companion program
 
 **After the fix:**
 6. Run `cargo test` — confirm all tests pass (old and new)
-7. Run `check-direct` against the original case — confirm it now gives the correct verdict
+7. Run `test-shield` — confirm the original case now passes
 8. **Update the shield markdown** to document the new behavior (see below)
 
 ### Shield Markdown ↔ Companion Program Sync
@@ -225,7 +220,7 @@ When updating a companion program:
 
 ## Phase 6: Validate & Promote
 
-1. Run all test cases and `cargo nextest run` for each affected shield
+1. Run `guardian test-shield` and `cargo nextest run` for each affected shield
 2. Promote resolved cases to `tests/` (ask human)
 3. Report summary: which shields were fixed, what changed
 4. Tell the user that Guardian shields are now fixed

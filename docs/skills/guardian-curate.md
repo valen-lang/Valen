@@ -2,7 +2,7 @@
 name: guardian-curate
 description: Weekly curation of shield cases. Walk the five cases/need-*/ queues, triage overrides, tune shields, process amendments, retrain trainees, and review implementor feedback.
 argument-hint: [optional: path to specific shield family dir]
-allowed-tools: Bash(guardian check *), Bash(guardian audit *), Bash(mv *), Bash(rm *), Bash(ls *), Bash(cargo build *), Bash(cargo test *), Read, Grep, Glob, Edit, Write
+allowed-tools: Bash(guardian check *), Bash(guardian audit *), Bash(guardian test-shield *), Bash(mv *), Bash(rm *), Bash(ls *), Bash(cargo build *), Bash(cargo test *), Read, Grep, Glob, Edit, Write
 ---
 
 # Curate Shields
@@ -23,18 +23,26 @@ for cases that haven't been through a review pass.
 
 For each case:
 1. Read `NNN.diff` (the contextified diff) and `NNN.context.json` (metadata)
-2. Present the case to the human: show the code, the shield's denial reason,
+2. Read the shield file itself (e.g. `Luz/shields/ShieldName-CODE/ShieldName-CODE.md`)
+   so you understand what rule the shield enforces and what its exceptions are
+   before forming an opinion
+3. Present the case to the human: show the code, the shield's denial reason,
    and the temp-disable reason
-3. Run the appeal-LLM (Opus-tier) to doublecheck the case
+4. Run the appeal-LLM (Opus-tier) to doublecheck the case
 4. Route based on appeal result:
 
-**Appeal-LLM says allow** (Opus sides with implementor — shield was too
-strict):
+**Human says the shield's requirements are wrong** — the shield is
+enforcing a rule that shouldn't apply here:
+- Move case to `cases/need-shield-amendment/`
+
+**Appeal-LLM sides with implementor** — shield wording is ambiguous or
+doesn't cover this pattern well enough:
 - Move case to `cases/need-shield-tuning/`
 - If the trainee program also denied (disagreed with Opus): file an
   additional copy in `cases/need-trainee-training/`
 
-**Appeal-LLM says deny** (Opus sides against implementor):
+**Appeal-LLM sides with the shield** — implementor was wrong to
+override:
 - Move case to `cases/need-implementor-changes/`
 
 After routing a case, remove its `Guardian: temp-disable: ...` comment
@@ -53,38 +61,23 @@ For each shield with cases in `cases/need-shield-tuning/`:
 4. Present proposed changes to the human for approval
 5. Edit the shield file with approved changes
 
-Validate prompt changes by running `guardian check-direct` via `cargo
-run`. The Guardian binary lives in `./Guardian/` with its own `Cargo.toml`
-and exposes two binaries (`guardian`, `guardian_benchmark`), so you must
-pass `--bin guardian`.
-
-Use `--config ./FrontendRust/guardian.toml` so the tier configs
-(simple_smart_config etc.) and backend are pulled from the toml. With
-`--config`, `--check` is rejected; scope to one shield via
-`--check-filter <SHIELD_CODE>` (e.g. `--check-filter SPDMX`). `--mode`
-is required and must match a section in the toml that includes the
-shield (e.g. `migrate_mode`, `guard_mode`, `review_mode`).
-
-Use relative paths in `cargo` commands per repo convention.
+Validate prompt changes by running `guardian test-shield`, which runs
+all `tests/cases/` and `cases/need-shield-amendment/` cases for the
+shield and reports per-case pass/fail. Use relative paths per repo
+convention.
 
 ```
 cargo run --manifest-path ./Guardian/Cargo.toml --release --bin guardian \
-  -- check-direct \
+  -- test-shield \
+  --shield <path/to/Shield-CODE.md> \
   --config ./FrontendRust/guardian.toml \
-  --mode migrate_mode \
-  --check-filter <SHIELD_CODE> \
-  --input <NNN.diff> \
-  --referenced-defs <NNN.referenced_defs.txt> \
-  --file-path <file_path from NNN.context.json> \
   --cache-dir /tmp/guardian-cache \
-  --log-dir /tmp/guardian-logs \
-  --format human \
   --log-level overview \
   > ./tmp/guardian-curate.txt 2>&1
 ```
 
-A passing run prints `✓ Review complete: N/N definitions passed` and
-exits 0. A failure prints the per-shield denial reason and exits non-zero.
+A passing run prints `CODE: N/N passed` with per-case results and exits
+0. A failure prints which cases failed and exits non-zero.
 
 Report results — which cases now pass, which still fail. Iterate with the
 human until satisfied.
@@ -96,7 +89,7 @@ Once a shield edit lands, any other case in any queue that flags **the
 same situation** the edit just addressed is out-of-date — the new
 shield prompt would no longer have raised it. For the rest of the
 session, discard those cases without re-running the appeal-LLM and
-without re-running `guardian check-direct`. Same situation means same
+without re-running `guardian test-shield`. Same situation means same
 shield code AND the same false-positive class (e.g. a method-to-free-
 function conversion of a different function in the same diff, or a
 cascading call-site update that exists only because the parent

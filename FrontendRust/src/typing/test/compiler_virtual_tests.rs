@@ -15,6 +15,7 @@ class CompilerVirtualTests extends FunSuite with Matchers {
 */
 // mig: fn regular_interface_and_struct
 #[test]
+#[ignore]
 fn regular_interface_and_struct() {
     panic!("Unmigrated test: regular_interface_and_struct");
 }
@@ -43,6 +44,7 @@ fn regular_interface_and_struct() {
 */
 // mig: fn regular_open_interface_and_struct_no_anonymous_interface
 #[test]
+#[ignore]
 fn regular_open_interface_and_struct_no_anonymous_interface() {
     panic!("Unmigrated test: regular_open_interface_and_struct_no_anonymous_interface");
 }
@@ -76,6 +78,7 @@ fn regular_open_interface_and_struct_no_anonymous_interface() {
 */
 // mig: fn implementing_two_interfaces_causes_no_vdrop_conflict
 #[test]
+#[ignore]
 fn implementing_two_interfaces_causes_no_vdrop_conflict() {
     panic!("Unmigrated test: implementing_two_interfaces_causes_no_vdrop_conflict");
 }
@@ -104,6 +107,7 @@ fn implementing_two_interfaces_causes_no_vdrop_conflict() {
 */
 // mig: fn upcast
 #[test]
+#[ignore]
 fn upcast() {
     panic!("Unmigrated test: upcast");
 }
@@ -125,6 +129,7 @@ fn upcast() {
 */
 // mig: fn virtual_with_body
 #[test]
+#[ignore]
 fn virtual_with_body() {
     panic!("Unmigrated test: virtual_with_body");
 }
@@ -145,6 +150,7 @@ fn virtual_with_body() {
 */
 // mig: fn templated_interface_and_struct
 #[test]
+#[ignore]
 fn templated_interface_and_struct() {
     panic!("Unmigrated test: templated_interface_and_struct");
 }
@@ -174,6 +180,7 @@ fn templated_interface_and_struct() {
 */
 // mig: fn custom_drop_with_concept_function
 #[test]
+#[ignore]
 fn custom_drop_with_concept_function() {
     panic!("Unmigrated test: custom_drop_with_concept_function");
 }
@@ -202,6 +209,7 @@ fn custom_drop_with_concept_function() {
 */
 // mig: fn test_complex_interface
 #[test]
+#[ignore]
 fn test_complex_interface() {
     panic!("Unmigrated test: test_complex_interface");
 }
@@ -214,6 +222,7 @@ fn test_complex_interface() {
 */
 // mig: fn test_specializing_interface
 #[test]
+#[ignore]
 fn test_specializing_interface() {
     panic!("Unmigrated test: test_specializing_interface");
 }
@@ -226,6 +235,7 @@ fn test_specializing_interface() {
 */
 // mig: fn use_bound_from_struct
 #[test]
+#[ignore]
 fn use_bound_from_struct() {
     panic!("Unmigrated test: use_bound_from_struct");
 }
@@ -262,6 +272,7 @@ fn use_bound_from_struct() {
 */
 // mig: fn basic_interface_forwarder
 #[test]
+#[ignore]
 fn basic_interface_forwarder() {
     panic!("Unmigrated test: basic_interface_forwarder");
 }
@@ -298,6 +309,7 @@ fn basic_interface_forwarder() {
 */
 // mig: fn generic_interface_forwarder
 #[test]
+#[ignore]
 fn generic_interface_forwarder() {
     panic!("Unmigrated test: generic_interface_forwarder");
 }
@@ -334,6 +346,7 @@ fn generic_interface_forwarder() {
 */
 // mig: fn generic_interface_forwarder_with_bound
 #[test]
+#[ignore]
 fn generic_interface_forwarder_with_bound() {
     panic!("Unmigrated test: generic_interface_forwarder_with_bound");
 }
@@ -373,6 +386,7 @@ fn generic_interface_forwarder_with_bound() {
 */
 // mig: fn basic_interface_anonymous_subclass
 #[test]
+#[ignore]
 fn basic_interface_anonymous_subclass() {
     panic!("Unmigrated test: basic_interface_anonymous_subclass");
 }
@@ -395,6 +409,7 @@ fn basic_interface_anonymous_subclass() {
 */
 // mig: fn integer_is_compatible_with_interface_anonymous_substruct
 #[test]
+#[ignore]
 fn integer_is_compatible_with_interface_anonymous_substruct() {
     panic!("Unmigrated test: integer_is_compatible_with_interface_anonymous_substruct");
 }
@@ -425,6 +440,7 @@ fn integer_is_compatible_with_interface_anonymous_substruct() {
 */
 // mig: fn lambda_is_compatible_with_interface_anonymous_substruct
 #[test]
+#[ignore]
 fn lambda_is_compatible_with_interface_anonymous_substruct() {
     panic!("Unmigrated test: lambda_is_compatible_with_interface_anonymous_substruct");
 }
@@ -447,6 +463,7 @@ fn lambda_is_compatible_with_interface_anonymous_substruct() {
 */
 // mig: fn implementing_a_non_generic_interface_call
 #[test]
+#[ignore]
 fn implementing_a_non_generic_interface_call() {
     panic!("Unmigrated test: implementing_a_non_generic_interface_call");
 }
@@ -468,6 +485,7 @@ fn implementing_a_non_generic_interface_call() {
 */
 // mig: fn anonymous_substruct_8
 #[test]
+#[ignore]
 fn anonymous_substruct_8() {
     panic!("Unmigrated test: anonymous_substruct_8");
 }

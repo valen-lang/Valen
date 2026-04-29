@@ -215,6 +215,7 @@ pub enum ITemplataT<'s, 't> {
   InterfaceDefinition(&'t InterfaceDefinitionTemplataT<'s, 't>),
   ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
   ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
+  Location(LocationTemplataT),
 }
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {

@@ -9,12 +9,13 @@ use crate::typing::citizen::struct_compiler::ResolveFailure;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::*;
 use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
-use crate::solver::solver::FailedSolve;
+use crate::solver::solver::{FailedSolve, ISolverError, SolveIncomplete};
 use crate::solver::simple_solver_state::SimpleSolverState;
 
 /*
@@ -623,7 +624,23 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = solver_state.userify_conclusions().into_iter().collect();
+        let mut all_runes: std::collections::HashSet<IRuneS<'s>> = rune_to_type.keys().cloned().collect();
+        all_runes.extend(solver_state.get_all_runes());
+        // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+        // Caller should remember to do that!
+        if all_runes.iter().any(|r| !conclusions.contains_key(r)) {
+            Err(
+                FailedSolve {
+                    steps: solver_state.get_steps(),
+                    conclusions: solver_state.get_conclusions().into_iter().collect(),
+                    unsolved_rules: solver_state.get_unsolved_rules(),
+                    unsolved_runes: solver_state.get_unsolved_runes(),
+                    error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: std::marker::PhantomData }),
+                })
+        } else {
+            Ok(conclusions)
+        }
     }
 /*
   def interpretResults(
@@ -659,7 +676,42 @@ where 's: 't,
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let reachable_bounds: HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>> =
+            include_reachable_bounds_for_runes
+                .iter()
+                .map(|rune| {
+                    let templata = conclusions.get(rune).unwrap();
+                    let maybe_mentioned_kind =
+                        match templata {
+                            ITemplataT::Kind(KindTemplataT { kind }) => Some(*kind),
+                            ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind, .. } }) => Some(*kind),
+                            _ => None,
+                        };
+                    let maybe_id_and_template_id: Option<()> =
+                        match maybe_mentioned_kind {
+                            Some(KindT::Struct(_)) => { panic!("Unimplemented: check_defining_conclusions_and_resolve ICitizenTT struct"); }
+                            Some(KindT::Interface(_)) => { panic!("Unimplemented: check_defining_conclusions_and_resolve ICitizenTT interface"); }
+                            Some(_) => None,
+                            None => None,
+                        };
+                    let citizen_rune_to_reachable_prototype = match maybe_id_and_template_id {
+                        None => Vec::new(),
+                        Some(_) => { panic!("Unimplemented: check_defining_conclusions_and_resolve citizen reachable bounds"); }
+                    };
+                    (*rune, InstantiationReachableBoundArgumentsT { citizen_rune_to_reachable_prototype })
+                })
+                .collect();
+        let environment_for_finalizing: &'t GeneralEnvironmentT<'s, 't> =
+            self.import_conclusions_and_reachable_bounds(envs.original_calling_env, conclusions, &reachable_bounds);
+        let env_for_resolve: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::General(environment_for_finalizing);
+        let instantiation_bound_args =
+            match self.resolve_conclusions_for_define(
+                env_for_resolve, state, invocation_range, call_location, envs.context_region, initial_rules, conclusions, &reachable_bounds) {
+                Ok(c) => c,
+                Err(e) => return Err(e),
+            };
+        Ok(instantiation_bound_args)
     }
 /*
   def checkDefiningConclusionsAndResolve(
@@ -778,8 +830,35 @@ where 's: 't,
         original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
-    ) -> GeneralEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> &'t GeneralEnvironmentT<'s, 't> {
+        // If this is the original calling env, in other words, if we're the original caller for
+        // this particular solve, then lets add all of our templatas to the environment.
+        let mut new_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            conclusions
+                .iter()
+                .map(|(name_s, templata)| {
+                    let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: std::marker::PhantomData });
+                    (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
+                })
+                .collect();
+        // These are the bounds we pulled in from the parameters, return type, impl sub citizen, etc.
+        new_entries.extend(
+            reachable_bounds.values()
+                .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
+                .enumerate()
+                .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
+                    panic!("Unimplemented: import_conclusions_and_reachable_bounds ReachablePrototypeNameT entry");
+                })
+        );
+        let new_id: &'t IdT<'s, 't> = self.typing_interner.alloc(original_calling_env.id());
+        child_of(
+            self.typing_interner,
+            self.scout_arena,
+            *original_calling_env,
+            original_calling_env.denizen_template_id(),
+            new_id,
+            new_entries,
+        )
     }
 /*
   def importConclusionsAndReachableBounds(
@@ -812,7 +891,7 @@ where 's: 't,
 {
     pub fn resolve_conclusions_for_define(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -821,7 +900,58 @@ where 's: 't,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // Check all template calls
+        for rule in rules {
+            match rule {
+                IRulexSR::Call(_r) => {
+                    panic!("Unimplemented: resolve_conclusions_for_define CallSR");
+                }
+                _ => {}
+            }
+        }
+
+        let runes_and_prototypes: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)> =
+            rules.iter().filter_map(|rule| {
+                match rule {
+                    IRulexSR::DefinitionFunc(_r) => {
+                        panic!("Unimplemented: resolve_conclusions_for_define DefinitionFuncSR");
+                    }
+                    _ => None,
+                }
+            }).collect();
+        let rune_to_prototype: HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> = runes_and_prototypes.iter().cloned().collect();
+        if rune_to_prototype.len() < runes_and_prototypes.len() {
+            panic!("resolve_conclusions_for_define: duplicate rune in runesAndPrototypes");
+        }
+
+        let maybe_runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
+            rules.iter().filter_map(|rule| {
+                match rule {
+                    IRulexSR::DefinitionCoordIsa(_r) => {
+                        panic!("Unimplemented: resolve_conclusions_for_define DefinitionCoordIsaSR");
+                    }
+                    _ => None,
+                }
+            }).collect();
+        let rune_to_impl: HashMap<IRuneS<'s>, IdT<'s, 't>> = maybe_runes_and_impls.iter().cloned().collect();
+        if rune_to_impl.len() < maybe_runes_and_impls.len() {
+            panic!("resolve_conclusions_for_define: duplicate rune in maybeRunesAndImpls");
+        }
+
+        let filtered_reachable_bounds: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)> =
+            reachable_bounds.iter()
+                .filter(|(_, rb)| !rb.citizen_rune_to_reachable_prototype.is_empty())
+                .map(|(rune, rb)| {
+                    (*rune, InstantiationReachableBoundArgumentsT {
+                        citizen_rune_to_reachable_prototype: rb.citizen_rune_to_reachable_prototype.clone(),
+                    })
+                })
+                .collect();
+        Ok(make(
+            rune_to_prototype.into_iter().collect(),
+            filtered_reachable_bounds,
+            rune_to_impl.into_iter().collect(),
+        ))
     }
 /*
   private def resolveConclusionsForDefine(

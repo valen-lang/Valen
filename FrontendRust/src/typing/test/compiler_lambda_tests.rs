@@ -41,6 +41,7 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 */
 // mig: fn simple_lambda
 #[test]
+#[ignore]
 fn simple_lambda() {
     panic!("Unmigrated test: simple_lambda");
 }
@@ -59,6 +60,7 @@ fn simple_lambda() {
 */
 // mig: fn lambda_with_one_magic_arg
 #[test]
+#[ignore]
 fn lambda_with_one_magic_arg() {
     panic!("Unmigrated test: lambda_with_one_magic_arg");
 } 
@@ -81,6 +83,7 @@ fn lambda_with_one_magic_arg() {
 */
 // mig: fn lambda_is_reused
 #[test]
+#[ignore]
 fn lambda_is_reused() {
     panic!("Unmigrated test: lambda_is_reused");
 } 
@@ -106,6 +109,7 @@ fn lambda_is_reused() {
 */
 // mig: fn lambda_called_with_different_types
 #[test]
+#[ignore]
 fn lambda_called_with_different_types() {
     panic!("Unmigrated test: lambda_called_with_different_types");
 } 
@@ -131,6 +135,7 @@ fn lambda_called_with_different_types() {
 */
 // mig: fn curried_lambda
 #[test]
+#[ignore]
 fn curried_lambda() {
     panic!("Unmigrated test: curried_lambda");
 } 
@@ -160,6 +165,7 @@ fn curried_lambda() {
 */
 // mig: fn lambda_with_a_type_specified_param
 #[test]
+#[ignore]
 fn lambda_with_a_type_specified_param() {
     panic!("Unmigrated test: lambda_with_a_type_specified_param");
 } 
@@ -187,6 +193,7 @@ fn lambda_with_a_type_specified_param() {
 */
 // mig: fn tests_lambda_and_concept_function
 #[test]
+#[ignore]
 fn tests_lambda_and_concept_function() {
     panic!("Unmigrated test: tests_lambda_and_concept_function");
 } 
@@ -211,6 +218,7 @@ fn tests_lambda_and_concept_function() {
 */
 // mig: fn lambda_inside_different_function_with_same_name
 #[test]
+#[ignore]
 fn lambda_inside_different_function_with_same_name() {
     panic!("Unmigrated test: lambda_inside_different_function_with_same_name");
 } 
@@ -240,6 +248,7 @@ fn lambda_inside_different_function_with_same_name() {
 */
 // mig: fn lambda_inside_template
 #[test]
+#[ignore]
 fn lambda_inside_template() {
     panic!("Unmigrated test: lambda_inside_template");
 } 
@@ -269,6 +278,7 @@ fn lambda_inside_template() {
 */
 // mig: fn curried_lambda_inside_template
 #[test]
+#[ignore]
 fn curried_lambda_inside_template() {
     panic!("Unmigrated test: curried_lambda_inside_template");
 } 

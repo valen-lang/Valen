@@ -1,4 +1,4 @@
-// Guardian: disable-all
+/* Guardian: disable-all */
 use std::hash::{Hash, Hasher};
 
 /// Value-type (see @TFITCX)

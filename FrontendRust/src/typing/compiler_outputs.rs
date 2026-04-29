@@ -1,6 +1,7 @@
 use crate::higher_typing::ast::FunctionA;
 use crate::interner::{Interner, StrI};
-use std::collections::{HashMap, HashSet, VecDeque};
+use std::collections::{HashMap, HashSet};
+use indexmap::IndexMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::*;
@@ -111,12 +112,93 @@ where 's: 't,
     pub instantiation_name_to_bounds:
         HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>>,
 
-    pub deferred_actions: VecDeque<DeferredActionT<'s, 't>>,
+    pub deferred_function_body_compiles: IndexMap<PtrKey<'t, PrototypeT<'s, 't>>, DeferredActionT<'s, 't>>,
+    pub deferred_function_compiles: IndexMap<PtrKey<'t, IdT<'s, 't>>, DeferredActionT<'s, 't>>,
     pub finished_deferred_function_body_compiles:
         HashSet<PtrKey<'t, PrototypeT<'s, 't>>>,
     pub finished_deferred_function_compiles:
         HashSet<PtrKey<'t, IdT<'s, 't>>>,
 }
+/*
+case class CompilerOutputs() {
+  // Not all signatures/banners will have a return type here, it might not have been processed yet.
+  private val returnTypesBySignature: mutable.HashMap[SignatureT, CoordT] = mutable.HashMap()
+
+  // Not all signatures/banners or even return types will have a function here, it might not have
+  // been processed yet.
+  private val signatureToFunction: mutable.HashMap[SignatureT, FunctionDefinitionT] = mutable.HashMap()
+//  private val functionsByPrototype: mutable.HashMap[PrototypeT, FunctionT] = mutable.HashMap()
+  private val envByFunctionSignature: mutable.HashMap[SignatureT, FunctionEnvironmentT] = mutable.HashMap()
+
+  // declaredNames is the structs that we're currently in the process of defining
+  // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
+  // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
+  // This will be the instantiated name, not just the template name, see UINIT.
+  private val functionDeclaredNames: mutable.HashMap[IdT[INameT], RangeS] = mutable.HashMap()
+  // Outer env is the env that contains the template.
+  // This will be the instantiated name, not just the template name, see UINIT.
+  private val functionNameToOuterEnv: mutable.HashMap[IdT[IFunctionTemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+  // Inner env is the env that contains the solved rules for the declaration, given placeholders.
+  // This will be the instantiated name, not just the template name, see UINIT.
+  private val functionNameToInnerEnv: mutable.HashMap[IdT[INameT], IInDenizenEnvironmentT] = mutable.HashMap()
+
+
+  // declaredNames is the structs that we're currently in the process of defining
+  // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
+  // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
+  private val typeDeclaredNames: mutable.HashSet[IdT[ITemplateNameT]] = mutable.HashSet()
+  // Outer env is the env that contains the template.
+  private val typeNameToOuterEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+  // Inner env is the env that contains the solved rules for the declaration, given placeholders.
+  // We can key by template name here because there's only one inner env per template. This is the env
+  // that has placeholders and stuff.
+  // Also, if it's keyed by template name, we can access it earlier, before the definition is even made.
+  // This is important for when we want to be compiling a struct/interface and one of its internal methods
+  // wants to look in its inner env to get some bounds.
+  private val typeNameToInnerEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
+  // One must fill this in when putting things into declaredNames.
+  private val typeNameToMutability: mutable.HashMap[IdT[ITemplateNameT], ITemplataT[MutabilityTemplataType]] = mutable.HashMap()
+  // One must fill this in when putting things into declaredNames.
+  private val interfaceNameToSealed: mutable.HashMap[IdT[IInterfaceTemplateNameT], Boolean] = mutable.HashMap()
+
+
+  private val structTemplateNameToDefinition: mutable.HashMap[IdT[IStructTemplateNameT], StructDefinitionT] = mutable.HashMap()
+  private val interfaceTemplateNameToDefinition: mutable.HashMap[IdT[IInterfaceTemplateNameT], InterfaceDefinitionT] = mutable.HashMap()
+
+  private val allImpls: mutable.HashMap[IdT[IImplTemplateNameT], ImplT] = mutable.HashMap()
+  private val subCitizenTemplateToImpls: mutable.HashMap[IdT[ICitizenTemplateNameT], Vector[ImplT]] = mutable.HashMap()
+  private val superInterfaceTemplateToImpls: mutable.HashMap[IdT[IInterfaceTemplateNameT], Vector[ImplT]] = mutable.HashMap()
+
+  private val kindExports: mutable.ArrayBuffer[KindExportT] = mutable.ArrayBuffer()
+  private val functionExports: mutable.ArrayBuffer[FunctionExportT] = mutable.ArrayBuffer()
+  private val kindExterns: mutable.ArrayBuffer[KindExternT] = mutable.ArrayBuffer()
+  private val functionExterns: mutable.ArrayBuffer[FunctionExternT] = mutable.ArrayBuffer()
+
+  // When we call a function, for example this one:
+  //   abstract func drop<T>(virtual opt Opt<T>) where func drop(T)void;
+  // and we instantiate it, drop<int>(Opt<int>), we need to figure out the bounds, ensure that
+  // drop(int) exists. Then we have to remember it for the instantiator.
+  // This map is how we remember it.
+  // Here, we'd remember: [drop<int>(Opt<int>), [Rune1337, drop(int)]].
+  // We also do this for structs and interfaces too.
+  private val instantiationNameToInstantiationBounds: mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] =
+    mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]]()
+
+//  // Only ArrayCompiler can make an RawArrayT2.
+//  private val staticSizedArrayTypes:
+//    mutable.HashMap[(ITemplata[IntegerTemplataType], ITemplata[MutabilityTemplataType], ITemplata[VariabilityTemplataType], CoordT), StaticSizedArrayTT] =
+//    mutable.HashMap()
+//  // Only ArrayCompiler can make an RawArrayT2.
+//  private val runtimeSizedArrayTypes: mutable.HashMap[(ITemplata[MutabilityTemplataType], CoordT), RuntimeSizedArrayTT] = mutable.HashMap()
+
+  // A queue of functions that our code uses, but we don't need to compile them right away.
+  // We can compile them later. Perhaps in parallel, someday!
+  private val deferredFunctionBodyCompiles: mutable.LinkedHashMap[PrototypeT[IFunctionNameT], DeferredEvaluatingFunctionBody] = mutable.LinkedHashMap()
+  private val finishedDeferredFunctionBodyCompiles: mutable.LinkedHashSet[PrototypeT[IFunctionNameT]] = mutable.LinkedHashSet()
+
+  private val deferredFunctionCompiles: mutable.LinkedHashMap[IdT[INameT], DeferredEvaluatingFunction] = mutable.LinkedHashMap()
+  private val finishedDeferredFunctionCompiles: mutable.LinkedHashSet[IdT[INameT]] = mutable.LinkedHashSet()
+*/
 
 impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
@@ -143,90 +225,13 @@ where 's: 't,
             kind_externs: Vec::new(),
             function_externs: Vec::new(),
             instantiation_name_to_bounds: HashMap::new(),
-            deferred_actions: VecDeque::new(),
+            deferred_function_body_compiles: IndexMap::new(),
+            deferred_function_compiles: IndexMap::new(),
             finished_deferred_function_body_compiles: HashSet::new(),
             finished_deferred_function_compiles: HashSet::new(),
         }
     }
     /*
-    case class CompilerOutputs() {
-      // Not all signatures/banners will have a return type here, it might not have been processed yet.
-      private val returnTypesBySignature: mutable.HashMap[SignatureT, CoordT] = mutable.HashMap()
-
-      // Not all signatures/banners or even return types will have a function here, it might not have
-      // been processed yet.
-      private val signatureToFunction: mutable.HashMap[SignatureT, FunctionDefinitionT] = mutable.HashMap()
-    //  private val functionsByPrototype: mutable.HashMap[PrototypeT, FunctionT] = mutable.HashMap()
-      private val envByFunctionSignature: mutable.HashMap[SignatureT, FunctionEnvironmentT] = mutable.HashMap()
-
-      // declaredNames is the structs that we're currently in the process of defining
-      // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
-      // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
-      // This will be the instantiated name, not just the template name, see UINIT.
-      private val functionDeclaredNames: mutable.HashMap[IdT[INameT], RangeS] = mutable.HashMap()
-      // Outer env is the env that contains the template.
-      // This will be the instantiated name, not just the template name, see UINIT.
-      private val functionNameToOuterEnv: mutable.HashMap[IdT[IFunctionTemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-      // Inner env is the env that contains the solved rules for the declaration, given placeholders.
-      // This will be the instantiated name, not just the template name, see UINIT.
-      private val functionNameToInnerEnv: mutable.HashMap[IdT[INameT], IInDenizenEnvironmentT] = mutable.HashMap()
-
-
-      // declaredNames is the structs that we're currently in the process of defining
-      // Things will appear here before they appear in structTemplateNameToDefinition/interfaceTemplateNameToDefinition
-      // This is to prevent infinite recursion / stack overflow when typingpassing recursive types
-      private val typeDeclaredNames: mutable.HashSet[IdT[ITemplateNameT]] = mutable.HashSet()
-      // Outer env is the env that contains the template.
-      private val typeNameToOuterEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-      // Inner env is the env that contains the solved rules for the declaration, given placeholders.
-      // We can key by template name here because there's only one inner env per template. This is the env
-      // that has placeholders and stuff.
-      // Also, if it's keyed by template name, we can access it earlier, before the definition is even made.
-      // This is important for when we want to be compiling a struct/interface and one of its internal methods
-      // wants to look in its inner env to get some bounds.
-      private val typeNameToInnerEnv: mutable.HashMap[IdT[ITemplateNameT], IInDenizenEnvironmentT] = mutable.HashMap()
-      // One must fill this in when putting things into declaredNames.
-      private val typeNameToMutability: mutable.HashMap[IdT[ITemplateNameT], ITemplataT[MutabilityTemplataType]] = mutable.HashMap()
-      // One must fill this in when putting things into declaredNames.
-      private val interfaceNameToSealed: mutable.HashMap[IdT[IInterfaceTemplateNameT], Boolean] = mutable.HashMap()
-
-
-      private val structTemplateNameToDefinition: mutable.HashMap[IdT[IStructTemplateNameT], StructDefinitionT] = mutable.HashMap()
-      private val interfaceTemplateNameToDefinition: mutable.HashMap[IdT[IInterfaceTemplateNameT], InterfaceDefinitionT] = mutable.HashMap()
-
-      private val allImpls: mutable.HashMap[IdT[IImplTemplateNameT], ImplT] = mutable.HashMap()
-      private val subCitizenTemplateToImpls: mutable.HashMap[IdT[ICitizenTemplateNameT], Vector[ImplT]] = mutable.HashMap()
-      private val superInterfaceTemplateToImpls: mutable.HashMap[IdT[IInterfaceTemplateNameT], Vector[ImplT]] = mutable.HashMap()
-
-      private val kindExports: mutable.ArrayBuffer[KindExportT] = mutable.ArrayBuffer()
-      private val functionExports: mutable.ArrayBuffer[FunctionExportT] = mutable.ArrayBuffer()
-      private val kindExterns: mutable.ArrayBuffer[KindExternT] = mutable.ArrayBuffer()
-      private val functionExterns: mutable.ArrayBuffer[FunctionExternT] = mutable.ArrayBuffer()
-
-      // When we call a function, for example this one:
-      //   abstract func drop<T>(virtual opt Opt<T>) where func drop(T)void;
-      // and we instantiate it, drop<int>(Opt<int>), we need to figure out the bounds, ensure that
-      // drop(int) exists. Then we have to remember it for the instantiator.
-      // This map is how we remember it.
-      // Here, we'd remember: [drop<int>(Opt<int>), [Rune1337, drop(int)]].
-      // We also do this for structs and interfaces too.
-      private val instantiationNameToInstantiationBounds: mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] =
-        mutable.HashMap[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]]()
-
-    //  // Only ArrayCompiler can make an RawArrayT2.
-    //  private val staticSizedArrayTypes:
-    //    mutable.HashMap[(ITemplata[IntegerTemplataType], ITemplata[MutabilityTemplataType], ITemplata[VariabilityTemplataType], CoordT), StaticSizedArrayTT] =
-    //    mutable.HashMap()
-    //  // Only ArrayCompiler can make an RawArrayT2.
-    //  private val runtimeSizedArrayTypes: mutable.HashMap[(ITemplata[MutabilityTemplataType], CoordT), RuntimeSizedArrayTT] = mutable.HashMap()
-
-      // A queue of functions that our code uses, but we don't need to compile them right away.
-      // We can compile them later. Perhaps in parallel, someday!
-      private val deferredFunctionBodyCompiles: mutable.LinkedHashMap[PrototypeT[IFunctionNameT], DeferredEvaluatingFunctionBody] = mutable.LinkedHashMap()
-      private val finishedDeferredFunctionBodyCompiles: mutable.LinkedHashSet[PrototypeT[IFunctionNameT]] = mutable.LinkedHashSet()
-
-      private val deferredFunctionCompiles: mutable.LinkedHashMap[IdT[INameT], DeferredEvaluatingFunction] = mutable.LinkedHashMap()
-      private val finishedDeferredFunctionCompiles: mutable.LinkedHashSet[IdT[INameT]] = mutable.LinkedHashSet()
     */
 }
 impl<'s, 't> CompilerOutputs<'s, 't>
@@ -324,7 +329,8 @@ where 's: 't,
         &self,
         signature: &'t SignatureT<'s, 't>,
     ) -> Option<&'t FunctionDefinitionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // signatureToFunction.get(signature)
+        self.signature_to_function.get(&PtrKey(signature)).copied()
     }
     /*
       def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
@@ -496,7 +502,12 @@ where 's: 't,
         signature: &'t SignatureT<'s, 't>,
         return_type_2: CoordT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let key = PtrKey(signature);
+        match self.return_types_by_signature.get(&key) {
+            None => {}
+            Some(existing) => assert!(*existing == return_type_2),
+        }
+        self.return_types_by_signature.insert(key, return_type_2);
     }
     /*
       def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
@@ -555,9 +566,19 @@ where 's: 't,
     pub fn declare_function(
         &mut self,
         call_ranges: &[RangeS<'s>],
-        name: IdT<'s, 't>,
+        name: &'t IdT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // functionDeclaredNames.get(name) match {
+        //   case Some(oldFunctionRange) => {
+        //     throw CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))
+        //   }
+        //   case None =>
+        // }
+        if let Some(_old_function_range) = self.function_declared_names.get(&PtrKey(name)) {
+            panic!("implement CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))");
+        }
+        // functionDeclaredNames.put(name, callRanges.head)
+        self.function_declared_names.insert(PtrKey(name), call_ranges[0]);
     }
     /*
       def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
@@ -644,10 +665,15 @@ where 's: 't,
 {
     pub fn declare_function_inner_env(
         &mut self,
-        name_t: IdT<'s, 't>,
+        name_t: &'t IdT<'s, 't>,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // vassert(functionDeclaredNames.contains(nameT))
+        assert!(self.function_declared_names.contains_key(&PtrKey(name_t)));
+        // vassert(!functionNameToInnerEnv.contains(nameT))
+        assert!(!self.function_name_to_inner_env.contains_key(&PtrKey(name_t)));
+        // functionNameToInnerEnv += (nameT -> env)
+        self.function_name_to_inner_env.insert(PtrKey(name_t), env);
     }
     /*
       def declareFunctionInnerEnv(
@@ -667,10 +693,13 @@ where 's: 't,
 {
     pub fn declare_function_outer_env(
         &mut self,
-        name_t: IdT<'s, 't>,
+        name_t: &'t IdT<'s, 't>,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // vassert(!functionNameToOuterEnv.contains(nameT))
+        assert!(!self.function_name_to_outer_env.contains_key(&PtrKey(name_t)));
+        // functionNameToOuterEnv += (nameT -> env)
+        self.function_name_to_outer_env.insert(PtrKey(name_t), env);
     }
     /*
       def declareFunctionOuterEnv(
@@ -936,7 +965,11 @@ where 's: 't,
         &mut self,
         devf: DeferredActionT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let prototype = match &devf {
+            DeferredActionT::EvaluateFunctionBody { prototype, .. } => *prototype,
+            _ => panic!("Expected EvaluateFunctionBody"),
+        };
+        self.deferred_function_body_compiles.insert(PtrKey(prototype), devf);
     }
     /*
       def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
@@ -951,7 +984,11 @@ where 's: 't,
         &mut self,
         devf: DeferredActionT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let name = match &devf {
+            DeferredActionT::EvaluateFunction { name, .. } => *name,
+            _ => panic!("Expected EvaluateFunction"),
+        };
+        self.deferred_function_compiles.insert(PtrKey(name), devf);
     }
     /*
       def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {

@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use crate::utils::range::RangeS;
 
 use crate::postparsing::names::*;
@@ -218,15 +219,103 @@ where 's: 't,
 {
     pub fn get_or_evaluate_function_for_header(
         &self,
-        outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
-        rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-        coutputs: &CompilerOutputs<'s, 't>,
+        outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        rued_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function1: &FunctionA<'s>,
         instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
-    ) -> FunctionHeaderT<'s, 't> {
-        panic!("Unimplemented: get_or_evaluate_function_for_header");
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        // Check preconditions
+        // function1.runeToType.keySet.foreach(rune => {
+        //   vassert(
+        //     runedEnv.lookupNearestWithImpreciseName(
+        //       interner.intern(RuneNameS(rune)),
+        //       Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty)
+        // })
+        let rued_env_as_i: IInDenizenEnvironmentT<'s, 't> = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
+        for rune in function1.rune_to_type.keys() {
+            // vassert(runedEnv.lookupNearestWithImpreciseName(
+            //   interner.intern(RuneNameS(rune)), Set(TemplataLookupContext, ExpressionLookupContext)).nonEmpty)
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune: *rune }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            lookup_filter.insert(ILookupContext::ExpressionLookupContext);
+            assert!(
+                rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).is_some());
+        }
+
+        // val paramTypes2 = evaluateFunctionParamTypes(runedEnv, function1.params);
+        let param_types2 = self.evaluate_function_param_types(&rued_env_as_i, &function1.params);
+
+        // val functionId = assembleName(runedEnv.id, runedEnv.templateArgs, paramTypes2)
+        let function_id = self.assemble_name(&rued_env.id, rued_env.template_args, &param_types2);
+
+        // val needleSignature = SignatureT(functionId)
+        let needle_signature = self.typing_interner.intern_signature(SignatureValT {
+            id: IdValT {
+                package_coord: function_id.package_coord,
+                init_steps: function_id.init_steps,
+                local_name: function_id.local_name,
+            },
+        });
+
+        // coutputs.lookupFunction(needleSignature) match {
+        match coutputs.lookup_function(needle_signature) {
+            //   case Some(FunctionDefinitionT(header, _, _)) => { (header) }
+            Some(func_def) => {
+                &func_def.header
+            }
+            //   case None => {
+            None => {
+                // coutputs.declareFunction(callRange, functionId)
+                let function_id_ref = self.typing_interner.intern_id(IdValT {
+                    package_coord: function_id.package_coord,
+                    init_steps: function_id.init_steps,
+                    local_name: function_id.local_name,
+                });
+                coutputs.declare_function(call_range, function_id_ref);
+
+                // coutputs.declareFunctionOuterEnv(outerEnv.id, outerEnv)
+                let outer_env_id_ref = self.typing_interner.intern_id(IdValT {
+                    package_coord: outer_env.id.package_coord,
+                    init_steps: outer_env.id.init_steps,
+                    local_name: outer_env.id.local_name,
+                });
+                let outer_env_as_i: &'t IInDenizenEnvironmentT<'s, 't> =
+                    self.typing_interner.alloc(IInDenizenEnvironmentT::BuildingWithClosureds(outer_env));
+                coutputs.declare_function_outer_env(outer_env_id_ref, outer_env_as_i);
+
+                // val params2 = assembleFunctionParams(runedEnv, coutputs, callRange, function1.params)
+                let params2 = self.assemble_function_params(&rued_env_as_i, coutputs, call_range, &function1.params);
+
+                // val maybeReturnType = getMaybeReturnType(runedEnv, function1.maybeRetCoordRune.map(_.rune))
+                let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
+
+                // val namedEnv = makeNamedEnv(runedEnv, params2.map(_.tyype), maybeReturnType)
+                let param_types_for_env: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
+                let named_env = self.make_named_env(rued_env, &param_types_for_env, maybe_return_type);
+
+                // coutputs.declareFunctionInnerEnv(functionId, namedEnv)
+                let named_env_ref: &'t FunctionEnvironmentT<'s, 't> = self.typing_interner.alloc(named_env);
+                let named_env_as_i: &'t IInDenizenEnvironmentT<'s, 't> =
+                    self.typing_interner.alloc(IInDenizenEnvironmentT::Function(named_env_ref));
+                coutputs.declare_function_inner_env(function_id_ref, named_env_as_i);
+
+                // val header = core.evaluateFunctionForHeader(namedEnv, coutputs, callRange, callLocation, params2, instantiationBoundParams)
+                let header = self.evaluate_function_for_header_core(
+                    named_env_ref, coutputs, call_range, call_location, &params2, instantiation_bound_params);
+
+                // vassert(header.toSignature == needleSignature)
+                let header_sig = header.to_signature();
+                assert!(header_sig.id == needle_signature.id);
+
+                // (header)
+                self.typing_interner.alloc(header)
+            }
+        }
     }
 
 /*
@@ -360,7 +449,24 @@ where 's: 't,
         env: &IInDenizenEnvironmentT<'s, 't>,
         params1: &[ParameterS<'s>],
     ) -> Vec<CoordT<'s, 't>> {
-        panic!("Unimplemented: evaluate_function_param_types");
+        // params1.map(param1 => {
+        //   val CoordTemplataT(coord) =
+        //     env.lookupNearestWithImpreciseName(
+        //       interner.intern(RuneNameS(param1.pattern.coordRune.get.rune)),
+        //       Set(TemplataLookupContext)).get
+        //   coord
+        // })
+        params1.iter().map(|param1| {
+            let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).unwrap() {
+                ITemplataT::Coord(coord_templata) => coord_templata.coord,
+                other => panic!("implement unexpected templata in evaluateFunctionParamTypes: {:?}", other),
+            }
+        }).collect()
     }
 
 /*
@@ -392,7 +498,47 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         params1: &[ParameterS<'s>],
     ) -> Vec<ParameterT<'s, 't>> {
-        panic!("Unimplemented: assemble_function_params");
+        // params1.zipWithIndex.map({ case (param1, index) =>
+        params1.iter().enumerate().map(|(index, param1)| {
+            //   val CoordTemplataT(coord) = vassertSome(
+            //     env.lookupNearestWithImpreciseName(
+            //       interner.intern(RuneNameS(param1.pattern.coordRune.get.rune)),
+            //       Set(TemplataLookupContext)))
+            let rune = param1.pattern.coord_rune.as_ref().unwrap().rune;
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).unwrap() {
+                ITemplataT::Coord(coord_templata) => coord_templata.coord,
+                other => panic!("implement unexpected templata in assembleFunctionParams: {:?}", other),
+            };
+
+            //   val maybeVirtuality = evaluateMaybeVirtuality(env, coutputs, parentRanges, coord.kind, param1.virtuality)
+            let maybe_virtuality = self.evaluate_maybe_virtuality(
+                env, coutputs, parent_ranges, &coord.kind, param1.virtuality.as_ref());
+
+            //   val nameT = param1.pattern.name match {
+            //     case None => interner.intern(TypingIgnoredParamNameT(index))
+            //     case Some(x) => nameTranslator.translateVarNameStep(x.name)
+            //   }
+            let name_t: IVarNameT<'s, 't> = match &param1.pattern.name {
+                None => {
+                    panic!("implement intern TypingIgnoredParamNameT");
+                }
+                Some(_x) => {
+                    panic!("implement nameTranslator.translateVarNameStep");
+                }
+            };
+
+            //   ParameterT(nameT, maybeVirtuality, param1.preChecked, coord)
+            ParameterT {
+                name: name_t,
+                virtuality: maybe_virtuality,
+                pre_checked: param1.pre_checked,
+                tyype: coord,
+            }
+        }).collect()
     }
 
 /*
@@ -430,10 +576,28 @@ where 's: 't,
 {
     pub fn get_maybe_return_type(
         &self,
-        near_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+        near_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
         maybe_ret_coord_rune: Option<&IRuneS<'s>>,
     ) -> Option<CoordT<'s, 't>> {
-        panic!("Unimplemented: get_maybe_return_type");
+        // maybeRetCoordRune.map(retCoordRuneA => {
+        //   val retCoordRune = (retCoordRuneA)
+        //   nearEnv.lookupNearestWithImpreciseName(interner.intern(RuneNameS(retCoordRune)), Set(TemplataLookupContext)) match {
+        //     case Some(CoordTemplataT(coord)) => coord
+        //     case other => vwat(retCoordRune, other)
+        //   }
+        // })
+        let near_env_as_i: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(near_env);
+        maybe_ret_coord_rune.map(|ret_coord_rune| {
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune: *ret_coord_rune }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter) {
+                Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
+                other => panic!("implement vwat in getMaybeReturnType: {:?}", other),
+            }
+        })
     }
 
 /*
@@ -615,7 +779,16 @@ where 's: 't,
         template_args: &[ITemplataT<'s, 't>],
         param_types: &[CoordT<'s, 't>],
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: assemble_name");
+        // templateName.copy(localName = templateName.localName.makeFunctionName(interner, keywords, templateArgs, paramTypes))
+        let function_template_name: IFunctionTemplateNameT<'s, 't> =
+            template_name.local_name.try_into().unwrap();
+        let local_name = function_template_name.make_function_name(
+            self.typing_interner, self.keywords, template_args, param_types);
+        IdT {
+            package_coord: template_name.package_coord,
+            init_steps: template_name.init_steps,
+            local_name,
+        }
     }
 
 /*
@@ -640,7 +813,24 @@ where 's: 't,
         param_types: &[CoordT<'s, 't>],
         maybe_return_type: Option<CoordT<'s, 't>>,
     ) -> FunctionEnvironmentT<'s, 't> {
-        panic!("Unimplemented: make_named_env");
+        // val BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT(
+        //   globalEnv, parentEnv, templateId, templateArgs, templatas,
+        //   function, variables, isRootCompilingDenizen, defaultRegion) = runedEnv
+        // val id = assembleName(templateId, templateArgs, paramTypes)
+        let id = self.assemble_name(&rued_env.id, rued_env.template_args, param_types);
+        // FunctionEnvironmentT(globalEnv, parentEnv, templateId, id, templatas, function, maybeReturnType, variables, isRootCompilingDenizen, defaultRegion)
+        FunctionEnvironmentT {
+            global_env: rued_env.global_env,
+            parent_env: rued_env.parent_env,
+            template_id: rued_env.id,
+            id,
+            templatas: rued_env.templatas,
+            function: rued_env.function,
+            maybe_return_type,
+            closured_locals: rued_env.variables,
+            is_root_compiling_denizen: rued_env.is_root_compiling_denizen,
+            default_region: rued_env.default_region,
+        }
     }
 
 /*

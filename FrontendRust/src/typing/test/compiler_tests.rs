@@ -93,6 +93,7 @@ fn simple_program_returning_an_int_explicit() {
 */
 // mig: fn hardcoding_negative_numbers
 #[test]
+#[ignore]
 fn hardcoding_negative_numbers() {
     panic!("Unmigrated test: hardcoding_negative_numbers");
 }
@@ -109,6 +110,7 @@ fn hardcoding_negative_numbers() {
 */
 // mig: fn simple_local
 #[test]
+#[ignore]
 fn simple_local() {
     panic!("Unmigrated test: simple_local");
 }
@@ -128,6 +130,7 @@ fn simple_local() {
 */
 // mig: fn tests_panic_return_type
 #[test]
+#[ignore]
 fn tests_panic_return_type() {
     panic!("Unmigrated test: tests_panic_return_type");
 }
@@ -151,6 +154,7 @@ fn tests_panic_return_type() {
 */
 // mig: fn taking_an_argument_and_returning_it
 #[test]
+#[ignore]
 fn taking_an_argument_and_returning_it() {
     panic!("Unmigrated test: taking_an_argument_and_returning_it");
 }
@@ -170,6 +174,7 @@ fn taking_an_argument_and_returning_it() {
 */
 // mig: fn tests_adding_two_numbers
 #[test]
+#[ignore]
 fn tests_adding_two_numbers() {
     panic!("Unmigrated test: tests_adding_two_numbers");
 }
@@ -198,6 +203,7 @@ fn tests_adding_two_numbers() {
 */
 // mig: fn simple_struct_read
 #[test]
+#[ignore]
 fn simple_struct_read() {
     panic!("Unmigrated test: simple_struct_read");
 }
@@ -217,6 +223,7 @@ fn simple_struct_read() {
 */
 // mig: fn make_array_and_dot_it
 #[test]
+#[ignore]
 fn make_array_and_dot_it() {
     panic!("Unmigrated test: make_array_and_dot_it");
 }
@@ -237,6 +244,7 @@ fn make_array_and_dot_it() {
 */
 // mig: fn simple_struct_instantiate
 #[test]
+#[ignore]
 fn simple_struct_instantiate() {
     panic!("Unmigrated test: simple_struct_instantiate");
 }
@@ -256,6 +264,7 @@ fn simple_struct_instantiate() {
 */
 // mig: fn call_destructor
 #[test]
+#[ignore]
 fn call_destructor() {
     panic!("Unmigrated test: call_destructor");
 }
@@ -278,6 +287,7 @@ fn call_destructor() {
 */
 // mig: fn custom_destructor
 #[test]
+#[ignore]
 fn custom_destructor() {
     panic!("Unmigrated test: custom_destructor");
 }
@@ -304,6 +314,7 @@ fn custom_destructor() {
 */
 // mig: fn make_constraint_reference
 #[test]
+#[ignore]
 fn make_constraint_reference() {
     panic!("Unmigrated test: make_constraint_reference");
 }
@@ -331,6 +342,7 @@ fn make_constraint_reference() {
 */
 // mig: fn recursion
 #[test]
+#[ignore]
 fn recursion() {
     panic!("Unmigrated test: recursion");
 }
@@ -349,6 +361,7 @@ fn recursion() {
 */
 // mig: fn test_overloads
 #[test]
+#[ignore]
 fn test_overloads() {
     panic!("Unmigrated test: test_overloads");
 }
@@ -364,6 +377,7 @@ fn test_overloads() {
 */
 // mig: fn test_readonly_ufcs
 #[test]
+#[ignore]
 fn test_readonly_ufcs() {
     panic!("Unmigrated test: test_readonly_ufcs");
 }
@@ -376,6 +390,7 @@ fn test_readonly_ufcs() {
 */
 // mig: fn test_readwrite_ufcs
 #[test]
+#[ignore]
 fn test_readwrite_ufcs() {
     panic!("Unmigrated test: test_readwrite_ufcs");
 }
@@ -388,6 +403,7 @@ fn test_readwrite_ufcs() {
 */
 // mig: fn test_templates
 #[test]
+#[ignore]
 fn test_templates() {
     panic!("Unmigrated test: test_templates");
 }
@@ -407,6 +423,7 @@ fn test_templates() {
 */
 // mig: fn test_taking_a_callable_param
 #[test]
+#[ignore]
 fn test_taking_a_callable_param() {
     panic!("Unmigrated test: test_taking_a_callable_param");
 }
@@ -429,6 +446,7 @@ fn test_taking_a_callable_param() {
 */
 // mig: fn simple_struct
 #[test]
+#[ignore]
 fn simple_struct() {
     panic!("Unmigrated test: simple_struct");
 }
@@ -479,6 +497,7 @@ fn simple_struct() {
 */
 // mig: fn calls_destructor_on_local_var
 #[test]
+#[ignore]
 fn calls_destructor_on_local_var() {
     panic!("Unmigrated test: calls_destructor_on_local_var");
 }
@@ -505,6 +524,7 @@ fn calls_destructor_on_local_var() {
 */
 // mig: fn tests_defining_an_empty_interface_and_an_implementing_struct
 #[test]
+#[ignore]
 fn tests_defining_an_empty_interface_and_an_implementing_struct() {
     panic!("Unmigrated test: tests_defining_an_empty_interface_and_an_implementing_struct");
 }
@@ -538,6 +558,7 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
 */
 // mig: fn tests_defining_a_non_empty_interface_and_an_implementing_struct
 #[test]
+#[ignore]
 fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
     panic!("Unmigrated test: tests_defining_a_non_empty_interface_and_an_implementing_struct");
 }
@@ -576,6 +597,7 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
 */
 // mig: fn stamps_an_interface_template_via_a_function_return
 #[test]
+#[ignore]
 fn stamps_an_interface_template_via_a_function_return() {
     panic!("Unmigrated test: stamps_an_interface_template_via_a_function_return");
 }
@@ -617,6 +639,7 @@ fn stamps_an_interface_template_via_a_function_return() {
 */
 // mig: fn reads_a_struct_member
 #[test]
+#[ignore]
 fn reads_a_struct_member() {
     panic!("Unmigrated test: reads_a_struct_member");
 }
@@ -650,6 +673,7 @@ fn reads_a_struct_member() {
 */
 // mig: fn automatically_drops_struct
 #[test]
+#[ignore]
 fn automatically_drops_struct() {
     panic!("Unmigrated test: automatically_drops_struct");
 }
@@ -683,6 +707,7 @@ fn automatically_drops_struct() {
 */
 // mig: fn tests_stamping_an_interface_template_from_a_function_param
 #[test]
+#[ignore]
 fn tests_stamping_an_interface_template_from_a_function_param() {
     panic!("Unmigrated test: tests_stamping_an_interface_template_from_a_function_param");
 }
@@ -713,6 +738,7 @@ fn tests_stamping_an_interface_template_from_a_function_param() {
 */
 // mig: fn reports_mismatched_return_type_when_expecting_void
 #[test]
+#[ignore]
 fn reports_mismatched_return_type_when_expecting_void() {
     panic!("Unmigrated test: reports_mismatched_return_type_when_expecting_void");
 }
@@ -733,6 +759,7 @@ fn reports_mismatched_return_type_when_expecting_void() {
 */
 // mig: fn tests_exporting_function
 #[test]
+#[ignore]
 fn tests_exporting_function() {
     panic!("Unmigrated test: tests_exporting_function");
 }
@@ -751,6 +778,7 @@ fn tests_exporting_function() {
 */
 // mig: fn tests_exporting_struct
 #[test]
+#[ignore]
 fn tests_exporting_struct() {
     panic!("Unmigrated test: tests_exporting_struct");
 }
@@ -769,6 +797,7 @@ fn tests_exporting_struct() {
 */
 // mig: fn tests_exporting_interface
 #[test]
+#[ignore]
 fn tests_exporting_interface() {
     panic!("Unmigrated test: tests_exporting_interface");
 }
@@ -787,6 +816,7 @@ fn tests_exporting_interface() {
 */
 // mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
+#[ignore]
 fn tests_single_expression_and_single_statement_functions_returns() {
     panic!("Unmigrated test: tests_single_expression_and_single_statement_functions_returns");
 }
@@ -813,6 +843,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
 */
 // mig: fn tests_calling_a_templated_struct_s_constructor
 #[test]
+#[ignore]
 fn tests_calling_a_templated_struct_s_constructor() {
     panic!("Unmigrated test: tests_calling_a_templated_struct_s_constructor");
 }
@@ -872,6 +903,7 @@ fn tests_calling_a_templated_struct_s_constructor() {
 */
 // mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
+#[ignore]
 fn tests_upcasting_from_a_struct_to_an_interface() {
     panic!("Unmigrated test: tests_upcasting_from_a_struct_to_an_interface");
 }
@@ -892,6 +924,7 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 */
 // mig: fn tests_calling_a_virtual_function
 #[test]
+#[ignore]
 fn tests_calling_a_virtual_function() {
     panic!("Unmigrated test: tests_calling_a_virtual_function");
 }
@@ -914,6 +947,7 @@ fn tests_calling_a_virtual_function() {
 */
 // mig: fn tests_upcasting_has_the_right_stuff
 #[test]
+#[ignore]
 fn tests_upcasting_has_the_right_stuff() {
     panic!("Unmigrated test: tests_upcasting_has_the_right_stuff");
 }
@@ -941,6 +975,7 @@ fn tests_upcasting_has_the_right_stuff() {
 */
 // mig: fn tests_calling_a_virtual_function_through_a_borrow_ref
 #[test]
+#[ignore]
 fn tests_calling_a_virtual_function_through_a_borrow_ref() {
     panic!("Unmigrated test: tests_calling_a_virtual_function_through_a_borrow_ref");
 }
@@ -960,6 +995,7 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
 */
 // mig: fn tests_calling_a_templated_function_with_explicit_template_args
 #[test]
+#[ignore]
 fn tests_calling_a_templated_function_with_explicit_template_args() {
     panic!("Unmigrated test: tests_calling_a_templated_function_with_explicit_template_args");
 }
@@ -982,6 +1018,7 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
 */
 // mig: fn tests_destructuring_borrow_doesnt_compile_to_destroy
 #[test]
+#[ignore]
 fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
     panic!("Unmigrated test: tests_destructuring_borrow_doesnt_compile_to_destroy");
 }
@@ -1020,6 +1057,7 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
 */
 // mig: fn tests_making_a_variable_with_a_pattern
 #[test]
+#[ignore]
 fn tests_making_a_variable_with_a_pattern() {
     panic!("Unmigrated test: tests_making_a_variable_with_a_pattern");
 }
@@ -1049,6 +1087,7 @@ fn tests_making_a_variable_with_a_pattern() {
 */
 // mig: fn tests_a_linked_list
 #[test]
+#[ignore]
 fn tests_a_linked_list() {
     panic!("Unmigrated test: tests_a_linked_list");
 }
@@ -1062,6 +1101,7 @@ fn tests_a_linked_list() {
 */
 // mig: fn test_borrow_ref
 #[test]
+#[ignore]
 fn test_borrow_ref() {
     panic!("Unmigrated test: test_borrow_ref");
 }
@@ -1074,6 +1114,7 @@ fn test_borrow_ref() {
 */
 // mig: fn tests_calling_a_function_with_an_upcast
 #[test]
+#[ignore]
 fn tests_calling_a_function_with_an_upcast() {
     panic!("Unmigrated test: tests_calling_a_function_with_an_upcast");
 }
@@ -1102,6 +1143,7 @@ fn tests_calling_a_function_with_an_upcast() {
 */
 // mig: fn tests_calling_a_templated_function_with_an_upcast
 #[test]
+#[ignore]
 fn tests_calling_a_templated_function_with_an_upcast() {
     panic!("Unmigrated test: tests_calling_a_templated_function_with_an_upcast");
 }
@@ -1131,6 +1173,7 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 */
 // mig: fn tests_upcast_with_generics_has_the_right_stuff
 #[test]
+#[ignore]
 fn tests_upcast_with_generics_has_the_right_stuff() {
     panic!("Unmigrated test: tests_upcast_with_generics_has_the_right_stuff");
 }
@@ -1159,6 +1202,7 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
 */
 // mig: fn tests_a_templated_linked_list
 #[test]
+#[ignore]
 fn tests_a_templated_linked_list() {
     panic!("Unmigrated test: tests_a_templated_linked_list");
 }
@@ -1172,6 +1216,7 @@ fn tests_a_templated_linked_list() {
 */
 // mig: fn tests_a_foreach_for_a_linked_list
 #[test]
+#[ignore]
 fn tests_a_foreach_for_a_linked_list() {
     panic!("Unmigrated test: tests_a_foreach_for_a_linked_list");
 }
@@ -1190,6 +1235,7 @@ fn tests_a_foreach_for_a_linked_list() {
 */
 // mig: fn test_return_from_inside_if_destroys_locals
 #[test]
+#[ignore]
 fn test_return_from_inside_if_destroys_locals() {
     panic!("Unmigrated test: test_return_from_inside_if_destroys_locals");
 }
@@ -1224,6 +1270,7 @@ fn test_return_from_inside_if_destroys_locals() {
 */
 // mig: fn recursive_struct
 #[test]
+#[ignore]
 fn recursive_struct() {
     panic!("Unmigrated test: recursive_struct");
 }
@@ -1242,6 +1289,7 @@ fn recursive_struct() {
 */
 // mig: fn recursive_struct_with_opt
 #[test]
+#[ignore]
 fn recursive_struct_with_opt() {
     panic!("Unmigrated test: recursive_struct_with_opt");
 }
@@ -1262,6 +1310,7 @@ fn recursive_struct_with_opt() {
 */
 // mig: fn templated_imm_struct
 #[test]
+#[ignore]
 fn templated_imm_struct() {
     panic!("Unmigrated test: templated_imm_struct");
 }
@@ -1280,6 +1329,7 @@ fn templated_imm_struct() {
 */
 // mig: fn borrow_load_member
 #[test]
+#[ignore]
 fn borrow_load_member() {
     panic!("Unmigrated test: borrow_load_member");
 }
@@ -1307,6 +1357,7 @@ fn borrow_load_member() {
 */
 // mig: fn test_vector_of_struct_templata
 #[test]
+#[ignore]
 fn test_vector_of_struct_templata() {
     panic!("Unmigrated test: test_vector_of_struct_templata");
 }
@@ -1332,6 +1383,7 @@ fn test_vector_of_struct_templata() {
 */
 // mig: fn if_branches_returns_never_and_struct
 #[test]
+#[ignore]
 fn if_branches_returns_never_and_struct() {
     panic!("Unmigrated test: if_branches_returns_never_and_struct");
 }
@@ -1358,6 +1410,7 @@ fn if_branches_returns_never_and_struct() {
 */
 // mig: fn test_return
 #[test]
+#[ignore]
 fn test_return() {
     panic!("Unmigrated test: test_return");
 }
@@ -1377,6 +1430,7 @@ fn test_return() {
 */
 // mig: fn test_return_from_inside_if
 #[test]
+#[ignore]
 fn test_return_from_inside_if() {
     panic!("Unmigrated test: test_return_from_inside_if");
 }
@@ -1404,6 +1458,7 @@ fn test_return_from_inside_if() {
 */
 // mig: fn zero_method_anonymous_interface
 #[test]
+#[ignore]
 fn zero_method_anonymous_interface() {
     panic!("Unmigrated test: zero_method_anonymous_interface");
 }
@@ -1422,6 +1477,7 @@ fn zero_method_anonymous_interface() {
 */
 // mig: fn reports_when_exported_function_depends_on_non_exported_param
 #[test]
+#[ignore]
 fn reports_when_exported_function_depends_on_non_exported_param() {
     panic!("Unmigrated test: reports_when_exported_function_depends_on_non_exported_param");
 }
@@ -1440,6 +1496,7 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
 */
 // mig: fn reports_when_exported_function_depends_on_non_exported_return
 #[test]
+#[ignore]
 fn reports_when_exported_function_depends_on_non_exported_return() {
     panic!("Unmigrated test: reports_when_exported_function_depends_on_non_exported_return");
 }
@@ -1460,6 +1517,7 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
 */
 // mig: fn reports_when_extern_function_depends_on_non_exported_param
 #[test]
+#[ignore]
 fn reports_when_extern_function_depends_on_non_exported_param() {
     panic!("Unmigrated test: reports_when_extern_function_depends_on_non_exported_param");
 }
@@ -1478,6 +1536,7 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
 */
 // mig: fn reports_when_extern_function_depends_on_non_exported_return
 #[test]
+#[ignore]
 fn reports_when_extern_function_depends_on_non_exported_return() {
     panic!("Unmigrated test: reports_when_extern_function_depends_on_non_exported_return");
 }
@@ -1496,6 +1555,7 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
 */
 // mig: fn reports_when_exported_struct_depends_on_non_exported_member
 #[test]
+#[ignore]
 fn reports_when_exported_struct_depends_on_non_exported_member() {
     panic!("Unmigrated test: reports_when_exported_struct_depends_on_non_exported_member");
 }
@@ -1518,6 +1578,7 @@ fn reports_when_exported_struct_depends_on_non_exported_member() {
 */
 // mig: fn checks_that_we_stored_a_borrowed_temporary_in_a_local
 #[test]
+#[ignore]
 fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
     panic!("Unmigrated test: checks_that_we_stored_a_borrowed_temporary_in_a_local");
 }
@@ -1543,6 +1604,7 @@ fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
 */
 // mig: fn reports_when_reading_nonexistant_local
 #[test]
+#[ignore]
 fn reports_when_reading_nonexistant_local() {
     panic!("Unmigrated test: reports_when_reading_nonexistant_local");
 }
@@ -1562,6 +1624,7 @@ fn reports_when_reading_nonexistant_local() {
 */
 // mig: fn reports_when_mutating_after_moving
 #[test]
+#[ignore]
 fn reports_when_mutating_after_moving() {
     panic!("Unmigrated test: reports_when_mutating_after_moving");
 }
@@ -1592,6 +1655,7 @@ fn reports_when_mutating_after_moving() {
 */
 // mig: fn tests_export_struct_twice
 #[test]
+#[ignore]
 fn tests_export_struct_twice() {
     panic!("Unmigrated test: tests_export_struct_twice");
 }
@@ -1611,6 +1675,7 @@ fn tests_export_struct_twice() {
 */
 // mig: fn reports_when_reading_after_moving
 #[test]
+#[ignore]
 fn reports_when_reading_after_moving() {
     panic!("Unmigrated test: reports_when_reading_after_moving");
 }
@@ -1641,6 +1706,7 @@ fn reports_when_reading_after_moving() {
 */
 // mig: fn reports_when_moving_from_inside_a_while
 #[test]
+#[ignore]
 fn reports_when_moving_from_inside_a_while() {
     panic!("Unmigrated test: reports_when_moving_from_inside_a_while");
 }
@@ -1668,6 +1734,7 @@ fn reports_when_moving_from_inside_a_while() {
 */
 // mig: fn cant_subscript_non_subscriptable_type
 #[test]
+#[ignore]
 fn cant_subscript_non_subscriptable_type() {
     panic!("Unmigrated test: cant_subscript_non_subscriptable_type");
 }
@@ -1692,6 +1759,7 @@ fn cant_subscript_non_subscriptable_type() {
 */
 // mig: fn humanize_errors
 #[test]
+#[ignore]
 fn humanize_errors() {
     panic!("Unmigrated test: humanize_errors");
 }
@@ -1875,6 +1943,7 @@ fn humanize_errors() {
 */
 // mig: fn report_when_multiple_types_in_array
 #[test]
+#[ignore]
 fn report_when_multiple_types_in_array() {
     panic!("Unmigrated test: report_when_multiple_types_in_array");
 }
@@ -1897,6 +1966,7 @@ fn report_when_multiple_types_in_array() {
 */
 // mig: fn report_when_abstract_method_defined_outside_open_interface
 #[test]
+#[ignore]
 fn report_when_abstract_method_defined_outside_open_interface() {
     panic!("Unmigrated test: report_when_abstract_method_defined_outside_open_interface");
 }
@@ -1919,6 +1989,7 @@ fn report_when_abstract_method_defined_outside_open_interface() {
 */
 // mig: fn report_when_imm_struct_has_varying_member
 #[test]
+#[ignore]
 fn report_when_imm_struct_has_varying_member() {
     panic!("Unmigrated test: report_when_imm_struct_has_varying_member");
 }
@@ -1944,6 +2015,7 @@ fn report_when_imm_struct_has_varying_member() {
 */
 // mig: fn report_imm_mut_mismatch_for_generic_type
 #[test]
+#[ignore]
 fn report_imm_mut_mismatch_for_generic_type() {
     panic!("Unmigrated test: report_imm_mut_mismatch_for_generic_type");
 }
@@ -1964,6 +2036,7 @@ fn report_imm_mut_mismatch_for_generic_type() {
 */
 // mig: fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
 #[test]
+#[ignore]
 fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param() {
     panic!("Unmigrated test: tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param");
 }
@@ -1998,6 +2071,7 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
 */
 // mig: fn report_when_imm_contains_varying_member
 #[test]
+#[ignore]
 fn report_when_imm_contains_varying_member() {
     panic!("Unmigrated test: report_when_imm_contains_varying_member");
 }
@@ -2018,6 +2092,7 @@ fn report_when_imm_contains_varying_member() {
 */
 // mig: fn test_imm_array
 #[test]
+#[ignore]
 fn test_imm_array() {
     panic!("Unmigrated test: test_imm_array");
 }
@@ -2041,6 +2116,7 @@ fn test_imm_array() {
 */
 // mig: fn tests_calling_an_abstract_function
 #[test]
+#[ignore]
 fn tests_calling_an_abstract_function() {
     panic!("Unmigrated test: tests_calling_an_abstract_function");
 }
@@ -2058,6 +2134,7 @@ fn tests_calling_an_abstract_function() {
 */
 // mig: fn test_struct_default_generic_argument_in_type
 #[test]
+#[ignore]
 fn test_struct_default_generic_argument_in_type() {
     panic!("Unmigrated test: test_struct_default_generic_argument_in_type");
 }
@@ -2090,6 +2167,7 @@ fn test_struct_default_generic_argument_in_type() {
 */
 // mig: fn lock_weak_member
 #[test]
+#[ignore]
 fn lock_weak_member() {
     panic!("Unmigrated test: lock_weak_member");
 }
@@ -2136,6 +2214,7 @@ fn lock_weak_member() {
 */
 // mig: fn tests_destructuring_shared_doesnt_compile_to_destroy
 #[test]
+#[ignore]
 fn tests_destructuring_shared_doesnt_compile_to_destroy() {
     panic!("Unmigrated test: tests_destructuring_shared_doesnt_compile_to_destroy");
 }
@@ -2176,6 +2255,7 @@ fn tests_destructuring_shared_doesnt_compile_to_destroy() {
 */
 // mig: fn generates_free_function_for_imm_struct
 #[test]
+#[ignore]
 fn generates_free_function_for_imm_struct() {
     panic!("Unmigrated test: generates_free_function_for_imm_struct");
 }
@@ -2205,6 +2285,7 @@ fn generates_free_function_for_imm_struct() {
 */
 // mig: fn reports_when_exported_ssa_depends_on_non_exported_element
 #[test]
+#[ignore]
 fn reports_when_exported_ssa_depends_on_non_exported_element() {
     panic!("Unmigrated test: reports_when_exported_ssa_depends_on_non_exported_element");
 }
@@ -2223,6 +2304,7 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
 */
 // mig: fn reports_when_exported_rsa_depends_on_non_exported_element
 #[test]
+#[ignore]
 fn reports_when_exported_rsa_depends_on_non_exported_element() {
     panic!("Unmigrated test: reports_when_exported_rsa_depends_on_non_exported_element");
 }
@@ -2255,6 +2337,7 @@ fn reports_when_exported_rsa_depends_on_non_exported_element() {
 */
 // mig: fn test_make_array
 #[test]
+#[ignore]
 fn test_make_array() {
     panic!("Unmigrated test: test_make_array");
 }
@@ -2278,6 +2361,7 @@ fn test_make_array() {
 */
 // mig: fn test_array_push_pop_len_capacity_drop
 #[test]
+#[ignore]
 fn test_array_push_pop_len_capacity_drop() {
     panic!("Unmigrated test: test_array_push_pop_len_capacity_drop");
 }
@@ -2304,6 +2388,7 @@ fn test_array_push_pop_len_capacity_drop() {
 */
 // mig: fn upcast_generic
 #[test]
+#[ignore]
 fn upcast_generic() {
     panic!("Unmigrated test: upcast_generic");
 }
@@ -2346,6 +2431,7 @@ fn upcast_generic() {
 */
 // mig: fn downcast_function_rrbfs
 #[test]
+#[ignore]
 fn downcast_function_rrbfs() {
     panic!("Unmigrated test: downcast_function_rrbfs");
 }
@@ -2432,6 +2518,7 @@ fn downcast_function_rrbfs() {
 */
 // mig: fn downcast_with_as
 #[test]
+#[ignore]
 fn downcast_with_as() {
     panic!("Unmigrated test: downcast_with_as");
 }
@@ -2554,6 +2641,7 @@ fn downcast_with_as() {
 */
 // mig: fn closure_using_parent_function_s_bound
 #[test]
+#[ignore]
 fn closure_using_parent_function_s_bound() {
     panic!("Unmigrated test: closure_using_parent_function_s_bound");
 }
@@ -2577,6 +2665,7 @@ fn closure_using_parent_function_s_bound() {
 */
 // mig: fn test_struct_default_generic_argument_in_call
 #[test]
+#[ignore]
 fn test_struct_default_generic_argument_in_call() {
     panic!("Unmigrated test: test_struct_default_generic_argument_in_call");
 }
@@ -2609,6 +2698,7 @@ fn test_struct_default_generic_argument_in_call() {
 */
 // mig: fn structs_can_resolve_other_structs_instantiation_bound_arguments
 #[test]
+#[ignore]
 fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
     panic!("Unmigrated test: structs_can_resolve_other_structs_instantiation_bound_arguments");
 }

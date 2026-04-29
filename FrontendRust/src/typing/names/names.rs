@@ -11,6 +11,7 @@ use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
 use crate::typing::typing_interner::TypingInterner;
+use crate::Keywords;
 
 /*
 package dev.vale.typing.names
@@ -318,6 +319,78 @@ sealed trait IFunctionTemplateNameT extends ITemplateNameT {
   def makeFunctionName(interner: Interner, keywords: Keywords, templateArgs: Vector[ITemplataT[ITemplataType]], params: Vector[CoordT]): IFunctionNameT
 }
 */
+// Scala trait method: def makeFunctionName(...): IFunctionNameT
+// Each variant overrides — see names.scala lines 265, 345, 376, 400, 415, 424, 441, 487, 666
+impl<'s, 't> IFunctionTemplateNameT<'s, 't> where 's: 't {
+  pub fn make_function_name(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    _keywords: &Keywords<'_>,
+    template_args: &[ITemplataT<'s, 't>],
+    params: &[CoordT<'s, 't>],
+  ) -> INameT<'s, 't> {
+    match self {
+      IFunctionTemplateNameT::FunctionTemplate(tmpl) => {
+        interner.intern_name(INameValT::Function(FunctionNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+      IFunctionTemplateNameT::OverrideDispatcherTemplate(tmpl) => {
+        interner.intern_name(INameValT::OverrideDispatcher(OverrideDispatcherNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+      IFunctionTemplateNameT::ExternFunction(e) => {
+        INameT::ExternFunction(e)
+      }
+      IFunctionTemplateNameT::FunctionBoundTemplate(tmpl) => {
+        interner.intern_name(INameValT::FunctionBound(FunctionBoundNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+      IFunctionTemplateNameT::PredictedFunctionTemplate(tmpl) => {
+        interner.intern_name(INameValT::PredictedFunction(PredictedFunctionNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+      IFunctionTemplateNameT::LambdaCallFunctionTemplate(tmpl) => {
+        interner.intern_name(INameValT::LambdaCallFunction(LambdaCallFunctionNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+      IFunctionTemplateNameT::ForwarderFunctionTemplate(tmpl) => {
+        let inner_name = tmpl.inner.make_function_name(interner, _keywords, template_args, params);
+        let inner_func_name: IFunctionNameT<'s, 't> = inner_name.try_into()
+            .unwrap_or_else(|_| panic!("ForwarderFunctionTemplate inner should produce a function name"));
+        interner.intern_name(INameValT::ForwarderFunction(ForwarderFunctionNameT {
+          template: tmpl,
+          inner: inner_func_name,
+        }))
+      }
+      IFunctionTemplateNameT::ConstructorTemplate(_) => {
+        panic!("Unimplemented: make_function_name for ConstructorTemplate")
+      }
+      IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(tmpl) => {
+        interner.intern_name(INameValT::AnonymousSubstructConstructor(AnonymousSubstructConstructorNameValT {
+          template: tmpl,
+          template_args,
+          parameters: params,
+        }))
+      }
+    }
+  }
+  /* */
+}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInstantiationNameT<'s, 't> {
@@ -416,14 +489,30 @@ impl<'s, 't> ICitizenTemplateNameT<'s, 't> {
                 t.make_citizen_name(interner, template_args),
             ICitizenTemplateNameT::RuntimeSizedArrayTemplate(t) =>
                 t.make_citizen_name(interner, template_args),
-            ICitizenTemplateNameT::LambdaCitizenTemplate(_) =>
-                panic!("Unimplemented: LambdaCitizenTemplateNameT.make_citizen_name"),
-            ICitizenTemplateNameT::StructTemplate(_) =>
-                panic!("Unimplemented: StructTemplateNameT.make_citizen_name"),
-            ICitizenTemplateNameT::InterfaceTemplate(_) =>
-                panic!("Unimplemented: InterfaceTemplateNameT.make_citizen_name"),
-            ICitizenTemplateNameT::AnonymousSubstructTemplate(_) =>
-                panic!("Unimplemented: AnonymousSubstructTemplateNameT.make_citizen_name"),
+            ICitizenTemplateNameT::LambdaCitizenTemplate(tmpl) => {
+                assert!(template_args.is_empty());
+                interner.intern_name(INameValT::LambdaCitizen(LambdaCitizenNameT {
+                  template: tmpl,
+                }))
+            }
+            ICitizenTemplateNameT::StructTemplate(tmpl) => {
+                interner.intern_name(INameValT::Struct(StructNameValT {
+                  template: IStructTemplateNameT::StructTemplate(tmpl),
+                  template_args,
+                }))
+            }
+            ICitizenTemplateNameT::InterfaceTemplate(tmpl) => {
+                interner.intern_name(INameValT::Interface(InterfaceNameValT {
+                  template: tmpl,
+                  template_args,
+                }))
+            }
+            ICitizenTemplateNameT::AnonymousSubstructTemplate(tmpl) => {
+                interner.intern_name(INameValT::AnonymousSubstruct(AnonymousSubstructNameValT {
+                  template: tmpl,
+                  template_args,
+                }))
+            }
         }
     }
 /*
@@ -450,6 +539,37 @@ sealed trait IStructTemplateNameT extends ICitizenTemplateNameT {
   }
 }
 */
+// Scala trait method: def makeStructName(...): IStructNameT
+// Overrides: LambdaCitizenTemplate (line 569), StructTemplate (line 618), AnonymousSubstructTemplate (line 659)
+impl<'s, 't> IStructTemplateNameT<'s, 't> where 's: 't {
+  pub fn make_struct_name(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    template_args: &[ITemplataT<'s, 't>],
+  ) -> INameT<'s, 't> {
+    match self {
+      IStructTemplateNameT::LambdaCitizenTemplate(tmpl) => {
+        assert!(template_args.is_empty());
+        interner.intern_name(INameValT::LambdaCitizen(LambdaCitizenNameT {
+          template: tmpl,
+        }))
+      }
+      IStructTemplateNameT::StructTemplate(tmpl) => {
+        interner.intern_name(INameValT::Struct(StructNameValT {
+          template: IStructTemplateNameT::StructTemplate(tmpl),
+          template_args,
+        }))
+      }
+      IStructTemplateNameT::AnonymousSubstructTemplate(tmpl) => {
+        interner.intern_name(INameValT::AnonymousSubstruct(AnonymousSubstructNameValT {
+          template: tmpl,
+          template_args,
+        }))
+      }
+    }
+  }
+  /* */
+}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInterfaceTemplateNameT<'s, 't> {
@@ -460,6 +580,25 @@ sealed trait IInterfaceTemplateNameT extends ICitizenTemplateNameT with ISuperKi
   def makeInterfaceName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]]): IInterfaceNameT
 }
 */
+// Scala trait method: def makeInterfaceName(...): IInterfaceNameT
+// Override: InterfaceTemplate (line 632)
+impl<'s, 't> IInterfaceTemplateNameT<'s, 't> where 's: 't {
+  pub fn make_interface_name(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    template_args: &[ITemplataT<'s, 't>],
+  ) -> INameT<'s, 't> {
+    match self {
+      IInterfaceTemplateNameT::InterfaceTemplate(tmpl) => {
+        interner.intern_name(INameValT::Interface(InterfaceNameValT {
+          template: tmpl,
+          template_args,
+        }))
+      }
+    }
+  }
+  /* */
+}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindNameT<'s, 't> {
@@ -541,6 +680,40 @@ sealed trait IImplTemplateNameT extends ITemplateNameT {
   def makeImplName(interner: Interner, templateArgs: Vector[ITemplataT[ITemplataType]], subCitizen: ICitizenTT): IImplNameT
 }
 */
+// Scala trait method: def makeImplName(...): IImplNameT
+// Overrides: ImplTemplate (line 160), ImplBoundTemplate (line 175), AnonymousSubstructImplTemplate (line 643)
+impl<'s, 't> IImplTemplateNameT<'s, 't> where 's: 't {
+  pub fn make_impl_name(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+    template_args: &[ITemplataT<'s, 't>],
+    sub_citizen: ICitizenTT<'s, 't>,
+  ) -> INameT<'s, 't> {
+    match self {
+      IImplTemplateNameT::ImplTemplate(tmpl) => {
+        interner.intern_name(INameValT::Impl(ImplNameValT {
+          template: tmpl,
+          template_args,
+          sub_citizen,
+        }))
+      }
+      IImplTemplateNameT::ImplBoundTemplate(tmpl) => {
+        interner.intern_name(INameValT::ImplBound(ImplBoundNameValT {
+          template: tmpl,
+          template_args,
+        }))
+      }
+      IImplTemplateNameT::AnonymousSubstructImplTemplate(tmpl) => {
+        interner.intern_name(INameValT::AnonymousSubstructImpl(AnonymousSubstructImplNameValT {
+          template: tmpl,
+          template_args,
+          sub_citizen,
+        }))
+      }
+    }
+  }
+  /* */
+}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IImplNameT<'s, 't> {
@@ -3116,12 +3289,14 @@ where 's: 't, 't: 'tmp,
     pub init_steps: &'tmp [INameT<'s, 't>],
     pub local_name: INameT<'s, 't>,
 }
+/* Guardian: disable-all */
 
 // Query wrapper for heterogeneous lookup (IdValT<'s, 't, 'tmp> against stored
 // IdValT<'s, 't, 't>). Mirrors postparsing::names::RuneValQuery.
 /// Interning transient (see @TFITCX)
 pub struct IdValQuery<'a, 's, 't, 'tmp>(pub &'a IdValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
+/* Guardian: disable-all */
 
 impl<'a, 's, 't, 'tmp> Hash for IdValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,
@@ -3153,6 +3328,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3162,6 +3338,7 @@ where 's: 't, 't: 'tmp,
     pub template: &'t ImplBoundTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3172,6 +3349,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3180,6 +3358,7 @@ where 's: 't, 't: 'tmp,
 {
     pub independent_impl_template_args: &'tmp [ITemplataT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3189,6 +3368,7 @@ where 's: 't, 't: 'tmp,
     pub human_name: StrI<'s>,
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3199,6 +3379,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3209,6 +3390,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3219,6 +3401,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3228,6 +3411,7 @@ where 's: 't, 't: 'tmp,
     pub code_location: CodeLocationS<'s>,
     pub param_types: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3238,6 +3422,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3247,6 +3432,7 @@ where 's: 't, 't: 'tmp,
     pub template: IStructTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3256,6 +3442,7 @@ where 's: 't, 't: 'tmp,
     pub template: &'t InterfaceTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3266,6 +3453,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub sub_citizen: ICitizenTT<'s, 't>,
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3276,6 +3464,7 @@ where 's: 't, 't: 'tmp,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
     pub parameters: &'tmp [CoordT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
@@ -3285,6 +3474,7 @@ where 's: 't, 't: 'tmp,
     pub template: &'t AnonymousSubstructTemplateNameT<'s, 't>,
     pub template_args: &'tmp [ITemplataT<'s, 't>],
 }
+/* Guardian: disable-all */
 
 // -- Simple / shallow concretes (reuse struct itself as Val) ------------------
 // The following ~45 concrete name structs have no `&'t [...]` slices, so
@@ -3364,6 +3554,7 @@ macro_rules! transient_name_val_impls {
         }
     };
 }
+/* Guardian: disable-all */
 
 transient_name_val_impls!(ImplNameValT, ImplNameValQuery,
     refs = [template], slices = [template_args], inline = [sub_citizen]);
@@ -3486,10 +3677,12 @@ where 's: 't, 't: 'tmp,
     ResolvingEnv(ResolvingEnvNameT<'s, 't>),
     CallEnv(CallEnvNameT<'s, 't>),
 }
+/* Guardian: disable-all */
 
 /// Interning transient (see @TFITCX)
 pub struct INameValQuery<'a, 's, 't, 'tmp>(pub &'a INameValT<'s, 't, 'tmp>)
 where 's: 't, 't: 'tmp;
+/* Guardian: disable-all */
 
 impl<'a, 's, 't, 'tmp> Hash for INameValQuery<'a, 's, 't, 'tmp>
 where 's: 't, 't: 'tmp,

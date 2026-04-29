@@ -19,14 +19,11 @@ Here's what I want you to do:
     * ./Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
     * ./Luz/shields/AvoidIfMatchesInTestsIfPossible-AIMITIPX.md
     * ./Luz/shields/KeepInlineComparisonsInline-KICIX.md
+    * ./Luz/shields/ScalaParityDuringMigration-SPDMX.md
 2. Try to build the project. if it doesn't build, then please make it build.
     * If you run into any easy lifetime fixes, please do them. If you run into any medium or complicated ones, or ones that span multiple definitions, please stop and tell me, because I like solving lifetime challenges.
-3. Run all tests for the project, and find the ones that are blocked by migration, and ignore the ones that are blocked on logic bugs. You'll do this by:
-    * Run `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml --no-fail-fast > ./tmp/slab15-tests.txt 2>&1`
-    * Run `grep -B1 -i "implement" ./tmp/slab15-tests.txt | grep "panicked at" | sed "s/.*thread '//;s/' .*//"`
-4. Pick a the simplest-looking panicking test, say it out loud like "The simplest panicking test is compiler_tests.rs's simple_program_returning_an_int_explicit test"
-5. Run just that specific test.
-6. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
+3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, STOP and report success — the TL will un-ignore the next test.
+4. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
     * DON'T IMPLEMENT ANYTHING ELSE. Just do the one step it gives you.
     * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
     * Anything you add should be *directly immediately above* the Scala comment. NOT below the comment. NOT in a different file. Feel free to slice scala comments apart so the new rust code can be directly above the corresponding old scala code.
@@ -40,13 +37,14 @@ Here's what I want you to do:
         * In other words, **conservatively implement as little as possible.**
         * In other words, **aggressively panic!** for anything that might not be executed by current tests. This will help us minimize our current changes.
     * **"Good partial implementing":** Always implement functions this way: write the full structure (straight-line variable bindings, function calls, etc.) but put `panic!` inside every branch body, loop body, closure/lambda body, and match arm. Then only fill in the specific arms/branches the test actually hits. You're always writing the skeleton with panics everywhere, not trying to understand all the logic at once.
+    * **Don't omit code because you think the callee handles it.** Translate every line in the Scala body, even if you believe another function already does the same check. If the Scala caller checks `results.size > 1`, the Rust caller checks `results.len() > 1` — even if the callee also checks internally. The Scala is the spec; your job is transcription, not reasoning about redundancy.
     * **Suspected bugs in Scala:** If you notice something in the Scala code that looks like a bug, still implement the Scala-parity logic exactly as written, but add a `// BUG:` comment explaining your suspicion. Never "fix" the Scala logic during migration.
     * If you're unsure about anything, or there's a choice to be made, pause and ask me for help. I like being a part of things, so please don't hesitate.
     * If you run into any lifetime errors, STOP. We'll need Evan to fix those, because lifetime errors in this project are incredibly difficult, and `rustc` ALWAYS LIES. You get bonus points and cookies if you stop because you found a lifetime error.
-7. Run the test again.
-    * If it panics with "implement" somewhere in the panic message, go to step 6.
+5. Run the test again.
+    * If it panics with "implement" somewhere in the panic message, go to step 4.
     * If it panics without "implement" somewhere in the panic message, please stop. I like fixing logic bugs myself.
-    * If it passes, start the whole process again at step 2.
+    * If it passes, STOP and report success. The TL will un-ignore the next test for you.
 
 
 Notes:

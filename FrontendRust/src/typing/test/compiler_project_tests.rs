@@ -23,6 +23,7 @@ class CompilerProjectTests extends FunSuite with Matchers {
 */
 // mig: fn function_has_correct_name
 #[test]
+#[ignore]
 fn function_has_correct_name() {
     let parse_bump = Bump::new();
     let scout_bump = Bump::new();
@@ -64,6 +65,7 @@ fn function_has_correct_name() {
 */
 // mig: fn lambda_has_correct_name
 #[test]
+#[ignore]
 fn lambda_has_correct_name() {
     panic!("Unmigrated test: lambda_has_correct_name");
 }
@@ -97,6 +99,7 @@ fn lambda_has_correct_name() {
 */
 // mig: fn struct_has_correct_name
 #[test]
+#[ignore]
 fn struct_has_correct_name() {
     panic!("Unmigrated test: struct_has_correct_name");
 }

@@ -41,11 +41,15 @@ object InstantiationBoundArgumentsT {
 */
 // mig: fn make
 pub fn make<'s, 't>(
-    _rune_to_bound_prototype: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)>,
-    _rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
-    _rune_to_bound_impl: Vec<(IRuneS<'s>, IdT<'s, 't>)>,
+    rune_to_bound_prototype: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)>,
+    rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
+    rune_to_bound_impl: Vec<(IRuneS<'s>, IdT<'s, 't>)>,
 ) -> InstantiationBoundArgumentsT<'s, 't> {
-    panic!("Unimplemented: InstantiationBoundArgumentsT::make");
+    InstantiationBoundArgumentsT {
+        rune_to_bound_prototype,
+        rune_to_citizen_rune_to_reachable_prototype,
+        rune_to_bound_impl,
+    }
 }
 /*
   def make[BF <: IFunctionNameT, BI <: IImplNameT](

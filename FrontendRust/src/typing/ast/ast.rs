@@ -398,11 +398,13 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {
 */
 }
 /// Value-type (see @TFITCX)
+#[derive(Copy, Clone)]
 pub struct AbstractT;
 /*
 case class AbstractT()
 */
 /// Arena-allocated (see @TFITCX)
+#[derive(Clone)]
 pub struct ParameterT<'s, 't> {
     pub name: IVarNameT<'s, 't>,
     pub virtuality: Option<AbstractT>,
@@ -907,7 +909,9 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn to_prototype(&self) -> PrototypeT<'s, 't> { panic!("Unimplemented: to_prototype"); }
+    pub fn to_prototype(&self) -> PrototypeT<'s, 't> {
+        PrototypeT { id: self.id, return_type: self.return_type }
+    }
 /*
   def toPrototype: PrototypeT[IFunctionNameT] = {
 //    val substituter = TemplataCompiler.getPlaceholderSubstituter(interner, fullName, templateArgs)
@@ -919,7 +923,9 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); }
+    pub fn to_signature(&self) -> SignatureT<'s, 't> {
+        self.to_prototype().to_signature()
+    }
 /*
   def toSignature: SignatureT = {
     toPrototype.toSignature
@@ -977,7 +983,9 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
-    fn to_signature(&self) -> SignatureT<'s, 't> { panic!("Unimplemented: to_signature"); }
+    pub fn to_signature(&self) -> SignatureT<'s, 't> {
+        SignatureT { id: self.id }
+    }
 /*
   def toSignature: SignatureT = SignatureT(id)
 }

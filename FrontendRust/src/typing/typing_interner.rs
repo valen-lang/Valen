@@ -1,9 +1,10 @@
-// Guardian: disable-all
+/* Guardian: disable-all */
 use std::cell::RefCell;
 use std::collections::HashMap as StdHashMap;
 
 use bumpalo::Bump;
 
+use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::ast::ast::{
     PrototypeT, PrototypeValQuery, PrototypeValT, SignatureT, SignatureValQuery, SignatureValT,
 };
@@ -117,6 +118,16 @@ where 's: 't,
     }
     pub fn alloc_slice_from_vec<T>(&self, vec: Vec<T>) -> &'t [T] {
         self.bump.alloc_slice_fill_iter(vec.into_iter())
+    }
+
+    pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'t, K, V> {
+        ArenaIndexMap::new_in(self.bump)
+    }
+
+    pub fn alloc_index_map_from_iter<K, V, I>(&self, iter: I) -> ArenaIndexMap<'t, K, V>
+    where K: std::hash::Hash + Eq + Clone, I: IntoIterator<Item = (K, V)>
+    {
+        ArenaIndexMap::from_iter_in(iter, self.bump)
     }
 
     // =========================================================================

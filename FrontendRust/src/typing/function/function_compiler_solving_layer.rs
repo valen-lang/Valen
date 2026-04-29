@@ -427,7 +427,44 @@ where 's: 't,
         templatas_by_rune: &std::collections::HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds_from_params_and_return: &[PrototypeTemplataT<'s, 't>],
     ) -> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> {
-        panic!("Unimplemented: add_runed_data_to_near_env");
+        let identifying_templatas: Vec<ITemplataT<'s, 't>> =
+            identifying_runes.iter().map(|r| *templatas_by_rune.get(r).unwrap()).collect();
+
+        // reachableBoundsFromParamsAndReturn.zipWithIndex.toVector
+        //   .map({ case (t, i) => (interner.intern(ReachablePrototypeNameT(i)), TemplataEnvEntry(t)) }) ++
+        // templatasByRune.toVector
+        //   .map({ case (k, v) => (interner.intern(RuneNameT(k)), TemplataEnvEntry(v)) })
+        let entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            reachable_bounds_from_params_and_return.iter().enumerate()
+                .map(|(i, t)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
+                    panic!("Unimplemented: add_runed_data_to_near_env ReachablePrototypeNameT");
+                })
+                .chain(
+                    templatas_by_rune.iter()
+                        .map(|(k, v)| {
+                            let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *k, _phantom: std::marker::PhantomData });
+                            (INameT::Rune(rune_name), IEnvEntryT::Templata(*v))
+                        })
+                )
+                .collect();
+
+        // newEntries = templatas.addEntries(interner, entries_list)
+        let new_entries = self.typing_interner.alloc(near_env.templatas.add_entries(self.typing_interner, self.scout_arena, entries_list));
+
+        let default_region = RegionT;
+
+        let template_args: &'t [ITemplataT<'s, 't>] = self.typing_interner.alloc_slice_from_vec(identifying_templatas);
+        BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT {
+            global_env: near_env.global_env,
+            parent_env: near_env.parent_env,
+            id: near_env.id,
+            template_args,
+            templatas: new_entries,
+            function: near_env.function,
+            variables: near_env.variables,
+            is_root_compiling_denizen: near_env.is_root_compiling_denizen,
+            default_region,
+        }
     }
 
 /*
@@ -812,14 +849,19 @@ where 's: 't,
             .map(|gp| gp.rune.rune)
             .collect();
         let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
-            panic!("Unimplemented: compute reachable_bounds from instantiation_bound_params");
+            instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.iter()
+                .flat_map(|(_, rb)| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
+                .map(|proto| PrototypeTemplataT { prototype: proto })
+                .collect();
         let runed_env = self.add_runed_data_to_near_env(
             near_env, &identifying_runes, &inferences, &reachable_bounds);
+        let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
+            self.typing_interner.alloc(runed_env);
 
         let header = self.get_or_evaluate_function_for_header(
-            near_env, &runed_env, coutputs, parent_ranges, call_location, function, &instantiation_bound_params);
+            near_env, runed_env, coutputs, parent_ranges, call_location, function, &instantiation_bound_params);
 
-        self.typing_interner.alloc(header)
+        header
     }
 
 /*

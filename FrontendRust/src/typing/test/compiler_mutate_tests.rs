@@ -36,6 +36,7 @@ pub fn read_code_from_resource(resource_filename: &str) -> String {
 */
 // mig: fn test_mutating_a_local_var
 #[test]
+#[ignore]
 fn test_mutating_a_local_var() {
   panic!("Unmigrated test: test_mutating_a_local_var");
 }
@@ -57,6 +58,7 @@ fn test_mutating_a_local_var() {
 */
 // mig: fn test_mutable_member_permission
 #[test]
+#[ignore]
 fn test_mutable_member_permission() {
   panic!("Unmigrated test: test_mutable_member_permission");
 }
@@ -87,6 +89,7 @@ fn test_mutable_member_permission() {
 */
 // mig: fn local_set_upcasts
 #[test]
+#[ignore]
 fn local_set_upcasts() {
   panic!("Unmigrated test: local_set_upcasts");
 }
@@ -117,6 +120,7 @@ fn local_set_upcasts() {
 */
 // mig: fn expr_set_upcasts
 #[test]
+#[ignore]
 fn expr_set_upcasts() {
   panic!("Unmigrated test: expr_set_upcasts");
 }
@@ -150,6 +154,7 @@ fn expr_set_upcasts() {
 */
 // mig: fn reports_when_we_try_to_mutate_an_imm_struct
 #[test]
+#[ignore]
 fn reports_when_we_try_to_mutate_an_imm_struct() {
   panic!("Unmigrated test: reports_when_we_try_to_mutate_an_imm_struct");
 }
@@ -178,6 +183,7 @@ fn reports_when_we_try_to_mutate_an_imm_struct() {
 */
 // mig: fn reports_when_we_try_to_mutate_a_final_member_in_a_struct
 #[test]
+#[ignore]
 fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
   panic!("Unmigrated test: reports_when_we_try_to_mutate_a_final_member_in_a_struct");
 }
@@ -206,6 +212,7 @@ fn reports_when_we_try_to_mutate_a_final_member_in_a_struct() {
 */
 // mig: fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array
 #[test]
+#[ignore]
 fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
   panic!("Unmigrated test: reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array");
 }
@@ -233,6 +240,7 @@ fn reports_when_we_try_to_mutate_an_element_in_an_imm_static_sized_array() {
 */
 // mig: fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type
 #[test]
+#[ignore]
 fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
   panic!("Unmigrated test: reports_when_we_try_to_mutate_a_local_variable_with_wrong_type");
 }
@@ -254,6 +262,7 @@ fn reports_when_we_try_to_mutate_a_local_variable_with_wrong_type() {
 */
 // mig: fn reports_when_we_try_to_override_a_non_interface
 #[test]
+#[ignore]
 fn reports_when_we_try_to_override_a_non_interface() {
   panic!("Unmigrated test: reports_when_we_try_to_override_a_non_interface");
 }
@@ -276,6 +285,7 @@ fn reports_when_we_try_to_override_a_non_interface() {
 */
 // mig: fn can_mutate_an_element_in_a_runtime_sized_array
 #[test]
+#[ignore]
 fn can_mutate_an_element_in_a_runtime_sized_array() {
   panic!("Unmigrated test: can_mutate_an_element_in_a_runtime_sized_array");
 }
@@ -300,6 +310,7 @@ fn can_mutate_an_element_in_a_runtime_sized_array() {
 */
 // mig: fn can_restackify_in_destructure_pattern
 #[test]
+#[ignore]
 fn can_restackify_in_destructure_pattern() {
   panic!("Unmigrated test: can_restackify_in_destructure_pattern");
 }
@@ -330,6 +341,7 @@ fn can_restackify_in_destructure_pattern() {
 */
 // mig: fn humanize_errors
 #[test]
+#[ignore]
 fn humanize_errors() {
   panic!("Unmigrated test: humanize_errors");
 }

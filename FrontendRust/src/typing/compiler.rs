@@ -12,16 +12,16 @@ use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::infer_compiler::InferEnv;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
-use crate::typing::env::environment::{GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
+use crate::typing::env::environment::{get_imprecise_name, GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::names::names::{
     IdT, IdValT, INameT, IFunctionTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    FunctionTemplataT, ITemplataT, KindTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
+    FunctionTemplataT, ITemplataT, KindTemplataT, MutabilityTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
 };
-use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, NeverT, StrT, VoidT};
+use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
@@ -899,11 +899,14 @@ where 's: 't,
                 .or_insert_with(Vec::new)
                 .push((name.local_name, *env_entry));
         }
-        let mut namespace_name_to_templatas_vec: Vec<(&'t IdT<'s, 't>, TemplatasStoreT<'s, 't>)> = Vec::new();
+        let mut namespace_name_to_templatas_vec: Vec<(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)> = Vec::new();
         for (package_id, entries) in namespace_name_to_entries {
             let mut builder = TemplatasStoreBuilder::new(package_id);
             for (local_name, env_entry) in entries {
                 builder.name_to_entry.push((local_name, env_entry));
+                if let Some(imprecise) = get_imprecise_name(self.scout_arena, local_name) {
+                    builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(env_entry);
+                }
             }
             namespace_name_to_templatas_vec.push((package_id, builder.build_in(self.typing_interner)));
         }
@@ -933,22 +936,33 @@ where 's: 't,
             ));
             let kind_t = ITemplataT::Kind(self.typing_interner.intern_kind_templata(KindTemplataT { kind: *kind }));
             builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(kind_t)));
+            if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
+                builtins_builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(IEnvEntryT::Templata(kind_t));
+            }
         }
         {
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
                 PrimitiveNameT { human_name: self.keywords.array, _phantom: PhantomData }
             ));
-            builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(
+            let entry = IEnvEntryT::Templata(
                 ITemplataT::RuntimeSizedArrayTemplate(RuntimeSizedArrayTemplateTemplataT { _phantom: PhantomData })
-            )));
+            );
+            builtins_builder.name_to_entry.push((prim, entry));
+            if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
+                builtins_builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(entry);
+            }
         }
         {
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
                 PrimitiveNameT { human_name: self.keywords.static_array, _phantom: PhantomData }
             ));
-            builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(
+            let entry = IEnvEntryT::Templata(
                 ITemplataT::StaticSizedArrayTemplate(StaticSizedArrayTemplateTemplataT { _phantom: PhantomData })
-            )));
+            );
+            builtins_builder.name_to_entry.push((prim, entry));
+            if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
+                builtins_builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(entry);
+            }
         }
         let builtins = builtins_builder.build_in(self.typing_interner);
 
@@ -966,7 +980,7 @@ where 's: 't,
 
         // Indexing phase
         for (_package_id, templatas) in global_env.name_to_top_level_environment {
-            for (_name, entry) in templatas.name_to_entry {
+            for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Struct(_) => panic!("Unimplemented: struct precompile in evaluate"),
                     IEnvEntryT::Interface(_) => panic!("Unimplemented: interface precompile in evaluate"),
@@ -977,7 +991,7 @@ where 's: 't,
 
         // Compiling phase
         for (_package_id, templatas) in global_env.name_to_top_level_environment {
-            for (_name, entry) in templatas.name_to_entry {
+            for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Struct(_) => panic!("Unimplemented: struct compile in evaluate"),
                     IEnvEntryT::Interface(_) => panic!("Unimplemented: interface compile in evaluate"),
@@ -988,7 +1002,7 @@ where 's: 't,
 
         // Impl compile phase
         for (_package_id, templatas) in global_env.name_to_top_level_environment {
-            for (_name, entry) in templatas.name_to_entry {
+            for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Impl(_) => panic!("Unimplemented: impl compile in evaluate"),
                     _ => {}
@@ -1001,7 +1015,7 @@ where 's: 't,
             if !package_id.init_steps.is_empty() {
                 continue;
             }
-            let global_namespaces: Vec<TemplatasStoreT<'s, 't>> =
+            let global_namespaces: Vec<&TemplatasStoreT<'s, 't>> =
                 global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
             let global_namespaces = self.typing_interner.alloc_slice_from_vec(global_namespaces);
             let package_env = self.typing_interner.alloc(PackageEnvironmentT {
@@ -1011,7 +1025,7 @@ where 's: 't,
             });
             let package_env_t: &'t IEnvironmentT<'s, 't> =
                 self.typing_interner.alloc(IEnvironmentT::Package(package_env));
-            for (_name, entry) in templatas.name_to_entry {
+            for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Function(function_a) => {
                         let templata = FunctionTemplataT {
@@ -2082,7 +2096,20 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         concrete_value2: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match concrete_value2 {
+            KindT::Never(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Int(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Float(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Bool(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Str(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::Void(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+            KindT::KindPlaceholder(_) => { panic!("Unimplemented: get_mutability KindPlaceholderT"); }
+            KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: get_mutability RuntimeSizedArray"); }
+            KindT::StaticSizedArray(_) => { panic!("Unimplemented: get_mutability StaticSizedArray"); }
+            KindT::Struct(_) => { panic!("Unimplemented: get_mutability Struct"); }
+            KindT::Interface(_) => { panic!("Unimplemented: get_mutability Interface"); }
+            KindT::OverloadSet(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
+        }
     }
     /*
       def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):

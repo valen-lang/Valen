@@ -42,7 +42,7 @@ where 's: 't,
   pub global_env: &'t GlobalEnvironmentT<'s, 't>,
   pub parent_env: IEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
-  pub templatas: TemplatasStoreT<'s, 't>,
+  pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub function: &'s FunctionA<'s>,
   pub variables: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
@@ -143,12 +143,13 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    lookup_with_imprecise_name_inner(
+      IEnvironmentT::BuildingWithClosureds(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -175,7 +176,7 @@ where 's: 't,
   pub parent_env: IEnvironmentT<'s, 't>,
   pub id: IdT<'s, 't>,
   pub template_args: &'t [ITemplataT<'s, 't>],
-  pub templatas: TemplatasStoreT<'s, 't>,
+  pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub function: &'s FunctionA<'s>,
   pub variables: &'t [IVariableT<'s, 't>],
   pub is_root_compiling_denizen: bool,
@@ -270,12 +271,14 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> wh
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    // EnvironmentHelper.lookupWithImpreciseNameInner(this, templatas, parentEnv, name, lookupFilter, getOnlyNearest)
+    lookup_with_imprecise_name_inner(
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(self), &self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -303,7 +306,7 @@ where 's: 't,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
   pub life: LocationInFunctionEnvironmentT<'s>,
-  pub templatas: TemplatasStoreT<'s, 't>,
+  pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub declared_locals: &'t [IVariableT<'s, 't>],
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
   pub restackified_locals: &'t [IVarNameT<'s, 't>],
@@ -818,115 +821,115 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 
 // mig: struct NodeEnvironmentBox
 // mig: impl NodeEnvironmentBox
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox / FunctionEnvironmentBoxT / IDenizenEnvironmentBoxT
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox / FunctionEnvironmentBoxT / IDenizenEnvironmentBoxT
 //  Scala mutable wrappers are subsumed by the builder-freeze pattern in Rust.)
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
 */
 // mig: override fn eq
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: override fn hashCode
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 */
 // mig: fn snapshot
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def snapshot: NodeEnvironmentT = nodeEnvironment
 */
 // mig: fn default_region
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def defaultRegion: RegionT = nodeEnvironment.defaultRegion
 */
 // mig: fn id
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def id: IdT[IFunctionNameT] = nodeEnvironment.parentFunctionEnv.id
 */
 // mig: fn node
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def node: IExpressionSE = nodeEnvironment.node
 */
 // mig: fn maybe_return_type
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def maybeReturnType: Option[CoordT] = nodeEnvironment.parentFunctionEnv.maybeReturnType
 */
 // mig: fn global_env
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def globalEnv: GlobalEnvironment = nodeEnvironment.globalEnv
 */
 // mig: fn declared_locals
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def declaredLocals: Vector[IVariableT] = nodeEnvironment.declaredLocals
 */
 // mig: fn unstackifieds
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def unstackifieds: Set[IVarNameT] = nodeEnvironment.unstackifiedLocals
 */
 // mig: fn function
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def function = nodeEnvironment.function
 */
 // mig: fn function_environment
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def functionEnvironment = nodeEnvironment.parentFunctionEnv
 */
 // mig: fn add_variable
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def addVariable(newVar: IVariableT): Unit= {
     nodeEnvironment = nodeEnvironment.addVariable(newVar)
   }
 */
 // mig: fn mark_local_unstackified
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def markLocalUnstackified(newMoved: IVarNameT): Unit= {
     nodeEnvironment = nodeEnvironment.markLocalUnstackified(newMoved)
   }
 */
 // mig: fn mark_local_restackified
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def markLocalRestackified(newMoved: IVarNameT): Unit= {
     nodeEnvironment = nodeEnvironment.markLocalRestackified(newMoved)
   }
 */
 // mig: fn get_variable
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def getVariable(name: IVarNameT): Option[IVariableT] = {
     nodeEnvironment.getVariable(name)
   }
 */
 // mig: fn get_all_locals
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def getAllLocals(): Vector[ILocalVariableT] = {
     nodeEnvironment.getAllLocals()
   }
 */
 // mig: fn get_all_unstackified_locals
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def getAllUnstackifiedLocals(): Vector[IVarNameT] = {
     nodeEnvironment.getAllUnstackifiedLocals()
   }
 */
 // mig: fn lookup_nearest_with_imprecise_name
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def lookupNearestWithImpreciseName(
 
@@ -937,7 +940,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn lookup_nearest_with_name
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def lookupNearestWithName(
 
@@ -948,35 +951,35 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn lookup_all_with_imprecise_name
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def lookupAllWithImpreciseName( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext]): Array[ITemplataT[ITemplataType]] = {
     nodeEnvironment.lookupAllWithImpreciseName(nameS, lookupFilter)
   }
 */
 // mig: fn lookup_all_with_name
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def lookupAllWithName( nameS: INameT, lookupFilter: Set[ILookupContext]): Iterable[ITemplataT[ITemplataType]] = {
     nodeEnvironment.lookupAllWithName(nameS, lookupFilter)
   }
 */
 // mig: fn lookup_with_imprecise_name_inner
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   private[env] def lookupWithImpreciseNameInner( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
     nodeEnvironment.lookupWithImpreciseNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
 // mig: fn lookup_with_name_inner
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   private[env] def lookupWithNameInner( nameS: INameT, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
     nodeEnvironment.lookupWithNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
 // mig: fn make_child
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def makeChild(
     node: IExpressionSE,
@@ -986,28 +989,28 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: fn add_entry
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): Unit = {
     nodeEnvironment = nodeEnvironment.addEntry(interner, name, entry)
   }
 */
 // mig: fn add_entries
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): Unit= {
     nodeEnvironment = nodeEnvironment.addEntries(interner, newEntries)
   }
 */
 // mig: fn nearest_block_env
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
     nodeEnvironment.nearestBlockEnv()
   }
 */
 // mig: fn nearest_loop_env
-// (Deleted in Rust per TL.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
 /*
   def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
     nodeEnvironment.nearestLoopEnv()
@@ -1026,7 +1029,7 @@ where 's: 't,
   pub parent_env: IEnvironmentT<'s, 't>,
   pub template_id: IdT<'s, 't>,
   pub id: IdT<'s, 't>,
-  pub templatas: TemplatasStoreT<'s, 't>,
+  pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub function: &'s FunctionA<'s>,
   pub maybe_return_type: Option<CoordT<'s, 't>>,
   pub closured_locals: &'t [IVariableT<'s, 't>],
@@ -1193,12 +1196,13 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    lookup_with_imprecise_name_inner(
+      IEnvironmentT::Function(self), self.templatas, self.parent_env, name, lookup_filter, get_only_nearest)
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(
@@ -1276,89 +1280,89 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 
 // mig: struct FunctionEnvironmentBoxT
 // mig: impl FunctionEnvironmentBoxT
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT / IDenizenEnvironmentBoxT
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT / IDenizenEnvironmentBoxT
 //  Scala mutable wrappers are subsumed by the builder-freeze pattern in Rust.)
 /*
 case class FunctionEnvironmentBoxT(var functionEnvironment: FunctionEnvironmentT) extends IDenizenEnvironmentBoxT {
 */
 // mig: override fn eq
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: override fn hashCode
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 */
 // mig: override fn denizen_template_id
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def denizenTemplateId: IdT[ITemplateNameT] = functionEnvironment.denizenTemplateId
 */
 // mig: override fn denizen_id
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def denizenId: IdT[INameT] = functionEnvironment.denizenId
 */
 // mig: override fn snapshot
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def snapshot: FunctionEnvironmentT = functionEnvironment
 */
 // mig: def id
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def id: IdT[IFunctionNameT] = functionEnvironment.id
 */
 // mig: fn function
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def function: FunctionA = functionEnvironment.function
 */
 // mig: fn maybe_return_type
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def maybeReturnType: Option[CoordT] = functionEnvironment.maybeReturnType
 */
 // mig: override fn global_env
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def globalEnv: GlobalEnvironment = functionEnvironment.globalEnv
 */
 // mig: override fn templatas
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def templatas: TemplatasStore = functionEnvironment.templatas
 */
 // mig: override fn root_compiling_denizen_env
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = functionEnvironment.rootCompilingDenizenEnv
 */
 // mig: fn set_return_type
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def setReturnType(returnType: Option[CoordT]): Unit = {
     functionEnvironment = functionEnvironment.copy(maybeReturnType = returnType)
   }
 */
 // mig: fn add_entry
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): Unit = {
     functionEnvironment = functionEnvironment.addEntry(interner, name, entry)
   }
 */
 // mig: fn add_entries
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): Unit= {
     functionEnvironment = functionEnvironment.addEntries(interner, newEntries)
   }
 */
 // mig: override fn lookup_nearest_with_imprecise_name
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def lookupNearestWithImpreciseName(
 
@@ -1369,7 +1373,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: override fn lookup_nearest_with_name
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def lookupNearestWithName(
 
@@ -1380,35 +1384,35 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
   }
 */
 // mig: override fn lookup_all_with_imprecise_name
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def lookupAllWithImpreciseName( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext]): Array[ITemplataT[ITemplataType]] = {
     functionEnvironment.lookupAllWithImpreciseName(nameS, lookupFilter)
   }
 */
 // mig: override fn lookup_all_with_name
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override def lookupAllWithName( nameS: INameT, lookupFilter: Set[ILookupContext]): Iterable[ITemplataT[ITemplataType]] = {
     functionEnvironment.lookupAllWithName(nameS, lookupFilter)
   }
 */
 // mig: override fn lookup_with_imprecise_name_inner
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override private[env] def lookupWithImpreciseNameInner( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
     functionEnvironment.lookupWithImpreciseNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
 // mig: override fn lookup_with_name_inner
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   override private[env] def lookupWithNameInner( nameS: INameT, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean): Array[ITemplataT[ITemplataType]] = {
     functionEnvironment.lookupWithNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
 // mig: fn make_child_node_environment
-// (Deleted in Rust per TL.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
+// (Deleted in Rust per typing-pass-design-v3.md §3.3 — FunctionEnvironmentBoxT subsumed by builder-freeze pattern.)
 /*
   def makeChildNodeEnvironment(node: IExpressionSE, life: LocationInFunctionEnvironmentT): NodeEnvironmentT = {
     functionEnvironment.makeChildNodeEnvironment(node, life)
@@ -1754,7 +1758,14 @@ pub fn lookup_with_imprecise_name_inner<'s, 't>(
 ) -> Vec<ITemplataT<'s, 't>>
 where 's: 't,
 {
-  panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  let result = templatas.lookup_with_imprecise_name_inner(requesting_env, name, lookup_filter);
+  if !result.is_empty() && get_only_nearest {
+    result
+  } else {
+    let mut combined = result;
+    combined.extend(parent.lookup_with_imprecise_name_inner(name, lookup_filter.clone(), get_only_nearest));
+    combined
+  }
 }
 /*
   def lookupWithImpreciseNameInner(

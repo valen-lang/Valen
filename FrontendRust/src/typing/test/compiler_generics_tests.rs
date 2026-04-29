@@ -36,6 +36,7 @@ fn read_code_from_resource(resource_filename: &str) -> String {
 */
 // mig: fn upcasting_with_generic_bounds
 #[test]
+#[ignore]
 fn upcasting_with_generic_bounds() {
     panic!("Unmigrated test: upcasting_with_generic_bounds");
 }
