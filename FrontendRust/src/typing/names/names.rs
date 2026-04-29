@@ -10,7 +10,7 @@ use crate::postparsing::names::IRuneS;
 use crate::typing::types::types::{CoordT, RegionT, ICitizenTT};
 use crate::typing::templata::templata::{ITemplataT, expect_mutability, expect_variability, expect_integer, expect_coord_templata};
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
-use crate::typing::typing_interner::TypingInterner;
+use crate::typing::typing_interner::{InternToken, TypingInterner};
 use crate::Keywords;
 
 /*
@@ -41,6 +41,7 @@ where 's: 't,
     pub package_coord: &'s PackageCoordinate<'s>,
     pub init_steps: &'t [INameT<'s, 't>],
     pub local_name: INameT<'s, 't>,
+    pub _seal: InternToken,
 }
 /*
 case class IdT[+T <: INameT](

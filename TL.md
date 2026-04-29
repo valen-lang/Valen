@@ -1,6 +1,15 @@
 # Typing Pass Migration — TL Handoff
 
-Operational handoff for the incoming TL. Architecture and design decisions are in `docs/architecture/typing-pass-design-v3.md` — read that first, top to bottom.
+## Required Reading
+
+Read these before doing anything else, in this order:
+
+1. **This file** — read top to bottom before starting work
+2. **`docs/architecture/typing-pass-design-v3.md`** — architecture and design decisions for the typing pass migration
+3. **`FrontendRust/docs/architecture/typing-pass-arenas.md`** — current arena shape and lifetime model
+4. **`FrontendRust/zen/migration_principles.md`** — migration rules (DCCR, RCSBASC, etc.)
+5. **`FrontendRust/zen/testing.md`** — test conventions (`find_func_named`, `expect_1`/`expect_2`, etc.)
+6. **`docs/skills/migration-drive.md`** — the junior's instructions (know what they're following)
 
 For historical slab-by-slab progress (Slabs 0–14b), see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
 

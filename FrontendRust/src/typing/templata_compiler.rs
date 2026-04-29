@@ -5,6 +5,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
+use crate::typing::typing_interner::InternToken;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::{GenericParameterS, IRegionMutabilityS, LocationInDenizen};
@@ -492,11 +493,11 @@ where 's: 't,
             INameT::KindPlaceholder(kp) => INameT::KindPlaceholderTemplate(kp.template),
             _ => panic!("get_placeholder_template: unexpected local_name"),
         };
-        IdT {
+        *self.typing_interner.intern_id(IdValT {
             package_coord: id.package_coord,
             init_steps: id.init_steps,
             local_name: template_name,
-        }
+        })
     }
 }
 /*

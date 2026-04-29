@@ -4,6 +4,15 @@ use std::collections::HashMap as StdHashMap;
 
 use bumpalo::Bump;
 
+/// Construction-witness token for [`IdT`]. The inner unit field is private
+/// to this module, so only code in `typing_interner` can construct one
+/// (specifically, `intern_id`). Stored as `IdT::_seal`, this makes it a
+/// compile error to build an `IdT` literal anywhere outside the interner —
+/// every `IdT` in the program is therefore canonical, which is what
+/// `IdT::eq`'s pointer-comparison semantics require.
+#[derive(Copy, Clone, Debug)]
+pub struct InternToken(());
+
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::ast::ast::{
     PrototypeT, PrototypeValQuery, PrototypeValT, SignatureT, SignatureValQuery, SignatureValT,
@@ -330,6 +339,7 @@ where 's: 't,
             package_coord: val.package_coord,
             init_steps,
             local_name: val.local_name,
+            _seal: InternToken(()),
         });
         let stored_key = IdValT {
             package_coord: val.package_coord,

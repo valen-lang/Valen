@@ -166,6 +166,13 @@ Instead, use the same file.
 
 ## SEE ALSO (auto)
 
+- **Read when testing, calibrating, or deploying a new Guardian shield end-to-end.** → Luz/arcana/BringingInAShield-BIASZ.md
+- **Read when designing test strategy, deciding where to draw the testing boundary, or structuring a new program's entry point.** → Luz/arcana/DarkBoxAPI-DBAPIZ.md
+- **Read when creating a reqwest HTTP client, or debugging 'Too many open files' errors in a reqwest-using service.** → Luz/arcana/DontMakeNewReqwestClientPerRequest-DMNRCPRZ.md
+- **Read when tempted to use anyhow::Error, stringly-typed errors, or loose types in public APIs.** → Luz/arcana/GoFurtherOnTheStaticTypingSpectrum-GFSTSZ.md
+- **Read when coordinating concurrent access to a limited resource across threads (semaphores, mutexes, RAII guards).** → Luz/arcana/RaiiOverSemaphoresForMovedResources-ROSFMRZ.md
+- **Read when designing test strategy or deciding whether to expose internals for testing.** → Luz/arcana/TestingArchitecture-TAZ.md
+- **Read when writing tests that touch shared state, temp dirs, or global state.** → Luz/arcana/TestsMustBeFullyIsolated-TMBFIZ.md
 - **Read when writing tests that use if matches!(...).** → Luz/shields/AvoidIfMatchesInTestsIfPossible-AIMITIPX.md
 - **Read when doing file I/O or handling paths.** → Luz/shields/BaseDirPathDiscipline-BDPDX.md
 - **Read when declaring public functions or types.** → Luz/shields/DocumentPublicAPIs-DPAPIX.md
@@ -186,6 +193,7 @@ Instead, use the same file.
 - **Read when handling an unexpected runtime condition.** → Luz/shields/NeverRecoverAlwaysFail-NRAFX.md
 - **Read when writing test setup or assertion helpers.** → Luz/shields/NeverRepeatImplementationCodeInTests-NRICITX.md
 - **Read when writing code that aggregates, reports, or prints errors to the user.** → Luz/shields/NeverSummarizeAwayErrorContent-NSAECX.md
+- **Read when writing Rust code that uses or references 'static lifetime.** → Luz/shields/NeverUseStaticLifetime-NUSLX.md
 - **Read when writing comments that might accidentally resemble Guardian directives.** → Luz/shields/NoAddingGuardianDirectives-NAGDX.md
 - **Read when adding Rust code during Scala-to-Rust migration.** → Luz/shields/NoChangesWithoutScalaReference-NCWSRX.md
 - **Read when writing test code that must branch on match or conditional.** → Luz/shields/NoConditionalsInTestsOneBranchProceedsAllOthersPanic-NCTOBPAOPX.md
@@ -211,3 +219,6 @@ Instead, use the same file.
 - **Read when asserting on collection size followed by indexed access.** → Luz/shields/UseExpectFunctionsInsteadOfAssertingSizeThenIndexing-UEFIAIX.md
 - **Read when writing Rust code that imports or references paths via crate::.** → Luz/shields/UseUseForShortNamesNotCrateInBodies-UUSNNCBX.md
 - **Read when composing a Bash command to understand which shapes are auto-allowed.** → Luz/shields/ValidateReadonlyBash-VRBX.md
+- **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → Luz/skills/CollapsedCallTree.md
+- **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → Luz/skills/feature-development-flow.md
+- **Read when reviewing or critiquing a plan for testing correctness before implementation.** → Luz/skills/good-testing.md

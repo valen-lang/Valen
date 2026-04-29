@@ -15,6 +15,7 @@ use crate::postparsing::ast::{LocationInDenizen, ParameterS};
 use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compiler::Compiler;
+use crate::typing::typing_interner::InternToken;
 
 /*
 package dev.vale.typing.function
@@ -784,11 +785,11 @@ where 's: 't,
             template_name.local_name.try_into().unwrap();
         let local_name = function_template_name.make_function_name(
             self.typing_interner, self.keywords, template_args, param_types);
-        IdT {
+        *self.typing_interner.intern_id(IdValT {
             package_coord: template_name.package_coord,
             init_steps: template_name.init_steps,
             local_name,
-        }
+        })
     }
 
 /*
