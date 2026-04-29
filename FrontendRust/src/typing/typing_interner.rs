@@ -25,8 +25,9 @@ use crate::typing::templata::templata::{
     PlaceholderTemplataT, PrototypeTemplataT,
 };
 use crate::typing::types::types::{
-    InterfaceTT, InternedKindPayloadT, InternedKindPayloadValT, KindPlaceholderT, OverloadSetT,
-    RuntimeSizedArrayTT, StaticSizedArrayTT, StructTT,
+    InterfaceTT, InterfaceTTValT, InternedKindPayloadT, InternedKindPayloadValT, KindPlaceholderT,
+    OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT,
+    StaticSizedArrayTT, StaticSizedArrayTTValT, StructTT, StructTTValT,
 };
 
 // 6-family HashMap design mirroring scout_arena.rs. Values with subcollections
@@ -82,8 +83,8 @@ macro_rules! impl_intern_name_wrapper_transient {
 }
 
 macro_rules! impl_intern_kind_wrapper {
-    ($method:ident, $variant:ident, $payload_ty:ident) => {
-        pub fn $method(&self, val: $payload_ty<'s, 't>) -> &'t $payload_ty<'s, 't> {
+    ($method:ident, $variant:ident, $val_ty:ident, $canonical_ty:ident) => {
+        pub fn $method(&self, val: $val_ty<'s, 't>) -> &'t $canonical_ty<'s, 't> {
             match self.intern_kind_payload(InternedKindPayloadValT::$variant(val)) {
                 InternedKindPayloadT::$variant(r) => r,
                 _ => unreachable!(),
@@ -417,12 +418,27 @@ where 's: 't,
         use InternedKindPayloadT as T;
         use InternedKindPayloadValT as V;
         let canonical = match val {
-            V::StructTT(p) => T::StructTT(self.bump.alloc(p)),
-            V::InterfaceTT(p) => T::InterfaceTT(self.bump.alloc(p)),
-            V::StaticSizedArrayTT(p) => T::StaticSizedArrayTT(self.bump.alloc(p)),
-            V::RuntimeSizedArrayTT(p) => T::RuntimeSizedArrayTT(self.bump.alloc(p)),
+            V::StructTT(v) => {
+                let c = StructTT { id: v.id, _must_intern: MustIntern(()) };
+                T::StructTT(self.bump.alloc(c))
+            }
+            V::InterfaceTT(v) => {
+                let c = InterfaceTT { id: v.id, _must_intern: MustIntern(()) };
+                T::InterfaceTT(self.bump.alloc(c))
+            }
+            V::StaticSizedArrayTT(v) => {
+                let c = StaticSizedArrayTT { name: v.name, _must_intern: MustIntern(()) };
+                T::StaticSizedArrayTT(self.bump.alloc(c))
+            }
+            V::RuntimeSizedArrayTT(v) => {
+                let c = RuntimeSizedArrayTT { name: v.name, _must_intern: MustIntern(()) };
+                T::RuntimeSizedArrayTT(self.bump.alloc(c))
+            }
             V::KindPlaceholder(p) => T::KindPlaceholder(self.bump.alloc(p)),
-            V::OverloadSet(p) => T::OverloadSet(self.bump.alloc(p)),
+            V::OverloadSet(v) => {
+                let c = OverloadSetT { env: v.env, name: v.name, _must_intern: MustIntern(()) };
+                T::OverloadSet(self.bump.alloc(c))
+            }
         };
         let mut inner = self.inner.borrow_mut();
         inner.kind_payload_val_to_ref.insert(val, canonical);
@@ -545,49 +561,15 @@ where 's: 't,
     impl_intern_name_wrapper_simple!(intern_call_env_name, CallEnv, CallEnvNameT);
 
     // --- 6 Kind-payload wrappers ---
-    // 5 are sealed (StructTT/InterfaceTT/SSA/RSA/OverloadSet) — take fields and
-    // construct the canonical with `_must_intern: MustIntern(())` here. KindPlaceholderT
-    // is reclassified to Value-type and uses the macro form unchanged.
-    pub fn intern_struct_tt(&self, id: IdT<'s, 't>) -> &'t StructTT<'s, 't> {
-        let val = StructTT { id, _must_intern: MustIntern(()) };
-        match self.intern_kind_payload(InternedKindPayloadValT::StructTT(val)) {
-            InternedKindPayloadT::StructTT(r) => r,
-            _ => unreachable!(),
-        }
-    }
-    pub fn intern_interface_tt(&self, id: IdT<'s, 't>) -> &'t InterfaceTT<'s, 't> {
-        let val = InterfaceTT { id, _must_intern: MustIntern(()) };
-        match self.intern_kind_payload(InternedKindPayloadValT::InterfaceTT(val)) {
-            InternedKindPayloadT::InterfaceTT(r) => r,
-            _ => unreachable!(),
-        }
-    }
-    pub fn intern_static_sized_array_tt(&self, name: IdT<'s, 't>) -> &'t StaticSizedArrayTT<'s, 't> {
-        let val = StaticSizedArrayTT { name, _must_intern: MustIntern(()) };
-        match self.intern_kind_payload(InternedKindPayloadValT::StaticSizedArrayTT(val)) {
-            InternedKindPayloadT::StaticSizedArrayTT(r) => r,
-            _ => unreachable!(),
-        }
-    }
-    pub fn intern_runtime_sized_array_tt(&self, name: IdT<'s, 't>) -> &'t RuntimeSizedArrayTT<'s, 't> {
-        let val = RuntimeSizedArrayTT { name, _must_intern: MustIntern(()) };
-        match self.intern_kind_payload(InternedKindPayloadValT::RuntimeSizedArrayTT(val)) {
-            InternedKindPayloadT::RuntimeSizedArrayTT(r) => r,
-            _ => unreachable!(),
-        }
-    }
-    impl_intern_kind_wrapper!(intern_kind_placeholder, KindPlaceholder, KindPlaceholderT);
-    pub fn intern_overload_set(
-        &self,
-        env: &'t crate::typing::env::environment::IInDenizenEnvironmentT<'s, 't>,
-        name: &'s crate::postparsing::names::IImpreciseNameS<'s>,
-    ) -> &'t OverloadSetT<'s, 't> {
-        let val = OverloadSetT { env, name, _must_intern: MustIntern(()) };
-        match self.intern_kind_payload(InternedKindPayloadValT::OverloadSet(val)) {
-            InternedKindPayloadT::OverloadSet(r) => r,
-            _ => unreachable!(),
-        }
-    }
+    // 5 sealed types take their `*ValT` mirror; the macro builds the canonical
+    // (with `_must_intern: MustIntern(())`) inside `intern_kind_payload`'s match.
+    // KindPlaceholderT is Value-type per @WVSBIZ — its "Val" is the canonical itself.
+    impl_intern_kind_wrapper!(intern_struct_tt, StructTT, StructTTValT, StructTT);
+    impl_intern_kind_wrapper!(intern_interface_tt, InterfaceTT, InterfaceTTValT, InterfaceTT);
+    impl_intern_kind_wrapper!(intern_static_sized_array_tt, StaticSizedArrayTT, StaticSizedArrayTTValT, StaticSizedArrayTT);
+    impl_intern_kind_wrapper!(intern_runtime_sized_array_tt, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT, RuntimeSizedArrayTT);
+    impl_intern_kind_wrapper!(intern_kind_placeholder, KindPlaceholder, KindPlaceholderT, KindPlaceholderT);
+    impl_intern_kind_wrapper!(intern_overload_set, OverloadSet, OverloadSetTValT, OverloadSetT);
 
     // --- 6 Templata-payload wrappers (5 simple + 1 transient) ---
     impl_intern_templata_wrapper_simple!(intern_coord_templata, Coord, CoordTemplataT);

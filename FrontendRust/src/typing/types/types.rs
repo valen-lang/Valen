@@ -323,6 +323,12 @@ object contentsRuntimeSizedArrayTT {
   }
 }
 */
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StaticSizedArrayTTValT<'s, 't> {
+  pub name: IdT<'s, 't>,
+}
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct RuntimeSizedArrayTT<'s, 't> {
@@ -338,6 +344,12 @@ case class RuntimeSizedArrayTT(
   def elementType = name.localName.arr.elementType
 }
 */
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct RuntimeSizedArrayTTValT<'s, 't> {
+  pub name: IdT<'s, 't>,
+}
+
 fn unapply_i_citizen_tt() {
   panic!("Unimplemented: unapply_i_citizen_tt");
 }
@@ -405,6 +417,12 @@ case class StructTT(id: IdT[IStructNameT]) extends ICitizenTT {
   }
 }
 */
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct StructTTValT<'s, 't> {
+  pub id: IdT<'s, 't>,
+}
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceTT<'s, 't> {
@@ -420,6 +438,12 @@ case class InterfaceTT(id: IdT[IInterfaceNameT]) extends ICitizenTT with ISuperK
   }
 }
 */
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct InterfaceTTValT<'s, 't> {
+  pub id: IdT<'s, 't>,
+}
+
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
@@ -441,6 +465,13 @@ case class OverloadSetT(
 
 }
 */
+/// Interning transient (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+pub struct OverloadSetTValT<'s, 't> {
+  pub env: &'t IInDenizenEnvironmentT<'s, 't>,
+  pub name: &'s IImpreciseNameS<'s>,
+}
+
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct KindPlaceholderT<'s, 't> {
@@ -479,12 +510,12 @@ case class KindPlaceholderT(id: IdT[KindPlaceholderNameT]) extends ISubKindTT wi
 pub enum InternedKindPayloadValT<'s, 't>
 where 's: 't,
 {
-  StructTT(StructTT<'s, 't>),
-  InterfaceTT(InterfaceTT<'s, 't>),
-  StaticSizedArrayTT(StaticSizedArrayTT<'s, 't>),
-  RuntimeSizedArrayTT(RuntimeSizedArrayTT<'s, 't>),
+  StructTT(StructTTValT<'s, 't>),
+  InterfaceTT(InterfaceTTValT<'s, 't>),
+  StaticSizedArrayTT(StaticSizedArrayTTValT<'s, 't>),
+  RuntimeSizedArrayTT(RuntimeSizedArrayTTValT<'s, 't>),
   KindPlaceholder(KindPlaceholderT<'s, 't>),
-  OverloadSet(OverloadSetT<'s, 't>),
+  OverloadSet(OverloadSetTValT<'s, 't>),
 }
 
 /// Interning transient (see @TFITCX)
