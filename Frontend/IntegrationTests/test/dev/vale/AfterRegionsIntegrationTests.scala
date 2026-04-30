@@ -71,7 +71,7 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
   // and reverted pending owner review.
   //
   // See:
-  //   - quest.md (Family 3 section)
+  //   - docs/historical/after-regions-test-fixing-quest.md (Family 3 section)
   //   - investigations/family3_map_function.md (collapsed call tree, instrumentation,
   //     architectural audit, git archaeology)
   //   - docs/Generics.md §§ GTCII, CDFGI, FODAIR, AFCTD, OMCNAGP

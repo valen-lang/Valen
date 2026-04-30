@@ -155,7 +155,7 @@ class AfterRegionsTests extends FunSuite with Matchers {
     // History: variadic `Tup<T RefList>` (pre-Sept-2022) may have had this property;
     // commit c1f24496 ("Found the Milano case, attempting to fix") replaced it with
     // hand-written mut Tup2/Tup3, dropping any imm inference. See Family 4.1 in
-    // quest.md.
+    // docs/historical/after-regions-test-fixing-quest.md.
     val compile = CompilerTestCompilation.test(
       """
         |import v.builtins.tup2.*;
