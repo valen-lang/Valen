@@ -20,11 +20,9 @@ test_output/
 # Claude Code
 */.claude/settings.local.json
 */.claude/worktrees/
-Rabble
 .DS_Store
 FrontendRust/zen/logs
 Luz
-Guardian
 guardian-cache
 target
 Frontend/lib/scala-reflect-2.12.8.jar
