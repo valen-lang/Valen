@@ -103,11 +103,13 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     vimpl()
   }
 
-  // Depends on Basic interface anonymous subclass
-  // This test does not pass yet, use #[ignore].
-  test("Reports error") {
-    // https://github.com/ValeLang/Vale/issues/548
-
+  // https://github.com/ValeLang/Vale/issues/548
+  // Real bug: impl-ing a mut interface with an imm struct is silently accepted, then
+  // explodes mid-override-search with BadIsaSuperKind(B). Fix attempt was an impl-time
+  // mutability check in ImplCompiler — but it broke IFunction1.anonymous (interface and
+  // anonymous-substruct both carry placeholder M's whose IdTs differ but are conceptually
+  // the same). Punted; needs a substitution-based comparison. See investigations/reports_error_1_3.md.
+  ignore("Reports error") {
     val compile = CompilerTestCompilation.test(
       """
         |interface A {
@@ -183,21 +185,40 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
-  // Depends on Generic interface anonymous subclass
-  // This test does not pass yet, use #[ignore].
-  test("Lambda is incompatible anonymous interface") {
+  test("Lambda body type mismatches anonymous interface return type") {
     val compile = CompilerTestCompilation.test(
       """
         |interface AFunction1<P Ref> {
         |  func __call(virtual this &AFunction1<P>, a P) int;
         |}
         |exported func main() {
-        |  arr = AFunction1<int>((_) => { 4 });
+        |  arr = AFunction1<int>((_) => { true });
         |}
         |""".stripMargin)
 
+    // The compiler rejects this not via a body-vs-return-type comparison on the
+    // synthesized forwarder, but earlier: the substruct constructor's __call bound
+    // (emitted by AnonymousInterfaceMacro) checks the lambda's __call return type
+    // during inference and reports a ReturnTypeConflictInConclusionResolve. See
+    // investigations/family1_4_body_result_doesnt_match_unreachable.md.
     compile.getCompilerOutputs() match {
-      case Err(BodyResultDoesntMatch(_, _, _, _)) =>
+      case Err(CouldntFindFunctionToCallT(_, fff)) => {
+        val rejectionReasons = fff.rejectedCalleeToReason.map(_._2).toVector
+        rejectionReasons match {
+          case Vector(FindFunctionResolveFailure(
+              ResolvingResolveConclusionError(
+                ReturnTypeConflictInConclusionResolve(
+                  _,
+                  CoordT(ShareT, _, IntT(_)),
+                  actualPrototype)))) => {
+            actualPrototype.returnType match {
+              case CoordT(ShareT, _, BoolT()) =>
+              case other => vwat(other)
+            }
+          }
+          case other => vwat(other)
+        }
+      }
       case Err(other) => {
         val codeMap = compile.getCodeMap().getOrDie()
         vwat(

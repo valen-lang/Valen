@@ -103,6 +103,19 @@ class AfterRegionsTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
   }
 
+  test("Lambda body type matches anonymous interface return type") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |interface AFunction1<P Ref> {
+        |  func __call(virtual this &AFunction1<P>, a P) int;
+        |}
+        |exported func main() {
+        |  arr = AFunction1<int>((_) => { 4 });
+        |}
+        |""".stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
   // Prot[name, params, return] decomposition is dead syntax — no .vale code uses it,
   // and the func syntax (CallSiteFuncSR/ResolveSR) can't discover an unknown return type
   // from just name+params. The solver requires either the return type or the full prototype
