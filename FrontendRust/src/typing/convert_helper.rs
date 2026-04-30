@@ -104,10 +104,14 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_expr: ReferenceExpressionTE<'s, 't>,
+        source_expr: &'t ReferenceExpressionTE<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
-    ) -> ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: convert");
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        if source_expr.result().coord == target_pointer_type {
+            return source_expr;
+        }
+
+        panic!("implement: convert — non-trivial conversion");
     }
 /*
   def convert(

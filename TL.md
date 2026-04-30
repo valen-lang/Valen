@@ -50,15 +50,33 @@ Net result: the `header_sig.id == needle_signature.id` assertion is gone; the te
 
 1. **Removed `FunctionEnvironmentBoxT` from Scala** for `declareAndEvaluateFunctionBody` and `evaluateFunctionBody` (the Box's `setReturnType`/`addEntry`/`addEntries` mutators are never invoked on this entry point). Edited Scala source first, updated Rust audit-trail `/* ... */` blocks to match, then changed Rust signatures to `&'t FunctionEnvironmentT` directly. SCPX clean. See "Editing Scala To Match A Rust Simplification" below.
 2. **Eagerly promoted ~23 panic stubs to `&'t self`** across `function_environment_t.rs` and `environment.rs` for methods matching the wrap-self (`lookup_*_inner` → `IEnvironmentT::Variant(self)`) or embed-self (`root_compiling_denizen_env`, `make_child*`) patterns. Doc rule added as design v3 §3.4a. See "Interning Approach" rule #4 below.
-3. **Added `snapshot(&self, interner)` to `TemplatasStoreBuilder`, `NodeEnvironmentBuilder`, `FunctionEnvironmentBuilder`** — Scala's `Box.snapshot` semantics, mid-flight freezes that don't consume the builder. Used by `evaluateFunctionBody`'s `val startingEnv = env.snapshot` line. Design v3 §3.3 updated.
+3. **Added `snapshot(&self, interner)` to `TemplatasStoreBuilder`, `NodeEnvironmentBox`, `FunctionEnvironmentBuilder`** — Scala's `Box.snapshot` semantics, mid-flight freezes that don't consume the builder. Used by `evaluateFunctionBody`'s `val startingEnv = env.snapshot` line. Design v3 §3.3 updated.
 
 JR is now unblocked on `evaluate_function_body` body migration. Driving test remains `simple_program_returning_an_int_explicit`. The current panic point is wherever the body migration lands next.
+
+**Latest session (NodeEnvironmentBox restructuring + expression-hierarchy equality opt-out):** While JR was migrating `unletLocalWithoutDropping` and adjacent helpers, several scaffolding gaps surfaced — all addressed at TL/architect level:
+
+1. **`result()` dispatch added on `ReferenceExpressionTE` and `AddressExpressionTE`.** Scala's `def result` lives on the trait; the slice pipeline emitted module-level placeholder free fns (`reference_expression_result`, `address_expression_result`) that didn't infer struct context. Wrapped each in an `impl<'s, 't> XExpressionTE<'s, 't> { pub fn result(&self) -> ... }` block dispatching to per-variant `e.result()` panic stubs. Same pattern as the "Proactively Add Inherited Dispatch Methods" section below.
+
+2. **`NodeEnvironmentBuilder` renamed to `NodeEnvironmentBox`** (architect-level Scala-parity rename). The Rust "Builder" naming was a leftover from when design v3 §3.3 framed these as one-shot builders; with `snapshot()` added in slab 15c, the type now has full `Box` semantics. Renaming brought it in line with Scala's `NodeEnvironmentBox`. Same logic still pending for `FunctionEnvironmentBuilder` → `FunctionEnvironmentBoxT`. Added a comment above the struct explaining why we have a Box at all (arena allocation precludes `&mut NodeEnvironmentT`; arena slices `&'t [...]` aren't growable in place).
+
+3. **Reversed design v3 §3.3's "Box deleted in Rust, subsumed by builder-freeze pattern" stance.** The Rust file `function_environment_t.rs` had carried 24 `// (Deleted in Rust per design v3 §3.3)` annotations on every Scala `NodeEnvironmentBox` method, with the actual Rust struct + impl living ~1100 lines later as orphans. Walked the Scala audit-trail block at lines 822-1020 and sliced in proper Rust impls adjacent to each Scala `/* def ... */`. Implemented `add_variable`, `get_all_locals`, `mark_local_unstackified` (verbatim Scala port). Panic-stubbed the other 22 methods. Deleted the orphan struct + impl from line 1950. Updated design v3 §3.3 to reflect the reversal.
+
+4. **`local_helper.rs` 7 method signatures aligned**: `nenv: &NodeEnvironmentT<'s, 't>` → `nenv: &mut NodeEnvironmentBox<'s, 't>` to match Scala's `NodeEnvironmentBox` parameter type and the prevailing convention in `expression_compiler.rs` / `call_compiler.rs` / `pattern_compiler.rs` (~25 sites already use `&mut NodeEnvironmentBox`). Bodies still `panic!()`.
+
+5. **Dropped `NodeEnvironmentBox::build_in` and `FunctionEnvironmentBuilder::build_in`** — both Rust-only (no Scala counterpart), zero user-facing call sites. The only finalizer that fires is `env.snapshot(...)` at `function_body_compiler.rs:267`, mirroring Scala's `Box.snapshot`. `TemplatasStoreBuilder::build_in` kept (it's a genuine one-shot builder, ~8 user-facing sites).
+
+6. **Dropped `derive(PartialEq)` from the entire expression hierarchy in `expressions.rs`** — `ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, plus all ~50 per-variant struct types. Mirrors Scala's 52 `override def equals(obj: Any): Boolean = vcurious()` overrides in `ast/expressions.scala`. Rust's "no impl" gives a strictly stronger compile-time error vs Scala's runtime panic. Documented as a vcurious-mirror exception in IEOIBZ + TL.md §3 + design v3 §2 — Arena-allocated types that opt out of equality entirely (no derive, no impl) when the Scala counterpart `vcurious`-disables comparison. New rule for future TLs: check the Scala counterpart's `equals` override before adding `PartialEq` to a Rust port.
+
+7. **`migration-drive.md` got two new notes**: a general "check `///` TFITCX classification before adding Clone/Copy/PartialEq derives" note (so future JRs don't paper over ownership errors with `Clone` on Arena-allocated types — the FunctionHeaderT case JR escalated today), and a "re-read this skill on every compaction" note at the top so JR picks up newly-added gotchas after context resets.
+
+JR is now unblocked on `unletLocalWithoutDropping` body and the surrounding `make_temporary_local_defer` / `unlet_and_drop_all` family. The active test is still `simple_program_returning_an_int_explicit`.
 
 ---
 
 ## Known Residual Items
 
-- **141 panic-stubbed method bodies** across 17 files (top: expression_compiler.rs 21, templata_compiler.rs 20, infer_compiler.rs 15). Plus 88 stale stubs labeled "Slab 10" in compiler_outputs.rs (52) and templata_compiler.rs (36).
+- **~165 panic-stubbed method bodies** across 17+ files (top: expression_compiler.rs 21, templata_compiler.rs 20, infer_compiler.rs 15, function_environment_t.rs ~25 — bumped today by the NodeEnvironmentBox panic-stub surface restoration). Plus 88 stale stubs labeled "Slab 10" in compiler_outputs.rs (52) and templata_compiler.rs (36). The count is approximate; treat as a rough magnitude, not an exact figure.
 - **dispatch_function_body_macro** and friends not wired.
 - **LocationInFunctionEnvironmentT.path: Vec<i32>** in `ast/ast.rs` violates AASSNCMCX. Future cleanup turns into `&'t [i32]`.
 - **IRegionNameT** retains `_Phantom` — 0 Scala implementors found, deferred.
@@ -193,6 +211,18 @@ Wrappers that hold `&'t FooT` (or `&'s` for higher-typing types) just `#[derive(
 Identity types with this pattern: `IEnvironmentT`, `FunctionA`, `StructA`, `InterfaceA`, `ImplA`, `FunctionHeaderT`, `IdT` (slight outlier — it ptr-eq's `init_steps`'s slice pointer, not the whole struct, because it lives by value, not by reference).
 
 Documented exceptions (kept as `self.id == other.id`): the variant env types (`PackageEnvironmentT`, `CitizenEnvironmentT`, `FunctionEnvironmentT`, etc.). These are sound because `IdT` is sealed/canonical, and these types are usually compared via `&'t IEnvironmentT` (which goes through `IEnvironmentT::eq`'s ptr-eq) anyway.
+
+**Equality opt-out (vcurious mirror).** Some Arena-allocated types intentionally have **no equality at all** — no derive, no impl. The expression hierarchy is the canonical case: `ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, plus the ~50 per-variant struct types in `ast/expressions.rs`. Scala has 52 `override def equals(obj: Any): Boolean = vcurious()` overrides on these in `ast/expressions.scala` — Scala panics on any `==` call. Rust mirrors this by not impl-ing `PartialEq`/`Hash` at all, which is strictly stronger (compile error vs runtime panic).
+
+Before adding a new arena-allocated type, check the Scala counterpart's equality story:
+
+| Scala has | Rust does |
+|---|---|
+| Default case-class equality (structural) | (Doesn't happen for arena-allocated types in practice) |
+| `vcurious()` equals/hashCode overrides | **No PartialEq/Hash impl or derive at all** |
+| `override def equals` calling `==` on a specific identity field (e.g. `id`) | Manual ptr-eq via `std::ptr::eq` per @IEOIBZ |
+
+The classification `/// Arena-allocated` is about lifetime/storage (the type lives in the typing arena, accessed via `&'t T`), not about identity semantics. Most Arena-allocated types do have identity and follow @IEOIBZ; the expression hierarchy is the documented opt-out.
 
 ### 4. `&'t self` on arena/interned-type methods that emit a `'t`-back-pointer to self (design v3 §3.4a)
 

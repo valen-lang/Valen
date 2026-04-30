@@ -155,7 +155,7 @@ where 's: 't,
     pub fn evaluate_and_coerce_to_reference_expressions(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -191,7 +191,7 @@ where 's: 't,
     pub fn evaluate_lookup_for_load(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -234,7 +234,7 @@ where 's: 't,
     pub fn evaluate_addressible_lookup_for_mutate(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         region: RegionT,
         load_range: RangeS<'s>,
@@ -335,7 +335,7 @@ where 's: 't,
     pub fn evaluate_addressible_lookup(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         ranges: &[RangeS<'s>],
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
@@ -440,7 +440,7 @@ where 's: 't,
     pub fn make_closure_struct_construct_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         region: RegionT,
         closure_struct_ref: StructTT<'s, 't>,
@@ -521,7 +521,7 @@ where 's: 't,
     pub fn evaluate_and_coerce_to_reference_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -569,7 +569,7 @@ where 's: 't,
 {
     pub fn coerce_to_reference_expression(
         &self,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
@@ -601,7 +601,7 @@ where 's: 't,
     pub fn evaluate_expected_address_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -640,7 +640,7 @@ where 's: 't,
     pub fn evaluate_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         outer_call_location: LocationInDenizen<'s>,
@@ -669,22 +669,79 @@ where 's: 't,
                         coutputs, nenv, life.add(0), parent_ranges,
                         outer_call_location, region, ret.inner);
 
-                let inner_expr_2 = match nenv.parent_function_env.maybe_return_type {
+                let inner_expr_2 = match nenv.maybe_return_type() {
                     None => uncasted_inner_expr_2,
-                    Some(_return_type) => {
-                        panic!("implement: evaluate_expression ReturnSE — return type conversion");
+                    Some(return_type) => {
+                        let snapshot = nenv.snapshot(self.typing_interner);
+                        let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+                        let range_list: Vec<RangeS<'s>> =
+                            std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                        match self.is_type_convertible(
+                            coutputs, &snapshot_env, &range_list, outer_call_location,
+                            uncasted_inner_expr_2.result().coord, return_type) {
+                            false => {
+                                panic!("implement: evaluate_expression ReturnSE — CouldntConvertForReturnT");
+                            }
+                            true => {
+                                self.convert(
+                                    snapshot_env, coutputs, &range_list, outer_call_location,
+                                    uncasted_inner_expr_2, return_type)
+                            }
+                        }
                     }
                 };
 
-                let all_locals = &nenv.declared_locals;
-                let unstackified_locals = &nenv.unstackified_locals;
+                let all_locals = nenv.get_all_locals();
+                let unstackified_locals = nenv.get_all_unstackified_locals();
                 let variables_to_destruct: Vec<&ILocalVariableT<'s, 't>> = all_locals.iter()
-                    .filter(|x| {
-                        panic!("implement: evaluate_expression ReturnSE — filter locals");
-                    })
+                    .filter(|x| !unstackified_locals.contains(&x.name()))
                     .collect();
+                let reversed_variables_to_destruct: Vec<&ILocalVariableT<'s, 't>> =
+                    variables_to_destruct.into_iter().rev().collect();
 
-                panic!("implement: evaluate_expression ReturnSE — result variable and return wrapping");
+                let mut returns = returns_from_inner_expr;
+                returns.insert(inner_expr_2.result().coord);
+
+                let result_var_name = self.typing_interner.intern_typing_pass_function_result_var_name(
+                    TypingPassFunctionResultVarNameT { _phantom: std::marker::PhantomData });
+                let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
+                let result_variable = ReferenceLocalVariableT {
+                    name: result_var_id,
+                    variability: VariabilityT::Final,
+                    coord: inner_expr_2.result().coord,
+                };
+                let result_let = self.typing_interner.alloc(
+                    ReferenceExpressionTE::LetNormal(LetNormalTE {
+                        variable: ILocalVariableT::Reference(result_variable),
+                        expr: inner_expr_2,
+                    }));
+                nenv.add_variable(IVariableT::ReferenceLocal(result_variable));
+
+                let range_list: Vec<RangeS<'s>> =
+                    std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                let destruct_exprs_refs =
+                    self.unlet_and_drop_all(
+                        coutputs, nenv, &range_list, outer_call_location, region,
+                        &reversed_variables_to_destruct);
+
+                let get_result_expr = self.unlet_local_without_dropping(
+                    nenv, &ILocalVariableT::Reference(result_variable));
+                let get_result_expr_ref = self.typing_interner.alloc(
+                    ReferenceExpressionTE::Unlet(get_result_expr));
+
+                let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                all_exprs.push(result_let);
+                all_exprs.extend(destruct_exprs_refs);
+                all_exprs.push(get_result_expr_ref);
+
+                let consecutor = self.consecutive(&all_exprs);
+
+                let return_te = self.typing_interner.alloc(
+                    ReferenceExpressionTE::Return(ReturnTE {
+                        source_expr: consecutor,
+                    }));
+
+                (ExpressionTE::Reference(return_te), returns)
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -2046,7 +2103,7 @@ where 's: 't,
     pub fn dot_borrow(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'s>,
@@ -2101,7 +2158,7 @@ where 's: 't,
     pub fn evaluate_closure(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -2195,7 +2252,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -2230,7 +2287,7 @@ where 's: 't,
     pub fn translate_pattern_list(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -2273,7 +2330,7 @@ where 's: 't,
     pub fn astronomize_lambda(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionA<'s> {
@@ -2360,14 +2417,22 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'s>,
         region: RegionT,
         expr_te: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let snapshot = nenv.snapshot(self.typing_interner);
+        let unreversed_variables_to_destruct =
+            snapshot.get_live_variables_introduced_since(starting_nenv);
+
+        if unreversed_variables_to_destruct.is_empty() {
+            expr_te
+        } else {
+            panic!("implement: drop_since — non-empty variables to destruct");
+        }
     }
 /*
   def dropSince(
@@ -2443,7 +2508,7 @@ where 's: 't,
 {
     pub fn resultify_expressions(
         &self,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {

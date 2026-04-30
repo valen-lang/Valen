@@ -40,7 +40,7 @@ Inline `Copy`, not arena-allocated:
 Neither arena (stack / heap-Vec / HashMap):
 - `CompilerOutputs<'s, 't>` — accumulator with heap-backed HashMaps, dies at pass end.
 - `Compiler<'s, 'ctx, 't>` — stack god struct, four `&'ctx` fields.
-- Env builders (`NodeEnvironmentBuilder` etc.) — stack-local with heap `Vec`s, freeze into `'t`.
+- Env builders (`NodeEnvironmentBox` etc.) — stack-local with heap `Vec`s, freeze into `'t`.
 
 ### Env mutation pattern
 

@@ -3,6 +3,8 @@ name: migration-drive
 description: Iteratively replace panics in a Scala-to-Rust migration with minimal, iterative parity-only changes with no novel logic, adding panic/assert placeholders until compile/test paths are implemented.
 ---
 
+> **Every time you compact, re-read this file** (`docs/skills/migration-drive.md`). It changes often as the TL adds notes about new gotchas, escalation patterns, and migration rules learned during the session. Compaction drops the prior conversation but not the file — if you re-read it, you pick up everything the previous instance learned. If you don't, you'll repeat mistakes that have already been documented.
+
 Here's what I want you to do:
 
 1. First, look at these files:
@@ -51,3 +53,14 @@ Notes:
 
 * **temp-disable:** Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.
 * **Scaffolding gap escalation:** If you need to call a method that doesn't exist yet on a Rust enum, but the Scala trait *does* have the corresponding `def` (e.g. `parentEnv.globalEnv` where `def globalEnv` exists on the Scala trait but no `fn global_env()` exists on the Rust enum) — this is a scaffolding gap from the slice pipeline. **Do NOT add the method yourself** (Guardian NNDX will rightly block you) and **do NOT temp-disable NNDX**. Instead, STOP and escalate: report what method is missing, which Scala trait defines it, and which Rust enum needs it. The TL will add it.
+
+* **Include enough context in every TL escalation that the TL can find what you're looking at without re-deriving your investigation.** The TL doesn't see your conversation — your escalation message is all they have. At minimum: the Rust file path and line number, the Scala counterpart's file/line, the exact error message if any, and the relevant TFITCX classifications. Quote, don't paraphrase. If you considered multiple options, list them with the trade-offs you saw.
+
+* **Check the `///` TFITCX classification before adding `Clone`/`Copy` or other derives to existing types.** When you hit an ownership/borrow error and the obvious fix looks like "add `Clone`" (or `Copy`, or `PartialEq`, or `Hash`), pause and look at the `///` doc comment on the type:
+    * `/// Arena-allocated (see @TFITCX)` — Clone/Copy explicitly forbidden by the rule ("immutable after construction, no Clone"). The intended access pattern is `&'t T` everywhere; if you need the value in two places, restructure to pass references, not to clone. Common shape: build locally, arena-allocate into the parent struct, return `&parent.field` to get `&'t T`. Adding Clone also breaks @IEOIBZ identity-equality for the type — two arena allocations are supposed to be distinct things.
+    * `/// Value-type (see @TFITCX)` — Copy/Clone are appropriate and usually already derived. If they're not, check whether the type's fields are all Copy; if yes, fine to add. If no, the type might be misclassified.
+    * `/// Interned (see @TFITCX)` — Copy is correct (Interned types are tagged-pointer-sized, e.g. `IdT`, name enums); the canonical refs are already Copy. Don't impl Clone manually — derive only.
+    * `/// Temporary state (see @TFITCX)` — depends. Builders/boxes usually aren't cloned; they're either consumed (`build_in`) or snapshot via `&self`. Ask the TL.
+    * `/// Miscellaneous` — case by case, ask.
+
+  Same rule applies to `PartialEq`/`Hash` derives: check the classification + the Scala counterpart. If Scala has `vcurious()` equals overrides on the type, mirror with no impl in Rust (compile error > runtime panic). If Scala has structural-by-default and Rust is Value-type, derive. If Rust is Arena-allocated with identity, manual `std::ptr::eq` per @IEOIBZ. **The classification is the spec — don't paper over compile errors by adding derives that contradict it.** When in doubt, escalate.

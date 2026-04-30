@@ -4,6 +4,7 @@ use crate::postparsing::ast::{IBodyS, IFunctionAttributeS, LocationInDenizen};
 use crate::postparsing::names::*;
 use crate::typing::types::types::*;
 use crate::typing::ast::ast::*;
+use crate::typing::ast::expressions::{BlockTE, ReferenceExpressionTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::env::environment::*;
@@ -511,17 +512,36 @@ where 's: 't,
         is_destructor: bool,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
         instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
-    ) -> FunctionHeaderT<'s, 't> {
+    ) -> &'t FunctionHeaderT<'s, 't> {
         // val (maybeEvaluatedRetCoord, body2) =
         //   bodyCompiler.declareAndEvaluateFunctionBody(
         //     fullEnvSnapshot, coutputs, life, callRange, callLocation,
         //     fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
-        let (_maybe_evaluated_ret_coord, _body2) =
+        let (maybe_evaluated_ret_coord, body2) =
             self.declare_and_evaluate_function_body(
                 full_env_snapshot, coutputs, life, call_range, call_location,
                 full_env_snapshot.function, maybe_explicit_return_coord, params_t, is_destructor);
 
-        panic!("implement: finish_function_maybe_deferred — post body compilation");
+        let ret_coord = match (maybe_explicit_return_coord, maybe_evaluated_ret_coord) {
+            (Some(c), None) => c,
+            (None, Some(c)) => c,
+            _ => panic!("Expected exactly one return coord"),
+        };
+        let header = self.finalize_header(
+            full_env_snapshot, coutputs, attributes_t.to_vec(), params_t, ret_coord);
+
+        let _needed_function_bounds = self.assemble_rune_to_function_bound(full_env_snapshot.templatas);
+        let _needed_impl_bounds = self.assemble_rune_to_impl_bound(full_env_snapshot.templatas);
+
+        let header_sig = self.typing_interner.alloc(header.to_signature());
+        assert!(coutputs.lookup_function(header_sig).is_none());
+        let function2 = self.typing_interner.alloc(FunctionDefinitionT {
+            header,
+            instantiation_bound_params: instantiation_bound_params.clone(),
+            body: ReferenceExpressionTE::Block(BlockTE { inner: body2.inner }),
+        });
+        coutputs.add_function(header_sig, function2);
+        &function2.header
     }
 /*
   // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.

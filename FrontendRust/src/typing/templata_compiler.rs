@@ -5,6 +5,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::typing_interner::MustIntern;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
@@ -516,7 +517,21 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let mut result = HashMap::new();
+        for (name, entry) in templatas.name_to_entry.iter() {
+            match (name, entry) {
+                (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata))) => {
+                    match &proto_templata.prototype.id.local_name {
+                        INameT::FunctionBound(_) => {
+                            panic!("implement: assemble_rune_to_function_bound — FunctionBoundNameT match");
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+        result
     }
 }
 /*
@@ -536,7 +551,21 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, IdT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let mut result = HashMap::new();
+        for (name, entry) in templatas.name_to_entry.iter() {
+            match (name, entry) {
+                (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Isa(isa))) => {
+                    match &isa.impl_name.local_name {
+                        INameT::ImplBound(_) => {
+                            panic!("implement: assemble_rune_to_impl_bound — ImplBoundNameT match");
+                        }
+                        _ => {}
+                    }
+                }
+                _ => {}
+            }
+        }
+        result
     }
 }
 /*
@@ -1516,7 +1545,29 @@ where 's: 't,
         source_pointer_type: CoordT<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let CoordT { ownership: target_ownership, region: target_region, kind: target_type } = target_pointer_type;
+        let CoordT { ownership: source_ownership, region: source_region, kind: source_type } = source_pointer_type;
+
+        match (&source_type, &target_type) {
+            (KindT::Never(_), _) => return true,
+            (a, b) if a == b => {}
+            _ => {
+                panic!("implement: isTypeConvertible — non-equal kind cases");
+            }
+        }
+
+        if source_region != target_region {
+            return false;
+        }
+
+        match (source_ownership, target_ownership) {
+            (a, b) if a == b => {}
+            _ => {
+                panic!("implement: isTypeConvertible — non-equal ownership cases");
+            }
+        }
+
+        true
     }
 /*
   def isTypeConvertible(

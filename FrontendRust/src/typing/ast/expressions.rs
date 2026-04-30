@@ -121,7 +121,13 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 */
 }
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Debug)]
+//
+// Wrapper holding `&'t ReferenceExpressionTE` / `&'t AddressExpressionTE`. The inner
+// expression hierarchies opt out of equality entirely (mirroring Scala's `vcurious`
+// equals overrides — see comment above `ReferenceExpressionTE`), so this wrapper
+// can't `derive(PartialEq)` either: the derive would call the inner type's eq, which
+// doesn't exist. Misuse fails at compile time.
+#[derive(Copy, Clone, Debug)]
 pub enum ExpressionTE<'s, 't> {
     Reference(&'t ReferenceExpressionTE<'s, 't>),
     Address(&'t AddressExpressionTE<'s, 't>),
@@ -139,7 +145,19 @@ fn expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 }
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+//
+// No `PartialEq`/`Hash` derive or impl — opts out of equality entirely, mirroring
+// Scala's `override def equals(obj: Any): Boolean = vcurious()` on every expression
+// case class in `ast/expressions.scala` (52 occurrences). Scala's `vcurious` panics
+// at runtime; Rust's "no impl" gives a strictly stronger compile-time error.
+//
+// Per @TFITCX this is `Arena-allocated` (lifetime/storage in the typing arena), but
+// per @IEOIBZ such types normally implement identity equality via `std::ptr::eq`.
+// The expression hierarchy is the exception: it's stored in the arena for memory
+// reasons (large, deeply nested trees with `&'t` child pointers) but has no
+// identity semantics — two distinct allocations of `ConstantIntTE { value: 5 }` are
+// neither `==` (Scala vfails) nor distinguishable by identity (no callers care).
+#[derive(Debug)]
 pub enum ReferenceExpressionTE<'s, 't> {
     LetAndLend(LetAndLendTE<'s, 't>),
     LockWeak(LockWeakTE<'s, 't>),
@@ -256,7 +274,7 @@ fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented:
 }
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub enum AddressExpressionTE<'s, 't> {
     LocalLookup(LocalLookupTE<'s, 't>),
     StaticSizedArrayLookup(StaticSizedArrayLookupTE<'s, 't>),
@@ -299,7 +317,7 @@ fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: var
 
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct LetAndLendTE<'s, 't>
 where 's: 't,
 {
@@ -359,7 +377,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct LockWeakTE<'s, 't>
 where 's: 't,
 {
@@ -413,7 +431,7 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct BorrowToWeakTE<'s, 't>
 where 's: 't,
 {
@@ -456,7 +474,7 @@ impl<'s, 't> BorrowToWeakTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct LetNormalTE<'s, 't>
 where 's: 't,
 {
@@ -482,7 +500,15 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 */
 }
 impl<'s, 't> LetNormalTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.expr.result().coord.region,
+                kind: KindT::Void(VoidT {}),
+            }
+        }
+    }
 /*
   override def result = {
     ReferenceResultT(CoordT(ShareT, expr.result.coord.region, VoidT()))
@@ -507,7 +533,7 @@ impl<'s, 't> LetNormalTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct UnletTE<'s, 't> {
     pub variable: ILocalVariableT<'s, 't>,
 }
@@ -528,7 +554,9 @@ impl<'s, 't> UnletTE<'s, 't> {
 */
 }
 impl<'s, 't> UnletTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.variable.coord() }
+    }
 /*
   override def result = ReferenceResultT(variable.coord)
 
@@ -538,7 +566,7 @@ impl<'s, 't> UnletTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DiscardTE<'s, 't>
 where 's: 't,
 {
@@ -596,7 +624,7 @@ impl<'s, 't> DiscardTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DeferTE<'s, 't>
 where 's: 't,
 {
@@ -642,7 +670,7 @@ impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct IfTE<'s, 't>
 where 's: 't,
 {
@@ -702,7 +730,7 @@ impl<'s, 't> IfTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct WhileTE<'s, 't>
 where 's: 't,
 {
@@ -746,7 +774,7 @@ impl<'s, 't> WhileTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct MutateTE<'s, 't>
 where 's: 't,
 {
@@ -780,7 +808,7 @@ impl<'s, 't> MutateTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct RestackifyTE<'s, 't>
 where 's: 't,
 {
@@ -814,7 +842,7 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct TransmigrateTE<'s, 't>
 where 's: 't,
 {
@@ -850,7 +878,7 @@ impl<'s, 't> TransmigrateTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ReturnTE<'s, 't>
 where 's: 't,
 {
@@ -874,7 +902,15 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ReturnTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.source_expr.result().coord.region,
+                kind: KindT::Never(NeverT { from_break: false }),
+            }
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(ShareT, sourceExpr.result.coord.region, NeverT(false)))
@@ -884,7 +920,7 @@ impl<'s, 't> ReturnTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct BreakTE<'s, 't> {
     pub region: RegionT,
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -915,7 +951,7 @@ impl<'s, 't> BreakTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct BlockTE<'s, 't>
 where 's: 't,
 {
@@ -945,7 +981,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> BlockTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
 /*
   override def result = inner.result
 }
@@ -953,7 +989,7 @@ impl<'s, 't> BlockTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct PureTE<'s, 't>
 where 's: 't,
 {
@@ -1001,11 +1037,11 @@ impl<'s, 't> PureTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConsecutorTE<'s, 't>
 where 's: 't,
 {
-    pub exprs: &'t [ReferenceExpressionTE<'s, 't>],
+    pub exprs: &'t [&'t ReferenceExpressionTE<'s, 't>],
 }
 /*
 case class ConsecutorTE(exprs: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
@@ -1023,7 +1059,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConsecutorTE<'s, 't> where 's: 't, {
-    fn new(exprs: &'t [ReferenceExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> { panic!("Unimplemented: ConsecutorTE::new"); }
+    fn new(exprs: &'t [&'t ReferenceExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> { panic!("Unimplemented: ConsecutorTE::new"); }
 /*
   // There shouldn't be a 0-element consecutor.
   // If we want a consecutor that returns nothing, put a VoidLiteralTE in it.
@@ -1067,7 +1103,15 @@ impl<'s, 't> ConsecutorTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> ConsecutorTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        let never_coord = self.exprs.iter()
+            .map(|e| e.result().coord)
+            .find(|c| matches!(c, CoordT { ownership: OwnershipT::Share, kind: KindT::Never(_), .. }));
+        match never_coord {
+            Some(n) => ReferenceResultT { coord: n },
+            None => self.exprs.last().unwrap().result(),
+        }
+    }
 /*
   override val result: ReferenceResultT =
     exprs.map(_.result.coord)
@@ -1086,7 +1130,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct TupleTE<'s, 't>
 where 's: 't,
 {
@@ -1132,7 +1176,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct StaticArrayFromValuesTE<'s, 't>
 where 's: 't,
 {
@@ -1168,7 +1212,7 @@ impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ArraySizeTE<'s, 't>
 where 's: 't,
 {
@@ -1198,7 +1242,7 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct IsSameInstanceTE<'s, 't>
 where 's: 't,
 {
@@ -1237,7 +1281,7 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct AsSubtypeTE<'s, 't>
 where 's: 't,
 {
@@ -1296,7 +1340,7 @@ impl<'s, 't> AsSubtypeTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct VoidLiteralTE<'s, 't> {
     pub region: RegionT,
     pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
@@ -1325,7 +1369,7 @@ impl<'s, 't> VoidLiteralTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConstantIntTE<'s, 't> {
     pub value: ITemplataT<'s, 't>,
     pub bits: i32,
@@ -1359,7 +1403,7 @@ impl<'s, 't> ConstantIntTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConstantBoolTE<'s, 't> {
     pub value: bool,
     pub region: RegionT,
@@ -1389,7 +1433,7 @@ impl<'s, 't> ConstantBoolTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConstantStrTE<'s, 't> {
     pub value: StrI<'s>,
     pub region: RegionT,
@@ -1419,7 +1463,7 @@ impl<'s, 't> ConstantStrTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConstantFloatTE<'s, 't> {
     pub value: f64,
     pub region: RegionT,
@@ -1449,7 +1493,7 @@ impl<'s, 't> ConstantFloatTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct LocalLookupTE<'s, 't> {
     pub range: RangeS<'s>,
     pub local_variable: ILocalVariableT<'s, 't>,
@@ -1488,7 +1532,7 @@ impl<'s, 't> LocalLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ArgLookupTE<'s, 't> {
     pub param_index: i32,
     pub coord: CoordT<'s, 't>,
@@ -1520,7 +1564,7 @@ impl<'s, 't> ArgLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct StaticSizedArrayLookupTE<'s, 't>
 where 's: 't,
 {
@@ -1567,7 +1611,7 @@ impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct RuntimeSizedArrayLookupTE<'s, 't>
 where 's: 't,
 {
@@ -1624,7 +1668,7 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ArrayLengthTE<'s, 't>
 where 's: 't,
 {
@@ -1654,7 +1698,7 @@ impl<'s, 't> ArrayLengthTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ReferenceMemberLookupTE<'s, 't>
 where 's: 't,
 {
@@ -1699,7 +1743,7 @@ impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct AddressMemberLookupTE<'s, 't>
 where 's: 't,
 {
@@ -1738,7 +1782,7 @@ impl<'s, 't> AddressMemberLookupTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct InterfaceFunctionCallTE<'s, 't>
 where 's: 't,
 {
@@ -1775,7 +1819,7 @@ impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ExternFunctionCallTE<'s, 't>
 where 's: 't,
 {
@@ -1821,7 +1865,7 @@ impl<'s, 't> ExternFunctionCallTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct FunctionCallTE<'s, 't>
 where 's: 't,
 {
@@ -1874,7 +1918,7 @@ impl<'s, 't> FunctionCallTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ReinterpretTE<'s, 't>
 where 's: 't,
 {
@@ -1930,7 +1974,7 @@ impl<'s, 't> ReinterpretTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct ConstructTE<'s, 't>
 where 's: 't,
 {
@@ -1968,7 +2012,7 @@ impl<'s, 't> ConstructTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct NewMutRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
@@ -2016,7 +2060,7 @@ impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct StaticArrayFromCallableTE<'s, 't>
 where 's: 't,
 {
@@ -2064,7 +2108,7 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DestroyStaticSizedArrayIntoFunctionTE<'s, 't>
 where 's: 't,
 {
@@ -2128,7 +2172,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DestroyStaticSizedArrayIntoLocalsTE<'s, 't>
 where 's: 't,
 {
@@ -2181,7 +2225,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DestroyMutRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
@@ -2203,7 +2247,7 @@ impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct RuntimeSizedArrayCapacityTE<'s, 't>
 where 's: 't,
 {
@@ -2223,7 +2267,7 @@ impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct PushRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
@@ -2247,7 +2291,7 @@ impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct PopRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
@@ -2272,7 +2316,7 @@ impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct InterfaceToInterfaceUpcastTE<'s, 't>
 where 's: 't,
 {
@@ -2311,7 +2355,7 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct UpcastTE<'s, 't>
 where 's: 't,
 {
@@ -2360,7 +2404,7 @@ impl<'s, 't> UpcastTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct SoftLoadTE<'s, 't>
 where 's: 't,
 {
@@ -2411,7 +2455,7 @@ impl<'s, 't> SoftLoadTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DestroyTE<'s, 't>
 where 's: 't,
 {
@@ -2458,7 +2502,7 @@ impl<'s, 't> DestroyTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct DestroyImmRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
@@ -2521,7 +2565,7 @@ impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(PartialEq, Debug)]
+#[derive(Debug)]
 pub struct NewImmRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
