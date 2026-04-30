@@ -125,6 +125,27 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     vimpl()
   }
 
+  ignore("Reports error (imm interface + imm struct)") {
+    // Fails with "Immutable struct ("A.anonymous") cannot have mutable member",
+    // because the anonymous substruct made from interface A contains a mutable
+    // thing. We'll want to fix that by making those contained things immutable
+    // when the interface is immutable.
+    val compile = CompilerTestCompilation.test(
+      """
+        |interface A imm {
+        |	func foo(virtual a &A) int;
+        |}
+        |
+        |struct B imm { val int; }
+        |impl A for B;
+        |
+        |func foo(b &B) int { return b.val; }
+        |""".stripMargin)
+    val coutputs = compile.expectCompilerOutputs()
+
+    vimpl()
+  }
+
   // right now there is no collision because they have different template names.
   // The old declaredSignatures mechanism (SignatureT -> RangeS map in CompilerOutputs)
   // was commented out. The replacement functionDeclaredNames uses IdT which includes

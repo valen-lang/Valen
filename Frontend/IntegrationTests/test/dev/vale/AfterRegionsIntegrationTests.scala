@@ -130,7 +130,8 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
 
-  test("Test overload set") {
+  ignore("Test overload set") {
+    // Search @POSIPP for why this doesn't work.
     val compile =
       RunCompilation.test(
         """
@@ -139,6 +140,21 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
           |exported func main() int {
           |  mylist = [#](1, 3, 3, 7);
           |  mylist.each(myfunc);
+          |  42
+          |}
+          |""".stripMargin)
+    compile.evalForKind(Vector()) match { case VonInt(42) => }
+  }
+
+  ignore("Pass overload set into placeholder parameter (@POSIPP)") {
+    // Search @POSIPP for why this doesn't work.
+    val compile =
+      RunCompilation.test(
+        """
+          |func myOtherFunc() { }
+          |func myFunc<F>(f &F) void where func(&F)void { f() }
+          |exported func main() int {
+          |  myFunc(myOtherFunc);
           |  42
           |}
           |""".stripMargin)

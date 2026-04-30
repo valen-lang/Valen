@@ -344,6 +344,7 @@ object CompilerErrorHumanizer {
     name match {
       case CodeVarNameS(name) => name.str
       case TopLevelCitizenDeclarationNameS(name, codeLocation) => name.str
+      case AnonymousSubstructTemplateNameS(TopLevelInterfaceDeclarationNameS(name, _)) => name.str + ".anonymous"
       case LambdaDeclarationNameS(codeLocation) => codeMap(codeLocation) + ": " + "(lambda)"
       case FunctionNameS(name, codeLocation) => codeMap(codeLocation) + ": " + name.str
       case ConstructorNameS(TopLevelCitizenDeclarationNameS(name, range)) => codeMap(range.begin) + ": " + name.str

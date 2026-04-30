@@ -204,6 +204,8 @@ Our current concept functions don't really work with default generic parameters 
 
 Here's how it should work in a post-generics world.
 
+> **Implementation handoff:** `investigations/cfwg_handoff.md` is the active handoff doc covering the failing tests (1.5 "Test overload set", 1.6 "Tests overload set and concept function") and the design space for landing CFWG. Read this section first for the design intent, then the handoff for current state, prior art, and a suggested attack plan. The architectural choice is not yet made; both alternatives below remain on the table.
+
 
 
 ## Prototype-Based Concept Functions
@@ -487,6 +489,8 @@ For now, we leave that question unanswered, and say that we can never know all c
 
 
 # Need Bound Information From Parameters (NBIFP née NBIFPR)
+
+> **Note on direction:** the current NBIFP implementation harvests bound prototypes from a citizen-typed parameter's inner env into the calling function's near-env (see `addRunedDataToNearEnv`). This is the currently-cataloged push exception under @BDPFWDZ ("By Default Pull From Where Declared", `docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md`) — the principle suggests refactoring toward link-walking, where the bounds stay in the citizen's inner env and `OverloadResolver` walks the calling function's parameter envs at lookup time. The mechanism described below is correct for the *what*; the principle weighs in on the *where*. The refactor is non-urgent technical debt, not blocking any test.
 
 Let's say we have this code:
 

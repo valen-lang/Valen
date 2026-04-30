@@ -49,6 +49,28 @@ class CallCompiler(
           "wot " + callableExpr.result.coord.kind))
       }
       case OverloadSetT(overloadSetEnv, functionName) => {
+        // Here we have a special case for overload sets.
+        // It makes cases like these work:
+        //     myOverloadSet = print;
+        //     myOverloadSet("hello");
+        // However, this code here only works when the user is specifically doing that form:
+        // an overload set, then some parens. We then do a lookup of the overload set's
+        // stored name ("print") in the overload set's stored env.
+        //
+        // This might not be the best long-term approach because it doesn't work in other cases:
+        //     fn myFunc<F>(f &F) where func(&F)void { f() }
+        //     myFunc(print);
+        // The below code doesn't match this example because it's not literally overloadset
+        // then parens; this example is instead trying to feed an overloadset argument into a
+        // parameter that has a __call method available. OverloadSet is not that; OverloadSet is
+        // a very surface level judo trick.
+        //
+        // See (failing) test "Pass overload set into placeholder parameter" (see @POSIPP).
+        //
+        // I think the right solution long term is to give OverloadSet some sort of __call
+        // function that under the hood calls some sort of builtin that knows how to do the
+        // below machinery.
+
         val unconvertedArgsPointerTypes2 =
           givenArgsExprs2.map(_.result.expectReference().coord)
 

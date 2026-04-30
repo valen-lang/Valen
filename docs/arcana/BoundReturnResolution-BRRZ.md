@@ -26,3 +26,4 @@ The long-form reasoning, safety analysis, and canonical tests are in `docs/Gener
 - `docs/arcana/EachCallSiteIsItsOwnSolve-ECSIIOSZ.md` — the per-call-site solve model that BRRZ runs inside.
 - `docs/arcana/DefaultRulesShouldBeIncrementalNotInitial-DRSINI.md` — DRSINI uses the same `incrementallySolve` callback pattern but for a different trigger (generic param defaults, not bound return runes).
 - `docs/refactor-thoughts/thoughts-on-origin-tracking.md` — the rejected alternative and why it was rejected.
+- `docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md` — BRRZ is a pull operation: the mid-solve real lookup reaches across to the callee's definition env rather than pre-harvesting bound info. BDPFWDZ is the broader principle.

@@ -1,6 +1,6 @@
 # Family 1 handoff — impl-bound propagation into overload resolution
 
-> **Status:** Active. Captures all context as of 2026-04-27. 6 failing tests in this family. Multi-day project (3–7 days). Wide blast radius — full AfterRegions suite must stay green after every non-trivial change.
+> **Status:** Partially resolved as of 2026-04-30. Tests 4.1 and 4.2 (the impl-bound-on-placeholder cases) shipped via Solution C in `OverloadResolver.getPlaceholderImplBoundEnvs`, principle-aligned with @BDPFWDZ. Tests 4.3, 4.4, 4.5, 4.6 still open. Tests 4.5 and 4.6 are the CFWG (Concept Functions With Generics) sub-family and need their own plan. Test 4.3 is a concrete-receiver override-search case, mostly orthogonal to Solution C. Test 4.4 has a test-design bug on top of Family 1 mechanics. Sections below are kept for context but the "shared root cause" is now narrower than originally scoped.
 
 This is a handoff to a junior engineer. It's long on purpose. **Read top-to-bottom once before touching code.** The Vale compiler's bound-propagation machinery has half a dozen interacting parts; the cheapest way to avoid going in circles is to absorb the context first.
 
@@ -121,7 +121,10 @@ Each test surfaces a different facet but they share the same root.
 
 Read each test carefully. Run it. See the actual error. Don't trust descriptions — verify.
 
-### 4.1 — Method call on generic data
+### 4.1 — Method call on generic data — RESOLVED 2026-04-30
+
+**RESOLVED:** Solution C (`OverloadResolver.getPlaceholderImplBoundEnvs`) walks the placeholder's IsaTemplataT to IShip's outer env at lookup time, surfacing the abstract `launch(virtual self &IShip)` as a candidate. The inner per-call-site solve verifies T isa IShip via `ImplCompiler.isParent`. Test source updated: `vimpl()` replaced with assertions that main's body has a `FunctionCallTE` for `launchGeneric<Raza>` and launchGeneric's body has a `FunctionCallTE` for `launch`. Per @BDPFWDZ. Sections below are kept for historical context.
+
 
 **File:** `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsTests.scala:22`
 
@@ -151,7 +154,10 @@ func launch(self &Raza) { }
 
 **Fix shape:** When `findPotentialFunction` rejects a candidate with "Bad super kind in isa," check the calling function's `implements`-bounds. If any bound `implements(T, SomeInterface)` exists where the rejected candidate is a method on `SomeInterface`, accept the candidate (the dispatch will go through SomeInterface's vtable).
 
-### 4.2 — Impl rule
+### 4.2 — Impl rule — RESOLVED 2026-04-30
+
+**RESOLVED:** Same Solution C fix as 4.1. Test source updated from `x T` (owned, would have required a `where func drop(T)void` bound) to `x &T` (borrow, no drop bound needed). Test assertion was originally checking the typing pass had monomorphized to Firefly via `templateArgs.last`, but per the current generics architecture monomorphization happens in the instantiator pass — the typing pass produces only the placeholder-T template. Test now asserts the template's `templateArgs.last` is the placeholder T, and that main's body has a `FunctionCallTE` resolving to `genericGetFuel<Firefly>`. Per @BDPFWDZ. Sections below kept for historical context.
+
 
 **File:** `Frontend/TypingPass/test/dev/vale/typing/AfterRegionsTests.scala:202`
 

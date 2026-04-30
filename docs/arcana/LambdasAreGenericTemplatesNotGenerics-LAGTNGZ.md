@@ -44,3 +44,4 @@ One closure struct, two instantiations of its call function — separately type-
 
 - `docs/Generics.md` — the generics system that top-level functions use.
 - `docs/arcana/EachCallSiteIsItsOwnSolve-ECSIIOSZ.md` — the per-call-site solve model.
+- `docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md` — pull-by-default is what makes per-call-site lambda specialization work without copying lambda bodies anywhere; the body stays in its lambda env and each call-site solve reaches it via the standard env chain.

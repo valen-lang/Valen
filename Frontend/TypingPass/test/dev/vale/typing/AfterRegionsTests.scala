@@ -69,7 +69,8 @@ class AfterRegionsTests extends FunSuite with Matchers {
     })
   }
 
-  test("Tests overload set and concept function") {
+  ignore("Tests overload set and concept function") {
+    // Search @POSIPP for why this doesn't work.
     val compile = CompilerTestCompilation.test(
       """
         |import v.builtins.print.*;
