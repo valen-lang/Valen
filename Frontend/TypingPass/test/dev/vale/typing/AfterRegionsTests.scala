@@ -45,13 +45,28 @@ class AfterRegionsTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
 
     val launchGeneric = coutputs.lookupFunction("launchGeneric")
+    // launchGeneric's body resolves x.launch() to a virtual call on IShip (dispatched via the impl
+    // bound). The placeholder T survives as the arg type.
+    Collector.only(launchGeneric, {
+      case FunctionCallTE(
+        PrototypeT(IdT(_, _, FunctionNameT(FunctionTemplateNameT(StrI("launch"), _), _, _)), _),
+        _, _) =>
+    })
 
     val main = coutputs.lookupFunction("main")
+    // No upcast — main passes &Raza directly without coercing to &IShip.
     Collector.all(main, { case UpcastTE(_, _, _) => }).size shouldEqual 0
-    vimpl()
-    //    Collector.all(main, {
-    //      case FuncCallTE =>
-    //    })
+    // The call site in main resolves to launchGeneric<Raza>.
+    Collector.only(main, {
+      case FunctionCallTE(
+        PrototypeT(
+          IdT(_, _, FunctionNameT(
+            FunctionTemplateNameT(StrI("launchGeneric"), _),
+            Vector(CoordTemplataT(CoordT(_, _, StructTT(IdT(_, _, StructNameT(StructTemplateNameT(StrI("Raza")), _)))))),
+            _)),
+          _),
+        _, _) =>
+    })
   }
 
   test("Tests overload set and concept function") {
@@ -211,20 +226,34 @@ class AfterRegionsTests extends FunSuite with Matchers {
         |func getFuel(self &Firefly) int { return 7; }
         |impl IShip for Firefly;
         |
-        |func genericGetFuel<T>(x T) int
+        |func genericGetFuel<T>(x &T) int
         |where implements(T, IShip) {
         |  return x.getFuel();
         |}
         |
         |exported func main() int {
-        |  return genericGetFuel(Firefly());
+        |  return genericGetFuel(&Firefly());
         |}
         |""".stripMargin
     )
     val coutputs = compile.expectCompilerOutputs()
+    // The typing pass compiles genericGetFuel as a template with placeholder T; per-call-site
+    // monomorphization to Firefly happens in the instantiator pass, not here.
     coutputs.lookupFunction("genericGetFuel").header.id.localName.templateArgs.last match {
-      case CoordTemplataT(CoordT(_,_, StructTT(IdT(_,_,StructNameT(StructTemplateNameT(StrI("Firefly")),_))))) =>
+      case CoordTemplataT(CoordT(_,_, KindPlaceholderT(IdT(_,_,KindPlaceholderNameT(KindPlaceholderTemplateNameT(0, CodeRuneS(StrI("T")))))))) =>
     }
+    // The call site in main resolves to a prototype whose callable id contains Firefly.
+    val main = coutputs.lookupFunction("main")
+    Collector.only(main, {
+      case FunctionCallTE(
+        PrototypeT(
+          IdT(_, _, FunctionNameT(
+            FunctionTemplateNameT(StrI("genericGetFuel"), _),
+            Vector(CoordTemplataT(CoordT(_, _, StructTT(IdT(_, _, StructNameT(StructTemplateNameT(StrI("Firefly")), _)))))),
+            _)),
+          _),
+        _, _) =>
+    })
   }
 
   test("Can downcast interface to interface through registered impl") {

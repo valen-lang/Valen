@@ -286,6 +286,8 @@ class FunctionCompilerSolvingLayer(
   }
 
   // IOW, add the necessary data to turn the near env into the runed env.
+  // The reachableBoundsFromParamsAndReturn harvest violates @BDPFWDZ — the bound prototypes
+  // are pushed downward from each citizen-typed param's inner env into this near-env.
   private def addRunedDataToNearEnv(
     nearEnv: BuildingFunctionEnvironmentWithClosuredsT,
     identifyingRunes: Vector[IRuneS],

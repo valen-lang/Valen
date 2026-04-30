@@ -178,6 +178,12 @@ class OverloadResolver(
     environment: IInDenizenEnvironmentT,
     matchingTemplatas: Vector[ITemplataT[ITemplataType]])
 
+  // Per @BDPFWDZ: candidate gathering is a pull-walk across multiple env sources — the calling
+  // env's chain, each param-type's outer env, each placeholder's impl-bound super-interface
+  // env, and any caller-supplied extras. Nothing is pre-pushed; declarations stay where they
+  // were introduced, and this function reaches them by walking. The end-to-end test for the
+  // placeholder-impl-bound case is `AfterRegionsIntegrationTests."Method call on impl-bounded
+  // generic dispatches through interface"` in IntegrationTests.
   private def getCandidateBanners(
     env: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -191,8 +197,10 @@ class OverloadResolver(
     getCandidateBannersInner(env, coutputs, range, functionName, searchedEnvs, results)
     getParamEnvironments(coutputs, range, paramFilters)
       .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
+    getPlaceholderImplBoundEnvs(env, coutputs, range, paramFilters)
+      .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
     extraEnvsToLookIn
-      .foreach(e => getCandidateBannersInner(env, coutputs, range, functionName, searchedEnvs, results))
+      .foreach(e => getCandidateBannersInner(e, coutputs, range, functionName, searchedEnvs, results))
   }
 
   private def getCandidateBannersInner(
@@ -459,6 +467,45 @@ class OverloadResolver(
         case _ => Vector.empty
       })
     })
+  }
+
+  // Per @BDPFWDZ: pull-walk for impl bounds. The IsaTemplataT was declared in the function's
+  // near-env via the where-clause and stays there; the interface's methods stay in the
+  // interface's outer env. This helper walks from the calling env to the super-interface env
+  // at lookup time rather than copying methods anywhere.
+  private def getPlaceholderImplBoundEnvs(
+    callingEnv: IInDenizenEnvironmentT,
+    coutputs: CompilerOutputs,
+    range: List[RangeS],
+    paramFilters: Vector[CoordT]
+  ): Vector[IInDenizenEnvironmentT] = {
+    val collected = ArrayBuffer[IInDenizenEnvironmentT]()
+    val seen = mutable.Set[IdT[INameT]]()
+    paramFilters.foreach({ case tyype =>
+      tyype.kind match {
+        case KindPlaceholderT(id) => {
+          val placeholderImprecise =
+            TemplatasStore.getImpreciseName(interner, id.localName) match {
+              case None => vfail("Placeholder localName had no imprecise name: " + id.localName)
+              case Some(n) => n
+            }
+          val implKey = interner.intern(ImplSubCitizenImpreciseNameS(placeholderImprecise))
+          val matching = callingEnv.lookupAllWithImpreciseName(implKey, Set(TemplataLookupContext))
+          matching.foreach({
+            case IsaTemplataT(_, _, _, InterfaceTT(superId)) => {
+              val templateId = TemplataCompiler.getInterfaceTemplate(superId)
+              if (!seen.contains(templateId)) {
+                seen.add(templateId)
+                collected += coutputs.getOuterEnvForType(range, templateId)
+              }
+            }
+            case _ =>
+          })
+        }
+        case _ =>
+      }
+    })
+    collected.toVector
   }
 
   // Checks to see if there's a function that *could*

@@ -431,6 +431,9 @@ class InferCompiler(
     }
   }
 
+  // Counter to @BDPFWDZ: this harvests bound prototypes from citizen-typed param inner envs
+  // for the caller to push into its near-env. Pull-aligned replacement is to walk the citizen's
+  // env at lookup time instead.
   def checkDefiningConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,

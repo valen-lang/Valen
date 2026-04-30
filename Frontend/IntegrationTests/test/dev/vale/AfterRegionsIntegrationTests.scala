@@ -74,6 +74,63 @@ class AfterRegionsIntegrationTests extends FunSuite with Matchers {
     compile.evalForKind(Vector()) match { case VonInt(42) => }
   }
 
+  // End-to-end exercise of impl-bound method dispatch on a placeholder receiver.
+  //
+  // The scenario: genericGetFuel<T> takes &T with a `where implements(T, IShip)` bound
+  // and calls x.getFuel() in its body. The user expects this to find IShip's abstract
+  // getFuel, then dispatch virtually to Raza's override at runtime.
+  //
+  // Why this isn't automatic: Vale's interface abstract methods don't sit at the package
+  // level. They live inside the interface's own outer env, reachable only via
+  // coutputs.getOuterEnvForType(getInterfaceTemplate(IShip)). For a *concrete* &IShip
+  // receiver, OverloadResolver.getParamEnvironments mechanically returns IShip's outer
+  // env (because the receiver's type names IShip directly). For a *placeholder* &T
+  // receiver, the type doesn't name IShip — IShip is one indirection away, declared via
+  // the where-clause as an IsaTemplataT(T, IShip) entry in genericGetFuel's near-env.
+  // Without something following that indirection, the lookup of getFuel finds only the
+  // free function `getFuel(self &Raza)` (which type-mismatches T) and never reaches
+  // IShip's outer env where the abstract method lives. Pre-fix, this produced
+  // "No ancestors satisfy call" and the program failed to type-check.
+  //
+  // What we changed: OverloadResolver.getCandidateBanners now also calls
+  // getPlaceholderImplBoundEnvs alongside getParamEnvironments. For each placeholder-
+  // typed param, it looks up ambient impl bounds keyed by the placeholder's imprecise
+  // name (ImplSubCitizenImpreciseNameS, populated automatically when addRunedDataToNearEnv
+  // writes the IsaTemplataT into the near-env), pulls each IsaTemplataT, and adds each
+  // super-interface's outer env to the candidate search. With that, the abstract
+  // getFuel(virtual self &IShip) becomes a candidate; the inner per-call-site solve
+  // verifies T isa IShip via the same IsaTemplataT (through ImplCompiler.isParent); the
+  // call resolves; the instantiator monomorphizes genericGetFuel<Raza>; and the backend
+  // dispatches getFuel virtually through Raza's vtable, returning 42.
+  //
+  // The fix is principle-aligned with @BDPFWDZ (By Default Pull From Where Declared):
+  // IShip's methods stay in IShip's outer env where they were declared; the resolver
+  // walks (via the where-clause's IsaTemplataT link) to find them; nothing is copied
+  // into the calling function's near-env. See
+  // docs/arcana/ByDefaultPullFromWhereDeclared-BDPFWDZ.md for the broader principle.
+  test("Method call on impl-bounded generic dispatches through interface") {
+    val compile =
+      RunCompilation.test(
+        """
+          |sealed interface IShip {
+          |  func getFuel(virtual self &IShip) int;
+          |}
+          |struct Raza { fuel int; }
+          |impl IShip for Raza;
+          |func getFuel(self &Raza) int { return self.fuel; }
+          |
+          |func genericGetFuel<T>(x &T) int
+          |where implements(T, IShip) {
+          |  return x.getFuel();
+          |}
+          |
+          |exported func main() int {
+          |  return genericGetFuel(&Raza(42));
+          |}
+          |""".stripMargin)
+    compile.evalForKind(Vector()) match { case VonInt(42) => }
+  }
+
   test("Test overload set") {
     val compile =
       RunCompilation.test(

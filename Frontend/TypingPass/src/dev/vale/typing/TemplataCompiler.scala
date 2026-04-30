@@ -1312,6 +1312,9 @@ class TemplataCompiler(
           })
       coutputs.declareTypeMutability(kindPlaceholderTemplateId, mutability)
 
+      // Per @BDPFWDZ: the placeholder env stays empty. Bound declarations
+      // (IsaTemplataT, FunctionBoundNameT) live in the introducing function's near-env, not
+      // here. Lookups walk from the calling env to find them.
       val placeholderEnv = GeneralEnvironmentT.childOf(interner, env, kindPlaceholderTemplateId, kindPlaceholderTemplateId)
       coutputs.declareTypeOuterEnv(kindPlaceholderTemplateId, placeholderEnv)
       coutputs.declareTypeInnerEnv(kindPlaceholderTemplateId, placeholderEnv)
