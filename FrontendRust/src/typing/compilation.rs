@@ -58,7 +58,7 @@ pub struct TypingPassCompilation<'s, 'ctx, 't, 'p>
 where 's: 't,
 {
   higher_typing_compilation: HigherTypingCompilation<'s, 'ctx, 'p>,
-  hinputs_cache: Option<HinputsT<'s, 't>>,
+  hinputs_cache: Option<()>,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   options: TypingPassOptions<'s>,
@@ -151,18 +151,17 @@ pub fn get_astrouts(&mut self) -> Result<(), String> {
 /*
   def getAstrouts(): Result[PackageCoordinateMap[ProgramA], ICompileErrorA] = higherTypingCompilation.getAstrouts()
 */
-pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
-  if self.hinputs_cache.is_some() {
-    return Ok(self.hinputs_cache.as_ref().unwrap());
-  }
-  let code_map = self.get_code_map().expect("getCodeMap failed");
-  let astrouts = self.higher_typing_compilation.expect_astrouts();
-  let compiler = Compiler::new(self.scout_arena, &self.typing_interner, self.keywords, &self.options);
-  match compiler.evaluate(&code_map, astrouts) {
-    Err(e) => Err(e),
-    Ok(hinputs) => {
-      self.hinputs_cache = Some(hinputs);
-      Ok(self.hinputs_cache.as_ref().unwrap())
+pub fn get_compiler_outputs(&mut self) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
+  match self.hinputs_cache {
+    Some(_coutputs) => panic!("not yet: return cached hinputs"),
+    None => {
+      let code_map = self.get_code_map().expect("getCodeMap failed");
+      let astrouts = self.higher_typing_compilation.expect_astrouts();
+      let compiler = Compiler::new(self.scout_arena, &self.typing_interner, self.keywords, &self.options);
+      match compiler.evaluate(&code_map, astrouts) {
+        Err(e) => Err(e),
+        Ok(_hinputs) => panic!("not yet: storing hinputs into cache"),
+      }
     }
   }
 }
@@ -187,7 +186,7 @@ pub fn get_compiler_outputs(&mut self) -> Result<&HinputsT<'s, 't>, ICompileErro
       }
     }
   */
-pub fn expect_compiler_outputs(&mut self) -> &HinputsT<'s, 't> {
+pub fn expect_compiler_outputs(&mut self) -> HinputsT<'s, 't> {
 /*
   def expectCompilerOutputs(): HinputsT = {
     getCompilerOutputs() match {

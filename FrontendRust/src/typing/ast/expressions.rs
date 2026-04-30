@@ -981,7 +981,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> BlockTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
+    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
 /*
   override def result = inner.result
 }

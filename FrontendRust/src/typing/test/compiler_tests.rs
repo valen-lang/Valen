@@ -35,7 +35,6 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-use crate::typing::types::types::{KindT, IntT};
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -74,8 +73,8 @@ fn simple_program_returning_an_int_explicit() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
-    assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
+    let _main = coutputs.lookup_function_by_human_name("main");
+    panic!("Not yet implemented: simple_program_returning_an_int_explicit assertions");
 }
 /*
   test("Simple program returning an int, explicit") {

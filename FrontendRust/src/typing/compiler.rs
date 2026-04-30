@@ -1090,33 +1090,7 @@ where 's: 't,
             }
         }
 
-        self.ensure_deep_exports(&mut coutputs);
-
-        let reachable_interfaces = coutputs.get_all_interfaces();
-        let reachable_structs = coutputs.get_all_structs();
-        let reachable_functions = coutputs.get_all_functions();
-
-        let hinputs = HinputsT {
-            interfaces: reachable_interfaces,
-            structs: reachable_structs,
-            functions: reachable_functions.clone(),
-            interface_to_edge_blueprints: HashMap::new(),
-            interface_to_sub_citizen_to_edge: HashMap::new(),
-            instantiation_name_to_instantiation_bounds: HashMap::new(),
-            kind_exports: coutputs.get_kind_exports(),
-            function_exports: coutputs.get_function_exports(),
-            kind_externs: coutputs.get_kind_externs(),
-            function_externs: coutputs.get_function_externs(),
-            sub_citizen_to_interface_to_edge: HashMap::new(),
-        };
-
-        {
-            let ids: Vec<_> = reachable_functions.iter().map(|f| f.header.id).collect();
-            let distinct: std::collections::HashSet<_> = ids.iter().collect();
-            assert!(ids.len() == distinct.len());
-        }
-
-        Ok(hinputs)
+        panic!("Unimplemented: evaluate — post-deferred phase (ensureDeepExports, reachability, HinputsT construction)");
     }
 /*
   def evaluate(
@@ -1920,14 +1894,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
-        let kind_exports = coutputs.get_kind_exports();
-        if !kind_exports.is_empty() {
-            panic!("implement: ensure_deep_exports — non-empty kind exports");
-        }
-        let function_exports = coutputs.get_function_exports();
-        if !function_exports.is_empty() {
-            panic!("implement: ensure_deep_exports — non-empty function exports");
-        }
+        panic!("Unimplemented: Slab 15 — body migration");
     }
     /*
       def ensureDeepExports(coutputs: CompilerOutputs): Unit = {

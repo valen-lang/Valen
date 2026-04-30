@@ -5,7 +5,6 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
-use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::typing_interner::MustIntern;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
@@ -520,8 +519,8 @@ where 's: 't,
         let mut result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
-                (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata))) => {
-                    match &proto_templata.prototype.id.local_name {
+                (INameT::Rune(rune_name), IEnvEntryT::Templata(TemplataEnvEntryT { templata: ITemplataT::Prototype(proto) })) => {
+                    match &proto.id.local_name {
                         INameT::FunctionBound(_) => {
                             panic!("implement: assemble_rune_to_function_bound — FunctionBoundNameT match");
                         }
@@ -554,8 +553,8 @@ where 's: 't,
         let mut result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
-                (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Isa(isa))) => {
-                    match &isa.impl_name.local_name {
+                (INameT::Rune(rune_name), IEnvEntryT::Templata(TemplataEnvEntryT { templata: ITemplataT::Isa(isa) })) => {
+                    match &isa.impl_id.local_name {
                         INameT::ImplBound(_) => {
                             panic!("implement: assemble_rune_to_impl_bound — ImplBoundNameT match");
                         }
