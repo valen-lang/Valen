@@ -95,7 +95,7 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 
 */
 // mig: override fn root_compiling_denizen_env
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -121,7 +121,7 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -223,7 +223,7 @@ impl<'s, 't> Eq for BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s,
 */
 // mig: override fn root_compiling_denizen_env
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -249,7 +249,7 @@ impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> wh
 // mig: fn lookup_with_name_inner
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -370,7 +370,7 @@ impl<'s, 't> Eq for NodeEnvironmentT<'s, 't> where 's: 't {}
 */
 // mig: override fn root_compiling_denizen_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -407,7 +407,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -429,7 +429,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -714,7 +714,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn make_child
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child(
-    &self,
+    &'t self,
     node: &'s IExpressionSE<'s>,
     maybe_new_default_region: Option<RegionT>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
@@ -1088,7 +1088,7 @@ impl<'s, 't> Eq for FunctionEnvironmentT<'s, 't> where 's: 't {}
 */
 // mig: override fn root_compiling_denizen_env
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -1174,7 +1174,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1219,11 +1219,30 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 // mig: fn make_child_node_environment
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child_node_environment(
-    &self,
+    &'t self,
     node: &'s IExpressionSE<'s>,
     life: LocationInFunctionEnvironmentT<'s>,
-  ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: make_child_node_environment");
+  ) -> NodeEnvironmentBuilder<'s, 't> {
+    // See WTHPFE, if this is a lambda, we let our blocks start with
+    // locals from the parent function.
+    let (declared_locals, unstackified_locals, restackified_locals) =
+      match &self.parent_env {
+        IEnvironmentT::Node(_node_env) => {
+          panic!("implement: make_child_node_environment — NodeEnvironmentT parent");
+        }
+        _ => (Vec::new(), Vec::new(), Vec::new()),
+      };
+    NodeEnvironmentBuilder {
+      parent_function_env: self,
+      parent_node_env: None,
+      node,
+      life,
+      templatas_builder: TemplatasStoreBuilder::new(&self.id),
+      declared_locals,
+      unstackified_locals,
+      restackified_locals,
+      default_region: self.default_region,
+    }
   }
   /*
     def makeChildNodeEnvironment(node: IExpressionSE, life: LocationInFunctionEnvironmentT): NodeEnvironmentT = {
@@ -1904,6 +1923,27 @@ where 's: 't,
     })
   }
   /* Guardian: disable-all */
+
+  pub fn snapshot(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t FunctionEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.snapshot(interner);
+    let closured_locals = interner.alloc_slice_from_vec(self.closured_locals.clone());
+    interner.alloc(FunctionEnvironmentT {
+      global_env: self.global_env,
+      parent_env: self.parent_env,
+      template_id: self.template_id,
+      id: self.id,
+      templatas,
+      function: self.function,
+      maybe_return_type: self.maybe_return_type,
+      closured_locals,
+      is_root_compiling_denizen: self.is_root_compiling_denizen,
+      default_region: self.default_region,
+    })
+  }
+  /* Guardian: disable-all */
 }
 
 /// Temporary state (see @TFITCX)
@@ -1937,6 +1977,28 @@ where 's: 't,
       parent_node_env: self.parent_node_env,
       node: self.node,
       life: self.life,
+      templatas,
+      declared_locals,
+      unstackified_locals,
+      restackified_locals,
+      default_region: self.default_region,
+    })
+  }
+  /* Guardian: disable-all */
+
+  pub fn snapshot(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t NodeEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.snapshot(interner);
+    let declared_locals = interner.alloc_slice_from_vec(self.declared_locals.clone());
+    let unstackified_locals = interner.alloc_slice_from_vec(self.unstackified_locals.clone());
+    let restackified_locals = interner.alloc_slice_from_vec(self.restackified_locals.clone());
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: self.parent_node_env,
+      node: self.node,
+      life: self.life.clone(),
       templatas,
       declared_locals,
       unstackified_locals,

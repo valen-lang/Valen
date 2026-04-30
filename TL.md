@@ -7,9 +7,12 @@ Read these before doing anything else, in this order:
 1. **This file** — read top to bottom before starting work
 2. **`docs/architecture/typing-pass-design-v3.md`** — architecture and design decisions for the typing pass migration
 3. **`FrontendRust/docs/architecture/typing-pass-arenas.md`** — current arena shape and lifetime model
-4. **`FrontendRust/zen/migration_principles.md`** — migration rules (DCCR, RCSBASC, etc.)
-5. **`FrontendRust/zen/testing.md`** — test conventions (`find_func_named`, `expect_1`/`expect_2`, etc.)
-6. **`docs/skills/migration-drive.md`** — the junior's instructions (know what they're following)
+4. **`FrontendRust/docs/arcana/SealedInternedConstruction-SICZ.md`** — the `MustIntern` seal pattern; how `IdT`-style types are constructible only via the interner
+5. **`FrontendRust/docs/arcana/IdentityEqualityOnIdentityBearingTypes-IEOIBZ.md`** — identity-bearing types impl `PartialEq` via `std::ptr::eq`; wrappers derive
+6. **`FrontendRust/docs/arcana/WhenValuesShouldBeInterned-WVSBIZ.md`** — heuristics + Scala-parity rule for when a type is Interned vs Value-type
+7. **`FrontendRust/zen/migration_principles.md`** — migration rules (DCCR, RCSBASC, etc.)
+8. **`FrontendRust/zen/testing.md`** — test conventions (`find_func_named`, `expect_1`/`expect_2`, etc.)
+9. **`docs/skills/migration-drive.md`** — the junior's instructions (know what they're following)
 
 For historical slab-by-slab progress (Slabs 0–14b), see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
 
@@ -32,6 +35,24 @@ The scaffolding phase is complete. Slabs 0–14b built out every type definition
 **Current work: body migration (Slab 15+).** 141 panic-stubbed method bodies across 17 files, plus 88 stale stubs from earlier slabs. All are functionally equivalent — they need real Scala-parity implementations. Work is test-driven: pick a test, run it, implement the body it hits, repeat.
 
 Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (compiler_tests 91, compiler_solver_tests 27, compiler_virtual_tests 18, compiler_mutate_tests 12, compiler_lambda_tests 10, compiler_ownership_tests 11, compiler_project_tests 3, compiler_generics_tests 1). All currently panic at the first method body they exercise.
+
+**Recent infrastructure work (interning approach hardening, post-Slab-15b):** During body migration of `simple_program_returning_an_int_explicit`, an assertion `header.to_signature().id == needle_signature.id` was failing because `assemble_name` was constructing un-interned `IdT` values that had different `init_steps` slice pointers than the canonical interned ones. This surfaced a broader gap: Rust's "Interned" classification per @TFITCX was discipline-enforced, not compiler-enforced. Three rounds of work followed, all infrastructure (no body migration progress beyond unblocking the test):
+
+1. **Sealed 21 TFITCX-Interned types** with `MustIntern` (private-constructor witness field per @SICZ): `IdT`, the 15 transient (slice-bearing) Name types (`ImplNameT`, `FunctionNameT`, `StructNameT`, `InterfaceNameT`, etc.), and the 5 Scala-`IInterning` kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`). Construction now requires going through the interner — compile error elsewhere. Caught two un-interned construction sites at compile time (`assemble_name`, `get_placeholder_template`); both now route through `intern_*` correctly. The ~57 simple Name types (`PrimitiveNameT`, `PackageTopLevelNameT`, `StructTemplateNameT`, etc.) are Interned per Scala parity but **not yet sealed** — extending the seal to them requires introducing `*NameValT` mirror types (same shape as the 5 kind-payload ValT mirrors), tracked in `FrontendRust/docs/todo.md`.
+2. **Reconciled Rust's Interned classification with Scala's `IInterning` trait.** Audit found 14 types Rust had marked Interned that Scala leaves as plain case classes (`SignatureT`, `PrototypeT`, `KindPlaceholderT`, all 11 Templata variants, `CoordListTemplataT`). Reclassified to `/// Value-type` per @TFITCX. The Rust Interned set now matches Scala's `IInterning` set, plus `IdT` as a deliberate Rust-side optimization for `init_steps` slice-pointer-equality.
+3. **Pushed identity-equality down to identity-bearing types** per @IEOIBZ. Manual `std::ptr::eq` + `std::ptr::hash` impls now live on `IEnvironmentT`, `FunctionA`, `StructA`, `InterfaceA`, `ImplA`, `FunctionHeaderT`. The 9 wrapper types in `templata.rs` (`FunctionTemplataT`, `StructDefinitionTemplataT`, etc.) just `#[derive(PartialEq, Eq, Hash)]` and the inner ptr-eq propagates. Variant env types (`PackageEnvironmentT`, `FunctionEnvironmentT`, etc.) keep their `self.id == other.id` impls — documented exception, sound because `IdT` is canonical.
+
+Plus IDEPFL uniformity: added Val mirror types for the 5 sealed kind-payload types (`StructTTValT`, `InterfaceTTValT`, `StaticSizedArrayTTValT`, `RuntimeSizedArrayTTValT`, `OverloadSetTValT`) so the kind-payload family follows the same dual-enum pattern as everything else.
+
+Net result: the `header_sig.id == needle_signature.id` assertion is gone; the test now progresses past it and panics at an unrelated mid-migration `compiler.rs:1043 Unimplemented: evaluate — export phase` placeholder, which is the next body to migrate.
+
+**Latest session (env-builder & `&'t self` hardening):** While migrating `finish_function_maybe_deferred` → `declare_and_evaluate_function_body`, JR hit three blockers in sequence — all addressed at TL/architect level:
+
+1. **Removed `FunctionEnvironmentBoxT` from Scala** for `declareAndEvaluateFunctionBody` and `evaluateFunctionBody` (the Box's `setReturnType`/`addEntry`/`addEntries` mutators are never invoked on this entry point). Edited Scala source first, updated Rust audit-trail `/* ... */` blocks to match, then changed Rust signatures to `&'t FunctionEnvironmentT` directly. SCPX clean. See "Editing Scala To Match A Rust Simplification" below.
+2. **Eagerly promoted ~23 panic stubs to `&'t self`** across `function_environment_t.rs` and `environment.rs` for methods matching the wrap-self (`lookup_*_inner` → `IEnvironmentT::Variant(self)`) or embed-self (`root_compiling_denizen_env`, `make_child*`) patterns. Doc rule added as design v3 §3.4a. See "Interning Approach" rule #4 below.
+3. **Added `snapshot(&self, interner)` to `TemplatasStoreBuilder`, `NodeEnvironmentBuilder`, `FunctionEnvironmentBuilder`** — Scala's `Box.snapshot` semantics, mid-flight freezes that don't consume the builder. Used by `evaluateFunctionBody`'s `val startingEnv = env.snapshot` line. Design v3 §3.3 updated.
+
+JR is now unblocked on `evaluate_function_body` body migration. Driving test remains `simple_program_returning_an_int_explicit`. The current panic point is wherever the body migration lands next.
 
 ---
 
@@ -60,6 +81,22 @@ When replacing a `panic!` stub with real logic, write just the shallow structure
 ## Don't Simplify Scala On The Way Over
 
 Restating the guiding principle as an operating rule because TLs slip on it: **when handing a body off to a junior, quote the Scala verbatim and instruct them to translate every line.** Do not flatten redundant checks, do not collapse impossible branches, do not inline single-use bindings, do not reason "well in Rust we can just…". If you find yourself writing "the Rust method already returns `Option`, so it's a direct return" or "we can skip this size check because it can't happen" in a hand-off, stop — that's a parity violation in the making. The whole migration's auditability rests on the diff being a literal line-for-line port. A junior who follows a verbatim Scala translation produces a reviewable patch; a junior who follows a TL's "smarter" translation produces a patch nobody can compare against the source.
+
+---
+
+## Editing Scala To Match A Rust Simplification
+
+Sometimes the Scala carries machinery that's genuinely dead weight in Rust — most often a Scala-side wrapper or indirection whose mutation/dispatch surface is unused on the call paths you're porting (`FunctionEnvironmentBoxT` is the canonical example: case class with `var nodeEnvironment` and `setReturnType`/`addEntry` mutators, but `evaluateFunctionBody` only ever reads through it). The temptation is to write the Rust without the wrapper and add a "diverges from Scala" note. **Don't.** That note rots; reviewers can't verify the divergence; the audit trail erodes.
+
+**Instead: edit the Scala source first to match what the Rust will become, then update the Rust audit-trail `/* ... */` blocks to reflect the new Scala, then make the Rust change.** Do this only when:
+
+1. The Scala wrapper/indirection is *unused* on the specific call paths you're porting (verify with `grep` across the relevant Scala module — no `setReturnType`, no `addEntry`, no other mutators invoked through it).
+2. The Rust replacement is design-doc-blessed (e.g., design v3 §3.3 already says `FunctionEnvironmentBoxT … deleted in Rust`).
+3. After the edit, SCPX still passes `--check-all`.
+
+The result: the Rust port is back to being a literal transcription of the (now-simplified) Scala, the `/* ... */` audit blocks faithfully quote the new Scala, and reviewers can compare line-for-line as before.
+
+This is a **TL/architect-level move only.** Juniors must never edit Scala — they escalate. The architect signs off on every Scala edit (`Run Solutions By The Architect First` applies). Today's example: removing `FunctionEnvironmentBoxT` from `declareAndEvaluateFunctionBody` and `evaluateFunctionBody` in `Frontend/TypingPass/.../FunctionBodyCompiler.scala`, then updating `function_body_compiler.rs` audit blocks, then changing the Rust signatures to `&'t FunctionEnvironmentT`.
 
 ---
 
@@ -108,6 +145,68 @@ After cleanup, two checks:
 ### Don't dispatch the orchestrator on a hand-edited file
 
 The slice-orchestrator runs all six steps. If the file already has hand-written Rust impls (like `env/environment.rs` did before this session), reconcile-mark only catches the matching-name old definitions and leaves the rest in place. The colliding fresh placehold stubs then need the manual `impl`-wrap cleanup above. Plan for it; don't expect the orchestrator alone to leave a compile-clean file when the input was mid-state.
+
+---
+
+## The Interning Approach (read before adding any new typing-pass type)
+
+Three layered rules govern interning, sealing, and equality. The first decides *what* to intern; the second decides *how the rule is enforced*; the third decides *how `==` works*. All three are documented in arcana — the summary below is for quick orientation.
+
+### 1. Decide Interned vs Value-type per Scala parity (@WVSBIZ)
+
+- A Rust type is `/// Interned (see @TFITCX)` **if and only if** Scala's counterpart `extends IInterning` (`INameT`, `ICitizenTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`).
+- The one deliberate Rust-side divergence is `IdT` — Scala leaves it a plain case class but Rust interns it for `&'t [INameT]` slice-pointer-equality performance.
+- Templata types (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `FunctionTemplataT`, ...), `SignatureT`, `PrototypeT`, `KindPlaceholderT`, `CoordListTemplataT` — **all `/// Value-type`** despite some still flowing through `intern_templata_payload` for caching. The interner method exists; the seal does not.
+- When in doubt: grep Scala for `extends IInterning` / `with IInterning` on the type. If absent, Value-type.
+
+### 2. Sealed Interned types via `MustIntern` (@SICZ)
+
+Every `/// Interned` type carries:
+
+```rust
+pub _must_intern: crate::typing::typing_interner::MustIntern,
+```
+
+`MustIntern(())` has a private unit-field constructor accessible only inside `typing_interner.rs`. Constructing such a literal anywhere else fails compilation with E0423 ("constructor is not visible here due to private fields"). The intern method (`intern_id`, `intern_struct_tt`, etc.) is the only path.
+
+When you add a new Interned type:
+1. Add `pub _must_intern: MustIntern,` as the **last field** of the struct.
+2. Construct it inside the corresponding `intern_*` method via `_must_intern: MustIntern(())`.
+3. Per IDEPFL/DSAUIMZ, also define a parallel `*ValT` mirror struct (no `_must_intern`) that callers pass into `intern_*`. Five examples in `types.rs`: `StructTTValT`, `InterfaceTTValT`, etc.
+
+### 3. Identity equality on identity-bearing types (@IEOIBZ)
+
+Types with identity (anything `/// Arena-allocated` per @TFITCX, accessed via `&'t` references, where two distinct allocations are distinct things) implement their own `PartialEq`/`Eq`/`Hash` via `std::ptr::eq`/`std::ptr::hash` on `&self`:
+
+```rust
+impl<'s, 't> PartialEq for FooT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
+}
+impl<'s, 't> Eq for FooT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FooT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
+}
+```
+
+Wrappers that hold `&'t FooT` (or `&'s` for higher-typing types) just `#[derive(PartialEq, Eq, Hash)]` — the derived field comparison deref-calls the inner ptr-eq impl. Don't write a manual `std::ptr::eq(self.foo, other.foo)` impl on the wrapper; that's the IEOIBZ refactor we just finished undoing.
+
+Identity types with this pattern: `IEnvironmentT`, `FunctionA`, `StructA`, `InterfaceA`, `ImplA`, `FunctionHeaderT`, `IdT` (slight outlier — it ptr-eq's `init_steps`'s slice pointer, not the whole struct, because it lives by value, not by reference).
+
+Documented exceptions (kept as `self.id == other.id`): the variant env types (`PackageEnvironmentT`, `CitizenEnvironmentT`, `FunctionEnvironmentT`, etc.). These are sound because `IdT` is sealed/canonical, and these types are usually compared via `&'t IEnvironmentT` (which goes through `IEnvironmentT::eq`'s ptr-eq) anyway.
+
+### 4. `&'t self` on arena/interned-type methods that emit a `'t`-back-pointer to self (design v3 §3.4a)
+
+Methods on arena-allocated/interned types default to `&self`. Promote to `&'t self` **only** when the method's output borrows from `self` itself — not from a field that's already a `&'t T` ref. Three concrete shapes trigger it:
+
+1. **Embed self as a back-pointer** — `make_child_*` returning `Builder { parent: self, ... }`.
+2. **Wrap self in a wrapper enum** — `lookup_*_inner` calling `helper(IEnvironmentT::Variant(self), ...)`.
+3. **Return a borrow into a by-value field** — usually sidesteppable by returning the field by value (Copy types like `IdT`).
+
+Pure getters of already-`'t`-ref fields don't need it (`fn templatas(&self) -> &'t TemplatasStoreT { self.templatas }` works under any receiver lifetime — `&'a (&'t T)` flattens to `&'t T` by Copy). Promotion is a per-method decision based on the output, not a blanket rule on the type.
+
+When scaffolding a new panic stub: if Scala wraps `this` in an enum or stores it as a child's parent, write the Rust signature as `&'t self` proactively — even before the body is implemented. Avoids the JR-blocked-on-receiver-lifetime cycle. As of this session, ~28 sites in the typing pass use `&'t self` (5 wired + 23 panic stubs proactively promoted).
+
+Full rationale and the `&self` vs `&'t self` decision tree live in design v3 §3.4a.
 
 ---
 
@@ -260,7 +359,7 @@ All 173 tests in `src/typing/test/` have `#[ignore]` except the currently-active
 - When a design diverges from the design doc, record the divergence in `FrontendRust/docs/reasoning/<topic>.md`. Then update the design doc.
 - **Never commit.** Juniors and TLs finish a batch, run `cargo check --lib` clean, self-review their diff, then hand back to the human with uncommitted changes.
 - **Expect and invite push-back.** Handoffs are proposals, not spec.
-- **Scope discipline.** If edits land in `tl-handoff.md`, the design doc, or reasoning docs, announce in the hand-back summary, not folded silently into the diff. TLs revert off-scope edits before review.
+- **Scope discipline.** If edits land in `TL.md`, the design doc, or reasoning docs, announce in the hand-back summary, not folded silently into the diff. TLs revert off-scope edits before review.
 
 ---
 

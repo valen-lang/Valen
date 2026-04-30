@@ -802,6 +802,25 @@ where 's: 't,
     })
   }
   /* Guardian: disable-all */
+
+  pub fn snapshot(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t TemplatasStoreT<'s, 't> {
+    let name_to_entry = interner.alloc_index_map_from_iter(self.name_to_entry.iter().copied());
+    let imprecise_to_entries = interner.alloc_index_map_from_iter(
+      self.imprecise_to_entries.iter().map(|(name, entries)| {
+        let frozen: &'t [IEnvEntryT<'s, 't>] = interner.alloc_slice_from_vec(entries.clone());
+        (*name, frozen)
+      })
+    );
+    interner.alloc(TemplatasStoreT {
+      templatas_store_name: self.templatas_store_name,
+      name_to_entry,
+      imprecise_to_entries,
+    })
+  }
+  /* Guardian: disable-all */
 }
 // mig: fn eq
 /*
@@ -1120,7 +1139,7 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1256,7 +1275,7 @@ override def hashCode(): Int = hash;
 */
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -1284,7 +1303,7 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1310,7 +1329,7 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1409,7 +1428,7 @@ case class ExportEnvironmentT(
 */
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -1437,7 +1456,7 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1458,7 +1477,7 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1511,7 +1530,7 @@ case class ExternEnvironmentT(
 */
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -1539,7 +1558,7 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1560,7 +1579,7 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1637,7 +1656,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 */
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
-  pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
+  pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
     panic!("Unimplemented: root_compiling_denizen_env");
   }
   /*
@@ -1653,7 +1672,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_name_inner
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_name_inner(
-    &self,
+    &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
@@ -1674,7 +1693,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn lookup_with_imprecise_name_inner(
-    &self,
+    &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,

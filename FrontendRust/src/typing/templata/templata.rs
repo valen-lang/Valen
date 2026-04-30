@@ -716,35 +716,6 @@ pub struct CoordListTemplataT<'s, 't> {
   pub coords: &'t [CoordT<'s, 't>],
 }
 
-// Transient Val for interning: holds a stack-borrowed slice (&'tmp) instead of
-// the canonical &'t slice. Per @DSAUIMZ / IDEPFL, this lets callers construct a
-// lookup key without arena-allocating the coords Vec on a HashMap hit.
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub struct CoordListTemplataValT<'s, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  pub coords: &'tmp [CoordT<'s, 't>],
-}
-
-/// Interning transient (see @TFITCX)
-pub struct CoordListTemplataValQuery<'a, 's, 't, 'tmp>(pub &'a CoordListTemplataValT<'s, 't, 'tmp>)
-where 's: 't, 't: 'tmp;
-
-impl<'a, 's, 't, 'tmp> std::hash::Hash for CoordListTemplataValQuery<'a, 's, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
-  /* Guardian: disable-all */
-}
-impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<CoordListTemplataValT<'s, 't, 't>> for CoordListTemplataValQuery<'a, 's, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  fn equivalent(&self, key: &CoordListTemplataValT<'s, 't, 't>) -> bool {
-    self.0.coords == key.coords
-  }
-  /* Guardian: disable-all */
-}
 /*
 case class CoordListTemplataT(coords: Vector[CoordT]) extends ITemplataT[PackTemplataType] {
   val hash = runtime.ScalaRunTime._hashCode(this)
@@ -784,66 +755,5 @@ impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
   /* Guardian: disable-all */
 }
 
-// -- Union enums for the interned-templata-payload interning family ----------
-// Per handoff-slab-4.md Gotcha 2. Mirrors the Kind-payload pattern but with
-// one transient variant (CoordListTemplataT has a slice, so it carries 'tmp).
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedTemplataPayloadValT<'s, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  Coord(CoordTemplataT<'s, 't>),
-  Kind(KindTemplataT<'s, 't>),
-  Placeholder(PlaceholderTemplataT<'s, 't>),
-  Prototype(PrototypeTemplataT<'s, 't>),
-  Isa(IsaTemplataT<'s, 't>),
-  CoordList(CoordListTemplataValT<'s, 't, 'tmp>),
-}
-
-/// Interning transient (see @TFITCX)
-#[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
-pub enum InternedTemplataPayloadT<'s, 't>
-where 's: 't,
-{
-  Coord(&'t CoordTemplataT<'s, 't>),
-  Kind(&'t KindTemplataT<'s, 't>),
-  Placeholder(&'t PlaceholderTemplataT<'s, 't>),
-  Prototype(&'t PrototypeTemplataT<'s, 't>),
-  Isa(&'t IsaTemplataT<'s, 't>),
-  CoordList(&'t CoordListTemplataT<'s, 't>),
-}
-
-// Query wrapper for heterogeneous HashMap lookup: 'tmp-borrowed query against
-// 't-canonicalized stored keys. Equivalence compares each variant's payload;
-// for the transient CoordList variant we delegate to CoordListTemplataValQuery.
-/// Interning transient (see @TFITCX)
-pub struct InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>(
-  pub &'a InternedTemplataPayloadValT<'s, 't, 'tmp>,
-) where 's: 't, 't: 'tmp;
-
-impl<'a, 's, 't, 'tmp> std::hash::Hash for InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  fn hash<H: std::hash::Hasher>(&self, state: &mut H) { self.0.hash(state); }
-  /* Guardian: disable-all */
-}
-
-impl<'a, 's, 't, 'tmp> hashbrown::Equivalent<InternedTemplataPayloadValT<'s, 't, 't>>
-  for InternedTemplataPayloadValQuery<'a, 's, 't, 'tmp>
-where 's: 't, 't: 'tmp,
-{
-  fn equivalent(&self, key: &InternedTemplataPayloadValT<'s, 't, 't>) -> bool {
-    use InternedTemplataPayloadValT::*;
-    match (self.0, key) {
-      (Coord(a), Coord(b)) => a == b,
-      (Kind(a), Kind(b)) => a == b,
-      (Placeholder(a), Placeholder(b)) => a == b,
-      (Prototype(a), Prototype(b)) => a == b,
-      (Isa(a), Isa(b)) => a == b,
-      (CoordList(a), CoordList(b)) => CoordListTemplataValQuery(a).equivalent(b),
-      _ => false,
-    }
-  }
-  /* Guardian: disable-all */
-}
+// (Templata payload interning family removed — types are TFITCX Value-type per
+// Scala parity. Construction goes via `bump.alloc(FooTemplataT { ... })`.)

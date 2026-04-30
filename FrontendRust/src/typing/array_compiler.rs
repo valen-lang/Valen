@@ -723,7 +723,7 @@ where 's: 't,
         // val placeholders =
         //   Vector(sizePlaceholder, mutabilityPlaceholder, variabilityPlaceholder, elementPlaceholder)
         let element_placeholder_templata = ITemplataT::Coord(
-            self.typing_interner.intern_coord_templata(element_placeholder));
+            self.typing_interner.alloc(element_placeholder));
         let placeholders = [
             size_placeholder, mutability_placeholder, variability_placeholder, element_placeholder_templata,
         ];
@@ -916,7 +916,7 @@ where 's: 't,
         // val placeholders =
         //   Vector(mutabilityPlaceholder, elementPlaceholder)
         let element_placeholder_templata = ITemplataT::Coord(
-            self.typing_interner.intern_coord_templata(element_placeholder));
+            self.typing_interner.alloc(element_placeholder));
         let placeholders = [mutability_placeholder, element_placeholder_templata];
         // val id = templateId.copy(localName = templateId.localName.makeCitizenName(interner, placeholders))
         let local_name = template_name.make_citizen_name(self.typing_interner, &placeholders);

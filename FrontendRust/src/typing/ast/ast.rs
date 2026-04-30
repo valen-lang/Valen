@@ -383,7 +383,11 @@ impl<'s> LocationInFunctionEnvironmentT<'s> {
 */
 }
 impl<'s> LocationInFunctionEnvironmentT<'s> {
-    fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentT<'s> { panic!("Unimplemented: add"); }
+    pub fn add(&self, sub_location: i32) -> LocationInFunctionEnvironmentT<'s> {
+        let mut new_path = self.path.clone();
+        new_path.push(sub_location);
+        LocationInFunctionEnvironmentT { path: new_path, _phantom: std::marker::PhantomData }
+    }
 /*
   def +(subLocation: Int): LocationInFunctionEnvironmentT = {
     LocationInFunctionEnvironmentT(path :+ subLocation)
@@ -674,6 +678,7 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
+#[derive(Clone)]
 pub enum IFunctionAttributeT<'s> {
     Extern(ExternT<'s>),
     Pure,
@@ -692,6 +697,7 @@ pub enum ICitizenAttributeT<'s> {
 sealed trait ICitizenAttributeT
 */
 /// Arena-allocated (see @TFITCX)
+#[derive(Clone)]
 pub struct ExternT<'s> {
     pub package_coord: PackageCoordinate<'s>,
 }

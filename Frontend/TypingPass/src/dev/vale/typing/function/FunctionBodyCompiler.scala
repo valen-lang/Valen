@@ -8,7 +8,7 @@ import dev.vale.postparsing.patterns.{AtomSP, CaptureS}
 import dev.vale.postparsing._
 import dev.vale.typing._
 import dev.vale.typing.ast.{ArgLookupTE, BlockTE, LocationInFunctionEnvironmentT, ParameterT, ReferenceExpressionTE, ReturnTE}
-import dev.vale.typing.env.{FunctionEnvironmentBoxT, NodeEnvironmentT, NodeEnvironmentBox}
+import dev.vale.typing.env.{NodeEnvironmentT, NodeEnvironmentBox}
 import dev.vale.typing.names._
 import dev.vale.typing.types._
 import dev.vale.typing.types._
@@ -59,7 +59,7 @@ class BodyCompiler(
   // - IF we had to infer it, the return type.
   // - The body.
   def declareAndEvaluateFunctionBody(
-    funcOuterEnv: FunctionEnvironmentBoxT,
+    funcOuterEnv: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
     life: LocationInFunctionEnvironmentT,
     parentRanges: List[RangeS],
@@ -83,7 +83,7 @@ class BodyCompiler(
               coutputs,
               life,
               parentRanges,
-              funcOuterEnv.functionEnvironment.defaultRegion,
+              funcOuterEnv.defaultRegion,
               callLocation,
               function1.params,
               params2,
@@ -119,7 +119,7 @@ class BodyCompiler(
                 coutputs,
                 life,
                 parentRanges,
-              funcOuterEnv.functionEnvironment.defaultRegion,
+              funcOuterEnv.defaultRegion,
               callLocation,
                 function1.params,
                 params2,
@@ -165,7 +165,7 @@ override def equals(obj: Any): Boolean = vcurious();
   }
 
   private def evaluateFunctionBody(
-    funcOuterEnv: FunctionEnvironmentBoxT,
+    funcOuterEnv: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
     life: LocationInFunctionEnvironmentT,
     parentRanges: List[RangeS],
@@ -198,7 +198,7 @@ override def equals(obj: Any): Boolean = vcurious();
             if (unconvertedBodyWithoutReturn.kind == NeverT(false)) {
               unconvertedBodyWithoutReturn
             } else {
-              convertHelper.convert(funcOuterEnv.snapshot, coutputs, body1.range :: parentRanges, callLocation, unconvertedBodyWithoutReturn, expectedResultType);
+              convertHelper.convert(funcOuterEnv, coutputs, body1.range :: parentRanges, callLocation, unconvertedBodyWithoutReturn, expectedResultType);
             }
           } else {
             return Err(ResultTypeMismatchError(expectedResultType, unconvertedBodyWithoutReturn.result.coord))

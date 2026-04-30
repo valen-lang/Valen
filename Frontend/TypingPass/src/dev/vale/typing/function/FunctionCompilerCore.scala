@@ -303,7 +303,7 @@ class FunctionCompilerCore(
   FunctionHeaderT = {
     val (maybeEvaluatedRetCoord, body2) =
       bodyCompiler.declareAndEvaluateFunctionBody(
-        FunctionEnvironmentBoxT(fullEnvSnapshot),
+        fullEnvSnapshot,
         coutputs, life, callRange, callLocation, fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
 
     val retCoord = vassertOne(maybeExplicitReturnCoord.toList ++ maybeEvaluatedRetCoord.toList)

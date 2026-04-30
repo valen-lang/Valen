@@ -3,6 +3,7 @@ use crate::interner::{Interner, StrI};
 use std::collections::{HashMap, HashSet};
 use indexmap::IndexMap;
 use crate::utils::range::RangeS;
+use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::names::*;
 use crate::postparsing::*;
 use crate::typing::hinputs_t::*;
@@ -44,26 +45,33 @@ where 's: 't,
 {
     EvaluateFunctionBody {
         prototype: &'t PrototypeT<'s, 't>,
-        function_env: &'t FunctionEnvironmentT<'s, 't>,
-        origin: &'s FunctionA<'s>,
+        full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        attributes_t: &'t [IFunctionAttributeT<'s>],
+        params_t: &'t [ParameterT<'s, 't>],
+        is_destructor: bool,
+        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
+        instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
     },
+    /*
+    case class DeferredEvaluatingFunctionBody(
+      prototypeT: PrototypeT[IFunctionNameT],
+      call: (CompilerOutputs) => Unit)
+    */
     EvaluateFunction {
         name: &'t IdT<'s, 't>,
         calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         origin: &'s FunctionA<'s>,
         template_args: &'t [ITemplataT<'s, 't>],
     },
+    /*
+    case class DeferredEvaluatingFunction(
+      name: IdT[INameT],
+      call: (CompilerOutputs) => Unit)
+    */
 }
-/*
-case class DeferredEvaluatingFunctionBody(
-  prototypeT: PrototypeT[IFunctionNameT],
-  call: (CompilerOutputs) => Unit)
-*/
-/*
-case class DeferredEvaluatingFunction(
-  name: IdT[INameT],
-  call: (CompilerOutputs) => Unit)
-*/
 /// Temporary state (see @TFITCX)
 pub struct CompilerOutputs<'s, 't>
 where 's: 't,
@@ -254,7 +262,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn peek_next_deferred_function_body_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.deferred_function_body_compiles.values().next()
     }
     /*
       def peekNextDeferredFunctionBodyCompile(): Option[DeferredEvaluatingFunctionBody] = {
@@ -269,7 +277,13 @@ where 's: 't,
         &mut self,
         prototype_t: &'t PrototypeT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
+        let first_key = *self.deferred_function_body_compiles.keys().next().unwrap();
+        assert!(PtrKey(prototype_t) == first_key);
+        // finishedDeferredFunctionBodyCompiles += prototypeT
+        self.finished_deferred_function_body_compiles.insert(PtrKey(prototype_t));
+        // deferredFunctionBodyCompiles -= prototypeT
+        self.deferred_function_body_compiles.shift_remove(&PtrKey(prototype_t));
     }
     /*
       def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
@@ -283,7 +297,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn peek_next_deferred_function_compile(&self) -> Option<&DeferredActionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.deferred_function_compiles.values().next()
     }
     /*
       def peekNextDeferredFunctionCompile(): Option[DeferredEvaluatingFunction] = {
@@ -296,9 +310,15 @@ where 's: 't,
 {
     pub fn mark_deferred_function_compiled(
         &mut self,
-        name: IdT<'s, 't>,
+        name: &'t IdT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        // vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
+        let first_key = *self.deferred_function_compiles.keys().next().unwrap();
+        assert!(PtrKey(name) == first_key);
+        // finishedDeferredFunctionCompiles += name
+        self.finished_deferred_function_compiles.insert(PtrKey(name));
+        // deferredFunctionCompiles -= name
+        self.deferred_function_compiles.shift_remove(&PtrKey(name));
     }
     /*
       def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {

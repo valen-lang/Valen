@@ -78,7 +78,10 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        self.iterate_translate_list_and_maybe_continue(
+            coutputs, nenv, life, parent_ranges, call_location,
+            &[], patterns_a, pattern_inputs_te, region,
+            after_patterns_success_continuation)
     }
 /*
   // Note: This will unlet/drop the input expressions. Be warned.
@@ -133,7 +136,17 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+        let distinct: HashSet<_> = names.iter().collect();
+        assert!(names.len() == distinct.len());
+
+        match (patterns_a.is_empty(), pattern_inputs_te.is_empty()) {
+            (true, true) => after_patterns_success_continuation(coutputs, nenv, live_capture_locals),
+            (false, false) => {
+                panic!("implement: iterateTranslateListAndMaybeContinue — non-empty patterns");
+            }
+            _ => panic!("mismatched patterns and inputs"),
+        }
     }
 /*
   def iterateTranslateListAndMaybeContinue(

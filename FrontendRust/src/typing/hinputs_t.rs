@@ -24,6 +24,7 @@ use crate::typing::names::names::{
     FunctionTemplateNameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
 };
 // mig: struct InstantiationReachableBoundArgumentsT
+#[derive(Clone)]
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
     pub citizen_rune_to_reachable_prototype: Vec<(
         IRuneS<'s>,
@@ -65,6 +66,7 @@ pub fn make<'s, 't>(
 }
 */
 // mig: struct InstantiationBoundArgumentsT
+#[derive(Clone)]
 pub struct InstantiationBoundArgumentsT<'s, 't> {
     pub rune_to_bound_prototype: Vec<(
         IRuneS<'s>,

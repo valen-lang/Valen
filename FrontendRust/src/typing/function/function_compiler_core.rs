@@ -103,13 +103,15 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         params2: &[ParameterT<'s, 't>],
-        _instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+        instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
     ) -> FunctionHeaderT<'s, 't> {
         // fullEnv.id match { case IdT(...drop...) => vpass(); case _ => }
         // (debug pattern match, not functionally needed)
 
-        let _life = LocationInFunctionEnvironmentT { path: Vec::new(), _phantom: std::marker::PhantomData };
+        // val life = LocationInFunctionEnvironmentT(Vector())
+        let life = LocationInFunctionEnvironmentT { path: Vec::new(), _phantom: std::marker::PhantomData };
 
+        // val isDestructor = params2.nonEmpty && params2.head.tyype.ownership == OwnT && ...
         let is_destructor =
             !params2.is_empty() &&
             params2[0].tyype.ownership == OwnershipT::Own &&
@@ -118,6 +120,7 @@ where 's: 't,
                 _ => false,
             };
 
+        // val maybeExport = fullEnv.function.attributes.collectFirst { case e@ExportS(_) => e }
         let _maybe_export =
             full_env.function.attributes.iter().find_map(|a| {
                 match a {
@@ -126,14 +129,10 @@ where 's: 't,
                 }
             });
 
-        let signature2 = self.typing_interner.intern_signature(SignatureValT {
-            id: IdValT {
-                package_coord: full_env.id.package_coord,
-                init_steps: full_env.id.init_steps,
-                local_name: full_env.id.local_name,
-            },
-        });
+        // val signature2 = SignatureT(fullEnv.id)
+        let signature2: &'t SignatureT<'s, 't> = self.typing_interner.alloc(SignatureT { id: full_env.id });
 
+        // val maybeRetTemplata = fullEnv.function.maybeRetCoordRune match { ... }
         let maybe_ret_templata =
             match &full_env.function.maybe_ret_coord_rune {
                 None => None,
@@ -147,6 +146,7 @@ where 's: 't,
                 }
             };
 
+        // val maybeRetCoord = maybeRetTemplata match { ... }
         let maybe_ret_coord =
             match maybe_ret_templata {
                 None => None,
@@ -158,9 +158,11 @@ where 's: 't,
                 _ => panic!("Must be a coord!"),
             };
 
+        // val header = fullEnv.function.body match { ... }
         let header =
             match &full_env.function.body {
                 IBodyS::CodeBody(_body) => {
+                    // val attributesWithoutExport = ...
                     let attributes_without_export: Vec<&IFunctionAttributeS<'s>> =
                         full_env.function.attributes.iter().filter(|a| {
                             !matches!(a, IFunctionAttributeS::Export(_))
@@ -169,14 +171,30 @@ where 's: 't,
 
                     match maybe_ret_coord {
                         Some(return_coord) => {
+                            // val header = finalizeHeader(...)
                             let header =
-                                self.finalize_header(full_env, coutputs, attributes_t, params2, return_coord);
+                                self.finalize_header(full_env, coutputs, attributes_t.clone(), params2, return_coord);
+
+                            // coutputs.deferEvaluatingFunctionBody(DeferredEvaluatingFunctionBody(...))
+                            let attributes_t_arena: &'t [IFunctionAttributeT<'s>] =
+                                self.typing_interner.alloc_slice_from_vec(attributes_t);
+                            let call_range_arena: &'t [RangeS<'s>] =
+                                self.typing_interner.alloc_slice_copy(call_range);
+                            let params_t_arena: &'t [ParameterT<'s, 't>] =
+                                self.typing_interner.alloc_slice_from_vec(params2.to_vec());
 
                             coutputs.defer_evaluating_function_body(
                                 DeferredActionT::EvaluateFunctionBody {
                                     prototype: self.typing_interner.alloc(header.to_prototype()),
-                                    function_env: full_env,
-                                    origin: full_env.function,
+                                    full_env_snapshot: full_env,
+                                    call_range: call_range_arena,
+                                    call_location,
+                                    life: life.clone(),
+                                    attributes_t: attributes_t_arena,
+                                    params_t: params_t_arena,
+                                    is_destructor,
+                                    maybe_explicit_return_coord: Some(return_coord),
+                                    instantiation_bound_params: instantiation_bound_params.clone(),
                                 });
 
                             header
@@ -194,6 +212,7 @@ where 's: 't,
                 }
             };
 
+        // if (header.attributes.exists({ case PureT => true case _ => false })) { ... }
         if header.attributes.iter().any(|a| matches!(a, IFunctionAttributeT::Pure)) {
             // (Scala has commented-out purity checks here)
         }
@@ -480,9 +499,30 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn finish_function_maybe_deferred(&self) -> FunctionHeaderT<'s, 't> {
-    panic!("Unimplemented: finish_function_maybe_deferred");
-}
+    pub fn finish_function_maybe_deferred(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        life: LocationInFunctionEnvironmentT<'s>,
+        attributes_t: &'t [IFunctionAttributeT<'s>],
+        params_t: &'t [ParameterT<'s, 't>],
+        is_destructor: bool,
+        maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
+        instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+    ) -> FunctionHeaderT<'s, 't> {
+        // val (maybeEvaluatedRetCoord, body2) =
+        //   bodyCompiler.declareAndEvaluateFunctionBody(
+        //     fullEnvSnapshot, coutputs, life, callRange, callLocation,
+        //     fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
+        let (_maybe_evaluated_ret_coord, _body2) =
+            self.declare_and_evaluate_function_body(
+                full_env_snapshot, coutputs, life, call_range, call_location,
+                full_env_snapshot.function, maybe_explicit_return_coord, params_t, is_destructor);
+
+        panic!("implement: finish_function_maybe_deferred — post body compilation");
+    }
 /*
   // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.
   private def finishFunctionMaybeDeferred(
@@ -499,7 +539,7 @@ where 's: 't,
   FunctionHeaderT = {
     val (maybeEvaluatedRetCoord, body2) =
       bodyCompiler.declareAndEvaluateFunctionBody(
-        FunctionEnvironmentBoxT(fullEnvSnapshot),
+        fullEnvSnapshot,
         coutputs, life, callRange, callLocation, fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
 
     val retCoord = vassertOne(maybeExplicitReturnCoord.toList ++ maybeEvaluatedRetCoord.toList)

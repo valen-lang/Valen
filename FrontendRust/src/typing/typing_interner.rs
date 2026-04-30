@@ -19,11 +19,8 @@ use crate::typing::ast::ast::{
     PrototypeT, PrototypeValQuery, PrototypeValT, SignatureT, SignatureValQuery, SignatureValT,
 };
 use crate::typing::names::names::*;
-use crate::typing::templata::templata::{
-    CoordListTemplataT, CoordListTemplataValT, CoordTemplataT, InternedTemplataPayloadT,
-    InternedTemplataPayloadValQuery, InternedTemplataPayloadValT, IsaTemplataT, KindTemplataT,
-    PlaceholderTemplataT, PrototypeTemplataT,
-};
+// Templata payload interner removed; types are TFITCX Value-type per Scala parity
+// and constructed directly via `bump.alloc(FooTemplataT { ... })` at call sites.
 use crate::typing::types::types::{
     InterfaceTT, InterfaceTTValT, InternedKindPayloadT, InternedKindPayloadValT, KindPlaceholderT,
     OverloadSetT, OverloadSetTValT, RuntimeSizedArrayTT, RuntimeSizedArrayTTValT,
@@ -45,17 +42,15 @@ where 's: 't,
 struct Inner<'s, 't>
 where 's: 't,
 {
-    // 6 family-level HashMaps.
+    // 5 family-level HashMaps. Family 6 (templata payload) was removed once the
+    // Templata family was reclassified Value-type per Scala parity — those types
+    // are now constructed directly via `bump.alloc(...)` at call sites.
     name_val_to_ref: hashbrown::HashMap<INameValT<'s, 't, 't>, INameT<'s, 't>>,
     id_val_to_ref: hashbrown::HashMap<IdValT<'s, 't, 't>, &'t IdT<'s, 't>>,
     prototype_val_to_ref: hashbrown::HashMap<PrototypeValT<'s, 't, 't>, &'t PrototypeT<'s, 't>>,
     signature_val_to_ref: hashbrown::HashMap<SignatureValT<'s, 't, 't>, &'t SignatureT<'s, 't>>,
     kind_payload_val_to_ref:
         StdHashMap<InternedKindPayloadValT<'s, 't>, InternedKindPayloadT<'s, 't>>,
-    templata_payload_val_to_ref: hashbrown::HashMap<
-        InternedTemplataPayloadValT<'s, 't, 't>,
-        InternedTemplataPayloadT<'s, 't>,
-    >,
 }
 
 // --- Per-concrete wrapper macros (used below to generate ~75 thin wrappers) -
@@ -93,17 +88,6 @@ macro_rules! impl_intern_kind_wrapper {
     };
 }
 
-macro_rules! impl_intern_templata_wrapper_simple {
-    ($method:ident, $variant:ident, $payload_ty:ident) => {
-        pub fn $method(&self, val: $payload_ty<'s, 't>) -> &'t $payload_ty<'s, 't> {
-            match self.intern_templata_payload(InternedTemplataPayloadValT::$variant(val)) {
-                InternedTemplataPayloadT::$variant(r) => r,
-                _ => unreachable!(),
-            }
-        }
-    };
-}
-
 impl<'s, 't> TypingInterner<'s, 't>
 where 's: 't,
 {
@@ -116,7 +100,6 @@ where 's: 't,
                 prototype_val_to_ref: hashbrown::HashMap::new(),
                 signature_val_to_ref: hashbrown::HashMap::new(),
                 kind_payload_val_to_ref: StdHashMap::new(),
-                templata_payload_val_to_ref: hashbrown::HashMap::new(),
             }),
         }
     }
@@ -446,41 +429,6 @@ where 's: 't,
     }
 
     // =========================================================================
-    // Family 6: Interned-templata-payload interning (5 simple + 1 transient)
-    // =========================================================================
-
-    pub fn intern_templata_payload<'tmp>(
-        &self,
-        val: InternedTemplataPayloadValT<'s, 't, 'tmp>,
-    ) -> InternedTemplataPayloadT<'s, 't> {
-        {
-            let inner = self.inner.borrow();
-            let query = InternedTemplataPayloadValQuery(&val);
-            if let Some(existing) = inner.templata_payload_val_to_ref.get(&query) {
-                return *existing;
-            }
-        }
-        use InternedTemplataPayloadT as T;
-        use InternedTemplataPayloadValT as V;
-        let (stored_key, canonical) = match val {
-            V::Coord(p) => (V::Coord(p), T::Coord(self.bump.alloc(p))),
-            V::Kind(p) => (V::Kind(p), T::Kind(self.bump.alloc(p))),
-            V::Placeholder(p) => (V::Placeholder(p), T::Placeholder(self.bump.alloc(p))),
-            V::Prototype(p) => (V::Prototype(p), T::Prototype(self.bump.alloc(p))),
-            V::Isa(p) => (V::Isa(p), T::Isa(self.bump.alloc(p))),
-            V::CoordList(v) => {
-                let coords = self.bump.alloc_slice_copy(v.coords);
-                let canonical = CoordListTemplataT { coords };
-                let key = CoordListTemplataValT { coords };
-                (V::CoordList(key), T::CoordList(self.bump.alloc(canonical)))
-            }
-        };
-        let mut inner = self.inner.borrow_mut();
-        inner.templata_payload_val_to_ref.insert(stored_key, canonical);
-        canonical
-    }
-
-    // =========================================================================
     // ~75 per-concrete wrappers (dispatch into family methods, unwrap).
     // =========================================================================
 
@@ -571,30 +519,8 @@ where 's: 't,
     impl_intern_kind_wrapper!(intern_kind_placeholder, KindPlaceholder, KindPlaceholderT, KindPlaceholderT);
     impl_intern_kind_wrapper!(intern_overload_set, OverloadSet, OverloadSetTValT, OverloadSetT);
 
-    // --- 6 Templata-payload wrappers (5 simple + 1 transient) ---
-    impl_intern_templata_wrapper_simple!(intern_coord_templata, Coord, CoordTemplataT);
-    impl_intern_templata_wrapper_simple!(intern_kind_templata, Kind, KindTemplataT);
-    impl_intern_templata_wrapper_simple!(intern_placeholder_templata, Placeholder, PlaceholderTemplataT);
-    impl_intern_templata_wrapper_simple!(intern_prototype_templata, Prototype, PrototypeTemplataT);
-    impl_intern_templata_wrapper_simple!(intern_isa_templata, Isa, IsaTemplataT);
-
-    // Hand-written (not via impl_intern_templata_wrapper_simple!) because
-    // CoordListTemplataT carries a `'tmp`-borrowed arena slice (per @DSAUIMZ —
-    // the one "transient" interned-templata-payload variant). The simple macro
-    // takes a payload struct by value and assumes the key type is the struct
-    // itself; here the key is CoordListTemplataValT<'s, 't, 'tmp> (separate type,
-    // 'tmp-parameterized). The family-level intern_templata_payload handles the
-    // promote-on-miss inside its `match` arm for the CoordList variant; this
-    // wrapper just does the wrap/dispatch/unwrap dance.
-    pub fn intern_coord_list_templata<'tmp>(
-        &self,
-        val: CoordListTemplataValT<'s, 't, 'tmp>,
-    ) -> &'t CoordListTemplataT<'s, 't> {
-        match self.intern_templata_payload(InternedTemplataPayloadValT::CoordList(val)) {
-            InternedTemplataPayloadT::CoordList(r) => r,
-            _ => unreachable!(),
-        }
-    }
+    // (Templata payload wrappers removed — types are TFITCX Value-type per
+    // Scala parity and constructed directly via `bump.alloc(FooTemplataT { ... })`.)
 }
 
 // KindT and ITemplataT are inline-owned (not arena-interned), so they have no

@@ -9,7 +9,7 @@ use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
-use crate::typing::compiler_outputs::CompilerOutputs;
+use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::infer_compiler::InferEnv;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
 use crate::typing::env::environment::{get_imprecise_name, GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
@@ -934,7 +934,7 @@ where 's: 't,
             let prim = INameT::Primitive(self.typing_interner.intern_primitive_name(
                 PrimitiveNameT { human_name: *human_name, _phantom: PhantomData }
             ));
-            let kind_t = ITemplataT::Kind(self.typing_interner.intern_kind_templata(KindTemplataT { kind: *kind }));
+            let kind_t = ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: *kind }));
             builtins_builder.name_to_entry.push((prim, IEnvEntryT::Templata(kind_t)));
             if let Some(imprecise) = get_imprecise_name(self.scout_arena, prim) {
                 builtins_builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(IEnvEntryT::Templata(kind_t));
@@ -1040,7 +1040,57 @@ where 's: 't,
             }
         }
 
-        panic!("Unimplemented: evaluate — export phase and beyond");
+        // Export compile phase
+        // packageToProgramA.flatMap({ case (packageCoord, programA) => ... programA.exports.foreach(...) })
+        for (_coord, program_a) in &package_to_program_a.package_coord_to_contents {
+            for _export in program_a.exports.iter() {
+                panic!("implement: export compile");
+            }
+        }
+
+        // Deferred function compilation loop
+        // while (coutputs.peekNextDeferredFunctionBodyCompile().nonEmpty || coutputs.peekNextDeferredFunctionCompile().nonEmpty)
+        while coutputs.peek_next_deferred_function_body_compile().is_some() || coutputs.peek_next_deferred_function_compile().is_some() {
+            // while (coutputs.peekNextDeferredFunctionCompile().nonEmpty)
+            while coutputs.peek_next_deferred_function_compile().is_some() {
+                panic!("implement: deferred function compile");
+            }
+            // if (coutputs.peekNextDeferredFunctionBodyCompile().nonEmpty)
+            if coutputs.peek_next_deferred_function_body_compile().is_some() {
+                let next_deferred = coutputs.peek_next_deferred_function_body_compile().unwrap();
+                match next_deferred {
+                    DeferredActionT::EvaluateFunctionBody {
+                        prototype, full_env_snapshot,
+                        call_range, call_location, life,
+                        attributes_t, params_t, is_destructor,
+                        maybe_explicit_return_coord, instantiation_bound_params,
+                    } => {
+                        let prototype = *prototype;
+                        let full_env_snapshot = *full_env_snapshot;
+                        let call_range = *call_range;
+                        let call_location = *call_location;
+                        let life = life.clone();
+                        let attributes_t = *attributes_t;
+                        let params_t = *params_t;
+                        let is_destructor = *is_destructor;
+                        let maybe_explicit_return_coord = *maybe_explicit_return_coord;
+                        let instantiation_bound_params = instantiation_bound_params.clone();
+
+                        // (nextDeferredEvaluatingFunctionBody.call)(coutputs)
+                        self.finish_function_maybe_deferred(
+                            &mut coutputs, full_env_snapshot, call_range, call_location,
+                            life, attributes_t, params_t, is_destructor,
+                            maybe_explicit_return_coord, &instantiation_bound_params);
+
+                        // coutputs.markDeferredFunctionBodyCompiled(nextDeferredEvaluatingFunctionBody.prototypeT)
+                        coutputs.mark_deferred_function_body_compiled(prototype);
+                    }
+                    _ => panic!("implement: unexpected deferred action type"),
+                }
+            }
+        }
+
+        panic!("Unimplemented: evaluate — post-deferred phase (ensureDeepExports, reachability, HinputsT construction)");
     }
 /*
   def evaluate(

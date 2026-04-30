@@ -193,10 +193,63 @@ pub enum ReferenceExpressionTE<'s, 't> {
 /*
 trait ReferenceExpressionTE extends ExpressionT {
 */
-fn reference_expression_result<'s, 't>() -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
-/*
-  override def result: ReferenceResultT
-*/
+impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        match self {
+            ReferenceExpressionTE::LetAndLend(e) => e.result(),
+            ReferenceExpressionTE::LockWeak(e) => e.result(),
+            ReferenceExpressionTE::BorrowToWeak(e) => e.result(),
+            ReferenceExpressionTE::LetNormal(e) => e.result(),
+            ReferenceExpressionTE::Unlet(e) => e.result(),
+            ReferenceExpressionTE::Discard(e) => e.result(),
+            ReferenceExpressionTE::Defer(e) => e.result(),
+            ReferenceExpressionTE::If(e) => e.result(),
+            ReferenceExpressionTE::While(e) => e.result(),
+            ReferenceExpressionTE::Mutate(e) => e.result(),
+            ReferenceExpressionTE::Restackify(e) => e.result(),
+            ReferenceExpressionTE::Transmigrate(e) => e.result(),
+            ReferenceExpressionTE::Return(e) => e.result(),
+            ReferenceExpressionTE::Break(e) => e.result(),
+            ReferenceExpressionTE::Block(e) => e.result(),
+            ReferenceExpressionTE::Pure(e) => e.result(),
+            ReferenceExpressionTE::Consecutor(e) => e.result(),
+            ReferenceExpressionTE::Tuple(e) => e.result(),
+            ReferenceExpressionTE::StaticArrayFromValues(e) => e.result(),
+            ReferenceExpressionTE::ArraySize(e) => e.result(),
+            ReferenceExpressionTE::IsSameInstance(e) => e.result(),
+            ReferenceExpressionTE::AsSubtype(e) => e.result(),
+            ReferenceExpressionTE::VoidLiteral(e) => e.result(),
+            ReferenceExpressionTE::ConstantInt(e) => e.result(),
+            ReferenceExpressionTE::ConstantBool(e) => e.result(),
+            ReferenceExpressionTE::ConstantStr(e) => e.result(),
+            ReferenceExpressionTE::ConstantFloat(e) => e.result(),
+            ReferenceExpressionTE::ArgLookup(e) => e.result(),
+            ReferenceExpressionTE::ArrayLength(e) => e.result(),
+            ReferenceExpressionTE::InterfaceFunctionCall(e) => e.result(),
+            ReferenceExpressionTE::ExternFunctionCall(e) => e.result(),
+            ReferenceExpressionTE::FunctionCall(e) => e.result(),
+            ReferenceExpressionTE::Reinterpret(e) => e.result(),
+            ReferenceExpressionTE::Construct(e) => e.result(),
+            ReferenceExpressionTE::NewMutRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::StaticArrayFromCallable(e) => e.result(),
+            ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(e) => e.result(),
+            ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(e) => e.result(),
+            ReferenceExpressionTE::DestroyMutRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::RuntimeSizedArrayCapacity(e) => e.result(),
+            ReferenceExpressionTE::PushRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::PopRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::InterfaceToInterfaceUpcast(e) => e.result(),
+            ReferenceExpressionTE::Upcast(e) => e.result(),
+            ReferenceExpressionTE::SoftLoad(e) => e.result(),
+            ReferenceExpressionTE::Destroy(e) => e.result(),
+            ReferenceExpressionTE::DestroyImmRuntimeSizedArray(e) => e.result(),
+            ReferenceExpressionTE::NewImmRuntimeSizedArray(e) => e.result(),
+        }
+    }
+    /*
+      override def result: ReferenceResultT
+    */
+}
 fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = result.coord.kind
@@ -216,10 +269,20 @@ pub enum AddressExpressionTE<'s, 't> {
 // directly into a struct (closures!), which can have addressible members.
 trait AddressExpressionTE extends ExpressionT {
 */
-fn address_expression_result<'s, 't>() -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
-/*
-  override def result: AddressResultT
-*/
+impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
+    pub fn result(&self) -> AddressResultT<'s, 't> {
+        match self {
+            AddressExpressionTE::LocalLookup(e) => e.result(),
+            AddressExpressionTE::StaticSizedArrayLookup(e) => e.result(),
+            AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.result(),
+            AddressExpressionTE::ReferenceMemberLookup(e) => e.result(),
+            AddressExpressionTE::AddressMemberLookup(e) => e.result(),
+        }
+    }
+    /*
+      override def result: AddressResultT
+    */
+}
 fn address_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
 /*
   override def kind = result.coord.kind
@@ -1284,7 +1347,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConstantIntTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Int(IntT { bits: self.bits }) } }
+    }
 /*
   override def result = {
     ReferenceResultT(CoordT(ShareT, region, IntT(bits)))

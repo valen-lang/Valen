@@ -1,11 +1,12 @@
 use crate::higher_typing::ast::FunctionA;
-use crate::postparsing::ast::{LocationInDenizen, ParameterS};
-use crate::postparsing::expressions::BodySE;
+use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
+use crate::postparsing::expressions::{BodySE, IExpressionSE};
+use crate::postparsing::patterns::patterns::AtomSP;
 use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
-use crate::typing::ast::expressions::{BlockTE, ReferenceExpressionTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ReferenceExpressionTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
-use crate::typing::env::function_environment_t::{FunctionEnvironmentBuilder, NodeEnvironmentBuilder};
+use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBuilder};
 use crate::typing::types::types::{CoordT, RegionT};
 use crate::utils::range::RangeS;
 use std::collections::HashSet;
@@ -21,7 +22,7 @@ import dev.vale.postparsing.patterns.{AtomSP, CaptureS}
 import dev.vale.postparsing._
 import dev.vale.typing._
 import dev.vale.typing.ast.{ArgLookupTE, BlockTE, LocationInFunctionEnvironmentT, ParameterT, ReferenceExpressionTE, ReturnTE}
-import dev.vale.typing.env.{FunctionEnvironmentBoxT, NodeEnvironmentT, NodeEnvironmentBox}
+import dev.vale.typing.env.{NodeEnvironmentT, NodeEnvironmentBox}
 import dev.vale.typing.names._
 import dev.vale.typing.types._
 import dev.vale.typing.types._
@@ -77,24 +78,59 @@ where 's: 't,
 {
     pub fn declare_and_evaluate_function_body(
         &self,
-        func_outer_env: &mut FunctionEnvironmentBuilder<'s, 't>,
+        func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_1: &'s FunctionA<'s>,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
-        params_2: &[&'t ParameterT<'s, 't>],
+        params_2: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
     ) -> (Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val bodyS = function1.body match { case CodeBodyS(b) => b; case _ => vwat() }
+        let body_s = match &function_1.body {
+            IBodyS::CodeBody(b) => b,
+            _ => panic!("Expected CodeBodyS"),
+        };
+
+        // maybeExplicitReturnCoord match { ... }
+        match maybe_explicit_return_coord {
+            None => {
+                panic!("implement: declareAndEvaluateFunctionBody — inferred return type");
+            }
+            Some(explicit_ret_coord) => {
+                // val (body2, returns) = evaluateFunctionBody(...)
+                let (body2, returns) =
+                    self.evaluate_function_body(
+                        func_outer_env, coutputs, life, parent_ranges,
+                        func_outer_env.default_region, call_location,
+                        &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
+                        is_destructor, Some(explicit_ret_coord))
+                    .unwrap_or_else(|_| panic!("implement: BodyResultDoesntMatch error handling"));
+
+                // vcurious(returns.size <= 1)
+                assert!(returns.len() <= 1);
+                // (returns.headOption, body2.result.kind) match { ... }
+                match returns.iter().next() {
+                    Some(x) if *x == explicit_ret_coord => {
+                        // Let it through, it returns the expected type.
+                    }
+                    _ => {
+                        panic!("implement: return type checking branches");
+                    }
+                }
+
+                (None, body2)
+            }
+        }
     }
 /*
   // Returns:
   // - IF we had to infer it, the return type.
   // - The body.
   def declareAndEvaluateFunctionBody(
-    funcOuterEnv: FunctionEnvironmentBoxT,
+    funcOuterEnv: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
     life: LocationInFunctionEnvironmentT,
     parentRanges: List[RangeS],
@@ -118,7 +154,7 @@ where 's: 't,
               coutputs,
               life,
               parentRanges,
-              funcOuterEnv.functionEnvironment.defaultRegion,
+              funcOuterEnv.defaultRegion,
               callLocation,
               function1.params,
               params2,
@@ -154,7 +190,7 @@ where 's: 't,
                 coutputs,
                 life,
                 parentRanges,
-              funcOuterEnv.functionEnvironment.defaultRegion,
+              funcOuterEnv.defaultRegion,
               callLocation,
                 function1.params,
                 params2,
@@ -211,23 +247,55 @@ where 's: 't,
 {
     pub fn evaluate_function_body(
         &self,
-        func_outer_env: &mut FunctionEnvironmentBuilder<'s, 't>,
+        func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         region: RegionT,
         call_location: LocationInDenizen<'s>,
         params_1: &[&'s ParameterS<'s>],
-        params_2: &[&'t ParameterT<'s, 't>],
+        params_2: &'t [ParameterT<'s, 't>],
         body_1: &'s BodySE<'s>,
         is_destructor: bool,
         maybe_expected_result_type: Option<CoordT<'s, 't>>,
     ) -> Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val env = NodeEnvironmentBox(funcOuterEnv.makeChildNodeEnvironment(body1.block, life))
+        let block_as_expr: &'s IExpressionSE<'s> =
+            self.scout_arena.alloc(IExpressionSE::Block(body_1.block));
+        let mut env = func_outer_env.make_child_node_environment(block_as_expr, life.clone());
+
+        let starting_env = env.snapshot(self.typing_interner);
+
+        // val patternsTE = evaluateLets(env, coutputs, life + 0, body1.range :: parentRanges, callLocation, region, params1, params2)
+        let range_list: Vec<RangeS<'s>> =
+            std::iter::once(body_1.range).chain(parent_ranges.iter().copied()).collect();
+        let params_2_refs: Vec<&'t ParameterT<'s, 't>> = params_2.iter().collect();
+        let patterns_te = self.evaluate_lets(
+            &mut env, coutputs, life.add(0),
+            &range_list, call_location, region, params_1, &params_2_refs);
+
+        let (statements_from_block, returns_from_inside_maybe_with_never) =
+            self.evaluate_block_statements(
+                coutputs, starting_env, &mut env, life.add(1),
+                parent_ranges, call_location, starting_env.default_region, body_1.block);
+
+        let unconverted_body_without_return =
+            self.consecutive(&[patterns_te, statements_from_block]);
+
+        let converted_body_without_return = match maybe_expected_result_type {
+            None => {
+                panic!("implement: evaluateFunctionBody — None expectedResultType");
+            }
+            Some(expected_result_type) => {
+                panic!("implement: evaluateFunctionBody — type conversion");
+            }
+        };
+
+        panic!("implement: evaluateFunctionBody — return wrapping");
     }
 /*
   private def evaluateFunctionBody(
-    funcOuterEnv: FunctionEnvironmentBoxT,
+    funcOuterEnv: FunctionEnvironmentT,
     coutputs: CompilerOutputs,
     life: LocationInFunctionEnvironmentT,
     parentRanges: List[RangeS],
@@ -260,7 +328,7 @@ where 's: 't,
             if (unconvertedBodyWithoutReturn.kind == NeverT(false)) {
               unconvertedBodyWithoutReturn
             } else {
-              convertHelper.convert(funcOuterEnv.snapshot, coutputs, body1.range :: parentRanges, callLocation, unconvertedBodyWithoutReturn, expectedResultType);
+              convertHelper.convert(funcOuterEnv, coutputs, body1.range :: parentRanges, callLocation, unconvertedBodyWithoutReturn, expectedResultType);
             }
           } else {
             return Err(ResultTypeMismatchError(expectedResultType, unconvertedBodyWithoutReturn.result.coord))
@@ -329,7 +397,30 @@ where 's: 't,
         params_1: &[&'s ParameterS<'s>],
         params_2: &[&'t ParameterT<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val paramLookups2 = params2.zipWithIndex.map({ case (p, index) => ArgLookupTE(index, p.tyype) })
+        let param_lookups_2: Vec<ReferenceExpressionTE<'s, 't>> =
+            params_2.iter().enumerate().map(|(index, p)| {
+                ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                    param_index: index as i32,
+                    coord: p.tyype,
+                })
+            }).collect();
+
+        let param_lookups_2_refs: Vec<&'t ReferenceExpressionTE<'s, 't>> =
+            param_lookups_2.into_iter().map(|e| &*self.typing_interner.alloc(e)).collect();
+        let patterns: Vec<&'s AtomSP<'s>> = params_1.iter().map(|p| &p.pattern).collect();
+        let let_exprs_2 = self.translate_pattern_list(
+            coutputs, nenv, life, range, call_location,
+            &patterns, &param_lookups_2_refs, region);
+
+        // todo: at this point, to allow for recursive calls, add a callable type to the environment
+        // for everything inside the body to use
+
+        if !params_1.is_empty() {
+            panic!("implement: evaluateLets — params1.foreach check");
+        }
+
+        let_exprs_2
     }
 /*
   // Produce the lets at the start of a function.

@@ -12,6 +12,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
+use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use std::collections::HashSet;
@@ -527,7 +528,14 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let (expr2, returns_from_expr) =
+            self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1);
+        match expr2 {
+            ExpressionTE::Reference(r) => (r, returns_from_expr),
+            ExpressionTE::Address(_a) => {
+                panic!("implement: evaluateAndCoerceToReferenceExpression — AddressExpressionTE");
+            }
+        }
     }
 /*
   def evaluateAndCoerceToReferenceExpression(
@@ -639,7 +647,49 @@ where 's: 't,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
     ) -> (ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match expr_1 {
+            IExpressionSE::Void(_) => {
+                (ExpressionTE::Reference(self.typing_interner.alloc(
+                    ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+                        region,
+                        _phantom: std::marker::PhantomData,
+                    }))), HashSet::new())
+            }
+            IExpressionSE::ConstantInt(c) => {
+                (ExpressionTE::Reference(self.typing_interner.alloc(
+                    ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                        value: ITemplataT::Integer(c.value),
+                        bits: c.bits,
+                        region,
+                    }))), HashSet::new())
+            }
+            IExpressionSE::Return(ret) => {
+                let (uncasted_inner_expr_2, returns_from_inner_expr) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(0), parent_ranges,
+                        outer_call_location, region, ret.inner);
+
+                let inner_expr_2 = match nenv.parent_function_env.maybe_return_type {
+                    None => uncasted_inner_expr_2,
+                    Some(_return_type) => {
+                        panic!("implement: evaluate_expression ReturnSE — return type conversion");
+                    }
+                };
+
+                let all_locals = &nenv.declared_locals;
+                let unstackified_locals = &nenv.unstackified_locals;
+                let variables_to_destruct: Vec<&ILocalVariableT<'s, 't>> = all_locals.iter()
+                    .filter(|x| {
+                        panic!("implement: evaluate_expression ReturnSE — filter locals");
+                    })
+                    .collect();
+
+                panic!("implement: evaluate_expression ReturnSE — result variable and return wrapping");
+            }
+            _ => {
+                panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
+            }
+        }
     }
 /*
   // returns:
@@ -2152,7 +2202,9 @@ where 's: 't,
         region: RegionT,
         block: &'s BlockSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        self.evaluate_block_statements_block(
+            coutputs, starting_nenv, nenv, parent_ranges, call_location,
+            life, region, block)
     }
 /*
   def evaluateBlockStatements(
@@ -2186,7 +2238,15 @@ where 's: 't,
         pattern_input_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        self.translate_pattern_list_pattern(
+            coutputs, nenv, life, parent_ranges, call_location,
+            patterns_1, pattern_input_exprs_2, region,
+            |_coutputs, nenv, _live_capture_locals| {
+                self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+                    region: nenv.default_region,
+                    _phantom: std::marker::PhantomData,
+                }))
+            })
     }
 /*
   def translatePatternList(

@@ -1813,7 +1813,7 @@ where 's: 't,
     ) -> ITemplataT<'s, 't> {
         match templata {
             ITemplataT::Kind(kind_templata) => {
-                ITemplataT::Coord(self.typing_interner.intern_coord_templata(
+                ITemplataT::Coord(self.typing_interner.alloc(
                     CoordTemplataT { coord: self.coerce_kind_to_coord(coutputs, kind_templata.kind, region) }
                 ))
             }
@@ -2221,7 +2221,7 @@ where 's: 't,
             INameT::NonKindNonRegionPlaceholder(placeholder_name),
         );
         // PlaceholderTemplataT(idT, tyype)
-        ITemplataT::Placeholder(self.typing_interner.intern_placeholder_templata(PlaceholderTemplataT {
+        ITemplataT::Placeholder(self.typing_interner.alloc(PlaceholderTemplataT {
             id: *id_t,
             tyype,
         }))

@@ -131,7 +131,24 @@ where 's: 't,
         region: RegionT,
         block_se: &'s BlockSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
+            self.evaluate_and_coerce_to_reference_expression(
+                coutputs, nenv, life.add(0), parent_ranges,
+                call_location, region, block_se.expr);
+
+        let unresultified_undestructed_expressions =
+            unnevered_unresultified_undestructed_root_expression;
+
+        let drop_range = RangeS { begin: block_se.range.end, end: block_se.range.end };
+        let drop_ranges: Vec<RangeS<'s>> =
+            std::iter::once(drop_range).chain(parent_ranges.iter().copied()).collect();
+        let new_expr =
+            self.drop_since(
+                coutputs, starting_nenv, nenv,
+                &drop_ranges, call_location, life, region,
+                unresultified_undestructed_expressions);
+
+        (new_expr, returns_from_exprs)
     }
 /*
   def evaluateBlockStatements(
