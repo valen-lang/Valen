@@ -141,7 +141,7 @@ sealed trait IRuneAttributeP {
 case class ImmutableRuneAttributeP(range: RangeL) extends IRuneAttributeP
 case class MutableRuneAttributeP(range: RangeL) extends IRuneAttributeP
 //case class TypeRuneAttributeP(range: RangeL, tyype: ITypePR) extends IRuneAttributeP { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 case class ReadOnlyRegionRuneAttributeP(range: RangeL) extends IRuneAttributeP
 case class ReadWriteRegionRuneAttributeP(range: RangeL) extends IRuneAttributeP
 case class ImmutableRegionRuneAttributeP(range: RangeL) extends IRuneAttributeP

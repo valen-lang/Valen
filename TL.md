@@ -50,25 +50,90 @@ Net result: the `header_sig.id == needle_signature.id` assertion is gone; the te
 
 1. **Removed `FunctionEnvironmentBoxT` from Scala** for `declareAndEvaluateFunctionBody` and `evaluateFunctionBody` (the Box's `setReturnType`/`addEntry`/`addEntries` mutators are never invoked on this entry point). Edited Scala source first, updated Rust audit-trail `/* ... */` blocks to match, then changed Rust signatures to `&'t FunctionEnvironmentT` directly. SCPX clean. See "Editing Scala To Match A Rust Simplification" below.
 2. **Eagerly promoted ~23 panic stubs to `&'t self`** across `function_environment_t.rs` and `environment.rs` for methods matching the wrap-self (`lookup_*_inner` → `IEnvironmentT::Variant(self)`) or embed-self (`root_compiling_denizen_env`, `make_child*`) patterns. Doc rule added as design v3 §3.4a. See "Interning Approach" rule #4 below.
-3. **Added `snapshot(&self, interner)` to `TemplatasStoreBuilder`, `NodeEnvironmentBuilder`, `FunctionEnvironmentBuilder`** — Scala's `Box.snapshot` semantics, mid-flight freezes that don't consume the builder. Used by `evaluateFunctionBody`'s `val startingEnv = env.snapshot` line. Design v3 §3.3 updated.
+3. **Added `snapshot(&self, interner)` to `TemplatasStoreBuilder`, `NodeEnvironmentBox`, `FunctionEnvironmentBuilder`** — Scala's `Box.snapshot` semantics, mid-flight freezes that don't consume the builder. Used by `evaluateFunctionBody`'s `val startingEnv = env.snapshot` line. Design v3 §3.3 updated.
 
 JR is now unblocked on `evaluate_function_body` body migration. Driving test remains `simple_program_returning_an_int_explicit`. The current panic point is wherever the body migration lands next.
+
+**Latest session (NodeEnvironmentBox restructuring + expression-hierarchy equality opt-out):** While JR was migrating `unletLocalWithoutDropping` and adjacent helpers, several scaffolding gaps surfaced — all addressed at TL/architect level:
+
+1. **`result()` dispatch added on `ReferenceExpressionTE` and `AddressExpressionTE`.** Scala's `def result` lives on the trait; the slice pipeline emitted module-level placeholder free fns (`reference_expression_result`, `address_expression_result`) that didn't infer struct context. Wrapped each in an `impl<'s, 't> XExpressionTE<'s, 't> { pub fn result(&self) -> ... }` block dispatching to per-variant `e.result()` panic stubs. Same pattern as the "Proactively Add Inherited Dispatch Methods" section below.
+
+2. **`NodeEnvironmentBuilder` renamed to `NodeEnvironmentBox`** (architect-level Scala-parity rename). The Rust "Builder" naming was a leftover from when design v3 §3.3 framed these as one-shot builders; with `snapshot()` added in slab 15c, the type now has full `Box` semantics. Renaming brought it in line with Scala's `NodeEnvironmentBox`. Same logic still pending for `FunctionEnvironmentBuilder` → `FunctionEnvironmentBoxT`. Added a comment above the struct explaining why we have a Box at all (arena allocation precludes `&mut NodeEnvironmentT`; arena slices `&'t [...]` aren't growable in place).
+
+3. **Reversed design v3 §3.3's "Box deleted in Rust, subsumed by builder-freeze pattern" stance.** The Rust file `function_environment_t.rs` had carried 24 `// (Deleted in Rust per design v3 §3.3)` annotations on every Scala `NodeEnvironmentBox` method, with the actual Rust struct + impl living ~1100 lines later as orphans. Walked the Scala audit-trail block at lines 822-1020 and sliced in proper Rust impls adjacent to each Scala `/* def ... */`. Implemented `add_variable`, `get_all_locals`, `mark_local_unstackified` (verbatim Scala port). Panic-stubbed the other 22 methods. Deleted the orphan struct + impl from line 1950. Updated design v3 §3.3 to reflect the reversal.
+
+4. **`local_helper.rs` 7 method signatures aligned**: `nenv: &NodeEnvironmentT<'s, 't>` → `nenv: &mut NodeEnvironmentBox<'s, 't>` to match Scala's `NodeEnvironmentBox` parameter type and the prevailing convention in `expression_compiler.rs` / `call_compiler.rs` / `pattern_compiler.rs` (~25 sites already use `&mut NodeEnvironmentBox`). Bodies still `panic!()`.
+
+5. **Dropped `NodeEnvironmentBox::build_in` and `FunctionEnvironmentBuilder::build_in`** — both Rust-only (no Scala counterpart), zero user-facing call sites. The only finalizer that fires is `env.snapshot(...)` at `function_body_compiler.rs:267`, mirroring Scala's `Box.snapshot`. `TemplatasStoreBuilder::build_in` kept (it's a genuine one-shot builder, ~8 user-facing sites).
+
+6. **Dropped `derive(PartialEq)` from the entire expression hierarchy in `expressions.rs`** — `ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, plus all ~50 per-variant struct types. Mirrors Scala's 52 `override def equals(obj: Any): Boolean = vcurious()` overrides in `ast/expressions.scala`. Rust's "no impl" gives a strictly stronger compile-time error vs Scala's runtime panic. Documented as a vcurious-mirror exception in IEOIBZ + TL.md §3 + design v3 §2 — Arena-allocated types that opt out of equality entirely (no derive, no impl) when the Scala counterpart `vcurious`-disables comparison. New rule for future TLs: check the Scala counterpart's `equals` override before adding `PartialEq` to a Rust port.
+
+7. **`migration-drive.md` got two new notes**: a general "check `///` TFITCX classification before adding Clone/Copy/PartialEq derives" note (so future JRs don't paper over ownership errors with `Clone` on Arena-allocated types — the FunctionHeaderT case JR escalated today), and a "re-read this skill on every compaction" note at the top so JR picks up newly-added gotchas after context resets.
+
+JR is now unblocked on `unletLocalWithoutDropping` body and the surrounding `make_temporary_local_defer` / `unlet_and_drop_all` family. The active test is still `simple_program_returning_an_int_explicit`.
+
+**Latest session (Slab 15e — first end-to-end test passing):** `simple_program_returning_an_int_explicit` is now **green end-to-end**. The body of `Compiler::evaluate`'s post-deferred phase is wired up; eight `Slab 10` panic stubs in `compiler_outputs.rs` filled in (`add_function`, `get_all_structs`/`_interfaces`/`_functions`, `get_kind_exports`/`_function_exports`/`_kind_externs`/`_function_externs`, `get_instantiation_name_to_function_bound_to_rune`); `compile_i_tables` / `make_interface_edge_blueprints` / `ensure_deep_exports` got Scala-shaped skeletons with panics in the unhandled branches; `HinputsT` field types reshaped to `Vec<&'t T>` (Scala's `Vector[T]` is GC-ref); `lookup_function_by_human_name` ported verbatim; `BlockTE::result()` dispatched to `self.inner.result()`; `templata_compiler.rs`'s `assemble_rune_to_function_bound`/`_impl_bound` pattern destructures fixed (`IEnvEntryT::Templata` directly wraps `ITemplataT`, no `TemplataEnvEntryT` wrapper; `PrototypeTemplataT.prototype`; `IsaTemplataT.impl_name`). Driving test promoted to `hardcoding_negative_numbers` (the next test in `compiler_tests.rs` order).
+
+Three meta-lessons from this session were folded into the rules below:
+
+1. **"Aggressively panic for untested branches" applies to code paths, not data values** — a struct field that gets initialized to an empty collection on the test path is correct parity, not a wrong-answer risk. Panic only inside the bodies that wouldn't be reached. See "Good Partial Implementing" below.
+2. **SPDMX-vs-TL.md tension on iteration scaffolding** — when SPDMX's heuristic flags a Scala-shaped `.map(|x| panic!())` / `.for_each(|x| panic!())` skeleton as "novel scaffolding," temp-disable SPDMX with the standard rationale; TL.md's "Good Partial Implementing" pattern wins. See "Skeleton-with-panics vs SPDMX" below.
+3. **`add_function` taking an explicit `signature: &'t SignatureT` parameter** is a documented Rust-side adaptation to interning (`CompilerOutputs` doesn't hold the typing_interner). SPDMX exception B applies; comment it inline as `// Rust adaptation (SPDMX-B): ...` when adding similar interner-passing parameters.
+
+**Latest session (Slab 15f — typing-pass test traversal + LetSE scaffolding):** `hardcoding_negative_numbers` is now **green end-to-end**. Three pieces of architect/TL-level scaffolding landed; JR is mid-migration on `simple_local`'s LetSE arm.
+
+1. **`src/typing/test/traverse.rs`** (~1740 lines) — Rust analog of Scala's `Collector.only` / `Collector.all`. Mirrors the established postparsing precedent (`src/postparsing/test/traverse.rs`, 1093 lines). `NodeRefT<'s, 't>` enum with ~95 variants, ~75 `visit_*` walkers, 5 `#[macro_export]` macros (`collect_in_tnode!`, `collect_where_tnode!`, `collect_only_tnode!`, plus `_tnodes!` plurals). The architect chose full upfront coverage (vs incremental) — every `ReferenceExpressionTE` / `AddressExpressionTE` / `KindT` / struct-payload `ITemplataT` variant is enumerated. Stop-at-trait for the 74 `INameT` variants, `IEnvironmentT`, attribute traits, etc. (per the postparsing precedent and TL.md §"What This Plan Deliberately Does NOT Cover"). No Guardian annotations (postparsing precedent has none either — pure test scaffolding). The file's `pub mod traverse;` is in `src/typing/test/mod.rs`.
+
+2. **`get_rune_types_from_pattern`** at `src/higher_typing/patterns.rs` — verbatim port of Scala's `PatternSUtils.getRuneTypesFromPattern` as a free `pub fn` (no Rust analog of `object PatternSUtils`). Recurses through `pattern.destructure`, appends `(coord_rune.rune, CoordTemplataType {})`, dedups preserving order. Used by the LetSE arm of `evaluate_expression`.
+
+3. **`LetExprRuneTypeSolverEnv`** at the bottom of `src/typing/expression/expression_compiler.rs` — Scala's `new IRuneTypeSolverEnv { ... }` anonymous class at `ExpressionCompiler.scala:959` becomes a named struct + `impl IRuneTypeSolverEnv<'s>` block, closing over `&'a NodeEnvironmentBox<'s, 't>`. Same shape as `HigherTypingRuneTypeSolverEnv` in `higher_typing_pass.rs:1867` (which collapses 6 anonymous Scala impls into one named struct). `/* Guardian: disable-all */` mirrors the higher-typing precedent. The `Some(_x) => panic!()` arm requires an `ITemplataT::tyype()` getter that doesn't exist yet — separate scaffolding gap, escalate when a test path hits it. The other 3 typing-pass `IRuneTypeSolverEnv` sites (`array_compiler.rs:101`, `templata_compiler.rs:1501` factory, `overload_resolver.rs:455`) get their own per-site structs when their containing functions get migrated — don't try to unify (the factory has a `LambdaStructImpreciseNameS` special case the LetSE inline doesn't).
+
+Three meta-lessons from this session:
+
+1. **Anonymous Scala trait impls map to named per-site Rust structs.** Established Rust precedent: `HigherTypingRuneTypeSolverEnv` collapses 6 anonymous Scala impls in one file into one struct (because they all close over the same fields). For typing-pass, expect ~4 per-site structs (one per anonymous `new IRuneTypeSolverEnv` call) since the bodies differ. Naming convention: `<UseSite>RuneTypeSolverEnv` (e.g. `LetExprRuneTypeSolverEnv`). Place at the bottom of the file with `/* Guardian: disable-all */`. Don't unify across sites unless you've verified the Scala bodies are identical.
+
+2. **Test-traversal scaffolding is TL territory, not JR.** When a test demands `Collector.only` (or any other large piece of test infrastructure with no Scala line-for-line counterpart), JR escalates and TL writes it. Don't expect JR to write hundreds of lines of `NodeRefT`/`visit_*` enumeration through their NNDX-restricted workflow — they shouldn't even try. TL.md §"NNDX Escalation Pattern" applies: TL adds the missing definitions directly.
+
+3. **AIMITIPX rule applies to test-traversal patterns.** No `if matches!` or `if`-guards on `collect_only_tnode!` patterns. Rust's vanilla struct/enum patterns support literal-value matching at any nesting level, so `Some(ConstantIntTE { value: ITemplataT::Integer(-3), .. }) => Some(())` works without any guard. The macro arms support guards (`$pattern if $guard => $body`) for parity with postparsing's macro shape, but don't use them — AIMITIPX shield will block tests that do.
 
 ---
 
 ## Known Residual Items
 
-- **141 panic-stubbed method bodies** across 17 files (top: expression_compiler.rs 21, templata_compiler.rs 20, infer_compiler.rs 15). Plus 88 stale stubs labeled "Slab 10" in compiler_outputs.rs (52) and templata_compiler.rs (36).
+- **~150 panic-stubbed method bodies** across 17+ files (top: expression_compiler.rs 21, templata_compiler.rs 20, infer_compiler.rs 15, function_environment_t.rs ~25). Plus ~80 stale stubs labeled "Slab 10" in compiler_outputs.rs (44) and templata_compiler.rs (36) — bumped down today by the eight `compiler_outputs.rs` Slab-10 stubs implemented in Slab 15e. The count is approximate; treat as a rough magnitude, not an exact figure.
 - **dispatch_function_body_macro** and friends not wired.
 - **LocationInFunctionEnvironmentT.path: Vec<i32>** in `ast/ast.rs` violates AASSNCMCX. Future cleanup turns into `&'t [i32]`.
 - **IRegionNameT** retains `_Phantom` — 0 Scala implementors found, deferred.
-- **22 cargo warnings** — all minor lifetime elision suggestions.
+- **30 cargo warnings** (was 22 in slab 15d, drifted up over 15e/15f) — all minor lifetime elision suggestions, mostly in `hinputs_t.rs`. Touched files in 15e/15f added zero warnings. Cleanup is cosmetic; defer.
+- **`lookup_function_by_human_name` should be `lookup_function_by_str`** per SPDMX exception J's pre-approved rename table (`Frontend/TypingPass/.../HinputsT.scala:146` → Rust). Cosmetic; rename the def in `hinputs_t.rs:326` and call sites in `compiler_tests.rs`. No body changes.
+- **`add_function` lacks the SPDMX-B adaptation comment** — should carry a `// Rust adaptation (SPDMX-B): signature passed explicitly because CompilerOutputs doesn't hold the typing_interner.` block above the fn. Cosmetic; documents the divergence so reviewers don't flag it.
+- **`ITemplataT::tyype()` getter is unimplemented** — Scala has it on the trait; Rust needs a per-variant match returning `ITemplataType<'s>`. Surfaces in `LetExprRuneTypeSolverEnv::lookup`'s `Some(_x) => panic!()` arm. Add when a test path hits the panic.
+- **3 typing-pass `IRuneTypeSolverEnv` sites un-migrated**: `array_compiler.rs:101`, `templata_compiler.rs:1501` (the `createRuneTypeSolverEnv` factory), `overload_resolver.rs:455`. Each becomes a per-site named struct following the `LetExprRuneTypeSolverEnv` pattern when its containing function gets migrated. Don't unify — Scala bodies differ.
+- **`lookup_nearest_with_imprecise_name`** at `function_environment_t.rs:1079` is panic-stubbed. Will need migration when a test path actually triggers a name lookup through the LetSE arm (none of the currently-passing tests do).
 
 ---
 
 ## Good Partial Implementing
 
 When replacing a `panic!` stub with real logic, write just the shallow structure of that scope — straight-line variable bindings, function calls, match expressions with all arms — but put `panic!` inside every new branch body, loop body, closure/lambda body, and match arm. Then only fill in the specific arms/branches the driving test actually hits. This applies recursively: when a test hits one of those inner panics, replace *that* panic with its own skeleton-with-panics, fill in only what the test needs, and so on. Each iteration expands one panic into a new layer of structure. **Aggressively panic for anything that might not be executed by current tests.** This minimizes each batch's diff and ensures untested paths crash loudly rather than silently returning wrong results.
+
+**Important clarification: "untested branches" means untested *code paths*, not untested *data values*.** A struct field that gets initialized to `HashMap::new()` on the test path is **executed** — the initializer runs, the empty map is constructed, the struct is built. If Scala produces an empty map on the same input (e.g. a program with no impls produces empty `interfaceEdgeBlueprints`), then an empty Rust map is the *correct* parity translation, not a silent-wrong-answer hazard. Panicking inside the field initializer would break the test for no reason, since the path through it is parity-correct.
+
+The rule applies to **branches that wouldn't be reached if the input is empty**: panic inside the loop body that iterates the (empty) collection, panic inside the match arm for a variant the input doesn't contain, panic inside the closure that's never invoked. Those are the untested code paths. The struct-field-init line itself runs unconditionally on the test path; whatever value it produces matches Scala's value on the same input, so it's correct.
+
+When in doubt, ask "does this line *run* on the test path?" If yes, it must produce the same value Scala produces — empty values are fine. If no (e.g. it's inside a closure body the test never invokes), panic.
+
+---
+
+## Skeleton-With-Panics vs SPDMX
+
+The "Good Partial Implementing" pattern (Scala-shaped iteration with panics in the closure bodies) collides with SPDMX's heuristic in a predictable way. SPDMX sees `.map(|x| panic!())` / `.for_each(|x| panic!())` / nested `for x in ... { panic!() }` and flags it as "novel scaffolding" or "Rust-only iteration structure," recommending `panic!()` for the whole function instead. But whole-function `panic!` breaks the test path, which is non-negotiable — so the skeleton-with-panics IS the right pattern, and SPDMX is the one being too aggressive.
+
+**Resolution: TL temp-disables SPDMX on the affected function with a documented rationale.** This is a TL/architect-level move; juniors must escalate, not temp-disable themselves. Standard rationale boilerplate (paste verbatim into the disable invocation):
+
+> Per TL.md "Good Partial Implementing": this function uses the skeleton-with-panics-in-closures pattern that the migration design endorses. The iteration structure (.map / .for_each / nested for) mirrors Scala's call graph; panics live in the closure bodies. SPDMX's heuristic flags the iteration structure as "novel scaffolding," but the structure IS the Scala parity — without it, the call graph diverges. For the empty-input case (the driving test), the closures never fire and the function is a verified no-op; for non-empty inputs they panic loudly with named placeholders. TL approval: temp-disable SPDMX here, re-enable when the closure bodies get filled in with real logic.
+
+This came up in Slab 15e on `ensure_deep_exports`, `compile_i_tables`, and `make_interface_edge_blueprints`. Expect it to recur on every function whose Scala body is a long `.map.groupBy.mapValues` / `.foreach` chain with side-effecting closures — which is most of the typing pass's emitter-shaped functions. The temp-disable is the standard remedy; re-enable lifts when the closure bodies get implemented with real logic.
 
 ---
 
@@ -193,6 +258,18 @@ Wrappers that hold `&'t FooT` (or `&'s` for higher-typing types) just `#[derive(
 Identity types with this pattern: `IEnvironmentT`, `FunctionA`, `StructA`, `InterfaceA`, `ImplA`, `FunctionHeaderT`, `IdT` (slight outlier — it ptr-eq's `init_steps`'s slice pointer, not the whole struct, because it lives by value, not by reference).
 
 Documented exceptions (kept as `self.id == other.id`): the variant env types (`PackageEnvironmentT`, `CitizenEnvironmentT`, `FunctionEnvironmentT`, etc.). These are sound because `IdT` is sealed/canonical, and these types are usually compared via `&'t IEnvironmentT` (which goes through `IEnvironmentT::eq`'s ptr-eq) anyway.
+
+**Equality opt-out (vcurious mirror).** Some Arena-allocated types intentionally have **no equality at all** — no derive, no impl. The expression hierarchy is the canonical case: `ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, plus the ~50 per-variant struct types in `ast/expressions.rs`. Scala has 52 `override def equals(obj: Any): Boolean = vcurious()` overrides on these in `ast/expressions.scala` — Scala panics on any `==` call. Rust mirrors this by not impl-ing `PartialEq`/`Hash` at all, which is strictly stronger (compile error vs runtime panic).
+
+Before adding a new arena-allocated type, check the Scala counterpart's equality story:
+
+| Scala has | Rust does |
+|---|---|
+| Default case-class equality (structural) | (Doesn't happen for arena-allocated types in practice) |
+| `vcurious()` equals/hashCode overrides | **No PartialEq/Hash impl or derive at all** |
+| `override def equals` calling `==` on a specific identity field (e.g. `id`) | Manual ptr-eq via `std::ptr::eq` per @IEOIBZ |
+
+The classification `/// Arena-allocated` is about lifetime/storage (the type lives in the typing arena, accessed via `&'t T`), not about identity semantics. Most Arena-allocated types do have identity and follow @IEOIBZ; the expression hierarchy is the documented opt-out.
 
 ### 4. `&'t self` on arena/interned-type methods that emit a `'t`-back-pointer to self (design v3 §3.4a)
 

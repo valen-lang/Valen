@@ -3,11 +3,12 @@ use crate::postparsing::ast::{IBodyS, LocationInDenizen, ParameterS};
 use crate::postparsing::expressions::{BodySE, IExpressionSE};
 use crate::postparsing::patterns::patterns::AtomSP;
 use crate::typing::ast::ast::{LocationInFunctionEnvironmentT, ParameterT};
-use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ReferenceExpressionTE};
+use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ReferenceExpressionTE, ReturnTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
-use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBuilder};
-use crate::typing::types::types::{CoordT, RegionT};
+use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
+use crate::typing::env::environment::IInDenizenEnvironmentT;
+use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
 use std::collections::HashSet;
 
@@ -282,16 +283,52 @@ where 's: 't,
         let unconverted_body_without_return =
             self.consecutive(&[patterns_te, statements_from_block]);
 
+        let starting_env_ref = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(starting_env));
         let converted_body_without_return = match maybe_expected_result_type {
             None => {
                 panic!("implement: evaluateFunctionBody — None expectedResultType");
             }
             Some(expected_result_type) => {
-                panic!("implement: evaluateFunctionBody — type conversion");
+                if self.is_type_convertible(coutputs, starting_env_ref, parent_ranges, call_location,
+                    unconverted_body_without_return.result().coord, expected_result_type) {
+                    if unconverted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+                        unconverted_body_without_return
+                    } else {
+                        let func_outer_env_ref = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Function(func_outer_env));
+                        self.convert(func_outer_env_ref, coutputs, &range_list, call_location,
+                            unconverted_body_without_return, expected_result_type)
+                    }
+                } else {
+                    return Err(ResultTypeMismatchError);
+                }
             }
         };
 
-        panic!("implement: evaluateFunctionBody — return wrapping");
+        let (converted_body_with_return, returns_maybe_with_never) =
+            if converted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+                (converted_body_without_return, returns_from_inside_maybe_with_never)
+            } else {
+                let mut returns = returns_from_inside_maybe_with_never;
+                returns.insert(converted_body_without_return.result().coord);
+                let return_te = &*self.typing_interner.alloc(
+                    ReferenceExpressionTE::Return(ReturnTE { source_expr: converted_body_without_return }));
+                (return_te, returns)
+            };
+
+        let returns =
+            if returns_maybe_with_never.len() > 1 {
+                returns_maybe_with_never.into_iter().filter(|c| {
+                    !matches!(c, CoordT { ownership: OwnershipT::Share, kind: KindT::Never(NeverT { from_break: false }), .. })
+                }).collect()
+            } else {
+                returns_maybe_with_never
+            };
+
+        if is_destructor {
+            panic!("implement: evaluateFunctionBody — destructor check");
+        }
+
+        Ok((&*self.typing_interner.alloc(BlockTE { inner: converted_body_with_return }), returns))
     }
 /*
   private def evaluateFunctionBody(
@@ -388,7 +425,7 @@ where 's: 't,
 {
     pub fn evaluate_lets(
         &self,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         range: &[RangeS<'s>],

@@ -507,7 +507,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_all_unstackified_locals
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn get_all_unstackified_locals(&self) -> Vec<IVarNameT<'s, 't>> {
-    panic!("Unimplemented: get_all_unstackified_locals");
+    self.unstackified_locals.to_vec()
   }
   /*
     def getAllUnstackifiedLocals(): Vector[IVarNameT] = {
@@ -683,7 +683,27 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     &self,
     since_nenv: &NodeEnvironmentT<'s, 't>,
   ) -> Vec<ILocalVariableT<'s, 't>> {
-    panic!("Unimplemented: get_live_variables_introduced_since");
+    let locals_as_of_then: Vec<ILocalVariableT<'s, 't>> =
+        since_nenv.declared_locals.iter().filter_map(|v| match v {
+            IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
+            IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
+            _ => None,
+        }).collect();
+    let locals_as_of_now: Vec<ILocalVariableT<'s, 't>> =
+        self.declared_locals.iter().filter_map(|v| match v {
+            IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
+            IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
+            _ => None,
+        }).collect();
+
+    assert!(locals_as_of_now.starts_with(&locals_as_of_then));
+    let locals_declared_since_then = &locals_as_of_now[locals_as_of_then.len()..];
+    assert!(locals_declared_since_then.len() == locals_as_of_now.len() - locals_as_of_then.len());
+
+    locals_declared_since_then.iter()
+        .filter(|x| !self.unstackified_locals.contains(&x.name()))
+        .copied()
+        .collect()
   }
   /*
     def getLiveVariablesIntroducedSince(
@@ -821,115 +841,248 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 
 // mig: struct NodeEnvironmentBox
 // mig: impl NodeEnvironmentBox
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox / FunctionEnvironmentBoxT / IDenizenEnvironmentBoxT
-//  Scala mutable wrappers are subsumed by the builder-freeze pattern in Rust.)
+/// Temporary state (see @TFITCX)
+//
+// Mirrors Scala's `NodeEnvironmentBox`. Why a Box instead of `&mut NodeEnvironmentT`?
+// Two reasons, both rooted in arena allocation:
+//
+// 1. `NodeEnvironmentT` is arena-allocated and accessed via `&'t NodeEnvironmentT`.
+//    The interner hands out shared borrows; per @TFITCX/@IEOIBZ, arena-allocated
+//    identity-bearing types are treated as immutable. There's no `&mut` to obtain.
+//
+// 2. Its list fields (`declared_locals`, `unstackified_locals`, `restackified_locals`)
+//    are arena slices `&'t [...]`, not `Vec`. Slices aren't growable in place — even
+//    with `&mut` you couldn't `push`; you'd have to re-arena-allocate the whole slice.
+//
+// The Box owns `Vec`s instead, mutates via `&mut self` without touching the arena,
+// then `build_in`/`snapshot` re-allocates those `Vec`s into arena slices to produce
+// the immutable `&'t NodeEnvironmentT`. Scala can sidestep all this with a literal
+// `var nodeEnvironment: NodeEnvironmentT` because GC makes every reference
+// mutable-by-default; Rust + arena can't, so the Box exists to bridge the gap.
+pub struct NodeEnvironmentBox<'s, 't>
+where 's: 't,
+{
+  pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
+  pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
+  pub node: &'s IExpressionSE<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
+  pub declared_locals: Vec<IVariableT<'s, 't>>,
+  pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
+  pub restackified_locals: Vec<IVarNameT<'s, 't>>,
+  pub default_region: RegionT,
+}
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
 */
 // mig: override fn eq
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (No Rust impl — Box deliberately doesn't impl PartialEq, mirroring Scala's vcurious panic-on-call. Misuse fails at compile time, which is strictly stronger than Scala's runtime vfail.)
 /*
   override def equals(obj: Any): Boolean = vcurious();
 */
 // mig: override fn hashCode
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+// (No Rust impl — Box deliberately doesn't impl Hash, mirroring Scala's "shouldn't hash, is mutable" vfail.)
 /*
 override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 */
 // mig: fn snapshot
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn snapshot(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> &'t NodeEnvironmentT<'s, 't> {
+    let templatas = self.templatas_builder.snapshot(interner);
+    let declared_locals = interner.alloc_slice_from_vec(self.declared_locals.clone());
+    let unstackified_locals = interner.alloc_slice_from_vec(self.unstackified_locals.clone());
+    let restackified_locals = interner.alloc_slice_from_vec(self.restackified_locals.clone());
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: self.parent_node_env,
+      node: self.node,
+      life: self.life.clone(),
+      templatas,
+      declared_locals,
+      unstackified_locals,
+      restackified_locals,
+      default_region: self.default_region,
+    })
+  }
 /*
   def snapshot: NodeEnvironmentT = nodeEnvironment
 */
+}
 // mig: fn default_region
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn default_region(&self) -> RegionT {
+    self.default_region
+  }
 /*
   def defaultRegion: RegionT = nodeEnvironment.defaultRegion
 */
+}
 // mig: fn id
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn id(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: id");
+  }
 /*
   def id: IdT[IFunctionNameT] = nodeEnvironment.parentFunctionEnv.id
 */
+}
 // mig: fn node
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn node(&self) -> &'s IExpressionSE<'s> {
+    panic!("Unimplemented: node");
+  }
 /*
   def node: IExpressionSE = nodeEnvironment.node
 */
+}
 // mig: fn maybe_return_type
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn maybe_return_type(&self) -> Option<CoordT<'s, 't>> {
+    self.parent_function_env.maybe_return_type
+  }
 /*
   def maybeReturnType: Option[CoordT] = nodeEnvironment.parentFunctionEnv.maybeReturnType
 */
+}
 // mig: fn global_env
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
+    panic!("Unimplemented: global_env");
+  }
 /*
   def globalEnv: GlobalEnvironment = nodeEnvironment.globalEnv
 */
+}
 // mig: fn declared_locals
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn declared_locals(&self) -> &[IVariableT<'s, 't>] {
+    panic!("Unimplemented: declared_locals");
+  }
 /*
   def declaredLocals: Vector[IVariableT] = nodeEnvironment.declaredLocals
 */
+}
 // mig: fn unstackifieds
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn unstackifieds(&self) -> &[IVarNameT<'s, 't>] {
+    panic!("Unimplemented: unstackifieds");
+  }
 /*
   def unstackifieds: Set[IVarNameT] = nodeEnvironment.unstackifiedLocals
 */
+}
 // mig: fn function
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn function(&self) -> &'s FunctionA<'s> {
+    panic!("Unimplemented: function");
+  }
 /*
   def function = nodeEnvironment.function
 */
+}
 // mig: fn function_environment
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn function_environment(&self) -> &'t FunctionEnvironmentT<'s, 't> {
+    panic!("Unimplemented: function_environment");
+  }
 /*
   def functionEnvironment = nodeEnvironment.parentFunctionEnv
 */
+}
 // mig: fn add_variable
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn add_variable(&mut self, new_var: IVariableT<'s, 't>) {
+    self.declared_locals.push(new_var);
+  }
 /*
   def addVariable(newVar: IVariableT): Unit= {
     nodeEnvironment = nodeEnvironment.addVariable(newVar)
   }
 */
+}
 // mig: fn mark_local_unstackified
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn mark_local_unstackified(&mut self, new_unstackified: IVarNameT<'s, 't>) {
+    // Verbatim port of NodeEnvironmentT.markLocalUnstackified (FunctionEnvironmentT.scala:269-300):
+    assert!(self.get_all_locals().iter().any(|l| l.name() == new_unstackified));
+    assert!(!self.unstackified_locals.contains(&new_unstackified));
+
+    if self.restackified_locals.contains(&new_unstackified) {
+      // It was a restackified local, so don't mark it as unstackified, just undo the
+      // restackification.
+      // Even if the local belongs to a parent env, we still mark it unstackified here, see UCRTVPE.
+      self.restackified_locals.retain(|x| *x != new_unstackified);
+    } else {
+      // Even if the local belongs to a parent env, we still mark it unstackified here, see UCRTVPE.
+      self.unstackified_locals.push(new_unstackified);
+    }
+  }
 /*
   def markLocalUnstackified(newMoved: IVarNameT): Unit= {
     nodeEnvironment = nodeEnvironment.markLocalUnstackified(newMoved)
   }
 */
+}
 // mig: fn mark_local_restackified
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn mark_local_restackified(&mut self, _new_restackified: IVarNameT<'s, 't>) {
+    panic!("Unimplemented: mark_local_restackified");
+  }
 /*
   def markLocalRestackified(newMoved: IVarNameT): Unit= {
     nodeEnvironment = nodeEnvironment.markLocalRestackified(newMoved)
   }
 */
+}
 // mig: fn get_variable
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn get_variable(&self, _name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
+    panic!("Unimplemented: get_variable");
+  }
 /*
   def getVariable(name: IVarNameT): Option[IVariableT] = {
     nodeEnvironment.getVariable(name)
   }
 */
+}
 // mig: fn get_all_locals
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn get_all_locals(&self) -> Vec<ILocalVariableT<'s, 't>> {
+    self.declared_locals.iter().filter_map(|v| match v {
+      IVariableT::AddressibleLocal(a) => Some(ILocalVariableT::Addressible(*a)),
+      IVariableT::ReferenceLocal(r) => Some(ILocalVariableT::Reference(*r)),
+      IVariableT::AddressibleClosure(_) | IVariableT::ReferenceClosure(_) => None,
+    }).collect()
+  }
 /*
   def getAllLocals(): Vector[ILocalVariableT] = {
     nodeEnvironment.getAllLocals()
   }
 */
+}
 // mig: fn get_all_unstackified_locals
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn get_all_unstackified_locals(&self) -> Vec<IVarNameT<'s, 't>> {
+    self.unstackified_locals.clone()
+  }
 /*
   def getAllUnstackifiedLocals(): Vector[IVarNameT] = {
     nodeEnvironment.getAllUnstackifiedLocals()
   }
 */
+}
 // mig: fn lookup_nearest_with_imprecise_name
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_nearest_with_imprecise_name(
+    &self,
+    _name_s: IImpreciseNameS<'s>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+  ) -> Option<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_nearest_with_imprecise_name");
+  }
 /*
   def lookupNearestWithImpreciseName(
 
@@ -939,8 +1092,16 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     nodeEnvironment.lookupNearestWithImpreciseName(nameS, lookupFilter)
   }
 */
+}
 // mig: fn lookup_nearest_with_name
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_nearest_with_name(
+    &self,
+    _name_s: INameT<'s, 't>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+  ) -> Option<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_nearest_with_name");
+  }
 /*
   def lookupNearestWithName(
 
@@ -950,36 +1111,78 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     nodeEnvironment.lookupNearestWithName(nameS, lookupFilter)
   }
 */
+}
 // mig: fn lookup_all_with_imprecise_name
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_all_with_imprecise_name(
+    &self,
+    _name_s: IImpreciseNameS<'s>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_all_with_imprecise_name");
+  }
 /*
   def lookupAllWithImpreciseName( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext]): Array[ITemplataT[ITemplataType]] = {
     nodeEnvironment.lookupAllWithImpreciseName(nameS, lookupFilter)
   }
 */
+}
 // mig: fn lookup_all_with_name
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_all_with_name(
+    &self,
+    _name_s: INameT<'s, 't>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_all_with_name");
+  }
 /*
   def lookupAllWithName( nameS: INameT, lookupFilter: Set[ILookupContext]): Iterable[ITemplataT[ITemplataType]] = {
     nodeEnvironment.lookupAllWithName(nameS, lookupFilter)
   }
 */
+}
 // mig: fn lookup_with_imprecise_name_inner
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_with_imprecise_name_inner(
+    &self,
+    _name_s: IImpreciseNameS<'s>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+  }
 /*
   private[env] def lookupWithImpreciseNameInner( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
     nodeEnvironment.lookupWithImpreciseNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
+}
 // mig: fn lookup_with_name_inner
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn lookup_with_name_inner(
+    &self,
+    _name_s: INameT<'s, 't>,
+    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    _get_only_nearest: bool,
+  ) -> Vec<ITemplataT<'s, 't>> {
+    panic!("Unimplemented: lookup_with_name_inner");
+  }
 /*
   private[env] def lookupWithNameInner( nameS: INameT, lookupFilter: Set[ILookupContext], getOnlyNearest: Boolean) = {
     nodeEnvironment.lookupWithNameInner(nameS, lookupFilter, getOnlyNearest)
   }
 */
+}
 // mig: fn make_child
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn make_child(
+    &self,
+    _node: &'s IExpressionSE<'s>,
+    _maybe_new_default_region: Option<RegionT>,
+  ) -> &'t NodeEnvironmentT<'s, 't> {
+    panic!("Unimplemented: make_child");
+  }
 /*
   def makeChild(
     node: IExpressionSE,
@@ -988,29 +1191,54 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     nodeEnvironment.makeChild(node, maybeNewDefaultRegion)
   }
 */
+}
 // mig: fn add_entry
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn add_entry(
+    &mut self,
+    _interner: &TypingInterner<'s, 't>,
+    _name: INameT<'s, 't>,
+    _entry: IEnvEntryT<'s, 't>,
+  ) {
+    panic!("Unimplemented: add_entry");
+  }
 /*
   def addEntry(interner: Interner, name: INameT, entry: IEnvEntry): Unit = {
     nodeEnvironment = nodeEnvironment.addEntry(interner, name, entry)
   }
 */
+}
 // mig: fn add_entries
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn add_entries(
+    &mut self,
+    _interner: &TypingInterner<'s, 't>,
+    _new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
+  ) {
+    panic!("Unimplemented: add_entries");
+  }
 /*
   def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): Unit= {
     nodeEnvironment = nodeEnvironment.addEntries(interner, newEntries)
   }
 */
+}
 // mig: fn nearest_block_env
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn nearest_block_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    panic!("Unimplemented: nearest_block_env");
+  }
 /*
   def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
     nodeEnvironment.nearestBlockEnv()
   }
 */
+}
 // mig: fn nearest_loop_env
-// (Deleted in Rust per typing-pass-design-v3.md §3.3 — NodeEnvironmentBox subsumed by builder-freeze pattern.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn nearest_loop_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    panic!("Unimplemented: nearest_loop_env");
+  }
 /*
   def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
     nodeEnvironment.nearestLoopEnv()
@@ -1018,6 +1246,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 }
 
 */
+}
 // mig: struct FunctionEnvironmentT
 // mig: impl FunctionEnvironmentT
 /// Arena-allocated (see @TFITCX)
@@ -1222,7 +1451,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     &'t self,
     node: &'s IExpressionSE<'s>,
     life: LocationInFunctionEnvironmentT<'s>,
-  ) -> NodeEnvironmentBuilder<'s, 't> {
+  ) -> NodeEnvironmentBox<'s, 't> {
     // See WTHPFE, if this is a lambda, we let our blocks start with
     // locals from the parent function.
     let (declared_locals, unstackified_locals, restackified_locals) =
@@ -1232,7 +1461,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
         }
         _ => (Vec::new(), Vec::new(), Vec::new()),
       };
-    NodeEnvironmentBuilder {
+    NodeEnvironmentBox {
       parent_function_env: self,
       parent_node_env: None,
       node,
@@ -1498,7 +1727,10 @@ sealed trait ILocalVariableT extends IVariableT {
 // mig: fn name
 impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
   pub fn name(&self) -> IVarNameT<'s, 't> {
-    panic!("Unimplemented: name");
+    match self {
+      ILocalVariableT::Addressible(a) => a.name,
+      ILocalVariableT::Reference(r) => r.name,
+    }
   }
   /*
     def name: IVarNameT
@@ -1507,7 +1739,10 @@ impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
 // mig: fn coord
 impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
   pub fn coord(&self) -> CoordT<'s, 't> {
-    panic!("Unimplemented: coord");
+    match self {
+      ILocalVariableT::Addressible(a) => a.coord,
+      ILocalVariableT::Reference(r) => r.coord,
+    }
   }
   /*
     def coord: CoordT
@@ -1903,27 +2138,6 @@ where 's: 't,
 impl<'s, 't> FunctionEnvironmentBuilder<'s, 't>
 where 's: 't,
 {
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t FunctionEnvironmentT<'s, 't> {
-    let templatas = self.templatas_builder.build_in(interner);
-    let closured_locals = interner.alloc_slice_from_vec(self.closured_locals);
-    interner.alloc(FunctionEnvironmentT {
-      global_env: self.global_env,
-      parent_env: self.parent_env,
-      template_id: self.template_id,
-      id: self.id,
-      templatas,
-      function: self.function,
-      maybe_return_type: self.maybe_return_type,
-      closured_locals,
-      is_root_compiling_denizen: self.is_root_compiling_denizen,
-      default_region: self.default_region,
-    })
-  }
-  /* Guardian: disable-all */
-
   pub fn snapshot(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -1946,65 +2160,6 @@ where 's: 't,
   /* Guardian: disable-all */
 }
 
-/// Temporary state (see @TFITCX)
-pub struct NodeEnvironmentBuilder<'s, 't>
-where 's: 't,
-{
-  pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
-  pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
-  pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s>,
-  pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
-  pub declared_locals: Vec<IVariableT<'s, 't>>,
-  pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
-  pub restackified_locals: Vec<IVarNameT<'s, 't>>,
-  pub default_region: RegionT,
-}
-
-impl<'s, 't> NodeEnvironmentBuilder<'s, 't>
-where 's: 't,
-{
-  pub fn build_in(
-    self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t NodeEnvironmentT<'s, 't> {
-    let templatas = self.templatas_builder.build_in(interner);
-    let declared_locals = interner.alloc_slice_from_vec(self.declared_locals);
-    let unstackified_locals = interner.alloc_slice_from_vec(self.unstackified_locals);
-    let restackified_locals = interner.alloc_slice_from_vec(self.restackified_locals);
-    interner.alloc(NodeEnvironmentT {
-      parent_function_env: self.parent_function_env,
-      parent_node_env: self.parent_node_env,
-      node: self.node,
-      life: self.life,
-      templatas,
-      declared_locals,
-      unstackified_locals,
-      restackified_locals,
-      default_region: self.default_region,
-    })
-  }
-  /* Guardian: disable-all */
-
-  pub fn snapshot(
-    &self,
-    interner: &TypingInterner<'s, 't>,
-  ) -> &'t NodeEnvironmentT<'s, 't> {
-    let templatas = self.templatas_builder.snapshot(interner);
-    let declared_locals = interner.alloc_slice_from_vec(self.declared_locals.clone());
-    let unstackified_locals = interner.alloc_slice_from_vec(self.unstackified_locals.clone());
-    let restackified_locals = interner.alloc_slice_from_vec(self.restackified_locals.clone());
-    interner.alloc(NodeEnvironmentT {
-      parent_function_env: self.parent_function_env,
-      parent_node_env: self.parent_node_env,
-      node: self.node,
-      life: self.life.clone(),
-      templatas,
-      declared_locals,
-      unstackified_locals,
-      restackified_locals,
-      default_region: self.default_region,
-    })
-  }
-  /* Guardian: disable-all */
-}
+// (NodeEnvironmentBox struct + impls were moved up adjacent to the Scala `case class
+//  NodeEnvironmentBox` block — see ~line 822 above. The previous "deleted in Rust per
+//  design v3 §3.3" stance was reversed when we re-recognized the Box semantics.)

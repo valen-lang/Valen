@@ -17,7 +17,7 @@ override def hashCode(): Int = vcurious()
 case class BoolPT(range: RangeL, value: Boolean) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 //case class BorrowPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 case class PointPT(range: RangeL, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 // This is for example func(Int)Bool, func:imm(Int, Int)Str, func:mut()(Str, Bool)
@@ -46,7 +46,7 @@ override def hashCode(): Int = vcurious()
   vassert(name.str.str != "_")
 }
 //case class NullablePT(range: Range, inner: ITemplexPT) extends ITemplexPT { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 case class InterpretedPT(range: RangeL, maybeOwnership: Option[OwnershipPT], maybeRegion: Option[RegionRunePT], inner: ITemplexPT) extends ITemplexPT {
   override def equals(obj: Any): Boolean = vcurious();
   override def hashCode(): Int = vcurious()

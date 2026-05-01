@@ -367,7 +367,7 @@ override def hashCode(): Int = vcurious()
 ////   }
 //case class UnreachableMootIE(innerExpr: ReferenceExpressionIE) extends ReferenceExpressionIE {
 //  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
+//override def hashCode(): Int = vcurious()
 //  override def resultRemoveMe = ReferenceResulIT(CoordI[cI](MutableShareI, NeverI()))
 //}
 

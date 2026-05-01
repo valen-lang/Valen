@@ -334,7 +334,7 @@ where 's: 't,
     pub fn get_instantiation_name_to_function_bound_to_rune(
         &self,
     ) -> HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.instantiation_name_to_bounds.clone()
     }
     /*
       def getInstantiationNameToFunctionBoundToRune(): Map[IdT[IInstantiationNameT], InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]] = {
@@ -547,9 +547,17 @@ where 's: 't,
 {
     pub fn add_function(
         &mut self,
+        signature: &'t SignatureT<'s, 't>,
         function: &'t FunctionDefinitionT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        assert!(
+            function.body.result().coord.kind == KindT::Never(NeverT { from_break: false }) ||
+            function.body.result().coord == function.header.return_type);
+
+        assert!(!self.signature_to_function.contains_key(&PtrKey(signature)),
+            "wot");
+
+        self.signature_to_function.insert(PtrKey(signature), function);
     }
     /*
       def addFunction(function: FunctionDefinitionT): Unit = {
@@ -1208,7 +1216,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_structs(&self) -> Vec<&'t StructDefinitionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.struct_template_name_to_definition.values().copied().collect()
     }
     /*
       def getAllStructs(): Iterable[StructDefinitionT] = structTemplateNameToDefinition.values
@@ -1218,7 +1226,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_interfaces(&self) -> Vec<&'t InterfaceDefinitionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.interface_template_name_to_definition.values().copied().collect()
     }
     /*
       def getAllInterfaces(): Iterable[InterfaceDefinitionT] = interfaceTemplateNameToDefinition.values
@@ -1228,7 +1236,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_all_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.signature_to_function.values().copied().collect()
     }
     /*
       def getAllFunctions(): Iterable[FunctionDefinitionT] = signatureToFunction.values
@@ -1360,7 +1368,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_kind_exports(&self) -> Vec<&'t KindExportT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.kind_exports.clone()
     }
     /*
       def getKindExports: Vector[KindExportT] = {
@@ -1372,7 +1380,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_function_exports(&self) -> Vec<&'t FunctionExportT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.function_exports.clone()
     }
     /*
       def getFunctionExports: Vector[FunctionExportT] = {
@@ -1384,7 +1392,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_kind_externs(&self) -> Vec<&'t KindExternT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.kind_externs.clone()
     }
     /*
       def getKindExterns: Vector[KindExternT] = {
@@ -1396,7 +1404,7 @@ impl<'s, 't> CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub fn get_function_externs(&self) -> Vec<&'t FunctionExternT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.function_externs.clone()
     }
     /*
       def getFunctionExterns: Vector[FunctionExternT] = {

@@ -35,3 +35,20 @@ The typing pass interner now seals every TFITCX-Interned type via the `MustInter
 - `docs/arcana/SealedInternedConstruction-SICZ.md` — pattern explanation
 - `.claude/rules/postparser/IDEPFL-postparser-interning.md` — existing dual-enum pattern in postparsing
 - `docs/shields/TypesFitIntoTheseCategories-TFITCX.md` — Interned-category requirement
+
+---
+
+## Consider getting rid of `TemplatasStoreBuilder`
+
+`TemplatasStoreBuilder` is a Rust-only construct with no Scala counterpart — Scala just uses `TemplatasStore` directly (constructed via the case class). The builder exists in Rust because we need to accumulate the `Vec<(INameT, IEnvEntryT)>` and the `HashMap<&'s IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>` on the heap before freezing into the typing arena (`ArenaIndexMap`). It's heavily used (~8+ user-facing `build_in` call sites, plus internal use inside every env Builder/Box).
+
+**What to consider:** is there a way to eliminate the separate Builder type and just construct `TemplatasStoreT` directly, the way Scala does? Possibilities:
+- Store the `Vec`/`HashMap` directly in `TemplatasStoreT` itself, and only freeze to `ArenaIndexMap` lazily on first lookup (one-shot interior mutability).
+- Have a `&mut TemplatasStoreT` phase before arena allocation, then commit. (Probably hits the same arena-immutability wall as `&mut NodeEnvironmentT` did — see the comment above `NodeEnvironmentBox`.)
+- Eat the cost: keep the builder, document it as a necessary Rust-side adapter just like `NodeEnvironmentBox`'s `build_in` was before we dropped that one.
+
+**Why we deferred:** unlike `NodeEnvironmentBox::build_in` (which had zero call sites and was clear dead weight), `TemplatasStoreBuilder` is genuinely load-bearing. Removing it requires a real design decision, not just deletion. Worth revisiting once body migration settles down.
+
+**Cross-references:**
+- `docs/architecture/typing-pass-design-v3.md` §3.2 (TemplatasStoreT shape) and §3.3 (Mutable Building Phase)
+- The recently-dropped `NodeEnvironmentBox::build_in` and `FunctionEnvironmentBuilder::build_in` for the "real Box mirrors don't need a separate Builder" precedent

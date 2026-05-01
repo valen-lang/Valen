@@ -6,7 +6,9 @@ use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
 use crate::postparsing::names::IImpreciseNameS;
 use crate::scout_arena::ScoutArena;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::{ReferenceExpressionTE, ConsecutorTE, VoidLiteralTE};
+use crate::typing::ast::ast::{InterfaceEdgeBlueprintT, KindExportT};
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
@@ -1048,6 +1050,11 @@ where 's: 't,
             }
         }
 
+        // val (interfaceEdgeBlueprints, interfaceToSubCitizenToEdge) =
+        //   Profiler.frame(() => { edgeCompiler.compileITables(coutputs) })
+        let (interface_edge_blueprints, interface_to_sub_citizen_to_edge) =
+            self.compile_i_tables(&mut coutputs);
+
         // Deferred function compilation loop
         // while (coutputs.peekNextDeferredFunctionBodyCompile().nonEmpty || coutputs.peekNextDeferredFunctionCompile().nonEmpty)
         while coutputs.peek_next_deferred_function_body_compile().is_some() || coutputs.peek_next_deferred_function_compile().is_some() {
@@ -1090,7 +1097,51 @@ where 's: 't,
             }
         }
 
-        panic!("Unimplemented: evaluate — post-deferred phase (ensureDeepExports, reachability, HinputsT construction)");
+        // ensureDeepExports(coutputs)
+        self.ensure_deep_exports(&mut coutputs);
+
+        // val (reachableInterfaces, reachableStructs, reachableFunctions) =
+        //   (coutputs.getAllInterfaces(), coutputs.getAllStructs(), coutputs.getAllFunctions())
+        let reachable_interfaces = coutputs.get_all_interfaces();
+        let reachable_structs = coutputs.get_all_structs();
+        let reachable_functions = coutputs.get_all_functions();
+
+        // interfaceEdgeBlueprints.groupBy(_.interface).mapValues(vassertOne(_))
+        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
+        for _blueprint in interface_edge_blueprints.iter() {
+            panic!("implement: groupBy interface + vassertOne for non-empty edge blueprints");
+        }
+
+        // coutputs.getInstantiationNameToFunctionBoundToRune()
+        let raw_instantiation_bounds = coutputs.get_instantiation_name_to_function_bound_to_rune();
+        let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, InstantiationBoundArgumentsT<'s, 't>> = HashMap::new();
+        for (_id, _bounds) in raw_instantiation_bounds.iter() {
+            panic!("implement: convert instantiation_name_to_function_bound_to_rune entry");
+        }
+
+        let hinputs = HinputsT {
+            interfaces: reachable_interfaces,
+            structs: reachable_structs,
+            functions: reachable_functions.clone(),
+            interface_to_edge_blueprints,
+            interface_to_sub_citizen_to_edge,
+            instantiation_name_to_instantiation_bounds,
+            kind_exports: coutputs.get_kind_exports(),
+            function_exports: coutputs.get_function_exports(),
+            kind_externs: coutputs.get_kind_externs(),
+            function_externs: coutputs.get_function_externs(),
+            // sub_citizen_to_interface_to_edge will be populated by instantiator (Scala comment WPBI)
+            sub_citizen_to_interface_to_edge: HashMap::new(),
+        };
+
+        // vassert(reachableFunctions.toVector.map(_.header.id).distinct.size == reachableFunctions.toVector.map(_.header.id).size)
+        {
+            let ids: Vec<_> = reachable_functions.iter().map(|f| f.header.id).collect();
+            let distinct: std::collections::HashSet<_> = ids.iter().collect();
+            assert!(ids.len() == distinct.len());
+        }
+
+        Ok(hinputs)
     }
 /*
   def evaluate(
@@ -1894,7 +1945,70 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // val packageToKindToExport =
+        //   coutputs.getKindExports
+        //     .map(kindExport => (kindExport.id.packageCoord, kindExport.tyype, kindExport))
+        //     .groupBy(_._1)
+        //     .mapValues(
+        //       _.map(x => (x._2, x._3))
+        //         .groupBy(_._1)
+        //         .mapValues({
+        //           case Vector() => vwat()
+        //           case Vector(only) => only
+        //           case multiple => throw CompileErrorExceptionT(TypeExportedMultipleTimes(...))
+        //         }))
+        let kind_export_triples: Vec<(&'s PackageCoordinate<'s>, KindT<'s, 't>, &'t KindExportT<'s, 't>)> =
+            coutputs.get_kind_exports().iter()
+                .map(|ke| (ke.id.package_coord, ke.tyype, *ke))
+                .collect();
+        let mut grouped_by_package: HashMap<&'s PackageCoordinate<'s>, Vec<(KindT<'s, 't>, &'t KindExportT<'s, 't>)>> = HashMap::new();
+        for (pc, k, ke) in kind_export_triples.into_iter() {
+            grouped_by_package.entry(pc).or_insert_with(Vec::new).push((k, ke));
+        }
+        let package_to_kind_to_export: HashMap<&'s PackageCoordinate<'s>, HashMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> =
+            grouped_by_package.into_iter().map(|(pc, kind_pairs)| {
+                let mut grouped_by_kind: HashMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = HashMap::new();
+                for (k, ke) in kind_pairs.into_iter() {
+                    grouped_by_kind.entry(k).or_insert_with(Vec::new).push(ke);
+                }
+                let inner: HashMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> =
+                    grouped_by_kind.into_iter().map(|(k, exports)| {
+                        let only = match exports.as_slice() {
+                            [] => panic!("vwat"),
+                            [only] => *only,
+                            _ => panic!("implement: TypeExportedMultipleTimes"),
+                        };
+                        (k, only)
+                    }).collect();
+                (pc, inner)
+            }).collect();
+
+        // coutputs.getFunctionExports.foreach(funcExport => {
+        //   val exportedKindToExport = packageToKindToExport.getOrElse(funcExport.exportId.packageCoord, Map())
+        //   (Vector(funcExport.prototype.returnType) ++ funcExport.prototype.paramTypes)
+        //     .foreach(paramType => {
+        //       if (!Compiler.isPrimitive(paramType.kind) && !exportedKindToExport.contains(paramType.kind)) {
+        //         throw CompileErrorExceptionT(ExportedFunctionDependedOnNonExportedKind(...))
+        //       }
+        //     })
+        // })
+        coutputs.get_function_exports().iter().for_each(|_func_export| {
+            panic!("implement: ensure_deep_exports — function export paramType check");
+        });
+
+        // coutputs.getFunctionExterns.foreach(functionExtern => { ... })
+        coutputs.get_function_externs().iter().for_each(|_function_extern| {
+            panic!("implement: ensure_deep_exports — function extern paramType check");
+        });
+
+        // packageToKindToExport.foreach((packageCoord, exportedKindToExport) =>
+        //   exportedKindToExport.foreach((exportedKind, (kind, export)) =>
+        //     exportedKind match { case StructTT(_) => ...; case contentsStaticSizedArrayTT(...) => ...; ... }))
+        package_to_kind_to_export.iter().for_each(|(_package_coord, exported_kind_to_export)| {
+            exported_kind_to_export.iter().for_each(|(_exported_kind, _export)| {
+                panic!("implement: ensure_deep_exports — exportedKind struct/array member check");
+            });
+        });
     }
     /*
       def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
@@ -2065,7 +2179,38 @@ where 's: 't,
         &self,
         exprs: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match exprs {
+            [] => panic!("Shouldn't have zero-element consecutors!"),
+            [only] => only,
+            _ => {
+                let flattened: Vec<&'t ReferenceExpressionTE<'s, 't>> =
+                    exprs.iter().flat_map(|e| {
+                        match e {
+                            ReferenceExpressionTE::Consecutor(c) => c.exprs.to_vec(),
+                            other => vec![*other],
+                        }
+                    }).collect();
+
+                let without_init_voids: Vec<&'t ReferenceExpressionTE<'s, 't>> = {
+                    let (init, last) = flattened.split_at(flattened.len() - 1);
+                    let mut filtered: Vec<&'t ReferenceExpressionTE<'s, 't>> = init.iter()
+                        .filter(|e| !matches!(e, ReferenceExpressionTE::VoidLiteral(_)))
+                        .copied()
+                        .collect();
+                    filtered.push(last[0]);
+                    filtered
+                };
+
+                match without_init_voids.as_slice() {
+                    [] => panic!("Shouldn't have zero-element consecutors!"),
+                    [only] => only,
+                    _ => {
+                        let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
+                        &*self.typing_interner.alloc(ReferenceExpressionTE::Consecutor(ConsecutorTE { exprs: exprs_slice }))
+                    }
+                }
+            }
+        }
     }
     /*
       // Flattens any nested ConsecutorTEs

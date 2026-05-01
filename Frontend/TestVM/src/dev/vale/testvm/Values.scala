@@ -249,8 +249,8 @@ case class RegisterHoldToObjectReferrer(expressionId: ExpressionId, ownership: O
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;  }
 //case class ResultToObjectReferrer(callId: CallId) extends IObjectReferrer {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;  }
+  //val hash = runtime.ScalaRunTime._hashCode(this);
+//override def hashCode(): Int = hash;  }
 case class ArgumentToObjectReferrer(argumentId: ArgumentId, ownership: OwnershipH) extends IObjectReferrer {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;  }
@@ -279,8 +279,8 @@ case class CallId(callDepth: Int, function: PrototypeH) {
   override def hashCode(): Int = callDepth + function.id.shortenedName.hashCode
 }
 //case class RegisterId(blockId: BlockId, lineInBlock: Int) {
-  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;  }
+  //val hash = runtime.ScalaRunTime._hashCode(this);
+//override def hashCode(): Int = hash;  }
 case class ArgumentId(callId: CallId, index: Int) {
   val hash = runtime.ScalaRunTime._hashCode(this);
 override def hashCode(): Int = hash;  }

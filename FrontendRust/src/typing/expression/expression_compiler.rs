@@ -15,7 +15,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /*
 package dev.vale.typing.expression
@@ -155,7 +155,7 @@ where 's: 't,
     pub fn evaluate_and_coerce_to_reference_expressions(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -191,7 +191,7 @@ where 's: 't,
     pub fn evaluate_lookup_for_load(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -234,7 +234,7 @@ where 's: 't,
     pub fn evaluate_addressible_lookup_for_mutate(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         region: RegionT,
         load_range: RangeS<'s>,
@@ -335,7 +335,7 @@ where 's: 't,
     pub fn evaluate_addressible_lookup(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         ranges: &[RangeS<'s>],
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
@@ -440,7 +440,7 @@ where 's: 't,
     pub fn make_closure_struct_construct_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         region: RegionT,
         closure_struct_ref: StructTT<'s, 't>,
@@ -521,7 +521,7 @@ where 's: 't,
     pub fn evaluate_and_coerce_to_reference_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -569,7 +569,7 @@ where 's: 't,
 {
     pub fn coerce_to_reference_expression(
         &self,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
@@ -601,7 +601,7 @@ where 's: 't,
     pub fn evaluate_expected_address_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -640,7 +640,7 @@ where 's: 't,
     pub fn evaluate_expression(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         outer_call_location: LocationInDenizen<'s>,
@@ -669,22 +669,163 @@ where 's: 't,
                         coutputs, nenv, life.add(0), parent_ranges,
                         outer_call_location, region, ret.inner);
 
-                let inner_expr_2 = match nenv.parent_function_env.maybe_return_type {
+                let inner_expr_2 = match nenv.maybe_return_type() {
                     None => uncasted_inner_expr_2,
-                    Some(_return_type) => {
-                        panic!("implement: evaluate_expression ReturnSE — return type conversion");
+                    Some(return_type) => {
+                        let snapshot = nenv.snapshot(self.typing_interner);
+                        let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+                        let range_list: Vec<RangeS<'s>> =
+                            std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                        match self.is_type_convertible(
+                            coutputs, &snapshot_env, &range_list, outer_call_location,
+                            uncasted_inner_expr_2.result().coord, return_type) {
+                            false => {
+                                panic!("implement: evaluate_expression ReturnSE — CouldntConvertForReturnT");
+                            }
+                            true => {
+                                self.convert(
+                                    snapshot_env, coutputs, &range_list, outer_call_location,
+                                    uncasted_inner_expr_2, return_type)
+                            }
+                        }
                     }
                 };
 
-                let all_locals = &nenv.declared_locals;
-                let unstackified_locals = &nenv.unstackified_locals;
+                let all_locals = nenv.get_all_locals();
+                let unstackified_locals = nenv.get_all_unstackified_locals();
                 let variables_to_destruct: Vec<&ILocalVariableT<'s, 't>> = all_locals.iter()
-                    .filter(|x| {
-                        panic!("implement: evaluate_expression ReturnSE — filter locals");
-                    })
+                    .filter(|x| !unstackified_locals.contains(&x.name()))
                     .collect();
+                let reversed_variables_to_destruct: Vec<&ILocalVariableT<'s, 't>> =
+                    variables_to_destruct.into_iter().rev().collect();
 
-                panic!("implement: evaluate_expression ReturnSE — result variable and return wrapping");
+                let mut returns = returns_from_inner_expr;
+                returns.insert(inner_expr_2.result().coord);
+
+                let result_var_name = self.typing_interner.intern_typing_pass_function_result_var_name(
+                    TypingPassFunctionResultVarNameT { _phantom: std::marker::PhantomData });
+                let result_var_id = IVarNameT::TypingPassFunctionResultVar(result_var_name);
+                let result_variable = ReferenceLocalVariableT {
+                    name: result_var_id,
+                    variability: VariabilityT::Final,
+                    coord: inner_expr_2.result().coord,
+                };
+                let result_let = self.typing_interner.alloc(
+                    ReferenceExpressionTE::LetNormal(LetNormalTE {
+                        variable: ILocalVariableT::Reference(result_variable),
+                        expr: inner_expr_2,
+                    }));
+                nenv.add_variable(IVariableT::ReferenceLocal(result_variable));
+
+                let range_list: Vec<RangeS<'s>> =
+                    std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
+                let destruct_exprs_refs =
+                    self.unlet_and_drop_all(
+                        coutputs, nenv, &range_list, outer_call_location, region,
+                        &reversed_variables_to_destruct);
+
+                let get_result_expr = self.unlet_local_without_dropping(
+                    nenv, &ILocalVariableT::Reference(result_variable));
+                let get_result_expr_ref = self.typing_interner.alloc(
+                    ReferenceExpressionTE::Unlet(get_result_expr));
+
+                let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                all_exprs.push(result_let);
+                all_exprs.extend(destruct_exprs_refs);
+                all_exprs.push(get_result_expr_ref);
+
+                let consecutor = self.consecutive(&all_exprs);
+
+                let return_te = self.typing_interner.alloc(
+                    ReferenceExpressionTE::Return(ReturnTE {
+                        source_expr: consecutor,
+                    }));
+
+                (ExpressionTE::Reference(return_te), returns)
+            }
+            IExpressionSE::Let(let_se) => {
+                let (source_expr_2, returns_from_source) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
+
+                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv };
+                let rune_to_initially_known_type: HashMap<_, _> =
+                    crate::higher_typing::patterns::get_rune_types_from_pattern(&let_se.pattern)
+                        .into_iter().collect();
+                let range_list: Vec<RangeS<'s>> =
+                    std::iter::once(let_se.range).chain(parent_ranges.iter().copied()).collect();
+                let rune_to_type =
+                    crate::postparsing::rune_type_solver::solve_rune_type(
+                        self.scout_arena,
+                        self.opts.global_options.sanity_check,
+                        &rune_type_solve_env,
+                        range_list,
+                        false,
+                        let_se.rules,
+                        &[],
+                        true,
+                        rune_to_initially_known_type,
+                    ).unwrap_or_else(|_e| {
+                        panic!("implement: LetSE — HigherTypingInferError");
+                    });
+
+                let rules_vec: Vec<&'s IRulexSR<'s>> = let_se.rules.iter().collect();
+                let result_te = self.infer_and_translate_pattern(
+                    coutputs,
+                    nenv,
+                    life.add(1),
+                    parent_ranges,
+                    outer_call_location,
+                    &rules_vec,
+                    &rune_to_type,
+                    &let_se.pattern,
+                    source_expr_2,
+                    region,
+                    |_coutputs, nenv, _life, _live_capture_locals| {
+                        self.typing_interner.alloc(
+                            ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+                                region: nenv.default_region(),
+                                _phantom: std::marker::PhantomData,
+                            }))
+                    },
+                );
+
+                (ExpressionTE::Reference(result_te), returns_from_source)
+            }
+            IExpressionSE::Consecutor(consecutor_se) => {
+                assert!(region == nenv.default_region());
+                let region_for_inners = region;
+
+                let mut init_exprs_te: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                let mut init_returns: HashSet<CoordT<'s, 't>> = HashSet::new();
+                for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
+                    let (undropped_expr_te, returns) =
+                        self.evaluate_and_coerce_to_reference_expression(
+                            coutputs, nenv, life.add(index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se);
+                    let expr_te = match undropped_expr_te.result().coord.kind {
+                        KindT::Void(_) => undropped_expr_te,
+                        _ => {
+                            panic!("implement: ConsecutorSE — drop non-void init expr");
+                        }
+                    };
+                    init_exprs_te.push(expr_te);
+                    init_returns.extend(returns);
+                }
+
+                let (last_expr_te, last_returns) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv,
+                        life.add((consecutor_se.exprs.len() - 1) as i32),
+                        parent_ranges,
+                        outer_call_location,
+                        region_for_inners,
+                        consecutor_se.exprs.last().unwrap());
+
+                init_exprs_te.push(last_expr_te);
+                init_returns.extend(last_returns);
+
+                let result = self.consecutive(&init_exprs_te);
+                (ExpressionTE::Reference(result), init_returns)
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -2046,7 +2187,7 @@ where 's: 't,
     pub fn dot_borrow(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'s>,
@@ -2101,7 +2242,7 @@ where 's: 't,
     pub fn evaluate_closure(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -2195,7 +2336,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -2230,7 +2371,7 @@ where 's: 't,
     pub fn translate_pattern_list(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -2273,7 +2414,7 @@ where 's: 't,
     pub fn astronomize_lambda(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionA<'s> {
@@ -2360,14 +2501,22 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'s>,
         region: RegionT,
         expr_te: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let snapshot = nenv.snapshot(self.typing_interner);
+        let unreversed_variables_to_destruct =
+            snapshot.get_live_variables_introduced_since(starting_nenv);
+
+        if unreversed_variables_to_destruct.is_empty() {
+            expr_te
+        } else {
+            panic!("implement: drop_since — non-empty variables to destruct");
+        }
     }
 /*
   def dropSince(
@@ -2443,7 +2592,7 @@ where 's: 't,
 {
     pub fn resultify_expressions(
         &self,
-        nenv: &mut NodeEnvironmentBuilder<'s, 't>,
+        nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
@@ -2478,3 +2627,74 @@ where 's: 't,
 }
 */
 }
+
+// Concrete IRuneTypeSolverEnv for the LetSE arm of evaluate. The Scala anonymous
+// `new IRuneTypeSolverEnv` at ExpressionCompiler.scala:959 closes over `nenv` and
+// delegates to lookupNearestWithImpreciseName. This struct captures that field.
+// Same shape as `HigherTypingRuneTypeSolverEnv` in higher_typing_pass.rs (which
+// collapses 6 anonymous Scala impls into one named struct).
+struct LetExprRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    nenv: &'a crate::typing::env::function_environment_t::NodeEnvironmentBox<'s, 't>,
+}
+/*
+Guardian: disable-all
+*/
+
+impl<'a, 's, 't> crate::postparsing::rune_type_solver::IRuneTypeSolverEnv<'s>
+    for LetExprRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    fn lookup(
+        &self,
+        range: RangeS<'s>,
+        name_s: crate::postparsing::names::IImpreciseNameS<'s>,
+    ) -> Result<
+        crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult<'s>,
+        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError<'s>,
+    > {
+        let mut filter = std::collections::HashSet::new();
+        filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
+        match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter) {
+            Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                            t.origin_struct.tyype,
+                        ),
+                        generic_params: t.origin_struct.generic_parameters,
+                    },
+                ))
+            }
+            Some(crate::typing::templata::templata::ITemplataT::InterfaceDefinition(t)) => {
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                            t.origin_interface.tyype,
+                        ),
+                        generic_params: t.origin_interface.generic_parameters,
+                    },
+                ))
+            }
+            Some(_x) => {
+                // Scala: `case Some(x) => Ok(TemplataLookupResult(x.tyype))`.
+                // Requires `ITemplataT::tyype()` getter — separate scaffolding gap.
+                panic!("LetExprRuneTypeSolverEnv: ITemplataT::tyype() not yet implemented");
+            }
+            None => Err(
+                crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
+                    crate::postparsing::rune_type_solver::RuneTypingCouldntFindType {
+                        range,
+                        name: name_s,
+                    },
+                ),
+            ),
+        }
+    }
+}
+/*
+Guardian: disable-all
+*/

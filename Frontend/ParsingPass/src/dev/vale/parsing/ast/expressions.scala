@@ -103,7 +103,7 @@ override def hashCode(): Int = vcurious();
 }
 //case class MatchPE(range: RangeP, condition: IExpressionPE, lambdas: Vector[LambdaPE]) extends IExpressionPE {
 //  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious();
+//override def hashCode(): Int = vcurious();
 //  override def needsSemicolonAtEndOfStatement: Boolean = false
 //}
 case class MutatePE(range: RangeL, mutatee: IExpressionPE, source: IExpressionPE) extends IExpressionPE {

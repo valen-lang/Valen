@@ -27,7 +27,7 @@ case class TemplexPR(templex: ITemplexPT) extends IRulexPR {
 case class BuiltinCallPR(range: RangeL, name: NameP, args: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 //case class ResolveSignaturePR(range: RangeL, nameStrRule: IRulexPR, argsPackRule: PackPR) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 case class PackPR(range: RangeL, elements: Vector[IRulexPR]) extends IRulexPR { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 
