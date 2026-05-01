@@ -540,7 +540,7 @@ where 's: 't,
             instantiation_bound_params: instantiation_bound_params.clone(),
             body: ReferenceExpressionTE::Block(BlockTE { inner: body2.inner }),
         });
-        coutputs.add_function(function2);
+        coutputs.add_function(header_sig, function2);
         &function2.header
     }
 /*

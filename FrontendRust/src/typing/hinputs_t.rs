@@ -21,7 +21,7 @@ use crate::typing::ast::ast::{
 };
 use crate::typing::ast::citizens::{CitizenDefinitionT, InterfaceDefinitionT, StructDefinitionT};
 use crate::typing::names::names::{
-    FunctionTemplateNameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
+    FunctionTemplateNameT, INameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
 };
 // mig: struct InstantiationReachableBoundArgumentsT
 #[derive(Clone)]
@@ -110,9 +110,9 @@ impl<'s, 't> InstantiationBoundArgumentsT<'s, 't> {
 }
 // mig: struct HinputsT
 pub struct HinputsT<'s, 't> {
-    pub interfaces: Vec<InterfaceDefinitionT<'s, 't>>,
-    pub structs: Vec<StructDefinitionT<'s, 't>>,
-    pub functions: Vec<FunctionDefinitionT<'s, 't>>,
+    pub interfaces: Vec<&'t InterfaceDefinitionT<'s, 't>>,
+    pub structs: Vec<&'t StructDefinitionT<'s, 't>>,
+    pub functions: Vec<&'t FunctionDefinitionT<'s, 't>>,
 
     pub interface_to_edge_blueprints: HashMap<
         IdT<'s, 't>,
@@ -128,10 +128,10 @@ pub struct HinputsT<'s, 't> {
         InstantiationBoundArgumentsT<'s, 't>,
     >,
 
-    pub kind_exports: Vec<KindExportT<'s, 't>>,
-    pub function_exports: Vec<FunctionExportT<'s, 't>>,
-    pub kind_externs: Vec<KindExternT<'s, 't>>,
-    pub function_externs: Vec<FunctionExternT<'s, 't>>,
+    pub kind_exports: Vec<&'t KindExportT<'s, 't>>,
+    pub function_exports: Vec<&'t FunctionExportT<'s, 't>>,
+    pub kind_externs: Vec<&'t KindExternT<'s, 't>>,
+    pub function_externs: Vec<&'t FunctionExternT<'s, 't>>,
 
     pub sub_citizen_to_interface_to_edge: HashMap<
         IdT<'s, 't>,
@@ -323,8 +323,19 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_human_name(&self, human_name: &str) -> FunctionDefinitionT {
-        panic!("Unimplemented: lookup_function_by_human_name");
+    pub fn lookup_function_by_human_name(&self, human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
+        let matches: Vec<_> = self.functions.iter().filter(|f| {
+            match &f.header.id.local_name {
+                INameT::Function(func_name) if func_name.template.human_name.as_str() == human_name => true,
+                _ => false,
+            }
+        }).collect();
+        if matches.is_empty() {
+            panic!("Function \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
     /*
       def lookupFunction(humanName: String): FunctionDefinitionT = {

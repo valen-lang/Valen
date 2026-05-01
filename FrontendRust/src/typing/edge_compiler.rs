@@ -98,7 +98,16 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
     ) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>>) {
-        panic!("Unimplemented: compile_i_tables");
+        // val interfaceEdgeBlueprints = makeInterfaceEdgeBlueprints(coutputs)
+        let interface_edge_blueprints = self.make_interface_edge_blueprints(coutputs);
+
+        // val itables = interfaceEdgeBlueprints.map(interfaceEdgeBlueprint => { ... })
+        let itables: HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>> =
+            interface_edge_blueprints.iter().map(|_interface_edge_blueprint| {
+                panic!("implement: compile_i_tables — itable construction per blueprint");
+            }).collect();
+
+        (interface_edge_blueprints, itables)
     }
 /*
   def compileITables(coutputs: CompilerOutputs):
@@ -168,7 +177,34 @@ where 's: 't,
         &self,
         coutputs: &CompilerOutputs<'s, 't>,
     ) -> Vec<InterfaceEdgeBlueprintT<'s, 't>> {
-        panic!("Unimplemented: make_interface_edge_blueprints");
+        // val x1 = coutputs.getAllFunctions().flatMap(function => function.header.getAbstractInterface match {
+        //   case None => Vector.empty
+        //   case Some(abstractInterface) => Vector(abstractInterfaceTemplate -> function)
+        // })
+        let x1: Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> =
+            coutputs.get_all_functions().iter().flat_map(|_function| -> Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> {
+                panic!("implement: make_interface_edge_blueprints — getAbstractInterface filter");
+            }).collect();
+
+        // val x2 = x1.groupBy(_._1)
+        // val x3 = x2.mapValues(_.map(_._2))
+        let mut x3: HashMap<IdT<'s, 't>, Vec<&'t FunctionDefinitionT<'s, 't>>> = HashMap::new();
+        for (k, v) in x1.into_iter() {
+            x3.entry(k).or_insert_with(Vec::new).push(v);
+        }
+
+        // val x4 = x3.map({ case (interfaceTemplateId, functions) => ... orderedMethods ... })
+        let _x4: HashMap<IdT<'s, 't>, ()> = x3.into_iter().map(|(_interface_template_id, _functions)| {
+            panic!("implement: make_interface_edge_blueprints — orderedMethods construction");
+        }).collect();
+
+        // val abstractFunctionHeadersByInterfaceTemplateId = x4 ++ coutputs.getAllInterfaces().map(...)
+        for _i in coutputs.get_all_interfaces().iter() {
+            panic!("implement: make_interface_edge_blueprints — augment with empty interfaces");
+        }
+
+        // val interfaceEdgeBlueprints = abstractFunctionHeadersByInterfaceTemplateId.map(...).toVector
+        Vec::new()
     }
 /*
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
