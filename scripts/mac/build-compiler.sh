@@ -1,3 +1,4 @@
+#!/bin/bash
 # This script builds the Vale compiler, runs some tests on it, and also packages up a release zip file.
 # It assumes we've already ran install-compiler-prereqs-mac.sh, or otherwise installed all the dependencies.
 
@@ -69,8 +70,13 @@ fi
 echo "Using LLVM dir $LLVM_CMAKE_DIR"
 
 
-touch ~/.zshrc
-source ~/.zshrc
+# Load any user-managed PATH/env additions, but only if running under zsh (the
+# original assumed shell). Skip silently otherwise so the script works under
+# /bin/bash too — sbt/cmake/etc. are expected to already be on PATH.
+if [ -n "$ZSH_VERSION" ]; then
+  touch ~/.zshrc
+  source ~/.zshrc
+fi
 
 cd Frontend
 
@@ -115,6 +121,14 @@ zip -r Vale-Mac-0.zip * || { echo 'Error copying into release-mac.' ; exit 1; }
 
 if [ "$WHICH_TESTS" == "all" ]
 then
+  CLANG_PATH="${CLANG_PATH:-/usr/bin/clang}"
+  if [ ! -x "$CLANG_PATH" ]
+  then
+    echo "clang at $CLANG_PATH doesn't exist or isn't executable. Set CLANG_PATH to override."
+    exit 1
+  fi
+  echo "Using clang at $CLANG_PATH"
+
   cd ../Tester
 
   rm -rf ./BuiltValeCompiler
@@ -124,7 +138,7 @@ then
   ./build.sh $BOOTSTRAPPING_VALEC_DIR || { echo 'Tester build failed, aborting.' ; exit 1; }
 
   echo Running Tester...
-  ./build/testvalec --frontend_path ./BuiltValeCompiler/Frontend.jar --backend_path ./BuiltValeCompiler/backend --builtins_dir ./BuiltValeCompiler/builtins --valec_path ./BuiltValeCompiler/valec --backend_tests_dir ../Backend/test --frontend_tests_dir ../Frontend --stdlib_dir ./BuiltValeCompiler/stdlib --clang_path ~/clang+llvm-16.0.4-arm64-apple-darwin22.0/bin/clang --libc_path /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr --concurrent 6 @resilient-v3 || { echo 'Tests failed, aborting.' ; exit 1; }
+  ./build/testvalec --frontend_path ./BuiltValeCompiler/Frontend.jar --backend_path ./BuiltValeCompiler/backend --builtins_dir ./BuiltValeCompiler/builtins --valec_path ./BuiltValeCompiler/valec --backend_tests_dir ../Backend/test --frontend_tests_dir ../Frontend --stdlib_dir ./BuiltValeCompiler/stdlib --clang_path "$CLANG_PATH" --libc_path /Library/Developer/CommandLineTools/SDKs/MacOSX.sdk/usr --concurrent 6 @resilient-v3 || { echo 'Tests failed, aborting.' ; exit 1; }
 fi
 
 cd ..
