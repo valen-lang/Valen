@@ -16,7 +16,7 @@ pub struct AbstractP {
 //sealed trait IVirtualityP
 case class AbstractP(range: RangeL)// extends IVirtualityP
 //case class OverrideP(range: RangeP, tyype: ITemplexPT) extends IVirtualityP { override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious() }
+//override def hashCode(): Int = vcurious() }
 */
 
 #[derive(Debug, PartialEq)]

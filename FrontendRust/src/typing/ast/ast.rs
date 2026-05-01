@@ -516,8 +516,8 @@ impl<'s, 't> PrototypeTemplataCalleeCandidate<'s, 't> {
 //  header: FunctionHeaderT
 //) extends IValidCalleeCandidate {
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
+//override def hashCode(): Int = hash;
+//override def equals(obj: Any): Boolean = vcurious();
 //
 //  override def range: Option[RangeS] = header.maybeOriginFunctionTemplata.map(_.function.range)
 //  override def paramTypes: Vector[CoordT] = header.paramTypes.toVector
@@ -528,7 +528,7 @@ override def equals(obj: Any): Boolean = vcurious();
 //  prototype: PrototypeTemplataT[IFunctionNameT]
 //) extends IValidCalleeCandidate {
 //  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
+//override def hashCode(): Int = hash;
 //  override def equals(obj: Any): Boolean = {
 //    val that = obj.asInstanceOf[ValidPrototypeTemplataCalleeCandidate]
 //    if (that == null) {
@@ -548,8 +548,8 @@ override def hashCode(): Int = hash;
 ////  function: FunctionTemplataT
 ////) extends IValidCalleeCandidate {
 ////  val hash = runtime.ScalaRunTime._hashCode(this);
-override def hashCode(): Int = hash;
-override def equals(obj: Any): Boolean = vcurious();
+//override def hashCode(): Int = hash;
+//override def equals(obj: Any): Boolean = vcurious();
 ////
 ////  override def range: Option[RangeS] = banner.maybeOriginFunctionTemplata.map(_.function.range)
 ////  override def paramTypes: Vector[CoordT] = banner.paramTypes.toVector

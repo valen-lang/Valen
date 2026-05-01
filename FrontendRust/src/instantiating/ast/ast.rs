@@ -46,7 +46,7 @@ override def hashCode(): Int = vcurious()
 //  externName: StrI
 //)  {
 //  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
+//override def hashCode(): Int = vcurious()
 //
 //}
 
