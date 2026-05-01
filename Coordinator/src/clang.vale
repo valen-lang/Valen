@@ -61,6 +61,10 @@ Subprocess {
     args.add("-o");
     args.add(exe_file.str());
     args.add("-lm");
+    // Force arm64 so that an x86_64 (Rosetta'd) parent process doesn't make
+    // child clang default to x86_64 when the backend produced arm64 build.o.
+    args.add("-arch");
+    args.add("arm64");
     //args.add("-Wall");
     //args.add("-Werror");
   }
