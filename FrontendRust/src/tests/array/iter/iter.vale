@@ -1,0 +1,16 @@
+
+struct StaticSizedArrayReadonlyIter<N Int, M Mutability, V Variability, E> where E Ref {
+  arr &[#N]<M, V>E;
+  pos! int;
+}
+func begin<N Int, M Mutability, V Variability, E>(arr &[#N]<M, V>E)
+StaticSizedArrayReadonlyIter<N, M, V, E> {
+  StaticSizedArrayReadonlyIter<N, M, V, E>(arr, 0)
+}
+func next<N Int, M Mutability, V Variability, E>(iter &StaticSizedArrayReadonlyIter<N, M, V, E>) Opt<&E> {
+  if iter.pos < iter.arr.len() {
+    Some<&E>(&iter.arr[set iter.pos = iter.pos + 1])
+  } else {
+    None<&E>()
+  }
+}

@@ -1340,7 +1340,7 @@ class CompilerTests extends FunSuite with Matchers {
     vassert(CompilerErrorHumanizer.humanize(false, humanizePos, linesBetween, lineRangeContaining, lineContaining,
       TypingPassSolverError(
         tz,
-        FailedCompilerSolve(
+        FailedSolve(
           Vector(
             Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]](
               false,
@@ -1348,6 +1348,8 @@ class CompilerTests extends FunSuite with Matchers {
               Vector(),
               Map(
                 CodeRuneS(StrI("X")) -> KindTemplataT(fireflyKind)))).toStream,
+          Map(),
+          Vector(),
           Vector(),
           RuleError(KindIsNotConcrete(ispaceshipKind)))))
       .nonEmpty)

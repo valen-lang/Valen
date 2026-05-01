@@ -1,0 +1,42 @@
+
+func MakeArray<T Ref, G Ref>(n int, generator G)
+[]<mut>T
+where func(&G, int)T, func drop(G)void
+{
+  arr = Array<mut, T>(n);
+  i = 0;
+  while (i < n) {
+    arr.push(generator(i));
+    set i = i + 1;
+  }
+  return arr;
+}
+
+func MakeImmArray<T Ref imm, G Ref>(n int, generator &G) []<imm>T
+where F Prot = func(&G, int)T, func drop(T)void
+{
+  return Array<imm, T>(n, generator);
+}
+
+func toImmArray<N Int, E Ref imm, X Mutability, Y Variability>(seq &[#N]<X, Y>E) []<imm>E
+where func drop(E)void
+{
+  return MakeImmArray<E>(N, &{ seq[_] });
+}
+
+func toImmArray<T Ref imm, M Mutability>(source &[]<M>T) Array<imm, T>
+where func drop(T)void {
+  return MakeImmArray<T>(source.len(), &{ source[_] });
+}
+
+// func toVaryArray<N, E, SM>(seq &[#N]<SM>E) []<mut>E {
+//   return MakeVaryArray(N, { seq[_] });
+// }
+//
+// func toVaryArray<T>(source &[]<_>T) Array<mut, &T> {
+//   return MakeVaryArray(source.len(), &{ source[_] });
+// }
+//
+// func toArray<T>(source &[]<_>T) Array<mut, &T> {
+//   return MakeArray(source.len(), { source[_] });
+// }

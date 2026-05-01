@@ -1,0 +1,1 @@
+../../../docs/skills/migration-test-fixer.md

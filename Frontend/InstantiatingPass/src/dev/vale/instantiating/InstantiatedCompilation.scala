@@ -14,7 +14,10 @@ case class InstantiatorCompilationOptions(
   debugOut: (=> String) => Unit = (x => {
     println("##: " + x)
   })
-) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 class InstantiatedCompilation(
   val interner: Interner,

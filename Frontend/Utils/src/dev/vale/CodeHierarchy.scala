@@ -107,7 +107,8 @@ class FileCoordinateMap[Contents](
   val fileCoordToContents: mutable.Map[FileCoordinate, Contents] =
     mutable.HashMap[FileCoordinate, Contents]()
 ) extends IPackageResolver[Map[String, Contents]] {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   def apply(coord: FileCoordinate): Contents = {
     vassertSome(fileCoordToContents.get(coord))
@@ -233,7 +234,8 @@ case class PackageCoordinateMap[Contents](
   packageCoordToContents: mutable.HashMap[PackageCoordinate, Contents] =
     mutable.HashMap[PackageCoordinate, Contents]()) {
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 
   def put(packageCoord: PackageCoordinate, contents: Contents): Unit = {

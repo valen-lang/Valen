@@ -29,7 +29,8 @@ case class EnvironmentA(
     maybeParentEnv: Option[EnvironmentA],
     codeMap: PackageCoordinateMap[ProgramS],
     runeToType: Map[IRuneS, ITemplataType]) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+  override def hashCode(): Int = vcurious()
 
   val structsS: Vector[StructS] = codeMap.packageCoordToContents.values.flatMap(_.structs).toVector
   val interfacesS: Vector[InterfaceS] = codeMap.packageCoordToContents.values.flatMap(_.interfaces).toVector
@@ -734,19 +735,6 @@ class HigherTypingPass(globalOptions: GlobalOptions, interner: Interner, keyword
             programsS.flatMap(_.imports).toVector))
       })
       val imports = mergedProgramS.packageCoordToContents.values.flatMap(_.imports)
-//      val rustImports = imports.filter(_.moduleName == keywords.rust)
-//      rustImports.foreach({
-//        case ImportS(_, moduleName, packageNames, importeeName) => {
-//          val rustPackageString = packageNames.map(_.str).mkString(".")
-//
-//          // ask a rust process to generate the json
-//          // DO NOT SUBMIT
-//          val processBuilder = Process("glass", List("/Users/verdagon/.cargo/bin/rustc", rustPackageString, importeeName.str))
-//          val process = processBuilder.run
-//          // Blocks
-//          process.exitValue()
-//        }
-//      })
 
       //    val orderedModules = orderModules(mergedProgramS)
 

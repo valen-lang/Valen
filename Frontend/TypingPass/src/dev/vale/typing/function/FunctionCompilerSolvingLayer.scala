@@ -13,7 +13,7 @@ import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
 import dev.vale.typing.function._
-import dev.vale.solver.{CompleteSolve, FailedSolve, IncompleteSolve, Solver}
+import dev.vale.solver.{FailedSolve, Solver, Step}
 import dev.vale.typing.ast.{FunctionBannerT, FunctionHeaderT, PrototypeT}
 import dev.vale.typing.env._
 import dev.vale.typing.infer.ITypingPassSolverError
@@ -356,14 +356,14 @@ class FunctionCompilerSolvingLayer(
       function.params.flatMap(_.pattern.coordRune.map(_.rune)) ++ function.maybeRetCoordRune.map(_.rune)
 
     val solver =
-      inferCompiler.makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      inferCompiler.makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
 
     var loopCheck = function.genericParameters.size + 1
 
     // Incrementally solve and add default generic parameters (and context region).
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
-      (solver) => {
+      (solverState) => {
         if (loopCheck == 0) {
           throw CompileErrorExceptionT(RangedInternalErrorT(callRange, "Infinite loop detected in incremental call solve!"))
         }
@@ -371,7 +371,7 @@ class FunctionCompilerSolvingLayer(
 
         TemplataCompiler.getFirstUnsolvedIdentifyingRune(
           function.genericParameters,
-          (rune) => solver.getConclusion(rune).nonEmpty) match {
+          (rune) => solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // This unsolved rune better be one we didn't explicitly hand in already.
@@ -379,7 +379,7 @@ class FunctionCompilerSolvingLayer(
 
             genericParam.default match {
               case Some(defaultRules) => {
-                solver.addRules(defaultRules.rules)
+                solverState.commitStep[ITypingPassSolverError](false, Vector(), Map(), defaultRules.rules).getOrDie()
                 true
               }
               case None => {
@@ -390,11 +390,11 @@ class FunctionCompilerSolvingLayer(
           }
         }
       }) match {
-      case Err(f@FailedCompilerSolve(_, _, _)) => {
+      case Err(f@FailedSolve(_, _, _, _, _)) => {
         return (ResolveFunctionFailure(ResolvingSolveFailedOrIncomplete(f)))
       }
       case Ok(true) =>
-      case Ok(false) => // Incomplete, will be detected as IncompleteCompilerSolve below.
+      case Ok(false) => // Incomplete, will be detected as SolveIncomplete below.
     }
 
     outerEnv.id match {
@@ -454,8 +454,8 @@ class FunctionCompilerSolvingLayer(
     // into a:
     //   func map<F>(self Opt<$0>, f F, t $0) { ... }
     val preliminaryEnvs = InferEnv(callingEnv, callRange, callLocation, nearEnv, RegionT())
-    val preliminarySolver =
-      inferCompiler.makeSolver(
+    val preliminarySolverState =
+      inferCompiler.makeSolverState(
         preliminaryEnvs,
         coutputs,
         functionDefinitionRules,
@@ -463,7 +463,7 @@ class FunctionCompilerSolvingLayer(
         function.range :: callRange,
         Vector(),
         initialSends)
-    inferCompiler.continue(preliminaryEnvs, coutputs, preliminarySolver) match {
+    inferCompiler.continue(preliminaryEnvs, coutputs, preliminarySolverState) match {
       case Ok(()) =>
       case Err(f) => {
         throw CompileErrorExceptionT(typing.TypingPassSolverError(function.range :: callRange, f))
@@ -472,7 +472,7 @@ class FunctionCompilerSolvingLayer(
 
     // Skip checking that the conclusions are all there, because we don't assume that they will all be there. We expect
     // an incomplete solve.
-    val preliminaryInferences = preliminarySolver.userifyConclusions().toMap
+    val preliminaryInferences = preliminarySolverState.userifyConclusions().toMap
     // Now we can use preliminaryInferences to know whether or not we need a placeholder for an
     // identifying rune.
     // Our
@@ -554,15 +554,15 @@ class FunctionCompilerSolvingLayer(
 
     val envs = InferEnv(nearEnv, parentRanges, callLocation, nearEnv, RegionT())
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, definitionRules, function.runeToType, range, Vector(), Vector())
     // Incrementally solve and add placeholders, see IRAGP.
     inferCompiler.incrementallySolve(
       envs, coutputs, solver,
       // Each step happens after the solver has done all it possibly can. Sometimes this can lead
       // to races, see RRBFS.
-      (solver) => {
-        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solver.getConclusion(rune).nonEmpty) match {
+      (solverState) => {
+        TemplataCompiler.getFirstUnsolvedIdentifyingRune(function.genericParameters, (rune) => solverState.getConclusion(rune).nonEmpty) match {
           case None => false
           case Some((genericParam, index)) => {
             // Make a placeholder for every argument even if it has a default, see DUDEWCD.
@@ -570,12 +570,20 @@ class FunctionCompilerSolvingLayer(
             val templata =
               templataCompiler.createPlaceholder(
                 coutputs, nearEnv, functionTemplateId, genericParam, index, function.runeToType, placeholderPureHeight, true)
-            solver.manualStep(Map(genericParam.rune.rune -> templata))
+
+            { // solver.manualStep(Map(genericParam.rune.rune -> templata))
+              solverState.commitStep[Nothing](false, Vector(), Map(genericParam.rune.rune -> templata), Vector()).getOrDie()
+//              solverState.addStep(step)
+//              step.conclusions.foreach({ case (rune, conclusion) =>
+//                solverState.concludeRune(solverState.getCanonicalRune(rune), conclusion)
+//              })
+            }
+
             true
           }
         }
       }) match {
-        case Err(f @ FailedCompilerSolve(_, _, err)) => {
+        case Err(f @ FailedSolve(_, _, _, _, err)) => {
           throw CompileErrorExceptionT(typing.TypingPassSolverError(function.range :: parentRanges, f))
         }
         case Ok(true) =>

@@ -1,0 +1,34 @@
+
+exported func main() int {
+  // find
+  println("Test 1");
+  vassert(find("Hello world!", "bork").isEmpty(), "Failed 1a");
+  vassert(find("Hello world!", "world").get().begin == 6, "Failed 1b");
+
+  // ==
+  println("Test 2");
+  vassert(slice("Hello world!", 1, 5) == "ello", "Failed 2a");
+  vassert(slice("Hello world!", 1, 5).str() == "ello", "Failed 2b");
+
+  // startsWith
+  println("Test 3");
+  vassert("Hello world!".startsWith("Hel"), "Failed 3a");
+  vassert(not "Hello world!".startsWith("Bork"), "Failed 3b");
+
+  // endsWith
+  println("Test 4");
+  vassert("Hello world!".endsWith("ld!"), "Failed 4a");
+  vassert(not "Hello world!".endsWith("Bork"), "Failed 4b");
+
+  // compare
+  println("Test 5");
+  vassert(("abc" <=> "abd") == -1, "Failed 5a");
+  vassert(("abc" <=> "abb") == 1, "Failed 5b");
+  vassert(("abc" <=> "abc") == 0, "Failed 5c");
+  vassert(("abc" <=> "ab") == 1, "Failed 5d");
+  vassert(("abc" <=> "abce") == -1, "Failed 5e");
+
+  // splice
+  println("Test 6");
+  vassert("sprogwoggle".splice(4, 1, "bble") == "sprobblewoggle", "Failed 6a");
+}

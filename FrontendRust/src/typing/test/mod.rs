@@ -1,0 +1,13 @@
+mod compiler_test_compilation;
+mod compiler_tests;
+mod compiler_generics_tests;
+mod compiler_lambda_tests;
+mod compiler_mutate_tests;
+mod compiler_ownership_tests;
+mod compiler_project_tests;
+mod compiler_solver_tests;
+mod compiler_virtual_tests;
+mod after_regions_tests;
+mod after_regions_error_tests;
+mod in_progress_tests;
+mod todo_tests;

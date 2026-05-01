@@ -397,8 +397,6 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
   test("static array from values") {
     compileExpressionExpect("[#](3, 5, 6)") shouldHave
       {
-//      case StaticArrayFromValuesPE(_,Vector(ConstantIntPE(_, 3, _), ConstantIntPE(_, 5, _), ConstantIntPE(_, 6, _))) =>
-//      case null =>
       case ConstructArrayPE(_,None,Some(MutabilityPT(_,MutableP)),None,StaticSizedP(None),true,Vector(_, _, _)) =>
       }
   }
@@ -406,8 +404,6 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
   test("static array from values with newlines") {
     compileExpressionExpect("[#](\n3\n)") shouldHave
       {
-        //      case StaticArrayFromValuesPE(_,Vector(ConstantIntPE(_, 3, _), ConstantIntPE(_, 5, _), ConstantIntPE(_, 6, _))) =>
-        //      case null =>
         case ConstructArrayPE(_,_,_,_,_,_,_) =>
       }
   }
@@ -415,8 +411,6 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
   test("static array from callable with rune") {
     compileExpressionExpect("[#N]({_ * 2})") shouldHave
       {
-//      case StaticArrayFromCallablePE(_,NameOrRunePT(NameP(_, StrI("N"))),_,_) =>
-//      case null =>
       case ConstructArrayPE(_,
         None,
         Some(MutabilityPT(_,MutableP)),
@@ -476,8 +470,6 @@ class ExpressionTests extends FunSuite with Collector with TestParseUtils {
   test("runtime array from callable with rune") {
     compileExpressionExpect("[](6, {_ * 2})") shouldHave
       {
-      //      case StaticArrayFromCallablePE(_,NameOrRunePT(NameP(_, StrI("N"))),_,_) =>
-      //      case null =>
       case ConstructArrayPE(_,
         None,
         Some(MutabilityPT(_,MutableP)),

@@ -1,0 +1,34 @@
+
+func has<E, F, M Mutability>(arr &[]<M>E, elem &E, equator &F) bool
+where func(&F, &E, &E)bool {
+  i = 0;
+  while (i < arr.len()) {
+    if (equator(arr[i], elem)) {
+      return true;
+    }
+    set i = i + 1;
+  }
+  return false;
+}
+
+func has<E, M Mutability>(arr &[]<M>E, elem &E) bool
+where func ==(&E, &E)bool {
+  has(arr, elem, { _ == _ })
+}
+
+func has<E, F, N Int, M Mutability>(seq &[#N]<M>E, elem &E, equator &F) bool
+where func(&F, &E, &E)bool {
+  i = 0;
+  while (i < seq.len()) {
+    if (equator(seq[i], elem)) {
+      return true;
+    }
+    set i = i + 1;
+  }
+  return false;
+}
+
+func has<E, N Int, M Mutability>(seq &[#N]<M>E, elem &E) bool
+where func ==(&E, &E)bool {
+  return has(seq, elem, { _ == _ });
+}

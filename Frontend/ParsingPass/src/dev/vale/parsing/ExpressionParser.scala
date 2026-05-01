@@ -237,7 +237,6 @@ class ScrambleIterator(
 }
 
 class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptions, patternParser: PatternParser, templexParser: TemplexParser) {
-//  val stringParser = new StringParser(this)
 
   private def parseWhile(iter: ScrambleIterator): Result[Option[WhilePE], IParseError] = {
     val whileBegin = iter.getPos()
@@ -1457,7 +1456,6 @@ class ExpressionParser(interner: Interner, keywords: Keywords, opts: GlobalOptio
     }
 
     // This is here so we can do things like: [name] = destruct event;
-    // DO NOT SUBMIT add test
     parseDestruct(iter, stopOnCurlied) match {
       case Err(e) => return Err(e)
       case Ok(Some(x)) => return Ok(x)

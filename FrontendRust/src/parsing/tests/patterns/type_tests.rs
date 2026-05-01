@@ -1,0 +1,380 @@
+/*
+package dev.vale.parsing.patterns
+
+import dev.vale.{Collector, StrI, parsing}
+import dev.vale.parsing.{PatternParser, TestParseUtils}
+import dev.vale.parsing.ast.{AnonymousRunePT, BorrowP, CallPT, FinalP, IgnoredLocalNameDeclarationP, ImmutableP, IntPT, InterpretedPT, MutabilityPT, MutableP, NameOrRunePT, NameP, PatternPP, StaticSizedArrayPT, TuplePT, VariabilityPT, VaryingP, WeakP}
+import dev.vale.parsing.ast.Patterns.{fromEnv, withType}
+import dev.vale.parsing._
+import dev.vale.parsing.ast._
+import org.scalatest._
+
+class TypeTests extends FunSuite with Matchers with Collector with TestParseUtils {
+  private def compile[T](code: String): PatternPP = {
+    compilePattern(code)
+//    compile(new PatternParser().parsePattern(_), code)
+  }
+*/
+use bumpalo::Bump;
+use crate::cast;
+use crate::parse_arena::ParseArena;
+use crate::keywords::Keywords;
+use crate::parsing::ast::{
+  INameDeclarationP, ITemplexPT, MutabilityP, OwnershipP, PatternPP, VariabilityP,
+};
+use crate::parsing::tests::utils::{
+  assert_templex_name, compile_pattern_expect, expect_1, expect_2,
+};
+
+fn compile<'p, 'ctx>(
+  parse_arena: &'ctx ParseArena<'p>,
+  keywords: &'ctx Keywords<'p>,
+  code: &str,
+) -> PatternPP<'p>
+where
+  'p: 'ctx,
+{
+  compile_pattern_expect(parse_arena, keywords, code)
+}
+
+#[test]
+fn ignoring_name() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ int");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  assert_templex_name(pattern.templex.as_ref().unwrap(), "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("Ignoring name") {
+    compile("_ int") shouldHave { case fromEnv("int") => }
+  }
+
+*/
+#[test]
+fn static_sized_array() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]MutableStruct");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let ssa = cast!(
+    pattern.templex.as_ref().unwrap(),
+    ITemplexPT::StaticSizedArray
+  );
+  assert_eq!(
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
+    MutabilityP::Mutable
+  );
+  assert_eq!(
+    cast!(ssa.variability, ITemplexPT::Variability).1,
+    VariabilityP::Final
+  );
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15a") {
+    compile("_ [#3]MutableStruct") shouldHave {
+      case withType(
+          StaticSizedArrayPT(_,
+              MutabilityPT(_,MutableP),
+              VariabilityPT(_,FinalP),
+              IntPT(_,3),
+              NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
+    }
+  }
+
+*/
+#[test]
+fn static_sized_array_with_imm() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm>MutableStruct");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let ssa = cast!(
+    pattern.templex.as_ref().unwrap(),
+    ITemplexPT::StaticSizedArray
+  );
+  assert_eq!(
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
+    MutabilityP::Immutable
+  );
+  assert_eq!(
+    cast!(ssa.variability, ITemplexPT::Variability).1,
+    VariabilityP::Final
+  );
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15b") {
+    compile("_ [#3]<imm>MutableStruct") shouldHave {
+      case withType(
+        StaticSizedArrayPT(_,
+          MutabilityPT(_,ImmutableP),
+          VariabilityPT(_,FinalP),
+          IntPT(_,3),
+          NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
+    }
+  }
+
+*/
+#[test]
+fn static_sized_array_with_imm_and_vary() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ [#3]<imm, vary>MutableStruct");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let ssa = cast!(
+    pattern.templex.as_ref().unwrap(),
+    ITemplexPT::StaticSizedArray
+  );
+  assert_eq!(
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
+    MutabilityP::Immutable
+  );
+  assert_eq!(
+    cast!(ssa.variability, ITemplexPT::Variability).1,
+    VariabilityP::Varying
+  );
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15c") {
+    compile("_ [#3]<imm, vary>MutableStruct") shouldHave {
+      case withType(
+      StaticSizedArrayPT(_,
+      MutabilityPT(_,ImmutableP),
+      VariabilityPT(_,VaryingP),
+      IntPT(_,3),
+      NameOrRunePT(NameP(_, StrI("MutableStruct"))))) =>
+    }
+  }
+
+*/
+#[test]
+fn runtime_sized_array() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ #[]int");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let rsa = cast!(
+    pattern.templex.as_ref().unwrap(),
+    ITemplexPT::RuntimeSizedArray
+  );
+  assert_eq!(
+    cast!(rsa.mutability, ITemplexPT::Mutability).1,
+    MutabilityP::Immutable
+  );
+  assert_templex_name(rsa.element, "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15d") {
+    compile("_ #[]int") shouldHave {
+      case withType(
+        RuntimeSizedArrayPT(_,
+          MutabilityPT(_,ImmutableP),
+          NameOrRunePT(NameP(_, StrI("int"))))) =>
+    }
+  }
+
+
+
+*/
+#[test]
+fn sequence_type() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ (int, bool)");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let tuple = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Tuple);
+  let (int_t, bool_t) = expect_2(&tuple.elements);
+  assert_templex_name(int_t, "int");
+  assert_templex_name(bool_t, "bool");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("Sequence type") {
+    compile("_ (int, bool)") shouldHave {
+      case withType(
+          TuplePT(_,
+            Vector(
+              NameOrRunePT(NameP(_, StrI("int"))),
+              NameOrRunePT(NameP(_, StrI("bool")))))) =>
+    }
+  }
+*/
+#[test]
+fn static_sized_array_with_borrow() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &[#3]MutableStruct");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
+  assert_eq!(
+    interpreted.maybe_ownership.unwrap().1,
+    OwnershipP::Borrow
+  );
+  assert!(interpreted.maybe_region.is_none());
+  let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
+  assert_eq!(
+    cast!(ssa.mutability, ITemplexPT::Mutability).1,
+    MutabilityP::Mutable
+  );
+  assert_eq!(
+    cast!(ssa.variability, ITemplexPT::Variability).1,
+    VariabilityP::Final
+  );
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15") {
+    compile("_ &[#3]MutableStruct") shouldHave {
+      case PatternPP(_,
+        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
+        Some(
+          InterpretedPT(_,
+            Some(OwnershipPT(_, BorrowP)),
+            None,
+            StaticSizedArrayPT(_,
+              MutabilityPT(_,MutableP),
+              VariabilityPT(_,FinalP),
+              IntPT(_,3),
+              NameOrRunePT(NameP(_, StrI("MutableStruct")))))),
+        None) =>
+    }
+  }
+*/
+#[test]
+fn static_sized_array_with_weak() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ &&[#3]<_, _>MutableStruct");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let interpreted = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Interpreted);
+  assert_eq!(
+    interpreted.maybe_ownership.unwrap().1,
+    OwnershipP::Weak
+  );
+  assert!(interpreted.maybe_region.is_none());
+  let ssa = cast!(interpreted.inner, ITemplexPT::StaticSizedArray);
+  cast!(ssa.mutability, ITemplexPT::AnonymousRune);
+  cast!(ssa.variability, ITemplexPT::AnonymousRune);
+  assert_eq!(cast!(ssa.size, ITemplexPT::Int).value, 3);
+  assert_templex_name(ssa.element, "MutableStruct");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15m") {
+    compile("_ &&[#3]<_, _>MutableStruct") shouldHave {
+      case PatternPP(_,
+        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
+        Some(
+          InterpretedPT(_,
+            Some(OwnershipPT(_, WeakP)),
+            None,
+            StaticSizedArrayPT(_,
+              AnonymousRunePT(_),
+              AnonymousRunePT(_),
+              IntPT(_,3),
+              NameOrRunePT(NameP(_, StrI("MutableStruct")))))),
+        None) =>
+    }
+  }
+*/
+#[test]
+fn call_type() {
+  let parse_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let keywords = Keywords::new_for_parse(&parse_arena);
+  let pattern = compile(&parse_arena, &keywords, "_ MyOption<MyList<int>>");
+  let destination = pattern.destination.unwrap();
+  assert!(matches!(
+    destination.decl,
+    INameDeclarationP::IgnoredLocalNameDeclaration(_)
+  ));
+  assert!(destination.mutate.is_none());
+  let myoption_call = cast!(pattern.templex.as_ref().unwrap(), ITemplexPT::Call);
+  assert_templex_name(myoption_call.template, "MyOption");
+  let mylist_type = expect_1(&myoption_call.args);
+  let mylist_call = cast!(mylist_type, ITemplexPT::Call);
+  assert_templex_name(mylist_call.template, "MyList");
+  let int_type = expect_1(&mylist_call.args);
+  assert_templex_name(int_type, "int");
+  assert!(pattern.destructure.is_none());
+}
+/*
+  test("15z") {
+    compile("_ MyOption<MyList<int>>") shouldHave {
+      case PatternPP(_,
+        Some(DestinationLocalP(IgnoredLocalNameDeclarationP(_), None)),
+        Some(
+          CallPT(
+            _,
+            NameOrRunePT(NameP(_, StrI("MyOption"))),
+            Vector(
+              CallPT(_,
+                NameOrRunePT(NameP(_, StrI("MyList"))),
+                Vector(
+                  NameOrRunePT(NameP(_, StrI("int")))))))),
+        None) =>
+    }
+  }
+}
+*/

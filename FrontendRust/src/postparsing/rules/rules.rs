@@ -1,0 +1,861 @@
+use crate::interner::StrI;
+use crate::postparsing::names::IRuneS;
+use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, ITemplataType, IntegerTemplataType, LocationTemplataType,
+  MutabilityTemplataType, OwnershipTemplataType, StringTemplataType, VariabilityTemplataType,
+};
+use crate::parsing::ast::{LocationP, MutabilityP, OwnershipP, VariabilityP};
+use crate::utils::range::RangeS;
+/*
+package dev.vale.postparsing.rules
+
+import dev.vale.parsing.ast.{LocationP, MutabilityP, OwnershipP, VariabilityP}
+import dev.vale.postparsing._
+import dev.vale.{RangeS, StrI, vassert, vassertSome, vcurious, vpass}
+import dev.vale.parsing.ast._
+import dev.vale.postparsing._
+
+import scala.collection.immutable.List
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub struct RuneUsage<'s> {
+  pub range: RangeS<'s>,
+  pub rune: IRuneS<'s>,
+}
+
+/*
+case class RuneUsage(range: RangeS, rune: IRuneS) {
+}
+*/
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum IRulexSR<'s> {
+  Equals(EqualsSR<'s>),
+  Literal(LiteralSR<'s>),
+  MaybeCoercingLookup(MaybeCoercingLookupSR<'s>),
+  Lookup(LookupSR<'s>),
+  MaybeCoercingCall(MaybeCoercingCallSR<'s>),
+  Call(CallSR<'s>),
+  RuneParentEnvLookup(RuneParentEnvLookupSR<'s>),
+  Augment(AugmentSR<'s>),
+  OneOf(OneOfSR<'s>),
+  IsInterface(IsInterfaceSR<'s>),
+  CoordComponents(CoordComponentsSR<'s>),
+  CoerceToCoord(CoerceToCoordSR<'s>),
+  Pack(PackSR<'s>),
+  CallSiteFunc(CallSiteFuncSR<'s>),
+  DefinitionFunc(DefinitionFuncSR<'s>),
+  Resolve(ResolveSR<'s>),
+  CoordSend(CoordSendSR<'s>),
+  DefinitionCoordIsa(DefinitionCoordIsaSR<'s>),
+  CallSiteCoordIsa(CallSiteCoordIsaSR<'s>),
+  KindComponents(KindComponentsSR<'s>),
+  PrototypeComponents(PrototypeComponentsSR<'s>),
+  IsConcrete(IsConcreteSR<'s>),
+  IsStruct(IsStructSR<'s>),
+  RefListCompoundMutability(RefListCompoundMutabilitySR<'s>),
+  IndexList(IndexListSR<'s>),
+}
+/*
+Guardian: disable-all
+// This isn't generic over e.g.  because we shouldnt reuse
+// this between layers. The generics solver doesn't even know about IRulexSR, doesn't
+// need to, it relies on delegates to do any rule-specific things.
+// Different stages will likely need different kinds of rules, so best not prematurely
+// combine them.
+trait IRulexSR {
+  def range: RangeS
+  def runeUsages: Vector[RuneUsage]
+}
+*/
+// V: why cloneable?
+// VA: It shouldn't be. Clone is derived but never called anywhere. IRulexSR is Clone-without-Copy
+// VA: (ATDCX violation). It's always stored as &'s [IRulexSR<'s>] in output structs. Safe to remove Clone.
+// VA: Also: GenericParameterDefaultS.rules is Vec<&'s IRulexSR<'s>> instead of &'s [IRulexSR<'s>],
+// VA: inconsistent with every other rule-holding struct (potential AASSNCMCX violation).
+
+impl<'s> IRulexSR<'s> {
+  pub fn range<'r>(&'r self) -> &'r RangeS<'s> {
+    match self {
+      IRulexSR::Equals(x) => &x.range,
+      IRulexSR::Literal(x) => &x.range,
+      IRulexSR::MaybeCoercingLookup(x) => &x.range,
+      IRulexSR::Lookup(x) => &x.range,
+      IRulexSR::MaybeCoercingCall(x) => &x.range,
+      IRulexSR::Call(x) => &x.range,
+      IRulexSR::RuneParentEnvLookup(x) => &x.range,
+      IRulexSR::Augment(x) => &x.range,
+      IRulexSR::OneOf(x) => &x.range,
+      IRulexSR::IsInterface(x) => &x.range,
+      IRulexSR::CoordComponents(x) => &x.range,
+      IRulexSR::CoerceToCoord(x) => &x.range,
+      IRulexSR::Pack(x) => &x.range,
+      IRulexSR::CallSiteFunc(x) => &x.range,
+      IRulexSR::DefinitionFunc(x) => &x.range,
+      IRulexSR::Resolve(x) => &x.range,
+      IRulexSR::CoordSend(x) => &x.range,
+      IRulexSR::DefinitionCoordIsa(x) => &x.range,
+      IRulexSR::CallSiteCoordIsa(x) => &x.range,
+      IRulexSR::KindComponents(x) => &x.range,
+      IRulexSR::PrototypeComponents(x) => &x.range,
+      IRulexSR::IsConcrete(x) => &x.range,
+      IRulexSR::IsStruct(x) => &x.range,
+      IRulexSR::RefListCompoundMutability(x) => &x.range,
+      IRulexSR::IndexList(x) => &x.range,
+    }
+    /*
+    Guardian: disable-all
+    */
+  }
+  /* Guardian: disable-all */
+
+  pub fn rune_usages<'r>(&'r self) -> Vec<RuneUsage<'s>> {
+    match self {
+      IRulexSR::Equals(x) => vec![x.left.clone(), x.right.clone()],
+      IRulexSR::Literal(x) => vec![x.rune.clone()],
+      IRulexSR::MaybeCoercingLookup(x) => vec![x.rune.clone()],
+      IRulexSR::Lookup(x) => vec![x.rune.clone()],
+      IRulexSR::MaybeCoercingCall(x) => {
+        let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
+        usages.extend(x.args.iter().cloned());
+        usages
+      }
+      IRulexSR::Call(x) => {
+        let mut usages = vec![x.result_rune.clone(), x.template_rune.clone()];
+        usages.extend(x.args.iter().cloned());
+        usages
+      }
+      IRulexSR::RuneParentEnvLookup(x) => vec![x.rune.clone()],
+      IRulexSR::Augment(x) => vec![x.result_rune.clone(), x.inner_rune.clone()],
+      IRulexSR::OneOf(x) => vec![x.rune.clone()],
+      IRulexSR::IsInterface(x) => vec![x.rune.clone()],
+      IRulexSR::CoordComponents(x) => {
+        vec![x.result_rune.clone(), x.ownership_rune.clone(), x.kind_rune.clone()]
+      }
+      IRulexSR::CoerceToCoord(x) => vec![x.coord_rune.clone(), x.kind_rune.clone()],
+      IRulexSR::Pack(x) => {
+        let mut usages = vec![x.result_rune.clone()];
+        usages.extend(x.members.iter().cloned());
+        usages
+      }
+      IRulexSR::CallSiteFunc(x) => vec![x.prototype_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::DefinitionFunc(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::Resolve(x) => vec![x.result_rune.clone(), x.params_list_rune.clone(), x.return_rune.clone()],
+      IRulexSR::CoordSend(x) => vec![x.sender_rune.clone(), x.receiver_rune.clone()],
+      IRulexSR::DefinitionCoordIsa(x) => vec![x.result_rune.clone(), x.sub_rune.clone(), x.super_rune.clone()],
+      IRulexSR::CallSiteCoordIsa(x) => {
+        let mut usages: Vec<RuneUsage<'s>> = x.result_rune.iter().cloned().collect();
+        usages.push(x.sub_rune.clone());
+        usages.push(x.super_rune.clone());
+        usages
+      }
+      IRulexSR::KindComponents(x) => vec![x.kind_rune.clone(), x.mutability_rune.clone()],
+      IRulexSR::PrototypeComponents(x) => vec![x.result_rune.clone(), x.params_rune.clone(), x.return_rune.clone()],
+      IRulexSR::IsConcrete(x) => vec![x.rune.clone()],
+      IRulexSR::IsStruct(x) => vec![x.rune.clone()],
+      IRulexSR::RefListCompoundMutability(x) => vec![x.result_rune.clone(), x.coord_list_rune.clone()],
+      IRulexSR::IndexList(x) => vec![x.result_rune.clone(), x.list_rune.clone()],
+    }
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct EqualsSR<'s> {
+  pub range: RangeS<'s>,
+  pub left: RuneUsage<'s>,
+  pub right: RuneUsage<'s>,
+}
+/*
+case class EqualsSR(range: RangeS, left: RuneUsage, right: RuneUsage) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  // V: we should make equals and hashCode exceptions to the broad rule
+  // V: we should probably also combine the various closer-to-scala shields
+  // VA: (these are process/shield-editing tasks, not code questions — not investigated here)
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(left, right)
+}
+*/
+// See SAIRFU and SRCAMP for what's going on with these rules.
+#[derive(Copy, Clone, Debug, PartialEq)]
+// MIGALLOW: Rust doesn't need a runeUsages override
+pub struct CoordSendSR<'s> {
+  pub range: RangeS<'s>,
+  pub sender_rune: RuneUsage<'s>,
+  pub receiver_rune: RuneUsage<'s>,
+}
+/*
+// See SAIRFU and SRCAMP for what's going on with these rules.
+case class CoordSendSR(
+  range: RangeS,
+  senderRune: RuneUsage,
+  receiverRune: RuneUsage
+) extends IRulexSR {
+
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(senderRune, receiverRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DefinitionCoordIsaSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub sub_rune: RuneUsage<'s>,
+  pub super_rune: RuneUsage<'s>,
+}
+/*
+case class DefinitionCoordIsaSR(range: RangeS, resultRune: RuneUsage, subRune: RuneUsage, superRune: RuneUsage) extends IRulexSR {
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, subRune, superRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CallSiteCoordIsaSR<'s> {
+  pub range: RangeS<'s>,
+  // This is here because when we add this CallSiteCoordIsaSR and its companion DefinitionCoordIsaSR,
+  // the DefinitionCoordIsaSR has a resultRune that it usually populates with an ImplTemplata.
+  // That rune is in the rules somewhere, but when we filter out the DefinitionCoordIsaSR for call site
+  // solves, that rune is still there, and all runes must be solved, so we need something to solve it.
+  // So, we make CallSiteCoordIsaSR solve it, and populate it with an ImplTemplata or ImplDefinitionTemplata.
+  // It's also similar to how Definition/CallSiteFuncSR work.
+  // It also means the call site has access to the impls, which might be nice for ONBIFS and NBIFP.
+  // It's an Option because CoordSendSR sometimes produces one of these, and it doesn't care about
+  // the result.
+  pub result_rune: Option<RuneUsage<'s>>,
+  pub sub_rune: RuneUsage<'s>,
+  pub super_rune: RuneUsage<'s>,
+}
+/*
+case class CallSiteCoordIsaSR(
+  range: RangeS,
+  // This is here because when we add this CallSiteCoordIsaSR and its companion DefinitionCoordIsaSR,
+  // the DefinitionCoordIsaSR has a resultRune that it usually populates with an ImplTemplata.
+  // That rune is in the rules somewhere, but when we filter out the DefinitionCoordIsaSR for call site
+  // solves, that rune is still there, and all runes must be solved, so we need something to solve it.
+  // So, we make CallSiteCoordIsaSR solve it, and populate it with an ImplTemplata or ImplDefinitionTemplata.
+  // It's also similar to how Definition/CallSiteFuncSR work.
+  // It also means the call site has access to the impls, which might be nice for ONBIFS and NBIFP.
+  // It's an Option because CoordSendSR sometimes produces one of these, and it doesn't care about
+  // the result.
+  resultRune: Option[RuneUsage],
+  subRune: RuneUsage,
+  superRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = resultRune.toVector ++ Vector(subRune, superRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct KindComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub kind_rune: RuneUsage<'s>,
+  pub mutability_rune: RuneUsage<'s>,
+}
+/*
+case class KindComponentsSR(
+  range: RangeS,
+  kindRune: RuneUsage,
+  mutabilityRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(kindRune, mutabilityRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CoordComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub ownership_rune: RuneUsage<'s>,
+  pub kind_rune: RuneUsage<'s>,
+}
+/*
+case class CoordComponentsSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  ownershipRune: RuneUsage,
+  kindRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, ownershipRune, kindRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct PrototypeComponentsSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub params_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
+}
+/*
+case class PrototypeComponentsSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  paramsRune: RuneUsage,
+  returnRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsRune, returnRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct ResolveSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
+}
+/*
+case class ResolveSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  name: StrI,
+  paramsListRune: RuneUsage,
+  returnRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CallSiteFuncSR<'s> {
+  pub range: RangeS<'s>,
+  pub prototype_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
+}
+/*
+case class CallSiteFuncSR(
+  range: RangeS,
+  prototypeRune: RuneUsage,
+  name: StrI,
+  paramsListRune: RuneUsage,
+  returnRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(prototypeRune, paramsListRune, returnRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct DefinitionFuncSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub name: StrI<'s>,
+  pub params_list_rune: RuneUsage<'s>,
+  pub return_rune: RuneUsage<'s>,
+}
+/*
+case class DefinitionFuncSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  name: StrI,
+  paramsListRune: RuneUsage,
+  returnRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, paramsListRune, returnRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OneOfSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub literals: &'s [ILiteralSL<'s>],
+}
+/*
+// See Possible Values Shouldnt Be Used For Inference (PVSBUFI)
+case class OneOfSR(
+  range: RangeS,
+  rune: RuneUsage,
+  literals: Vector[ILiteralSL]
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  vassert(literals.nonEmpty)
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IsConcreteSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+}
+/*
+case class IsConcreteSR(
+  range: RangeS,
+  rune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IsInterfaceSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+}
+/*
+case class IsInterfaceSR(
+  range: RangeS,
+  rune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IsStructSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+}
+/*
+case class IsStructSR(
+  range: RangeS,
+  rune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct CoerceToCoordSR<'s> {
+  pub range: RangeS<'s>,
+  pub coord_rune: RuneUsage<'s>,
+  pub kind_rune: RuneUsage<'s>,
+}
+/*
+// TODO: Get rid of this in favor of just CoordComponentsSR.
+case class CoerceToCoordSR(
+  range: RangeS,
+  coordRune: RuneUsage,
+  kindRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(coordRune, kindRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RefListCompoundMutabilitySR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub coord_list_rune: RuneUsage<'s>,
+}
+/*
+case class RefListCompoundMutabilitySR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  coordListRune: RuneUsage,
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, coordListRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LiteralSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub literal: ILiteralSL<'s>,
+}
+
+/*
+case class LiteralSR(
+  range: RangeS,
+  rune: RuneUsage,
+  literal: ILiteralSL
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MaybeCoercingLookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub name: IImpreciseNameS<'s>,
+}
+
+/*
+case class MaybeCoercingLookupSR(
+  range: RangeS,
+  rune: RuneUsage,
+  name: IImpreciseNameS
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+// A rule that looks up something that's not a Kind, so it doesn't need a default region.
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+  pub name: IImpreciseNameS<'s>,
+}
+/*
+// A rule that looks up something that's not a Kind, so it doesn't need a default region.
+case class LookupSR(
+  range: RangeS,
+  rune: RuneUsage,
+  name: IImpreciseNameS
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MaybeCoercingCallSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub template_rune: RuneUsage<'s>,
+  pub args: &'s [RuneUsage<'s>],
+}
+/*
+case class MaybeCoercingCallSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  templateRune: RuneUsage,
+  args: Vector[RuneUsage]
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+// MIGALLOW: Rust doesn't need a runeUsages override
+pub struct CallSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub template_rune: RuneUsage<'s>,
+  pub args: &'s [RuneUsage<'s>],
+}
+/*
+case class CallSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  templateRune: RuneUsage,
+  args: Vector[RuneUsage]
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, templateRune) ++ args
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IndexListSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub list_rune: RuneUsage<'s>,
+  pub index: i32,
+}
+/*
+case class IndexListSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  listRune: RuneUsage,
+  index: Int
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, listRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct RuneParentEnvLookupSR<'s> {
+  pub range: RangeS<'s>,
+  pub rune: RuneUsage<'s>,
+}
+/*
+case class RuneParentEnvLookupSR(
+  range: RangeS,
+  rune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(rune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct AugmentSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub ownership: Option<OwnershipP>,
+  pub inner_rune: RuneUsage<'s>,
+}
+/*
+// InterpretedAR will overwrite inner's permission and ownership to the given ones.
+// We turned InterpretedAR into this
+case class AugmentSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  ownership: Option[OwnershipP],
+  innerRune: RuneUsage
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune, innerRune)
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct PackSR<'s> {
+  pub range: RangeS<'s>,
+  pub result_rune: RuneUsage<'s>,
+  pub members: &'s [RuneUsage<'s>],
+}
+/*
+case class PackSR(
+  range: RangeS,
+  resultRune: RuneUsage,
+  members: Vector[RuneUsage]
+) extends IRulexSR {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  // MIGALLOW: Rust doesn't need a runeUsages override
+  override def runeUsages: Vector[RuneUsage] = Vector(resultRune) ++ members
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub enum ILiteralSL<'s> {
+  IntLiteral(IntLiteralSL),
+  StringLiteral(StringLiteralSL<'s>),
+  BoolLiteral(BoolLiteralSL),
+  MutabilityLiteral(MutabilityLiteralSL),
+  LocationLiteral(LocationLiteralSL),
+  OwnershipLiteral(OwnershipLiteralSL),
+  VariabilityLiteral(VariabilityLiteralSL),
+}
+
+impl<'s> ILiteralSL<'s> {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    match self {
+      ILiteralSL::IntLiteral(x) => x.get_type(),
+      ILiteralSL::StringLiteral(x) => x.get_type(),
+      ILiteralSL::BoolLiteral(x) => x.get_type(),
+      ILiteralSL::MutabilityLiteral(x) => x.get_type(),
+      ILiteralSL::LocationLiteral(x) => x.get_type(),
+      ILiteralSL::OwnershipLiteral(x) => x.get_type(),
+      ILiteralSL::VariabilityLiteral(x) => x.get_type(),
+    }
+  }
+  /* Guardian: disable-all */
+}
+
+/*
+sealed trait ILiteralSL {
+  def getType(): ITemplataType
+}
+*/
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct IntLiteralSL {
+  pub value: i64,
+}
+/*
+case class IntLiteralSL(value: Long) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = IntegerTemplataType()
+}
+*/
+
+impl IntLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::IntegerTemplataType(IntegerTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct StringLiteralSL<'s> {
+  pub value: StrI<'s>,
+}
+/*
+case class StringLiteralSL(value: String) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = StringTemplataType()
+}
+*/
+
+impl<'s> StringLiteralSL<'s> {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::StringTemplataType(StringTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct BoolLiteralSL {
+  pub value: bool,
+}
+/*
+case class BoolLiteralSL(value: Boolean) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = BooleanTemplataType()
+}
+*/
+
+impl BoolLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::BooleanTemplataType(BooleanTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct MutabilityLiteralSL {
+  pub mutability: MutabilityP,
+}
+/*
+case class MutabilityLiteralSL(mutability: MutabilityP) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = MutabilityTemplataType()
+}
+*/
+
+impl MutabilityLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct LocationLiteralSL {
+  pub location: LocationP,
+}
+/*
+case class LocationLiteralSL(location: LocationP) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = LocationTemplataType()
+}
+*/
+
+impl LocationLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::LocationTemplataType(LocationTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct OwnershipLiteralSL {
+  pub ownership: OwnershipP,
+}
+/*
+case class OwnershipLiteralSL(ownership: OwnershipP) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = OwnershipTemplataType()
+}
+*/
+
+impl OwnershipLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */
+
+#[derive(Copy, Clone, Debug, PartialEq)]
+pub struct VariabilityLiteralSL {
+  pub variability: VariabilityP,
+}
+/*
+case class VariabilityLiteralSL(variability: VariabilityP) extends ILiteralSL {
+  // MIGALLOW: Rust doesn't need a equals override
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
+  override def getType(): ITemplataType = VariabilityTemplataType()
+}
+*/
+
+impl VariabilityLiteralSL {
+  pub fn get_type<'a>(&self) -> ITemplataType<'a> {
+    ITemplataType::VariabilityTemplataType(VariabilityTemplataType {})
+  }
+  /* Guardian: disable-all */
+}
+/* Guardian: disable-all */

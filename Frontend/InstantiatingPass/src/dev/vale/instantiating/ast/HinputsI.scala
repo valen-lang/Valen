@@ -48,7 +48,8 @@ case class HinputsI(
   val subCitizenToInterfaceToEdge: Map[IdI[cI, ICitizenNameI[cI]], Map[IdI[cI, IInterfaceNameI[cI]], EdgeI]] =
     subCitizenToInterfaceToEdgeMutable.mapValues(_.toMap).toMap
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 
   def lookupStruct(structId: IdI[cI, IStructNameI[cI]]): StructDefinitionI = {
     vassertSome(structs.find(_.instantiatedCitizen.id == structId))

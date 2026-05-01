@@ -1,0 +1,8 @@
+[submodule "Guardian"]
+	path = Guardian
+	url = https://github.com/Verdagon/Guardian.git
+	branch = main
+[submodule "Luz"]
+	path = Luz
+	url = https://github.com/Verdagon/Luz.git
+	branch = main

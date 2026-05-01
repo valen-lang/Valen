@@ -5,7 +5,7 @@ import dev.vale.simplifying.VonHammer
 import dev.vale.highlighter.{Highlighter, Spanner}
 import dev.vale.finalast.{PackageH, ProgramH}
 import dev.vale.options.GlobalOptions
-import dev.vale.parsing.{ParseErrorHumanizer, ParserVonifier}
+import dev.vale.parsing.{ParseErrorHumanizer, ParsedLoader, ParserVonifier}
 import dev.vale.postparsing.PostParserErrorHumanizer
 import dev.vale.typing.CompilerErrorHumanizer
 import dev.vale.testvm.Vivem
@@ -33,11 +33,15 @@ object PassManager {
     def packageCoord(interner: Interner): PackageCoordinate
   }
   case class ModulePathInput(moduleName: StrI, path: String) extends IFrontendInput {
-    val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+    val hash = runtime.ScalaRunTime._hashCode(this)
+    override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
     override def packageCoord(interner: Interner): PackageCoordinate = interner.intern(PackageCoordinate(moduleName, Vector.empty))
   }
   case class DirectFilePathInput(packageCoordinate: PackageCoordinate, path: String) extends IFrontendInput {
-    val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+    val hash = runtime.ScalaRunTime._hashCode(this)
+    override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
     override def packageCoord(interner: Interner): PackageCoordinate = packageCoordinate
   }
   case class SourceInput(
@@ -45,7 +49,9 @@ object PassManager {
       // Name isnt guaranteed to be unique, we sometimes hand in strings like "builtins.vale"
       name: String,
       code: String) extends IFrontendInput {
-    val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+    val hash = runtime.ScalaRunTime._hashCode(this)
+    override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
     override def packageCoord(interner: Interner): PackageCoordinate = packageCoordinate
   }
 
@@ -54,6 +60,7 @@ object PassManager {
 //    modulePaths: Map[String, String],
 //    packagesToBuild: Vector[PackageCoordinate],
     outputDirPath: Option[String],
+    inputVpstDir: Option[String],
     benchmark: Boolean,
     outputVPST: Boolean,
     outputVAST: Boolean,
@@ -65,7 +72,10 @@ object PassManager {
     useOverloadIndex: Boolean,
     verboseErrors: Boolean,
     debugOutput: Boolean
-  ) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+  ) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
   def parseOpts(interner: Interner, opts: Options, list: List[String]) : Options = {
     list match {
@@ -73,6 +83,10 @@ object PassManager {
       case "--output_dir" :: value :: tail => {
         vcheck(opts.outputDirPath.isEmpty, "Multiple output files specified!", InputException)
         parseOpts(interner, opts.copy(outputDirPath = Some(value)), tail)
+      }
+      case "--input_vpst" :: value :: tail => {
+        vcheck(opts.inputVpstDir.isEmpty, "Multiple --input_vpst specified!", InputException)
+        parseOpts(interner, opts.copy(inputVpstDir = Some(value)), tail)
       }
       case "--output_vpst" :: value :: tail => {
         parseOpts(interner, opts.copy(outputVPST = value.toBoolean), tail)
@@ -203,13 +217,33 @@ object PassManager {
 
     val startTime = java.lang.System.currentTimeMillis()
 
+    // If --input_vpst is provided, load .vpst files
+    // The Rust parser already filtered to only needed packages via import-driven parsing
+    val allInputs = opts.inputVpstDir match {
+      case Some(vpstDir) => {
+        val vpstFiles = new java.io.File(vpstDir).listFiles().filter(_.getName.endsWith(".vpst"))
+        val vpstInputs = vpstFiles.map(file => {
+          val code = Source.fromFile(file).mkString
+          val fileP = new ParsedLoader(interner).load(code) match {
+            case Err(e) => return Err(s"Failed to load ${file.getName}: $e")
+            case Ok(f) => f
+          }
+          SourceInput(fileP.fileCoord.packageCoordinate, file.getPath, code)
+        }).toVector
+        opts.inputs ++ vpstInputs
+      }
+      case None => opts.inputs
+    }
+
+    val packageCoords = allInputs.map(_.packageCoord(interner)).distinct
+
     val compilation =
       new FullCompilation(
         interner,
         keywords,
-        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ opts.inputs.map(_.packageCoord(interner)).distinct,
+        Vector(PackageCoordinate.BUILTIN(interner, keywords)) ++ packageCoords,
         Builtins.getCodeMap(interner, keywords)
-          .or(packageCoord => resolvePackageContents(interner, opts.inputs, packageCoord)),
+          .or(packageCoord => resolvePackageContents(interner, allInputs, packageCoord)),
         passmanager.FullCompilationOptions(
           GlobalOptions(
             sanityCheck = opts.sanityCheck,
@@ -373,6 +407,7 @@ object PassManager {
           Options(
             inputs = Vector.empty,
             outputDirPath = None,
+            inputVpstDir = None,
             benchmark = false,
             outputVPST = true,
             outputVAST = true,
@@ -386,7 +421,7 @@ object PassManager {
             debugOutput = false),
           args.toList)
       vcheck(opts.mode.nonEmpty, "No mode!", InputException)
-      vcheck(opts.inputs.nonEmpty, "No input files!", InputException)
+      vcheck(opts.inputs.nonEmpty || opts.inputVpstDir.nonEmpty, "No input files!", InputException)
 
       opts.mode.get match {
         case "highlight" => {

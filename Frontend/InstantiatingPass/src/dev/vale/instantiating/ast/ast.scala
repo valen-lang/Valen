@@ -23,7 +23,8 @@ case class KindExportI(
   id: IdI[cI, ExportNameI[cI]],
   exportedName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 }
 
@@ -33,7 +34,8 @@ case class FunctionExportI(
   exportId: IdI[cI, ExportNameI[cI]],
   exportedName: StrI
 )  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
   vpass()
 }
 
@@ -42,7 +44,8 @@ case class FunctionExportI(
 //  packageCoordinate: PackageCoordinate,
 //  externName: StrI
 //)  {
-//  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+//  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //
 //}
 
@@ -54,14 +57,18 @@ case class FunctionExternI(
 )  {
   vpass()
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 }
 
 case class InterfaceEdgeBlueprintI(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
   interface: IdI[cI, IInterfaceNameI[cI]],
-  superFamilyRootHeaders: Vector[(PrototypeI[cI], Int)]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+  superFamilyRootHeaders: Vector[(PrototypeI[cI], Int)]) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 case class EdgeI(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
@@ -76,7 +83,8 @@ case class EdgeI(
   // The typing pass keys this by placeholdered name, and the instantiator keys this by non-placeholdered names
   abstractFuncToOverrideFunc: Map[IdI[cI, IFunctionNameI[cI]], PrototypeI[cI]]
 ) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   override def equals(obj: Any): Boolean = {
     obj match {
@@ -96,7 +104,8 @@ case class FunctionDefinitionI(
   runeToFuncBound: Map[IRuneS, IdI[cI, FunctionBoundNameI[cI]]],
   runeToImplBound: Map[IRuneS, IdI[cI, ImplBoundNameI[cI]]],
   body: ReferenceExpressionIE)  {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   // We always end a function with a ret, whose result is a Never.
   vassert(body.result.kind == NeverIT[cI](false))
@@ -110,7 +119,8 @@ object getFunctionLastName {
 
 // A unique location in a function. Environment is in the name so it spells LIFE!
 case class LocationInFunctionEnvironmentI(path: Vector[Int]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 
   def +(subLocation: Int): LocationInFunctionEnvironmentI = {
     LocationInFunctionEnvironmentI(path :+ subLocation)
@@ -127,7 +137,9 @@ case class ParameterI(
   preChecked: Boolean,
   tyype: CoordI[cI]) {
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
 
   // Use same instead, see EHCFBD for why we dont like equals.
   override def equals(obj: Any): Boolean = vcurious();
@@ -152,14 +164,16 @@ case class ParameterI(
 // it takes a complete typingpass evaluate to deduce a function's return type.
 
 case class SignatureI[+R <: IRegionsModeI](id: IdI[R, IFunctionNameI[R]]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   def paramTypes: Vector[CoordI[R]] = id.localName.parameters
 }
 
 sealed trait IFunctionAttributeI
 sealed trait ICitizenAttributeI
 case class ExternI(packageCoord: PackageCoordinate) extends IFunctionAttributeI with ICitizenAttributeI { // For optimization later
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
 }
 // There's no Export2 here, we use separate KindExport and FunctionExport constructs.
 //case class Export2(packageCoord: PackageCoordinate) extends IFunctionAttribute2 with ICitizenAttribute2
@@ -179,7 +193,9 @@ case class FunctionHeaderI(
   params: Vector[ParameterI],
   returnType: CoordI[cI]) {
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
 
 //  val perspectiveRegion =
 //    id.localName.templateArgs.last match {
@@ -272,7 +288,8 @@ case class FunctionHeaderI(
 case class PrototypeI[+R <: IRegionsModeI](
     id: IdI[R, IFunctionNameI[R]],
     returnType: CoordI[R]) {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   def paramTypes: Vector[CoordI[R]] = id.localName.parameters
   def toSignature: SignatureI[R] = SignatureI[R](id)
 }
@@ -297,14 +314,18 @@ case class AddressibleLocalVariableI(
   variability: VariabilityI,
   collapsedCoord: CoordI[cI]
 ) extends ILocalVariableI {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 }
 case class ReferenceLocalVariableI(
   name: IVarNameI[cI],
   variability: VariabilityI,
   collapsedCoord: CoordI[cI]
 ) extends ILocalVariableI {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
   vpass()
 }
 case class AddressibleClosureVariableI(
@@ -321,6 +342,8 @@ case class ReferenceClosureVariableI(
   variability: VariabilityI,
   collapsedCoord: CoordI[cI]
 ) extends IVariableI {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious();
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious();
 
 }

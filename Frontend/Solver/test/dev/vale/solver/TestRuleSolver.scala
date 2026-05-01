@@ -1,12 +1,130 @@
 package dev.vale.solver
 
-import dev.vale.{Err, Interner, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
-import org.scalatest._
+import dev.vale.{Err, Ok, RangeS, Result, vassert, vassertSome, vfail, vimpl, vwat}
 
 import scala.collection.immutable.Map
 
-class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, Unit, String, String] {
-  override def sanityCheckConclusion(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
+object TestRuleSolver {
+  def sanityCheckConclusionInner(env: Unit, state: Unit, rune: Long, conclusion: String): Unit = {}
+
+  // Per @CSCDSRZ, this only concludes runes — it doesn't mark any rules as solved.
+  def complexSolveInner(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
+    val unsolvedRules = solverState.getUnsolvedRules()
+    val receiverRunes = unsolvedRules.collect({ case Send(_, receiverRune) => receiverRune })
+    val newConclusions =
+      receiverRunes.flatMap(receiver => {
+        val receiveRules = unsolvedRules.collect({ case z @ Send(_, r) if r == receiver => z })
+        val callRules = unsolvedRules.collect({ case z @ Call(r, _, _) if r == receiver => z })
+        val senderConclusions = receiveRules.map(_.senderRune).flatMap(solverState.getConclusion)
+        val callTemplates = callRules.map(_.nameRune).flatMap(solverState.getConclusion)
+        vassert(callTemplates.distinct.size <= 1)
+        // If true, there are some senders/constraints we don't know yet, so lets be
+        // careful to not assume between any possibilities below.
+        val anyUnknownConstraints =
+          (senderConclusions.size != receiveRules.size || callRules.size != callTemplates.size)
+        solveReceives(senderConclusions, callTemplates, anyUnknownConstraints) match {
+          case None => List()
+          case Some(receiverInstantiation) => List(receiver -> receiverInstantiation)
+        }
+      }).toMap
+    solverState.commitStep[String](true, Vector(), newConclusions, Vector()) match { case Ok(_) => case Err(e) => return Err(e) }
+    Ok(())
+  }
+
+  def solveInner(state: Unit, env: Unit, solverState: SimpleSolverState[IRule, Long, String], ruleIndex: Int, rule: IRule): Result[Unit, ISolverError[Long, String, String]] = {
+    rule match {
+      case Equals(leftRune, rightRune) => {
+        solverState.getConclusion(leftRune) match {
+          case Some(left) => {
+            //            solverState.commitStep[String](rightRune, left) match { case Ok(_) => case Err(e) => return Err(e) }
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(rightRune -> left), Vector())
+          }
+          case None => {
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(leftRune -> vassertSome(solverState.getConclusion(rightRune))), Vector())
+          }
+        }
+      }
+      case Lookup(rune, name) => {
+        val value = name
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> value), Vector())
+      }
+      case Literal(rune, literal) => {
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(rune -> literal), Vector())
+      }
+      case OneOf(rune, literals) => {
+        val literal = solverState.getConclusion(rune).get
+        if (!literals.contains(literal)) {
+          return Err(RuleError("conflict!"))
+        }
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector())
+      }
+      case CoordComponents(coordRune, ownershipRune, kindRune) => {
+        solverState.getConclusion(coordRune) match {
+          case Some(combined) => {
+            val Array(ownership, kind) = combined.split("/")
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(ownershipRune -> ownership, kindRune -> kind), Vector())
+          }
+          case None => {
+            (solverState.getConclusion(ownershipRune), solverState.getConclusion(kindRune)) match {
+              case (Some(ownership), Some(kind)) => {
+                solverState.commitStep[String](false, Vector(ruleIndex), Map(coordRune -> (ownership + "/" + kind)), Vector())
+              }
+              case _ => vfail()
+            }
+          }
+        }
+      }
+      case Pack(resultRune, memberRunes) => {
+        solverState.getConclusion(resultRune) match {
+          case Some(result) => {
+            val parts = result.split(",")
+            solverState.commitStep[String](false, Vector(ruleIndex), memberRunes.zip(parts).toMap, Vector())
+          }
+          case None => {
+            val result = memberRunes.map(solverState.getConclusion).map(_.get).mkString(",")
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> result), Vector())
+          }
+        }
+      }
+      case Call(resultRune, nameRune, argRune) => {
+        val maybeResult = solverState.getConclusion(resultRune)
+        val maybeName = solverState.getConclusion(nameRune)
+        val maybeArg = solverState.getConclusion(argRune)
+        (maybeResult, maybeName, maybeArg) match {
+          case (Some(result), Some(templateName), _) => {
+            val prefix = templateName + ":"
+            vassert(result.startsWith(prefix))
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(argRune -> result.slice(prefix.length, result.length)), Vector())
+          }
+          case (_, Some(templateName), Some(arg)) => {
+            solverState.commitStep[String](false, Vector(ruleIndex), Map(resultRune -> (templateName + ":" + arg)), Vector())
+          }
+          case other => vwat(other)
+        }
+      }
+      case Send(senderRune, receiverRune) => {
+        val receiver = vassertSome(solverState.getConclusion(receiverRune))
+        if (receiver == "ISpaceship" || receiver == "IWeapon:int") {
+          solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector(Implements(senderRune, receiverRune)))
+        } else {
+          // Not receiving into an interface, so sender must be the same
+          solverState.commitStep[String](false, Vector(ruleIndex), Map(senderRune -> receiver), Vector())
+        }
+      }
+      case Implements(subRune, superRune) => {
+        val sub = vassertSome(solverState.getConclusion(subRune))
+        val suuper = vassertSome(solverState.getConclusion(superRune))
+        (sub, suuper) match {
+          case (x, y) if x == y => Ok(())
+          case ("Firefly", "ISpaceship") => Ok(())
+          case ("Serenity", "ISpaceship") => Ok(())
+          case ("Flamethrower:int", "IWeapon:int") => Ok(())
+          case other => vimpl(other)
+        }
+        solverState.commitStep[String](false, Vector(ruleIndex), Map(), Vector())
+      }
+    }
+  }
 
   def instantiateAncestorTemplate(descendants: Vector[String], ancestorTemplate: String): String = {
     // IRL, we may want to doublecheck that all descendants *can* instantiate as the ancestor template.
@@ -40,133 +158,10 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     if (tyype.contains(":")) tyype.split(":")(0) else tyype
   }
 
-  override def complexSolve(state: Unit, env: Unit, solverState: ISolverState[IRule, Long, String], stepState: IStepState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
-    val unsolvedRules = stepState.getUnsolvedRules()
-    val receiverRunes = unsolvedRules.collect({ case Send(_, receiverRune) => receiverRune })
-    receiverRunes.foreach(receiver => {
-      val receiveRules = unsolvedRules.collect({ case z @ Send(_, r) if r == receiver => z })
-      val callRules = unsolvedRules.collect({ case z @ Call(r, _, _) if r == receiver => z })
-      val senderConclusions = receiveRules.map(_.senderRune).flatMap(stepState.getConclusion)
-      val callTemplates = callRules.map(_.nameRune).flatMap(stepState.getConclusion)
-      vassert(callTemplates.distinct.size <= 1)
-      // If true, there are some senders/constraints we don't know yet, so lets be
-      // careful to not assume between any possibilities below.
-      val anyUnknownConstraints =
-        (senderConclusions.size != receiveRules.size || callRules.size != callTemplates.size)
-      solveReceives(senderConclusions, callTemplates, anyUnknownConstraints) match {
-        case None => List()
-        case Some(receiverInstantiation) => stepState.concludeRune(List(RangeS.testZero(interner)), receiver, receiverInstantiation)
-      }
-    })
-    Ok(())
-  }
-
-  override def solve(state: Unit, env: Unit, solverState: ISolverState[IRule, Long, String], ruleIndex: Int, rule: IRule, stepState: IStepState[IRule, Long, String]): Result[Unit, ISolverError[Long, String, String]] = {
-    rule match {
-      case Equals(leftRune, rightRune) => {
-        stepState.getConclusion(leftRune) match {
-          case Some(left) => stepState.concludeRune(List(RangeS.testZero(interner)), rightRune, left); Ok(())
-          case None => stepState.concludeRune(List(RangeS.testZero(interner)), leftRune, vassertSome(stepState.getConclusion(rightRune))); Ok(())
-        }
-      }
-      case Lookup(rune, name) => {
-        val value = name
-        stepState.concludeRune(List(RangeS.testZero(interner)), rune, value)
-        Ok(())
-      }
-      case Literal(rune, literal) => {
-        stepState.concludeRune(List(RangeS.testZero(interner)), rune, literal)
-        Ok(())
-      }
-      case OneOf(rune, literals) => {
-        val literal = stepState.getConclusion(rune).get
-        if (!literals.contains(literal)) {
-          return Err(RuleError("conflict!"))
-        }
-        Ok(())
-      }
-      case CoordComponents(coordRune, ownershipRune, kindRune) => {
-        stepState.getConclusion(coordRune) match {
-          case Some(combined) => {
-            val Array(ownership, kind) = combined.split("/")
-            stepState.concludeRune(List(RangeS.testZero(interner)), ownershipRune, ownership)
-            stepState.concludeRune(List(RangeS.testZero(interner)), kindRune, kind)
-            Ok(())
-          }
-          case None => {
-            (stepState.getConclusion(ownershipRune), stepState.getConclusion(kindRune)) match {
-              case (Some(ownership), Some(kind)) => {
-                stepState.concludeRune(List(RangeS.testZero(interner)), coordRune, ownership + "/" + kind)
-                Ok(())
-              }
-              case _ => vfail()
-            }
-          }
-        }
-      }
-      case Pack(resultRune, memberRunes) => {
-        stepState.getConclusion(resultRune) match {
-          case Some(result) => {
-            val parts = result.split(",")
-            memberRunes.zip(parts).foreach({ case (rune, part) =>
-              stepState.concludeRune(List(RangeS.testZero(interner)), rune, part)
-            })
-            Ok(())
-          }
-          case None => {
-            val result = memberRunes.map(stepState.getConclusion).map(_.get).mkString(",")
-            stepState.concludeRune(List(RangeS.testZero(interner)), resultRune, result)
-            Ok(())
-          }
-        }
-      }
-      case Call(resultRune, nameRune, argRune) => {
-        val maybeResult = stepState.getConclusion(resultRune)
-        val maybeName = stepState.getConclusion(nameRune)
-        val maybeArg = stepState.getConclusion(argRune)
-        (maybeResult, maybeName, maybeArg) match {
-          case (Some(result), Some(templateName), _) => {
-            val prefix = templateName + ":"
-            vassert(result.startsWith(prefix))
-            stepState.concludeRune(List(RangeS.testZero(interner)), argRune, result.slice(prefix.length, result.length))
-            Ok(())
-          }
-          case (_, Some(templateName), Some(arg)) => {
-            stepState.concludeRune(List(RangeS.testZero(interner)), resultRune, (templateName + ":" + arg))
-            Ok(())
-          }
-          case other => vwat(other)
-        }
-      }
-      case Send(senderRune, receiverRune) => {
-        val receiver = vassertSome(stepState.getConclusion(receiverRune))
-        if (receiver == "ISpaceship" || receiver == "IWeapon:int") {
-          stepState.addRule(Implements(senderRune, receiverRune))
-          Ok(())
-        } else {
-          // Not receiving into an interface, so sender must be the same
-          stepState.concludeRune(List(RangeS.testZero(interner)), senderRune, receiver)
-          Ok(())
-        }
-      }
-      case Implements(subRune, superRune) => {
-        val sub = vassertSome(stepState.getConclusion(subRune))
-        val suuper = vassertSome(stepState.getConclusion(superRune))
-        (sub, suuper) match {
-          case (x, y) if x == y => Ok(())
-          case ("Firefly", "ISpaceship") => Ok(())
-          case ("Serenity", "ISpaceship") => Ok(())
-          case ("Flamethrower:int", "IWeapon:int") => Ok(())
-          case other => vimpl(other)
-        }
-      }
-    }
-  }
-
   private def solveReceives(
-    senders: Vector[String],
-    callTemplates: Vector[String],
-    anyUnknownConstraints: Boolean) = {
+      senders: Vector[String],
+      callTemplates: Vector[String],
+      anyUnknownConstraints: Boolean) = {
     val senderTemplates = senders.map(getTemplate)
     // Theoretically possible, not gonna handle it for this test
     vassert(callTemplates.toSet.size <= 1)
@@ -190,8 +185,8 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
   }
 
   def narrow(
-    ancestorTemplateUnnarrowed: Set[String],
-    anyUnknownConstraints: Boolean):
+      ancestorTemplateUnnarrowed: Set[String],
+      anyUnknownConstraints: Boolean):
   Set[String] = {
     val ancestorTemplate =
       if (ancestorTemplateUnnarrowed.size > 1) {
@@ -210,5 +205,5 @@ class TestRuleSolver(interner: Interner) extends ISolveRule[IRule, Long, Unit, U
     vassert(ancestorTemplate.size <= 1)
     ancestorTemplate
   }
-
 }
+

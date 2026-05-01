@@ -65,5 +65,7 @@ logLevel := Level.Debug
 (unmanagedResourceDirectories) in Test := Seq(
     baseDirectory.value / "Tests" / "test" / "main" / "resources")
 
+Test / parallelExecution := true
+
 assemblyJarName in assembly := "Frontend.jar"
 assemblyOutputPath in assembly := (baseDirectory.value / "Frontend.jar")

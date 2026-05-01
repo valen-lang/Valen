@@ -7,6 +7,7 @@ import org.scalatest._
 
 class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
 
+  // This test does not pass yet, use #[ignore].
   test("Forgetting set when changing") {
     val error =
       compileStatement(
@@ -16,6 +17,7 @@ class AfterRegionsTests extends FunSuite with Collector with TestParseUtils {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Report leaving out semicolon or ending body after expression, for paren") {
     compileBlockContents(
       """

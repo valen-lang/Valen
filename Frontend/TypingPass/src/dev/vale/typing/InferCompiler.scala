@@ -21,38 +21,14 @@ import scala.collection.immutable._
 
 //ISolverOutcome[IRulexSR, IRuneS, ITemplata[ITemplataType], ITypingPassSolverError]
 
-sealed trait IResolveSolveOutcome
 case class CompleteResolveSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
     runeToBound: InstantiationBoundArgumentsT[IFunctionNameT, IImplNameT]
-) extends IResolveSolveOutcome
+)
 
 case class CompleteDefineSolve(
     conclusions: Map[IRuneS, ITemplataT[ITemplataType]],
     runeToBound: InstantiationBoundArgumentsT[FunctionBoundNameT, ImplBoundNameT])
-
-sealed trait IIncompleteOrFailedCompilerSolve extends IResolveSolveOutcome {
-  def unsolvedRules: Vector[IRulexSR]
-  def unsolvedRunes: Vector[IRuneS]
-  def steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]]
-}
-case class IncompleteCompilerSolve(
-  steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]],
-  unsolvedRules: Vector[IRulexSR],
-  unknownRunes: Set[IRuneS],
-  incompleteConclusions: Map[IRuneS, ITemplataT[ITemplataType]]
-) extends IIncompleteOrFailedCompilerSolve {
-  vassert(unknownRunes.nonEmpty)
-  override def unsolvedRunes: Vector[IRuneS] = unknownRunes.toVector
-}
-
-case class FailedCompilerSolve(
-  steps: Stream[Step[IRulexSR, IRuneS, ITemplataT[ITemplataType]]],
-  unsolvedRules: Vector[IRulexSR],
-  error: ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]
-) extends IIncompleteOrFailedCompilerSolve {
-  override def unsolvedRunes: Vector[IRuneS] = Vector()
-}
 
 sealed trait IConclusionResolveError
 case class CouldntFindImplForConclusionResolve(range: List[RangeS], fail: IsntParent) extends IConclusionResolveError
@@ -61,11 +37,11 @@ case class CouldntFindFunctionForConclusionResolve(range: List[RangeS], fff: Fin
 case class ReturnTypeConflictInConclusionResolve(range: List[RangeS], expectedReturnType: CoordT, actual: PrototypeT[IFunctionNameT]) extends IConclusionResolveError
 
 sealed trait IResolvingError
-case class ResolvingSolveFailedOrIncomplete(inner: IIncompleteOrFailedCompilerSolve) extends IResolvingError
+case class ResolvingSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IResolvingError
 case class ResolvingResolveConclusionError(inner: IConclusionResolveError) extends IResolvingError
 
 sealed trait IDefiningError
-case class DefiningSolveFailedOrIncomplete(inner: IIncompleteOrFailedCompilerSolve) extends IDefiningError
+case class DefiningSolveFailedOrIncomplete(inner: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]) extends IDefiningError
 case class DefiningResolveConclusionError(inner: IConclusionResolveError) extends IDefiningError
 
 case class InferEnv(
@@ -173,7 +149,7 @@ class InferCompiler(
     includeReachableBoundsForRunes: Vector[IRuneS]):
   Result[CompleteDefineSolve, IDefiningError] = {
     val solver =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     continue(envs, coutputs, solver) match {
       case Ok(()) =>
       case Err(e) => return Err(DefiningSolveFailedOrIncomplete(e))
@@ -203,7 +179,7 @@ class InferCompiler(
       initialSends: Vector[InitialSend]):
   Result[CompleteResolveSolve, IResolvingError] = {
     val solver =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
     continue(envs, coutputs, solver) match {
       case Ok(()) =>
       case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(e))
@@ -220,18 +196,18 @@ class InferCompiler(
       invocationRange: List[RangeS],
       initialKnowns: Vector[InitialKnown],
       initialSends: Vector[InitialSend]):
-  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedCompilerSolve] = {
-    val solver =
-      makeSolver(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
-    continue(envs, coutputs, solver) match {
+  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+    val solverState =
+      makeSolverState(envs, coutputs, rules, runeToType, invocationRange, initialKnowns, initialSends)
+    continue(envs, coutputs, solverState) match {
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.userifyConclusions().toMap)
+    Ok(solverState.userifyConclusions().toMap)
   }
 
 
-  def makeSolver(
+  def makeSolverState(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
     initialRules: Vector[IRulexSR],
@@ -239,8 +215,7 @@ class InferCompiler(
     invocationRange: List[RangeS],
     initialKnowns: Vector[InitialKnown],
     initialSends: Vector[InitialSend]):
-  Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType],
-    ITypingPassSolverError] = {
+  SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]] = {
     Profiler.frame(() => {
       val runeToType =
         initialRuneToType ++
@@ -267,7 +242,7 @@ class InferCompiler(
           })
 
       val solver =
-        compilerSolver.makeSolver(invocationRange, envs, state, rules, runeToType, alreadyKnown)
+        compilerSolver.makeSolverState(invocationRange, envs, state, rules, runeToType, alreadyKnown)
       solver
     })
   }
@@ -275,12 +250,9 @@ class InferCompiler(
   def continue(
     envs: InferEnv, // See CSSNCE
     state: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
-  Result[Unit, FailedCompilerSolve] = {
-    compilerSolver.continue(envs, state, solver) match {
-      case Ok(()) => Ok(())
-      case Err(FailedSolve(steps, unsolvedRules, error)) => Err(FailedCompilerSolve(steps, unsolvedRules, error))
-    }
+    solver: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+  Result[Unit, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+    compilerSolver.continue(envs, state, solver)
   }
 
   def checkResolvingConclusionsAndResolve(
@@ -291,28 +263,19 @@ class InferCompiler(
       runeToType: Map[IRuneS, ITemplataType],
       rules: Vector[IRulexSR],
       includeReachableBoundsForRunes: Vector[IRuneS],
-      solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
   Result[CompleteResolveSolve, IResolvingError] = {
-    val (steps, conclusions) =
-      compilerSolver.interpretResults(runeToType, solver) match {
-        case CompleteSolve(steps, conclusions) => (steps, conclusions)
-        case IncompleteSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-          return Err(ResolvingSolveFailedOrIncomplete(IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions)))
-        }
-        case FailedSolve(steps, unsolvedRules, error) => {
-          return Err(ResolvingSolveFailedOrIncomplete(FailedCompilerSolve(steps, unsolvedRules, error)))
-        }
-      }
-    // rules.collect({
-    //   case r@CallSR(_, RuneUsage(_, callerResolveResultRune), _, _) => {
-    //     val inferences =
-    //       resolveTemplateCallConclusion(envs.originalCallingEnv, state, ranges, callLocation, r, conclusions) match {
-    //         case Ok(i) => i
-    //         case Err(e) => return Err(FailedCompilerSolve(steps, Vector(), RuleError(CouldntResolveKind(e))))
-    //       }
-    //     val _ = inferences // We don't care, we just did the resolve so that we could instantiate it and add its
-    //   }
-    // })
+    val stepsStream = solverState.getSteps().toStream
+    val conclusionsStream = solverState.userifyConclusions().toMap
+
+    val conclusions = conclusionsStream.toMap
+    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
+
+    // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+    // Caller should remember to do that!
+    if ((allRunes -- conclusions.keySet).nonEmpty) {
+      return Err(ResolvingSolveFailedOrIncomplete(FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](stepsStream, solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), SolveIncomplete())))
+    }
 
     val citizensFromCalls =
       rules
@@ -366,7 +329,7 @@ class InferCompiler(
         val inferences =
           resolveTemplateCallConclusion(envWithConclusions, state, ranges, callLocation, r, conclusions) match {
             case Ok(i) => i
-            case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(FailedCompilerSolve(steps, Vector(), RuleError(CouldntResolveKind(e)))))
+            case Err(e) => return Err(ResolvingSolveFailedOrIncomplete(FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](stepsStream, conclusions, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), RuleError(CouldntResolveKind(e)))))
           }
         val _ = inferences // We don't care, we just did the resolve so that we could instantiate it and add its
       }
@@ -417,16 +380,18 @@ class InferCompiler(
 
   def interpretResults(
       runeToType: Map[IRuneS, ITemplataType],
-      solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]):
-  Result[Map[IRuneS, ITemplataT[ITemplataType]], IIncompleteOrFailedCompilerSolve] = {
-    compilerSolver.interpretResults(runeToType, solver) match {
-      case CompleteSolve(steps, conclusions) => Ok(conclusions)
-      case IncompleteSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-        Err(IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions))
-      }
-      case FailedSolve(steps, unsolvedRules, error) => {
-        Err(FailedCompilerSolve(steps, unsolvedRules, error))
-      }
+      solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]):
+  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
+    val conclusions = solverState.userifyConclusions().toMap
+    val allRunes = runeToType.keySet ++ solverState.getAllRunes()
+    // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
+    // Caller should remember to do that!
+    if ((allRunes -- conclusions.keySet).nonEmpty) {
+      Err(
+        FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
+          solverState.getSteps(), solverState.getConclusions().toMap, solverState.getUnsolvedRules(), solverState.getUnsolvedRunes(), SolveIncomplete()))
+    } else {
+      Ok(conclusions)
     }
   }
 
@@ -749,20 +714,20 @@ class InferCompiler(
   def incrementallySolve(
     envs: InferEnv,
     coutputs: CompilerOutputs,
-    solver: Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError],
-    onIncompleteSolve: (Solver[IRulexSR, IRuneS, InferEnv, CompilerOutputs, ITemplataT[ITemplataType], ITypingPassSolverError]) => Boolean):
-  Result[Boolean, FailedCompilerSolve] = {
+    solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]],
+    onIncompleteSolve: (SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]) => Boolean):
+  Result[Boolean, FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
     // See IRAGP for why we have this incremental solving/placeholdering.
     while ( {
-      continue(envs, coutputs, solver) match {
+      continue(envs, coutputs, solverState) match {
         case Ok(()) =>
         case Err(f) => return Err(f)
       }
 
       // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
       // Caller should remember to do that!
-      if (!solver.isComplete()) {
-        val continue = onIncompleteSolve(solver)
+      if (!solverState.isComplete()) {
+        val continue = onIncompleteSolve(solverState)
         if (!continue) {
           return Ok(false)
         }

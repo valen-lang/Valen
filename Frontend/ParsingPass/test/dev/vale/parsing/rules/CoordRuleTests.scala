@@ -55,7 +55,6 @@ class CoordRuleTests extends FunSuite with Matchers with Collector with TestPars
     compile("int") shouldHave {
       case TemplexPR(NameOrRunePT(NameP(_, StrI("int")))) =>
     }
-//        CoordPR(None,None,None,None,None,Some(Vector(NameTemplexPR("int"))))
 
   }
 
@@ -65,7 +64,6 @@ class CoordRuleTests extends FunSuite with Matchers with Collector with TestPars
           CoordTypePR,
           Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(NameOrRunePT(NameP(_, StrI("int")))))) =>
     }
-//      runedTCoordWithEnvKind("T", "int")
 
   }
 
@@ -95,7 +93,6 @@ class CoordRuleTests extends FunSuite with Matchers with Collector with TestPars
           ComponentsPR(_,CoordTypePR,Vector(TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)), TemplexPR(AnonymousRunePT(_)))),
           TemplexPR(NameOrRunePT(NameP(_, StrI("int"))))) =>
     }
-//        runedTCoordWithValue("T", NameTemplexPR("int"))
   }
 
   test("Coord with sequence in value spot") {

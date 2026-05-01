@@ -23,13 +23,22 @@ sealed trait IMethod
 case class NeededOverride(
   name: IImpreciseNameS,
   paramFilters: Vector[CoordT]
-) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
-case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) extends IMethod {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
+case class FoundFunction(prototype: PrototypeT[IFunctionNameT]) extends IMethod {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 case class PartialEdgeT(
   struct: StructTT,
   interface: InterfaceTT,
-  methods: Vector[IMethod]) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+  methods: Vector[IMethod]) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 class EdgeCompiler(
     opts: TypingPassOptions,

@@ -26,7 +26,8 @@ trait IEnvironmentT {
   override def toString: String = {
     "#Environment:" + id
   }
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vfail() // Shouldnt hash these, too big.
 
   def globalEnv: GlobalEnvironment
 
@@ -260,7 +261,8 @@ case class TemplatasStore(
   // Vector because multiple things can share an INameS; function overloads.
   entriesByImpreciseNameS: Map[IImpreciseNameS, Vector[IEnvEntry]]
 ) {
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
   entriesByNameT.values.foreach({
     case FunctionEnvEntry(function) => vassert(function.name.packageCoordinate == templatasStoreName.packageCoord)
@@ -390,7 +392,8 @@ case class PackageEnvironmentT[+T <: INameT](
   // These are ones that the user imports (or the ancestors that we implicitly import)
   globalNamespaces: Vector[TemplatasStore]
 ) extends IEnvironmentT {
-  val hash = runtime.ScalaRunTime._hashCode(id); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(id);
+override def hashCode(): Int = hash;
 
   override def templatas: TemplatasStore = {
     vimpl()
@@ -454,7 +457,8 @@ case class CitizenEnvironmentT[+T <: INameT, +Y <: ITemplateNameT](
   override def denizenId: IdT[INameT] = templateId
   override def denizenTemplateId: IdT[ITemplateNameT] = templateId
 
-  val hash = runtime.ScalaRunTime._hashCode(id); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(id);
+override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     if (!obj.isInstanceOf[IInDenizenEnvironmentT]) {
       return false

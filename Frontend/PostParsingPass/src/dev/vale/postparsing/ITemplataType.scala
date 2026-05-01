@@ -19,7 +19,8 @@ case class LocationTemplataType() extends ITemplataType
 case class OwnershipTemplataType() extends ITemplataType
 case class VariabilityTemplataType() extends ITemplataType
 case class PackTemplataType(elementType: ITemplataType) extends ITemplataType {
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+  override def hashCode(): Int = hash;
   override def equals(obj: Any): Boolean = {
     obj match {
       case PackTemplataType(thatElementType) => elementType == thatElementType
@@ -35,5 +36,7 @@ case class TemplateTemplataType(
 ) extends ITemplataType {
   vassert(!paramTypes.contains(RegionTemplataType()))
 
-  val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash;
+  val hash = runtime.ScalaRunTime._hashCode(this)
+
+  override def hashCode(): Int = hash;
 }

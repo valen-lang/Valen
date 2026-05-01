@@ -3,7 +3,7 @@ package dev.vale.typing
 import dev.vale._
 import dev.vale.postparsing._
 import dev.vale.postparsing.rules.IRulexSR
-import dev.vale.solver.{FailedSolve, IIncompleteOrFailedSolve, IncompleteSolve, RuleError, SolverErrorHumanizer}
+import dev.vale.solver.{FailedSolve, RuleError, SolveIncomplete, SolverErrorHumanizer}
 import dev.vale.typing.types._
 import dev.vale.SourceCodeUtils.{humanizePos, lineBegin, lineContaining, lineRangeContaining, linesBetween}
 import dev.vale.highertyping.FunctionA
@@ -101,16 +101,7 @@ object CompilerErrorHumanizer {
         }
         case CouldntEvaluatImpl(range, eff) => {
           "Couldn't evaluate impl statement:\n" +
-            humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, eff match {
-              case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-                IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                  steps, unsolvedRules, unknownRunes, incompleteConclusions)
-              }
-              case FailedCompilerSolve(steps, unsolvedRules, error) => {
-                FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                  steps, unsolvedRules, error)
-              }
-            })
+            humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, eff)
       }
         case BodyResultDoesntMatch(range, functionName, expectedReturnType, resultType) => {
           "Function " + printableName(codeMap, functionName) + " return type " + humanizeTemplata(codeMap, CoordTemplataT(expectedReturnType)) + " doesn't match body's result: " + humanizeTemplata(codeMap, CoordTemplataT(resultType))
@@ -203,16 +194,7 @@ object CompilerErrorHumanizer {
               (rule: IRulexSR) => rule.runeUsages.map(usage => (usage.rune, usage.range)),
               (rule: IRulexSR) => rule.runeUsages.map(_.rune),
               PostParserErrorHumanizer.humanizeRule,
-              failedSolve match {
-                case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-                  IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                    steps, unsolvedRules, unknownRunes, incompleteConclusions)
-                }
-                case FailedCompilerSolve(steps, unsolvedRules, error) => {
-                  FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-                    steps, unsolvedRules, error)
-                }
-              })
+              failedSolve)
           text
         }
         case HigherTypingInferError(range, err) => {
@@ -243,7 +225,7 @@ object CompilerErrorHumanizer {
         humanizeConclusionResolveError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case DefiningSolveFailedOrIncomplete(inner) => {
-        humanizeIncompleteOrFailedCompilerSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
+        humanizeFailedSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
     }
   }
@@ -259,16 +241,6 @@ object CompilerErrorHumanizer {
     val ResolveFailure(range, reason) = fff
     humanizeResolvingError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
 
-    // humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason match {
-    //   case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-    //     IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-    //       steps, unsolvedRules, unknownRunes, incompleteConclusions)
-    //   }
-    //   case FailedCompilerSolve(steps, unsolvedRules, error) => {
-    //     FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-    //       steps, unsolvedRules, error)
-    //   }
-    // })
   }
 
   def humanizeResolvingError(
@@ -284,30 +256,21 @@ object CompilerErrorHumanizer {
         humanizeConclusionResolveError(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case ResolvingSolveFailedOrIncomplete(inner) => {
-        humanizeIncompleteOrFailedCompilerSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
+        humanizeFailedSolve(verbose, codeMap, linesBetween, lineRangeContaining, lineContaining, inner)
       }
       case other => vimpl(other)
     }
   }
 
-  def humanizeIncompleteOrFailedCompilerSolve(
+  def humanizeFailedSolve(
       verbose: Boolean,
       codeMap: CodeLocationS => String,
       linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
       lineRangeContaining: (CodeLocationS) => RangeS,
       lineContaining: (CodeLocationS) => String,
-      error: IIncompleteOrFailedCompilerSolve):
+      error: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]):
   String = {
-    humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, error match {
-      case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-        IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-          steps, unsolvedRules, unknownRunes, incompleteConclusions)
-      }
-      case FailedCompilerSolve(steps, unsolvedRules, error) => {
-        FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-          steps, unsolvedRules, error)
-      }
-    })
+    humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, error)
   }
 
   def humanizeConclusionResolveError(
@@ -465,16 +428,7 @@ object CompilerErrorHumanizer {
       }
 //      case Outscored() => "Outscored!"
       case InferFailure(reason) => {
-        humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason match {
-          case IncompleteCompilerSolve(steps, unsolvedRules, unknownRunes, incompleteConclusions) => {
-            IncompleteSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-              steps, unsolvedRules, unknownRunes, incompleteConclusions)
-          }
-          case FailedCompilerSolve(steps, unsolvedRules, error) => {
-            FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
-              steps, unsolvedRules, error)
-          }
-        })
+        humanizeCandidateAndFailedSolve(codeMap, linesBetween, lineRangeContaining, lineContaining, reason)
       }
     })
   }
@@ -568,7 +522,7 @@ object CompilerErrorHumanizer {
     linesBetween: (CodeLocationS, CodeLocationS) => Vector[RangeS],
     lineRangeContaining: (CodeLocationS) => RangeS,
     lineContaining: (CodeLocationS) => String,
-    result: IIncompleteOrFailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]):
+    result: FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]):
   String = {
     val (text, lineBegins) =
       SolverErrorHumanizer.humanizeFailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError](
@@ -821,7 +775,7 @@ object CompilerErrorHumanizer {
       }
       case StructTemplateNameT(humanName) => humanName.str
       case InterfaceTemplateNameT(humanName) => humanName.str
-      case p @ NonKindNonRegionPlaceholderNameT(index, rune) => p.toString // DO NOT SUBMIT
+      case NonKindNonRegionPlaceholderNameT(index, rune) => humanizeRune(rune)
     }
   }
 

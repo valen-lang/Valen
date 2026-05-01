@@ -1,0 +1,6 @@
+import printutils.*;
+
+exported func main() {
+  a = 42.125;
+  print(a);
+}

@@ -15,6 +15,7 @@ import org.scalatest._
 
 class AfterRegionsErrorTests extends FunSuite with Matchers {
 
+  // This test does not pass yet, use #[ignore].
   test("Prints bread crumb trail") {
     val compile = CompilerTestCompilation.test(
       """
@@ -103,6 +104,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
   }
 
   // Depends on Basic interface anonymous subclass
+  // This test does not pass yet, use #[ignore].
   test("Reports error") {
     // https://github.com/ValeLang/Vale/issues/548
 
@@ -112,7 +114,8 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         |	func foo(virtual a &A) int;
         |}
         |
-        |struct B imm { val int; }
+        |struct B imm {
+  val int; }
         |impl A for B;
         |
         |func foo(b &B) int { return b.val; }
@@ -123,6 +126,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
   }
 
   // right now there is no collision because they have different template names.
+  // This test does not pass yet, use #[ignore].
   test("Reports when two functions with same signature") {
     val compile = CompilerTestCompilation.test(
       """
@@ -136,6 +140,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
   }
 
   // Interface bounds, downcasting
+  // This test does not pass yet, use #[ignore].
   test("Report when downcasting to interface") {
     vimpl() // can we solve this by putting an impl in the environment for that placeholder?
 
@@ -158,6 +163,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Report when downcasting between unrelated types") {
     val compile = CompilerTestCompilation.test(
       """
@@ -180,6 +186,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
   }
 
   // Depends on Generic interface anonymous subclass
+  // This test does not pass yet, use #[ignore].
   test("Lambda is incompatible anonymous interface") {
     val compile = CompilerTestCompilation.test(
       """
@@ -208,6 +215,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Detects sending non-citizen to citizen") {
     val compile = CompilerTestCompilation.test(
       """
@@ -226,7 +234,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
         fff.rejectedCalleeToReason.map(_._2).head match {
           case InferFailure(reason) => {
             reason match {
-              case FailedCompilerSolve(_, _, RuleError(SendingNonCitizen(IntT(32)))) =>
+              case FailedSolve(_, _, _, _, RuleError(SendingNonCitizen(IntT(32)))) =>
               case other => vfail(other)
             }
           }
@@ -235,6 +243,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Abstract func without virtual") {
     val compile = CompilerTestCompilation.test(
       """
@@ -253,6 +262,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Accidentally mention type rune") {
     val compile = CompilerTestCompilation.test(
       """
@@ -271,6 +281,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Call bound with wrong arguments") {
     val compile = CompilerTestCompilation.test(
       """
@@ -286,6 +297,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Inherit reachable bounds for params and things inside params too (IRBFPTIPT)") {
     val compile = CompilerTestCompilation.test(
       """
@@ -309,6 +321,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Ambiguous call") {
     val compile = CompilerTestCompilation.test(
       """
@@ -326,6 +339,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
+  // This test does not pass yet, use #[ignore].
   test("Cant make non-weakable extend a weakable") {
     val compile = CompilerTestCompilation.test(
       """
@@ -347,7 +361,7 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
     }
   }
 
-
+  // This test does not pass yet, use #[ignore].
   test("Cant make weakable extend a non-weakable") {
     val compile = CompilerTestCompilation.test(
       """
@@ -365,6 +379,8 @@ class AfterRegionsErrorTests extends FunSuite with Matchers {
       case _ => vfail()
     }
   }
+
+  // This test does not pass yet, use #[ignore].
   test("Cant make weak ref to non-weakable") {
     val compile = CompilerTestCompilation.test(
       """

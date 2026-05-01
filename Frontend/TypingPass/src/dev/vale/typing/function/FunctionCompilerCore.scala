@@ -21,7 +21,10 @@ import dev.vale.typing.env._
 
 import scala.collection.immutable.{List, Set}
 
-case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 class FunctionCompilerCore(
     opts: TypingPassOptions,
@@ -300,7 +303,7 @@ class FunctionCompilerCore(
   FunctionHeaderT = {
     val (maybeEvaluatedRetCoord, body2) =
       bodyCompiler.declareAndEvaluateFunctionBody(
-        FunctionEnvironmentBoxT(fullEnvSnapshot),
+        fullEnvSnapshot,
         coutputs, life, callRange, callLocation, fullEnvSnapshot.function, maybeExplicitReturnCoord, paramsT, isDestructor)
 
     val retCoord = vassertOne(maybeExplicitReturnCoord.toList ++ maybeEvaluatedRetCoord.toList)

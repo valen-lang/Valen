@@ -5,12 +5,11 @@ import dev.vale.options.GlobalOptions
 import dev.vale.parsing.ast.{FinalP, LoadAsBorrowP, MutableP, UseP}
 import dev.vale.postparsing.patterns.{AtomSP, CaptureS}
 import dev.vale.postparsing.rules.{LiteralSR, MaybeCoercingLookupSR, MutabilityLiteralSL, RuneUsage}
-import dev.vale.solver.IncompleteSolve
 import dev.vale.parsing._
 import dev.vale.parsing.ast._
 import dev.vale.postparsing.patterns._
 import dev.vale.postparsing.rules._
-import dev.vale.solver.IncompleteSolve
+import dev.vale.solver.{FailedSolve, SolveIncomplete}
 import org.scalatest._
 
 class PostParserTests extends FunSuite with Matchers with Collector {
@@ -70,9 +69,9 @@ class PostParserTests extends FunSuite with Matchers with Collector {
         |func moo<K, V>(a Map<K, V, _>) { ... }
         |""".stripMargin)
     error match {
-      case IdentifyingRunesIncompleteS(_, IdentifiabilitySolveError(_, IncompleteSolve(_, _,runes, _))) => {
+      case IdentifyingRunesIncompleteS(_, IdentifiabilitySolveError(_, FailedSolve(_, _, _, unsolvedRunes, SolveIncomplete()))) => {
         // The param rune, and the _ rune are both unknown
-        vassert(runes.size == 2)
+        vassert(unsolvedRunes.size == 2)
       }
     }
   }

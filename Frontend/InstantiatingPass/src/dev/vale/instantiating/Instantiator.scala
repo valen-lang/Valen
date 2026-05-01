@@ -3170,7 +3170,8 @@ class Instantiator(
 //                case ImmutableT => ShareT
 //                case MutableT => outerOwnership
 //              }
-            CoordTemplataI(RegionTemplataI(0), CoordI(vimpl(/*newOwnership*/), vimpl(kind)))
+            // CoordTemplataI(RegionTemplataI(0), CoordI(newOwnership), vimpl(kind))
+            CoordTemplataI(RegionTemplataI(0), CoordI(vimpl(), vimpl(kind)))
           }
         }
       }

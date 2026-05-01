@@ -1,0 +1,1 @@
+../../../docs/skills/slice-pipeline.md

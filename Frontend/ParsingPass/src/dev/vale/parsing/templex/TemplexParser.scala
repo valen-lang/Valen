@@ -188,60 +188,6 @@ class TemplexParser(interner: Interner, keywords: Keywords) {
     Ok(Some(result))
   }
 
-  //  private[parser] def tupleTemplex: Parser[ITemplexPT] = {
-  //    (pos <~ "(" <~ optWhite <~ ")") ~ pos ^^ {
-  //      case begin ~ end => TuplePT(ast.RangeP(begin, end), Vector.empty)
-  //    } |
-  //      pos ~ ("(" ~> optWhite ~> repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ "," <~ optWhite <~ ")") ~ pos ^^ {
-  //        case begin ~ members ~ end => TuplePT(ast.RangeP(begin, end), members.toVector)
-  //      } |
-  //      pos ~
-  //        ("(" ~> optWhite ~> templex <~ optWhite <~ "," <~ optWhite) ~
-  //        (repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ ")") ~
-  //        pos ^^ {
-  //        case begin ~ first ~ rest ~ end => TuplePT(ast.RangeP(begin, end), (first :: rest).toVector)
-  //      }
-  //    // Old:
-  //    //  pos ~ ("[" ~> optWhite ~> repsep(templex, optWhite ~> "," <~ optWhite) <~ optWhite <~ "]") ~ pos ^^ {
-  //    //    case begin ~ members ~ end => ManualSequencePT(ast.RangeP(begin, end), members.toVector)
-  //    //  }
-  //  }
-  //
-  //  private[parser] def atomTemplex: Parser[ITemplexPT] = {
-  //    ("(" ~> optWhite ~> templex <~ optWhite <~ ")") |
-  //      staticSizedArrayTemplex |
-  //      runtimeSizedArrayTemplex |
-  //      tupleTemplex |
-  //      (pos ~ long ~ pos ^^ { case begin ~ value ~ end => IntPT(ast.RangeP(begin, end), value) }) |
-  //      pos ~ "true" ~ pos ^^ { case begin ~ _ ~ end => BoolPT(ast.RangeP(begin, end), true) } |
-  //      pos ~ "false" ~ pos ^^ { case begin ~ _ ~ end => BoolPT(ast.RangeP(begin, end), false) } |
-  //      pos ~ "own" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), OwnP) } |
-  //      pos ~ "borrow" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), BorrowP) } |
-  //      pos ~ "ptr" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), PointerP) } |
-  //      pos ~ "weak" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), WeakP) } |
-  //      pos ~ "share" ~ pos ^^ { case begin ~ _ ~ end => OwnershipPT(ast.RangeP(begin, end), ShareP) } |
-  //      mutabilityAtomTemplex |
-  //      variabilityAtomTemplex |
-  //      pos ~ "inl" ~ pos ^^ { case begin ~ _ ~ end => LocationPT(ast.RangeP(begin, end), InlineP) } |
-  //      pos ~ "yon" ~ pos ^^ { case begin ~ _ ~ end => LocationPT(ast.RangeP(begin, end), YonderP) } |
-  //      pos ~ "xrw" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ExclusiveReadwriteP) } |
-  //      pos ~ "rw" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ReadwriteP) } |
-  //      pos ~ "ro" ~ pos ^^ { case begin ~ _ ~ end => PermissionPT(ast.RangeP(begin, end), ReadonlyP) } |
-  //      pos ~ ("_\\b".r) ~ pos ^^ { case begin ~ _ ~ end => AnonymousRunePT(ast.RangeP(begin, end)) } |
-  //      (typeIdentifier ^^ NameOrRunePT)
-  //  }
-  //
-  //  def mutabilityAtomTemplex: Parser[MutabilityPT] = {
-  //    pos ~ "mut" ~ pos ^^ { case begin ~ _ ~ end => MutabilityPT(ast.RangeP(begin, end), MutableP) } |
-  //      pos ~ "imm" ~ pos ^^ { case begin ~ _ ~ end => MutabilityPT(ast.RangeP(begin, end), ImmutableP) }
-  //  }
-  //
-  //  def variabilityAtomTemplex: Parser[VariabilityPT] = {
-  //    pos ~ "vary" ~ pos ^^ { case begin ~ _ ~ end => VariabilityPT(ast.RangeP(begin, end), VaryingP) } |
-  //      pos ~ "final" ~ pos ^^ { case begin ~ _ ~ end => VariabilityPT(ast.RangeP(begin, end), FinalP) }
-  //  }
-  //
-
 //  def parseRegioned(iter: ScrambleIterator): Result[Option[ITemplexPT], IParseError] = {
 //    val begin = iter.getPos()
 //    if (!iter.trySkipSymbol('\'')) {

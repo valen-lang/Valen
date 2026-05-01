@@ -1,0 +1,4 @@
+
+func ==(a str, b str) bool {
+  streq(a, 0, a.len(), b, 0, b.len())
+}

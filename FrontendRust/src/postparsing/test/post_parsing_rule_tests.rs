@@ -1,0 +1,463 @@
+use bumpalo::Bump;
+use crate::compile_options::GlobalOptions;
+use crate::parsing::tests::utils::compile_file;
+use crate::postparsing::ast::ProgramS;
+use crate::postparsing::itemplatatype::{
+  CoordTemplataType, IntegerTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType,
+  OwnershipTemplataType, VariabilityTemplataType,
+};
+use crate::postparsing::names::{CodeRuneS, IRuneValS};
+use crate::postparsing::post_parser::PostParser;
+use crate::Keywords;
+use crate::parse_arena::ParseArena;
+use crate::scout_arena::ScoutArena;
+/*
+package dev.vale.postparsing
+
+import dev.vale._
+import dev.vale.options.GlobalOptions
+import dev.vale.parsing._
+import dev.vale.postparsing._
+import org.scalatest._
+
+import scala.collection.immutable.List
+
+class PostParsingRuleTests extends FunSuite with Matchers {
+*/
+
+fn compile<'s, 'ctx, 'p>(
+  scout_arena: &'ctx ScoutArena<'s>,
+  keywords: &'ctx Keywords<'s>,
+  parse_arena: &'ctx ParseArena<'p>,
+  code: &str,
+) -> ProgramS<'s>
+where 'p: 's,
+{
+  let options = GlobalOptions {
+    sanity_check: true,
+    use_overload_index: true,
+    use_optimized_solver: true,
+    verbose_errors: false,
+    debug_output: false,
+  };
+
+  let keywords_p = Keywords::new_for_parse(parse_arena);
+  let only_file = compile_file(parse_arena, &keywords_p, code).unwrap();
+  // Re-intern FileCoordinate from 'p into 's
+  let file_coord_s = scout_arena.intern_file_coordinate(
+    scout_arena.intern_package_coordinate(
+      scout_arena.intern_str(only_file.file_coord.package_coord.module.as_str()),
+      &only_file.file_coord.package_coord.packages.iter().map(|s| scout_arena.intern_str(s.as_str())).collect::<Vec<_>>(),
+    ),
+    only_file.file_coord.filepath.as_str(),
+  );
+  let post_parser = PostParser::new(options, scout_arena, keywords, &keywords_p, parse_arena);
+  post_parser
+    .scout_program(file_coord_s, &only_file)
+    .unwrap()
+}
+/*
+  private def compile(code: String, interner: Interner = new Interner()): ProgramS = {
+    val compile = PostParserTestCompilation.test(code, interner)
+    compile.getScoutput() match {
+      case Err(e) => {
+        val codeMap = compile.getCodeMap().getOrDie()
+        vfail(PostParserErrorHumanizer.humanize(
+          SourceCodeUtils.humanizePos(codeMap, _),
+          SourceCodeUtils.linesBetween(codeMap, _, _),
+          SourceCodeUtils.lineRangeContaining(codeMap, _),
+          SourceCodeUtils.lineContaining(codeMap, _),
+          e))
+      }
+      case Ok(t) => t.expectOne()
+    }
+  }
+*/
+fn compile_for_error<'s, 'ctx, 'p>(
+  _scout_arena: &'ctx ScoutArena<'s>,
+  _keywords: &'ctx crate::Keywords<'s>,
+  _parse_arena: &'ctx ParseArena<'p>,
+  _code: &str,
+) -> crate::postparsing::post_parser::ICompileErrorS<'s>
+where 'p: 's,
+{
+  panic!("Unimplemented: compile_for_error");
+}
+/*
+  private def compileForError(code: String): ICompileErrorS = {
+    PostParserTestCompilation.test(code).getScoutput() match {
+      case Err(e) => e
+      case Ok(t) => vfail("Successfully compiled!\n" + t.toString)
+    }
+  }
+*/
+#[test]
+fn predict_simple_templex() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main(a int) {}",
+  );
+  let main = program.lookup_function("main");
+  let rune = &main.params.first().unwrap().pattern.coord_rune.as_ref().unwrap().rune;
+  let predicted = main
+    .rune_to_predicted_type
+    .get(&rune)
+    .expect("expected rune in rune_to_predicted_type");
+  assert_eq!(predicted, &ITemplataType::CoordTemplataType(CoordTemplataType {}));
+}
+/*
+  test("Predict simple templex") {
+    val program =
+      compile(
+        """
+          |func main(a int) {}
+          |""".stripMargin)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(main.params.head.pattern.coordRune.get.rune)) shouldEqual
+      CoordTemplataType()
+  }
+*/
+#[test]
+fn can_know_rune_type_from_simple_equals() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<T, Y>(a T) where Y = T {}",
+  );
+  let main = program.lookup_function("main");
+
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
+  }));
+  let y_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("Y"),
+  }));
+
+  let t_predicted = main.rune_to_predicted_type.get(&t_rune).unwrap();
+  let y_predicted = main.rune_to_predicted_type.get(&y_rune).unwrap();
+
+  assert_eq!(
+    t_predicted,
+    &ITemplataType::CoordTemplataType(CoordTemplataType {})
+  );
+  assert_eq!(
+    y_predicted,
+    &ITemplataType::CoordTemplataType(CoordTemplataType {})
+  );
+}
+/*
+  test("Can know rune type from simple equals") {
+    val interner = new Interner()
+    val program =
+      compile(
+        """
+          |func main<T, Y>(a T)
+          |where Y = T {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T"))))) shouldEqual
+      CoordTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("Y"))))) shouldEqual
+      CoordTemplataType()
+  }
+*/
+#[test]
+fn predict_knows_type_from_or_rule() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<M Ownership>(a int) where M = any(own, borrow) {}",
+  );
+  let main = program.lookup_function("main");
+
+  let m_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("M"),
+  }));
+  let m_predicted = main.rune_to_predicted_type.get(&m_rune).unwrap();
+  assert_eq!(
+    m_predicted,
+    &ITemplataType::OwnershipTemplataType(OwnershipTemplataType {})
+  );
+}
+/*
+  test("Predict knows type from Or rule") {
+    val interner = new Interner()
+    val program =
+      compile(
+        """
+          |func main<M Ownership>(a int)
+          |where M = any(own, borrow) {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("M"))))) shouldEqual
+      OwnershipTemplataType()
+  }
+*/
+#[test]
+fn predict_coord_component_types() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  // vregionmut() // Put back in with regions
+  // val program =
+  //   compile(
+  //     """
+  //       |func main<T>(a T)
+  //       |where T = Ref[O, R, K], O Ownership, R Region, K Kind {}
+  //       |""".stripMargin, interner)
+  // Take out with regions
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<T>(a T) where T = Ref[O, K], O Ownership, K Kind {}",
+  );
+  let main = program.lookup_function("main");
+
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
+  }));
+  let o_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("O"),
+  }));
+  let k_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("K"),
+  }));
+  assert_eq!(
+    main.rune_to_predicted_type.get(&t_rune),
+    Some(&ITemplataType::CoordTemplataType(CoordTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&o_rune),
+    Some(&ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}))
+  );
+  // vregionmut() // Put back in with regions
+  // vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("R"))))) shouldEqual RegionTemplataType()
+  assert_eq!(
+    main.rune_to_predicted_type.get(&k_rune),
+    Some(&ITemplataType::KindTemplataType(KindTemplataType {}))
+  );
+}
+/*
+  test("Predict CoordComponent types") {
+    val interner = new Interner()
+    vregionmut() // Put back in with regions
+    // val program =
+    //   compile(
+    //     """
+    //       |func main<T>(a T)
+    //       |where T = Ref[O, R, K], O Ownership, R Region, K Kind {}
+    //       |""".stripMargin, interner)
+    // Take out with regions
+    val program =
+      compile(
+        """
+          |func main<T>(a T)
+          |where T = Ref[O, K], O Ownership, K Kind {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T"))))) shouldEqual CoordTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("O"))))) shouldEqual OwnershipTemplataType()
+    vregionmut() // Put back in with regions
+    // vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("R"))))) shouldEqual RegionTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("K"))))) shouldEqual KindTemplataType()
+  }
+*/
+#[test]
+fn predict_call_types() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<A, B>(p1 A, p2 B) where A = T<B>, T = Option, A = int {}",
+  );
+  let main = program.lookup_function("main");
+
+  let a_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("A"),
+  }));
+  let b_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("B"),
+  }));
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
+  }));
+  assert_eq!(
+    main.rune_to_predicted_type.get(&a_rune),
+    Some(&ITemplataType::CoordTemplataType(CoordTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&b_rune),
+    Some(&ITemplataType::CoordTemplataType(CoordTemplataType {}))
+  );
+  // We can't know if T it's a Coord->Coord or a Coord->Kind type.
+  assert_eq!(main.rune_to_predicted_type.get(&t_rune), None);
+}
+/*
+  test("Predict Call types") {
+    val interner = new Interner()
+    val program =
+      compile(
+        """
+          |func main<A, B>(p1 A, p2 B)
+          |where A = T<B>, T = Option, A = int {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("A"))))) shouldEqual CoordTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("B"))))) shouldEqual CoordTemplataType()
+    // We can't know if T it's a Coord->Coord or a Coord->Kind type.
+    main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T")))) shouldEqual None
+  }
+*/
+#[test]
+fn predict_array_sequence_types() {
+  // Not sure if this test is useful anymore, since we say M, V, N's types up-front now
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<M Mutability, V Variability, N Int, E>(t T) where T Ref = [#N]<M, V>E {}",
+  );
+  let main = program.lookup_function("main");
+
+  let m_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("M"),
+  }));
+  let v_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("V"),
+  }));
+  let n_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("N"),
+  }));
+  let e_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("E"),
+  }));
+  let t_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("T"),
+  }));
+  assert_eq!(
+    main.rune_to_predicted_type.get(&m_rune),
+    Some(&ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&v_rune),
+    Some(&ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&n_rune),
+    Some(&ITemplataType::IntegerTemplataType(IntegerTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&e_rune),
+    Some(&ITemplataType::CoordTemplataType(CoordTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&t_rune),
+    Some(&ITemplataType::CoordTemplataType(CoordTemplataType {}))
+  );
+}
+/*
+  // Not sure if this test is useful anymore, since we say M, V, N's types up-front now
+  test("Predict array sequence types") {
+    val interner = new Interner()
+    val program =
+      compile(
+        """
+          |func main<M Mutability, V Variability, N Int, E>(t T)
+          |where T Ref = [#N]<M, V>E {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("M"))))) shouldEqual MutabilityTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("V"))))) shouldEqual VariabilityTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("N"))))) shouldEqual IntegerTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("E"))))) shouldEqual CoordTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("T"))))) shouldEqual CoordTemplataType()
+  }
+*/
+#[test]
+fn predict_for_is_interface() {
+  // Not sure if this test is useful anymore, since we say Kind up-front now
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "func main<A Kind, B Kind>() where A = isInterface(B) {}",
+  );
+  let main = program.lookup_function("main");
+
+  let a_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("A"),
+  }));
+  let b_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS {
+    name: scout_arena.intern_str("B"),
+  }));
+  assert_eq!(
+    main.rune_to_predicted_type.get(&a_rune),
+    Some(&ITemplataType::KindTemplataType(KindTemplataType {}))
+  );
+  assert_eq!(
+    main.rune_to_predicted_type.get(&b_rune),
+    Some(&ITemplataType::KindTemplataType(KindTemplataType {}))
+  );
+}
+/*
+  // Not sure if this test is useful anymore, since we say Kind up-front now
+  test("Predict for isInterface") {
+    val interner = new Interner()
+    val program =
+      compile(
+        """
+          |func main<A Kind, B Kind>()
+          |where A = isInterface(B) {}
+          |""".stripMargin, interner)
+    val main = program.lookupFunction("main")
+
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("A"))))) shouldEqual KindTemplataType()
+    vassertSome(main.runeToPredictedType.get(CodeRuneS(interner.intern(StrI("B"))))) shouldEqual KindTemplataType()
+  }
+*/
+/*
+}
+*/

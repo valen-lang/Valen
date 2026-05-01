@@ -85,7 +85,7 @@ class ImplCompiler(
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
     val solver =
-      inferCompiler.makeSolver(
+      inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
 
     inferCompiler.continue(envs, coutputs, solver) match {
@@ -114,7 +114,7 @@ class ImplCompiler(
     callingEnv: IInDenizenEnvironmentT,
     initialKnowns: Vector[InitialKnown],
     implTemplata: ImplDefinitionTemplataT):
-  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedCompilerSolve] = {
+  Result[Map[IRuneS, ITemplataT[ITemplataType]], FailedSolve[IRulexSR, IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
 
     val ImplDefinitionTemplataT(parentEnv, impl) = implTemplata
     val ImplA(
@@ -149,14 +149,14 @@ class ImplCompiler(
     // to evaluate an override.
     val originalCallingEnv = callingEnv
     val envs = InferEnv(originalCallingEnv, range :: parentRanges, callLocation, outerEnv, RegionT())
-    val solver =
-      inferCompiler.makeSolver(
+    val solverState =
+      inferCompiler.makeSolverState(
         envs, coutputs, callSiteRules, runeToType, range :: parentRanges, initialKnowns, Vector())
-    inferCompiler.continue(envs, coutputs, solver) match {
+    inferCompiler.continue(envs, coutputs, solverState) match {
       case Ok(()) =>
       case Err(e) => return Err(e)
     }
-    Ok(solver.userifyConclusions().toMap)
+    Ok(solverState.userifyConclusions().toMap)
   }
 
   // This will just figure out the struct template and interface template,
@@ -523,14 +523,14 @@ class ImplCompiler(
   //   parent: InterfaceTT,
   //   verifyConclusions: Boolean,
   //   declareBounds: Boolean):
-  // Result[ICitizenTT, IIncompleteOrFailedCompilerSolve] = {
+  // Result[ICitizenTT, FailedSolve] = {
   //   val initialKnowns =
   //     Vector(
   //       InitialKnown(implTemplata.impl.interfaceKindRune, KindTemplataT(parent)))
   //   val CompleteCompilerSolve(_, conclusions, _, _) =
   //     solveImplForCall(coutputs, parentRanges, callLocation, callingEnv, initialKnowns, implTemplata, declareBounds, true) match {
   //       case ccs @ CompleteCompilerSolve(_, _, _, _) => ccs
-  //       case x : IIncompleteOrFailedCompilerSolve => return Err(x)
+  //       case x : FailedSolve => return Err(x)
   //     }
   //   val parentTT = conclusions.get(implTemplata.impl.subCitizenRune.rune)
   //   vassertSome(parentTT) match {

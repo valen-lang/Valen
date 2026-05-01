@@ -34,7 +34,8 @@ case class StructDefinitionT(
     instantiatedCitizen.id.localName.templateArgs.map(_.tyype)
   }
 
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 
 //  override def getRef: StructTT = ref
 //
@@ -124,6 +125,7 @@ case class InterfaceDefinitionT(
   }
 
   override def instantiatedCitizen: ICitizenTT = instantiatedInterface
-  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+  override def equals(obj: Any): Boolean = vcurious();
+override def hashCode(): Int = vcurious()
 //  override def getRef = ref
 }

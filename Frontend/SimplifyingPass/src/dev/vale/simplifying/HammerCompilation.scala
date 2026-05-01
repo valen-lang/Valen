@@ -20,7 +20,10 @@ case class HammerCompilationOptions(
     println("##: " + x)
   }),
   globalOptions: GlobalOptions = GlobalOptions()
-) { val hash = runtime.ScalaRunTime._hashCode(this); override def hashCode(): Int = hash; override def equals(obj: Any): Boolean = vcurious(); }
+) {
+  val hash = runtime.ScalaRunTime._hashCode(this);
+override def hashCode(): Int = hash;
+override def equals(obj: Any): Boolean = vcurious(); }
 
 class HammerCompilation(
   val interner: Interner,
