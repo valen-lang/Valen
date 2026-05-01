@@ -15,7 +15,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 
 /*
 package dev.vale.typing.expression
@@ -742,6 +742,90 @@ where 's: 't,
                     }));
 
                 (ExpressionTE::Reference(return_te), returns)
+            }
+            IExpressionSE::Let(let_se) => {
+                let (source_expr_2, returns_from_source) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
+
+                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv };
+                let rune_to_initially_known_type: HashMap<_, _> =
+                    crate::higher_typing::patterns::get_rune_types_from_pattern(&let_se.pattern)
+                        .into_iter().collect();
+                let range_list: Vec<RangeS<'s>> =
+                    std::iter::once(let_se.range).chain(parent_ranges.iter().copied()).collect();
+                let rune_to_type =
+                    crate::postparsing::rune_type_solver::solve_rune_type(
+                        self.scout_arena,
+                        self.opts.global_options.sanity_check,
+                        &rune_type_solve_env,
+                        range_list,
+                        false,
+                        let_se.rules,
+                        &[],
+                        true,
+                        rune_to_initially_known_type,
+                    ).unwrap_or_else(|_e| {
+                        panic!("implement: LetSE — HigherTypingInferError");
+                    });
+
+                let rules_vec: Vec<&'s IRulexSR<'s>> = let_se.rules.iter().collect();
+                let result_te = self.infer_and_translate_pattern(
+                    coutputs,
+                    nenv,
+                    life.add(1),
+                    parent_ranges,
+                    outer_call_location,
+                    &rules_vec,
+                    &rune_to_type,
+                    &let_se.pattern,
+                    source_expr_2,
+                    region,
+                    |_coutputs, nenv, _life, _live_capture_locals| {
+                        self.typing_interner.alloc(
+                            ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+                                region: nenv.default_region(),
+                                _phantom: std::marker::PhantomData,
+                            }))
+                    },
+                );
+
+                (ExpressionTE::Reference(result_te), returns_from_source)
+            }
+            IExpressionSE::Consecutor(consecutor_se) => {
+                assert!(region == nenv.default_region());
+                let region_for_inners = region;
+
+                let mut init_exprs_te: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                let mut init_returns: HashSet<CoordT<'s, 't>> = HashSet::new();
+                for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
+                    let (undropped_expr_te, returns) =
+                        self.evaluate_and_coerce_to_reference_expression(
+                            coutputs, nenv, life.add(index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se);
+                    let expr_te = match undropped_expr_te.result().coord.kind {
+                        KindT::Void(_) => undropped_expr_te,
+                        _ => {
+                            panic!("implement: ConsecutorSE — drop non-void init expr");
+                        }
+                    };
+                    init_exprs_te.push(expr_te);
+                    init_returns.extend(returns);
+                }
+
+                let (last_expr_te, last_returns) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv,
+                        life.add((consecutor_se.exprs.len() - 1) as i32),
+                        parent_ranges,
+                        outer_call_location,
+                        region_for_inners,
+                        consecutor_se.exprs.last().unwrap());
+
+                init_exprs_te.push(last_expr_te);
+                init_returns.extend(last_returns);
+
+                let result = self.consecutive(&init_exprs_te);
+                (ExpressionTE::Reference(result), init_returns)
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -2543,3 +2627,74 @@ where 's: 't,
 }
 */
 }
+
+// Concrete IRuneTypeSolverEnv for the LetSE arm of evaluate. The Scala anonymous
+// `new IRuneTypeSolverEnv` at ExpressionCompiler.scala:959 closes over `nenv` and
+// delegates to lookupNearestWithImpreciseName. This struct captures that field.
+// Same shape as `HigherTypingRuneTypeSolverEnv` in higher_typing_pass.rs (which
+// collapses 6 anonymous Scala impls into one named struct).
+struct LetExprRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    nenv: &'a crate::typing::env::function_environment_t::NodeEnvironmentBox<'s, 't>,
+}
+/*
+Guardian: disable-all
+*/
+
+impl<'a, 's, 't> crate::postparsing::rune_type_solver::IRuneTypeSolverEnv<'s>
+    for LetExprRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    fn lookup(
+        &self,
+        range: RangeS<'s>,
+        name_s: crate::postparsing::names::IImpreciseNameS<'s>,
+    ) -> Result<
+        crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult<'s>,
+        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError<'s>,
+    > {
+        let mut filter = std::collections::HashSet::new();
+        filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
+        match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter) {
+            Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                            t.origin_struct.tyype,
+                        ),
+                        generic_params: t.origin_struct.generic_parameters,
+                    },
+                ))
+            }
+            Some(crate::typing::templata::templata::ITemplataT::InterfaceDefinition(t)) => {
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                    crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                        tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                            t.origin_interface.tyype,
+                        ),
+                        generic_params: t.origin_interface.generic_parameters,
+                    },
+                ))
+            }
+            Some(_x) => {
+                // Scala: `case Some(x) => Ok(TemplataLookupResult(x.tyype))`.
+                // Requires `ITemplataT::tyype()` getter — separate scaffolding gap.
+                panic!("LetExprRuneTypeSolverEnv: ITemplataT::tyype() not yet implemented");
+            }
+            None => Err(
+                crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
+                    crate::postparsing::rune_type_solver::RuneTypingCouldntFindType {
+                        range,
+                        name: name_s,
+                    },
+                ),
+            ),
+        }
+    }
+}
+/*
+Guardian: disable-all
+*/

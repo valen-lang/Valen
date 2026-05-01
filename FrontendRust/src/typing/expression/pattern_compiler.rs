@@ -210,7 +210,21 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        // The rules are different depending on the incoming type.
+        // See Impl Rule For Upcasts (IRFU).
+        let converted_input_expr = match &pattern.coord_rune {
+            None => {
+                unconverted_input_expr
+            }
+            Some(_receiver_rune) => {
+                panic!("implement: infer_and_translate_pattern — Some(receiverRune) branch");
+            }
+        };
+
+        self.inner_translate_sub_pattern_and_maybe_continue(
+            coutputs, nenv, life, parent_ranges, call_location,
+            pattern, &[], converted_input_expr, region,
+            after_patterns_success_continuation)
     }
 /*
   // Note: This will unlet/drop the input expression. Be warned.

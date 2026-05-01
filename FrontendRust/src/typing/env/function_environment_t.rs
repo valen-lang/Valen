@@ -914,7 +914,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn default_region
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn default_region(&self) -> RegionT {
-    panic!("Unimplemented: default_region");
+    self.default_region
   }
 /*
   def defaultRegion: RegionT = nodeEnvironment.defaultRegion

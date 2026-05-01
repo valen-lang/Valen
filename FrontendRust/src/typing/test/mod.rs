@@ -1,5 +1,6 @@
 mod compiler_test_compilation;
 mod compiler_tests;
+pub mod traverse;
 mod compiler_generics_tests;
 mod compiler_lambda_tests;
 mod compiler_mutate_tests;

@@ -2,6 +2,7 @@
 pub mod ast;
 pub mod astronomer_error_reporter;
 pub mod higher_typing_pass;
+pub mod patterns;
 
 #[cfg(test)]
 mod tests;

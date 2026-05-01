@@ -94,9 +94,31 @@ fn simple_program_returning_an_int_explicit() {
 */
 // mig: fn hardcoding_negative_numbers
 #[test]
-#[ignore]
 fn hardcoding_negative_numbers() {
-    panic!("Unmigrated test: hardcoding_negative_numbers");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int { return -3; }";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ConstantInt(
+            crate::typing::ast::expressions::ConstantIntTE {
+                value: crate::typing::templata::templata::ITemplataT::Integer(-3),
+                ..
+            }
+        ) => Some(())
+    );
 }
 /*
   test("Hardcoding negative numbers") {
@@ -111,9 +133,23 @@ fn hardcoding_negative_numbers() {
 */
 // mig: fn simple_local
 #[test]
-#[ignore]
 fn simple_local() {
-    panic!("Unmigrated test: simple_local");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int {\n  a = 42;\n  return a;\n}";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
 }
 /*
   test("Simple local") {
