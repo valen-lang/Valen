@@ -471,7 +471,17 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn get_variable
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn get_variable(&self, name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
-    panic!("Unimplemented: get_variable");
+    match self.declared_locals.iter().find(|v| v.name() == name) {
+      Some(v) => Some(*v),
+      None => {
+        match self.parent_node_env {
+          Some(p) => p.get_variable(name),
+          None => {
+            self.parent_function_env.closured_locals.iter().find(|v| v.name() == name).copied()
+          }
+        }
+      }
+    }
   }
   /*
     def getVariable(name: IVarNameT): Option[IVariableT] = {
@@ -809,17 +819,20 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn nearest_block_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
-  pub fn nearest_block_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_block_env");
+  pub fn nearest_block_env(&'t self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    match self.node {
+        IExpressionSE::Block(_) => Some((self, self.node)),
+        _ => self.parent_node_env.and_then(|p| p.nearest_block_env()),
+    }
   }
-  /*
+/*
     def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
       node match {
         case b @ BlockSE(_, _, _) => Some((this, b))
         case _ => parentNodeEnv.flatMap(_.nearestBlockEnv())
       }
     }
-  */
+*/
 }
 // mig: fn nearest_loop_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
@@ -968,7 +981,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn unstackifieds
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn unstackifieds(&self) -> &[IVarNameT<'s, 't>] {
-    panic!("Unimplemented: unstackifieds");
+    &self.unstackified_locals
   }
 /*
   def unstackifieds: Set[IVarNameT] = nodeEnvironment.unstackifiedLocals
@@ -1039,8 +1052,13 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn get_variable
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn get_variable(&self, _name: IVarNameT<'s, 't>) -> Option<IVariableT<'s, 't>> {
-    panic!("Unimplemented: get_variable");
+  // AFTERM: remove the needless snapshot — transcribe the inner's `def getVariable`
+  // body directly off the Box's fields (declared_locals / parent_node_env /
+  // parent_function_env.closured_locals), drop the interner parameter, and update
+  // call sites. See `get_all_locals` / `get_all_unstackified_locals` below for
+  // the precedent pattern in this file.
+  pub fn get_variable(&self, name: IVarNameT<'s, 't>, interner: &TypingInterner<'s, 't>) -> Option<IVariableT<'s, 't>> {
+    self.snapshot(interner).get_variable(name)
   }
 /*
   def getVariable(name: IVarNameT): Option[IVariableT] = {
@@ -1225,8 +1243,14 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn nearest_block_env
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn nearest_block_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_block_env");
+  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
+  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
+  pub fn nearest_block_env(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    let snap = self.snapshot(interner);
+    snap.nearest_block_env()
   }
 /*
   def nearestBlockEnv(): Option[(NodeEnvironmentT, BlockSE)] = {
@@ -1687,7 +1711,12 @@ sealed trait IVariableT  {
 // mig: fn name
 impl<'s, 't> IVariableT<'s, 't> where 's: 't {
   pub fn name(&self) -> IVarNameT<'s, 't> {
-    panic!("Unimplemented: name");
+    match self {
+      IVariableT::AddressibleLocal(v) => v.name,
+      IVariableT::ReferenceLocal(v) => v.name,
+      IVariableT::AddressibleClosure(v) => v.name,
+      IVariableT::ReferenceClosure(v) => v.name,
+    }
   }
   /*
     def name: IVarNameT

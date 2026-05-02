@@ -453,8 +453,16 @@ where 's: 't,
         // todo: at this point, to allow for recursive calls, add a callable type to the environment
         // for everything inside the body to use
 
-        if !params_1.is_empty() {
-            panic!("implement: evaluateLets — params1.foreach check");
+        for param in params_1.iter() {
+            match (&param.pattern.name, param.pattern.name.as_ref().map(|c| c.mutate)) {
+                (Some(capture), Some(false)) => {
+                    let translated_name = self.translate_var_name_step(capture.name);
+                    if !nenv.declared_locals.iter().any(|l| l.name() == translated_name) {
+                        panic!("wot couldnt find {:?}", capture.name);
+                    }
+                }
+                _ => {}
+            }
         }
 
         let_exprs_2

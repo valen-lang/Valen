@@ -95,7 +95,12 @@ where 's: 't,
         param_kind: &KindT<'s, 't>,
         maybe_virtuality: Option<&AbstractSP<'s>>,
     ) -> Option<AbstractT> {
-        panic!("Unimplemented: evaluate_maybe_virtuality");
+        match maybe_virtuality {
+            None => None,
+            Some(_) => {
+                panic!("implement: evaluate_maybe_virtuality — Some");
+            }
+        }
     }
 
 /*
@@ -527,8 +532,8 @@ where 's: 't,
                 None => {
                     panic!("implement intern TypingIgnoredParamNameT");
                 }
-                Some(_x) => {
-                    panic!("implement nameTranslator.translateVarNameStep");
+                Some(x) => {
+                    self.translate_var_name_step(x.name)
                 }
             };
 

@@ -162,7 +162,15 @@ where 's: 't,
         region: RegionT,
         exprs_1: &[&'s IExpressionSE<'s>],
     ) -> (Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mut result_exprs = Vec::new();
+        let mut all_returns = HashSet::new();
+        for (index, expr) in exprs_1.iter().enumerate() {
+            let (ref_expr, returns) = self.evaluate_and_coerce_to_reference_expression(
+                coutputs, nenv, life.add(index as i32), parent_ranges, call_location, region, expr);
+            result_exprs.push(ref_expr);
+            all_returns.extend(returns);
+        }
+        (result_exprs, all_returns)
     }
 /*
   def evaluateAndCoerceToReferenceExpressions(
@@ -198,7 +206,16 @@ where 's: 't,
         name: IVarNameT<'s, 't>,
         target_ownership: LoadAsP,
     ) -> Option<ExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name) {
+            Some(x) => {
+                let thing = self.soft_load(nenv, range, x, target_ownership, region);
+                let thing_ref: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(thing);
+                Some(ExpressionTE::Reference(thing_ref))
+            }
+            None => {
+                panic!("implement: evaluate_lookup_for_load — None from evaluate_addressible_lookup");
+            }
+        }
     }
 /*
   private def evaluateLookupForLoad(
@@ -340,7 +357,31 @@ where 's: 't,
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
     ) -> Option<&'t AddressExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match nenv.get_variable(name_2, self.typing_interner) {
+            Some(IVariableT::AddressibleLocal(alv)) => {
+                assert!(!nenv.unstackifieds().contains(&alv.name));
+                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: ranges[0],
+                    local_variable: ILocalVariableT::Addressible(alv),
+                })))
+            }
+            Some(IVariableT::ReferenceLocal(rlv)) => {
+                if nenv.unstackifieds().contains(&rlv.name) {
+                    panic!("CantUseUnstackifiedLocal {:?}", rlv.name);
+                }
+                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: ranges[0],
+                    local_variable: ILocalVariableT::Reference(rlv),
+                })))
+            }
+            Some(IVariableT::AddressibleClosure(_)) => {
+                panic!("implement: evaluate_addressible_lookup — AddressibleClosure");
+            }
+            Some(IVariableT::ReferenceClosure(_)) => {
+                panic!("implement: evaluate_addressible_lookup — ReferenceClosure");
+            }
+            None => None,
+        }
     }
 /*
   private def evaluateAddressibleLookup(
@@ -826,6 +867,18 @@ where 's: 't,
 
                 let result = self.consecutive(&init_exprs_te);
                 (ExpressionTE::Reference(result), init_returns)
+            }
+            IExpressionSE::LocalLoad(local_load) => {
+                let name = self.translate_var_name_step(local_load.name);
+                let range_list = vec![local_load.range];
+                let lookup_expr_1 =
+                    self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership);
+                match lookup_expr_1 {
+                    None => {
+                        panic!("Couldnt find {:?}", name);
+                    }
+                    Some(x) => (x, HashSet::new()),
+                }
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -2308,7 +2361,19 @@ where 's: 't,
         region: RegionT,
         name: IImpreciseNameS<'s>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let overload_set = self.typing_interner.intern_overload_set(
+            OverloadSetTValT { env, name: self.scout_arena.get_imprecise_name_ref(name) });
+        let void_expr: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(
+            ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+        self.typing_interner.alloc(
+            ReferenceExpressionTE::Reinterpret(ReinterpretTE {
+                expr: void_expr,
+                result_reference: CoordT {
+                    ownership: OwnershipT::Share,
+                    region,
+                    kind: KindT::OverloadSet(overload_set),
+                },
+            }))
     }
 /*
   private def newGlobalFunctionGroupExpression(

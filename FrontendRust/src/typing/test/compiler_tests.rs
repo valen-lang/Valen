@@ -35,7 +35,10 @@ use crate::parse_arena::ParseArena;
 use crate::scout_arena::ScoutArena;
 use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
-use crate::typing::types::types::{KindT, IntT};
+use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
+use crate::typing::ast::ast::ParameterT;
+use crate::typing::ast::expressions::LocalLookupTE;
+use crate::typing::names::names::IVarNameT;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -191,9 +194,41 @@ fn tests_panic_return_type() {
 */
 // mig: fn taking_an_argument_and_returning_it
 #[test]
-#[ignore]
 fn taking_an_argument_and_returning_it() {
-    panic!("Unmigrated test: taking_an_argument_and_returning_it");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "func main(a int) int { return a; }";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+
+    let param: &ParameterT = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Parameter(p) => Some(p)
+    );
+    assert!(param.tyype == CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
+
+    let lookup: &LocalLookupTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::LocalLookup(l) => Some(l)
+    );
+    match lookup.local_variable.name() {
+        IVarNameT::CodeVar(c) => assert!(c.name.as_str() == "a"),
+        _ => panic!("Expected CodeVarNameT"),
+    }
+    match lookup.local_variable.coord() {
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. } => {}
+        other => panic!("Expected CoordT(Share, _, Int(32)), got {:?}", other),
+    }
 }
 /*
   test("Taking an argument and returning it") {
@@ -379,9 +414,24 @@ fn make_constraint_reference() {
 */
 // mig: fn recursion
 #[test]
-#[ignore]
 fn recursion() {
-    panic!("Unmigrated test: recursion");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int { return main(); }";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    // Make sure it inferred the param type and return type correctly
+    assert!(coutputs.lookup_function_by_human_name("main").header.return_type == CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
 }
 /*
   test("Recursion") {

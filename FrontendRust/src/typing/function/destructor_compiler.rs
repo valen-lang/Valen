@@ -1,10 +1,10 @@
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::ast::expressions::ReferenceExpressionTE;
+use crate::typing::ast::expressions::{DiscardTE, ReferenceExpressionTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::function::function_compiler::StampFunctionSuccess;
-use crate::typing::types::types::{CoordT, RegionT};
+use crate::typing::types::types::{CoordT, KindT, OwnershipT, RegionT};
 use crate::utils::range::RangeS;
 
 /*
@@ -90,7 +90,29 @@ where 's: 't,
         context_region: RegionT,
         undestructed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let result_coord = undestructed_expr_2.result().coord;
+        let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
+            (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
+            (OwnershipT::Share, _) => {
+                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+            }
+            (OwnershipT::Own, _) => {
+                panic!("implement: drop — OwnT");
+            }
+            (OwnershipT::Borrow, _) => {
+                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+            }
+            (OwnershipT::Weak, _) => {
+                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+            }
+        };
+        match result_expr_2.result().coord.kind {
+            KindT::Void(_) | KindT::Never(_) => {}
+            _ => {
+                panic!("Unexpected return type for drop autocall.\nReturn: {:?}\nParam: {:?}", result_expr_2.result().coord.kind, undestructed_expr_2.result().coord);
+            }
+        }
+        result_expr_2
     }
 /*
   def drop(

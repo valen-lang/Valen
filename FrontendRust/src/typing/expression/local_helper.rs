@@ -174,8 +174,29 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], local_variable_a: &LocalS<'s>, reference_type2: CoordT<'s, 't>) -> ILocalVariableT<'s, 't> {
-        panic!("Unimplemented: make_user_local_variable");
+    pub fn make_user_local_variable(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], local_variable_a: &'s LocalS<'s>, reference_type2: CoordT<'s, 't>) -> ILocalVariableT<'s, 't> {
+        let var_id = self.translate_var_name_step(local_variable_a.var_name);
+
+        if nenv.get_variable(var_id, self.typing_interner).is_some() {
+            panic!("There's already a variable named {:?}", var_id);
+        }
+
+        let variability = self.determine_local_variability(local_variable_a);
+
+        let mutable = self.get_mutability(coutputs, reference_type2.kind);
+        let addressible = self.determine_if_local_is_addressible(mutable, local_variable_a);
+
+        let local_var = if addressible {
+            panic!("implement: make_user_local_variable — addressible local");
+        } else {
+            ILocalVariableT::Reference(ReferenceLocalVariableT {
+                name: var_id,
+                variability,
+                coord: reference_type2,
+            })
+        };
+        nenv.add_variable(IVariableT::from(local_var));
+        local_var
     }
 /*
   // A user local variable is one that the user can address inside their code.
@@ -236,8 +257,21 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: &AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: soft_load");
+    pub fn soft_load(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, load_range: &[RangeS<'s>], a: &'t AddressExpressionTE<'s, 't>, load_as_p: LoadAsP, region: RegionT) -> ReferenceExpressionTE<'s, 't> {
+        match a.result().coord.ownership {
+            OwnershipT::Share => {
+                ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Share })
+            }
+            OwnershipT::Own => {
+                panic!("implement: soft_load — OwnT");
+            }
+            OwnershipT::Borrow => {
+                panic!("implement: soft_load — BorrowT");
+            }
+            OwnershipT::Weak => {
+                panic!("implement: soft_load — WeakT");
+            }
+        }
     }
 /*
   def softLoad(
@@ -388,15 +422,21 @@ object LocalHelper {
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // See ClosureTests for requirements here
     pub fn determine_if_local_is_addressible(
         &self,
         mutability: ITemplataT<'s, 't>,
         local_a: &'s LocalS<'s>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match mutability {
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                local_a.child_mutated != IVariableUseCertainty::NotUsed || local_a.child_moved != IVariableUseCertainty::NotUsed
+            }
+            _ => {
+                local_a.child_mutated != IVariableUseCertainty::NotUsed
+            }
+        }
     }
-    /* Guardian: disable-all */
-}
 /*
   // See ClosureTests for requirements here
   def determineIfLocalIsAddressible(mutability: ITemplataT[MutabilityTemplataType], localA: LocalS): Boolean = {
@@ -409,8 +449,10 @@ where 's: 't,
       }
     }
   }
-
 */
+    /* Guardian: disable-all */
+}
+
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
@@ -418,10 +460,12 @@ where 's: 't,
         &self,
         local_a: &'s LocalS<'s>,
     ) -> VariabilityT {
-        panic!("Unimplemented: Slab 15 — body migration");
+        if local_a.self_mutated != IVariableUseCertainty::NotUsed || local_a.child_mutated != IVariableUseCertainty::NotUsed {
+            VariabilityT::Varying
+        } else {
+            VariabilityT::Final
+        }
     }
-    /* Guardian: disable-all */
-}
 /*
   def determineLocalVariability(localA: LocalS): VariabilityT = {
     if (localA.selfMutated != NotUsed || localA.childMutated != NotUsed) {
@@ -430,5 +474,9 @@ where 's: 't,
       FinalT
     }
   }
+*/
+    /* Guardian: disable-all */
+}
+/*
 }
 */

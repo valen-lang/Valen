@@ -24,7 +24,7 @@ Here's what I want you to do:
     * ./Luz/shields/ScalaParityDuringMigration-SPDMX.md
 2. Try to build the project. if it doesn't build, then please make it build.
     * If you run into any easy lifetime fixes, please do them. If you run into any medium or complicated ones, or ones that span multiple definitions, please stop and tell me, because I like solving lifetime challenges.
-3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, STOP and report success — the TL will un-ignore the next test.
+3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, pick the next simplest-looking ignored test, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
 4. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
     * DON'T IMPLEMENT ANYTHING ELSE. Just do the one step it gives you.
     * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
@@ -46,7 +46,7 @@ Here's what I want you to do:
 5. Run the test again.
     * If it panics with "implement" somewhere in the panic message, go to step 4.
     * If it panics without "implement" somewhere in the panic message, please stop. I like fixing logic bugs myself.
-    * If it passes, STOP and report success. The TL will un-ignore the next test for you.
+    * If it passes, pick the next simplest-looking ignored test, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
 
 
 Notes:
@@ -57,6 +57,16 @@ Notes:
 * **Include enough context in every TL escalation that the TL can find what you're looking at without re-deriving your investigation.** The TL doesn't see your conversation — your escalation message is all they have. At minimum: the Rust file path and line number, the Scala counterpart's file/line, the exact error message if any, and the relevant TFITCX classifications. Quote, don't paraphrase. If you considered multiple options, list them with the trade-offs you saw.
 
 * **SPDMX vs skeleton-with-panics: escalate, don't temp-disable.** When you're porting a Scala function whose body is a `.map.groupBy.mapValues` / `.foreach` chain and you write a Scala-shaped iteration skeleton with `panic!` in the closure bodies, SPDMX may flag it as "novel scaffolding" or recommend `panic!()` for the whole function. **Both are wrong** — the skeleton IS the Scala parity (per TL.md "Good Partial Implementing"), and whole-function `panic!` breaks the test. The resolution is a TL temp-disable with a standard rationale, but the temp-disable is **TL/architect-level only**. Don't temp-disable SPDMX yourself; STOP and escalate, naming the function you're porting and quoting the Scala body (`.map.groupBy.mapValues` / `.foreach` chain). The TL will issue the temp-disable.
+
+* **Adding an `interner` parameter is always a fine Rust adaptation.** When Scala parity wants something that needs the typing interner (e.g. materializing a `&'t T` snapshot, allocating a slice, re-interning a name) and Scala didn't take an interner because it used GC + mutable references, just thread `interner: &TypingInterner<'s, 't>` through the Rust signature. Don't escalate for this shape — it's JR-level work, doesn't trip Guardian (signature shape change on an existing definition is fine), and is the documented Rust adaptation pattern. Add a comment above the fn explaining why:
+    ```rust
+    // Rust adaptation (SPDMX-B): interner threaded because <reason — typically:
+    // arena-allocation of a result that Scala mutated in place, or re-allocation
+    // of a slice that Scala grew via GC>.
+    ```
+    Examples already in the codebase: `CompilerOutputs::add_function(signature, ...)`, `NodeEnvironmentBox::nearest_block_env(interner)`, `NodeEnvironmentBox::add_entry(interner, ...)`. If you're unsure whether the interner-add is the right shape (vs some other adaptation), escalate — but the default answer is yes.
+
+* **You do as many changes as possible. The TL only does Guardian-blocked changes.** If Guardian doesn't fire, you don't need to escalate. Threading a new parameter through call sites, renaming a local to match Scala, fixing an obvious lifetime annotation, adding a `&'t self` receiver where the body needs it — all yours. Escalate only when Guardian fires on something legitimate (NNDX on a missing definition, SPDMX on a Scala-shaped skeleton, etc.). This means more responsibility on you, but faster iteration overall.
 
 * **Check the `///` TFITCX classification before adding `Clone`/`Copy` or other derives to existing types.** When you hit an ownership/borrow error and the obvious fix looks like "add `Clone`" (or `Copy`, or `PartialEq`, or `Hash`), pause and look at the `///` doc comment on the type:
     * `/// Arena-allocated (see @TFITCX)` — Clone/Copy explicitly forbidden by the rule ("immutable after construction, no Clone"). The intended access pattern is `&'t T` everywhere; if you need the value in two places, restructure to pass references, not to clone. Common shape: build locally, arena-allocate into the parent struct, return `&parent.field` to get `&'t T`. Adding Clone also breaks @IEOIBZ identity-equality for the type — two arena allocations are supposed to be distinct things.

@@ -143,6 +143,38 @@ This came up in Slab 15e on `ensure_deep_exports`, `compile_i_tables`, and `make
 
 ---
 
+## TL Does Only What JR Can't — Guardian-Blocked Changes Only
+
+**Default to letting JR do the work.** TL/architect intervention is reserved for changes that Guardian would block JR on, or that require explicit architect approval per other rules in this doc. Concretely, TL handles:
+
+- **NNDX-blocked definition adds** (new fn / struct / trait / enum / impl with no Scala line-for-line counterpart): per "NNDX Escalation Pattern" above.
+- **SPDMX-blocked skeleton-with-panics** patterns: per "Skeleton-With-Panics vs SPDMX" above — TL issues the temp-disable.
+- **Scala source edits** to match a Rust simplification: per "Editing Scala To Match A Rust Simplification" above — TL/architect-only.
+- **Guardian annotations** for new definitions without Scala counterparts: per "Guardian Annotations For New Definitions Without Scala Counterparts" — TL adds `/* Guardian: disable-all */` or empty `/* */` blocks.
+- **Test-traversal / large test infrastructure** with no Scala line-for-line counterpart: per slab 15f's `traverse.rs` precedent.
+- **Structural / lifetime / cross-file refactors** that need architect sign-off per "Run Solutions By The Architect First."
+
+**Everything else is JR's job, including signature shape changes that don't trip Guardian.** Adding an `interner` parameter to a method is JR's call — they don't need to escalate. Adding `&'t self` where needed for back-pointer-emitting methods is JR's call. Renaming a parameter from `env` to `nenv` to match Scala is JR's call. Threading a new field through three call sites is JR's call. The line is "would Guardian fire on this edit?" — if no, JR does it; if yes, TL does it.
+
+This shifts work to JR aggressively. The benefit: faster iteration, less TL bottleneck, JR develops more autonomy on the parts of the migration that are mechanical. The cost: occasional JR mistakes that get caught at code review. That trade-off is correct — the alternative (TL touches every divergence) is what we've been doing and it's slower than it should be.
+
+When in doubt, the rubric: would I want to see this in a JR diff or in a TL diff at hand-back? If "JR diff is fine, I'll spot-check at review," then JR does it.
+
+---
+
+## Adding `interner` Parameters Is Always A Good Rust Adaptation
+
+When Scala parity wants behavior that needs the typing interner (e.g. materializing a `&'t T` snapshot, allocating a slice, interning a name), and Scala didn't have that parameter because Scala used GC + mutable references, **threading an `interner: &TypingInterner<'s, 't>` parameter through the Rust signature is always a fine Rust adaptation.** Document with a `// Rust adaptation (SPDMX-B): ...` comment explaining why the interner is needed (typically: arena-allocation of a result that Scala mutated in place, or re-allocation of a slice that Scala grew via GC).
+
+Concrete cases that have come up:
+- `CompilerOutputs::add_function(signature: &'t SignatureT, ...)` — Scala interned via implicit `Interner` access; Rust threads the signature explicitly because `CompilerOutputs` doesn't hold the typing_interner. (Slab 15e.)
+- `NodeEnvironmentBox::nearest_block_env(interner)` — Scala's Box delegates to its `var nodeEnvironment` directly; Rust's Box stores mutations in Vecs out-of-arena per design v3 §3.3, so producing a `&'t NodeEnvironmentT` requires snapshotting through the arena.
+- The `*Box::add_entry` / `add_entries` family already takes `interner` — same pattern, same reason.
+
+**This is JR-level work, not a TL escalation.** Adding an interner parameter doesn't trip Guardian (it's not a new definition; it's a signature shape change on an existing one). Per "TL Does Only What JR Can't" above, JR should make this kind of adaptation themselves and proceed. If JR is uncertain whether the interner-add is the right shape, they can escalate, but the default answer is yes.
+
+---
+
 ## Don't Simplify Scala On The Way Over
 
 Restating the guiding principle as an operating rule because TLs slip on it: **when handing a body off to a junior, quote the Scala verbatim and instruct them to translate every line.** Do not flatten redundant checks, do not collapse impossible branches, do not inline single-use bindings, do not reason "well in Rust we can just…". If you find yourself writing "the Rust method already returns `Option`, so it's a direct return" or "we can skip this size check because it can't happen" in a hand-off, stop — that's a parity violation in the making. The whole migration's auditability rests on the diff being a literal line-for-line port. A junior who follows a verbatim Scala translation produces a reviewable patch; a junior who follows a TL's "smarter" translation produces a patch nobody can compare against the source.

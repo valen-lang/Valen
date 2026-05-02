@@ -235,8 +235,16 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_var_name_step(&self, name: IVarNameS) -> IVarNameT<'_, '_> {
-        panic!("Unimplemented: translate_var_name_step");
+    pub fn translate_var_name_step(&self, name: IVarNameS<'s>) -> IVarNameT<'s, 't> {
+        match name {
+            IVarNameS::CodeVarName(name_str) => {
+                IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(
+                    CodeVarNameT { name: name_str, _phantom: std::marker::PhantomData }))
+            }
+            _ => {
+                panic!("implement: translate_var_name_step — {:?}", std::mem::discriminant(&name));
+            }
+        }
     }
 /*
   def translateVarNameStep(name: IVarNameS): IVarNameT = {

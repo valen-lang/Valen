@@ -12,6 +12,11 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
+use crate::postparsing::rules::RuneUsage;
+use crate::typing::infer_compiler::{InferEnv, InitialSend};
+use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+use crate::parsing::ast::LoadAsP;
+use crate::postparsing::expressions::IExpressionSE;
 use std::collections::HashMap;
 use std::collections::HashSet;
 
@@ -143,7 +148,23 @@ where 's: 't,
         match (patterns_a.is_empty(), pattern_inputs_te.is_empty()) {
             (true, true) => after_patterns_success_continuation(coutputs, nenv, live_capture_locals),
             (false, false) => {
-                panic!("implement: iterateTranslateListAndMaybeContinue — non-empty patterns");
+                let head_pattern_a = patterns_a[0];
+                let head_pattern_input_te = pattern_inputs_te[0];
+                let tail_patterns_a = &patterns_a[1..];
+                let tail_pattern_inputs_te = &pattern_inputs_te[1..];
+                self.inner_translate_sub_pattern_and_maybe_continue(
+                    coutputs, nenv, life.add(0), parent_ranges, call_location,
+                    head_pattern_a, live_capture_locals, head_pattern_input_te, region,
+                    |coutputs, nenv, _life, live_capture_locals| {
+                        let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+                        let distinct: HashSet<_> = names.iter().collect();
+                        assert!(names.len() == distinct.len());
+
+                        self.iterate_translate_list_and_maybe_continue(
+                            coutputs, nenv, life.add(1), parent_ranges, call_location,
+                            live_capture_locals, tail_patterns_a, tail_pattern_inputs_te, region,
+                            after_patterns_success_continuation)
+                    })
             }
             _ => panic!("mismatched patterns and inputs"),
         }
@@ -216,8 +237,75 @@ where 's: 't,
             None => {
                 unconverted_input_expr
             }
-            Some(_receiver_rune) => {
-                panic!("implement: infer_and_translate_pattern — Some(receiverRune) branch");
+            Some(receiver_rune) => {
+                let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                    rune_a_to_type_with_implicitly_coercing_lookups_s.clone();
+                // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
+                // loose. We intentionally ignored the types of the things they're looking up, so we could know
+                // what types we *expect* them to be, so we could coerce.
+                // That coercion is good, but lets make it more explicit.
+                let mut rule_builder: Vec<&'s IRulexSR<'s>> = Vec::new();
+                if !rules_with_implicitly_coercing_lookups_s.is_empty() {
+                    panic!("implement: infer_and_translate_pattern — explicifyLookups with non-empty rules");
+                }
+                let rules_a = rule_builder;
+
+                let snapshot = nenv.snapshot(self.typing_interner);
+                let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+                let invocation_range: Vec<RangeS<'s>> =
+                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                let complete_define_solve =
+                    // We could probably just solveForResolving (see DBDAR) but seems right to solveForDefining since we're
+                    // declaring a bunch of things.
+                    self.solve_for_defining(
+                        InferEnv {
+                            original_calling_env: snapshot_env,
+                            parent_ranges: self.typing_interner.alloc_slice_copy(parent_ranges),
+                            call_location,
+                            self_env: IEnvironmentT::from(IInDenizenEnvironmentT::Node(snapshot)),
+                            context_region: nenv.default_region(),
+                        },
+                        coutputs,
+                        &rules_a,
+                        &rune_a_to_type,
+                        &invocation_range,
+                        call_location,
+                        &[],
+                        &[InitialSend {
+                            sender_rune: RuneUsage {
+                                range: pattern.range,
+                                rune: self.scout_arena.intern_rune(
+                                    crate::postparsing::names::IRuneValS::PatternInputRune(PatternInputRuneS {
+                                        code_loc: pattern.range.begin,
+                                    })),
+                            },
+                            receiver_rune: receiver_rune.clone(),
+                            send_templata: ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT {
+                                coord: unconverted_input_expr.result().coord,
+                            })),
+                        }],
+                        &[],
+                    ).unwrap_or_else(|_f| {
+                        panic!("implement: infer_and_translate_pattern — TypingPassDefiningError");
+                    });
+
+                nenv.add_entries(
+                    self.typing_interner,
+                    &complete_define_solve.conclusions.iter()
+                        .map(|(key, value)| {
+                            panic!("implement: infer_and_translate_pattern — addEntries mapping");
+                        })
+                        .collect::<Vec<_>>());
+                let expected_coord = match complete_define_solve.conclusions.get(&receiver_rune.rune) {
+                    Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
+                    _ => panic!("Expected coord templata for receiver rune"),
+                };
+
+                let range_list: Vec<RangeS<'s>> =
+                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                self.convert(
+                    snapshot_env, coutputs, &range_list, call_location,
+                    unconverted_input_expr, expected_coord)
             }
         };
 
@@ -335,7 +423,105 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = previous_live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names {
+                    if !seen.contains(n) { seen.push(*n); }
+                }
+                seen
+            };
+            assert!(names == distinct);
+        }
+
+        // TODO(CRASTBU): make test that we have the right type in there, cuz the coordRuneA seems to be unused
+
+        let mut current_instructions: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+
+        let (maybe_capture_local_var_t, expr_to_destructure_or_drop_or_pass_te) =
+            match &pattern.name {
+                None => (None, input_expr),
+                Some(capture_s) => {
+                    let _local_name_t = self.translate_var_name_step(capture_s.name);
+                    if capture_s.mutate {
+                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — mutate case");
+                    } else {
+                        let range_list: Vec<RangeS<'s>> =
+                            std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                        let (_block_env, block_expr) = nenv.nearest_block_env(self.typing_interner)
+                            .expect("Expected nearest block env");
+                        let block_se = match block_expr {
+                            IExpressionSE::Block(b) => b,
+                            _ => panic!("Expected BlockSE from nearestBlockEnv"),
+                        };
+                        let local_s = block_se.locals.iter()
+                            .find(|l| l.var_name == capture_s.name)
+                            .expect("Expected local");
+                        let local_t = self.make_user_local_variable(
+                            coutputs, nenv, &range_list, local_s, input_expr.result().coord);
+                        current_instructions.push(self.typing_interner.alloc(
+                            ReferenceExpressionTE::LetNormal(LetNormalTE {
+                                variable: local_t,
+                                expr: input_expr,
+                            })));
+                        let local_lookup = self.typing_interner.alloc(
+                            AddressExpressionTE::LocalLookup(LocalLookupTE {
+                                range: pattern.range,
+                                local_variable: local_t,
+                            }));
+                        let captured_local_alias_te =
+                            self.soft_load(nenv, &range_list, local_lookup, LoadAsP::LoadAsBorrow, region);
+                        let captured_local_alias_te_ref: &'t ReferenceExpressionTE<'s, 't> =
+                            self.typing_interner.alloc(captured_local_alias_te);
+                        (Some(local_t), captured_local_alias_te_ref)
+                    }
+                }
+            };
+
+        if maybe_capture_local_var_t.is_some() {
+            assert!(expr_to_destructure_or_drop_or_pass_te.result().coord.ownership != OwnershipT::Own);
+        }
+
+        let mut live_capture_locals: Vec<ILocalVariableT<'s, 't>> = previous_live_capture_locals.to_vec();
+        if let Some(local_t) = maybe_capture_local_var_t {
+            live_capture_locals.push(local_t);
+        }
+        {
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names {
+                    if !seen.contains(n) { seen.push(*n); }
+                }
+                seen
+            };
+            assert!(names == distinct);
+        }
+
+        let destructure_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = match pattern.destructure {
+            None => {
+                let mut result: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                match &pattern.name {
+                    None => {
+                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — drop uncaptured");
+                    }
+                    Some(_) => {
+                        // We aren't destructuring it, but we stored it, so just do nothing.
+                    }
+                }
+                result.push(after_sub_pattern_success_continuation(
+                    coutputs, nenv, life.add(0), &live_capture_locals));
+                result
+            }
+            Some(_) => {
+                panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure");
+            }
+        };
+
+        let mut all_exprs = current_instructions;
+        all_exprs.extend(destructure_exprs);
+        self.consecutive(&all_exprs)
     }
 /*
   private def innerTranslateSubPatternAndMaybeContinue(

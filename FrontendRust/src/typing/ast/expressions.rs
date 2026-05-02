@@ -598,7 +598,15 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> DiscardTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.expr.result().coord.region,
+                kind: KindT::Void(VoidT),
+            }
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(ShareT, expr.result.coord.region, VoidT()))
@@ -1361,7 +1369,15 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> VoidLiteralTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.region,
+                kind: KindT::Void(VoidT),
+            }
+        }
+    }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, region, VoidT()))
 }
@@ -1518,7 +1534,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> LocalLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> AddressResultT<'s, 't> {
+        AddressResultT { coord: self.local_variable.coord() }
+    }
 /*
   override def result: AddressResultT = AddressResultT(localVariable.coord)
 */
@@ -1556,7 +1574,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ArgLookupTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.coord }
+    }
 /*
   override def result = ReferenceResultT(coord)
 }
@@ -2445,7 +2465,16 @@ impl<'s, 't> SoftLoadTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> SoftLoadTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        let addr_result = self.expr.result();
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: self.target_ownership,
+                region: addr_result.coord.region,
+                kind: addr_result.coord.kind,
+            }
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(targetOwnership, expr.result.coord.region, expr.result.coord.kind))
