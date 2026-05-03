@@ -250,7 +250,7 @@ where 's: 't,
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
             lookup_filter.insert(ILookupContext::ExpressionLookupContext);
             assert!(
-                rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).is_some());
+                rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).is_some());
         }
 
         // val paramTypes2 = evaluateFunctionParamTypes(runedEnv, function1.params);
@@ -468,7 +468,7 @@ where 's: 't,
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::new();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
-            match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).unwrap() {
+            match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
                 other => panic!("implement unexpected templata in evaluateFunctionParamTypes: {:?}", other),
             }
@@ -515,7 +515,7 @@ where 's: 't,
                 IImpreciseNameValS::RuneName(RuneNameValS { rune }));
             let mut lookup_filter = HashSet::new();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
-            let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter).unwrap() {
+            let coord = match env.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).unwrap() {
                 ITemplataT::Coord(coord_templata) => coord_templata.coord,
                 other => panic!("implement unexpected templata in assembleFunctionParams: {:?}", other),
             };
@@ -599,7 +599,7 @@ where 's: 't,
                 IImpreciseNameValS::RuneName(RuneNameValS { rune: *ret_coord_rune }));
             let mut lookup_filter = HashSet::new();
             lookup_filter.insert(ILookupContext::TemplataLookupContext);
-            match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter) {
+            match near_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
                 Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
                 other => panic!("implement vwat in getMaybeReturnType: {:?}", other),
             }
@@ -670,12 +670,36 @@ where 's: 't,
 {
     pub fn get_generic_function_prototype_from_call(
         &self,
-        rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+        rued_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
         coutputs: &CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         function1: &FunctionA<'s>,
     ) -> PrototypeT<'s, 't> {
-        panic!("Unimplemented: get_generic_function_prototype_from_call");
+        // Check preconditions
+        for (template_param, _) in function1.rune_to_type.iter() {
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            lookup_filter.insert(ILookupContext::ExpressionLookupContext);
+            let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
+            assert!(rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).is_some());
+        }
+
+        let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
+        let param_types = self.evaluate_function_param_types(&rued_env_as_i, function1.params);
+        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|ru| &ru.rune));
+        let named_env = self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
+        let needle_signature = SignatureT { id: named_env.id };
+
+        let named_env_as_i = IInDenizenEnvironmentT::Function(named_env);
+        let params2 = self.assemble_function_params(&named_env_as_i, coutputs, call_range, function1.params);
+
+        let prototype = self.get_function_prototype_for_call(
+            named_env, coutputs, call_range, &params2);
+
+        assert!(prototype.to_signature() == needle_signature);
+        prototype
     }
 
 /*

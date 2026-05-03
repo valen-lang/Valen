@@ -1115,8 +1115,8 @@ where 's: 't,
         // coutputs.getInstantiationNameToFunctionBoundToRune()
         let raw_instantiation_bounds = coutputs.get_instantiation_name_to_function_bound_to_rune();
         let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, InstantiationBoundArgumentsT<'s, 't>> = HashMap::new();
-        for (_id, _bounds) in raw_instantiation_bounds.iter() {
-            panic!("implement: convert instantiation_name_to_function_bound_to_rune entry");
+        for (id, bounds) in raw_instantiation_bounds.iter() {
+            instantiation_name_to_instantiation_bounds.insert(*id.0, (*bounds).clone());
         }
 
         let hinputs = HinputsT {

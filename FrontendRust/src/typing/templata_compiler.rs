@@ -12,6 +12,7 @@ use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::{GenericParameterS, IRegionMutabilityS, LocationInDenizen};
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::postparsing::rules::rules::IRulexSR;
+use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
 use std::collections::HashMap;
@@ -193,8 +194,20 @@ where 's: 't,
         rules: &'s [IRulexSR<'s>],
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         num_explicit_template_args: i32,
-    ) -> Vec<IRulexSR<'s>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+    ) -> Vec<&'s IRulexSR<'s>> {
+        let mut result: Vec<&'s IRulexSR<'s>> =
+            rules.iter().filter(|r| include_rule_in_call_site_solve(r)).collect();
+        for (index, generic_param) in generic_parameters.iter().enumerate() {
+            if index as i32 >= num_explicit_template_args {
+                match &generic_param.default {
+                    Some(x) => {
+                        panic!("implement: assembleCallSiteRules default rules");
+                    }
+                    None => {}
+                }
+            }
+        }
+        result
     }
 }
 /*
@@ -1792,7 +1805,7 @@ where 's: 't,
         // We could instead pipe a lookup context through, if this proves problematic.
         let mut lookup_filter = std::collections::HashSet::new();
         lookup_filter.insert(ILookupContext::TemplataLookupContext);
-        let results = env.lookup_nearest_with_imprecise_name(name, lookup_filter);
+        let results = env.lookup_nearest_with_imprecise_name(name, lookup_filter, self.typing_interner);
         if results.iter().count() > 1 {
             panic!("vfail");
         }

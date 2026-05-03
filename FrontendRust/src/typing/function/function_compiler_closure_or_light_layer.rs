@@ -247,17 +247,34 @@ where 's: 't,
 {
     pub fn evaluate_generic_light_function_from_call_for_prototype2(
         &self,
-        parent_env: IEnvironmentT,
-        coutputs: CompilerOutputs,
-        calling_env: IInDenizenEnvironmentT,
-        call_range: Vec<RangeS>,
-        call_location: LocationInDenizen,
-        function: FunctionA,
-        explicit_template_args: Vec<ITemplataT>,
+        parent_env: &'t IEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function: &'s FunctionA<'s>,
+        explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        args: Vec<Option<CoordT>>,
-    ) -> IResolveFunctionResult<'_, '_> {
-        panic!("Unimplemented: evaluate_generic_light_function_from_call_for_prototype2");
+        args: &[Option<CoordT<'s, 't>>],
+    ) -> IResolveFunctionResult<'s, 't> {
+        self.check_not_closure(function);
+
+        let function_template_name = self.translate_generic_function_name(function.name);
+        let function_name_local: INameT<'s, 't> = match function_template_name {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+            IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+            IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+            IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        };
+        let outer_env_id = parent_env.id().add_step(self.typing_interner, function_name_local);
+        let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, false);
+        self.evaluate_generic_function_from_call_for_prototype(
+            outer_env, coutputs, calling_env, call_range, call_location, explicit_template_args, context_region, args)
     }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype2(
@@ -657,8 +674,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    fn check_not_closure(&self, function: FunctionA) {
-        panic!("Unimplemented: check_not_closure");
+    fn check_not_closure(&self, function: &'s FunctionA<'s>) {
+        match &function.body {
+            IBodyS::CodeBody(body1) => assert!(body1.body.closured_names.is_empty()),
+            IBodyS::ExternBody(_) => {}
+            IBodyS::GeneratedBody(_) => {}
+            IBodyS::AbstractBody(_) => {}
+        }
     }
 /*
   private def checkNotClosure(function: FunctionA) = {

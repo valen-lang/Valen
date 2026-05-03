@@ -137,6 +137,16 @@ This came up in Slab 15e on `ensure_deep_exports`, `compile_i_tables`, and `make
 
 ---
 
+## Never Add `// AFTERM:` Or `// TODO:` Comments — Only The Architect Can Suggest Them
+
+**Do not add `// AFTERM:` or `// TODO:` comments yourself, and do not tell JR to add them either.** These markers are the architect's tool for tracking deferred cleanup; they only get added when the architect explicitly asks. If you find a thing that "should be cleaned up later" and want to record it, raise it to the architect — don't park it inline as an AFTERM/TODO on your own initiative, and don't include "add a `// AFTERM: ...` comment" as a step in any reply to JR.
+
+This applies even when the deferral seems obviously correct (e.g. a needless snapshot that could be inlined, a misplaced helper that could be moved, a panic stub that's clearly going to need real logic). The architect decides whether the deferral is worth a marker comment vs. fixing immediately vs. ignoring; defaulting to AFTERM/TODO without that decision adds noise to the codebase that nobody asked for.
+
+If you've already drafted a reply to JR that includes "add a `// AFTERM: ...` comment," strike it before sending. If JR proposes an AFTERM/TODO themselves, tell them to drop it and escalate to the architect instead.
+
+---
+
 ## Run Solutions By The Architect First
 
 **Before implementing any structural fix or design change, propose the solution to the architect and wait for approval.** This includes lifetime-parameter additions, signature changes that propagate across many files, new abstractions, and any choice between alternatives. Don't start editing — even for fixes that look mechanical — until the architect has signed off on the approach. The cost of a quick check is small; the cost of unwinding a wrong-direction change across ~20 call sites is large.

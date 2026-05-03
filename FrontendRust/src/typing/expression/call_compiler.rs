@@ -58,7 +58,67 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match callable_expr.result().coord.kind {
+            KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
+            KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
+                panic!("wot {:?}", callable_expr.result().coord.kind);
+            }
+            KindT::OverloadSet(overload_set) => {
+                let unconverted_args_pointer_types_2: Vec<CoordT<'s, 't>> =
+                    given_args_exprs_2.iter().map(|e| e.result().coord).collect();
+
+                // We want to get the prototype here, not the entire header, because
+                // we might be in the middle of a recursive call like:
+                // func main():Int(main())
+                let stamp_result =
+                    self.find_function(
+                        overload_set.env,
+                        coutputs,
+                        range,
+                        call_location,
+                        *overload_set.name,
+                        explicit_template_arg_rules_s,
+                        explicit_template_arg_runes_s,
+                        context_region,
+                        &unconverted_args_pointer_types_2,
+                        &[],
+                        false);
+                let stamp_result = match stamp_result {
+                    Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
+                    Ok(x) => x,
+                };
+
+                let snapshot = nenv.snapshot(self.typing_interner);
+                let snapshot_env = self.typing_interner.alloc(
+                    IInDenizenEnvironmentT::Node(snapshot));
+                let param_types = stamp_result.prototype.param_types();
+                let args_exprs_2 =
+                    self.convert_exprs(
+                        snapshot_env, coutputs, range, call_location,
+                        given_args_exprs_2, &param_types);
+
+                self.check_types(
+                    coutputs,
+                    snapshot_env,
+                    range,
+                    call_location,
+                    &param_types,
+                    &args_exprs_2.iter().map(|a| a.result().coord).collect::<Vec<_>>(),
+                    true);
+
+                assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
+                let result_te = stamp_result.prototype.return_type;
+                self.typing_interner.alloc(
+                    ReferenceExpressionTE::FunctionCall(FunctionCallTE {
+                        callable: stamp_result.prototype,
+                        args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+                        return_type: result_te,
+                    }))
+            }
+            _ => {
+                panic!("implement: evaluate_call non-OverloadSet kind");
+            }
+        }
     }
 /*
   private def evaluateCall(
@@ -278,7 +338,29 @@ where 's: 't,
         args: &[CoordT<'s, 't>],
         exact: bool,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        assert!(params.len() == args.len());
+        for (params_head, args_head) in params.iter().zip(args.iter()) {
+            if params_head == args_head {
+                // match, nothing to do
+            } else {
+                if !exact {
+                    panic!("implement: checkTypes non-exact isTypeConvertible");
+                } else {
+                    match args_head.kind {
+                        KindT::Never(_) => {
+                            // This is fine, no conversion will ever actually happen.
+                            // This can be seen in this call: +(5, panic())
+                        }
+                        _ => {
+                            // do stuff here.
+                            // also there is one special case here, which is when we try to hand in
+                            // an owning when they just want a borrow, gotta account for that here
+                            panic!("do stuff {:?} and {:?}", args_head, params_head);
+                        }
+                    }
+                }
+            }
+        }
     }
 /*
   def checkTypes(
@@ -346,7 +428,19 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let call_expr =
+            self.evaluate_call(
+                coutputs,
+                nenv,
+                life,
+                range,
+                call_location,
+                region,
+                callable_reference_expr_2,
+                explicit_template_arg_rules_s,
+                explicit_template_arg_runes_s,
+                args_exprs_2);
+        call_expr
     }
 /*
   def evaluatePrefixCall(

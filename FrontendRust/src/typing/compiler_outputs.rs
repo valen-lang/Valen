@@ -363,9 +363,15 @@ where 's: 't,
 {
     pub fn get_instantiation_bounds(
         &self,
+        interner: &TypingInterner<'s, 't>,
         instantiation_id: IdT<'s, 't>,
     ) -> Option<&'t InstantiationBoundArgumentsT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let instantiation_id_ref = interner.intern_id(IdValT {
+            package_coord: instantiation_id.package_coord,
+            init_steps: instantiation_id.init_steps,
+            local_name: instantiation_id.local_name,
+        });
+        self.instantiation_name_to_bounds.get(&PtrKey(instantiation_id_ref)).copied()
     }
     /*
       def getInstantiationBounds(
@@ -380,15 +386,34 @@ where 's: 't,
 {
     pub fn add_instantiation_bounds(
         &mut self,
-        sanity_check: bool,
-        interner: &'t TypingInterner<'s, 't>,
-        original_calling_template_id: IdT<'s, 't>,
+        _sanity_check: bool,
+        interner: &TypingInterner<'s, 't>,
+        _original_calling_template_id: IdT<'s, 't>,
         instantiation_id: IdT<'s, 't>,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        for (_rune, reachable_bound_args) in &instantiation_bound_args.rune_to_citizen_rune_to_reachable_prototype {
+            for (_callee_rune, _reachable_prototype) in &reachable_bound_args.citizen_rune_to_reachable_prototype {
+                panic!("implement: addInstantiationBounds reachable bound assertion");
+            }
+        }
+        for (_rune, _caller_bound_arg_function) in &instantiation_bound_args.rune_to_bound_prototype {
+            panic!("implement: addInstantiationBounds bound prototype assertion");
+        }
+
+        let instantiation_id_ref = interner.intern_id(IdValT {
+            package_coord: instantiation_id.package_coord,
+            init_steps: instantiation_id.init_steps,
+            local_name: instantiation_id.local_name,
+        });
+        if let Some(_existing) = self.instantiation_name_to_bounds.get(&PtrKey(instantiation_id_ref)) {
+            panic!("implement: addInstantiationBounds existing check vassert");
+        }
+
+        self.instantiation_name_to_bounds.insert(PtrKey(instantiation_id_ref), instantiation_bound_args);
     }
     /*
+Guardian: temp-disable: SPDMX — The omitted Scala blocks are: (1) two `instantiationId match` with `vpass()` — no-op debugging guardrails (Exception F), and (2) a `sanityCheck` guarded `Collector.all` that requires the not-yet-migrated `Collector` utility. All three have no effect on the put operation which is the core logic. Will add when Collector is migrated. — FrontendRust/guardian-logs/request-366-1777779259089/hook-366/add_instantiation_bounds--381.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def addInstantiationBounds(
         sanityCheck: Boolean,
         interner: Interner,

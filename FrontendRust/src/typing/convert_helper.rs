@@ -59,14 +59,24 @@ where 's: 't,
 {
     pub fn convert_exprs(
         &self,
-        env: &IInDenizenEnvironmentT<'s, 't>,
+        env: &'t IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_exprs: Vec<ReferenceExpressionTE<'s, 't>>,
-        target_pointer_types: Vec<CoordT<'s, 't>>,
-    ) -> Vec<ReferenceExpressionTE<'s, 't>> {
-        panic!("Unimplemented: convert_exprs");
+        source_exprs: &[&'t ReferenceExpressionTE<'s, 't>],
+        target_pointer_types: &[CoordT<'s, 't>],
+    ) -> Vec<&'t ReferenceExpressionTE<'s, 't>> {
+        if source_exprs.len() != target_pointer_types.len() {
+            panic!("num exprs mismatch, source:\n{:?}\ntarget:\n{:?}", source_exprs, target_pointer_types);
+        }
+
+        let mut previous_ref_exprs = Vec::new();
+        for (source_expr, target_pointer_type) in source_exprs.iter().zip(target_pointer_types.iter()) {
+            let ref_expr =
+                self.convert(env, coutputs, range, call_location, source_expr, *target_pointer_type);
+            previous_ref_exprs.push(ref_expr);
+        }
+        previous_ref_exprs
     }
 /*
   def convertExprs(

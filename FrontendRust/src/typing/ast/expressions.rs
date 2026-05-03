@@ -1890,7 +1890,7 @@ pub struct FunctionCallTE<'s, 't>
 where 's: 't,
 {
     pub callable: &'t PrototypeT<'s, 't>,
-    pub args: &'t [ReferenceExpressionTE<'s, 't>],
+    pub args: &'t [&'t ReferenceExpressionTE<'s, 't>],
     pub return_type: CoordT<'s, 't>,
 }
 /*
@@ -1930,7 +1930,7 @@ impl<'s, 't> FunctionCallTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> FunctionCallTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.return_type } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(returnType)
 }
@@ -1975,7 +1975,9 @@ impl<'s, 't> ReinterpretTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> ReinterpretTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.result_reference }
+    }
 /*
   override def result = ReferenceResultT(resultReference)
 

@@ -449,6 +449,7 @@ impl<'s, 't> ParameterT<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub enum ICalleeCandidate<'s, 't> {
     Function(FunctionCalleeCandidate<'s, 't>),
     Header(&'t HeaderCalleeCandidate<'s, 't>),
@@ -458,6 +459,7 @@ pub enum ICalleeCandidate<'s, 't> {
 sealed trait ICalleeCandidate
 */
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct FunctionCalleeCandidate<'s, 't> {
     pub ft: FunctionTemplataT<'s, 't>,
 }
@@ -473,6 +475,7 @@ impl<'s, 't> FunctionCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(PartialEq, Eq, Hash)]
 pub struct HeaderCalleeCandidate<'s, 't> {
     pub header: FunctionHeaderT<'s, 't>,
 }
@@ -488,6 +491,7 @@ impl<'s, 't> HeaderCalleeCandidate<'s, 't> {
 */
 }
 /// Temporary state (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash)]
 pub struct PrototypeTemplataCalleeCandidate<'s, 't> {
     pub prototype_t: PrototypeT<'s, 't>,
 }
@@ -994,7 +998,14 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
-    fn param_types(&self) -> Vec<CoordT<'s, 't>> { panic!("Unimplemented: param_types"); }
+    pub fn param_types(&self) -> &'t [CoordT<'s, 't>] {
+        match self.id.local_name {
+            INameT::Function(f) => f.parameters,
+            INameT::LambdaCallFunction(f) => f.parameters,
+            INameT::ForwarderFunction(_) => panic!("implement: param_types for ForwarderFunction"),
+            _ => panic!("param_types called on non-function name: {:?}", self.id.local_name),
+        }
+    }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters
 */

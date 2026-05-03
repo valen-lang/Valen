@@ -3,7 +3,7 @@ use crate::typing::compiler::Compiler;
 use crate::typing::function::function_compiler::*;
 use crate::typing::compilation::TypingPassOptions;
 use crate::utils::code_hierarchy::PackageCoordinate;
-use crate::typing::infer_compiler::{include_rule_in_definition_solve, InitialKnown, InitialSend, InferEnv};
+use crate::typing::infer_compiler::{include_rule_in_definition_solve, InitialKnown, InitialSend, InferEnv, CompleteResolveSolve, IResolvingError};
 use crate::postparsing::itemplatatype::ITemplataType;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
@@ -361,7 +361,15 @@ where 's: 't,
         function: &FunctionA<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
     ) -> Vec<InitialKnown<'s, 't>> {
-        panic!("Unimplemented: assemble_known_templatas");
+        function.generic_parameters.iter()
+            .zip(explicit_template_args.iter())
+            .map(|(generic_param, explicit_arg)| {
+                InitialKnown {
+                    rune: generic_param.rune,
+                    templata: *explicit_arg,
+                }
+            })
+            .collect()
     }
 
 /*
@@ -515,19 +523,108 @@ where 's: 't,
 {
     pub fn evaluate_generic_function_from_call_for_prototype(
         &self,
-        outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
     ) -> IResolveFunctionResult<'s, 't> {
-        panic!("Unimplemented: evaluate_generic_function_from_call_for_prototype");
-    }
+        let function = outer_env.function;
+        self.check_closure_concerns_handled(outer_env);
 
+        let call_site_rules = self.assemble_call_site_rules(
+            function.rules, function.generic_parameters, explicit_template_args.len() as i32);
+
+        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
+
+        // Rust adaptation (SPDMX-B): re-allocate call_range into the typing arena to satisfy
+        // InferEnv's `&'t [RangeS<'s>]` field. Scala doesn't need this because GC.
+        let call_range_t = self.typing_interner.alloc_slice_copy(call_range);
+        let envs = InferEnv {
+            original_calling_env: calling_env,
+            parent_ranges: call_range_t,
+            call_location,
+            self_env: IEnvironmentT::BuildingWithClosureds(outer_env),
+            context_region,
+        };
+        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+        let invocation_range = call_range;
+        let initial_knowns = self.assemble_known_templatas(function, explicit_template_args);
+        let include_reachable_bounds_for_runes: Vec<IRuneS<'s>> =
+            function.params.iter()
+                .flat_map(|p| p.pattern.coord_rune.map(|ru| ru.rune))
+                .chain(function.maybe_ret_coord_rune.map(|ru| ru.rune))
+                .collect();
+
+        let mut solver = self.make_solver_state(
+            envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
+
+        let mut loop_check = function.generic_parameters.len() as i32 + 1;
+
+        match self.incrementally_solve(
+            envs, coutputs, &mut solver,
+            |solver_state| {
+                panic!("implement: evaluateGenericFunctionFromCallForPrototype incrementallySolve callback");
+            },
+        ) {
+            Err(f) => {
+                return IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
+                    reason: IResolvingError::ResolvingSolveFailedOrIncomplete(f),
+                });
+            }
+            Ok(true) => {}
+            Ok(false) => {} // Incomplete, will be detected as SolveIncomplete below.
+        }
+
+        let CompleteResolveSolve { conclusions: inferred_templatas, rune_to_bound: rune_to_function_bound } =
+            match self.check_resolving_conclusions_and_resolve(
+                envs, coutputs, invocation_range, call_location, &rune_to_type, &call_site_rules, &include_reachable_bounds_for_runes, &mut solver,
+            ) {
+                Err(e) => {
+                    return IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
+                        reason: e,
+                    });
+                }
+                Ok(i) => i,
+            };
+
+        let identifying_runes: Vec<IRuneS<'s>> =
+            function.generic_parameters.iter().map(|gp| gp.rune.rune).collect();
+        let reachable_bound_protos: Vec<PrototypeTemplataT<'s, 't>> =
+            rune_to_function_bound.rune_to_citizen_rune_to_reachable_prototype.iter()
+                .flat_map(|(_rune, x)| {
+                    panic!("implement: evaluateGenericFunctionFromCallForPrototype reachable_bound_protos");
+                    #[allow(unreachable_code)]
+                    std::iter::empty::<PrototypeTemplataT<'s, 't>>()
+                })
+                .collect();
+        let runed_env = self.typing_interner.alloc(self.add_runed_data_to_near_env(
+            outer_env, &identifying_runes, &inferred_templatas, &reachable_bound_protos));
+
+        let prototype = self.get_generic_function_prototype_from_call(
+            runed_env, coutputs, call_range, function);
+
+        let prototype_templata = self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(prototype) });
+
+        coutputs.add_instantiation_bounds(
+            self.opts.global_options.sanity_check,
+            self.typing_interner,
+            calling_env.root_compiling_denizen_env().denizen_template_id(),
+            prototype.id,
+            self.typing_interner.alloc(rune_to_function_bound),
+        );
+
+        IResolveFunctionResult::ResolveFunctionSuccess(ResolveFunctionSuccess {
+            prototype: prototype_templata,
+            inferences: inferred_templatas,
+        })
+    }
 /*
+Guardian: temp-disable: SPDMX — The omitted Scala block is `outerEnv.id match { case IdT(_,Vector(),FunctionTemplateNameT(StrI("Bork"),_)) => vpass(); case _ => }` — a no-op debugging guardrail (vpass is a breakpoint-only function). It has no logical effect and is Exception F (debugging-only code). — FrontendRust/guardian-logs/request-254-1777775550299/hook-254/evaluate_generic_function_from_call_for_prototype--516.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateGenericFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -970,7 +1067,29 @@ where 's: 't,
         function: &FunctionA<'s>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> Vec<InitialSend<'s, 't>> {
-        panic!("Unimplemented: assemble_initial_sends_from_args");
+        function.params.iter()
+            .map(|p| p.pattern.coord_rune.unwrap())
+            .zip(args.iter())
+            .enumerate()
+            .flat_map(|(arg_index, (param_rune, arg))| {
+                match arg {
+                    None => None,
+                    Some(arg_templata) => {
+                        let sender_rune = RuneUsage {
+                            range: call_range,
+                            rune: self.scout_arena.intern_rune(
+                                IRuneValS::ArgumentRune(ArgumentRuneS { arg_index: arg_index as i32 })),
+                        };
+                        Some(InitialSend {
+                            sender_rune,
+                            receiver_rune: param_rune,
+                            send_templata: ITemplataT::Coord(
+                                self.typing_interner.alloc(CoordTemplataT { coord: *arg_templata })),
+                        })
+                    }
+                }
+            })
+            .collect()
     }
 
 /*

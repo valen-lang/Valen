@@ -789,7 +789,7 @@ where 's: 't,
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
 
-                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv };
+                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner };
                 let rune_to_initially_known_type: HashMap<_, _> =
                     crate::higher_typing::patterns::get_rune_types_from_pattern(&let_se.pattern)
                         .into_iter().collect();
@@ -878,6 +878,48 @@ where 's: 't,
                         panic!("Couldnt find {:?}", name);
                     }
                     Some(x) => (x, HashSet::new()),
+                }
+            }
+            IExpressionSE::FunctionCall(fc) => {
+                match fc.callable_expr {
+                    IExpressionSE::OutsideLoad(outside_load) => {
+                        let (args_exprs_2, returns_from_args) =
+                            self.evaluate_and_coerce_to_reference_expressions(
+                                coutputs, nenv, life.add(0), parent_ranges, fc.location,
+                                // See SRIE
+                                nenv.default_region(),
+                                fc.arg_exprs);
+                        let mut range_list = vec![fc.range];
+                        range_list.extend_from_slice(parent_ranges);
+                        let snapshot_env = nenv.snapshot(self.typing_interner);
+                        let env_ref = self.typing_interner.alloc(
+                            IInDenizenEnvironmentT::Node(snapshot_env));
+                        let callable_expr = self.new_global_function_group_expression(
+                            env_ref,
+                            coutputs,
+                            nenv.default_region(),
+                            outside_load.name);
+                        let template_arg_runes: Vec<IRuneS<'s>> = outside_load.maybe_template_args
+                            .map(|args| args.iter().map(|a| a.rune).collect::<Vec<_>>())
+                            .unwrap_or_default();
+                        let rules_refs: Vec<&'s IRulexSR<'s>> = outside_load.rules.iter().collect();
+                        let call_expr_2 =
+                            self.evaluate_prefix_call(
+                                coutputs,
+                                nenv,
+                                life.add(1),
+                                &range_list,
+                                fc.location,
+                                region,
+                                callable_expr,
+                                &rules_refs,
+                                &template_arg_runes,
+                                &args_exprs_2);
+                        (ExpressionTE::Reference(call_expr_2), returns_from_args)
+                    }
+                    _ => {
+                        panic!("implement: evaluate_expression FunctionCall non-OutsideLoad callable");
+                    }
                 }
             }
             _ => {
@@ -2361,8 +2403,9 @@ where 's: 't,
         region: RegionT,
         name: IImpreciseNameS<'s>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
+        let name_ref: &'s IImpreciseNameS<'s> = self.scout_arena.alloc(name);
         let overload_set = self.typing_interner.intern_overload_set(
-            OverloadSetTValT { env, name: self.scout_arena.get_imprecise_name_ref(name) });
+            OverloadSetTValT { env, name: name_ref });
         let void_expr: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(
             ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
         self.typing_interner.alloc(
@@ -2698,11 +2741,13 @@ where 's: 't,
 // delegates to lookupNearestWithImpreciseName. This struct captures that field.
 // Same shape as `HigherTypingRuneTypeSolverEnv` in higher_typing_pass.rs (which
 // collapses 6 anonymous Scala impls into one named struct).
+// Rust adaptation (SPDMX-B): interner field added for entry_to_templata
 struct LetExprRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
 {
     nenv: &'a crate::typing::env::function_environment_t::NodeEnvironmentBox<'s, 't>,
+    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
 }
 /*
 Guardian: disable-all
@@ -2723,7 +2768,7 @@ where
     > {
         let mut filter = std::collections::HashSet::new();
         filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
-        match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter) {
+        match self.nenv.lookup_nearest_with_imprecise_name(name_s, &filter, self.typing_interner) {
             Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
                 Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
                     crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {

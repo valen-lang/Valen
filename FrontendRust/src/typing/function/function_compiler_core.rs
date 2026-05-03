@@ -143,7 +143,7 @@ where 's: 't,
                     let mut lookup_filter = HashSet::new();
                     lookup_filter.insert(ILookupContext::TemplataLookupContext);
                     let full_env_as_i = IEnvironmentT::Function(full_env);
-                    full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter)
+                    full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner)
                 }
             };
 
@@ -403,8 +403,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_function_prototype_for_call(&self) -> PrototypeT<'s, 't> {
-        panic!("Unimplemented: get_function_prototype_for_call");
+    pub fn get_function_prototype_for_call(
+        &self,
+        full_env: &'t FunctionEnvironmentT<'s, 't>,
+        _coutputs: &CompilerOutputs<'s, 't>,
+        _call_range: &[RangeS<'s>],
+        _params2: &[ParameterT<'s, 't>],
+    ) -> PrototypeT<'s, 't> {
+        self.get_function_prototype_inner_for_call(full_env, full_env.id)
     }
 /*
   // Preconditions:
@@ -427,8 +433,22 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_function_prototype_inner_for_call(&self) -> PrototypeT<'s, 't> {
-        panic!("Unimplemented: get_function_prototype_inner_for_call");
+    pub fn get_function_prototype_inner_for_call(
+        &self,
+        full_env: &'t FunctionEnvironmentT<'s, 't>,
+        id: IdT<'s, 't>,
+    ) -> PrototypeT<'s, 't> {
+        let ret_coord_rune = full_env.function.maybe_ret_coord_rune.unwrap();
+        let imprecise_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::RuneName(RuneNameValS { rune: ret_coord_rune.rune }));
+        let mut lookup_filter = HashSet::new();
+        lookup_filter.insert(ILookupContext::TemplataLookupContext);
+        let full_env_as_i = IInDenizenEnvironmentT::Function(full_env);
+        let return_coord = match full_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner) {
+            Some(ITemplataT::Coord(coord_templata)) => coord_templata.coord,
+            other => panic!("vwat: unexpected in getFunctionPrototypeInnerForCall: {:?}", other),
+        };
+        PrototypeT { id, return_type: return_coord }
     }
 /*
   def getFunctionPrototypeInnerForCall(

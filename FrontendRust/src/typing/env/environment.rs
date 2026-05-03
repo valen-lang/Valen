@@ -1,6 +1,6 @@
 use std::collections::{HashMap as StdHashMap, HashSet};
 
-use crate::typing::templata::templata::ITemplataT;
+use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
 
@@ -117,22 +117,24 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     match self {
-      IEnvironmentT::Package(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::Citizen(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::Function(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::Node(_) => { panic!("Unimplemented: lookup_with_imprecise_name_inner for Node"); }
-      IEnvironmentT::BuildingWithClosureds(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::General(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::Export(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
-      IEnvironmentT::Extern(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest),
+      IEnvironmentT::Package(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Citizen(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Function(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Node(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::BuildingWithClosureds(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::General(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Export(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Extern(e) => e.lookup_with_imprecise_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
     }
   }
   /*
@@ -163,12 +165,14 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_all_with_imprecise_name
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_all_with_imprecise_name");
+    self.lookup_with_imprecise_name_inner(name_s, lookup_filter, false, interner)
   }
   /*
     def lookupAllWithImpreciseName(
@@ -227,12 +231,14 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_nearest_with_imprecise_name
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    let results = self.lookup_with_imprecise_name_inner(name_s, lookup_filter, true);
+    let results = self.lookup_with_imprecise_name_inner(name_s, lookup_filter, true, interner);
     match results.len() {
       0 => None,
       1 => Some(results.into_iter().next().unwrap()),
@@ -296,8 +302,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
     match self {
       IInDenizenEnvironmentT::Citizen(_) => { panic!("Unimplemented: root_compiling_denizen_env for Citizen"); }
-      IInDenizenEnvironmentT::Function(_) => { panic!("Unimplemented: root_compiling_denizen_env for Function"); }
-      IInDenizenEnvironmentT::Node(_) => { panic!("Unimplemented: root_compiling_denizen_env for Node"); }
+      IInDenizenEnvironmentT::Function(e) => e.root_compiling_denizen_env(),
+      IInDenizenEnvironmentT::Node(e) => e.parent_function_env.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::BuildingWithClosureds(_) => *self,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(_) => *self,
       IInDenizenEnvironmentT::General(_) => { panic!("Unimplemented: root_compiling_denizen_env for General"); }
@@ -340,13 +346,15 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
-    as_env.lookup_nearest_with_imprecise_name(name_s, lookup_filter)
+    as_env.lookup_nearest_with_imprecise_name(name_s, lookup_filter, interner)
   }
   /* Guardian: disable-all */
 }
@@ -376,15 +384,20 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
-    as_env.lookup_all_with_imprecise_name(name_s, lookup_filter)
+    as_env.lookup_all_with_imprecise_name(name_s, lookup_filter, interner)
   }
-  /* Guardian: disable-all */
+/*
+Guardian: temp-disable: NCWSRX — This is a Rust-only dispatch method that exists because Rust doesn't have inheritance — IInDenizenEnvironmentT extends IEnvironmentT in Scala, so this method is inherited, not explicitly defined. There is no separate Scala def to reference. The comment above it says "Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)". Adding interner parameter is SPDMX-B adaptation. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-151-1777699456955/hook-151/lookup_all_with_imprecise_name--384.0.NoChangesWithoutScalaReference-NCWSRX.NoChangesWithoutScalaReference-NCWSRX.verdict.md
+Guardian: disable-all
+*/
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
@@ -401,14 +414,16 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     name_s: IImpreciseNameS<'s>,
     lookup_filter: HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
-    as_env.lookup_with_imprecise_name_inner(name_s, lookup_filter, get_only_nearest)
+    as_env.lookup_with_imprecise_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
   /* Guardian: disable-all */
 }
@@ -597,12 +612,22 @@ pub fn entry_matches_filter<'s, 't>(
   }
 */
 // mig: fn entry_to_templata
+// Rust adaptation (SPDMX-B): interner threaded because FunctionTemplataT.outer_env
+// needs a &'t IEnvironmentT, which requires arena-allocation of the defining_env value.
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
   entry: IEnvEntryT<'s, 't>,
-) -> ITemplataT<'s, 't> {
+  interner: &TypingInterner<'s, 't>,
+) -> ITemplataT<'s, 't>
+where 's: 't,
+{
   match entry {
-    IEnvEntryT::Function(_) => panic!("Unimplemented: entry_to_templata Function"),
+    IEnvEntryT::Function(func) => {
+        ITemplataT::Function(interner.alloc(FunctionTemplataT {
+            outer_env: interner.alloc(defining_env),
+            function: func,
+        }))
+    }
     IEnvEntryT::Struct(_) => panic!("Unimplemented: entry_to_templata Struct"),
     IEnvEntryT::Interface(_) => panic!("Unimplemented: entry_to_templata Interface"),
     IEnvEntryT::Impl(_) => panic!("Unimplemented: entry_to_templata Impl"),
@@ -1043,15 +1068,17 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let a1 = self.imprecise_to_entries.get(&name).copied().unwrap_or(&[]);
     let a2: Vec<_> = a1.iter().filter(|e| entry_matches_filter(e, lookup_filter)).collect();
-    let a3: Vec<ITemplataT<'s, 't>> = a2.iter().map(|e| entry_to_templata(defining_env, **e)).collect();
+    let a3: Vec<ITemplataT<'s, 't>> = a2.iter().map(|e| entry_to_templata(defining_env, **e, interner)).collect();
     a3
   }
   /*
@@ -1169,13 +1196,14 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let mut result: Vec<ITemplataT<'s, 't>> = Vec::new();
     result.extend(self.global_env.builtins.lookup_with_imprecise_name_inner(
-      IEnvironmentT::Package(self), name, lookup_filter));
+      IEnvironmentT::Package(self), name, lookup_filter, interner));
     for global_namespace in self.global_namespaces {
       result.extend(global_namespace.lookup_with_imprecise_name_inner(
-        IEnvironmentT::Package(self), name, lookup_filter));
+        IEnvironmentT::Package(self), name, lookup_filter, interner));
     }
     result
   }
@@ -1328,11 +1356,13 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
   }
@@ -1476,11 +1506,13 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
   }
@@ -1578,11 +1610,13 @@ impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> ExternEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
   }
@@ -1692,11 +1726,13 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_imprecise_name_inner
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_with_imprecise_name_inner(
     &'t self,
     name: IImpreciseNameS<'s>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     panic!("Unimplemented: lookup_with_imprecise_name_inner");
   }

@@ -476,7 +476,10 @@ where 's: 't,
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
     ) -> IResolveFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let FunctionTemplataT { outer_env: env, function } = function_templata;
+        self.evaluate_generic_light_function_from_call_for_prototype2(
+            env, coutputs, calling_env, call_range, call_location, function, explicit_template_args,
+            context_region, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>())
     }
 /*
   def evaluateGenericLightFunctionFromCallForPrototype(
