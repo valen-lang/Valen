@@ -446,26 +446,66 @@ class Lexer(interner: Interner, keywords: Keywords) {
 
     iter.consumeCommentsAndWhitespace()
 
-    if (!iter.trySkip('{')) {
-      return Err(BadStructContentsBegin(iter.getPos()))
-    }
-    val membersBegin = iter.getPos()
-
-    iter.consumeCommentsAndWhitespace()
-
     val membersAcc = new Accumulator[ScrambleLE]()
+    val methodsAcc = new Accumulator[FunctionL]()
 
-    val contents =
-      lexScramble(iter, false, false, false) match {
-        case Err(e) => return Err(e)
-        case Ok(x) => x
+    val contentsRange =
+      if (iter.peek() == ';') {
+        val r = RangeL(iter.getPos(), iter.getPos())
+        if (!iter.trySkip(';')) vwat()
+        iter.consumeCommentsAndWhitespace()
+        r
+      } else if (iter.trySkip('{')) {
+        iter.consumeCommentsAndWhitespace()
+        val contentsBegin = iter.getPos()
+        var keepGoing = true
+        while (keepGoing) {
+          if (iter.atEnd() || iter.peek() == '}') {
+            keepGoing = false
+          } else {
+            val memberBegin = iter.getPos()
+
+            // Trial-lex on a clone: if it parses as a function, commit; otherwise fall back to a
+            // scramble member declaration ending in `;`. This is how `extern struct Vec<T> {
+            // extern func with_capacity(c i64) Vec<T>; }` parses without the lexer rejecting
+            // `extern func` inside a struct body.
+            val funcTrialIter = iter.clone()
+            val trialAttributes =
+              lexAttributes(funcTrialIter) match {
+                case Err(e) => return Err(e)
+                case Ok(a) => a
+              }
+            lexFunction(funcTrialIter, memberBegin, trialAttributes) match {
+              case Err(e) => return Err(e)
+              case Ok(Some(func)) => {
+                iter.position = funcTrialIter.position
+                iter.consumeCommentsAndWhitespace()
+                methodsAcc.add(func)
+              }
+              case Ok(None) => {
+                membersAcc.add(
+                  lexScramble(iter, false, false, true) match {
+                    case Err(e) => return Err(e)
+                    case Ok(x) => x
+                  })
+                iter.consumeCommentsAndWhitespace()
+                if (!iter.trySkip(';')) {
+                  return Err(BadStructContentsEnd(iter.getPos()))
+                }
+                iter.consumeCommentsAndWhitespace()
+              }
+            }
+          }
+        }
+        val contentsEnd = iter.getPos()
+        if (!iter.trySkip('}')) {
+          return Err(BadStructContentsEnd(iter.getPos()))
+        }
+        iter.consumeCommentsAndWhitespace()
+        RangeL(contentsBegin, contentsEnd)
+      } else {
+        return Err(BadStructContentsBegin(iter.getPos()))
       }
-
-    if (!iter.trySkip('}')) {
-      return Err(BadStructContentsEnd(iter.getPos()))
-    }
-
-    iter.consumeCommentsAndWhitespace()
 
     val end = iter.getPos()
 
@@ -477,7 +517,9 @@ class Lexer(interner: Interner, keywords: Keywords) {
         maybeMutability,
         maybeGenericArgs,
         maybeRules,
-        contents)
+        contentsRange,
+        membersAcc.buildArray(),
+        methodsAcc.buildArray())
     Ok(Some(struct))
   }
 

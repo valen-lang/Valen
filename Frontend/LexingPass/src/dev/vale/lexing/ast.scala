@@ -62,7 +62,9 @@ case class StructL(
   mutability: Option[ScrambleLE],
   identifyingRunes: Option[AngledLE],
   templateRules: Option[ScrambleLE],
-  members: ScrambleLE) { override def equals(obj: Any): Boolean = vcurious();
+  contentsRange: RangeL,
+  members: Vector[ScrambleLE],
+  methods: Vector[FunctionL]) { override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious() }
 
 case class InterfaceL(
