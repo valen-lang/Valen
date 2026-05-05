@@ -113,6 +113,7 @@ sealed trait KindIT[+R <: IRegionsModeI] {
   // We can always get the mutability for a struct from the coutputs.
 
   def isPrimitive: Boolean
+//  def isRustKind(): Boolean
 
   def expectCitizen(): ICitizenIT[R] = {
     this match {
@@ -145,27 +146,33 @@ case class NeverIT[+R <: IRegionsModeI](
   fromBreak: Boolean
 ) extends KindIT[R] {
   override def isPrimitive: Boolean = true
+//  override def isRustKind(): Boolean = false
 }
 
 // Mostly for interoperability with extern functions
 case class VoidIT[+R <: IRegionsModeI]() extends KindIT[R] {
   override def isPrimitive: Boolean = true
+//  override def isRustKind(): Boolean = false
 }
 
 case class IntIT[+R <: IRegionsModeI](bits: Int) extends KindIT[R] {
   override def isPrimitive: Boolean = true
+//  override def isRustKind(): Boolean = false
 }
 
 case class BoolIT[+R <: IRegionsModeI]() extends KindIT[R] {
   override def isPrimitive: Boolean = true
+//  override def isRustKind(): Boolean = false
 }
 
 case class StrIT[+R <: IRegionsModeI]() extends KindIT[R] {
   override def isPrimitive: Boolean = false
+//  override def isRustKind(): Boolean = false
 }
 
 case class FloatIT[+R <: IRegionsModeI]() extends KindIT[R] {
   override def isPrimitive: Boolean = true
+//  override def isRustKind(): Boolean = false
 }
 
 object contentsStaticSizedArrayIT {
@@ -181,6 +188,7 @@ case class StaticSizedArrayIT[+R <: IRegionsModeI](
 ) extends KindIT[R] {
   vassert(name.initSteps.isEmpty)
   override def isPrimitive: Boolean = false
+//  override def isRustKind(): Boolean = false
   def mutability: MutabilityI = name.localName.arr.mutability
   def elementType = name.localName.arr.elementType
   def size = name.localName.size
@@ -198,6 +206,7 @@ case class RuntimeSizedArrayIT[+R <: IRegionsModeI](
   name: IdI[R, RuntimeSizedArrayNameI[R]]
 ) extends KindIT[R] {
   override def isPrimitive: Boolean = false
+//  override def isRustKind(): Boolean = false
   def mutability = name.localName.arr.mutability
   def elementType = name.localName.arr.elementType
 
@@ -225,6 +234,7 @@ sealed trait ICitizenIT[+R <: IRegionsModeI] extends ISubKindIT[R] {
 // These should only be made by StructCompiler, which puts the definition and bounds into coutputs at the same time
 case class StructIT[+R <: IRegionsModeI](id: IdI[R, IStructNameI[R]]) extends ICitizenIT[R] {
   override def isPrimitive: Boolean = false
+//  override def isRustKind(): Boolean = id.packageCoord.module.str == "rust"
   (id.initSteps.lastOption, id.localName) match {
     case (Some(StructTemplateNameI(_)), StructNameI(_, _)) => vfail()
     case _ =>
@@ -233,6 +243,7 @@ case class StructIT[+R <: IRegionsModeI](id: IdI[R, IStructNameI[R]]) extends IC
 
 case class InterfaceIT[+R <: IRegionsModeI](id: IdI[R, IInterfaceNameI[R]]) extends ICitizenIT[R] {
   override def isPrimitive: Boolean = false
+//  override def isRustKind(): Boolean = false
   (id.initSteps.lastOption, id.localName) match {
     case (Some(InterfaceTemplateNameI(_)), InterfaceNameI(_, _)) => vfail()
     case _ =>

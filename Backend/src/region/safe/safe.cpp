@@ -907,8 +907,7 @@ void Safe::declareStruct(
   kindStructs.declareStruct(structM->kind, Weakability::WEAKABLE);
 }
 
-void Safe::defineStruct(
-    StructDefinition* structM) {
+void Safe::defineStruct(StructDefinition* structM) {
   std::vector<LLVMTypeRef> innerStructMemberTypesL;
   for (int i = 0; i < structM->members.size(); i++) {
     innerStructMemberTypesL.push_back(
@@ -1910,4 +1909,11 @@ LiveRef Safe::immutabilify(
     return wrapToLiveRef(
         checkerAFL, functionState, builder, regionInstanceRef, targetRefMT, transmutedRefLE);
   }
+}
+
+void Safe::declareOpaque(Opaque* opaque) {
+  { assert(false); throw 1337; } // impl
+}
+void Safe::defineOpaque(Opaque* opaque, int size, int alignment) {
+  { assert(false); throw 1337; } // impl
 }

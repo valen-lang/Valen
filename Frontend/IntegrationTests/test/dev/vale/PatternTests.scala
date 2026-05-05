@@ -73,7 +73,11 @@ class PatternTests extends FunSuite with Matchers {
     val monouts = compile.getMonouts()
     val tupDef = monouts.lookupStruct("Tup2")
     val tupDefMemberTypes =
-      tupDef.members.collect({ case StructMemberI(_, _, tyype) => tyype.reference })
+      tupDef.members.collect({
+        case StructMemberI(_, _, AddressMemberTypeI(tyype)) => tyype
+        case StructMemberI(_, _, ReferenceMemberTypeI(tyype)) => tyype
+//        case StructMemberI(_, _, OpaqueMemberTypeI()) => vwat()
+      })
     tupDefMemberTypes match {
       case Vector(
         CoordI(MutableShareI,IntIT(32)),

@@ -12,8 +12,9 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   def packageCoordToExportNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]] = inner.packageCoordToExportNameToFunction
   def packageCoordToExportNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]] = inner.packageCoordToExportNameToKind
-  def packageCoordToExternNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]] = inner.packageCoordToExternNameToFunction
-  def packageCoordToExternNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]] = inner.packageCoordToExternNameToKind
+  def packageCoordToPrototypeToExtern: Map[PackageCoordinate, Map[PrototypeH, HamutsFunctionExtern]] = inner.packageCoordToPrototypeToExtern
+  def packageCoordToKindToExtern: Map[PackageCoordinate, Map[OpaqueHT, HamutsKindExtern]] = inner.packageCoordToKindToExtern
+  def structTToOpaqueH: Map[StructIT[cI], OpaqueHT] = inner.structTToOpaqueH
   def structTToStructH: Map[StructIT[cI], StructHT] = inner.structTToStructH
   def structTToStructDefH: Map[StructIT[cI], StructDefinitionH] = inner.structTToStructDefH
   def structDefs: Vector[StructDefinitionH] = inner.structDefs
@@ -30,6 +31,10 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
   def addStructOriginatingFromTypingPass(structIT: StructIT[cI], structDefH: StructDefinitionH): Unit = {
     inner = inner.addStructOriginatingFromTypingPass(structIT, structDefH)
+  }
+
+  def addOpaque(structIT: StructIT[cI], opaqueH: OpaqueHT): Unit = {
+    inner = inner.addOpaque(structIT, opaqueH)
   }
 
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Unit = {
@@ -72,8 +77,12 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
     inner = inner.addFunctionExport(prototype, packageCoordinate, exportedName)
   }
 
-  def addFunctionExtern(prototype: PrototypeH, exportedName: StrI): Unit = {
-    inner = inner.addFunctionExtern(prototype, exportedName)
+  def addKindExtern(opaqueH: OpaqueHT, simpleId: SimpleId, exportedName: String): Unit = {
+    inner = inner.addKindExtern(opaqueH, simpleId, exportedName)
+  }
+
+  def addFunctionExtern(prototype: PrototypeH, simpleId: SimpleId, exportedName: String): Unit = {
+    inner = inner.addFunctionExtern(prototype, simpleId, exportedName)
   }
 
 //  def getNameId(readableName: String, packageCoordinate: PackageCoordinate, parts: Vector[IVonData]): Int = {
@@ -92,6 +101,7 @@ override def hashCode(): Int = vfail() // Shouldnt hash, is mutable
 
 case class Hamuts(
     humanNameToFullNameToId: Map[String, Map[String, Int]],
+    structTToOpaqueH: Map[StructIT[cI], OpaqueHT],
     structTToStructH: Map[StructIT[cI], StructHT],
     structTToStructDefH: Map[StructIT[cI], StructDefinitionH],
     structDefs: Vector[StructDefinitionH],
@@ -103,10 +113,9 @@ case class Hamuts(
     functionDefs: Map[PrototypeI[cI], FunctionH],
     packageCoordToExportNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]],
     packageCoordToExportNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]],
-    packageCoordToExternNameToFunction: Map[PackageCoordinate, Map[StrI, PrototypeH]],
-    packageCoordToExternNameToKind: Map[PackageCoordinate, Map[StrI, KindHT]]) {
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
+    packageCoordToPrototypeToExtern: Map[PackageCoordinate, Map[PrototypeH, HamutsFunctionExtern]],
+    packageCoordToKindToExtern: Map[PackageCoordinate, Map[OpaqueHT, HamutsKindExtern]]) {
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
 
   vassert(functionDefs.values.map(_.id).toVector.distinct.size == functionDefs.values.size)
   vassert(structDefs.map(_.id).distinct.size == structDefs.size)
@@ -115,6 +124,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
   def forwardDeclareStruct(structIT: StructIT[cI], structRefH: StructHT): Hamuts = {
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH + (structIT -> structRefH),
       structTToStructDefH,
       structDefs,
@@ -126,8 +136,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addStructOriginatingFromTypingPass(structTT: StructIT[cI], structDefH: StructDefinitionH): Hamuts = {
@@ -144,6 +154,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
     //   case None => {
         Hamuts(
           humanNameToFullNameToId,
+          structTToOpaqueH,
           structTToStructH,
           structTToStructDefH + (structTT -> structDefH),
           structDefs :+ structDefH,
@@ -155,10 +166,30 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
           functionDefs,
           packageCoordToExportNameToFunction,
           packageCoordToExportNameToKind,
-          packageCoordToExternNameToFunction,
-          packageCoordToExternNameToKind)
+          packageCoordToPrototypeToExtern,
+          packageCoordToKindToExtern)
       // }
     // }
+  }
+
+  def addOpaque(structIT: StructIT[cI], opaqueH: OpaqueHT): Hamuts = {
+    vassert(!structTToOpaqueH.contains(structIT)) // I think we only do this function once and use the cached thing
+    Hamuts(
+      humanNameToFullNameToId,
+      structTToOpaqueH + (structIT -> opaqueH),
+      structTToStructH,
+      structTToStructDefH,
+      structDefs,
+      staticSizedArrays,
+      runtimeSizedArrays,
+      interfaceTToInterfaceH,
+      interfaceTToInterfaceDefH,
+      functionRefs,
+      functionDefs,
+      packageCoordToExportNameToFunction,
+      packageCoordToExportNameToKind,
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addStructOriginatingFromHammer(structDefH: StructDefinitionH): Hamuts = {
@@ -166,6 +197,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs :+ structDefH,
@@ -177,13 +209,14 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def forwardDeclareInterface(interfaceIT: InterfaceIT[cI], interfaceRefH: InterfaceHT): Hamuts = {
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -195,14 +228,15 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addInterface(interfaceIT: InterfaceIT[cI], interfaceDefH: InterfaceDefinitionH): Hamuts = {
     vassert(interfaceTToInterfaceH.contains(interfaceIT))
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -214,8 +248,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def forwardDeclareFunction(functionRef2: PrototypeI[cI], functionRefH: FunctionRefH): Hamuts = {
@@ -223,6 +257,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -234,8 +269,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addFunction(functionRef2: PrototypeI[cI], functionDefH: FunctionH): Hamuts = {
@@ -249,6 +284,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -260,8 +296,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs + (functionRef2 -> functionDefH),
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addKindExport(kind: KindHT, packageCoordinate: PackageCoordinate, exportedName: StrI): Hamuts = {
@@ -284,6 +320,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -295,8 +332,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       newPackageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addFunctionExport(function: PrototypeH, packageCoordinate: PackageCoordinate, exportedName: StrI): Hamuts = {
@@ -319,6 +356,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -330,56 +368,21 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       newPackageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
-//  def addKindExtern(kind: KindHT, packageCoordinate: PackageCoordinate, exportedName: StrI): Hamuts = {
-//    val newPackageCoordToExternNameToKind =
-//      packageCoordToExternNameToKind.get(packageCoordinate) match {
-//        case None => {
-//          packageCoordToExternNameToKind + (packageCoordinate -> Map(exportedName -> kind))
-//        }
-//        case Some(exportNameToFullName) => {
-//          exportNameToFullName.get(exportedName) match {
-//            case None => {
-//              packageCoordToExternNameToKind + (packageCoordinate -> (exportNameToFullName + (exportedName -> kind)))
-//            }
-//            case Some(existingFullName) => {
-//              vfail("Already exported a `" + exportedName + "` from package `" + packageCoordinate + " : " + existingFullName)
-//            }
-//          }
-//        }
-//      }
-//
-//    Hamuts(
-//      humanNameToFullNameToId,
-//      structTToStructH,
-//      structTToStructDefH,
-//      structDefs,
-//      staticSizedArrays,
-//      runtimeSizedArrays,
-//      interfaceTToInterfaceH,
-//      interfaceTToInterfaceDefH,
-//      functionRefs,
-//      functionDefs,
-//      packageCoordToExportNameToFunction,
-//      packageCoordToExportNameToKind,
-//      packageCoordToExternNameToFunction,
-//      newPackageCoordToExternNameToKind)
-//  }
-
-  def addFunctionExtern(function: PrototypeH, exportedName: StrI): Hamuts = {
-    val packageCoordinate = function.id.packageCoordinate
-    val newPackageCoordToExternNameToFunction =
-      packageCoordToExternNameToFunction.get(packageCoordinate) match {
+  def addKindExtern(opaqueH: OpaqueHT, simpleId: SimpleId, exportedName: String): Hamuts = {
+    val packageCoordinate = opaqueH.packageCoord
+    val newPackageCoordToKindToExtern: Map[PackageCoordinate, Map[OpaqueHT, HamutsKindExtern]] =
+      packageCoordToKindToExtern.get(packageCoordinate) match {
         case None => {
-          packageCoordToExternNameToFunction + (packageCoordinate -> Map(exportedName -> function))
+          packageCoordToKindToExtern + (packageCoordinate -> Map(opaqueH -> HamutsKindExtern(exportedName, opaqueH, simpleId)))
         }
         case Some(exportNameToFullName) => {
-          exportNameToFullName.get(exportedName) match {
+          exportNameToFullName.get(opaqueH) match {
             case None => {
-              packageCoordToExternNameToFunction + (packageCoordinate -> (exportNameToFullName + (exportedName -> function)))
+              packageCoordToKindToExtern + (packageCoordinate -> (exportNameToFullName + (opaqueH -> HamutsKindExtern(exportedName, opaqueH, simpleId))))
             }
             case Some(existingFullName) => {
               vfail("Already exported a `" + exportedName + "` from package `" + packageCoordinate + " : " + existingFullName)
@@ -390,6 +393,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -401,8 +405,45 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      newPackageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      newPackageCoordToKindToExtern)
+  }
+
+  def addFunctionExtern(function: PrototypeH, simpleId: SimpleId, exportedName: String): Hamuts = {
+    val packageCoordinate = function.id.packageCoordinate
+    val newPackageCoordToPrototypeToExtern =
+      packageCoordToPrototypeToExtern.get(packageCoordinate) match {
+        case None => {
+          packageCoordToPrototypeToExtern + (packageCoordinate -> Map(function -> HamutsFunctionExtern(exportedName, function, simpleId)))
+        }
+        case Some(prototypeToExtern) => {
+          prototypeToExtern.get(function) match {
+            case None => {
+              packageCoordToPrototypeToExtern + (packageCoordinate -> (prototypeToExtern + (function -> HamutsFunctionExtern(exportedName, function, simpleId))))
+            }
+            case Some(existingFullName) => {
+              vfail("Already exported a `" + exportedName + "` from package `" + packageCoordinate + " : " + existingFullName)
+            }
+          }
+        }
+      }
+
+    Hamuts(
+      humanNameToFullNameToId,
+      structTToOpaqueH,
+      structTToStructH,
+      structTToStructDefH,
+      structDefs,
+      staticSizedArrays,
+      runtimeSizedArrays,
+      interfaceTToInterfaceH,
+      interfaceTToInterfaceDefH,
+      functionRefs,
+      functionDefs,
+      packageCoordToExportNameToFunction,
+      packageCoordToExportNameToKind,
+      newPackageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addStaticSizedArray(
@@ -411,6 +452,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
   ): Hamuts = {
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -422,8 +464,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
   def addRuntimeSizedArray(
@@ -432,6 +474,7 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
   ): Hamuts = {
     Hamuts(
       humanNameToFullNameToId,
+      structTToOpaqueH,
       structTToStructH,
       structTToStructDefH,
       structDefs,
@@ -443,8 +486,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
       functionDefs,
       packageCoordToExportNameToFunction,
       packageCoordToExportNameToKind,
-      packageCoordToExternNameToFunction,
-      packageCoordToExternNameToKind)
+      packageCoordToPrototypeToExtern,
+      packageCoordToKindToExtern)
   }
 
 //  // This returns a unique ID for that specific human name.
@@ -478,8 +521,8 @@ override def hashCode(): Int = vfail() // Would need a really good reason to has
 //        functionDefs,
 //        packageCoordToExportNameToFunction,
 //        packageCoordToExportNameToKind,
-//        packageCoordToExternNameToFunction,
-//        packageCoordToExternNameToKind)
+//        packageCoordToPrototypeToExtern,
+//        packageCoordToKindToExtern)
 //    (newHamuts, id)
 //  }
 

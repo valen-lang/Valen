@@ -131,6 +131,7 @@ object RegionCollapserConsistent {
         collapseFunctionName(map, n.asInstanceOf[IFunctionNameI[sI]])
       }
       case n @ LambdaCallFunctionNameI(_, _, _) => collapseFunctionName(map, n)
+      case s @ StructNameI(_, _) => collapseStructName(map, s)
       case other => vimpl(other)
     }
   }

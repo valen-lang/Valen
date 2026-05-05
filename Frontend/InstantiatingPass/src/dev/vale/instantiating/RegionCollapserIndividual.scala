@@ -51,11 +51,11 @@ object RegionCollapserIndividual {
       }
       case n @ ExternFunctionNameI(humanName, templateArgs, parameters) => {
         val map = RegionCounter.countFunctionName(n)
-        val templateArgsC = templateArgs.map(collapseTemplata(map, _))
         val paramsC =
           parameters.map(param => {
             collapseCoord(param)
           })
+        val templateArgsC = templateArgs.map(collapseTemplata(map, _))
         ExternFunctionNameI[cI](humanName, templateArgsC, paramsC)
       }
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramsTT), templateArgs, parameters) => {
@@ -123,6 +123,7 @@ object RegionCollapserIndividual {
     name: IVarNameI[sI]):
   IVarNameI[cI] = {
     name match {
+//      case OpaqueMemberNameI() => OpaqueMemberNameI()
       case TypingPassBlockResultVarNameI(life) => TypingPassBlockResultVarNameI(life)
       case CodeVarNameI(name) => CodeVarNameI(name)
       case TypingPassTemporaryVarNameI(life) => TypingPassTemporaryVarNameI(life)
@@ -152,6 +153,9 @@ object RegionCollapserIndividual {
       case n : IFunctionNameI[_] => collapseFunctionName(n.asInstanceOf[IFunctionNameI[sI]])
       case x : IFunctionTemplateNameI[_] => collapseFunctionTemplateName(x.asInstanceOf[IFunctionTemplateNameI[sI]])
       case StructTemplateNameI(humanName) => StructTemplateNameI(humanName)
+      case s @ StructNameI(_,_) => {
+        collapseStructName(s)
+      }
       case x @ LambdaCitizenNameI(_) => collapseStructName(x)
       case LambdaCitizenTemplateNameI(codeLocation) => LambdaCitizenTemplateNameI(codeLocation)
       case n @ LambdaCallFunctionNameI(LambdaCallFunctionTemplateNameI(codeLocation, paramTypes), templateArgs, parameters) => collapseFunctionName(n)

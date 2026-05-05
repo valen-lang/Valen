@@ -82,8 +82,16 @@ class VivemTests extends FunSuite with Matchers {
             ArgumentH(CoordH(MutableShareH,InlineH,IntHT.i32), 1))))
 
     val packages = new PackageCoordinateMap[PackageH]()
-    packages.put(PackageCoordinate.BUILTIN(interner, keywords), PackageH(Vector.empty, Vector.empty, Vector(addExtern), Vector.empty, Vector.empty, Map(), Map(), Map(interner.intern(StrI("__vbi_addI32")) -> addPrototype), Map()))
-    packages.put(PackageCoordinate.TEST_TLD(interner, keywords), PackageH(Vector.empty, Vector.empty, Vector(main), Vector.empty, Vector.empty, Map(interner.intern(StrI("main")) -> main.prototype), Map(), Map(), Map()))
+    packages.put(
+      PackageCoordinate.BUILTIN(interner, keywords),
+      PackageH(
+        Vector.empty, Vector.empty, Vector(addExtern), Vector.empty, Vector.empty, Map(), Map(),
+        Map(addPrototype -> HamutsFunctionExtern("__vbi_addI32", addPrototype, SimpleId(Vector(SimpleIdStep("", Vector()), SimpleIdStep("__vbi_addI32", Vector()))))), Map()))
+    packages.put(
+      PackageCoordinate.TEST_TLD(interner, keywords),
+      PackageH(
+        Vector.empty, Vector.empty, Vector(main), Vector.empty, Vector.empty,
+        Map(interner.intern(StrI("main")) -> main.prototype), Map(), Map(), Map()))
     val programH = ProgramH(packages)
 
     val result =

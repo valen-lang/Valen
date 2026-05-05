@@ -612,4 +612,17 @@ LLVMValueRef decompressI56PtrToI64(
     GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI56LE);
 LLVMValueRef decompressI52PtrToI64(GlobalState* globalState, FunctionState* functionState, LLVMBuilderRef builder, LLVMValueRef ptrI52LE);
 
+// DO NOT SUBMIT we brought this in but it really should remain private
+void innerDeallocateYonder(
+    AreaAndFileAndLine from,
+    GlobalState* globalState,
+    FunctionState* functionState,
+    KindStructs* kindStructsSource,
+    LLVMBuilderRef builder,
+    Reference* refMT,
+    LiveRef liveRef);
+
+
+int alignSize(int size, int alignment);
+
 #endif

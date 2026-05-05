@@ -215,7 +215,8 @@ void exportFunction(GlobalState* globalState, Package* package, Function* functi
 RawFuncPtrLE declareExternFunction(
     GlobalState* globalState,
     Package* package,
-    Prototype* prototypeM) {
+    Prototype* prototypeM,
+    const std::string& mangledName) {
   LLVMTypeRef externReturnLT = translateExternReturnType(globalState, prototypeM->returnType);
 
   bool usingReturnOutParam = typeNeedsPointerParameter(globalState, prototypeM->returnType);
@@ -243,14 +244,14 @@ RawFuncPtrLE declareExternFunction(
     }
   }
 
-  auto userFuncNameL = package->getFunctionExternName(prototypeM);
-  auto abiFuncNameL = std::string("vale_abi_") + userFuncNameL;
+  auto abiFuncNameL = std::string("vale_abi_") + prototypeM->name->packageCoord->projectName + "_" + mangledName;
 
   RawFuncPtrLE functionL =
       addRawFunction(globalState->mod, abiFuncNameL.c_str(), externReturnLT, externParamTypesL);
+  LLVMSetFunctionCallConv(functionL.ptrLE, LLVMCCallConv);
 
-  assert(globalState->externFunctions.count(prototypeM->name->name) == 0);
-  globalState->externFunctions.emplace(prototypeM->name->name, functionL);
+  assert(globalState->externFunctions.count(prototypeM) == 0);
+  globalState->externFunctions.emplace(prototypeM, functionL);
 
   return functionL;
 }

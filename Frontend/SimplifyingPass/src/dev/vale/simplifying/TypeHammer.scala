@@ -1,7 +1,7 @@
 package dev.vale.simplifying
 
 import dev.vale.finalast.{BoolHT, CoordH, FloatHT, InlineH, IntHT, KindHT, NeverHT, PrototypeH, RuntimeSizedArrayDefinitionHT, RuntimeSizedArrayHT, StaticSizedArrayDefinitionHT, StaticSizedArrayHT, StrHT, VoidHT, YonderH}
-import dev.vale.{Interner, Keywords, vassert, vfail, vimpl, vregionmut, vwat, finalast => m}
+import dev.vale.{Interner, Keywords, PackageCoordinate, StrI, vassert, vfail, vimpl, vregionmut, vwat, finalast => m}
 import dev.vale.finalast._
 import dev.vale.instantiating.ast._
 
@@ -19,7 +19,13 @@ class TypeHammer(
       case FloatIT() => FloatHT()
       case StrIT() => StrHT()
       case VoidIT() => VoidHT()
-      case s @ StructIT(_) => structHammer.translateStructI(hinputs, hamuts, s)
+      case s @ StructIT(id) => {
+        if (hinputs.kindExterns.contains(s)) {
+          structHammer.translateOpaqueI(hinputs, hamuts, s)
+        } else {
+          structHammer.translateStructI(hinputs, hamuts, s)
+        }
+      }
 
       case i @ InterfaceIT(_) => structHammer.translateInterface(hinputs, hamuts, i)
 
@@ -59,10 +65,9 @@ class TypeHammer(
         case (OwnI, _) => YonderH
         case (ImmutableBorrowI | MutableBorrowI, _) => YonderH
         case (WeakI, _) => YonderH
-//        case (ImmutableShareI | MutableShareI, OverloadSetI(_, _)) => InlineH
-//        case (ShareI, PackIT(_, _)) => InlineH
-//        case (ShareI, TupleIT(_, _)) => InlineH
-//        case (ShareI, StructIT(FullNameI(_, Vector(), CitizenNameI(CitizenTemplateNameI("Tup"), _)))) => InlineH
+        case (_, kind @ StructIT(_)) if hinputs.kindExterns.contains(kind) => {
+          InlineH
+        }
         case (ImmutableShareI | MutableShareI, VoidIT() | IntIT(_) | BoolIT() | FloatIT() | NeverIT(_)) => InlineH
         case (ImmutableShareI | MutableShareI, StrIT()) => YonderH
         case (ImmutableShareI | MutableShareI, _) => YonderH

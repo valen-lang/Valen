@@ -33,9 +33,10 @@ case class HinputsI(
 
   kindExports: Vector[KindExportI],
   functionExports: Vector[FunctionExportI],
-//  kindExterns: Vector[KindExternI],
+  kindExterns: Map[StructIT[cI], KindExternI],
   functionExterns: Vector[FunctionExternI],
 ) {
+  override def toString: String = "HinputsI#()"
 
   private val subCitizenToInterfaceToEdgeMutable = mutable.HashMap[IdI[cI, ICitizenNameI[cI]], mutable.HashMap[IdI[cI, IInterfaceNameI[cI]], EdgeI]]()
   interfaceToSubCitizenToEdge.foreach({ case (interface, subCitizenToEdge) =>

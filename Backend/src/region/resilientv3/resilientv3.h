@@ -180,14 +180,16 @@ public:
   LLVMTypeRef translateType(Reference* referenceM) override;
 
 
+  void declareOpaque(Opaque* opaque) override;
+  void defineOpaque(Opaque* opaque, int size, int alignment) override;
+
   void declareEdge(
       Edge* edge) override;
 
   void defineEdge(
       Edge* edge) override;
 
-  void defineStruct(
-      StructDefinition* structM) override;
+  void defineStruct(StructDefinition* structM) override;
 
   void declareStruct(
       StructDefinition* structM) override;

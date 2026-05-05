@@ -49,17 +49,14 @@ override def hashCode(): Int = vcurious()
 //
 //}
 
-case class FunctionExternI(
-//  range: RangeS,
-  prototype: PrototypeI[cI],
-//  packageCoordinate: PackageCoordinate,
-  externName: StrI
-)  {
+case class FunctionExternI(prototype: PrototypeI[cI]) {
   vpass()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
+}
 
-  override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
-
+case class KindExternI(struct: StructIT[cI]) {
+  vpass()
+  override def equals(obj: Any): Boolean = vcurious(); override def hashCode(): Int = vcurious()
 }
 
 case class InterfaceEdgeBlueprintI(
