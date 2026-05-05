@@ -632,6 +632,6 @@ class PatternCompiler(
       containerAlias: ReferenceExpressionTE,
       index: Int): StaticSizedArrayLookupTE = {
     arrayCompiler.lookupInStaticSizedArray(
-      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT()), staticSizedArrayT)
+      range, containerAlias, ConstantIntTE(IntegerTemplataT(index), 32, RegionT(DefaultRegionT)), staticSizedArrayT)
   }
 }

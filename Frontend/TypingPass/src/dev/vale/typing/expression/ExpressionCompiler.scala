@@ -200,7 +200,7 @@ class ExpressionCompiler(
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val name2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
         val borrowExpr =
           localHelper.borrowSoftLoad(
@@ -234,7 +234,7 @@ class ExpressionCompiler(
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val borrowExpr =
           localHelper.borrowSoftLoad(
             coutputs,
@@ -286,7 +286,7 @@ class ExpressionCompiler(
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefRef = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefRef = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closureParamVarName2 = interner.intern(ClosureParamNameT(closuredVarsStructTemplateName.codeLocation))
 
         val borrowExpr =
@@ -319,7 +319,7 @@ class ExpressionCompiler(
             case MutabilityTemplataT(ImmutableT) => ShareT
             case PlaceholderTemplataT(idT, MutabilityTemplataType()) => vimpl()
           }
-        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(), closuredVarsStructRef)
+        val closuredVarsStructRefCoord = CoordT(ownership, RegionT(DefaultRegionT), closuredVarsStructRef)
         val closuredVarsStructDef = coutputs.lookupStruct(closuredVarsStructRef.id)
 
         vassert(closuredVarsStructDef.members.map(_.name).contains(varName))
@@ -533,7 +533,7 @@ class ExpressionCompiler(
               range :: parentRanges,
               callLocation,
               region,
-              newGlobalFunctionGroupExpression(nenv.snapshot, coutputs, RegionT(), name),
+              newGlobalFunctionGroupExpression(nenv.snapshot, coutputs, RegionT(DefaultRegionT), name),
               rules.toVector,
               templateArgTemplexesS.toVector.flatMap(_.map(_.rune)),
               argsExprs2)
@@ -1032,7 +1032,7 @@ class ExpressionCompiler(
                   .addEntries(interner, Vector(ArbitraryNameT() -> TemplataEnvEntry(pt)))
               val expr =
                 newGlobalFunctionGroupExpression(
-                  tinyEnv, coutputs, RegionT(), interner.intern(ArbitraryNameS()))
+                  tinyEnv, coutputs, RegionT(DefaultRegionT), interner.intern(ArbitraryNameS()))
               (expr, Set())
             }
             case _ => {
@@ -1127,7 +1127,7 @@ class ExpressionCompiler(
                 } else if (commonAncestors.size > 1) {
                   throw CompileErrorExceptionT(RangedInternalErrorT(range :: parentRanges, s"More than one common ancestor of two branches of if:\n${a}\n${b}"))
                 } else {
-                  CoordT(ownership, RegionT(), commonAncestors.head)
+                  CoordT(ownership, RegionT(DefaultRegionT), commonAncestors.head)
                 }
               }
               case (a, b) => {
@@ -1238,7 +1238,7 @@ class ExpressionCompiler(
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
               bodyExpressionsWithResult.result.coord
             }
@@ -1259,7 +1259,7 @@ class ExpressionCompiler(
               outerCallLocation,
               region,
               newGlobalFunctionGroupExpression(
-                callEnv, coutputs, vregionmut(RegionT()), interner.intern(CodeNameS(keywords.List))),
+                callEnv, coutputs, vregionmut(RegionT(DefaultRegionT)), interner.intern(CodeNameS(keywords.List))),
               Vector(RuneParentEnvLookupSR(range, RuneUsage(range, SelfRuneS()))),
               Vector(SelfRuneS()),
               Vector())
@@ -1284,7 +1284,7 @@ class ExpressionCompiler(
                   life + 1,
                   parentRanges,
                   outerCallLocation,
-                  vregionmut(RegionT()),
+                  vregionmut(RegionT(DefaultRegionT)),
                   bodySE)
 
               // We store the iteration result in a local because the loop body will have
@@ -1303,7 +1303,7 @@ class ExpressionCompiler(
                   range :: parentRanges,
                   outerCallLocation,
                   region,
-                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(), interner.intern(CodeNameS(keywords.add))),
+                  newGlobalFunctionGroupExpression(callEnv, coutputs, RegionT(DefaultRegionT), interner.intern(CodeNameS(keywords.add))),
                   Vector(),
                   Vector(),
                   Vector(
@@ -1587,7 +1587,7 @@ class ExpressionCompiler(
         callLocation,
         interfaceTemplata,
         Vector(CoordTemplataT(containedCoord))).expect().kind
-    val ownOptCoord = CoordT(OwnT, RegionT(), optInterfaceRef)
+    val ownOptCoord = CoordT(OwnT, RegionT(DefaultRegionT), optInterfaceRef)
 
     val someConstructorTemplata =
       nenv.lookupNearestWithImpreciseName(interner.intern(CodeNameS(keywords.Some)), Set(ExpressionLookupContext)).toList match {

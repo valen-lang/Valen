@@ -209,7 +209,7 @@ case class StaticSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     val mutability = expectMutability(templateArgs(1))
     val variability = expectVariability(templateArgs(2))
     val elementType = expectCoordTemplata(templateArgs(3)).coord
-    val selfRegion = vregionmut(RegionT())
+    val selfRegion = vregionmut(RegionT(DefaultRegionT))
     interner.intern(StaticSizedArrayNameT(this, size, variability, interner.intern(RawArrayNameT(mutability, elementType, selfRegion))))
   }
 }
@@ -228,7 +228,7 @@ case class RuntimeSizedArrayTemplateNameT() extends ICitizenTemplateNameT {
     vassert(templateArgs.size == 2)
     val mutability = expectMutability(templateArgs(0))
     val elementType = expectCoordTemplata(templateArgs(1)).coord
-    val region = vregionmut(RegionT())
+    val region = vregionmut(RegionT(DefaultRegionT))
     interner.intern(RuntimeSizedArrayNameT(this, interner.intern(RawArrayNameT(mutability, elementType, region))))
   }
 }

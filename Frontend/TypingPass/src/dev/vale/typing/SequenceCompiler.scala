@@ -29,7 +29,7 @@ class SequenceCompiler(
     exprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     val types2 = exprs2.map(_.result.expectReference().coord)
-    val region = RegionT()
+    val region = RegionT(DefaultRegionT)
     val finalExpr = TupleTE(exprs2, makeTupleCoord(env, coutputs, parentRanges, callLocation, region, types2))
     (finalExpr)
   }

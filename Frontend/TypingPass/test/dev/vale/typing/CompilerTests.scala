@@ -92,7 +92,7 @@ class CompilerTests extends FunSuite with Matchers {
         |func main(a int) int { return a; }
         |""".stripMargin)
     val coutputs = compile.expectCompilerOutputs()
-    Collector.onlyOf(coutputs.lookupFunction("main"), classOf[ParameterT]).tyype == CoordT(ShareT, RegionT(), IntT.i32)
+    Collector.onlyOf(coutputs.lookupFunction("main"), classOf[ParameterT]).tyype == CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
     val lookup = Collector.onlyOf(coutputs.lookupFunction("main"), classOf[LocalLookupTE]);
     lookup.localVariable.name match { case CodeVarNameT(StrI("a")) => }
     lookup.localVariable.coord match { case CoordT(ShareT, _, IntT.i32) => }
@@ -218,7 +218,7 @@ class CompilerTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
 
     // Make sure it inferred the param type and return type correctly
-    coutputs.lookupFunction("main").header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    coutputs.lookupFunction("main").header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 
   test("Test overloads") {
@@ -226,7 +226,7 @@ class CompilerTests extends FunSuite with Matchers {
     val coutputs = compile.expectCompilerOutputs()
 
     coutputs.lookupFunction("main").header.returnType shouldEqual
-      CoordT(ShareT, RegionT(), IntT.i32)
+      CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 
   test("Test readonly UFCS") {
@@ -263,7 +263,7 @@ class CompilerTests extends FunSuite with Matchers {
       """.stripMargin)
     val coutputs = compile.expectCompilerOutputs()
 
-    coutputs.functions.collect({ case x @ functionNameT("do") => x }).head.header.returnType shouldEqual CoordT(ShareT, RegionT(), IntT.i32)
+    coutputs.functions.collect({ case x @ functionNameT("do") => x }).head.header.returnType shouldEqual CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)
   }
 
   test("Simple struct") {
@@ -487,9 +487,9 @@ class CompilerTests extends FunSuite with Matchers {
     coutputs.lookupFunction("main").header.params.head.tyype shouldEqual
         CoordT(
           BorrowT,
-          RegionT(),
+          RegionT(DefaultRegionT),
           interner.intern(
-            InterfaceTT(IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector(), interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("MyOption")))), Vector(CoordTemplataT(CoordT(ShareT, RegionT(), IntT.i32)))))))))
+            InterfaceTT(IdT(PackageCoordinate.TEST_TLD(interner, keywords), Vector(), interner.intern(InterfaceNameT(interner.intern(InterfaceTemplateNameT(interner.intern(StrI("MyOption")))), Vector(CoordTemplataT(CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32)))))))))
 
     // Can't run it because there's nothing implementing that interface >_>
   }
@@ -1189,7 +1189,7 @@ class CompilerTests extends FunSuite with Matchers {
     val funcTemplateId = IdT(testPackageCoord, Vector(), funcTemplateName)
     val funcName = IdT(testPackageCoord, Vector(), FunctionNameT(FunctionTemplateNameT(interner.intern(StrI("main")), tzCodeLoc), Vector(), Vector()))
     val regionName = funcTemplateId.addStep(interner.intern(KindPlaceholderNameT(interner.intern(KindPlaceholderTemplateNameT(0, DenizenDefaultRegionRuneS(FunctionNameS(funcTemplateName.humanName, funcTemplateName.codeLocation)))))))
-    val region = RegionT()
+    val region = RegionT(DefaultRegionT)
 
     val fireflyKind = StructTT(IdT(testPackageCoord, Vector(), StructNameT(StructTemplateNameT(StrI("Firefly")), Vector())))
     val fireflyCoord = CoordT(OwnT,region,fireflyKind)
@@ -1201,9 +1201,9 @@ class CompilerTests extends FunSuite with Matchers {
     val unrelatedCoord = CoordT(OwnT,region,unrelatedKind)
     val fireflyTemplateName = IdT(testPackageCoord, Vector(), interner.intern(FunctionTemplateNameT(interner.intern(StrI("myFunc")), tz.head.begin)))
     val fireflySignature = ast.SignatureT(IdT(testPackageCoord, Vector(), interner.intern(FunctionNameT(interner.intern(FunctionTemplateNameT(interner.intern(StrI("myFunc")), tz.head.begin)), Vector(), Vector(fireflyCoord)))))
-    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val fireflyExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val fireflyExport = KindExportT(tz.head, fireflyKind, fireflyExportId, interner.intern(StrI("Firefly")));
-    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT())))
+    val serenityExportId = IdT(testPackageCoord, Vector(), interner.intern(ExportNameT(interner.intern(ExportTemplateNameT(tz.head.begin)), RegionT(DefaultRegionT))))
     val serenityExport = KindExportT(tz.head, fireflyKind, serenityExportId, interner.intern(StrI("Serenity")));
 
     val filenamesAndSources = FileCoordinateMap.test(interner, "blah blah blah\nblah blah blah")
@@ -1365,7 +1365,7 @@ class CompilerTests extends FunSuite with Matchers {
         |""".stripMargin)
     compile.getCompilerOutputs() match {
       case Err(ArrayElementsHaveDifferentTypes(_, types)) => {
-        types shouldEqual Set(CoordT(ShareT, RegionT(), IntT.i32), CoordT(ShareT, RegionT(), BoolT()))
+        types shouldEqual Set(CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32), CoordT(ShareT, RegionT(DefaultRegionT), BoolT()))
       }
     }
   }

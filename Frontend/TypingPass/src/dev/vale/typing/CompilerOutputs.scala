@@ -156,13 +156,13 @@ case class CompilerOutputs() {
     runeToBoundImpl) = instantiationBoundArgs
 
     instantiationId match {
-      case IdT(_,Vector(),FunctionNameT(FunctionTemplateNameT(StrI("Bork"),_),Vector(CoordTemplataT(CoordT(_,RegionT(),IntT(32)))),Vector(CoordT(_,RegionT(),IntT(32))))) => {
+      case IdT(_,Vector(),FunctionNameT(FunctionTemplateNameT(StrI("Bork"),_),Vector(CoordTemplataT(CoordT(_,RegionT(DefaultRegionT),IntT(32)))),Vector(CoordT(_,RegionT(DefaultRegionT),IntT(32))))) => {
         vpass()
       }
-      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("XOpt")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(InterfaceTemplateNameT(StrI("XOpt")), FunctionTemplateNameT(StrI("harvest"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
+      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("XOpt")),Vector(CoordTemplataT(CoordT(own,RegionT(DefaultRegionT),KindPlaceholderT(IdT(_,Vector(InterfaceTemplateNameT(StrI("XOpt")), FunctionTemplateNameT(StrI("harvest"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
         vpass()
       }
-      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("IXOption")),Vector(CoordTemplataT(CoordT(own,RegionT(),KindPlaceholderT(IdT(_,Vector(FunctionTemplateNameT(StrI("drop"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
+      case IdT(_,Vector(),InterfaceNameT(InterfaceTemplateNameT(StrI("IXOption")),Vector(CoordTemplataT(CoordT(own,RegionT(DefaultRegionT),KindPlaceholderT(IdT(_,Vector(FunctionTemplateNameT(StrI("drop"),_), OverrideDispatcherTemplateNameT(IdT(_,Vector(),ImplTemplateNameT(_)))),KindPlaceholderNameT(KindPlaceholderTemplateNameT(0,DispatcherRuneFromImplS(CodeRuneS(StrI("T")))))))))))) => {
         vpass()
       }
       case _ =>
@@ -238,7 +238,7 @@ case class CompilerOutputs() {
     }
 
     instantiationId match {
-      case IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("ifunction"))),Vector(),AnonymousSubstructNameT(AnonymousSubstructTemplateNameT(InterfaceTemplateNameT(StrI("IFunction1"))),Vector(MutabilityTemplataT(MutableT), CoordTemplataT(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))), CoordTemplataT(CoordT(ShareT,RegionT(),BoolT())), CoordTemplataT(CoordT(ShareT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(FunctionNameT(FunctionTemplateNameT(StrI("parseSlice"),_),Vector(),Vector(CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("path"))),Vector(),StructNameT(StructTemplateNameT(StrI("Path")),Vector())))), CoordT(OwnT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("NotesCollector")),Vector())))), CoordT(BorrowT,RegionT(),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))))),LambdaCitizenNameT(LambdaCitizenTemplateNameT(_))))))))) => {
+      case IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("ifunction"))),Vector(),AnonymousSubstructNameT(AnonymousSubstructTemplateNameT(InterfaceTemplateNameT(StrI("IFunction1"))),Vector(MutabilityTemplataT(MutableT), CoordTemplataT(CoordT(BorrowT,RegionT(DefaultRegionT),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))), CoordTemplataT(CoordT(ShareT,RegionT(DefaultRegionT),BoolT())), CoordTemplataT(CoordT(ShareT,RegionT(DefaultRegionT),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(FunctionNameT(FunctionTemplateNameT(StrI("parseSlice"),_),Vector(),Vector(CoordT(BorrowT,RegionT(DefaultRegionT),StructTT(IdT(PackageCoordinate(StrI("stdlib"),Vector(StrI("path"))),Vector(),StructNameT(StructTemplateNameT(StrI("Path")),Vector())))), CoordT(OwnT,RegionT(DefaultRegionT),StructTT(IdT(PackageCoordinate(StrI("vmdparse"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("NotesCollector")),Vector())))), CoordT(BorrowT,RegionT(DefaultRegionT),StructTT(IdT(PackageCoordinate(StrI("parseiter"),Vector()),Vector(),StructNameT(StructTemplateNameT(StrI("ParseIter")),Vector()))))))),LambdaCitizenNameT(LambdaCitizenTemplateNameT(_))))))))) => {
 //        println(instantiationBoundArgs.runeToBoundPrototype.size)
 //        println(instantiationBoundArgs.runeToBoundImpl.size)
 //        println(instantiationBoundArgs.runeToCitizenRuneToReachablePrototype.size)

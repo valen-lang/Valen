@@ -392,7 +392,7 @@ class OverloadResolver(
                   } else {
                     // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                     functionCompiler.evaluateGenericLightFunctionFromCallForPrototype(
-                      coutputs, callRange, callLocation, callingEnv, ft, explicitlySpecifiedTemplateArgTemplatas.toVector, RegionT(), args) match {
+                      coutputs, callRange, callLocation, callingEnv, ft, explicitlySpecifiedTemplateArgTemplatas.toVector, RegionT(DefaultRegionT), args) match {
                       case (ResolveFunctionFailure(reason)) => Err(FindFunctionResolveFailure(reason))
                       case (ResolveFunctionSuccess(prototype, conclusions)) => {
                         paramsMatch(coutputs, callingEnv, callRange, callLocation, args, prototype.prototype.paramTypes, exact) match {
@@ -800,7 +800,7 @@ class OverloadResolver(
     val paramFilters =
       Vector(
         callableTE.result.underlyingCoord,
-        CoordT(ShareT, RegionT(), IntT.i32))
+        CoordT(ShareT, RegionT(DefaultRegionT), IntT.i32))
       findFunction(
         callingEnv, coutputs, range, callLocation, funcName, Vector.empty, Vector.empty, contextRegion,
         paramFilters, Vector.empty, false) match {

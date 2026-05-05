@@ -332,7 +332,7 @@ object TemplataCompiler {
                 interner.intern(RawArrayNameT(
                   expectMutability(substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, mutability)),
                   substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, elementType),
-                  RegionT()))))))))
+                  RegionT(DefaultRegionT)))))))))
       }
       case StaticSizedArrayTT(IdT(packageCoord, initSteps, StaticSizedArrayNameT(template, size, variability, RawArrayNameT(mutability, elementType, region)))) => {
         KindTemplataT(
@@ -347,7 +347,7 @@ object TemplataCompiler {
                 interner.intern(RawArrayNameT(
                   expectMutability(substituteTemplatasInTemplata(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, mutability)),
                   substituteTemplatasInCoord(coutputs, sanityCheck, interner, keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource, elementType),
-                  RegionT()))))))))
+                  RegionT(DefaultRegionT)))))))))
       }
       case p @ KindPlaceholderT(id @ IdT(_, _, KindPlaceholderNameT(KindPlaceholderTemplateNameT(index, rune)))) => {
         if (id.initId(interner) == needleTemplateName) {
@@ -1276,7 +1276,7 @@ class TemplataCompiler(
       kindOwnership: OwnershipT,
       registerWithCompilerOutputs: Boolean
   ): CoordTemplataT = {
-    val regionPlaceholderTemplata = RegionT()
+    val regionPlaceholderTemplata = RegionT(DefaultRegionT)
 
     val kindPlaceholderT =
       createKindPlaceholderInner(

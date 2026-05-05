@@ -939,9 +939,9 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -988,7 +988,7 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT()))
+                      val placeholderedExportName = interner.intern(ExportNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
                       val exportEnv =
                         ExportEnvironmentT(
@@ -1084,8 +1084,8 @@ class Compiler(
                       val templateName = interner.intern(ExternTemplateNameT(functionA.range.begin))
                       val templateId = IdT(packageId.packageCoord, Vector(), templateName)
 
-                      val regionPlaceholder = RegionT()
-                      val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT()))
+                      val regionPlaceholder = RegionT(DefaultRegionT)
+                      val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExternId = templateId.copy(localName = placeholderedExternName)
                       val externEnv =
                         ExternEnvironmentT(
@@ -1180,7 +1180,7 @@ class Compiler(
                         ExportEnvironmentT(
                           globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-                      val regionPlaceholder = RegionT()
+                      val regionPlaceholder = RegionT(DefaultRegionT)
 
                       val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
                       val placeholderedExportId = templateId.copy(localName = placeholderedExportName)
@@ -1235,7 +1235,7 @@ class Compiler(
               ExportEnvironmentT(
                 globalEnv, packageEnv, templateId, templateId, TemplatasStore(templateId, Map(), Map()))
 
-            val regionPlaceholder = RegionT()
+            val regionPlaceholder = RegionT(DefaultRegionT)
 
             val placeholderedExportName = interner.intern(ExportNameT(templateName, regionPlaceholder))
             val placeholderedExportId = templateId.copy(localName = placeholderedExportName)

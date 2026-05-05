@@ -53,12 +53,12 @@ class RSAImmutableNewMacro(
           env.lookupNearestWithImpreciseName(
             interner.intern(RuneNameS(CodeRuneS(keywords.M))), Set(TemplataLookupContext))))
 
-    val arrayTT = arrayCompiler.resolveRuntimeSizedArray(elementType, mutability, RegionT())
+    val arrayTT = arrayCompiler.resolveRuntimeSizedArray(elementType, mutability, RegionT(DefaultRegionT))
 
     val generatorArgCoord =
       paramCoords(1).tyype match {
-        case CoordT(ShareT, _, kind) => CoordT(ShareT, RegionT(), kind)
-        case CoordT(BorrowT, _, kind) => CoordT(BorrowT, RegionT(), kind)
+        case CoordT(ShareT, _, kind) => CoordT(ShareT, RegionT(DefaultRegionT), kind)
+        case CoordT(BorrowT, _, kind) => CoordT(BorrowT, RegionT(DefaultRegionT), kind)
         case CoordT(OwnT, _, kind) => vwat() // shouldnt happen, signature takes in an &
       }
 
@@ -71,8 +71,8 @@ class RSAImmutableNewMacro(
         interner.intern(CodeNameS(keywords.underscoresCall)),
         Vector(),
         Vector(),
-        RegionT(),
-        Vector(generatorArgCoord, CoordT(ShareT, RegionT(), IntT(32))),
+        RegionT(DefaultRegionT),
+        Vector(generatorArgCoord, CoordT(ShareT, RegionT(DefaultRegionT), IntT(32))),
         Vector(),
         false) match {
         case Err(e) => throw CompileErrorExceptionT(CouldntFindFunctionToCallT(callRange, e))
@@ -89,7 +89,7 @@ class RSAImmutableNewMacro(
         ReturnTE(
           NewImmRuntimeSizedArrayTE(
             arrayTT,
-            RegionT(),
+            RegionT(DefaultRegionT),
             sizeTE,
             generatorTE,
             generatorPrototype.prototype)))

@@ -39,7 +39,7 @@ class RSADropIntoMacro(keywords: Keywords, arrayCompiler: ArrayCompiler) extends
             callLocation,
             ArgLookupTE(0, paramCoords(0).tyype),
             ArgLookupTE(1, paramCoords(1).tyype),
-            RegionT())))
+            RegionT(DefaultRegionT))))
     (header, body)
   }
 }

@@ -199,7 +199,7 @@ class CallCompiler(
 //      }
 
     val argsTypes2 = givenArgsExprs2.map(_.result.coord)
-    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(), kind)
+    val closureParamType = CoordT(givenCallableBorrowExpr2.result.coord.ownership, RegionT(DefaultRegionT), kind)
     val paramFilters = Vector(closureParamType) ++ argsTypes2
     val resolved =
       overloadCompiler.findFunction(
