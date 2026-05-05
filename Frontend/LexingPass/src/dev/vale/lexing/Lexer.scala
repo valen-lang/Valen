@@ -465,10 +465,6 @@ class Lexer(interner: Interner, keywords: Keywords) {
           } else {
             val memberBegin = iter.getPos()
 
-            // Trial-lex on a clone: if it parses as a function, commit; otherwise fall back to a
-            // scramble member declaration ending in `;`. This is how `extern struct Vec<T> {
-            // extern func with_capacity(c i64) Vec<T>; }` parses without the lexer rejecting
-            // `extern func` inside a struct body.
             val funcTrialIter = iter.clone()
             val trialAttributes =
               lexAttributes(funcTrialIter) match {

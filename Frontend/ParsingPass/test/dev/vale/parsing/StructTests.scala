@@ -212,6 +212,8 @@ class StructTests extends FunSuite with Collector with TestParseUtils {
       struct.members.contents.collect { case StructMethodP(f) => f }
     vassert(methods.length == 2)
     methods(0).header.name match { case Some(NameP(_, StrI("with_capacity"))) => }
+    vassertOne(methods(0).header.attributes.collect({ case ExternAttributeP(_) => }))
     methods(1).header.name match { case Some(NameP(_, StrI("capacity"))) => }
+    vassertOne(methods(1).header.attributes.collect({ case ExternAttributeP(_) => }))
   }
 }
