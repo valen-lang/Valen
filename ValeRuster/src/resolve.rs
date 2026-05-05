@@ -1,11 +1,13 @@
-use std::collections::HashMap;
-use rustdoc_types::{Crate, Impl, Import, Item, ItemEnum};
-use crate::{resolve_id, ResolveError, SimpleType, SimpleValType, UId};
+use std::cmp::max;
+use std::collections::{HashMap, HashSet};
+use rustdoc_types::{Crate, GenericArg, GenericArgs, Impl, Use, Item, ItemEnum, Type};
+use crate::{resolve_id, ResolveError, UId};
 use crate::indexer::ItemIndex;
 use crate::ResolveError::{NotFound, ResolveFatal};
-use crate::resolve_id::get_expanded_direct_child_uids;
+use crate::resolve_id::{get_expanded_direct_child_uids, is_primitive, item_has_name};
 use crate::resolve_id::get_unexpanded_direct_child_uids_exclude_impl_children;
 use crate::resolve_id::include_impls_children;
+use crate::simplify::{SimpleType, SimpleValType, simplify_type};
 
 // Recurses.
 pub fn resolve(
@@ -46,7 +48,8 @@ pub fn resolve(
                       return Err(ResolveError::NotFound);
                     }
                   }
-                  Err(ResolveError::ResolveFatal(fatal)) => return Err(ResolveError::ResolveFatal(fatal))
+                  Err(ResolveError::ResolveFatal(fatal)) => return Err(ResolveError::ResolveFatal(fatal)),
+                  Err(ResolveError::Unsupported(reason)) => return Err(ResolveError::Unsupported(reason)),
                 };
           }
           // We should only be overwriting the Vec::new() above
@@ -62,7 +65,7 @@ pub fn resolve(
 
       match &tentative_item.inner {
         ItemEnum::ExternCrate { .. } => unimplemented!(),
-        ItemEnum::Import(import) => {
+        ItemEnum::Use(import) => {
           // When we do an import, we actually want the module the
           // import is referring to, not the import's id.
 
@@ -114,14 +117,18 @@ pub fn resolve(
                 let mut maybe_found_child_ids: Vec<UId> = Vec::new();
                 for hay_child_key in hey_direct_child_ids {
                   let hay_child = foreign_crate.index.get(&hay_child_key.id).unwrap();
-                  if crate::item_has_name(&hay_child, next_foreign_crate_name) {
+                  if item_has_name(&hay_child, next_foreign_crate_name) {
                     maybe_found_child_ids.push(hay_child_key.clone());
                   }
                 }
                 if maybe_found_child_ids.len() == 0 {
-                  unimplemented!();
+                  return Err(ResolveError::Unsupported(format!(
+                    "Couldn't resolve foreign path step '{}' in crate '{}'",
+                    next_foreign_crate_name, foreign_crate_root_name)));
                 } else if maybe_found_child_ids.len() > 1 {
-                  unimplemented!();
+                  return Err(ResolveError::Unsupported(format!(
+                    "Ambiguous foreign path step '{}' in crate '{}'",
+                    next_foreign_crate_name, foreign_crate_root_name)));
                 }
                 result_uid = maybe_found_child_ids.get(0).unwrap().clone();
               }
@@ -145,7 +152,7 @@ pub fn resolve(
             generics.insert(generic_param.name.to_string(), generic_arg_type.clone());
           }
 
-          match crate::simplify_type(crates, &item_index, &generics, &tentative_item_id.crate_name, &type_alias.type_) {
+          match simplify_type(crates, &item_index, &HashSet::new(), None, &generics, &tentative_item_id.crate_name, &type_alias.type_) {
             Ok(type_) => Ok(type_.valtype),
             Err(_) => {
               unimplemented!()
@@ -161,7 +168,7 @@ pub fn resolve(
           //     // get_child_ids(
           //     //   crates, &UId{crate_name: resolved_id.crate_name, id: path.id.clone() })?
         },
-        ItemEnum::ForeignType => unimplemented!(),
+        ItemEnum::ExternType => unimplemented!(),
         _ => {
 
           Ok(
@@ -198,7 +205,7 @@ pub fn extend_and_resolve(
     // We'll just use the empty string.
     return Ok(
       SimpleValType {
-        id: crate::tuple_id(&item_index.primitive_name_to_uid),
+        id: unimplemented!(),// crate::tuple_id(&item_index.primitive_name_to_uid),
         generic_args: initial_generic_args,
         maybe_parent_concrete: None,
         maybe_parent_impl: None,
@@ -211,7 +218,7 @@ pub fn extend_and_resolve(
         "bool" | "char" | "f32" | "f64" | "f128" | "i128" | "i16" | "i32" | "i64" | "i8" | "isize" | "str" | "u128" | "u16" | "u32" | "u64" | "u8" | "usize" => {
           Ok(
             SimpleValType {
-              id: crate::primitive_id(&item_index.primitive_name_to_uid, name),
+              id: unimplemented!(),// crate::primitive_id(&item_index.primitive_name_to_uid, name),
               generic_args: Vec::new(),
               maybe_parent_concrete: None,
               maybe_parent_impl: None
@@ -250,18 +257,18 @@ pub fn extend_and_resolve(
         let direct_child_item =
             crates.get(&direct_child_uid.crate_name).unwrap()
                 .index.get(&direct_child_uid.id).unwrap();
-        if crate::item_has_name(&direct_child_item, name) {
+        if item_has_name(&direct_child_item, name) {
           found_items.push((direct_child_uid, direct_child_item));
         }
       }
 
-      let mut unnarrowed_imports: Vec<(UId, &Import)> = Vec::new();
+      let mut unnarrowed_imports: Vec<(UId, &Use)> = Vec::new();
       let mut unfiltered_unnarrowed_others: Vec<(UId, &Item)> = Vec::new();
       let mut unnarrowed_impls: Vec<(UId, &Impl)> = Vec::new();
       for (item_uid, item) in found_items {
         match &item.inner {
           ItemEnum::Impl(impl_) => unnarrowed_impls.push((item_uid.clone(), impl_)),
-          ItemEnum::Import(import_) => unnarrowed_imports.push((item_uid.clone(), import_)),
+          ItemEnum::Use(import_) => unnarrowed_imports.push((item_uid.clone(), import_)),
           _ => unfiltered_unnarrowed_others.push((item_uid.clone(), item)),
         }
       }
@@ -287,12 +294,13 @@ pub fn extend_and_resolve(
                     Err(ResolveError::NotFound) => {
                       unimplemented!();
                     }
+                    Err(ResolveError::Unsupported(reason)) => return Err(ResolveError::Unsupported(reason)),
                     Err(ResolveError::ResolveFatal(fatal)) => return Err(ResolveFatal(fatal))
                   };
               let import_item =
                   resolve_id::lookup_uid(crates, &resolved_import_uid);
               match &import_item.inner {
-                ItemEnum::Import(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
+                ItemEnum::Use(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
                 ItemEnum::Impl(impl_) => {
                   unnarrowed_impls.push((resolved_import_uid, impl_));
                 }
@@ -310,7 +318,7 @@ pub fn extend_and_resolve(
             let mut unnarrowed_others: Vec<(UId, &Item)> = Vec::new();
             for (item_uid, item) in unfiltered_unnarrowed_others {
               match &item.inner {
-                ItemEnum::Import(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
+                ItemEnum::Use(_) | ItemEnum::TypeAlias(_) => panic!("Resolve didn't work!"),
                 ItemEnum::Impl(_impl_) => panic!("Impl shouldnt be in this list"),
                 ItemEnum::Module(_) | ItemEnum::Struct(_) | ItemEnum::Trait(_) | ItemEnum::Function(_) | ItemEnum::Enum(_) => {
                   unnarrowed_others.push((item_uid, &item));
@@ -335,7 +343,7 @@ pub fn extend_and_resolve(
             // Narrow down impls
             let mut impl_matches: Vec<(UId, &Impl, i64, Vec<SimpleType>)> = Vec::new();
             for (impl_uid, impl_) in unnarrowed_impls {
-              if let Some((score, generics)) = crate::impl_from_matches_generic_args(crates, &item_index, impl_, &initial_generic_args) {
+              if let Some((score, generics)) = impl_from_matches_generic_args(crates, &item_index, impl_, &initial_generic_args) {
                 impl_matches.push((impl_uid.clone(), impl_, score, generics));
               }
             }
@@ -440,4 +448,166 @@ pub fn extend_and_resolve(
       Ok(result_step)
     }
   }
+}
+
+// If successful match, returns a height score and the deduced generics.
+fn impl_from_matches_generic_args(
+  crates: &HashMap<String, Crate>,
+  item_index: &ItemIndex,
+  impl_: &Impl,
+  generics_args: &Vec<SimpleType>
+) -> Option<(i64, Vec<SimpleType>)> {
+  let empty = Vec::new();
+  let impl_generic_params =
+      if let Some(trait_) = &impl_.trait_ {
+        if let Some(args) = &trait_.args {
+          match args.as_ref() {
+            GenericArgs::AngleBracketed { args, .. } => {
+              args
+            }
+            GenericArgs::Parenthesized { .. } => unimplemented!(),
+            GenericArgs::ReturnTypeNotation => unimplemented!(),
+          }
+        } else {
+          &empty
+        }
+      } else {
+        &empty
+      };
+  if generics_args.len() > impl_generic_params.len() {
+    // TODO: Resultify
+    panic!("Too many generic args!");
+  }
+  let mut generics_map: HashMap<String, SimpleType> = HashMap::new();
+
+
+  let mut highest_height_score: i64 = 0;
+  // This may ignore excess impl_generic_params, that's fine.
+  for (generic_arg, generic_param) in generics_args.into_iter().zip(impl_generic_params) {
+    match generic_param {
+      GenericArg::Lifetime(_) => unimplemented!(),
+      GenericArg::Const(_) => unimplemented!(),
+      GenericArg::Infer => unimplemented!(),
+      GenericArg::Type(type_) => {
+        if let Some(height_score) = match_generic_arg_type(crates, &item_index, &mut generics_map, generic_arg, type_, 1) {
+          highest_height_score = max(highest_height_score, height_score)
+        } else {
+          return None
+        }
+      }
+    }
+  }
+
+  let mut results = Vec::new();
+  for generic_param in &impl_.generics.params {
+    match generics_map.get(&generic_param.name) {
+      None => unimplemented!(),
+      Some(generic_arg) => {
+        results.push(generic_arg.clone())
+      }
+    }
+  }
+  Some((highest_height_score, results))
+}
+
+fn match_generic_arg_type(
+  crates: &HashMap<String, Crate>,
+  item_index: &ItemIndex,
+  generics: &mut HashMap<String, SimpleType>,
+  generic_arg: &SimpleType,
+  generic_param: &Type,
+  current_height: i64
+) -> Option<i64> {
+  println!("arg {:?} param {:?}", generic_arg, generic_param);
+  match (generic_arg, generic_param) {
+    (_, Type::Generic(generic_param_name)) => {
+      if let Some(existing) = generics.get(generic_param_name) {
+        assert!(existing == generic_arg); // TODO: do result or something?
+      } else {
+        generics.insert(generic_param_name.clone(), generic_arg.clone());
+      }
+      Some(current_height)
+    }
+    (
+      SimpleType { imm_ref: true, valtype: inner_arg, ..},
+      Type::BorrowedRef { is_mutable: false, type_: inner_param, .. }
+    ) => {
+      match_generic_arg_valtype(crates, item_index, generics, inner_arg, inner_param, current_height + 1)
+    }
+    (
+      SimpleType { mut_ref: true, valtype: inner_arg, ..},
+      Type::BorrowedRef { is_mutable: true, type_: inner_param, .. }
+    ) => {
+      match_generic_arg_valtype(crates, item_index, generics, inner_arg, inner_param, current_height + 1)
+    }
+    (
+      SimpleType { valtype: inner_arg, ..},
+      other_param
+    ) => {
+      match_generic_arg_valtype(
+        crates, &item_index, generics, inner_arg, other_param, current_height + 1)
+    }
+  }
+}
+
+fn match_generic_arg_valtype(
+  crates: &HashMap<String, Crate>,
+  item_index: &ItemIndex,
+  generics: &mut HashMap<String, SimpleType>,
+  generic_arg: &SimpleValType,
+  generic_param: &Type,
+  current_height: i64,
+) -> Option<i64> {
+  match (generic_arg, generic_param) {
+    // The order of these cases is important, for example we want to match
+    // any type to a generic variable T before we do anything else.
+    (_, Type::Generic(generic_param_name)) => {
+      generics.insert(
+        generic_param_name.clone(),
+        SimpleType {
+          imm_ref: false,
+          mut_ref: false,
+          valtype: generic_arg.clone()
+        });
+      Some(current_height)
+    }
+    (_, _) if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) => {
+      if let Type::Primitive(generic_param_primitive_name) = generic_param {
+        if item_index.primitive_uid_to_name.get(&generic_arg.id).unwrap() == generic_param_primitive_name {
+          Some(current_height)
+        } else {
+          None
+        }
+      } else {
+        None
+      }
+    }
+    (_, Type::Primitive(generic_param_primitive_name)) => {
+      if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) &&
+          item_index.primitive_uid_to_name.get(&generic_arg.id).unwrap() == generic_param_primitive_name {
+        Some(current_height)
+      } else {
+        None
+      }
+    }
+    (
+      _,
+      Type::ResolvedPath(rustdoc_types::Path { path: generic_param_name, args: _generic_params, .. })
+    ) => {
+      if is_primitive(&item_index.primitive_uid_to_name, &generic_arg.id) {
+        return None;
+      }
+      if &lookup_name(crates, generic_arg) == generic_param_name {
+        unimplemented!();
+      } else {
+        None
+      }
+    }
+    _ => unimplemented!()
+  }
+}
+
+pub(crate) fn lookup_name(crates: &HashMap<String, Crate>, valtype: &SimpleValType) -> String {
+  let item = resolve_id::lookup_uid(crates, &valtype.id);
+  item.name.as_ref().map(|x| &x[..]).unwrap_or("unnamed").to_string()
 }

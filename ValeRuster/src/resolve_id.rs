@@ -1,7 +1,63 @@
 use std::collections::{HashMap, HashSet};
-use rustdoc_types::{Crate, Import, Item, ItemEnum, Type};
-use crate::{GenealogyKey, get_concrete_impls, get_impl_children, ResolveError, UId};
+use itertools::Itertools;
+use rustdoc_types::{Crate, Id, Use, Item, ItemEnum, Type};
 use crate::ResolveError::{NotFound, ResolveFatal};
+use crate::{ResolveError, UId};
+
+// TODO: optimize: All over the place we're calling .keys() and .collect()
+// on some crate.index.
+pub(crate) fn tuple_id(
+  primitive_name_to_uid: &HashMap<String, UId>,
+) -> UId {
+  primitive_name_to_uid.get("tuple").unwrap().clone()
+}
+pub(crate) fn str_id(
+  primitive_name_to_uid: &HashMap<String, UId>,
+) -> UId {
+  primitive_name_to_uid.get("str").unwrap().clone()
+}
+fn slice_id(
+  primitive_name_to_uid: &HashMap<String, UId>,
+) -> UId {
+  primitive_name_to_uid.get("slice").unwrap().clone()
+}
+fn lifetime_id(
+) -> UId {
+  UId{ crate_name: "".to_string(), id: Id(u32::MAX) }
+}
+pub(crate) fn primitive_id(
+  primitive_name_to_uid: &HashMap<String, UId>,
+  name: &str
+) -> UId {
+  primitive_name_to_uid.get(name).unwrap().clone()
+}
+
+// Any other primitive can roughly be treated as a normal type
+pub(crate) fn is_special_primitive(primitive_name_to_uid: &HashMap<String, UId>, id: &UId) -> bool {
+  id == &tuple_id(primitive_name_to_uid) ||
+      id == &str_id(primitive_name_to_uid) ||
+      id == &slice_id(primitive_name_to_uid) ||
+      id == &lifetime_id() ||
+      is_generic(id)
+}
+pub(crate) fn is_primitive(
+  primitive_uid_to_name: &HashMap<UId, String>,
+  id: &UId
+) -> bool {
+  id == &lifetime_id() ||
+      is_generic(id) ||
+      primitive_uid_to_name.contains_key(id)
+}
+
+pub(crate) fn is_generic(id: &UId) -> bool {
+  id.crate_name.starts_with("$")
+}
+
+pub(crate) fn generic_name(id: &UId) -> &str {
+  assert!(is_generic(id));
+  &id.crate_name[1..]
+}
+
 
 // Recurses.
 pub fn resolve_uid(
@@ -38,6 +94,7 @@ pub fn resolve_uid(
                       return Err(ResolveError::NotFound);
                     }
                   }
+                  Err(ResolveError::Unsupported(reason)) => return Err(ResolveError::Unsupported(reason)),
                   Err(ResolveError::ResolveFatal(fatal)) => return Err(ResolveError::ResolveFatal(fatal))
                 };
           }
@@ -51,7 +108,7 @@ pub fn resolve_uid(
 
       match &tentative_item.inner {
         ItemEnum::ExternCrate { .. } => unimplemented!(),
-        ItemEnum::Import(import) => {
+        ItemEnum::Use(import) => {
           // When we do an import, we actually want the module the
           // import is referring to, not the import's id.
 
@@ -96,14 +153,14 @@ pub fn resolve_uid(
                     };
                 for hay_child_id in hay_child_uids {
                   let hay_child = foreign_crate.index.get(&hay_child_id.id).unwrap();
-                  if crate::item_has_name(&hay_child, next_foreign_crate_name) {
+                  if item_has_name(&hay_child, next_foreign_crate_name) {
                     found_child_uids.push(hay_child_id);
                   }
                 }
                 if found_child_uids.len() > 1 {
                   // Let's filter out any macros, sometimes they collide with real things,
                   // like how "vec" is both a macro and a module.
-                  found_child_uids = crate::filter_out_macro_uids(crates, found_child_uids);
+                  found_child_uids = filter_out_macro_uids(crates, found_child_uids);
                 }
                 if found_child_uids.len() != 1 {
                   unimplemented!();
@@ -129,7 +186,7 @@ pub fn resolve_uid(
             }
           }
         },
-        ItemEnum::ForeignType => unimplemented!(),
+        ItemEnum::ExternType => unimplemented!(),
         _ => Ok(tentative_item_id.clone())
       }
     }
@@ -151,7 +208,7 @@ pub(crate) fn extend_and_resolve_uid(
     // For the life of me I can't figure out the Id for tuples, I suspect they don't have one
     // because they have a special entry in the Type enum.
     // We'll just use the empty string.
-    return Ok(crate::tuple_id(&primitive_name_to_uid));
+    return Ok(tuple_id(&primitive_name_to_uid));
     // return Ok(ChildKey::Normal { id: crate::tuple_id(&primitive_name_to_uid) });
   }
 
@@ -159,7 +216,7 @@ pub(crate) fn extend_and_resolve_uid(
     None => {
       match name {
         "bool" | "char" | "f32" | "f64" | "f128" | "i128" | "i16" | "i32" | "i64" | "i8" | "isize" | "str" | "u128" | "u16" | "u32" | "u64" | "u8" | "usize" => {
-          Ok(crate::primitive_id(&primitive_name_to_uid, name))
+          Ok(primitive_id(&primitive_name_to_uid, name))
           // Ok(ChildKey::Normal { id: crate::primitive_id(&primitive_name_to_uid, name) })
         }
         _ => {
@@ -183,23 +240,16 @@ pub(crate) fn extend_and_resolve_uid(
       let previous_crate = crates.get(previous_crate_name).unwrap();
       // let previous_container_item = previous_crate.index.get(&previous_container_id.id).unwrap();
 
-      let direct_child_uids_without_methods =
-          match get_unexpanded_direct_child_uids_exclude_impl_children(crates, &primitive_name_to_uid, &previous_container_id) {
+      let direct_child_uids =
+          match get_expanded_direct_child_uids(crates, &primitive_name_to_uid, &previous_container_id, true) {
         Ok(x) => x,
-        Err(e) => return Err(ResolveFatal(e))
+        Err(e) => return Err(e)
       };
-      let direct_child_keys =
-          match include_impls_children(crates, &primitive_name_to_uid, direct_child_uids_without_methods) {
-            Ok(x) => x,
-            Err(e) => return Err(ResolveFatal(e))
-          };
-      let direct_child_uids = collapse_children(&direct_child_keys);
 
       let mut found_items: Vec<(UId, &Item)> = Vec::new();
       for direct_child_uid in direct_child_uids {
-        let direct_child_item =
-            previous_crate.index.get(&direct_child_uid.id).unwrap();
-        if crate::item_has_name(&direct_child_item, name) {
+        let direct_child_item = lookup_uid(crates, &direct_child_uid);
+        if item_has_name(&direct_child_item, name) {
           found_items.push((direct_child_uid, direct_child_item));
         }
       }
@@ -212,19 +262,24 @@ pub(crate) fn extend_and_resolve_uid(
               Err(ResolveError::NotFound) => {
                 unimplemented!()
               }
+              Err(ResolveError::Unsupported(reason)) => return Err(ResolveError::Unsupported(reason)),
               Err(ResolveFatal(e)) => return Err(ResolveFatal(e))
             };
         let found_child = lookup_uid(crates, &found_child_uid);
         match found_child.inner {
+          ItemEnum::Use(_) => {
+            println!("wat");
+          }
           ItemEnum::Macro(_) => {} // skip
           ItemEnum::ProcMacro(_) => {} // skip
           ItemEnum::Primitive(_) => {} // skip
           _ => {
-            new_found_items.push((found_child_uid.clone(), item));
+            new_found_items.push((found_child_uid.clone(), found_child));
           }
         }
       }
       found_items = new_found_items;
+      found_items = found_items.into_iter().unique_by(|(x, _)| x.clone()).collect(); // DO NOT SUBMIT optimize
 
       if found_items.len() == 0 {
         return Err(NotFound)
@@ -290,6 +345,7 @@ fn resolve_type_uid(
           Err(ResolveError::NotFound) => {
             unimplemented!();
           }
+          Err(ResolveError::Unsupported(_)) => unreachable!("resolve_uid never returns Unsupported"),
           Err(ResolveError::ResolveFatal(fatal)) => return Err(fatal)
         }
       }
@@ -299,9 +355,9 @@ fn resolve_type_uid(
       }
       Type::Generic(_name) => unimplemented!(),
       Type::BorrowedRef { type_, .. } => resolve_type_uid(crates, primitive_name_to_uid, type_crate_name, type_)?,
-      Type::Primitive(name) => crate::primitive_id(primitive_name_to_uid, name),
+      Type::Primitive(name) => primitive_id(primitive_name_to_uid, name),
       Type::FunctionPointer(_) => unimplemented!(),
-      Type::Tuple(_inners) => crate::tuple_id(&primitive_name_to_uid, ),
+      Type::Tuple(_inners) => tuple_id(&primitive_name_to_uid, ),
       Type::Slice(_) => unimplemented!(),
       Type::Array { .. } => unimplemented!(),
       Type::Pat { .. } => unimplemented!(),
@@ -334,7 +390,7 @@ pub(crate) fn get_expanded_direct_child_uids(
   let mut direct_child_uids: Vec<UId> = vec![];
   for direct_child_uid in unexpanded_direct_child_uids.clone() {
     match &lookup_uid(crates, &direct_child_uid).inner {
-      ItemEnum::Import(Import { id: Some(target_module_id), glob: true, .. }) => {
+      ItemEnum::Use(Use { id: Some(target_module_id), is_glob: true, .. }) => {
         // We treat glob imports as if we're directly importing
         // everything matching them.
         let target_module_uid =
@@ -404,6 +460,7 @@ pub(crate) fn include_impls_children(
           },
           Ok(None) => {}
           Err(ResolveError::NotFound) => unimplemented!(),
+          Err(ResolveError::Unsupported(_)) => unreachable!("get_impl_children never returns Unsupported"),
           Err(ResolveFatal(e)) => return Err(e)
         }
       }
@@ -484,3 +541,169 @@ pub(crate) fn get_unexpanded_direct_child_uids_exclude_impl_children(
     _ => unimplemented!()
   }
 }
+
+pub(crate) fn item_has_name(direct_child_item: &Item, name: &str) -> bool {
+  match &direct_child_item.inner {
+    ItemEnum::Use(import) => {
+      import.name == name && !import.is_glob
+    }
+    // When we import e.g.
+    //   std::string::String::From<&str>::from as RustStringFromStrRef
+    // we need to search for the "From" impl, thats what we're doing here.
+    ItemEnum::Impl(impl_) => {
+      impl_.trait_.as_ref().map(|x| &x.path[..]) == Some(name)
+    }
+    _ => {
+      direct_child_item.name.as_ref().map(|x| &x[..]) == Some(name)
+    }
+  }
+}
+
+fn filter_out_macro_uids(
+  crates: &HashMap<String, Crate>,
+  found_child_uids: Vec<UId>
+) -> Vec<UId> {
+  let mut narrowed_found_child_ids = Vec::new();
+  for found_child_uid in &found_child_uids {
+    // Note we're doing a shallow lookup here, these might refer to more imports
+    // or type aliases. We could resolve them fully in the future.
+    let found_child = lookup_uid(crates, found_child_uid);
+    if !matches!(found_child.inner, ItemEnum::Macro(_)) {
+      narrowed_found_child_ids.push(found_child_uid.clone());
+    }
+  }
+  return narrowed_found_child_ids;
+}
+
+fn get_impl_children(
+  crates: &HashMap<String, Crate>,
+  primitive_name_to_uid: &HashMap<String, UId>,
+  impl_uid: &UId
+) -> anyhow::Result<Option<Vec<UId>>, ResolveError> {
+  let item = lookup_uid(crates, &impl_uid);
+  if let ItemEnum::Impl(impl_) = &item.inner {
+    if let Some(name) = &item.name {
+      if name == "Any" {
+        // Other crates seem to reference core::any::Any but don't have a path to it.
+        // If this becomes a problem with a lot of other things we might have to make
+        // lookup_uid return an optional.
+        return Ok(None);
+      }
+    }
+
+    // This impl_.items won't actually have everything.
+    // some impls dont actually implement all the methods in their trait, they instead use the default implementation. for example, this
+    // impl<'a> Iterator for Chars<'a> {
+    //   file:///Users/verdagon/.rustup/toolchains/nightly-aarch64-apple-darwin/share/doc/rust/html/src/core/str/iter.rs.html#38
+    // only overrides 6 methods of Iterator. luckily the doc lists the names of them so we can bring them in from the trait.
+    // TODO: doc better
+    let mut impl_method_uids: Vec<UId> =
+        impl_.items
+            .iter()
+            .map(|x| UId { crate_name: impl_uid.crate_name.clone(), id: x.clone() })
+            .collect();
+
+    let mut impl_methods_names = HashSet::new();
+    for impl_method_uid_unresolved in &impl_method_uids {
+      let impl_method_item =
+          lookup_uid(crates, &impl_method_uid_unresolved);
+      if let Some(name) = &impl_method_item.name {
+        if matches!(impl_method_item.inner, ItemEnum::Function(_)) {
+          impl_methods_names.insert(name);
+        } else {
+          // There are sometimes associated types in there, maybe other things too
+        }
+      }
+    }
+    if let Some(trait_) = &impl_.trait_ {
+      let trait_id = &trait_.id;
+      let trait_unresolved_uid = UId { crate_name: impl_uid.crate_name.clone(), id: trait_id.clone() };
+      let trait_uid =
+          match resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid) {
+            Ok(trait_uid) => trait_uid,
+            Err(ResolveError::NotFound) => {
+              let _ = resolve_uid(crates, &primitive_name_to_uid, &trait_unresolved_uid);
+              unimplemented!();
+            }
+            Err(ResolveError::Unsupported(_)) => unreachable!("resolve_uid never returns Unsupported"),
+            Err(ResolveError::ResolveFatal(fatal)) => {
+              return Err(ResolveError::ResolveFatal(fatal))
+            }
+          };
+      let trait_item = lookup_uid(crates, &trait_uid);
+      let trait_ =
+          match &trait_item.inner {
+            ItemEnum::Trait(trait_) => trait_,
+            _ => panic!("Not an impl!")
+          };
+      // Here, we grab the rest from the parent trait.
+      let mut needed_names = HashSet::new();
+      for name in &impl_.provided_trait_methods {
+        if impl_methods_names.contains(&name) {
+          continue;
+        }
+        // If we get here, then the impl didn't define this method, so it's
+        // inheriting it from the parent.
+        needed_names.insert(name);
+      }
+
+      for trait_child_id in &trait_.items {
+        let trait_child_uid = UId { crate_name: trait_uid.crate_name.clone(), id: trait_child_id.clone() };
+        let trait_child_item = lookup_uid(crates, &trait_child_uid);
+        if let Some(name) = &trait_child_item.name {
+          if needed_names.contains(name) {
+            impl_method_uids.push(trait_child_uid);
+          }
+        }
+      }
+    }
+
+    return Ok(Some(impl_method_uids));
+  } else {
+    panic!("Impl item id isn't impl.");
+  }
+}
+
+// TODO: optimize: super expensive
+// TODO: look for impls in other crates
+// A concrete is a struct or an enum
+fn get_concrete_impls(
+  crates: &HashMap<String, Crate>,
+  primitive_name_to_uid: &HashMap<String, UId>,
+  concrete_id: &UId
+) -> Vec<UId> {
+  let crate_ = crates.get(&concrete_id.crate_name).unwrap();
+
+  let mut result = Vec::new();
+  for (neighbor_id, item) in &crate_.index {
+    match &item.inner {
+      ItemEnum::Impl(impl_) => {
+        match &impl_.for_ {
+          Type::ResolvedPath(path) => {
+            if &path.id == &concrete_id.id {
+              let uid =
+                  UId { crate_name: concrete_id.crate_name.clone(), id: neighbor_id.clone() };
+              result.push(uid);
+            }
+          },
+          Type::Primitive(name) => {
+            if let Some(item_for_primitive_id) = primitive_name_to_uid.get(name) {
+              if item_for_primitive_id == concrete_id {
+                let uid =
+                    UId { crate_name: concrete_id.crate_name.clone(), id: neighbor_id.clone() };
+                result.push(uid);
+              }
+            } else {
+              // DO NOT SUBMIT put this warning back in
+              // eprintln!("Primitive not found: {}", name);
+            }
+          }
+          _ => {}
+        }
+      }
+      _ => {}
+    }
+  }
+  return result;
+}
+
