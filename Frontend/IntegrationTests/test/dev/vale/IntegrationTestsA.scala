@@ -321,10 +321,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
     }
   }
 
-  // TODO: rune-type solver fails to infer `T` from the return type `Vec<T>` of an
-  // extern free function declaration with no body. Unrelated to struct-internal-method
-  // routing. Hits "Couldn't solve some runes: T" at definition time.
-  ignore("Extern function returning extern struct") {
+  test("Extern function returning extern struct") {
     val compile = RunCompilation.test(
       """
         |extern struct Vec<T> imm;
@@ -339,6 +336,7 @@ class IntegrationTestsA extends FunSuite with Matchers {
       case VonInt(42) =>
     }
   }
+
 
   test("Extern rust Vec") {
     val compile = RunCompilation.test(

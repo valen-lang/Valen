@@ -1091,28 +1091,7 @@ class Compiler(
                       val regionPlaceholder = RegionT(DefaultRegionT)
                       val placeholderedExternName = interner.intern(ExternNameT(templateName, RegionT(DefaultRegionT)))
                       val placeholderedExternId = templateId.copy(localName = placeholderedExternName)
-                      val externEnv =
-                        ExternEnvironmentT(
-                          globalEnv, packageEnv, templateId, placeholderedExternId, TemplatasStore(placeholderedExternId, Map(), Map()))
-                      // We evaluate this and then don't do anything for it on purpose, we just do
-                      // this to cause the compiler to make instantiation bounds for all the types
-                      // in terms of this extern. That way, further below, when we do the
-                      // substituting templatas, the bounds are already made for these types.
-                      val externPlaceholderedWrapperPrototype =
-                        functionCompiler.evaluateGenericLightFunctionFromCallForPrototype(
-                          coutputs,
-                          List(functionA.range),
-                          LocationInDenizen(Vector()),
-                          externEnv,
-                          templata,
-                          Vector(),
-                          regionPlaceholder,
-                          Vector()) match {
-                          case ResolveFunctionSuccess(prototype, inferences) => prototype.prototype
-                          case ResolveFunctionFailure(reason) => {
-                            throw CompileErrorExceptionT(TypingPassResolvingError(List(functionA.range), reason))
-                          }
-                        }
+                      val externPlaceholderedWrapperPrototype = header.toPrototype
 
 //                      val externPerspectivedParams =
 //                        header.params.map(_.tyype).map(typeT => {
@@ -1159,14 +1138,6 @@ class Compiler(
                           }
                           case other => vwat(other)
                         }
-                      // Though, we do need to add some instantiation bounds for this new IdT we
-                      // just made.
-                      coutputs.addInstantiationBounds(
-                        opts.globalOptions.sanityCheck,
-                        interner,
-                        templateId,
-                        externPrototype.id,
-                        vassertSome(coutputs.getInstantiationBounds(externPlaceholderedWrapperPrototype.id)))
 
                       coutputs.addFunctionExtern(
                         functionA.range, placeholderedExternId, externPrototype, externName)
