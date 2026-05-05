@@ -23,13 +23,12 @@ use crate::typing::ast::citizens::{CitizenDefinitionT, InterfaceDefinitionT, Str
 use crate::typing::names::names::{
     FunctionTemplateNameT, INameT, IdT, ImplTemplateNameT, InterfaceTemplateNameT, StructTemplateNameT,
 };
+use crate::typing::typing_interner::TypingInterner;
+use crate::utils::arena_index_map::ArenaIndexMap;
 // mig: struct InstantiationReachableBoundArgumentsT
-#[derive(Clone)]
+/// Arena-allocated (see @TFITCX)
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
-    pub citizen_rune_to_reachable_prototype: Vec<(
-        IRuneS<'s>,
-        &'t PrototypeT<'s, 't>,
-    )>,
+    pub citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
 }
 /*
 case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
@@ -41,16 +40,19 @@ case class InstantiationReachableBoundArgumentsT[R <: IFunctionNameT](
 object InstantiationBoundArgumentsT {
 */
 // mig: fn make
+// Rust adaptation (SPDMX-B): interner threaded so the resulting InstantiationBoundArgumentsT
+// is arena-allocated and shared by &'t reference (no Clone, per AASSNCMCX).
 pub fn make<'s, 't>(
-    rune_to_bound_prototype: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)>,
-    rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)>,
+    interner: &TypingInterner<'s, 't>,
+    rune_to_bound_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>,
+    rune_to_citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>)>,
     rune_to_bound_impl: Vec<(IRuneS<'s>, IdT<'s, 't>)>,
-) -> InstantiationBoundArgumentsT<'s, 't> {
-    InstantiationBoundArgumentsT {
-        rune_to_bound_prototype,
-        rune_to_citizen_rune_to_reachable_prototype,
-        rune_to_bound_impl,
-    }
+) -> &'t InstantiationBoundArgumentsT<'s, 't> {
+    interner.alloc(InstantiationBoundArgumentsT {
+        rune_to_bound_prototype: interner.alloc_index_map_from_iter(rune_to_bound_prototype.into_iter()),
+        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(rune_to_citizen_rune_to_reachable_prototype.into_iter()),
+        rune_to_bound_impl: interner.alloc_index_map_from_iter(rune_to_bound_impl.into_iter()),
+    })
 }
 /*
   def make[BF <: IFunctionNameT, BI <: IImplNameT](
@@ -66,20 +68,11 @@ pub fn make<'s, 't>(
 }
 */
 // mig: struct InstantiationBoundArgumentsT
-#[derive(Clone)]
+/// Arena-allocated (see @TFITCX)
 pub struct InstantiationBoundArgumentsT<'s, 't> {
-    pub rune_to_bound_prototype: Vec<(
-        IRuneS<'s>,
-        &'t PrototypeT<'s, 't>,
-    )>,
-    pub rune_to_citizen_rune_to_reachable_prototype: Vec<(
-        IRuneS<'s>,
-        InstantiationReachableBoundArgumentsT<'s, 't>,
-    )>,
-    pub rune_to_bound_impl: Vec<(
-        IRuneS<'s>,
-        IdT<'s, 't>,
-    )>,
+    pub rune_to_bound_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
+    pub rune_to_citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
+    pub rune_to_bound_impl: ArenaIndexMap<'t, IRuneS<'s>, IdT<'s, 't>>,
 }
 /*
 case class InstantiationBoundArgumentsT[BF <: IFunctionNameT, BI <: IImplNameT](
@@ -109,6 +102,7 @@ impl<'s, 't> InstantiationBoundArgumentsT<'s, 't> {
 */
 }
 // mig: struct HinputsT
+/// Temporary state (see @TFITCX)
 pub struct HinputsT<'s, 't> {
     pub interfaces: Vec<&'t InterfaceDefinitionT<'s, 't>>,
     pub structs: Vec<&'t StructDefinitionT<'s, 't>>,
@@ -116,16 +110,16 @@ pub struct HinputsT<'s, 't> {
 
     pub interface_to_edge_blueprints: HashMap<
         IdT<'s, 't>,
-        InterfaceEdgeBlueprintT<'s, 't>,
+        &'t InterfaceEdgeBlueprintT<'s, 't>,
     >,
     pub interface_to_sub_citizen_to_edge: HashMap<
         IdT<'s, 't>,
-        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>,
     >,
 
     pub instantiation_name_to_instantiation_bounds: HashMap<
         IdT<'s, 't>,
-        InstantiationBoundArgumentsT<'s, 't>,
+        &'t InstantiationBoundArgumentsT<'s, 't>,
     >,
 
     pub kind_exports: Vec<&'t KindExportT<'s, 't>>,
@@ -135,7 +129,7 @@ pub struct HinputsT<'s, 't> {
 
     pub sub_citizen_to_interface_to_edge: HashMap<
         IdT<'s, 't>,
-        HashMap<IdT<'s, 't>, EdgeT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>,
     >,
 }
 /*

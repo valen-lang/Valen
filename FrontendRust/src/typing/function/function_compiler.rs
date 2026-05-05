@@ -1,14 +1,17 @@
 use crate::higher_typing::ast::FunctionA;
-use crate::postparsing::ast::LocationInDenizen;
+use crate::postparsing::ast::{LocationInDenizen, IBodyS};
 use crate::postparsing::names::{IFunctionDeclarationNameS, IVarNameS};
 use crate::typing::ast::ast::FunctionHeaderT;
 use crate::typing::ast::citizens::NormalStructMemberT;
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
-use crate::typing::env::environment::IInDenizenEnvironmentT;
+use crate::typing::env::environment::{IInDenizenEnvironmentT, IEnvironmentT};
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
-use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
-use crate::typing::types::types::{CoordT, RegionT, StructTT};
+use crate::typing::templata::templata::*;
+use crate::typing::types::types::*;
+use crate::typing::names::names::*;
+use crate::typing::env::environment::ILookupContext;
+use std::collections::HashSet;
 use crate::utils::range::RangeS;
 
 /*
@@ -329,9 +332,43 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let FunctionTemplataT { outer_env: declaring_env, function } = function_templata;
+        if function.is_light() {
+            self.evaluate_templated_light_banner_from_call_closure_or_light(
+                declaring_env, coutputs, calling_env, call_range, call_location,
+                function, already_specified_template_args, context_region, arg_types)
+        } else {
+            let lambda_citizen_name_2 =
+                match function.name {
+                    IFunctionDeclarationNameS::LambdaDeclarationName(lambda_name) => {
+                        INameT::LambdaCitizen(self.typing_interner.alloc(LambdaCitizenNameT {
+                            template: self.typing_interner.alloc(LambdaCitizenTemplateNameT {
+                                code_location: lambda_name.code_location,
+                                _phantom: std::marker::PhantomData,
+                            }),
+                        }))
+                    }
+                    _ => { panic!("vwat"); }
+                };
+
+            let lookup_result = declaring_env.lookup_nearest_with_name(
+                lambda_citizen_name_2,
+                HashSet::from([ILookupContext::TemplataLookupContext]),
+                self.typing_interner);
+            let closure_struct_ref: StructTT<'s, 't> = match lookup_result {
+                Some(ITemplataT::Kind(KindTemplataT { kind: KindT::Struct(s) })) => **s,
+                _ => { panic!("Unimplemented: evaluateTemplatedFunctionFromCallForPrototype lookup failed"); }
+            };
+
+            let banner = self.evaluate_templated_closure_function_from_call_for_banner(
+                declaring_env, coutputs, calling_env, call_range, call_location,
+                closure_struct_ref, function, already_specified_template_args,
+                context_region, arg_types);
+            banner
+        }
     }
 /*
+Guardian: temp-disable: SPDMX — Scala's nameTranslator.translateCodeLocation is a documented identity function (CodeLocationS(line,col) => CodeLocationS(line,col)). Rust has no NameTranslator on Compiler — using code_location directly is semantically identical. struct_compiler_core.rs:404 uses same pattern (self.translate_code_location) which also doesn't compile yet. — FrontendRust/guardian-logs/request-1702-1777945237454/hook-1702/evaluate_templated_function_from_call_for_prototype--321.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE
@@ -516,7 +553,24 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
         verify_conclusions: bool,
     ) -> StructTT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let code_body = match &function_a.body {
+            IBodyS::CodeBody(code_body) => code_body,
+            _ => panic!("evaluate_closure_struct: expected CodeBodyS"),
+        };
+        let closured_names = code_body.body.closured_names;
+
+        // Note, this is where the unordered closuredNames set becomes ordered.
+        let closured_var_names_and_types: Vec<&'t NormalStructMemberT<'s, 't>> =
+            closured_names.iter().map(|name| {
+                self.determine_closure_variable_member(containing_node_env, coutputs, *name)
+            }).collect();
+
+        let (struct_tt, _, _function_templata) =
+            self.make_closure_understruct(
+                containing_node_env, coutputs, call_range, call_location, name, function_a,
+                &closured_var_names_and_types);
+
+        struct_tt
     }
 /*
   def evaluateClosureStruct(

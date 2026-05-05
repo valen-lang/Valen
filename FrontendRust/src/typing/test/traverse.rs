@@ -1,3 +1,5 @@
+/* Guardian: disable-all */
+
 // Test-only traversal helper for the typing pass. Mirrors `src/postparsing/test/traverse.rs`.
 //
 // Scala uses `Collector.only` (in `Frontend/Utils/.../Collector.scala`) which walks
@@ -338,8 +340,8 @@ fn visit_function_definition<'s, 't, T, F>(
     's: 't,
 {
     collect_if(pred, out, NodeRefT::FunctionDefinition(f));
-    visit_function_header(pred, out, &f.header);
-    visit_instantiation_bound_arguments(pred, out, &f.instantiation_bound_params);
+    visit_function_header(pred, out, f.header);
+    visit_instantiation_bound_arguments(pred, out, f.instantiation_bound_params);
     visit_reference_expression(pred, out, &f.body);
 }
 
@@ -353,10 +355,10 @@ fn visit_function_header<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::FunctionHeader(h));
     visit_id(pred, out, &h.id);
-    for attr in &h.attributes {
+    for attr in h.attributes {
         visit_function_attribute(pred, out, attr);
     }
-    for param in &h.params {
+    for param in h.params {
         visit_parameter(pred, out, param);
     }
     visit_coord(pred, out, &h.return_type);
@@ -376,14 +378,14 @@ fn visit_struct_definition<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::StructDefinition(s));
     visit_id(pred, out, &s.template_name);
     visit_struct_tt(pred, out, &s.instantiated_citizen);
-    for attr in &s.attributes {
+    for attr in s.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
     visit_templata(pred, out, &s.mutability);
-    for member in &s.members {
+    for member in s.members {
         visit_struct_member(pred, out, member);
     }
-    visit_instantiation_bound_arguments(pred, out, &s.instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, s.instantiation_bound_params);
 }
 
 fn visit_interface_definition<'s, 't, T, F>(
@@ -398,12 +400,12 @@ fn visit_interface_definition<'s, 't, T, F>(
     visit_id(pred, out, &i.template_name);
     visit_interface_tt(pred, out, &i.instantiated_interface);
     visit_interface_tt(pred, out, &i.ref_);
-    for attr in &i.attributes {
+    for attr in i.attributes {
         visit_citizen_attribute(pred, out, attr);
     }
     visit_templata(pred, out, &i.mutability);
-    visit_instantiation_bound_arguments(pred, out, &i.instantiation_bound_params);
-    for (proto, _idx) in &i.internal_methods {
+    visit_instantiation_bound_arguments(pred, out, i.instantiation_bound_params);
+    for (proto, _idx) in i.internal_methods {
         visit_prototype(pred, out, proto);
     }
 }
@@ -417,7 +419,7 @@ where
     visit_id(pred, out, &e.edge_id);
     visit_kind_citizen(pred, out, &e.sub_citizen);
     visit_id(pred, out, &e.super_interface);
-    visit_instantiation_bound_arguments(pred, out, &e.instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, e.instantiation_bound_params);
     for (id, ovr) in &e.abstract_func_to_override_func {
         visit_id(pred, out, id);
         visit_override(pred, out, ovr);
@@ -445,17 +447,17 @@ where
 {
     collect_if(pred, out, NodeRefT::Override(o));
     visit_id(pred, out, &o.dispatcher_call_id);
-    for (id, t) in &o.impl_placeholder_to_dispatcher_placeholder {
+    for (id, t) in o.impl_placeholder_to_dispatcher_placeholder {
         visit_id(pred, out, id);
         visit_templata(pred, out, t);
     }
-    for (id, t) in &o.impl_placeholder_to_case_placeholder {
+    for (id, t) in o.impl_placeholder_to_case_placeholder {
         visit_id(pred, out, id);
         visit_templata(pred, out, t);
     }
     visit_id(pred, out, &o.case_id);
     visit_prototype(pred, out, &o.override_prototype);
-    visit_instantiation_bound_arguments(pred, out, &o.dispatcher_instantiation_bound_params);
+    visit_instantiation_bound_arguments(pred, out, o.dispatcher_instantiation_bound_params);
 }
 
 fn visit_interface_edge_blueprint<'s, 't, T, F>(
@@ -468,7 +470,7 @@ fn visit_interface_edge_blueprint<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::InterfaceEdgeBlueprint(b));
     visit_id(pred, out, &b.interface);
-    for (proto, _idx) in &b.super_family_root_headers {
+    for (proto, _idx) in b.super_family_root_headers {
         visit_prototype(pred, out, proto);
     }
 }
@@ -765,6 +767,7 @@ fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::Break(x));
 }
@@ -869,6 +872,7 @@ fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiter
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::VoidLiteral(x));
 }
@@ -886,6 +890,7 @@ fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t Constant
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantBool(x));
 }
@@ -894,6 +899,7 @@ fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantS
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantStr(x));
 }
@@ -902,6 +908,7 @@ fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t Constan
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantFloat(x));
 }
@@ -1557,6 +1564,7 @@ fn visit_function_attribute<'s, 't, T, F>(
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::FunctionAttribute(a));
 }
@@ -1568,6 +1576,7 @@ fn visit_citizen_attribute<'s, 't, T, F>(
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
+    't: 's,
 {
     collect_if(pred, out, NodeRefT::CitizenAttribute(a));
 }

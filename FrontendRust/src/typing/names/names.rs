@@ -132,7 +132,7 @@ impl<'s, 't> IdT<'s, 't> {
         }
       }
     */
-    fn steps(&self) -> Vec<INameT<'s, 't>> {
+    pub fn steps(&self) -> Vec<INameT<'s, 't>> {
         match self.local_name {
             INameT::PackageTopLevel(_) => self.init_steps.to_vec(),
             _ => {
@@ -423,7 +423,38 @@ pub enum IInstantiationNameT<'s, 't> {
 /*
 sealed trait IInstantiationNameT extends INameT {
   def template: ITemplateNameT
+*/
+impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
+    pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
+        match self {
+            IInstantiationNameT::Export(_) => &[],
+            IInstantiationNameT::Impl(x) => x.template_args,
+            IInstantiationNameT::ImplBound(x) => x.template_args,
+            IInstantiationNameT::StaticSizedArray(_) => panic!("Unimplemented: template_args on StaticSizedArrayNameT (computed: Vector(size, arr.mutability, variability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
+            IInstantiationNameT::RuntimeSizedArray(_) => panic!("Unimplemented: template_args on RuntimeSizedArrayNameT (computed: Vector(arr.mutability, CoordTemplataT(arr.elementType)) — needs interner to allocate slice)"),
+            IInstantiationNameT::KindPlaceholder(_) => &[],
+            IInstantiationNameT::OverrideDispatcher(x) => x.template_args,
+            IInstantiationNameT::OverrideDispatcherCase(x) => x.independent_impl_template_args,
+            IInstantiationNameT::Extern(_) => &[],
+            IInstantiationNameT::ExternFunction(_) => &[],
+            IInstantiationNameT::Function(x) => x.template_args,
+            IInstantiationNameT::ForwarderFunction(_) => panic!("Unimplemented: template_args on ForwarderFunctionNameT (Scala: inner.templateArgs — recurse through IFunctionNameT)"),
+            IInstantiationNameT::FunctionBound(x) => x.template_args,
+            IInstantiationNameT::PredictedFunction(x) => x.template_args,
+            IInstantiationNameT::LambdaCallFunction(x) => x.template_args,
+            IInstantiationNameT::Struct(x) => x.template_args,
+            IInstantiationNameT::Interface(x) => x.template_args,
+            IInstantiationNameT::LambdaCitizen(_) => &[],
+            IInstantiationNameT::AnonymousSubstructImpl(x) => x.template_args,
+            IInstantiationNameT::AnonymousSubstructConstructor(x) => x.template_args,
+            IInstantiationNameT::AnonymousSubstruct(x) => x.template_args,
+        }
+    }
+    /*
   def templateArgs: Vector[ITemplataT[ITemplataType]]
+*/
+}
+/*
 }
 */
 /// Value-type (see @TFITCX)
@@ -1150,7 +1181,7 @@ sealed trait IVarNameT extends INameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassBlockResultVarNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s>,
+    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
     pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 /*
@@ -1167,7 +1198,7 @@ case class TypingPassFunctionResultVarNameT() extends IVarNameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassTemporaryVarNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s>,
+    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
     pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 /*
@@ -1176,7 +1207,7 @@ case class TypingPassTemporaryVarNameT(life: LocationInFunctionEnvironmentT) ext
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternMemberNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s>,
+    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
     pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 /*
@@ -1194,7 +1225,7 @@ case class TypingIgnoredParamNameT(num: Int) extends IVarNameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternDestructureeNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s>,
+    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
     pub _phantom: std::marker::PhantomData<&'t ()>,
 }
 /*

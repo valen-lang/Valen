@@ -227,12 +227,29 @@ When updating a companion program:
 
 ---
 
+## Local Environment
+
+- **Binary**: `Guardian/target/debug/guardian`
+- **Config for test-shield**: `FrontendRust/guardian.toml` (not `Guardian/guardian.toml` which has a different schema)
+- **API key**: prefix commands with `OPENROUTER_API_KEY=$(cat Guardian/api_key.txt)`
+- **`expect-deny`/`expect-allow`** create files in `tests/` at the shield root — move them to `tests/cases/` for `test-shield` to pick them up
+- **Full command pattern**:
+  ```bash
+  OPENROUTER_API_KEY=$(cat Guardian/api_key.txt) Guardian/target/debug/guardian test-shield \
+    --shield Luz/shields/<ShieldName>.md \
+    --config FrontendRust/guardian.toml \
+    --cache-dir /tmp/guardian-cache --log-level overview
+  ```
+
+---
+
 ## Reference: Log Directory Structure
 
 ```
-guardian-logs/request-XXXX/
-  hook.request.json                       # raw hook input (tool name, file path, content)
-  hook/
+guardian-logs/request-XXXX-TIMESTAMP/
+  log.hook-XXXX.log                       # top-level hook log
+  hook-XXXX.request.json                  # raw hook input (tool name, file path, content)
+  hook-XXXX/
     file-scope.contextified_diff.txt      # file-level contextified diff
     file-scope.diff.patch                 # raw git diff
     file-scope.modified.txt               # full modified file
@@ -251,7 +268,9 @@ guardian-logs/request-XXXX/
 
     log.file-scope.<Shield>.log           # pipeline log for file-scope check
     log.<def>.<Shield>.log                # pipeline log for per-def check
+    log.<def>.<Shield>.vote0.log          # full LLM interaction (prompt + response)
     log.<def>.log                         # pipeline log for definition processing
 ```
 
 Where `<def>` is `<name>--<line>.<index>` (e.g. `new--204.0`).
+The hook subdirectory is `hook-XXXX/` (named by hook ID), not bare `hook/`.

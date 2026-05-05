@@ -75,7 +75,7 @@ where 's: 't,
         &self,
         parent_fate: &mut FunctionEnvironmentBuilder<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -127,13 +127,13 @@ where 's: 't,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
         block_se: &'s BlockSE<'s>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
         let (unnevered_unresultified_undestructed_root_expression, returns_from_exprs) =
             self.evaluate_and_coerce_to_reference_expression(
-                coutputs, nenv, life.add(0), parent_ranges,
+                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,
                 call_location, region, block_se.expr);
 
         let unresultified_undestructed_expressions =

@@ -19,8 +19,8 @@ use crate::typing::env::i_env_entry::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
-use crate::typing::ptr_key::PtrKey;
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::compiler::Compiler;
 
 /*
 package dev.vale.typing
@@ -48,12 +48,12 @@ where 's: 't,
         full_env_snapshot: &'t FunctionEnvironmentT<'s, 't>,
         call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         attributes_t: &'t [IFunctionAttributeT<'s>],
         params_t: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
-        instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+        instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     },
     /*
     case class DeferredEvaluatingFunctionBody(
@@ -77,40 +77,40 @@ pub struct CompilerOutputs<'s, 't>
 where 's: 't,
 {
     pub return_types_by_signature:
-        HashMap<PtrKey<'t, SignatureT<'s, 't>>, CoordT<'s, 't>>,
+        HashMap<SignatureT<'s, 't>, CoordT<'s, 't>>,
     pub signature_to_function:
-        HashMap<PtrKey<'t, SignatureT<'s, 't>>, &'t FunctionDefinitionT<'s, 't>>,
+        HashMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
 
     pub function_declared_names:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, RangeS<'s>>,
+        HashMap<IdT<'s, 't>, RangeS<'s>>,
     pub type_declared_names:
-        HashSet<PtrKey<'t, IdT<'s, 't>>>,
+        HashSet<IdT<'s, 't>>,
 
     pub function_name_to_outer_env:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
     pub function_name_to_inner_env:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
     pub type_name_to_outer_env:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
     pub type_name_to_inner_env:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
 
     pub type_name_to_mutability:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, ITemplataT<'s, 't>>,
+        HashMap<IdT<'s, 't>, ITemplataT<'s, 't>>,
     pub interface_name_to_sealed:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, bool>,
+        HashMap<IdT<'s, 't>, bool>,
 
     pub struct_template_name_to_definition:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t StructDefinitionT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t StructDefinitionT<'s, 't>>,
     pub interface_template_name_to_definition:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InterfaceDefinitionT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t InterfaceDefinitionT<'s, 't>>,
 
     pub all_impls:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t ImplT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t ImplT<'s, 't>>,
     pub sub_citizen_template_to_impls:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, Vec<&'t ImplT<'s, 't>>>,
+        HashMap<IdT<'s, 't>, Vec<&'t ImplT<'s, 't>>>,
     pub super_interface_template_to_impls:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, Vec<&'t ImplT<'s, 't>>>,
+        HashMap<IdT<'s, 't>, Vec<&'t ImplT<'s, 't>>>,
 
     pub kind_exports: Vec<&'t KindExportT<'s, 't>>,
     pub function_exports: Vec<&'t FunctionExportT<'s, 't>>,
@@ -118,14 +118,14 @@ where 's: 't,
     pub function_externs: Vec<&'t FunctionExternT<'s, 't>>,
 
     pub instantiation_name_to_bounds:
-        HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>>,
+        HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>>,
 
-    pub deferred_function_body_compiles: IndexMap<PtrKey<'t, PrototypeT<'s, 't>>, DeferredActionT<'s, 't>>,
-    pub deferred_function_compiles: IndexMap<PtrKey<'t, IdT<'s, 't>>, DeferredActionT<'s, 't>>,
+    pub deferred_function_body_compiles: IndexMap<PrototypeT<'s, 't>, DeferredActionT<'s, 't>>,
+    pub deferred_function_compiles: IndexMap<IdT<'s, 't>, DeferredActionT<'s, 't>>,
     pub finished_deferred_function_body_compiles:
-        HashSet<PtrKey<'t, PrototypeT<'s, 't>>>,
+        HashSet<PrototypeT<'s, 't>>,
     pub finished_deferred_function_compiles:
-        HashSet<PtrKey<'t, IdT<'s, 't>>>,
+        HashSet<IdT<'s, 't>>,
 }
 /*
 case class CompilerOutputs() {
@@ -279,11 +279,11 @@ where 's: 't,
     ) {
         // vassert(prototypeT == vassertSome(deferredFunctionBodyCompiles.headOption)._1)
         let first_key = *self.deferred_function_body_compiles.keys().next().unwrap();
-        assert!(PtrKey(prototype_t) == first_key);
+        assert!(*prototype_t == first_key);
         // finishedDeferredFunctionBodyCompiles += prototypeT
-        self.finished_deferred_function_body_compiles.insert(PtrKey(prototype_t));
+        self.finished_deferred_function_body_compiles.insert(*prototype_t);
         // deferredFunctionBodyCompiles -= prototypeT
-        self.deferred_function_body_compiles.shift_remove(&PtrKey(prototype_t));
+        self.deferred_function_body_compiles.shift_remove(prototype_t);
     }
     /*
       def markDeferredFunctionBodyCompiled(prototypeT: PrototypeT[IFunctionNameT]): Unit = {
@@ -314,11 +314,11 @@ where 's: 't,
     ) {
         // vassert(name == vassertSome(deferredFunctionCompiles.headOption)._1)
         let first_key = *self.deferred_function_compiles.keys().next().unwrap();
-        assert!(PtrKey(name) == first_key);
+        assert!(*name == first_key);
         // finishedDeferredFunctionCompiles += name
-        self.finished_deferred_function_compiles.insert(PtrKey(name));
+        self.finished_deferred_function_compiles.insert(*name);
         // deferredFunctionCompiles -= name
-        self.deferred_function_compiles.shift_remove(&PtrKey(name));
+        self.deferred_function_compiles.shift_remove(name);
     }
     /*
       def markDeferredFunctionCompiled(name: IdT[INameT]): Unit = {
@@ -333,7 +333,7 @@ where 's: 't,
 {
     pub fn get_instantiation_name_to_function_bound_to_rune(
         &self,
-    ) -> HashMap<PtrKey<'t, IdT<'s, 't>>, &'t InstantiationBoundArgumentsT<'s, 't>> {
+    ) -> HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>> {
         self.instantiation_name_to_bounds.clone()
     }
     /*
@@ -350,7 +350,7 @@ where 's: 't,
         signature: &'t SignatureT<'s, 't>,
     ) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         // signatureToFunction.get(signature)
-        self.signature_to_function.get(&PtrKey(signature)).copied()
+        self.signature_to_function.get(signature).copied()
     }
     /*
       def lookupFunction(signature: SignatureT): Option[FunctionDefinitionT] = {
@@ -371,7 +371,7 @@ where 's: 't,
             init_steps: instantiation_id.init_steps,
             local_name: instantiation_id.local_name,
         });
-        self.instantiation_name_to_bounds.get(&PtrKey(instantiation_id_ref)).copied()
+        self.instantiation_name_to_bounds.get(instantiation_id_ref).copied()
     }
     /*
       def getInstantiationBounds(
@@ -406,11 +406,11 @@ where 's: 't,
             init_steps: instantiation_id.init_steps,
             local_name: instantiation_id.local_name,
         });
-        if let Some(_existing) = self.instantiation_name_to_bounds.get(&PtrKey(instantiation_id_ref)) {
+        if let Some(_existing) = self.instantiation_name_to_bounds.get(instantiation_id_ref) {
             panic!("implement: addInstantiationBounds existing check vassert");
         }
 
-        self.instantiation_name_to_bounds.insert(PtrKey(instantiation_id_ref), instantiation_bound_args);
+        self.instantiation_name_to_bounds.insert(*instantiation_id_ref, instantiation_bound_args);
     }
     /*
 Guardian: temp-disable: SPDMX — The omitted Scala blocks are: (1) two `instantiationId match` with `vpass()` — no-op debugging guardrails (Exception F), and (2) a `sanityCheck` guarded `Collector.all` that requires the not-yet-migrated `Collector` utility. All three have no effect on the put operation which is the core logic. Will add when Collector is migrated. — FrontendRust/guardian-logs/request-366-1777779259089/hook-366/add_instantiation_bounds--381.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
@@ -547,12 +547,11 @@ where 's: 't,
         signature: &'t SignatureT<'s, 't>,
         return_type_2: CoordT<'s, 't>,
     ) {
-        let key = PtrKey(signature);
-        match self.return_types_by_signature.get(&key) {
+        match self.return_types_by_signature.get(signature) {
             None => {}
             Some(existing) => assert!(*existing == return_type_2),
         }
-        self.return_types_by_signature.insert(key, return_type_2);
+        self.return_types_by_signature.insert(*signature, return_type_2);
     }
     /*
       def declareFunctionReturnType(signature: SignatureT, returnType2: CoordT): Unit = {
@@ -579,10 +578,10 @@ where 's: 't,
             function.body.result().coord.kind == KindT::Never(NeverT { from_break: false }) ||
             function.body.result().coord == function.header.return_type);
 
-        assert!(!self.signature_to_function.contains_key(&PtrKey(signature)),
+        assert!(!self.signature_to_function.contains_key(signature),
             "wot");
 
-        self.signature_to_function.insert(PtrKey(signature), function);
+        self.signature_to_function.insert(*signature, function);
     }
     /*
       def addFunction(function: FunctionDefinitionT): Unit = {
@@ -627,11 +626,11 @@ where 's: 't,
         //   }
         //   case None =>
         // }
-        if let Some(_old_function_range) = self.function_declared_names.get(&PtrKey(name)) {
+        if let Some(_old_function_range) = self.function_declared_names.get(name) {
             panic!("implement CompileErrorExceptionT(FunctionAlreadyExists(oldFunctionRange, callRanges.head, name))");
         }
         // functionDeclaredNames.put(name, callRanges.head)
-        self.function_declared_names.insert(PtrKey(name), call_ranges[0]);
+        self.function_declared_names.insert(*name, call_ranges[0]);
     }
     /*
       def declareFunction(callRanges: List[RangeS], name: IdT[IFunctionNameT]): Unit = {
@@ -653,9 +652,9 @@ where 's: 't,
         template_name: &'t IdT<'s, 't>,
     ) {
         // vassert(!typeDeclaredNames.contains(templateName))
-        assert!(!self.type_declared_names.contains(&PtrKey(template_name)));
+        assert!(!self.type_declared_names.contains(template_name));
         // typeDeclaredNames += templateName
-        self.type_declared_names.insert(PtrKey(template_name));
+        self.type_declared_names.insert(*template_name);
     }
     /*
       // We can't declare the struct at the same time as we declare its mutability or environment,
@@ -675,11 +674,11 @@ where 's: 't,
         mutability: ITemplataT<'s, 't>,
     ) {
         // vassert(typeDeclaredNames.contains(templateName))
-        assert!(self.type_declared_names.contains(&PtrKey(template_name)));
+        assert!(self.type_declared_names.contains(template_name));
         // vassert(!typeNameToMutability.contains(templateName))
-        assert!(!self.type_name_to_mutability.contains_key(&PtrKey(template_name)));
+        assert!(!self.type_name_to_mutability.contains_key(template_name));
         // typeNameToMutability += (templateName -> mutability)
-        self.type_name_to_mutability.insert(PtrKey(template_name), mutability);
+        self.type_name_to_mutability.insert(*template_name, mutability);
     }
     /*
       def declareTypeMutability(
@@ -722,11 +721,11 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(functionDeclaredNames.contains(nameT))
-        assert!(self.function_declared_names.contains_key(&PtrKey(name_t)));
+        assert!(self.function_declared_names.contains_key(name_t));
         // vassert(!functionNameToInnerEnv.contains(nameT))
-        assert!(!self.function_name_to_inner_env.contains_key(&PtrKey(name_t)));
+        assert!(!self.function_name_to_inner_env.contains_key(name_t));
         // functionNameToInnerEnv += (nameT -> env)
-        self.function_name_to_inner_env.insert(PtrKey(name_t), env);
+        self.function_name_to_inner_env.insert(*name_t, env);
     }
     /*
       def declareFunctionInnerEnv(
@@ -750,9 +749,9 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(!functionNameToOuterEnv.contains(nameT))
-        assert!(!self.function_name_to_outer_env.contains_key(&PtrKey(name_t)));
+        assert!(!self.function_name_to_outer_env.contains_key(name_t));
         // functionNameToOuterEnv += (nameT -> env)
-        self.function_name_to_outer_env.insert(PtrKey(name_t), env);
+        self.function_name_to_outer_env.insert(*name_t, env);
     }
     /*
       def declareFunctionOuterEnv(
@@ -774,13 +773,13 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(typeDeclaredNames.contains(nameT))
-        assert!(self.type_declared_names.contains(&PtrKey(name_t)));
+        assert!(self.type_declared_names.contains(name_t));
         // vassert(!typeNameToOuterEnv.contains(nameT))
-        assert!(!self.type_name_to_outer_env.contains_key(&PtrKey(name_t)));
+        assert!(!self.type_name_to_outer_env.contains_key(name_t));
         // vassert(nameT == env.id)
         // (skipped — requires pattern-matching all IInDenizenEnvironmentT variants to extract id)
         // typeNameToOuterEnv += (nameT -> env)
-        self.type_name_to_outer_env.insert(PtrKey(name_t), env);
+        self.type_name_to_outer_env.insert(*name_t, env);
     }
     /*
       def declareTypeOuterEnv(
@@ -803,14 +802,14 @@ where 's: 't,
         env: &'t IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(typeDeclaredNames.contains(templateId))
-        assert!(self.type_declared_names.contains(&PtrKey(template_id)));
+        assert!(self.type_declared_names.contains(template_id));
         // One should declare the outer env first
         // vassert(typeNameToOuterEnv.contains(templateId))
-        assert!(self.type_name_to_outer_env.contains_key(&PtrKey(template_id)));
+        assert!(self.type_name_to_outer_env.contains_key(template_id));
         // vassert(!typeNameToInnerEnv.contains(templateId))
-        assert!(!self.type_name_to_inner_env.contains_key(&PtrKey(template_id)));
+        assert!(!self.type_name_to_inner_env.contains_key(template_id));
         // typeNameToInnerEnv += (templateId -> env)
-        self.type_name_to_inner_env.insert(PtrKey(template_id), env);
+        self.type_name_to_inner_env.insert(*template_id, env);
     }
     /*
       def declareTypeInnerEnv(
@@ -834,7 +833,14 @@ where 's: 't,
         &mut self,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        if struct_def.mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) {
+            struct_def.members.iter().for_each(|_m| {
+                panic!("implement: add_struct immutable member check")
+            });
+        }
+        assert!(self.type_name_to_mutability.contains_key(&struct_def.template_name));
+        assert!(!self.struct_template_name_to_definition.contains_key(&struct_def.template_name));
+        self.struct_template_name_to_definition.insert(struct_def.template_name, struct_def);
     }
     /*
       def addStruct(structDef: StructDefinitionT): Unit = {
@@ -1022,7 +1028,7 @@ where 's: 't,
             DeferredActionT::EvaluateFunctionBody { prototype, .. } => *prototype,
             _ => panic!("Expected EvaluateFunctionBody"),
         };
-        self.deferred_function_body_compiles.insert(PtrKey(prototype), devf);
+        self.deferred_function_body_compiles.insert(*prototype, devf);
     }
     /*
       def deferEvaluatingFunctionBody(devf: DeferredEvaluatingFunctionBody): Unit = {
@@ -1041,7 +1047,7 @@ where 's: 't,
             DeferredActionT::EvaluateFunction { name, .. } => *name,
             _ => panic!("Expected EvaluateFunction"),
         };
-        self.deferred_function_compiles.insert(PtrKey(name), devf);
+        self.deferred_function_compiles.insert(*name, devf);
     }
     /*
       def deferEvaluatingFunction(devf: DeferredEvaluatingFunction): Unit = {
@@ -1085,7 +1091,10 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match self.type_name_to_mutability.get(&template_name) {
+            None => panic!("Still figuring out mutability for struct: {:?}", template_name),
+            Some(m) => *m,
+        }
     }
     /*
       def lookupMutability(templateName: IdT[ITemplateNameT]): ITemplataT[MutabilityTemplataType] = {
@@ -1145,8 +1154,10 @@ where 's: 't,
     pub fn lookup_struct(
         &self,
         struct_tt: IdT<'s, 't>,
+        compiler: &Compiler<'_, '_, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let template_id = compiler.get_struct_template(struct_tt);
+        self.lookup_struct_template(template_id)
     }
     /*
       def lookupStruct(structTT: IdT[IStructNameT]): StructDefinitionT = {
@@ -1161,7 +1172,8 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        *self.struct_template_name_to_definition.get(&template_name)
+            .expect("Struct template not found")
     }
     /*
       def lookupStructTemplate(templateName: IdT[IStructTemplateNameT]): StructDefinitionT = {
@@ -1307,7 +1319,12 @@ where 's: 't,
         range: &[RangeS<'s>],
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match self.type_name_to_outer_env.get(&name) {
+            None => {
+                panic!("No outer env for type: {:?}", name);
+            }
+            Some(x) => *x,
+        }
     }
     /*
       def getOuterEnvForType(range: List[RangeS], name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {
@@ -1327,7 +1344,7 @@ where 's: 't,
         &self,
         name: IdT<'s, 't>,
     ) -> &'t IInDenizenEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        *self.type_name_to_inner_env.get(&name).unwrap()
     }
     /*
       def getInnerEnvForType(name: IdT[ITemplateNameT]): IInDenizenEnvironmentT = {

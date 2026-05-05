@@ -57,12 +57,12 @@ fn citizen_definition_default_region() -> RegionT {
 pub struct StructDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_citizen: StructTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s>>,
+    pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
-    pub members: Vec<IStructMemberT<'s, 't>>,
+    pub members: &'t [IStructMemberT<'s, 't>],
     pub is_closure: bool,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
 }
 /*
 case class StructDefinitionT(
@@ -238,11 +238,11 @@ pub struct InterfaceDefinitionT<'s, 't> {
     pub template_name: IdT<'s, 't>,
     pub instantiated_interface: InterfaceTT<'s, 't>,
     pub ref_: InterfaceTT<'s, 't>,
-    pub attributes: Vec<ICitizenAttributeT<'s>>,
+    pub attributes: &'t [ICitizenAttributeT<'s>],
     pub weakable: bool,
     pub mutability: ITemplataT<'s, 't>,
-    pub instantiation_bound_params: InstantiationBoundArgumentsT<'s, 't>,
-    pub internal_methods: Vec<(PrototypeT<'s, 't>, usize)>,
+    pub instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
+    pub internal_methods: &'t [(PrototypeT<'s, 't>, usize)],
 }
 /*
 case class InterfaceDefinitionT(

@@ -37,8 +37,10 @@ use crate::utils::code_hierarchy::{self, IPackageResolver, PackageCoordinate};
 use std::collections::HashMap;
 use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
 use crate::typing::ast::ast::ParameterT;
-use crate::typing::ast::expressions::LocalLookupTE;
+use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
+use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
 use crate::typing::names::names::IVarNameT;
+use crate::typing::types::types::NeverT;
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -170,9 +172,31 @@ fn simple_local() {
 */
 // mig: fn tests_panic_return_type
 #[test]
-#[ignore]
 fn tests_panic_return_type() {
-    panic!("Unmigrated test: tests_panic_return_type");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import v.builtins.panic.*;\nexported func main() int {\n  x = { __vbi_panic() }();\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    let let_normal: &LetNormalTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::LetNormal(l) => Some(l)
+    );
+    match let_normal.variable {
+        ILocalVariableT::Reference(ReferenceLocalVariableT { coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Never(NeverT { from_break: false }), .. }, .. }) => {}
+        _ => panic!("Expected LetNormalTE with ReferenceLocalVariableT(_,_,CoordT(ShareT,_,NeverT(false))), got {:?}", let_normal.variable),
+    }
 }
 /*
   test("Tests panic return type") {

@@ -11,12 +11,15 @@ Interning maps use `HashMap::with_capacity(64)` to avoid rehashing during keywor
 
 ## Why Immutability Matters
 
-Arena data is never mutated after construction:
+**Nothing in an arena is ever mutated.** This is an absolute invariant, not a guideline:
 - **No resizing.** `ArenaIndexMap` hash tables are allocated once at correct size.
 - **No dangling pointers.** Nothing points to data that might move.
 - **Bulk deallocation.** Dropping the arena frees everything. No individual destructors.
+- **Identity stability.** `&'t` references are stable forever, so `std::ptr::eq` is valid identity (per @IEOIBZ).
 
-This is enforced by convention (fields are `pub`), not the type system.
+The type system enforces most of this — you can't get `&mut T` from a `&'t T`. The remaining failure mode is interior mutability (`RefCell`, `Cell`, `Mutex`) inside an arena-allocated struct; treat that as a bug.
+
+If a value's lifecycle needs mutation, it does not go in the arena. See "Mutation patterns" below.
 
 ## Output Data vs Working State
 
@@ -29,6 +32,26 @@ All data in the compiler falls into two categories:
 The smell to watch for is **Clone-without-Copy** on output data. Copy types must also derive Clone (Rust requires it as a supertrait), but that Clone is a trivial memcpy — harmless. Clone *without* Copy means the type could hide an expensive heap duplication, and should be investigated. Output data must never contain heap collections (`Vec`, `HashMap`, `Box`).
 
 **Working state** is mutable data used during a pass — scopes, environments, builders, solver state. It lives on the stack or heap and may contain `Vec`, `HashMap`, `Box`. Clone is allowed for working state (e.g., `StackFrame` is cloned on scope entry). Moving working state off the heap (persistent data structures, Rc, arena-backed collections) is a future refactor goal.
+
+## Mutation Patterns
+
+Arenas don't support mutation, period. When a value's lifecycle requires mutation, pick one of three patterns:
+
+- **Box pattern** — Vec-backed mutation buffer that lives outside the arena, with `snapshot(interner)` to freeze the current state into the arena as a fresh `&'t T`. Each snapshot is a new arena allocation; the old one is unchanged. Used by `NodeEnvironmentBox`, `TemplatasStoreBuilder`, `FunctionEnvironmentBuilder`. Mirrors Scala's `*Box` case classes whose `var` field gets replaced on each mutation.
+- **Non-arena container** — owns its own `Vec`/`HashMap` collections, lives entirely outside the arena, dies at pass end. Used by `CompilerOutputs` for accumulating per-pass results.
+- **By-value** — owned `T` on the stack, mutate freely, then move into final position. Used for short-lived values that get built up and consumed in one scope.
+
+The choice is driven by who mutates and how long the value lives:
+
+| Lifetime | Multiple mutators? | Pattern |
+|---|---|---|
+| Short, single scope | No | By-value |
+| Pass-wide accumulator | Many call sites push into it | Non-arena container |
+| Scope-local, frozen at boundaries | Mutated then snapshotted, possibly multiple times | Box |
+
+## Where To Put Data: Arena vs Inline vs Mutable Container
+
+For an immutable value (one that has passed the "needs mutation" filter), the next question is whether it lives in the arena (accessed via `&'t T`) or stored inline by value. The decision framework lives in @WVSBIZ — the seven principles (size, dynamic length, interned, identity, sharing, recursion, back-pointers) and the Scala-parity override.
 
 ### Transient Data
 

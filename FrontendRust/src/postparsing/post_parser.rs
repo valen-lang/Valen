@@ -1078,10 +1078,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }
     }
 
-    let imports: Vec<&'s ImportS<'s>> = Vec::new();
+    let mut imports: Vec<&'s ImportS<'s>> = Vec::new();
     for denizen in parsed.denizens {
-      if let IDenizenP::TopLevelImport(_import_p) = denizen {
-        panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_IMPORT_NOT_YET_IMPLEMENTED");
+      if let IDenizenP::TopLevelImport(import_p) = denizen {
+        imports.push(&*self.scout_arena.alloc(self.scout_import(file_coordinate, import_p)));
       }
     }
 
@@ -1579,10 +1579,20 @@ fn scout_export_as(
   }
 */
 fn scout_import(
-  _file: &crate::utils::code_hierarchy::FileCoordinate<'s>,
-  _import_p: &crate::parsing::ast::ImportP<'p>,
+  &self,
+  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
+  import_p: &crate::parsing::ast::ImportP<'p>,
 ) -> crate::postparsing::ast::ImportS<'s> {
-  panic!("Unimplemented scout_import");
+  let _pos = PostParser::eval_pos(file, import_p.range.begin());
+
+  ImportS {
+    range: PostParser::eval_range(file, import_p.range),
+    module_name: self.scout_arena.intern_str(import_p.module_name.str().as_str()),
+    package_names: self.scout_arena.alloc_slice_from_vec(
+      import_p.package_steps.iter().map(|n| self.scout_arena.intern_str(n.str().as_str())).collect(),
+    ),
+    importee_name: self.scout_arena.intern_str(import_p.importee_name.str().as_str()),
+  }
 }
 /*
   private def scoutImport(file: FileCoordinate, importP: ImportP): ImportS = {

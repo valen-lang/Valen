@@ -4,7 +4,7 @@ use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
-use crate::postparsing::names::IImpreciseNameS;
+use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::{ReferenceExpressionTE, ConsecutorTE, VoidLiteralTE};
 use crate::typing::ast::ast::{InterfaceEdgeBlueprintT, KindExportT};
@@ -13,16 +13,18 @@ use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::infer_compiler::InferEnv;
-use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro};
+use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro, FunctionBodyMacro};
 use crate::typing::env::environment::{get_imprecise_name, GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::names::names::{
-    IdT, IdValT, INameT, IFunctionTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
+    IdT, IdValT, INameT, IFunctionTemplateNameT, IInstantiationNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    FunctionTemplataT, ITemplataT, KindTemplataT, MutabilityTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
+    CoordTemplataT, FunctionTemplataT, ITemplataT, KindTemplataT, MutabilityTemplataT, PlaceholderTemplataT,
+    RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
 };
+use crate::typing::types::types::CoordT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
@@ -222,6 +224,15 @@ where 's: 't,
       keywords,
       nameTranslator,
       new IInfererDelegate {
+*/
+    pub fn get_placeholders_in_id(&self, accum: &mut Vec<IdT<'s, 't>>, id: IdT<'s, 't>) {
+        match id.local_name {
+            INameT::KindPlaceholder(_) => accum.push(id),
+            INameT::KindPlaceholderTemplate(_) => accum.push(id),
+            _ => {}
+        }
+    }
+/*
         def getPlaceholdersInId(accum: Accumulator[IdT[INameT]], id: IdT[INameT]): Unit = {
           id.localName match {
             case KindPlaceholderNameT(_) => accum.add(id)
@@ -229,7 +240,30 @@ where 's: 't,
             case _ =>
           }
         }
-
+*/
+    pub fn get_placeholders_in_templata(&self, accum: &mut Vec<IdT<'s, 't>>, templata: ITemplataT<'s, 't>) {
+        match templata {
+            ITemplataT::Kind(KindTemplataT { kind }) => self.get_placeholders_in_kind(accum, *kind),
+            ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind, .. } }) => self.get_placeholders_in_kind(accum, *kind),
+            ITemplataT::Placeholder(PlaceholderTemplataT { id, .. }) => accum.push(*id),
+            ITemplataT::Integer(_) => {}
+            ITemplataT::Boolean(_) => {}
+            ITemplataT::String(_) => {}
+            ITemplataT::RuntimeSizedArrayTemplate(_) => {}
+            ITemplataT::StaticSizedArrayTemplate(_) => {}
+            ITemplataT::Variability(_) => {}
+            ITemplataT::Ownership(_) => {}
+            ITemplataT::Mutability(_) => {}
+            ITemplataT::InterfaceDefinition(_) => {}
+            ITemplataT::StructDefinition(_) => {}
+            ITemplataT::ImplDefinition(_) => {}
+            ITemplataT::CoordList(_) => { panic!("implement: get_placeholders_in_templata CoordList"); }
+            ITemplataT::Prototype(_) => { panic!("implement: get_placeholders_in_templata Prototype"); }
+            ITemplataT::Isa(_) => { panic!("implement: get_placeholders_in_templata Isa"); }
+            _ => { panic!("implement: get_placeholders_in_templata other"); }
+        }
+    }
+/*
         def getPlaceholdersInTemplata(accum: Accumulator[IdT[INameT]], templata: ITemplataT[ITemplataType]): Unit = {
           templata match {
             case KindTemplataT(kind) => getPlaceholdersInKind(accum, kind)
@@ -260,7 +294,38 @@ where 's: 't,
             case other => vimpl(other)
           }
         }
-
+*/
+    pub fn get_placeholders_in_kind(&self, accum: &mut Vec<IdT<'s, 't>>, kind: KindT<'s, 't>) {
+        match kind {
+            KindT::Int(_) => {}
+            KindT::Bool(_) => {}
+            KindT::Float(_) => {}
+            KindT::Void(_) => {}
+            KindT::Never(_) => {}
+            KindT::Str(_) => {}
+            KindT::RuntimeSizedArray(_) => { panic!("implement: get_placeholders_in_kind RuntimeSizedArray"); }
+            KindT::StaticSizedArray(_) => { panic!("implement: get_placeholders_in_kind StaticSizedArray"); }
+            // Rust adaptation (SPDMX-B): IdT.local_name is type-erased INameT in Rust; narrow via TryFrom<INameT> for IInstantiationNameT to call the dispatch method (per AASSNCMCX-session precedent in templata_compiler.rs).
+            KindT::Struct(s) => {
+                let inst_name = IInstantiationNameT::try_from(s.id.local_name).expect(
+                    "StructTT id local_name must be an IInstantiationNameT");
+                for arg in inst_name.template_args() {
+                    self.get_placeholders_in_templata(accum, *arg);
+                }
+            }
+            // Rust adaptation (SPDMX-B): IdT.local_name is type-erased INameT in Rust; narrow via TryFrom<INameT> for IInstantiationNameT to call the dispatch method (per AASSNCMCX-session precedent in templata_compiler.rs).
+            KindT::Interface(i) => {
+                let inst_name = IInstantiationNameT::try_from(i.id.local_name).expect(
+                    "InterfaceTT id local_name must be an IInstantiationNameT");
+                for arg in inst_name.template_args() {
+                    self.get_placeholders_in_templata(accum, *arg);
+                }
+            }
+            KindT::KindPlaceholder(p) => accum.push(p.id),
+            KindT::OverloadSet(_) => {}
+        }
+    }
+/*
         def getPlaceholdersInKind(accum: Accumulator[IdT[INameT]], kind: KindT): Unit = {
           kind match {
             case IntT(_) =>
@@ -286,7 +351,16 @@ where 's: 't,
             case other => vimpl(other)
           }
         }
+*/
+    pub fn sanity_check_conclusion(&self, envs: &InferEnv<'s, 't>, _state: &mut CompilerOutputs<'s, 't>, _rune: IRuneS<'s>, templata: ITemplataT<'s, 't>) {
+        let mut accum: Vec<IdT<'s, 't>> = Vec::new();
+        self.get_placeholders_in_templata(&mut accum, templata);
 
+        if !accum.is_empty() {
+            panic!("implement: sanityCheckConclusion non-empty accum path");
+        }
+    }
+/*
         override def sanityCheckConclusion(env: InferEnv, state: CompilerOutputs, rune: IRuneS, templata: ITemplataT[ITemplataType]): Unit = {
           val accum = new Accumulator[IdT[INameT]]()
           getPlaceholdersInTemplata(accum, templata)
@@ -327,6 +401,31 @@ where 's: 't,
           templataCompiler.lookupTemplata(envs.selfEnv, coutputs, range, name)
         }
 
+*/
+    // mig: fn is_descendant_kind
+    // Rust adaptation: collides with Compiler::is_descendant lifted from
+    // ImplCompiler.scala (which Rust flattened onto Compiler); appended `_kind`
+    // suffix to disambiguate this delegate-class isDescendant from
+    // ImplCompiler's. Scala uses class-level disambiguation (Compiler's
+    // anonymous CompilerSolverDelegate vs ImplCompiler) that Rust lacks.
+    pub fn is_descendant_kind(
+        &self,
+        _envs: &InferEnv<'s, 't>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        kind: KindT<'s, 't>,
+    ) -> bool {
+        match kind {
+            KindT::KindPlaceholder(_) => { panic!("implement: is_descendant_kind KindPlaceholder"); }
+            KindT::RuntimeSizedArray(_) => false,
+            KindT::OverloadSet(_) => false,
+            KindT::Never(_) => true,
+            KindT::StaticSizedArray(_) => false,
+            KindT::Struct(_) => { panic!("implement: is_descendant_kind Struct"); }
+            KindT::Interface(_) => { panic!("implement: is_descendant_kind Interface"); }
+            KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Str(_) | KindT::Void(_) => false,
+        }
+    }
+/*
         override def isDescendant(
           envs: InferEnv,
           coutputs: CompilerOutputs,
@@ -343,7 +442,22 @@ where 's: 't,
             case IntT(_) | BoolT() | FloatT() | StrT() | VoidT() => false
           }
         }
-
+*/
+    // mig: fn is_ancestor_kind
+    // Rust adaptation: see is_descendant_kind above for the `_kind` suffix
+    // rationale (ImplCompiler/Compiler flattening collision).
+    pub fn is_ancestor_kind(
+        &self,
+        _envs: &InferEnv<'s, 't>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        kind: KindT<'s, 't>,
+    ) -> bool {
+        match kind {
+            KindT::Interface(_) => true,
+            _ => false,
+        }
+    }
+/*
         override def isAncestor(
           envs: InferEnv,
           coutputs: CompilerOutputs,
@@ -970,8 +1084,29 @@ where 's: 't,
 
         let name_to_top_level_environment =
             self.typing_interner.alloc_slice_from_vec(namespace_name_to_templatas_vec);
+
+        // Mirrors Scala compiler.scala:1170-1187 nameToFunctionBodyMacro Map population.
+        let mut name_to_function_body_macro =
+            self.typing_interner.alloc_index_map::<StrI<'s>, FunctionBodyMacro>();
+        name_to_function_body_macro.insert(self.keywords.abstract_body, FunctionBodyMacro::AbstractBody);
+        name_to_function_body_macro.insert(self.keywords.struct_constructor_generator, FunctionBodyMacro::StructConstructor);
+        name_to_function_body_macro.insert(self.keywords.drop_generator, FunctionBodyMacro::StructDrop);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_len, FunctionBodyMacro::RsaLen);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_mut_new, FunctionBodyMacro::RsaMutableNew);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_imm_new, FunctionBodyMacro::RsaImmutableNew);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_push, FunctionBodyMacro::RsaMutablePush);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_pop, FunctionBodyMacro::RsaMutablePop);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_capacity, FunctionBodyMacro::RsaMutableCapacity);
+        name_to_function_body_macro.insert(self.keywords.vale_static_sized_array_len, FunctionBodyMacro::SsaLen);
+        name_to_function_body_macro.insert(self.keywords.vale_runtime_sized_array_drop_into, FunctionBodyMacro::RsaDropInto);
+        name_to_function_body_macro.insert(self.keywords.vale_static_sized_array_drop_into, FunctionBodyMacro::SsaDropInto);
+        name_to_function_body_macro.insert(self.keywords.vale_lock_weak, FunctionBodyMacro::LockWeak);
+        name_to_function_body_macro.insert(self.keywords.vale_same_instance, FunctionBodyMacro::SameInstance);
+        name_to_function_body_macro.insert(self.keywords.vale_as_subtype, FunctionBodyMacro::AsSubtype);
+
         let global_env: &'t GlobalEnvironmentT<'s, 't> = self.typing_interner.alloc(GlobalEnvironmentT {
             name_to_top_level_environment,
+            name_to_function_body_macro,
             builtins,
         });
 
@@ -1076,18 +1211,18 @@ where 's: 't,
                         let full_env_snapshot = *full_env_snapshot;
                         let call_range = *call_range;
                         let call_location = *call_location;
-                        let life = life.clone();
+                        let life = *life;
                         let attributes_t = *attributes_t;
                         let params_t = *params_t;
                         let is_destructor = *is_destructor;
                         let maybe_explicit_return_coord = *maybe_explicit_return_coord;
-                        let instantiation_bound_params = instantiation_bound_params.clone();
+                        let instantiation_bound_params = *instantiation_bound_params;
 
                         // (nextDeferredEvaluatingFunctionBody.call)(coutputs)
                         self.finish_function_maybe_deferred(
                             &mut coutputs, full_env_snapshot, call_range, call_location,
                             life, attributes_t, params_t, is_destructor,
-                            maybe_explicit_return_coord, &instantiation_bound_params);
+                            maybe_explicit_return_coord, instantiation_bound_params);
 
                         // coutputs.markDeferredFunctionBodyCompiled(nextDeferredEvaluatingFunctionBody.prototypeT)
                         coutputs.mark_deferred_function_body_compiled(prototype);
@@ -1107,16 +1242,16 @@ where 's: 't,
         let reachable_functions = coutputs.get_all_functions();
 
         // interfaceEdgeBlueprints.groupBy(_.interface).mapValues(vassertOne(_))
-        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
+        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
         for _blueprint in interface_edge_blueprints.iter() {
             panic!("implement: groupBy interface + vassertOne for non-empty edge blueprints");
         }
 
         // coutputs.getInstantiationNameToFunctionBoundToRune()
         let raw_instantiation_bounds = coutputs.get_instantiation_name_to_function_bound_to_rune();
-        let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, InstantiationBoundArgumentsT<'s, 't>> = HashMap::new();
+        let mut instantiation_name_to_instantiation_bounds: HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>> = HashMap::new();
         for (id, bounds) in raw_instantiation_bounds.iter() {
-            instantiation_name_to_instantiation_bounds.insert(*id.0, (*bounds).clone());
+            instantiation_name_to_instantiation_bounds.insert(*id, *bounds);
         }
 
         let hinputs = HinputsT {
@@ -2301,8 +2436,8 @@ where 's: 't,
             KindT::KindPlaceholder(_) => { panic!("Unimplemented: get_mutability KindPlaceholderT"); }
             KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: get_mutability RuntimeSizedArray"); }
             KindT::StaticSizedArray(_) => { panic!("Unimplemented: get_mutability StaticSizedArray"); }
-            KindT::Struct(_) => { panic!("Unimplemented: get_mutability Struct"); }
-            KindT::Interface(_) => { panic!("Unimplemented: get_mutability Interface"); }
+            KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),
+            KindT::Interface(i) => coutputs.lookup_mutability(self.get_interface_template(i.id)),
             KindT::OverloadSet(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
         }
     }

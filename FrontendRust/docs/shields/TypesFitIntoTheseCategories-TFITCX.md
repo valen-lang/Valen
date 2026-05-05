@@ -79,6 +79,7 @@ B. Test-only structs (inside `#[cfg(test)]` modules).
 
 ## See also
 
-- @WVSBIZ — decision framework for when a value-type should be promoted to interned.
+- @WVSBIZ — full decision framework for arena-vs-inline (seven principles), and when an arena-allocated value should be interned vs just allocated.
 - @SICZ — how Interned types are sealed against external construction via `MustIntern`.
 - @IEOIBZ — identity-bearing Arena-allocated types implement `PartialEq`/`Hash` via `std::ptr::eq`/`std::ptr::hash`.
+- `FrontendRust/docs/architecture/arenas.md` — arenas are immutable; mutation goes through Box / non-arena container / by-value patterns instead.

@@ -81,7 +81,7 @@ where 's: 't,
         &self,
         func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_1: &'s FunctionA<'s>,
@@ -98,7 +98,28 @@ where 's: 't,
         // maybeExplicitReturnCoord match { ... }
         match maybe_explicit_return_coord {
             None => {
-                panic!("implement: declareAndEvaluateFunctionBody — inferred return type");
+                let (body2, returns) =
+                    self.evaluate_function_body(
+                        func_outer_env, coutputs, life, parent_ranges,
+                        func_outer_env.default_region, call_location,
+                        &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
+                        is_destructor, None)
+                    .unwrap_or_else(|_| panic!("implement: BodyResultDoesntMatch error handling (None ret)"));
+
+                assert!(body2.result().coord.kind != KindT::Never(NeverT { from_break: true }));
+                let return_type2 =
+                    if returns.is_empty() && body2.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
+                        // No returns yet the body results in a Never. This can happen if we call panic from inside.
+                        body2.result().coord
+                    } else {
+                        assert!(!returns.is_empty());
+                        if returns.len() > 1 {
+                            panic!("Can't infer return type because {} types are returned", returns.len());
+                        }
+                        *returns.iter().next().unwrap()
+                    };
+
+                (Some(return_type2), body2)
             }
             Some(explicit_ret_coord) => {
                 // val (body2, returns) = evaluateFunctionBody(...)
@@ -113,12 +134,19 @@ where 's: 't,
                 // vcurious(returns.size <= 1)
                 assert!(returns.len() <= 1);
                 // (returns.headOption, body2.result.kind) match { ... }
-                match returns.iter().next() {
-                    Some(x) if *x == explicit_ret_coord => {
+                match (returns.iter().next(), body2.result().coord.kind) {
+                    (Some(x), _) if *x == explicit_ret_coord => {
                         // Let it through, it returns the expected type.
                     }
+                    (Some(coord), _) if coord.ownership == OwnershipT::Share && coord.kind == KindT::Never(NeverT { from_break: false }) => {
+                        // Let it through, it returns a never but we expect something else, that's fine
+                    }
+                    (None, KindT::Never(NeverT { from_break: false })) => {
+                        // Let it through, it doesn't return anything yet it results in a never, which means
+                        // we called panic or something from inside.
+                    }
                     _ => {
-                        panic!("implement: return type checking branches");
+                        panic!("implement: CouldntConvertForReturnT error");
                     }
                 }
 
@@ -250,7 +278,7 @@ where 's: 't,
         &self,
         func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         region: RegionT,
         call_location: LocationInDenizen<'s>,
@@ -272,12 +300,12 @@ where 's: 't,
             std::iter::once(body_1.range).chain(parent_ranges.iter().copied()).collect();
         let params_2_refs: Vec<&'t ParameterT<'s, 't>> = params_2.iter().collect();
         let patterns_te = self.evaluate_lets(
-            &mut env, coutputs, life.add(0),
+            &mut env, coutputs, life.add(self.typing_interner, 0),
             &range_list, call_location, region, params_1, &params_2_refs);
 
         let (statements_from_block, returns_from_inside_maybe_with_never) =
             self.evaluate_block_statements(
-                coutputs, starting_env, &mut env, life.add(1),
+                coutputs, starting_env, &mut env, life.add(self.typing_interner, 1),
                 parent_ranges, call_location, starting_env.default_region, body_1.block);
 
         let unconverted_body_without_return =
@@ -285,9 +313,7 @@ where 's: 't,
 
         let starting_env_ref = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(starting_env));
         let converted_body_without_return = match maybe_expected_result_type {
-            None => {
-                panic!("implement: evaluateFunctionBody — None expectedResultType");
-            }
+            None => unconverted_body_without_return,
             Some(expected_result_type) => {
                 if self.is_type_convertible(coutputs, starting_env_ref, parent_ranges, call_location,
                     unconverted_body_without_return.result().coord, expected_result_type) {
@@ -427,7 +453,7 @@ where 's: 't,
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,

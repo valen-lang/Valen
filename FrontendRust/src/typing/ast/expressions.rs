@@ -989,7 +989,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> BlockTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> { self.inner.result() }
 /*
   override def result = inner.result
 }
@@ -1864,7 +1864,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ExternFunctionCallTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.prototype2.return_type } }
 /*
   // We dont:
   //   vassert(prototype2.fullName.last.templateArgs.isEmpty)
@@ -2024,7 +2024,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConstructTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   vpass()
 

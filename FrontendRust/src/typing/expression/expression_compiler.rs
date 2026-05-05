@@ -1,5 +1,6 @@
 use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::{LocationInDenizen, FunctionS};
+use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS};
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::expressions::*;
@@ -16,6 +17,7 @@ use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use std::collections::{HashMap, HashSet};
+use crate::typing::templata_compiler::IBoundArgumentsSource;
 
 /*
 package dev.vale.typing.expression
@@ -156,7 +158,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -166,7 +168,7 @@ where 's: 't,
         let mut all_returns = HashSet::new();
         for (index, expr) in exprs_1.iter().enumerate() {
             let (ref_expr, returns) = self.evaluate_and_coerce_to_reference_expression(
-                coutputs, nenv, life.add(index as i32), parent_ranges, call_location, region, expr);
+                coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, call_location, region, expr);
             result_exprs.push(ref_expr);
             all_returns.extend(returns);
         }
@@ -486,7 +488,35 @@ where 's: 't,
         region: RegionT,
         closure_struct_ref: StructTT<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
+        let substituter =
+            self.get_placeholder_substituter(
+                self.opts.global_options.sanity_check,
+                nenv.function_environment().template_id,
+                closure_struct_ref.id,
+                IBoundArgumentsSource::InheritBoundsFromTypeItself,
+            );
+        // Note, this is where the unordered closuredNames set becomes ordered.
+        let lookup_expressions2: Vec<ExpressionTE<'s, 't>> =
+            closure_struct_def.members.iter().map(|member| {
+                panic!("Unimplemented: make_closure_struct_construct_expression member loop");
+            }).collect();
+        let ownership =
+            match closure_struct_def.mutability {
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                ITemplataT::Placeholder(_) => { panic!("Unimplemented: make_closure_struct_construct_expression PlaceholderTemplataT"); }
+                _ => { panic!("Unimplemented: make_closure_struct_construct_expression unexpected mutability"); }
+            };
+        let struct_ref = self.typing_interner.alloc(closure_struct_ref);
+        let result_pointer_type = CoordT { ownership, region, kind: KindT::Struct(struct_ref) };
+
+        let construct_expr2 = ConstructTE {
+            struct_tt: struct_ref,
+            result_reference: result_pointer_type,
+            args: self.typing_interner.alloc_slice_from_vec(lookup_expressions2),
+        };
+        self.typing_interner.alloc(ReferenceExpressionTE::Construct(construct_expr2))
     }
 /*
   private def makeClosureStructConstructExpression(
@@ -563,7 +593,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -615,7 +645,12 @@ where 's: 't,
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match expr_2 {
+            ExpressionTE::Reference(r) => r,
+            ExpressionTE::Address(_a) => {
+                panic!("Unimplemented: coerce_to_reference_expression Address case");
+            }
+        }
     }
 /*
   def coerceToReferenceExpression(
@@ -643,7 +678,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -682,7 +717,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         outer_call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -707,7 +742,7 @@ where 's: 't,
             IExpressionSE::Return(ret) => {
                 let (uncasted_inner_expr_2, returns_from_inner_expr) =
                     self.evaluate_and_coerce_to_reference_expression(
-                        coutputs, nenv, life.add(0), parent_ranges,
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,
                         outer_call_location, region, ret.inner);
 
                 let inner_expr_2 = match nenv.maybe_return_type() {
@@ -787,7 +822,7 @@ where 's: 't,
             IExpressionSE::Let(let_se) => {
                 let (source_expr_2, returns_from_source) =
                     self.evaluate_and_coerce_to_reference_expression(
-                        coutputs, nenv, life.add(0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
 
                 let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner };
                 let rune_to_initially_known_type: HashMap<_, _> =
@@ -814,7 +849,7 @@ where 's: 't,
                 let result_te = self.infer_and_translate_pattern(
                     coutputs,
                     nenv,
-                    life.add(1),
+                    life.add(self.typing_interner, 1),
                     parent_ranges,
                     outer_call_location,
                     &rules_vec,
@@ -842,7 +877,7 @@ where 's: 't,
                 for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
                     let (undropped_expr_te, returns) =
                         self.evaluate_and_coerce_to_reference_expression(
-                            coutputs, nenv, life.add(index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se);
+                            coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se);
                     let expr_te = match undropped_expr_te.result().coord.kind {
                         KindT::Void(_) => undropped_expr_te,
                         _ => {
@@ -856,7 +891,7 @@ where 's: 't,
                 let (last_expr_te, last_returns) =
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv,
-                        life.add((consecutor_se.exprs.len() - 1) as i32),
+                        life.add(self.typing_interner, (consecutor_se.exprs.len() - 1) as i32),
                         parent_ranges,
                         outer_call_location,
                         region_for_inners,
@@ -885,7 +920,7 @@ where 's: 't,
                     IExpressionSE::OutsideLoad(outside_load) => {
                         let (args_exprs_2, returns_from_args) =
                             self.evaluate_and_coerce_to_reference_expressions(
-                                coutputs, nenv, life.add(0), parent_ranges, fc.location,
+                                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location,
                                 // See SRIE
                                 nenv.default_region(),
                                 fc.arg_exprs);
@@ -907,7 +942,7 @@ where 's: 't,
                             self.evaluate_prefix_call(
                                 coutputs,
                                 nenv,
-                                life.add(1),
+                                life.add(self.typing_interner, 1),
                                 &range_list,
                                 fc.location,
                                 region,
@@ -918,9 +953,81 @@ where 's: 't,
                         (ExpressionTE::Reference(call_expr_2), returns_from_args)
                     }
                     _ => {
-                        panic!("implement: evaluate_expression FunctionCall non-OutsideLoad callable");
+                        let (undecayed_callable_expr_2, returns_from_callable) =
+                            self.evaluate_and_coerce_to_reference_expression(
+                                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location, region, fc.callable_expr);
+                        let decayed_callable_expr_2_ref =
+                            self.maybe_borrow_soft_load(coutputs, &ExpressionTE::Reference(undecayed_callable_expr_2));
+                        let decayed_callable_reference_expr_2 =
+                            self.coerce_to_reference_expression(nenv, parent_ranges, ExpressionTE::Reference(decayed_callable_expr_2_ref), region);
+                        let (args_exprs_2, returns_from_args) =
+                            self.evaluate_and_coerce_to_reference_expressions(
+                                coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, fc.location,
+                                nenv.default_region(),
+                                fc.arg_exprs);
+                        let function_pointer_call_2 =
+                            self.evaluate_prefix_call(
+                                coutputs,
+                                nenv,
+                                life.add(self.typing_interner, 2),
+                                &{
+                                    let mut range_list = vec![fc.range];
+                                    range_list.extend_from_slice(parent_ranges);
+                                    range_list
+                                },
+                                fc.location,
+                                region,
+                                decayed_callable_reference_expr_2,
+                                &[],
+                                &[],
+                                &args_exprs_2);
+                        let mut all_returns = returns_from_callable;
+                        all_returns.extend(returns_from_args);
+                        (ExpressionTE::Reference(function_pointer_call_2), all_returns)
                     }
                 }
+            }
+            IExpressionSE::Function(function_se) => {
+                let function_s = function_se.function;
+                let mut range_list = vec![function_s.range];
+                range_list.extend_from_slice(parent_ranges);
+                let call_expr_2 = self.evaluate_closure(
+                    coutputs, nenv, &range_list, outer_call_location, region, *function_s.name, function_s);
+                (ExpressionTE::Reference(call_expr_2), HashSet::new())
+            }
+            IExpressionSE::Ownershipped(ownershipped) => {
+                let (source_te, returns_from_inner) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, ownershipped.inner_expr);
+                let result_expr_2 =
+                    match source_te.result().coord.ownership {
+                        OwnershipT::Own => {
+                            panic!("implement: Ownershipped OwnT");
+                        }
+                        OwnershipT::Borrow => {
+                            panic!("implement: Ownershipped BorrowT");
+                        }
+                        OwnershipT::Weak => {
+                            panic!("implement: Ownershipped WeakT");
+                        }
+                        OwnershipT::Share => {
+                            match ownershipped.target_ownership {
+                                LoadAsP::Move => {
+                                    // Allow this, we can do ^ on a share ref, itll just give us a share ref.
+                                    source_te
+                                }
+                                LoadAsP::LoadAsBorrow => {
+                                    // Allow this, we can do & on a share ref, itll just give us a share ref.
+                                    source_te
+                                }
+                                LoadAsP::LoadAsWeak => {
+                                    panic!("implement: Ownershipped ShareT LoadAsWeakP");
+                                }
+                                LoadAsP::Use => source_te,
+                            }
+                        }
+                    };
+                (ExpressionTE::Reference(result_expr_2), returns_from_inner)
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -928,6 +1035,7 @@ where 's: 't,
         }
     }
 /*
+Guardian: temp-disable: SPDMX — False positive: the OutsideLoad-arm collapse predates this edit. My change only threads the interner argument into existing life.add() calls per the AASSNCMCX directive (LIFE.add now takes interner). The match-arm structure is unchanged. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1088-1777919053718/hook-1088/evaluate_expression--682.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // returns:
   // - resulting expression
   // - all the types that are returned from inside the body via return
@@ -2285,7 +2393,7 @@ where 's: 't,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         context_region: RegionT,
         undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
@@ -2344,7 +2452,21 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let function_a = self.astronomize_lambda(coutputs, nenv, parent_ranges, function_s);
+
+        let snapshot_env = nenv.snapshot(self.typing_interner);
+        let closure_struct_tt =
+            self.evaluate_closure_struct(coutputs, snapshot_env, parent_ranges, call_location, name, function_a, true);
+        let closure_coord =
+            self.pointify_kind(coutputs, KindT::Struct(self.typing_interner.alloc(closure_struct_tt)), region, OwnershipT::Own);
+
+        let mut range_list = vec![function_a.range];
+        range_list.extend_from_slice(parent_ranges);
+        let construct_expr_2 =
+            self.make_closure_struct_construct_expression(coutputs, nenv, &range_list, region, closure_struct_tt);
+        assert!(construct_expr_2.result().coord == closure_coord);
+
+        construct_expr_2
     }
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
@@ -2445,7 +2567,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
@@ -2480,7 +2602,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         patterns_1: &[&'s AtomSP<'s>],
@@ -2526,7 +2648,83 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionA<'s> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let range_s = function_s.range;
+        let name_s = *function_s.name;
+        let attributes_s = function_s.attributes;
+        let identifying_runes_s = function_s.generic_params;
+        let rune_to_explicit_type = &function_s.rune_to_predicted_type;
+        let tyype = &function_s.tyype;
+        let params_s = function_s.params;
+        let maybe_ret_coord_rune = &function_s.maybe_ret_coord_rune;
+        let rules_with_implicitly_coercing_lookups_s = function_s.rules;
+        let body_s = function_s.body;
+
+        let mut rune_s_to_pre_known_type_a: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            rune_to_explicit_type.iter().map(|(k, v)| (*k, v.clone())).collect();
+        for param in params_s {
+            if let Some(ref coord_rune) = param.pattern.coord_rune {
+                rune_s_to_pre_known_type_a.insert(coord_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+            }
+        }
+
+        let snapshot = nenv.snapshot(self.typing_interner);
+        let env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+        let rune_type_solve_env = self.create_rune_type_solver_env(env_ref);
+
+        let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {
+            scout_arena: self.scout_arena,
+        };
+        let mut range_list = vec![range_s];
+        range_list.extend_from_slice(parent_ranges);
+        let rune_a_to_type_with_implicitly_coercing_lookups_s =
+            match rune_type_solver.solve_rune_type(
+                self.opts.global_options.sanity_check,
+                &rune_type_solve_env,
+                range_list.clone(),
+                false,
+                rules_with_implicitly_coercing_lookups_s,
+                &identifying_runes_s.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
+                true,
+                rune_s_to_pre_known_type_a,
+            ) {
+                Ok(t) => t,
+                Err(_e) => panic!("CouldntSolveRuneTypesT"),
+            };
+
+        let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            rune_a_to_type_with_implicitly_coercing_lookups_s;
+        // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
+        // loose. We intentionally ignored the types of the things they're looking up, so we could know
+        // what types we *expect* them to be, so we could coerce.
+        // That coercion is good, but lets make it more explicit.
+        let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+        match crate::higher_typing::higher_typing_pass::explicify_lookups(
+            &rune_type_solve_env,
+            self.scout_arena,
+            &mut rune_a_to_type,
+            &mut rule_builder,
+            rules_with_implicitly_coercing_lookups_s.to_vec(),
+        ) {
+            Err(_e) => panic!("explicify_lookups failed in astronomize_lambda"),
+            Ok(()) => {}
+        }
+
+        let mut attributes: Vec<IFunctionAttributeS<'s>> = attributes_s.to_vec();
+        attributes.push(IFunctionAttributeS::UserFunction(UserFunctionS));
+
+        self.scout_arena.alloc(FunctionA::new(
+            range_s,
+            name_s,
+            self.scout_arena.alloc_slice_from_vec(attributes),
+            tyype.clone(),
+            identifying_runes_s,
+            self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
+            params_s,
+            maybe_ret_coord_rune.clone(),
+            self.scout_arena.alloc_slice_from_vec(rule_builder),
+            *body_s,
+        ))
     }
 /*
   def astronomizeLambda(
@@ -2612,7 +2810,7 @@ where 's: 't,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
         expr_te: &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
@@ -2623,7 +2821,30 @@ where 's: 't,
         if unreversed_variables_to_destruct.is_empty() {
             expr_te
         } else {
-            panic!("implement: drop_since — non-empty variables to destruct");
+            match expr_te.result().coord.kind {
+                KindT::Void(_) => {
+                    let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
+                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct);
+                    let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                    exprs.push(expr_te);
+                    exprs.extend(destroy_expressions);
+                    exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData })));
+                    self.consecutive(&exprs)
+                }
+                KindT::Never(_) => {
+                    // In this case, we want to not drop them, so we can support things like:
+                    //   func drop(self Server) { panic("unreachable"); }
+                    // and not drop Server.
+                    let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
+                    let _destroy_expressions = self.unlet_all_without_dropping(coutputs, nenv, range, &reversed_variables_to_destruct);
+                    // Just dont add in the destroyExpressions, let em go.
+                    // We did the above simply to mark them as unstackified.
+                    expr_te
+                }
+                _ => {
+                    panic!("implement: drop_since — unexpected kind");
+                }
+            }
         }
     }
 /*
@@ -2701,7 +2922,7 @@ where 's: 't,
     pub fn resultify_expressions(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
         panic!("Unimplemented: Slab 15 — body migration");

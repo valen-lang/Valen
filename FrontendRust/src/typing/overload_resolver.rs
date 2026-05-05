@@ -13,7 +13,7 @@ use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::FunctionEnvironmentT;
-use crate::typing::function::function_compiler::{StampFunctionSuccess, IResolveFunctionResult};
+use crate::typing::function::function_compiler::{StampFunctionSuccess, IResolveFunctionResult, IEvaluateFunctionResult};
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
@@ -284,7 +284,10 @@ where 's: 't,
                         index: param_index as i32, argument: *desired_param, parameter: *candidate_param });
                 }
             } else {
-                panic!("implement: paramsMatch non-exact isTypeConvertible");
+                if !self.is_type_convertible(coutputs, calling_env, parent_ranges, call_location, *desired_param, *candidate_param) {
+                    return Err(IFindFunctionFailureReason::SpecificParamDoesntSend {
+                        index: param_index as i32, argument: *desired_param, parameter: *candidate_param });
+                }
             }
         }
         Ok(())
@@ -611,7 +614,27 @@ where 's: 't,
                                             .collect();
 
                                     if ft.function.is_lambda() {
-                                        panic!("implement: attemptCandidateBanner lambda evaluateTemplatedFunctionFromCallForPrototype");
+                                        // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
+                                        match self.evaluate_templated_function_from_call_for_prototype(
+                                            coutputs, calling_env, call_range, call_location, ft,
+                                            &explicitly_specified_template_arg_templatas, context_region, args,
+                                        ) {
+                                            IEvaluateFunctionResult::EvaluateFunctionFailure(_reason) => {
+                                                panic!("implement: attemptCandidateBanner EvaluateFunctionFailure");
+                                            }
+                                            IEvaluateFunctionResult::EvaluateFunctionSuccess(eval_success) => {
+                                                match self.params_match(
+                                                    coutputs, calling_env, call_range, call_location,
+                                                    args, &eval_success.prototype.prototype.param_types(), exact,
+                                                ) {
+                                                    Err(rejection_reason) => Err(rejection_reason),
+                                                    Ok(()) => {
+                                                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, eval_success.prototype.prototype.id).is_some());
+                                                        Ok(AttemptedCandidate { prototype: eval_success.prototype.prototype })
+                                                    }
+                                                }
+                                            }
+                                        }
                                     } else {
                                         // We pass in our env because the callee needs to see functions declared here, see CSSNCE.
                                         match self.evaluate_generic_light_function_from_call_for_prototype(
@@ -864,7 +887,7 @@ where 's: 't,
     ) -> Vec<&'t IInDenizenEnvironmentT<'s, 't>> {
         param_filters.iter().flat_map(|tyype| {
             match tyype.kind {
-                KindT::Struct(_) => { panic!("implement: get_param_environments StructTT"); }
+                KindT::Struct(sr) => { vec![coutputs.get_outer_env_for_type(range, self.get_struct_template(sr.id))] }
                 KindT::Interface(_) => { panic!("implement: get_param_environments InterfaceTT"); }
                 KindT::KindPlaceholder(_) => { panic!("implement: get_param_environments KindPlaceholderT"); }
                 _ => Vec::new()

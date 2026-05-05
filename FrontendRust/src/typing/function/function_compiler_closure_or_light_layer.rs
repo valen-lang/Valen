@@ -106,17 +106,17 @@ where 's: 't,
 {
     pub fn evaluate_templated_closure_function_from_call_for_banner(
         &self,
-        parent_env: IEnvironmentT,
-        coutputs: CompilerOutputs,
-        calling_env: IInDenizenEnvironmentT,
-        call_range: Vec<RangeS>,
-        call_location: LocationInDenizen,
-        closure_struct_ref: StructTT,
-        function: FunctionA,
-        already_specified_template_args: Vec<ITemplataT>,
+        parent_env: &'t IEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        closure_struct_ref: StructTT<'s, 't>,
+        function: &'s FunctionA<'s>,
+        already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult<'_, '_> {
+        arg_types: &[CoordT<'s, 't>],
+    ) -> IEvaluateFunctionResult<'s, 't> {
         panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_banner");
     }
 /*
@@ -557,17 +557,25 @@ where 's: 't,
 {
     pub fn evaluate_templated_light_banner_from_call_closure_or_light(
         &self,
-        parent_env: IEnvironmentT,
-        coutputs: CompilerOutputs,
-        calling_env: IInDenizenEnvironmentT,
-        call_range: Vec<RangeS>,
-        call_location: LocationInDenizen,
-        function: FunctionA,
-        explicit_template_args: Vec<ITemplataT>,
+        parent_env: &'t IEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function: &'s FunctionA<'s>,
+        explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
-        arg_types: Vec<CoordT>,
-    ) -> IEvaluateFunctionResult<'_, '_> {
-        panic!("Unimplemented: evaluate_templated_light_banner_from_call");
+        arg_types: &[CoordT<'s, 't>],
+    ) -> IEvaluateFunctionResult<'s, 't> {
+        self.check_not_closure(function);
+
+        let outer_env_id = parent_env.id().add_step(
+            self.typing_interner,
+            self.translate_generic_template_function_name(function.name, arg_types));
+        let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, false);
+        self.evaluate_templated_light_banner_from_call(
+            outer_env, coutputs, calling_env, call_range, call_location,
+            explicit_template_args, context_region, arg_types)
     }
 /*
   def evaluateTemplatedLightBannerFromCall(

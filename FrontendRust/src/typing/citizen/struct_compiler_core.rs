@@ -2,12 +2,13 @@ use crate::higher_typing::ast::{FunctionA, InterfaceA, StructA};
 use crate::postparsing::ast::{ICitizenAttributeS, IStructMemberS, LocationInDenizen};
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::typing::ast::ast::ICitizenAttributeT;
-use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, NormalStructMemberT};
+use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironmentT};
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::templata::templata::FunctionTemplataT;
+use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::types::types::{MutabilityT, StructTT};
 use crate::utils::range::RangeS;
 
@@ -389,7 +390,174 @@ where 's: 't,
         function_a: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::names::names::*;
+        use crate::typing::templata::templata::*;
+        use crate::typing::types::types::*;
+
+        let is_mutable = members.iter().any(|_m| {
+            panic!("implement: is_mutable check in make_closure_understruct_core")
+        });
+        let mutability = if is_mutable { MutabilityT::Mutable } else { MutabilityT::Immutable };
+
+        let understruct_template_name_t =
+            self.typing_interner.intern_lambda_citizen_template_name(LambdaCitizenTemplateNameT {
+                code_location: self.translate_code_location(function_a.range.begin),
+                _phantom: std::marker::PhantomData,
+            });
+        let understruct_templated_id =
+            containing_function_env.id().add_step(
+                self.typing_interner,
+                INameT::LambdaCitizenTemplate(understruct_template_name_t));
+
+        let understruct_instantiated_name_t =
+            IStructTemplateNameT::LambdaCitizenTemplate(understruct_template_name_t)
+                .make_struct_name(self.typing_interner, &[]);
+        let understruct_instantiated_id =
+            containing_function_env.id().add_step(
+                self.typing_interner,
+                understruct_instantiated_name_t);
+
+        // Lambdas have no bounds, so we just supply empty maps
+        coutputs.add_instantiation_bounds(
+            self.opts.global_options.sanity_check,
+            self.typing_interner,
+            *understruct_templated_id,
+            *understruct_instantiated_id,
+            self.typing_interner.alloc(InstantiationBoundArgumentsT {
+                rune_to_bound_prototype: self.typing_interner.alloc_index_map(),
+                rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
+                rune_to_bound_impl: self.typing_interner.alloc_index_map(),
+            }));
+        let understruct_struct_tt = self.typing_interner.intern_struct_tt(StructTTValT {
+            id: *understruct_instantiated_id,
+        });
+
+        let drop_func_name_t = INameT::FunctionTemplate(
+            self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                human_name: self.keywords.drop,
+                code_location: function_a.range.begin,
+                _phantom: std::marker::PhantomData,
+            }));
+
+        // We declare the function into the environment that we use to compile the
+        // struct, so that those who use the struct can reach into its environment
+        // and see the function and use it.
+        // See CSFMSEO and SAFHE.
+        let call_func_name_t = INameT::FunctionTemplate(
+            self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                human_name: self.keywords.underscores_call,
+                code_location: function_a.range.begin,
+                _phantom: std::marker::PhantomData,
+            }));
+
+        use crate::postparsing::names::{INameValS, IFunctionDeclarationNameValS, FunctionNameS, INameS, IFunctionDeclarationNameS};
+        use crate::typing::env::i_env_entry::IEnvEntryT;
+        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT};
+
+        let drop_name_s = self.scout_arena.intern_name(
+            INameValS::FunctionDeclaration(
+                IFunctionDeclarationNameValS::FunctionName(FunctionNameS {
+                    name: self.keywords.drop,
+                    code_location: function_a.range.begin,
+                })));
+        let drop_function_decl_name_s = match drop_name_s {
+            INameS::FunctionDeclaration(f) => f,
+            _ => panic!("unexpected"),
+        };
+
+        let drop_function_a =
+            self.make_implicit_drop_function_struct_drop(*drop_function_decl_name_s, function_a.range);
+        let drop_function_a_ref = self.scout_arena.alloc(drop_function_a);
+
+        let mut outer_store = TemplatasStoreBuilder::new(understruct_templated_id);
+        outer_store.add_entries(
+            self.scout_arena,
+            vec![
+                (call_func_name_t, IEnvEntryT::Function(function_a)),
+                (drop_func_name_t, IEnvEntryT::Function(drop_function_a_ref)),
+                (understruct_instantiated_name_t, IEnvEntryT::Templata(
+                    ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
+                (INameT::Self_(self.typing_interner.intern_self_name(SelfNameT { _phantom: std::marker::PhantomData })),
+                 IEnvEntryT::Templata(
+                    ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(understruct_struct_tt) })))),
+            ]);
+        let outer_templatas = outer_store.build_in(self.typing_interner);
+
+        let struct_outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: containing_function_env.global_env(),
+            parent_env: containing_function_env.into(),
+            template_id: *understruct_templated_id,
+            id: *understruct_templated_id,
+            templatas: outer_templatas,
+        });
+
+        let mut inner_store = TemplatasStoreBuilder::new(understruct_instantiated_id);
+        // There are no inferences we'd need to add, because it's a lambda and they don't have
+        // any rules or anything.
+        inner_store.add_entries(self.scout_arena, vec![]);
+        let inner_templatas = inner_store.build_in(self.typing_interner);
+
+        let struct_inner_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: struct_outer_env.global_env,
+            parent_env: IEnvironmentT::Citizen(struct_outer_env),
+            template_id: *understruct_templated_id,
+            id: *understruct_instantiated_id,
+            templatas: inner_templatas,
+        });
+
+        // We return this from the function in case we want to eagerly compile it (which we do
+        // if it's not a template).
+        let function_templata = FunctionTemplataT {
+            outer_env: self.typing_interner.alloc(IEnvironmentT::Citizen(struct_inner_env)),
+            function: function_a,
+        };
+
+        coutputs.declare_type(understruct_templated_id);
+        coutputs.declare_type_outer_env(understruct_templated_id,
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_outer_env)));
+        coutputs.declare_type_inner_env(understruct_templated_id,
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_inner_env)));
+        coutputs.declare_type_mutability(understruct_templated_id, ITemplataT::Mutability(MutabilityTemplataT { mutability }));
+
+        let closure_struct_definition = StructDefinitionT {
+            template_name: *understruct_templated_id,
+            instantiated_citizen: *understruct_struct_tt,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            weakable: false,
+            mutability: ITemplataT::Mutability(MutabilityTemplataT { mutability }),
+            members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|_m| {
+                panic!("implement: convert NormalStructMemberT ref to owned IStructMemberT")
+            }).collect::<Vec<_>>()),
+            is_closure: true,
+            instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {
+                rune_to_bound_prototype: self.typing_interner.alloc_index_map(),
+                rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
+                rune_to_bound_impl: self.typing_interner.alloc_index_map(),
+            }),
+        };
+        coutputs.add_struct(self.typing_interner.alloc(closure_struct_definition));
+
+        let closured_vars_struct_ref = *understruct_struct_tt;
+
+        // Always evaluate a drop, drops only capture borrows so there should always be a drop defined
+        // on all members.
+        use std::collections::HashSet;
+        use crate::typing::env::environment::ILookupContext;
+        let drop_function_templata = {
+            let inner_env: IEnvironmentT = IEnvironmentT::Citizen(struct_inner_env);
+            match inner_env.lookup_nearest_with_name(
+                drop_func_name_t,
+                HashSet::from([ILookupContext::ExpressionLookupContext]),
+                self.typing_interner,
+            ) {
+                Some(ITemplataT::Function(ft)) => *ft,
+                _ => panic!("Couldn't find closure drop function we just added!"),
+            }
+        };
+        self.evaluate_generic_function_from_non_call(
+            coutputs, parent_ranges, call_location, drop_function_templata);
+
+        (closured_vars_struct_ref, mutability, function_templata)
     }
 /*
   // Makes a struct to back a closure

@@ -10,6 +10,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::templata::templata::*;
 
 /*
 package dev.vale.typing.expression
@@ -49,7 +50,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
@@ -115,8 +116,19 @@ where 's: 't,
                         return_type: result_te,
                     }))
             }
-            _ => {
-                panic!("implement: evaluate_call non-OverloadSet kind");
+            other => {
+                self.evaluate_custom_call(
+                    nenv,
+                    coutputs,
+                    life,
+                    range,
+                    call_location,
+                    context_region,
+                    other,
+                    explicit_template_arg_rules_s,
+                    explicit_template_arg_runes_s,
+                    callable_expr,
+                    given_args_exprs_2)
             }
         }
     }
@@ -223,7 +235,7 @@ where 's: 't,
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
@@ -232,8 +244,72 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_callable_unborrowed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
         given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> &'t FunctionCallTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        // Whether we're given a borrow or an own, the call itself will be given a borrow.
+        let given_callable_borrow_expr_2: &'t ReferenceExpressionTE<'s, 't> =
+            match given_callable_unborrowed_expr_2.result().coord {
+                CoordT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
+                CoordT { ownership: OwnershipT::Own, .. } => {
+                    panic!("Unimplemented: evaluate_custom_call OwnT makeTemporaryLocal");
+                }
+                _ => { panic!("Unimplemented: evaluate_custom_call unexpected ownership"); }
+            };
+
+        let env = nenv.snapshot(self.typing_interner);
+
+        let args_types_2: Vec<CoordT<'s, 't>> = given_args_exprs_2.iter().map(|e| e.result().coord).collect();
+        let closure_param_type = CoordT { ownership: given_callable_borrow_expr_2.result().coord.ownership, region: RegionT {}, kind };
+        let mut param_filters = vec![closure_param_type];
+        param_filters.extend_from_slice(&args_types_2);
+
+        let env_ref = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(env));
+        let resolved =
+            self.find_function(
+                env_ref,
+                coutputs,
+                range,
+                call_location,
+                self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call })),
+                explicit_template_arg_rules_s,
+                explicit_template_arg_runes_s,
+                context_region,
+                &param_filters,
+                &[],
+                false);
+        let resolved = match resolved {
+            Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
+            Ok(x) => x,
+        };
+
+        let mutability = self.get_mutability(coutputs, kind);
+        let ownership =
+            match mutability {
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                _ => { panic!("Unimplemented: evaluate_custom_call unexpected mutability"); }
+            };
+        assert!(given_callable_borrow_expr_2.result().coord.ownership == ownership);
+        let actual_callable_expr_2 = given_callable_borrow_expr_2;
+
+        let mut actual_args_exprs_2: Vec<&'t ReferenceExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
+        actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
+
+        let arg_types: Vec<CoordT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result().coord).collect();
+        if arg_types != resolved.prototype.param_types() {
+            panic!("arg param type mismatch. params: {:?} args: {:?}", resolved.prototype.param_types(), arg_types);
+        }
+
+        self.check_types(coutputs, env_ref, range, call_location, &resolved.prototype.param_types(), &arg_types, true);
+
+        assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
+        let result_te = resolved.prototype.return_type;
+        self.typing_interner.alloc(
+            ReferenceExpressionTE::FunctionCall(FunctionCallTE {
+                callable: resolved.prototype,
+                args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
+                return_type: result_te,
+            }))
     }
 /*
   private def evaluateCustomCall(
@@ -419,7 +495,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        life: LocationInFunctionEnvironmentT<'s>,
+        life: LocationInFunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,

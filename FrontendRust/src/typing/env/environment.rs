@@ -4,14 +4,14 @@ use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
 
-use crate::postparsing::names::{CodeNameS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
+use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, RuneNameValS, SelfNameS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
   BuildingFunctionEnvironmentWithClosuredsT, FunctionEnvironmentT, NodeEnvironmentT,
 };
 use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::typing::names::names::{IdT, INameT};
+use crate::typing::names::names::{IdT, INameT, IInstantiationNameT, ITemplateNameT};
 use crate::typing::typing_interner::TypingInterner;
 
 /*
@@ -147,13 +147,18 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_name_inner
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
     lookup_filter: HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    match self {
+      IEnvironmentT::Citizen(c) => c.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      _ => panic!("implement: lookup_with_name_inner for {:?}", std::mem::discriminant(self)),
+    }
   }
   /*
     private[env] def lookupWithNameInner(
@@ -207,12 +212,19 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_nearest_with_name
 impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata in inner lookup
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_nearest_with_name");
+    let results = self.lookup_with_name_inner(name_s, lookup_filter, true, interner);
+    match results.len() {
+      0 => None,
+      1 => Some(results[0]),
+      _ => panic!("Too many with name {:?}: {:?}", name_s, results),
+    }
   }
   /*
     def lookupNearestWithName(
@@ -301,7 +313,7 @@ trait IInDenizenEnvironmentT extends IEnvironmentT {
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&self) -> IInDenizenEnvironmentT<'s, 't> {
     match self {
-      IInDenizenEnvironmentT::Citizen(_) => { panic!("Unimplemented: root_compiling_denizen_env for Citizen"); }
+      IInDenizenEnvironmentT::Citizen(e) => e.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::Function(e) => e.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::Node(e) => e.parent_function_env.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::BuildingWithClosureds(_) => *self,
@@ -360,13 +372,15 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata in inner lookup
   pub fn lookup_nearest_with_name(
     &self,
     name_s: INameT<'s, 't>,
     lookup_filter: HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
-    as_env.lookup_nearest_with_name(name_s, lookup_filter)
+    as_env.lookup_nearest_with_name(name_s, lookup_filter, interner)
   }
   /* Guardian: disable-all */
 }
@@ -401,14 +415,16 @@ Guardian: disable-all
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     name_s: INameT<'s, 't>,
     lookup_filter: HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
-    as_env.lookup_with_name_inner(name_s, lookup_filter, get_only_nearest)
+    as_env.lookup_with_name_inner(name_s, lookup_filter, get_only_nearest, interner)
   }
   /* Guardian: disable-all */
 }
@@ -503,6 +519,10 @@ case object ExpressionLookupContext extends ILookupContext
 // Macro-dispatch fields (functorHelper, *Macro, nameToStructDefinedMacro, etc.)
 // from the Scala case class below are omitted here; they moved to `Compiler` as
 // part of the god-struct refactor. See docs/migration/handoff-god-struct-progress.md.
+// Exception: `name_to_function_body_macro` is preserved as a field per Scala
+// parity — the Scala lookup is via Map[StrI, IFunctionBodyMacro], realized in
+// Rust as ArenaIndexMap<StrI, FunctionBodyMacro> (dispatch-tag enum at
+// macros::macros::FunctionBodyMacro).
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct GlobalEnvironmentT<'s, 't>
@@ -510,6 +530,8 @@ where 's: 't,
 {
   pub name_to_top_level_environment:
     &'t [(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)],
+  pub name_to_function_body_macro:
+    ArenaIndexMap<'t, crate::interner::StrI<'s>, crate::typing::macros::macros::FunctionBodyMacro>,
   pub builtins: &'t TemplatasStoreT<'s, 't>,
 }
 /*
@@ -657,6 +679,14 @@ pub fn get_imprecise_name<'s, 't>(
     INameT::StructTemplate(s) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: s.human_name }))),
     INameT::InterfaceTemplate(i) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: i.human_namee }))),
     INameT::Rune(r) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: r.rune }))),
+    INameT::LambdaCitizen(lc) => get_imprecise_name(scout_arena, INameT::LambdaCitizenTemplate(lc.template)),
+    INameT::LambdaCitizenTemplate(_loc) => Some(scout_arena.intern_imprecise_name(
+        IImpreciseNameValS::LambdaStructImpreciseName(LambdaStructImpreciseNameValS {
+            lambda_name: scout_arena.intern_imprecise_name(IImpreciseNameValS::LambdaImpreciseName(LambdaImpreciseNameS {})),
+        }))),
+    INameT::ClosureParam(_cp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}))),
+    INameT::Self_(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}))),
+    INameT::Arbitrary(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameS {}))),
     _ => panic!("Unimplemented: get_imprecise_name for {:?}", name_t),
   }
 }
@@ -1045,13 +1075,17 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
 */
 // mig: fn lookup_with_name_inner
 impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &self,
     defining_env: IEnvironmentT<'s, 't>,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    self.name_to_entry.get(&name)
+      .filter(|entry| entry_matches_filter(entry, lookup_filter))
+      .map(|entry| entry_to_templata(defining_env, *entry, interner))
   }
   /*
     private[env] def lookupWithNameInner(
@@ -1304,7 +1338,26 @@ override def hashCode(): Int = hash;
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
-    panic!("Unimplemented: root_compiling_denizen_env");
+    match (self.id.local_name, self.parent_env.id().local_name) {
+      (id_local, parent_local)
+        if IInstantiationNameT::try_from(id_local).is_ok()
+          && ITemplateNameT::try_from(parent_local).is_ok() => {
+        IInDenizenEnvironmentT::Citizen(self)
+      }
+      (_, INameT::PackageTopLevel(_)) => {
+        IInDenizenEnvironmentT::Citizen(self)
+      }
+      _ => {
+        match IInDenizenEnvironmentT::try_from(self.parent_env) {
+          Ok(parent_in_denizen_env) => {
+            let result = parent_in_denizen_env.root_compiling_denizen_env();
+            assert!(IInstantiationNameT::try_from(result.id().local_name).is_ok(), "vwat");
+            result
+          }
+          Err(_) => { panic!("vwat: parent is not IInDenizenEnvironmentT"); }
+        }
+      }
+    }
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
@@ -1330,13 +1383,24 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn lookup_with_name_inner
 impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner needed for entry_to_templata
   pub fn lookup_with_name_inner(
     &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    let result: Vec<_> = self.templatas.lookup_with_name_inner(
+      IEnvironmentT::Citizen(self), name, lookup_filter, interner,
+    ).into_iter().collect();
+    if !result.is_empty() && get_only_nearest {
+      result
+    } else {
+      let mut combined = result;
+      combined.extend(self.parent_env.lookup_with_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+      combined
+    }
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -1364,7 +1428,16 @@ impl<'s, 't> CitizenEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    let result = self.templatas.lookup_with_imprecise_name_inner(
+      IEnvironmentT::Citizen(self), name, lookup_filter, interner,
+    );
+    if !result.is_empty() && get_only_nearest {
+      result
+    } else {
+      let mut combined = result;
+      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+      combined
+    }
   }
   /*
     private[env] override def lookupWithImpreciseNameInner(

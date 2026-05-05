@@ -158,15 +158,60 @@ where 's: 't,
 {
     pub fn get_or_evaluate_templated_function_for_banner(
         &self,
-        outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
-        rued_env: &BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
-        coutputs: &CompilerOutputs<'s, 't>,
+        outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        rued_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function1: &FunctionA<'s>,
-        instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+        instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> PrototypeTemplataT<'s, 't> {
-        panic!("Unimplemented: get_or_evaluate_templated_function_for_banner");
+        // Check preconditions
+        let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
+        for template_param in function1.rune_to_type.keys() {
+            let imprecise_name = self.scout_arena.intern_imprecise_name(
+                IImpreciseNameValS::RuneName(RuneNameValS { rune: *template_param }));
+            let mut lookup_filter = HashSet::new();
+            lookup_filter.insert(ILookupContext::TemplataLookupContext);
+            lookup_filter.insert(ILookupContext::ExpressionLookupContext);
+            assert!(
+                rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).is_some());
+        }
+        let params2 = self.assemble_function_params(&rued_env_as_i, coutputs, call_range, &function1.params);
+
+        let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
+        let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
+        // Rust adaptation (SPDMX-B): arena-allocate so .templata()/.id can emit 't-borrowed references; Scala relies on GC.
+        let named_env: &'t FunctionEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(self.make_named_env(rued_env, &param_types, maybe_return_type));
+        let banner = FunctionBannerT {
+            origin_function_templata: Some(named_env.templata()),
+            name: named_env.id,
+        };
+
+        let signature = self.typing_interner.alloc(SignatureT { id: banner.name });
+        match coutputs.lookup_function(signature) {
+            Some(function_def) => {
+                PrototypeTemplataT { prototype: self.typing_interner.alloc(function_def.header.to_prototype()) }
+            }
+            None => {
+                coutputs.declare_function(call_range, &named_env.id);
+                let outer_env_as_i: &'t IInDenizenEnvironmentT<'s, 't> =
+                    self.typing_interner.alloc(IInDenizenEnvironmentT::BuildingWithClosureds(outer_env));
+                coutputs.declare_function_outer_env(&outer_env.id, outer_env_as_i);
+                let named_env_as_i: &'t IInDenizenEnvironmentT<'s, 't> =
+                    self.typing_interner.alloc(IInDenizenEnvironmentT::Function(named_env));
+                coutputs.declare_function_inner_env(&named_env.id, named_env_as_i);
+
+                let header =
+                    self.evaluate_function_for_header_core(named_env, coutputs, call_range, call_location, &params2, instantiation_bound_params);
+                if !header.to_banner().same(&banner) {
+                    panic!("wut: banner mismatch in get_or_evaluate_templated_function_for_banner");
+                }
+
+                PrototypeTemplataT { prototype: self.typing_interner.alloc(header.to_prototype()) }
+            }
+        }
     }
 
 /*
@@ -231,7 +276,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function1: &FunctionA<'s>,
-        instantiation_bound_params: &InstantiationBoundArgumentsT<'s, 't>,
+        instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> &'t FunctionHeaderT<'s, 't> {
         // Check preconditions
         // function1.runeToType.keySet.foreach(rune => {

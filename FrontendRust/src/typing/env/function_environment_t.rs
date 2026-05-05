@@ -60,8 +60,8 @@ case class BuildingFunctionEnvironmentWithClosuredsT(
 */
 // mig: fn templata
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
-  pub fn templata(&self) -> FunctionTemplataT<'s, 't> {
-    panic!("Unimplemented: templata");
+  pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
+    FunctionTemplataT { outer_env: &self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)
@@ -307,7 +307,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s, 't>,
   pub templatas: &'t TemplatasStoreT<'s, 't>,
   pub declared_locals: &'t [IVariableT<'s, 't>],
   pub unstackified_locals: &'t [IVarNameT<'s, 't>],
@@ -391,7 +391,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: override fn id
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn id(&self) -> IdT<'s, 't> {
-    panic!("Unimplemented: id");
+    self.parent_function_env.id
   }
   /*
     override def id: IdT[IFunctionNameT] = parentFunctionEnv.id
@@ -460,7 +460,7 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 // mig: fn global_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
-    panic!("Unimplemented: global_env");
+    self.parent_function_env.global_env
   }
   /*
     def globalEnv: GlobalEnvironment = parentFunctionEnv.globalEnv
@@ -887,7 +887,7 @@ where 's: 't,
   pub parent_function_env: &'t FunctionEnvironmentT<'s, 't>,
   pub parent_node_env: Option<&'t NodeEnvironmentT<'s, 't>>,
   pub node: &'s IExpressionSE<'s>,
-  pub life: LocationInFunctionEnvironmentT<'s>,
+  pub life: LocationInFunctionEnvironmentT<'s, 't>,
   pub templatas_builder: TemplatasStoreBuilder<'s, 't>,
   pub declared_locals: Vec<IVariableT<'s, 't>>,
   pub unstackified_locals: Vec<IVarNameT<'s, 't>>,
@@ -945,7 +945,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn id
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn id(&self) -> IdT<'s, 't> {
-    panic!("Unimplemented: id");
+    self.parent_function_env.id
   }
 /*
   def id: IdT[IFunctionNameT] = nodeEnvironment.parentFunctionEnv.id
@@ -1008,7 +1008,7 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 // mig: fn function_environment
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn function_environment(&self) -> &'t FunctionEnvironmentT<'s, 't> {
-    panic!("Unimplemented: function_environment");
+    self.parent_function_env
   }
 /*
   def functionEnvironment = nodeEnvironment.parentFunctionEnv
@@ -1390,8 +1390,8 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn templata
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
-  pub fn templata(&self) -> FunctionTemplataT<'s, 't> {
-    panic!("Unimplemented: templata");
+  pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
+    FunctionTemplataT { outer_env: &self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)
@@ -1499,7 +1499,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child_node_environment(
     &'t self,
     node: &'s IExpressionSE<'s>,
-    life: LocationInFunctionEnvironmentT<'s>,
+    life: LocationInFunctionEnvironmentT<'s, 't>,
   ) -> NodeEnvironmentBox<'s, 't> {
     // See WTHPFE, if this is a lambda, we let our blocks start with
     // locals from the parent function.

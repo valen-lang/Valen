@@ -593,8 +593,18 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
     IRulexSR::Literal(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), x.literal.get_type())].into_iter().collect(), vec![])
     }
-    IRulexSR::Lookup(_) => {
-      panic!("solve_rule LookupSR not yet migrated");
+    IRulexSR::Lookup(x) => {
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), x.name.clone()) {
+            Err(_e) => panic!("LookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      let tyype = match actual_lookup_result {
+        IRuneTypeSolverLookupResult::Primitive(p) => p.tyype,
+        IRuneTypeSolverLookupResult::Templata(t) => t.templata,
+        IRuneTypeSolverLookupResult::Citizen(c) => c.tyype,
+      };
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [(x.rune.rune.clone(), tyype)].into_iter().collect(), vec![])
     }
     IRulexSR::MaybeCoercingLookup(x) => {
       let actual_lookup_result =
@@ -904,10 +914,33 @@ pub fn solve_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
             Err(_e) => {
               panic!("LookupSR pre-computation error path not yet migrated");
             }
-            Ok(_result) => {
-              // Complex coercion logic for different lookup result types.
-              // For now, panic if we actually hit a lookup (the simple test has none).
-              panic!("LookupSR pre-computation not yet fully migrated");
+            Ok(result) => {
+              let entries: Vec<(IRuneS<'s>, ITemplataType)> = match &result {
+                // We don't know whether we'll coerce this into a kind or a coord.
+                IRuneTypeSolverLookupResult::Primitive(p) => {
+                  match &p.tyype {
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Citizen(c) => {
+                  match &c.tyype {
+                    ITemplataType::TemplateTemplataType(t) if t.param_types.is_empty() && matches!(&*t.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+                IRuneTypeSolverLookupResult::Templata(t) => {
+                  match &t.templata {
+                    ITemplataType::TemplateTemplataType(tt) if tt.param_types.is_empty() && matches!(&*tt.return_type, ITemplataType::KindTemplataType(_)) => vec![],
+                    ITemplataType::KindTemplataType(_) => vec![],
+                    other => vec![(lookup.rune.rune.clone(), other.clone())],
+                  }
+                }
+              };
+              for (k, v) in entries {
+                map.insert(k, v);
+              }
             }
           }
         }

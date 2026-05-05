@@ -484,15 +484,16 @@ where 's: 't,
 {
     pub fn make_closure_understruct(
         &self,
-        containing_function_env: NodeEnvironmentT<'s, 't>,
-        coutputs: &CompilerOutputs<'s, 't>,
+        containing_function_env: &'t NodeEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         name: IFunctionDeclarationNameS<'s>,
-        function_s: &FunctionA<'s>,
-        members: &[NormalStructMemberT<'s, 't>],
+        function_s: &'s FunctionA<'s>,
+        members: &[&'t NormalStructMemberT<'s, 't>],
     ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
-        panic!("Unimplemented: make_closure_understruct");
+        self.make_closure_understruct_core(
+            containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }
 /*
   def makeClosureUnderstruct(

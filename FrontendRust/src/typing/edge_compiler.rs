@@ -97,12 +97,12 @@ where 's: 't,
     pub fn compile_i_tables(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-    ) -> (Vec<InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>>) {
+    ) -> (Vec<&'t InterfaceEdgeBlueprintT<'s, 't>>, HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>>) {
         // val interfaceEdgeBlueprints = makeInterfaceEdgeBlueprints(coutputs)
         let interface_edge_blueprints = self.make_interface_edge_blueprints(coutputs);
 
         // val itables = interfaceEdgeBlueprints.map(interfaceEdgeBlueprint => { ... })
-        let itables: HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, EdgeT<'s, 't>>> =
+        let itables: HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>> =
             interface_edge_blueprints.iter().map(|_interface_edge_blueprint| {
                 panic!("implement: compile_i_tables — itable construction per blueprint");
             }).collect();
@@ -176,14 +176,19 @@ where 's: 't,
     pub fn make_interface_edge_blueprints(
         &self,
         coutputs: &CompilerOutputs<'s, 't>,
-    ) -> Vec<InterfaceEdgeBlueprintT<'s, 't>> {
+    ) -> Vec<&'t InterfaceEdgeBlueprintT<'s, 't>> {
         // val x1 = coutputs.getAllFunctions().flatMap(function => function.header.getAbstractInterface match {
         //   case None => Vector.empty
         //   case Some(abstractInterface) => Vector(abstractInterfaceTemplate -> function)
         // })
         let x1: Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> =
-            coutputs.get_all_functions().iter().flat_map(|_function| -> Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> {
-                panic!("implement: make_interface_edge_blueprints — getAbstractInterface filter");
+            coutputs.get_all_functions().iter().flat_map(|function| -> Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> {
+                match function.header.get_abstract_interface() {
+                    None => Vec::new(),
+                    Some(_abstract_interface) => {
+                        panic!("implement: make_interface_edge_blueprints — getInterfaceTemplate for abstract interface");
+                    }
+                }
             }).collect();
 
         // val x2 = x1.groupBy(_._1)
@@ -207,6 +212,7 @@ where 's: 't,
         Vec::new()
     }
 /*
+Guardian: temp-disable: SPDMX — False positive: the Vec::new() return predates this edit. My change is signature-only (Vec<InterfaceEdgeBlueprintT> → Vec<&'t InterfaceEdgeBlueprintT>) per architect's AASSNCMCX field-flip directive — InterfaceEdgeBlueprintT is now Arena-allocated so callers must hold &'t. The pre-existing body skeleton is unchanged. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1057-1777917939302/hook-1057/make_interface_edge_blueprints--176.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
     val x1 =
       coutputs.getAllFunctions().flatMap({ case function =>

@@ -1,7 +1,8 @@
 use std::collections::HashMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
-use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
+use crate::postparsing::rules::rules::CoordSendSR;
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::*;
 use crate::typing::ast::ast::*;
@@ -15,6 +16,7 @@ use crate::typing::infer::compiler_solver::ITypingPassSolverError;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
+use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::solver::solver::{FailedSolve, ISolverError, SolveIncomplete};
 use crate::solver::simple_solver_state::SimpleSolverState;
 
@@ -43,6 +45,7 @@ import scala.collection.immutable._
 //ISolverOutcome[IRulexSR, IRuneS, ITemplata[ITemplataType], ITypingPassSolverError]
 
 */
+/// Temporary state (see @TFITCX)
 pub struct CompleteResolveSolve<'s, 't> {
     pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
@@ -54,6 +57,7 @@ case class CompleteResolveSolve(
 )
 
 */
+/// Temporary state (see @TFITCX)
 pub struct CompleteDefineSolve<'s, 't> {
     pub conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     pub rune_to_bound: &'t InstantiationBoundArgumentsT<'s, 't>,
@@ -256,11 +260,27 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_knowns: &[InitialKnown],
-        initial_sends: &[InitialSend],
+        initial_knowns: &[InitialKnown<'s, 't>],
+        initial_sends: &[InitialSend<'s, 't>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
     ) -> Result<CompleteDefineSolve<'s, 't>, IDefiningError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mut solver =
+            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
+        match self.r#continue(envs, coutputs, &mut solver) {
+            Ok(()) => {}
+            Err(e) => return Err(IDefiningError::DefiningSolveFailedOrIncomplete(e)),
+        }
+        let conclusions =
+            match self.interpret_results(rune_to_type, &mut solver) {
+                Ok(conclusions) => conclusions,
+                Err(f) => return Err(IDefiningError::DefiningSolveFailedOrIncomplete(f)),
+            };
+        match self.check_defining_conclusions_and_resolve(
+            envs, coutputs, invocation_range, call_location, rules, include_reachable_bounds_for_runes, &conclusions,
+        ) {
+            Ok(instantiation_bound_args) => Ok(CompleteDefineSolve { conclusions, rune_to_bound: instantiation_bound_args }),
+            Err(x) => Err(IDefiningError::DefiningResolveConclusionError(x)),
+        }
     }
 /*
   def solveForDefining(
@@ -308,8 +328,8 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_knowns: &[InitialKnown],
-        initial_sends: &[InitialSend],
+        initial_knowns: &[InitialKnown<'s, 't>],
+        initial_sends: &[InitialSend<'s, 't>],
     ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
         let mut solver =
             self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
@@ -391,23 +411,33 @@ where 's: 't,
         initial_rules: &[&'s IRulexSR<'s>],
         initial_rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
-        initial_knowns: &[InitialKnown],
-        initial_sends: &[InitialSend],
+        initial_knowns: &[InitialKnown<'s, 't>],
+        initial_sends: &[InitialSend<'s, 't>],
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
         let mut rune_to_type = initial_rune_to_type.clone();
-        for _send in initial_sends {
-            panic!("Unimplemented: make_solver_state — initialSends runeToType extension");
+        for send in initial_sends {
+            rune_to_type.insert(send.sender_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
         }
         let mut rules: Vec<&'s IRulexSR<'s>> = initial_rules.to_vec();
-        for _send in initial_sends {
-            panic!("Unimplemented: make_solver_state — initialSends rules extension");
+        for send in initial_sends {
+            rules.push(self.scout_arena.alloc(IRulexSR::CoordSend(CoordSendSR {
+                range: send.receiver_rune.range,
+                sender_rune: send.sender_rune,
+                receiver_rune: send.receiver_rune,
+            })));
         }
         let mut already_known: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = HashMap::new();
-        for _known in initial_knowns {
-            panic!("Unimplemented: make_solver_state — initialKnowns processing");
+        for known in initial_knowns {
+            if self.opts.global_options.sanity_check {
+                self.sanity_check_conclusion(&envs, state, known.rune.rune, known.templata);
+            }
+            already_known.insert(known.rune.rune, known.templata);
         }
-        for _send in initial_sends {
-            panic!("Unimplemented: make_solver_state — initialSends alreadyKnown extension");
+        for send in initial_sends {
+            if self.opts.global_options.sanity_check {
+                self.sanity_check_conclusion(&envs, state, send.sender_rune.rune, send.send_templata);
+            }
+            already_known.insert(send.sender_rune.rune, send.send_templata);
         }
         self.make_solver_state_solver(
             invocation_range.to_vec(), envs, state, rules, rune_to_type, already_known)
@@ -553,7 +583,7 @@ where 's: 't,
                 .filter(|(_rune, citizen)| citizens_from_calls.contains(citizen))
                 .collect();
 
-        let reachable_bounds: HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>> =
+        let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
             include_reachable_bounds_for_runes_with_citizens.into_iter().map(|(rune, _citizen)| {
                 panic!("implement: checkResolvingConclusionsAndResolve reachableBounds mapValues");
             }).collect();
@@ -596,12 +626,13 @@ where 's: 't,
 
         let instantiation_bound_args = self.typing_interner.alloc(
             InstantiationBoundArgumentsT {
-                rune_to_bound_prototype: rune_to_prototype.into_iter().collect(),
-                rune_to_citizen_rune_to_reachable_prototype:
+                rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(
+                    rune_to_prototype.into_iter().map(|(k, v)| (k, *v))),
+                rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
                     reachable_bounds.into_iter()
-                        .filter(|(_, v)| !v.citizen_rune_to_reachable_prototype.is_empty())
-                        .collect(),
-                rune_to_bound_impl: rune_to_impl.into_iter().collect(),
+                        .filter(|(_, v)| !v.citizen_rune_to_reachable_prototype.is_empty())),
+                rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(
+                    rune_to_impl.into_iter()),
             });
 
         Ok(CompleteResolveSolve {
@@ -795,8 +826,8 @@ where 's: 't,
         initial_rules: &[&'s IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
-        let reachable_bounds: HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>> =
+    ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
+        let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
             include_reachable_bounds_for_runes
                 .iter()
                 .map(|rune| {
@@ -807,18 +838,41 @@ where 's: 't,
                             ITemplataT::Coord(CoordTemplataT { coord: CoordT { kind, .. } }) => Some(*kind),
                             _ => None,
                         };
-                    let maybe_id_and_template_id: Option<()> =
+                    let maybe_id_and_template_id: Option<(IdT<'s, 't>, IdT<'s, 't>)> =
                         match maybe_mentioned_kind {
-                            Some(KindT::Struct(_)) => { panic!("Unimplemented: check_defining_conclusions_and_resolve ICitizenTT struct"); }
-                            Some(KindT::Interface(_)) => { panic!("Unimplemented: check_defining_conclusions_and_resolve ICitizenTT interface"); }
+                            Some(KindT::Struct(s)) => Some((s.id, self.get_citizen_template(s.id))),
+                            Some(KindT::Interface(i)) => Some((i.id, self.get_citizen_template(i.id))),
                             Some(_) => None,
                             None => None,
                         };
                     let citizen_rune_to_reachable_prototype = match maybe_id_and_template_id {
-                        None => Vec::new(),
-                        Some(_) => { panic!("Unimplemented: check_defining_conclusions_and_resolve citizen reachable bounds"); }
+                        None => self.typing_interner.alloc_index_map(),
+                        Some((id, template_id)) => {
+                            let inner_env = state.get_inner_env_for_type(template_id);
+                            let _substituter =
+                                self.get_placeholder_substituter(
+                                    self.opts.global_options.sanity_check,
+                                    envs.original_calling_env.denizen_template_id(),
+                                    id,
+                                    IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                                );
+                            let entries: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> =
+                                inner_env.templatas().name_to_entry.iter()
+                                    .filter_map(|(name, entry)| {
+                                        match (name, entry) {
+                                            (INameT::Rune(_rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)))
+                                                if matches!(proto_templata.prototype.id.local_name, INameT::FunctionBound(_)) =>
+                                            {
+                                                panic!("implement: check_defining_conclusions_and_resolve FunctionBoundNameT entry");
+                                            }
+                                            _ => None,
+                                        }
+                                    })
+                                    .collect();
+                            self.typing_interner.alloc_index_map_from_iter(entries.into_iter())
+                        }
                     };
-                    (*rune, InstantiationReachableBoundArgumentsT { citizen_rune_to_reachable_prototype })
+                    (*rune, &*self.typing_interner.alloc(InstantiationReachableBoundArgumentsT { citizen_rune_to_reachable_prototype }))
                 })
                 .collect();
         let environment_for_finalizing: &'t GeneralEnvironmentT<'s, 't> =
@@ -918,7 +972,7 @@ where 's: 't,
     pub fn import_reachable_bounds(
         &self,
         original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
-        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
+        reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> GeneralEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
     }
@@ -949,7 +1003,7 @@ where 's: 't,
         &self,
         original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
+        reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> &'t GeneralEnvironmentT<'s, 't> {
         // If this is the original calling env, in other words, if we're the original caller for
         // this particular solve, then lets add all of our templatas to the environment.
@@ -1018,8 +1072,8 @@ where 's: 't,
         context_region: RegionT,
         rules: &[&'s IRulexSR<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
-        reachable_bounds: &HashMap<IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>>,
-    ) -> Result<InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
+        reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
+    ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
         // Check all template calls
         for rule in rules {
             match rule {
@@ -1058,17 +1112,14 @@ where 's: 't,
             panic!("resolve_conclusions_for_define: duplicate rune in maybeRunesAndImpls");
         }
 
-        let filtered_reachable_bounds: Vec<(IRuneS<'s>, InstantiationReachableBoundArgumentsT<'s, 't>)> =
+        let filtered_reachable_bounds: Vec<(IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>)> =
             reachable_bounds.iter()
                 .filter(|(_, rb)| !rb.citizen_rune_to_reachable_prototype.is_empty())
-                .map(|(rune, rb)| {
-                    (*rune, InstantiationReachableBoundArgumentsT {
-                        citizen_rune_to_reachable_prototype: rb.citizen_rune_to_reachable_prototype.clone(),
-                    })
-                })
+                .map(|(rune, rb)| (*rune, *rb))
                 .collect();
         Ok(make(
-            rune_to_prototype.into_iter().collect(),
+            self.typing_interner,
+            rune_to_prototype.into_iter().map(|(k, v)| (k, *v)).collect(),
             filtered_reachable_bounds,
             rune_to_impl.into_iter().collect(),
         ))

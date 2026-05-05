@@ -51,7 +51,13 @@ pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
   }
 */
 pub fn evaluate_ownership(ownership: OwnershipP) -> OwnershipT {
-  panic!("Unimplemented: evaluate_ownership");
+  match ownership {
+    OwnershipP::Own => OwnershipT::Own,
+    OwnershipP::Borrow => OwnershipT::Borrow,
+    OwnershipP::Weak => OwnershipT::Weak,
+    OwnershipP::Share => OwnershipT::Share,
+    OwnershipP::Live => { panic!("implement: evaluate_ownership Live"); }
+  }
 }
 /*
   def evaluateOwnership(ownership: OwnershipP): OwnershipT = {

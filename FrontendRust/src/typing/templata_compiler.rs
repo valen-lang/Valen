@@ -112,7 +112,34 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let steps = id.steps();
+        let is_instantiation_name = |name: &INameT<'s, 't>| -> bool {
+            match name {
+                INameT::Function(_) |
+                INameT::LambdaCallFunction(_) |
+                INameT::ForwarderFunction(_) |
+                INameT::Struct(_) |
+                INameT::LambdaCitizen(_) |
+                INameT::Interface(_) |
+                INameT::Impl(_) |
+                INameT::Export(_) |
+                INameT::ExternFunction(_) |
+                INameT::KindPlaceholder(_) |
+                INameT::AnonymousSubstructImpl(_) |
+                INameT::OverrideDispatcher(_) => true,
+                _ => false,
+            }
+        };
+        let index = steps.iter().position(is_instantiation_name);
+        let index = index.expect("get_top_level_denizen_id: no IInstantiationNameT found in steps");
+        let last_step = steps[index];
+        assert!(is_instantiation_name(&last_step), "get_top_level_denizen_id: step at index is not IInstantiationNameT");
+        let init_steps_slice = self.typing_interner.alloc_slice_copy(&steps[..index]);
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: init_steps_slice,
+            local_name: last_step,
+        })
     }
 }
 /*
@@ -251,7 +278,23 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let local_name = match id.local_name {
+            INameT::Struct(s) => {
+                match s.template {
+                    IStructTemplateNameT::StructTemplate(tmpl) => INameT::StructTemplate(tmpl),
+                    IStructTemplateNameT::LambdaCitizenTemplate(tmpl) => INameT::LambdaCitizenTemplate(tmpl),
+                    IStructTemplateNameT::AnonymousSubstructTemplate(tmpl) => INameT::AnonymousSubstructTemplate(tmpl),
+                }
+            }
+            INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
+            INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
+            _ => panic!("get_citizen_template called with non-citizen name: {:?}", id.local_name),
+        };
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name,
+        })
     }
 }
 /*
@@ -343,6 +386,16 @@ where 's: 't,
         // IdT(packageCoord, initSteps, last.template)
         let template_name = match id.local_name {
             INameT::StaticSizedArray(ssa) => INameT::StaticSizedArrayTemplate(ssa.template),
+            INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
+            INameT::Struct(s) => {
+                match s.template {
+                    IStructTemplateNameT::StructTemplate(tmpl) => INameT::StructTemplate(tmpl),
+                    IStructTemplateNameT::LambdaCitizenTemplate(tmpl) => INameT::LambdaCitizenTemplate(tmpl),
+                    IStructTemplateNameT::AnonymousSubstructTemplate(tmpl) => INameT::AnonymousSubstructTemplate(tmpl),
+                }
+            }
+            INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
+            INameT::Function(f) => INameT::FunctionTemplate(f.template),
             _ => panic!("get_template: not yet implemented for {:?}", id.local_name),
         };
         self.typing_interner.intern_id(IdValT {
@@ -406,10 +459,26 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let local_name = match id.local_name {
+            INameT::Struct(s) => {
+                match s.template {
+                    IStructTemplateNameT::StructTemplate(tmpl) => INameT::StructTemplate(tmpl),
+                    IStructTemplateNameT::LambdaCitizenTemplate(tmpl) => INameT::LambdaCitizenTemplate(tmpl),
+                    IStructTemplateNameT::AnonymousSubstructTemplate(tmpl) => INameT::AnonymousSubstructTemplate(tmpl),
+                }
+            }
+            INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
+            _ => panic!("get_struct_template called with non-struct name: {:?}", id.local_name),
+        };
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name,
+        })
     }
 }
 /*
+Guardian: temp-disable: SPDMX — In Scala, LambdaCitizenNameT extends IStructNameT, so getStructTemplate's `last.template` handles it polymorphically. In Rust, IStructNameT is flattened into INameT enum, so we must explicitly match LambdaCitizen — this is the standard SSTREX pattern, not novel logic. — FrontendRust/guardian-logs/request-1332-1777936399967/hook-1332/get_struct_template--405.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getStructTemplate(id: IdT[IStructNameT]): IdT[IStructTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -425,7 +494,15 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let local_name = match id.local_name {
+            INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
+            _ => panic!("get_interface_template called with non-interface name"),
+        };
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name,
+        })
     }
 }
 /*
@@ -1255,9 +1332,15 @@ where 's: 't,
 
 // IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
 // so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
-// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). Context fields come in Slab 15.
+// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). The five fields below mirror
+// Scala's anonymous-trait-impl closure captures at TemplataCompiler.scala:808-824 (sanityCheck,
+// originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource).
 pub struct IPlaceholderSubstituter<'s, 't> {
-    pub _phantom: std::marker::PhantomData<(&'s (), &'t ())>,
+    pub sanity_check: bool,
+    pub original_calling_denizen_id: IdT<'s, 't>,
+    pub needle_template_name: IdT<'s, 't>,
+    pub new_substituting_templatas: &'t [ITemplataT<'s, 't>],
+    pub bound_arguments_source: IBoundArgumentsSource<'s, 't>,
 }
 impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
     pub fn substitute_for_coord(
@@ -1326,7 +1409,19 @@ where 's: 't,
         name: IdT<'s, 't>,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> IPlaceholderSubstituter<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let top_level_denizen_id = self.get_top_level_denizen_id(name);
+        let top_level_local_name: IInstantiationNameT<'s, 't> =
+            top_level_denizen_id.local_name.try_into()
+                .unwrap_or_else(|_| panic!("get_placeholder_substituter: topLevelDenizenId.localName must be IInstantiationNameT, got {:?}", top_level_denizen_id.local_name));
+        let template_args: &[ITemplataT<'s, 't>] = top_level_local_name.template_args();
+        let top_level_denizen_template_id = self.get_template(top_level_denizen_id);
+        self.get_placeholder_substituter_ext(
+            sanity_check,
+            original_calling_denizen_id,
+            *top_level_denizen_template_id,
+            template_args,
+            bound_arguments_source,
+        )
     }
 }
 /*
@@ -1362,10 +1457,16 @@ where 's: 't,
         sanity_check: bool,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
-        new_substituting_templatas: &[ITemplataT<'s, 't>],
+        new_substituting_templatas: &'t [ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> IPlaceholderSubstituter<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        IPlaceholderSubstituter {
+            sanity_check,
+            original_calling_denizen_id,
+            needle_template_name,
+            new_substituting_templatas,
+            bound_arguments_source,
+        }
     }
 }
 /*
@@ -1501,17 +1602,109 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    // TODO: Slab 10 — return Box<dyn IRuneTypeSolverEnv<'s> + 't> or similar after body settles
     pub fn create_rune_type_solver_env(
         &self,
         parent_env: &'t IInDenizenEnvironmentT<'s, 't>,
-    ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+    ) -> TemplataCompilerRuneTypeSolverEnv<'_, 's, 't> {
+        TemplataCompilerRuneTypeSolverEnv {
+            parent_env,
+            typing_interner: self.typing_interner,
+        }
     }
+    /*
+Guardian: disable-all
+      def createRuneTypeSolverEnv(parentEnv: IInDenizenEnvironmentT): IRuneTypeSolverEnv = {
+        new IRuneTypeSolverEnv {
+    */
+}
+
+
+// Concrete IRuneTypeSolverEnv produced by `create_rune_type_solver_env` above. The
+// Scala anonymous `new IRuneTypeSolverEnv` at TemplataCompiler.scala:1513 closes over
+// `parentEnv` and dispatches to either a LambdaStructImpreciseNameS special case or
+// `parentEnv.lookupNearestWithImpreciseName`. Same shape pattern as
+// `HigherTypingRuneTypeSolverEnv` (higher_typing_pass.rs) and `LetExprRuneTypeSolverEnv`
+// (expression_compiler.rs).
+// Rust adaptation (SPDMX-B): typing_interner field added for entry_to_templata.
+pub struct TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    parent_env: &'t IInDenizenEnvironmentT<'s, 't>,
+    typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
 }
 /*
-  def createRuneTypeSolverEnv(parentEnv: IInDenizenEnvironmentT): IRuneTypeSolverEnv = {
-    new IRuneTypeSolverEnv {
+Guardian: disable-all
+*/
+
+impl<'a, 's, 't> crate::postparsing::rune_type_solver::IRuneTypeSolverEnv<'s>
+for TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
+where
+    's: 't,
+{
+    fn lookup(
+        &self,
+        range: RangeS<'s>,
+        name_s: crate::postparsing::names::IImpreciseNameS<'s>,
+    ) -> Result<
+        crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult<'s>,
+        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError<'s>,
+    > {
+        match name_s {
+            crate::postparsing::names::IImpreciseNameS::LambdaStructImpreciseName(_) => {
+                // Scala: vregionmut() // Take out with regions
+                // Lambdas look up their struct as a KindTemplata in their environment, they don't
+                // look up the origin template by name. (Scala comment from astronomizeLambda.)
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
+                    crate::postparsing::rune_type_solver::TemplataLookupResult {
+                        templata: crate::postparsing::itemplatatype::ITemplataType::KindTemplataType(
+                            crate::postparsing::itemplatatype::KindTemplataType {},
+                        ),
+                    },
+                ))
+            }
+            _ => {
+                let mut filter = std::collections::HashSet::new();
+                filter.insert(crate::typing::env::environment::ILookupContext::TemplataLookupContext);
+                match self.parent_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
+                    Some(crate::typing::templata::templata::ITemplataT::StructDefinition(t)) => {
+                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                            crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                                tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                                    t.origin_struct.tyype,
+                                ),
+                                generic_params: t.origin_struct.generic_parameters,
+                            },
+                        ))
+                    }
+                    Some(crate::typing::templata::templata::ITemplataT::InterfaceDefinition(t)) => {
+                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Citizen(
+                            crate::postparsing::rune_type_solver::CitizenRuneTypeSolverLookupResult {
+                                tyype: crate::postparsing::itemplatatype::ITemplataType::TemplateTemplataType(
+                                    t.origin_interface.tyype,
+                                ),
+                                generic_params: t.origin_interface.generic_parameters,
+                            },
+                        ))
+                    }
+                    Some(_x) => {
+                        // Scala: case Some(x) => Ok(TemplataLookupResult(x.tyype))
+                        // Requires `ITemplataT::tyype()` getter — separate scaffolding gap (see TL.md residual items).
+                        panic!("TemplataCompilerRuneTypeSolverEnv: ITemplataT::tyype() not yet implemented");
+                    }
+                    None => Err(
+                        crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
+                            crate::postparsing::rune_type_solver::RuneTypingCouldntFindType {
+                                range,
+                                name: name_s,
+                            },
+                        ),
+                    ),
+                }
+            }
+        }
+    }
+/*
       override def lookup(
           range: RangeS,
           nameS: IImpreciseNameS
@@ -1538,6 +1731,7 @@ where 's: 't,
   }
 }
 */
+}
 /*
 class TemplataCompiler(
   interner: Interner,
@@ -1667,7 +1861,26 @@ where 's: 't,
         region: RegionT,
         ownership_if_mutable: OwnershipT,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mutability = self.get_mutability(coutputs, kind);
+        let ownership =
+            match mutability {
+                ITemplataT::Placeholder(_) => { panic!("Unimplemented: pointify_kind PlaceholderTemplataT"); }
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => ownership_if_mutable,
+                ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                _ => { panic!("Unimplemented: pointify_kind unexpected mutability"); }
+            };
+        match kind {
+            KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: pointify_kind RuntimeSizedArray"); }
+            KindT::StaticSizedArray(_) => { panic!("Unimplemented: pointify_kind StaticSizedArray"); }
+            KindT::Struct(_) => CoordT { ownership, region, kind },
+            KindT::Interface(_) => CoordT { ownership, region, kind },
+            KindT::Void(_) => CoordT { ownership: OwnershipT::Share, region, kind },
+            KindT::Int(_) => CoordT { ownership: OwnershipT::Share, region, kind },
+            KindT::Float(_) => CoordT { ownership: OwnershipT::Share, region, kind },
+            KindT::Bool(_) => CoordT { ownership: OwnershipT::Share, region, kind },
+            KindT::Str(_) => CoordT { ownership: OwnershipT::Share, region, kind },
+            _ => { panic!("Unimplemented: pointify_kind other kind"); }
+        }
     }
 /*
   def pointifyKind(

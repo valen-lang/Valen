@@ -25,6 +25,8 @@ use crate::typing::infer_compiler::InferEnv;
 use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::typing::citizen::impl_compiler::IsntParent;
 use crate::typing::citizen::struct_compiler::ResolveFailure;
+use crate::typing::templata::conversions::evaluate_ownership;
+use crate::parsing::ast::ast::OwnershipP;
 
 /*
 package dev.vale.typing.infer
@@ -534,8 +536,8 @@ where 's: 't,
     pub fn make_solver_state_solver(
         &self,
         _range: Vec<RangeS<'s>>,
-        _env: InferEnv<'s, 't>,
-        _state: &mut CompilerOutputs<'s, 't>,
+        env: InferEnv<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
         rules: Vec<&'s IRulexSR<'s>>,
         initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
         initially_known_rune_to_templata: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
@@ -555,8 +557,12 @@ where 's: 't,
             rules.iter().all(|r| !matches!(r, IRulexSR::CallSiteCoordIsa(_))) ||
             rules.iter().all(|r| !matches!(r, IRulexSR::DefinitionCoordIsa(_))));
 
-        for (_rune, _templata) in &initially_known_rune_to_templata {
-            panic!("Unimplemented: make_solver_state_solver — initiallyKnownRuneToTemplata sanity check");
+        for (rune, templata) in &initially_known_rune_to_templata {
+            if self.opts.global_options.sanity_check {
+                self.sanity_check_conclusion(&env, state, *rune, *templata);
+            }
+            // vassert(templata.tyype == vassertSome(initialRuneToType.get(rune)))
+            // Not yet implemented: ITemplataT::tyype() method doesn't exist in Rust
         }
 
         let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
@@ -1108,7 +1114,60 @@ where 's: 't,
             //     case EqualsSR(...) =>
             IRulexSR::Equals(_) => { panic!("Unimplemented: solve_rule Equals"); }
             //     case CoordSendSR(...) =>
-            IRulexSR::CoordSend(_) => { panic!("Unimplemented: solve_rule CoordSend"); }
+            IRulexSR::CoordSend(coord_send) => {
+                // See IRFU and SRCAMP for what's going on here.
+                match solver_state.get_conclusion(&coord_send.receiver_rune.rune) {
+                    None => {
+                        let sender_templata = solver_state.get_conclusion(&coord_send.sender_rune.rune).expect("Neither receiverRune nor senderRune solved in CoordSendSR");
+                        let coord = match sender_templata {
+                            ITemplataT::Coord(ct) => ct.coord,
+                            _ => panic!("Expected CoordTemplataT in CoordSendSR sender"),
+                        };
+                        if self.is_descendant_kind(&env, state, coord.kind) {
+                            let new_rule = IRulexSR::CallSiteCoordIsa(CallSiteCoordIsaSR {
+                                range: coord_send.range,
+                                result_rune: None,
+                                sub_rune: coord_send.sender_rune,
+                                super_rune: coord_send.receiver_rune,
+                            });
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule]) {
+                                Ok(_) => Ok(()),
+                                Err(_e) => { panic!("implement: solve_rule CoordSend descendant InternalSolverError wrapping"); }
+                            }
+                        } else {
+                            let mut conclusions = HashMap::new();
+                            conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                Ok(_) => Ok(()),
+                                Err(_e) => { panic!("implement: solve_rule CoordSend non-descendant InternalSolverError wrapping"); }
+                            }
+                        }
+                    }
+                    Some(ITemplataT::Coord(receiver_coord_templata)) => {
+                        let coord = receiver_coord_templata.coord;
+                        if self.is_ancestor_kind(&env, state, coord.kind) {
+                            let new_rule = IRulexSR::CallSiteCoordIsa(CallSiteCoordIsaSR {
+                                range: coord_send.range,
+                                result_rune: None,
+                                sub_rune: coord_send.sender_rune,
+                                super_rune: coord_send.receiver_rune,
+                            });
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule]) {
+                                Ok(_) => Ok(()),
+                                Err(_e) => { panic!("implement: solve_rule CoordSend ancestor InternalSolverError wrapping"); }
+                            }
+                        } else {
+                            let mut conclusions = HashMap::new();
+                            conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
+                            match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                Ok(_) => Ok(()),
+                                Err(_e) => { panic!("implement: solve_rule CoordSend non-ancestor InternalSolverError wrapping"); }
+                            }
+                        }
+                    }
+                    Some(_other) => { panic!("implement: solve_rule CoordSend unexpected receiver conclusion"); }
+                }
+            }
             //     case OneOfSR(...) =>
             IRulexSR::OneOf(_) => { panic!("Unimplemented: solve_rule OneOf"); }
             //     case IsConcreteSR(...) =>
@@ -1154,7 +1213,55 @@ where 's: 't,
             //     case RuneParentEnvLookupSR(...) =>
             IRulexSR::RuneParentEnvLookup(_) => { panic!("Unimplemented: solve_rule RuneParentEnvLookup"); }
             //     case AugmentSR(...) =>
-            IRulexSR::Augment(_) => { panic!("Unimplemented: solve_rule Augment"); }
+            IRulexSR::Augment(augment) => {
+                match solver_state.get_conclusion(&augment.result_rune.rune) {
+                    Some(_outer_coord) => {
+                        panic!("implement: solve_rule Augment outerCoordRune known path");
+                    }
+                    None => {
+                        let inner_templata = solver_state.get_conclusion(&augment.inner_rune.rune).expect("Neither outerCoordRune nor innerRune solved in AugmentSR");
+                        let inner_coord = match inner_templata {
+                            ITemplataT::Coord(ct) => ct.coord,
+                            _ => panic!("Expected CoordTemplataT in AugmentSR inner"),
+                        };
+                        let new_region = RegionT;
+                        let new_ownership = match augment.ownership {
+                            None => inner_coord.ownership,
+                            Some(augment_ownership) => {
+                                let mutability = self.get_mutability(state, inner_coord.kind);
+                                match mutability {
+                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
+                                        inner_coord.ownership
+                                    }
+                                    ITemplataT::Placeholder(PlaceholderTemplataT { .. }) => {
+                                        if augment_ownership == OwnershipP::Share {
+                                            return Err(ITypingPassSolverError::CantSharePlaceholder { kind: inner_coord.kind });
+                                        }
+                                        evaluate_ownership(augment_ownership)
+                                    }
+                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                                        if augment_ownership == OwnershipP::Share {
+                                            return Err(ITypingPassSolverError::CantShareMutable { kind: inner_coord.kind });
+                                        }
+                                        evaluate_ownership(augment_ownership)
+                                    }
+                                    _ => { panic!("implement: solve_rule Augment unexpected mutability"); }
+                                }
+                            }
+                        };
+                        let new_coord = CoordT { ownership: new_ownership, region: new_region, kind: inner_coord.kind };
+                        let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(augment.result_rune.rune, new_templata);
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                panic!("implement: solve_rule Augment InternalSolverError wrapping");
+                            }
+                        }
+                    }
+                }
+            }
             //     case PackSR(...) =>
             IRulexSR::Pack(_) => { panic!("Unimplemented: solve_rule Pack"); }
             //     case CallSR(...) =>
