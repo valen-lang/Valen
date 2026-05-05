@@ -11,7 +11,11 @@ func invoke_frontend(
   include_builtins bool,
   output_vast bool,
   output_vpst bool,
-  output_dir &Path)
+  output_dir &Path,
+  // Rust interop: empty when disabled. When set, Frontend invokes ValeRuster.
+  vale_ruster_path str,
+  rust_cargo_toml str,
+  rust_output_dir str)
 Subprocess {
   program = if IsWindows() { "java.exe" } else { "java" };
 
@@ -52,6 +56,15 @@ Subprocess {
   if not output_vpst {
     command_line_args.add("--output_vpst");
     command_line_args.add("false");
+  }
+
+  if vale_ruster_path != "" {
+    command_line_args.add("--vale_ruster_path");
+    command_line_args.add(vale_ruster_path);
+    command_line_args.add("--rust_cargo_toml");
+    command_line_args.add(rust_cargo_toml);
+    command_line_args.add("--rust_output_dir");
+    command_line_args.add(rust_output_dir);
   }
 
   project_directories.each((declaration) => {
