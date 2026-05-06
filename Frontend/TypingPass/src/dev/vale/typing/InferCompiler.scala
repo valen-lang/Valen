@@ -197,7 +197,7 @@ class InferCompiler(
             genericParam.default match {
               case Some(defaultRules) => {
                 solverState.commitStep[ITypingPassSolverError](
-                  false, Vector(), Map(), defaultRules.rules).getOrDie()
+                  false, Vector(), Map(), defaultRules.rules, defaultRules.runeToType.keySet).getOrDie()
                 true
               }
               case None => false

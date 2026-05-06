@@ -119,8 +119,14 @@ class StructCompilerGenericArgsLayer(
       val runesForPrediction =
         (interfaceA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
+      // Include default-only runeToType entries — those runes appear in the predict
+      // rules (via assemblePredictRules) but aren't in the parent's main runeToType
+      // since defaults are self-contained per Option 1.
+      val defaultsRuneToType =
+        interfaceA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =
-        runesForPrediction.toVector.map(r => r -> interfaceA.runeToType(r)).toMap
+        runesForPrediction.toVector.map(r =>
+          r -> interfaceA.runeToType.getOrElse(r, defaultsRuneToType(r))).toMap
 
       val contextRegion = RegionT(DefaultRegionT)
 
@@ -186,8 +192,12 @@ class StructCompilerGenericArgsLayer(
       val runesForPrediction =
         (structA.genericParameters.map(_.rune.rune) ++
           callSiteRules.flatMap(_.runeUsages.map(_.rune))).toSet
+      // Include default-only runeToType entries (Option 1: defaults are self-contained).
+      val defaultsRuneToType =
+        structA.genericParameters.flatMap(_.default).flatMap(_.runeToType).toMap
       val runeToTypeForPrediction =
-        runesForPrediction.toVector.map(r => r -> structA.headerRuneToType(r)).toMap
+        runesForPrediction.toVector.map(r =>
+          r -> structA.headerRuneToType.getOrElse(r, defaultsRuneToType(r))).toMap
 
       // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
       // just to populate any generic parameter default values.

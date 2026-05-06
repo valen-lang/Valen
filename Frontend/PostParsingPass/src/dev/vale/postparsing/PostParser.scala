@@ -342,16 +342,24 @@ object PostParser {
           case r @ LiteralSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ MaybeCoercingLookupSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ ResolveSR(_, _, _, _, _) => rulesToLeaveInDefaultArgument.add(r)
-          // Per @DRSINI, this hoisted EqualsSR just aliases two runes in the parent's rules.
-          // Harmless on its own — only fires when LiteralSR is added incrementally.
-          case r @ EqualsSR(_, _, _) => ruleBuilder += r // Hoist it up into regular rules
+          // Per @DRSINI, this EqualsSR aliases the param rune to the default's resultRune.
+          // We KEEP it in the default's rules (rather than hoisting) so the default is fully
+          // self-contained — it travels intact when GenericParameterS is inherited (e.g. by
+          // struct internal methods). At default-fire time, the typing pass registers the
+          // default-only runes via solverState.registerRunes(default.runeToType.keys).
+          case r @ EqualsSR(_, _, _) => rulesToLeaveInDefaultArgument.add(r)
           case r @ CallSiteFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case r @ DefinitionFuncSR(_, _, _, _, _) => ruleBuilder += r // Hoist it up into regular rules
           case other => vwat(other)
         })
 
+        // Default-only runeToType. resultRune is typed the same as the parent param via
+        // the connecting EqualsSR. (For complex defaults that introduce additional
+        // default-only runes via MaybeCoercingLookupSR/ResolveSR/etc., those runes' types
+        // would also belong here — left as a follow-up.)
+        val defaultRuneToType = Map(resultRune.rune -> genericParamTypeS.tyype)
         GenericParameterDefaultS(
-          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector)
+          resultRune.rune, rulesToLeaveInDefaultArgument.buildArray().toVector, defaultRuneToType)
       })
 
 //    val (maybeImplicitRegionGenericParam, maybeCoordRegionS) =

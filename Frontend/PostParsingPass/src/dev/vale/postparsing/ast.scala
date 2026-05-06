@@ -350,11 +350,14 @@ case class GenericParameterS(
 
 // Per @DRSINI, these rules are added incrementally (not in the initial rule set) by
 // solveForResolving and evaluateGenericFunctionFromCallForPrototype for unsolved runes.
-// The connecting EqualsSR(paramRune, resultRune) is hoisted into the parent's main rules
-// and fires automatically once these rules give resultRune a value.
+// `rules` includes the connecting EqualsSR(paramRune, resultRune) so the default is fully
+// self-contained — it travels intact when GenericParameterS is inherited (e.g. by struct
+// internal methods). `runeToType` carries types for default-only runes (currently just
+// resultRune); these get registered into the solver at default-fire time.
 case class GenericParameterDefaultS(
   resultRune: IRuneS,
-  rules: Vector[IRulexSR])
+  rules: Vector[IRulexSR],
+  runeToType: Map[IRuneS, ITemplataType])
 
 // Underlying class for all XYZFunctionS types
 case class FunctionS(
