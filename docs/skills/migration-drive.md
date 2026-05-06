@@ -56,6 +56,10 @@ Notes:
 
 * **Include enough context in every TL escalation that the TL can find what you're looking at without re-deriving your investigation.** The TL doesn't see your conversation — your escalation message is all they have. At minimum: the Rust file path and line number, the Scala counterpart's file/line, the exact error message if any, and the relevant TFITCX classifications. Quote, don't paraphrase. If you considered multiple options, list them with the trade-offs you saw.
 
+* **Before escalating "X doesn't exist," grep for it.** Rust names often diverge from Scala (operators like `def +` become `fn add`, etc.). Scan the type's `impl` blocks and the audit-trail `/* ... */` for a renamed counterpart before declaring something missing.
+
+* **Cite Scala paths, not Rust audit-trail lines.** When pointing the TL at a Scala counterpart, cite the actual `Frontend/.../Foo.scala:line`, not the Rust file's quoted comment. Saves the TL a hop.
+
 * **SPDMX vs skeleton-with-panics: escalate, don't temp-disable.** When you're porting a Scala function whose body is a `.map.groupBy.mapValues` / `.foreach` chain and you write a Scala-shaped iteration skeleton with `panic!` in the closure bodies, SPDMX may flag it as "novel scaffolding" or recommend `panic!()` for the whole function. **Both are wrong** — the skeleton IS the Scala parity (per TL.md "Good Partial Implementing"), and whole-function `panic!` breaks the test. The resolution is a TL temp-disable with a standard rationale, but the temp-disable is **TL/architect-level only**. Don't temp-disable SPDMX yourself; STOP and escalate, naming the function you're porting and quoting the Scala body (`.map.groupBy.mapValues` / `.foreach` chain). The TL will issue the temp-disable.
 
 * **Guardian flags a pre-existing parity issue: fix it if easy, pause if not.** When Guardian rejects an edit because of a parity violation that predates your change (e.g. you're threading a parameter through a function and SPDMX flags a match-arm collapse that was already there), don't reflexively reach for a temp-disable. First ask: "is the underlying parity gap easy to close right here?" If it's a small adjustment (split one match arm into two with a `panic!` in the new arm, restore a `_ => {}` to the Scala-listed variant, add a missing `assert!` line, etc.), just fix it as part of your edit — the temp-disable is a worse outcome than a 5-line parity fix. If closing the gap would need deeper surgery (call-graph changes, new helpers, restructuring beyond the local function, or anything that needs a judgment call about how Scala's logic should land in Rust), **pause and ask the user**. Don't issue a temp-disable as the default escape hatch when the underlying complaint is legitimate.
@@ -67,6 +71,10 @@ Notes:
     // of a slice that Scala grew via GC>.
     ```
     Examples already in the codebase: `CompilerOutputs::add_function(signature, ...)`, `NodeEnvironmentBox::nearest_block_env(interner)`, `NodeEnvironmentBox::add_entry(interner, ...)`. If you're unsure whether the interner-add is the right shape (vs some other adaptation), escalate — but the default answer is yes.
+
+* **Interner macro wrappers return struct references, not enum variants.** Methods like `intern_typing_pass_block_result_var_name` return `&'t StructType`, not `IVarNameT` — use `.into()` or the From impl to convert to the final enum variant needed.
+
+* **Understand the full type wrapper hierarchy before implementing.** When building values like `ReferenceLocalVariableT`, trace the full path to the final enum type (e.g., `ReferenceLocalVariableT` → `ILocalVariableT::Reference` → `IVariableT::ReferenceLocal`) and build from innermost out to avoid multiple rounds of type errors.
 
 * **You do as many changes as possible. The TL only does Guardian-blocked changes.** If Guardian doesn't fire, you don't need to escalate. Threading a new parameter through call sites, renaming a local to match Scala, fixing an obvious lifetime annotation, adding a `&'t self` receiver where the body needs it — all yours. Escalate only when Guardian fires on something legitimate (NNDX on a missing definition, SPDMX on a Scala-shaped skeleton, etc.). This means more responsibility on you, but faster iteration overall.
 

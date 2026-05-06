@@ -767,7 +767,6 @@ fn visit_break<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t BreakTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::Break(x));
 }
@@ -872,7 +871,6 @@ fn visit_void_literal<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t VoidLiter
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::VoidLiteral(x));
 }
@@ -890,7 +888,6 @@ fn visit_constant_bool<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t Constant
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantBool(x));
 }
@@ -899,7 +896,6 @@ fn visit_constant_str<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t ConstantS
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantStr(x));
 }
@@ -908,7 +904,6 @@ fn visit_constant_float<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, x: &'t Constan
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::ConstantFloat(x));
 }
@@ -1564,7 +1559,6 @@ fn visit_function_attribute<'s, 't, T, F>(
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::FunctionAttribute(a));
 }
@@ -1576,7 +1570,6 @@ fn visit_citizen_attribute<'s, 't, T, F>(
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
-    't: 's,
 {
     collect_if(pred, out, NodeRefT::CitizenAttribute(a));
 }

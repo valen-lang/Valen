@@ -1154,7 +1154,7 @@ where 's: 't,
     pub fn lookup_struct(
         &self,
         struct_tt: IdT<'s, 't>,
-        compiler: &Compiler<'_, '_, 't>,
+        compiler: &Compiler<'s, '_, 't>,
     ) -> &'t StructDefinitionT<'s, 't> {
         let template_id = compiler.get_struct_template(struct_tt);
         self.lookup_struct_template(template_id)

@@ -96,9 +96,9 @@ Three meta-lessons from this session:
 
 3. **AIMITIPX rule applies to test-traversal patterns.** No `if matches!` or `if`-guards on `collect_only_tnode!` patterns. Rust's vanilla struct/enum patterns support literal-value matching at any nesting level, so `Some(ConstantIntTE { value: ITemplataT::Integer(-3), .. }) => Some(())` works without any guard. The macro arms support guards (`$pattern if $guard => $body`) for parity with postparsing's macro shape, but don't use them — AIMITIPX shield will block tests that do.
 
-**Latest session (AASSNCMCX foundational sweep + supporting TL adds):** JR is mid-sweep on a foundational AASSNCMCX cleanup of arena-allocated typing-pass structs. Several supporting TL/architect-level scaffolding additions landed alongside it.
+**Past session (AASSNCMCX foundational sweep + supporting TL adds):** A foundational AASSNCMCX cleanup of arena-allocated typing-pass structs landed (JR drove the sweep; TL/architect added the supporting scaffolding called out below). The sweep is **complete**; the items below are settled background.
 
-1. **AASSNCMCX sweep** (in progress, JR): convert all `Vec<T>` / `HashMap<K, V>` fields on `/// Arena-allocated` structs to `&'t [T]` and `ArenaIndexMap<'t, K, V>`. Convert `HashMap` *values* that reference arena-allocated types to `&'t T` (preserving `@IEOIBZ` identity). Specific structural decisions: `InstantiationBoundArgumentsT` and `InstantiationReachableBoundArgumentsT` reclassified `/// Arena-allocated` (drop `Clone`); `HinputsT` reclassified `/// Temporary state` (mirroring `CompilerOutputs`, top-level `Vec`/`HashMap` retained); `LocationInFunctionEnvironmentT` reclassified `/// Value-type` with `path: &'t [i32]` and Copy derive (mirrors `LocationInDenizen` precedent); `FunctionDefinitionT.header` flipped to `&'t FunctionHeaderT` to preserve `@IEOIBZ` identity; nested `ArenaIndexMap` held by-value (not via `&'t`) per the `TemplatasStoreT` precedent. `PrototypeT` stays by-value in maps (it's `/// Value-type` Copy with derived content Hash/Eq); pre-existing `Vec<(IRuneS, &'t PrototypeT)>` shapes were a leftover bug, fixed during the sweep.
+1. **AASSNCMCX sweep** (landed): convert all `Vec<T>` / `HashMap<K, V>` fields on `/// Arena-allocated` structs to `&'t [T]` and `ArenaIndexMap<'t, K, V>`. Convert `HashMap` *values* that reference arena-allocated types to `&'t T` (preserving `@IEOIBZ` identity). Specific structural decisions: `InstantiationBoundArgumentsT` and `InstantiationReachableBoundArgumentsT` reclassified `/// Arena-allocated` (drop `Clone`); `HinputsT` reclassified `/// Temporary state` (mirroring `CompilerOutputs`, top-level `Vec`/`HashMap` retained); `LocationInFunctionEnvironmentT` reclassified `/// Value-type` with `path: &'t [i32]` and Copy derive (mirrors `LocationInDenizen` precedent); `FunctionDefinitionT.header` flipped to `&'t FunctionHeaderT` to preserve `@IEOIBZ` identity; nested `ArenaIndexMap` held by-value (not via `&'t`) per the `TemplatasStoreT` precedent. `PrototypeT` stays by-value in maps (it's `/// Value-type` Copy with derived content Hash/Eq); pre-existing `Vec<(IRuneS, &'t PrototypeT)>` shapes were a leftover bug, fixed during the sweep.
 
 2. **`PtrKey<'t, T>` scope tightened.** Inline doc comment on `ptr_key.rs` now states that `PtrKey` is for `/// Arena-allocated` identity types only (per `@IEOIBZ`). For types with canonical content-based Hash/Eq via interner-deduplicated inner pointers (`IdT`, `SignatureT`, `PrototypeT`), the bare type is the correct map key — wrapping in `PtrKey` is redundant for canonical-ref insertions and **incorrect** when constructed from a by-value Copy of the type held in a struct field (the outer address differs from the canonical interner ref). The AASSNCMCX sweep drops `PtrKey<'t, IdT>` etc. throughout `CompilerOutputs` (~17 fields).
 
@@ -119,6 +119,32 @@ Three meta-lessons from this session:
 2. **JR-level lifetime promotion (`&'t self`) when a method returns a struct embedding a `&'t` ref to a by-value field.** Per design v3 §3.4a shape #3, the typical fix is "sidestep by returning the field by value" — but when the embedded field type is *fixed by Scala parity* (e.g. `FunctionTemplataT.outer_env: &'t IEnvironmentT`, the field shape mirrors Scala's GC ref), the sidestep isn't available and `&'t self` is the correct promotion. JR escalated on this today; the receiver-lifetime add is JR-level work and shouldn't have been escalated. Doc clarification landed in §3.4a.
 
 3. **`PtrKey<T>` is wrong for canonical-content-hash types.** When a type already has `PartialEq`/`Hash` via interner-deduplicated inner pointers (the `IdT` style — slice-pointer-equality on canonical interned slices), wrapping it in `PtrKey` adds a *different* (outer-address-based) Hash/Eq that collides with the inner canonical equality. Bug: insertion via `PtrKey(canonical_ref)` and lookup via `PtrKey(&struct.field)` *never* agree, even for content-equal `IdT`s. Established convention going forward: `PtrKey` only for `@IEOIBZ` identity types (env/function-A/etc.), never for `IdT`/`SignatureT`/`PrototypeT`.
+
+**Latest session (Slab 15i — `tests_panic_return_type` end-to-end):** `tests_panic_return_type` is now **green end-to-end** (program: `import v.builtins.panic.*; exported func main() int { x = { __vbi_panic() }(); }`). The test asserts the `LetNormalTE` for `x` resolves to `ReferenceLocalVariableT` with `CoordT(Share, _, NeverT { from_break: false })`. Four pieces of TL/architect scaffolding landed; JR drove the body migration:
+
+1. **Sanity-check conclusion pipeline ported on Compiler** — `sanity_check_conclusion`, `get_placeholders_in_id`, `get_placeholders_in_templata`, `get_placeholders_in_kind` (all sliced into the audit-trail block at `compiler.rs:225-319`, JR-level work since the Scala counterparts already lived in the comment block). The two `infer_compiler.rs::make_solver_state` `if self.opts.global_options.sanity_check { … }` call sites now invoke `self.sanity_check_conclusion(…)` (Scala `Compiler.scala:467-478` shape). The non-empty-accum branch of `sanity_check_conclusion` and several `get_placeholders_in_kind` array-variant arms remain panic-stubbed per "Good Partial Implementing".
+
+2. **`is_descendant_kind`/`is_ancestor_kind` sliced in on Compiler** (TL add, `compiler.rs:404-430` audit-trail split). Both panic-stubbed; the `_kind` suffix is a Rust adaptation for a Scala class-collision (see "Compiler/ImplCompiler Name-Collision Disambiguation" below). NNDX temp-disable required.
+
+3. **Layer-skip fix in `evaluate_templated_function_from_call_for_prototype`** — JR's coercion of `declaring_env: IEnvironmentT` to `BuildingFunctionEnvironmentWithClosuredsT` was wrong. The right shape is delegating to the closure-or-light layer (`evaluate_templated_light_banner_from_call_closure_or_light`), which builds the `Building...` env via `make_env_without_closure_stuff` internally. The closure-or-light layer's body got filled at the same time (Scala `FunctionCompilerClosureOrLightLayer.scala:387-393`).
+
+4. **`make_named_env` arena-allocation pattern at the call site of `get_or_evaluate_templated_function_for_banner`** — `let named_env: &'t FunctionEnvironmentT = self.typing_interner.alloc(self.make_named_env(...))`. Standard "TemplatasStoreT Is `&'t` In All Env Structs" Rust adaptation since `FunctionEnvironmentT` is `/// Arena-allocated` and `templata(&'t self)` requires `'t`-lifetime self. JR-level work — escalation of this shape is unnecessary going forward.
+
+Plus several JR-level body migrations of note: `make_closure_understruct_core` (~150 lines, builds `LambdaCitizenTemplateNameT`, instantiation bounds, outer/inner `CitizenEnvironmentT`s, returns `(closured_vars_struct_ref, mutability, function_templata)`), `make_implicit_drop_function_struct_drop` (synthesizes the `FunctionA` for the auto-generated drop with four CodeRunes and four IRulexSR rules), `FunctionBodyMacro::generate_function_body` (15-arm dispatch in `macros.rs`), and `IInstantiationNameT::template_args() -> &'t [ITemplataT]` (21-arm dispatch added in `names/names.rs`).
+
+Three meta-lessons from this session:
+
+1. **Compiler/ImplCompiler name-collision disambiguation is a recurring pattern.** When Scala has the same method name on two different classes — e.g. anonymous-delegate `Compiler.isDescendant(kind: KindT)` and `ImplCompiler.isDescendant(kind: ISubKindTT)` — and Rust flattens both onto `Compiler`, the collision needs a Rust-side disambiguation. See "Compiler/ImplCompiler Name-Collision Disambiguation" below. Expect this to recur for every anonymous `IInfererDelegate`-style override that shadows a method from another Scala class.
+
+2. **Lifetime errors with established AASSNCMCX shapes are JR-level work.** When a stack-local of an `/// Arena-allocated` type needs to live for `'t` (typically because a downstream method emits a `'t`-borrow into it, e.g. `templata(&'t self)`), the fix is `self.typing_interner.alloc(...)` at the call site. This is documented in "TemplatasStoreT Is `&'t` In All Env Structs" and slab 15h's design v3 §3.4a clarification — and it's JR's job, not a TL escalation. The general rule: migration-drive's "stop on lifetime errors" applies to *novel* lifetime puzzles where the right shape isn't obvious; once a shape is documented, JR fixes it themselves. (When in doubt, JR can ask — but the default is "you handle it.")
+
+3. **Pre-existing parity gaps Guardian flags during your edit: fix locally if cheap, else pause.** When Guardian rejects an edit because of a parity violation that predates your change (e.g. SPDMX flags a match-arm collapse that was already there), JR's first instinct should not be a temp-disable. Small adjustments — split one match arm into two with `panic!` in the new arm, restore a `_ => {}` to a Scala-listed variant, add a missing assertion — should just land as part of the edit. Bigger surgery (call-graph changes, new helpers, restructuring beyond the local function) → pause and ask. Documented today in `migration-drive.md`.
+
+---
+
+## Where We Are Now
+
+After Slab 15i: `tests_panic_return_type` is the latest passing test. The next ignored test in `compiler_tests.rs` order becomes the driving target for Slab 15j. Pre-15i passing tests (`simple_program_returning_an_int_explicit`, `hardcoding_negative_numbers`, `taking_an_argument_and_returning_it`, etc.) remain un-ignored as regression guards.
 
 ---
 
@@ -462,6 +488,30 @@ Not like this (Scala comment stranded outside the impl):
 
 ---
 
+## Compiler/ImplCompiler Name-Collision Disambiguation
+
+Scala has multiple compiler-side classes (`Compiler`, `ImplCompiler`, `TemplataCompiler`, etc.) that sometimes share method names — e.g. `Compiler`'s anonymous `IInfererDelegate.isDescendant(kind: KindT)` and `ImplCompiler.isDescendant(kind: ISubKindTT)` are both named `isDescendant` in Scala source, distinguished only by their owning class. Rust flattens many of these onto a single `Compiler` struct (the established convention — see `Compiler` impl blocks across `compiler.rs`, `impl_compiler.rs`, `templata_compiler.rs`, etc.), which collapses the namespace and surfaces the collision at compile time.
+
+**The disambiguation pattern**: when slicing in the second of two same-named methods, append a `_<distinguishing-arg-type>` suffix (`is_descendant_kind` / `is_ancestor_kind` for the `KindT`-taking version, since the existing `is_descendant` takes `ISubKindTT`). Add a comment above the new fn:
+
+```rust
+// Rust adaptation: collides with Compiler::is_descendant lifted from
+// ImplCompiler.scala (which Rust flattened onto Compiler); appended `_kind`
+// suffix to disambiguate this delegate-class isDescendant from
+// ImplCompiler's. Scala uses class-level disambiguation (Compiler's
+// anonymous CompilerSolverDelegate vs ImplCompiler) that Rust lacks.
+```
+
+**This is TL territory**: NNDX fires on the rename (the new fn's name doesn't match a Scala def's exact name), so JR escalates and TL slices the methods in with the temp-disable. Standard slice-in pattern applies (split the audit-trail comment, insert Rust impl, reopen the comment around the corresponding Scala `override def`).
+
+**Choice of which method gets the suffix**: prefer suffixing the *newer* / *less-established* slice — leave existing call sites intact. The first-sliced method keeps the natural name; subsequent collisions disambiguate.
+
+**Don't reach for option (3) — materialize an `IInfererDelegate` struct** unless the architect signs off. The flatten-onto-Compiler convention has been the precedent since `sanity_check_conclusion`; reversing it relocates ~5 already-sliced methods. The `_kind`-suffix adaptation is local and reversible.
+
+This will recur for every anonymous-delegate override in `Compiler.scala` whose method name shadows another flattened-onto-Compiler method. Expected hits going forward: `lookupTemplata`, `coerceToCoord`, `isParent` (when their slices land — verify against existing `Compiler::*` methods first).
+
+---
+
 ## Guardian Annotations For New Definitions Without Scala Counterparts
 
 When adding a Rust function that has no direct Scala counterpart (e.g. delegation wiring for Scala trait inheritance, `From`/`TryFrom` impls, interning Val/Query structs), Guardian's NNDX shield will fire. The TL is ordained and can push through, but must annotate the new code so Guardian doesn't fire on future edits either:
@@ -502,11 +552,23 @@ All 173 tests in `src/typing/test/` have `#[ignore]` except the currently-active
 
 ---
 
+## Commit Message Format
+
+When the architect says "fire commit," structure the message as:
+
+1. **First line: 1–3-sentence TL;DR** of what this commit does. The whole summary fits on the first line (no hard wrap into the body); think headline, not subject. Tools that show only the first line should give the reader the gist.
+2. **Body: what the commit contains** — paragraph(s) describing the changes in enough detail that a reviewer can verify scope without reading the diff. Group by file or by concern, whichever reads better.
+3. **Trailing list: notable situations / new arcana / complicated comments.** Bullet list at the end calling out anything unusual: scaffolding fixes that needed architect approval, new arcana documents created, Guardian temp-disables added, comments inserted that explain non-obvious invariants, Scala source edits, etc. Empty list is fine — omit the section if nothing notable happened.
+
+Use a HEREDOC to preserve formatting (per the standard commit protocol). Don't add a Co-Authored-By trailer unless the architect explicitly asks for one.
+
+---
+
 ## How To Continue
 
 1. **Read the design doc** (`docs/architecture/typing-pass-design-v3.md`) top to bottom. Also read `FrontendRust/docs/architecture/typing-pass-arenas.md` for the current arena shape.
-2. **Body migration is test-driven.** The active test (currently `simple_program_returning_an_int_explicit`) drives which panic stubs get implemented. See "Test Promotion Workflow" above.
-3. **Don't commit.** The human handles all commits and tags. Hand back uncommitted working trees at batch boundaries.
+2. **Body migration is test-driven.** The active test (most recently `tests_panic_return_type` as of Slab 15i; the next `#[ignore]`'d test in `compiler_tests.rs` order becomes the driving target) drives which panic stubs get implemented. See "Test Promotion Workflow" above.
+3. **Only commit when the architect says "fire commit".** Hand back uncommitted working trees at batch boundaries by default. The architect handles tags. When (and only when) the architect says the literal phrase "fire commit," run `git commit` with a message in the format below.
 4. **Group related bodies** into coherent batches for review. Each batch gets a handoff doc listing target methods, driving test(s), and Scala translation gotchas.
 
 ---
@@ -515,7 +577,7 @@ All 173 tests in `src/typing/test/` have `#[ignore]` except the currently-active
 
 - Spawn a junior for each batch. Write a handoff listing the target methods, the test(s) that exercise them, and any Scala translation gotchas for those specific bodies.
 - When a design diverges from the design doc, record the divergence in `FrontendRust/docs/reasoning/<topic>.md`. Then update the design doc.
-- **Never commit.** Juniors and TLs finish a batch, run `cargo check --lib` clean, self-review their diff, then hand back to the human with uncommitted changes.
+- **Don't commit unless the architect says "fire commit".** Juniors and TLs finish a batch, run `cargo check --lib` clean, self-review their diff, then hand back to the architect with uncommitted changes. Only on the literal phrase "fire commit" does the TL run `git commit`.
 - **Expect and invite push-back.** Handoffs are proposals, not spec.
 - **Scope discipline.** If edits land in `TL.md`, the design doc, or reasoning docs, announce in the hand-back summary, not folded silently into the diff. TLs revert off-scope edits before review.
 

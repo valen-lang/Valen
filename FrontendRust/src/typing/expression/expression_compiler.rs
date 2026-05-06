@@ -2842,7 +2842,16 @@ where 's: 't,
                     expr_te
                 }
                 _ => {
-                    panic!("implement: drop_since — unexpected kind");
+                    let (resultified_expr, result_local_variable) = self.resultify_expressions(nenv, life.add(self.typing_interner, 1), expr_te);
+                    let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
+                    let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct);
+                    let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                    exprs.push(resultified_expr);
+                    exprs.extend(destroy_expressions);
+                    let result_ilocal_variable = ILocalVariableT::Reference(result_local_variable);
+                    let unlet_te = self.unlet_local_without_dropping(nenv, &result_ilocal_variable);
+                    exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet_te)));
+                    self.consecutive(&exprs)
                 }
             }
         }
@@ -2925,7 +2934,12 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         expr: &'t ReferenceExpressionTE<'s, 't>,
     ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let result_var_ref = self.typing_interner.intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { life });
+        let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
+        let result_variable = ReferenceLocalVariableT { name: result_var_name, variability: VariabilityT::Final, coord: expr.result().coord };
+        let result_let = LetNormalTE { variable: ILocalVariableT::Reference(result_variable), expr };
+        nenv.add_variable(IVariableT::ReferenceLocal(result_variable));
+        (self.typing_interner.alloc(ReferenceExpressionTE::LetNormal(result_let)), result_variable)
     }
 /*
   // Makes the last expression stored in a variable.

@@ -1132,14 +1132,24 @@ where 's: 't,
                             });
                             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule]) {
                                 Ok(_) => Ok(()),
-                                Err(_e) => { panic!("implement: solve_rule CoordSend descendant InternalSolverError wrapping"); }
+                                Err(e) => {
+                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                    let error = self.typing_interner.alloc(e);
+                                    Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                }
                             }
                         } else {
                             let mut conclusions = HashMap::new();
                             conclusions.insert(coord_send.receiver_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
                             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
                                 Ok(_) => Ok(()),
-                                Err(_e) => { panic!("implement: solve_rule CoordSend non-descendant InternalSolverError wrapping"); }
+                                Err(e) => {
+                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                    let error = self.typing_interner.alloc(e);
+                                    Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                }
                             }
                         }
                     }
@@ -1154,14 +1164,24 @@ where 's: 't,
                             });
                             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], HashMap::new(), vec![new_rule]) {
                                 Ok(_) => Ok(()),
-                                Err(_e) => { panic!("implement: solve_rule CoordSend ancestor InternalSolverError wrapping"); }
+                                Err(e) => {
+                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                    let error = self.typing_interner.alloc(e);
+                                    Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                }
                             }
                         } else {
                             let mut conclusions = HashMap::new();
                             conclusions.insert(coord_send.sender_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord })));
                             match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
                                 Ok(_) => Ok(()),
-                                Err(_e) => { panic!("implement: solve_rule CoordSend non-ancestor InternalSolverError wrapping"); }
+                                Err(e) => {
+                                    let ranges = std::iter::once(coord_send.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                    let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                    let error = self.typing_interner.alloc(e);
+                                    Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                }
                             }
                         }
                     }

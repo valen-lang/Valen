@@ -270,9 +270,72 @@ fn taking_an_argument_and_returning_it() {
 */
 // mig: fn tests_adding_two_numbers
 #[test]
-#[ignore]
 fn tests_adding_two_numbers() {
-    panic!("Unmigrated test: tests_adding_two_numbers");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import v.builtins.arith.*;\nexported func main() int { return +(2, 3); }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ConstantInt(
+            crate::typing::ast::expressions::ConstantIntTE {
+                value: crate::typing::templata::templata::ITemplataT::Integer(2),
+                ..
+            }
+        ) => Some(())
+    );
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ConstantInt(
+            crate::typing::ast::expressions::ConstantIntTE {
+                value: crate::typing::templata::templata::ITemplataT::Integer(3),
+                ..
+            }
+        ) => Some(())
+    );
+
+    let func_call: &crate::typing::ast::expressions::FunctionCallTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(call) => Some(call)
+    );
+
+    match func_call.callable.id.local_name {
+        crate::typing::names::names::INameT::Function(fname) => {
+            assert!(fname.template.human_name.as_str() == "+");
+        }
+        _ => panic!("Expected function name for + operator"),
+    }
+
+    assert_eq!(func_call.args.len(), 2);
+    match (&func_call.args[0], &func_call.args[1]) {
+        (
+            crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(c1),
+            crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(c2)
+        ) => {
+            match (&c1.value, &c2.value) {
+                (
+                    crate::typing::templata::templata::ITemplataT::Integer(2),
+                    crate::typing::templata::templata::ITemplataT::Integer(3)
+                ) => {}
+                _ => panic!("Expected ConstantInt(2) and ConstantInt(3)"),
+            }
+        }
+        _ => panic!("Expected function call with ConstantInt arguments"),
+    }
 }
 /*
   test("Tests adding two numbers") {

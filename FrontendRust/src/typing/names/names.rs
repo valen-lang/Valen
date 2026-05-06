@@ -1181,8 +1181,7 @@ sealed trait IVarNameT extends INameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassBlockResultVarNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub life: LocationInFunctionEnvironmentT<'s, 't>,
 }
 /*
 case class TypingPassBlockResultVarNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
@@ -1198,8 +1197,7 @@ case class TypingPassFunctionResultVarNameT() extends IVarNameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassTemporaryVarNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub life: LocationInFunctionEnvironmentT<'s, 't>,
 }
 /*
 case class TypingPassTemporaryVarNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
@@ -1207,8 +1205,7 @@ case class TypingPassTemporaryVarNameT(life: LocationInFunctionEnvironmentT) ext
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternMemberNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub life: LocationInFunctionEnvironmentT<'s, 't>,
 }
 /*
 case class TypingPassPatternMemberNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT
@@ -1225,8 +1222,7 @@ case class TypingIgnoredParamNameT(num: Int) extends IVarNameT
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct TypingPassPatternDestructureeNameT<'s, 't> {
-    pub life: &'s LocationInFunctionEnvironmentT<'s, 't>,
-    pub _phantom: std::marker::PhantomData<&'t ()>,
+    pub life: LocationInFunctionEnvironmentT<'s, 't>,
 }
 /*
 case class TypingPassPatternDestructureeNameT(life: LocationInFunctionEnvironmentT) extends IVarNameT

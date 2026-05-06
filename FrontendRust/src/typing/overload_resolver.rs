@@ -641,8 +641,8 @@ where 's: 't,
                                             coutputs, call_range, call_location, calling_env, ft,
                                             &explicitly_specified_template_arg_templatas, RegionT, args,
                                         ) {
-                                            IResolveFunctionResult::ResolveFunctionFailure(_reason) => {
-                                                panic!("implement: attemptCandidateBanner ResolveFunctionFailure");
+                                            IResolveFunctionResult::ResolveFunctionFailure(failure) => {
+                                                Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason })
                                             }
                                             IResolveFunctionResult::ResolveFunctionSuccess(resolve_success) => {
                                                 match self.params_match(
