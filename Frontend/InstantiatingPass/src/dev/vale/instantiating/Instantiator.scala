@@ -183,35 +183,38 @@ class Instantiator(
         FunctionExportI(range, prototypeC, exportIdC, exportedName)
       })
 
-//    val funcExternsC =
-//      functionExternsT.map({ case FunctionExternT(range, externPlaceholderedIdT, prototypeT, externedName) =>
-//        val perspectiveRegionT = RegionT(DefaultRegionT)
-//
-//        val externIdS =
-//          translateId[ExternNameT, ExternNameI[sI]](
-//            externPlaceholderedIdT,
-//            { case ExternNameT(ExternTemplateNameT(codeLoc)) =>
-//              ExternNameI(ExternTemplateNameI(codeLoc), RegionTemplataI(0))
-//            })
-//        val externIdC =
-//          RegionCollapserIndividual.collapseExternId(RegionCounter.countExternId(externIdS), externIdS)
-//
-//        val externTemplateIdT = TemplataCompiler.getExternTemplate(externPlaceholderedIdT)
-//
-//        val substitutions =
-//          Map[IdT[IPlaceholderNameT], ITemplataI[sI]](
-//            externTemplateIdT -> assemblePlaceholderMap(externPlaceholderedIdT, externIdS))
-//
-//        val (_, prototypeC) =
-//          translatePrototype(
-//            externPlaceholderedIdT,
-//            DenizenBoundToDenizenCallerBoundArgS(Map(), Map()),
-//            substitutions,
-//            perspectiveRegionT,
-//            prototypeT)
-//        Collector.all(prototypeC, { case PlaceholderTemplataT(_, _) => vwat() })
-//        FunctionExternI(prototypeC, externedName)
-//      })
+    val nonGenericFuncExternsC =
+      functionExternsT.flatMap({ case FunctionExternT(range, externPlaceholderedIdT, prototypeT, externedName) =>
+        val isGeneric = prototypeT.id.localName.templateArgs.nonEmpty
+        if (isGeneric) {
+          // We don't handle generic externs yet, that comes later when we see what instantiations are actually needed.
+          // We handle those like we handle normal non-extern generic functions.
+          None
+        } else {
+          val perspectiveRegionT = RegionT(DefaultRegionT)
+
+          val externIdS =
+            translateId[ExternNameT, ExternNameI[sI]](
+              externPlaceholderedIdT,
+              { case ExternNameT(ExternTemplateNameT(codeLoc), _) =>
+                ExternNameI(ExternTemplateNameI(codeLoc), RegionTemplataI(0))
+              })
+          val externIdC =
+            RegionCollapserIndividual.collapseExternId(RegionCounter.countExternId(externIdS), externIdS)
+
+          val substitutions = assemblePlaceholderMap(externPlaceholderedIdT, externIdS)
+
+          val (_, prototypeC) =
+            translatePrototype(
+              externPlaceholderedIdT,
+              DenizenBoundToDenizenCallerBoundArgS(Map(), Map()),
+              substitutions,
+              perspectiveRegionT,
+              prototypeT)
+          Collector.all(prototypeC, { case PlaceholderTemplataT(_, _) => vwat() })
+          Some(FunctionExternI(prototypeC))
+        }
+      })
 
     while ({
       // We make structs and interfaces eagerly as we come across them
@@ -316,7 +319,10 @@ class Instantiator(
         kindExportsC,
         functionExportsC,
         monouts.kindExterns.map(x => x.struct -> x).toMap,
-        monouts.functionExterns.toVector)
+        // Non-generic extern functions are translated up-front, before the main instantiating loop.
+        // Generic extern functions are translated at their callsites, so we only translate the actually needed
+        // instantiations, similar to how normal generic functions work.
+        (nonGenericFuncExternsC ++ monouts.functionExterns).toVector)
 
     resultHinputs
   }
@@ -2228,7 +2234,13 @@ class Instantiator(
             })
           val resultIT = prototypeI.returnType
           val resultCE = ExternFunctionCallIE(prototypeC, argsCE, prototypeC.returnType)
-          monouts.functionExterns += FunctionExternI(prototypeC)
+          // Only generic externs need to be collected here. Non-generic externs are translated
+          // up-front before the main instantiating loop.
+          prototype2.id.localName match {
+            case dev.vale.typing.names.ExternFunctionNameT(_, templateArgs, _) if templateArgs.nonEmpty =>
+              monouts.functionExterns += FunctionExternI(prototypeC)
+            case _ =>
+          }
 
           (resultIT, resultCE)
         }

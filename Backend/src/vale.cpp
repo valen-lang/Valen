@@ -346,20 +346,23 @@ std::string generateFunctionC(
         s << paramTypeExportName << (abiUsesPointer ? "*" : "") << " param" << i;
         break;
       case CFuncLineMode::EXTERN_USER_PROTOTYPE:
+        // DO NOT SUBMIT: doublecheck logic. The user-facing extern signature passes
+        // structs by value (master convention). For rust externs, `borrowParam`
+        // (rust `&T`) becomes `const T*` and `usize` maps to uintptr_t.
+        // `abiUsesPointer` reflects ABI shim mechanics, not the user-visible C
+        // signature, so it must NOT add a `*` here — doing so was the PR 3.2
+        // regression that broke 14 interface/struct extern/export tests. Verify
+        // the rust-extern path still produces the right C signatures before submit.
         if (borrowParam) {
-          s << "const "; // DO NOT SUBMIT complete hack, check for muts
-        } else {
-          s << "";
+          s << "const ";
         }
         if (rustParamStr == "usize") {
           s << "uintptr_t";
         } else {
           s << paramTypeExportName;
         }
-        if (abiUsesPointer || borrowParam) {
-          s << "*"; // DO NOT SUBMIT doublecheck logic
-        } else {
-          s << "";
+        if (borrowParam) {
+          s << "*";
         }
         s << " param" << i;
         break;

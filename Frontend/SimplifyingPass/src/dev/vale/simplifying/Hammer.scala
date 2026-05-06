@@ -294,7 +294,18 @@ class Hammer(interner: Interner, keywords: Keywords) {
     })
 
     functionExterns.foreach({ case FunctionExternI(prototype) =>
-      val exportName = mangleFunc(prototype.id)
+      // Non-rust externs (stdlib's fsqrt etc.) use humanName directly so the user-written
+      // `#include "stdlib/fsqrt.h"` and the generated header path agree. Rust externs use
+      // "" because ValeRuster reads exportSimplifiedId instead of exportName.
+      val exportName =
+        if (prototype.id.packageCoord.module.str == "rust") {
+          ""
+        } else {
+          prototype.id.localName match {
+            case ExternFunctionNameI(humanName, _, _) => humanName.str
+            case other => vwat(other)
+          }
+        }
       val exportSimplifiedId = NameHammer.simplifyId(prototype.id)
       val prototypeH = typeHammer.translatePrototype(hinputs, hamuts, prototype)
       hamuts.addFunctionExtern(prototypeH, exportSimplifiedId, exportName)
