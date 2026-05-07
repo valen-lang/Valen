@@ -406,8 +406,19 @@ where 's: 't,
             init_steps: instantiation_id.init_steps,
             local_name: instantiation_id.local_name,
         });
-        if let Some(_existing) = self.instantiation_name_to_bounds.get(instantiation_id_ref) {
-            panic!("implement: addInstantiationBounds existing check vassert");
+        if let Some(existing) = self.instantiation_name_to_bounds.get(instantiation_id_ref) {
+            // Theres some ambiguities or something here. sometimes when we evaluate
+            // the same thing twice we get different results.
+            // It's gonna be especially tricky because we get each function bounds from the overload
+            // resolver which only returns one.
+            // We avoid this by merging all sorts of function bounds, see MFBFDP.
+            assert!(
+                existing.rune_to_bound_prototype == instantiation_bound_args.rune_to_bound_prototype &&
+                existing.rune_to_citizen_rune_to_reachable_prototype == instantiation_bound_args.rune_to_citizen_rune_to_reachable_prototype &&
+                existing.rune_to_bound_impl == instantiation_bound_args.rune_to_bound_impl,
+                "addInstantiationBounds: existing bounds != new bounds"
+            );
+            return;
         }
 
         self.instantiation_name_to_bounds.insert(*instantiation_id_ref, instantiation_bound_args);
@@ -954,8 +965,10 @@ where 's: 't,
         kind: KindT<'s, 't>,
         id: IdT<'s, 't>,
         exported_name: StrI<'s>,
+        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let export = interner.alloc(KindExportT { range, tyype: kind, id, exported_name });
+        self.kind_exports.push(export);
     }
     /*
       def addKindExport(range: RangeS, kind: KindT, id: IdT[ExportNameT], exportedName: StrI): Unit = {

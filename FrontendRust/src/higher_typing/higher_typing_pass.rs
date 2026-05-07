@@ -229,7 +229,7 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
                 coerce_kind_template_lookup_to_kind(scout_arena, rune_a_to_type, rule_builder, range, result_rune, &name, citizen_template_type.clone());
               }
               ITemplataType::CoordTemplataType(_) => {
-                coerce_kind_template_lookup_to_coord(rune_a_to_type, rule_builder, range, result_rune, &name, citizen_template_type.clone());
+                coerce_kind_template_lookup_to_coord(scout_arena, rune_a_to_type, rule_builder, range, result_rune, &name, citizen_template_type.clone());
               }
               ITemplataType::TemplateTemplataType(ttt) => {
                 assert!(!ttt.param_types.is_empty());
@@ -415,8 +415,27 @@ fn coerce_kind_template_lookup_to_kind<'s>(scout_arena: &ScoutArena<'s>, rune_a_
 
 */
 // mig: fn coerce_kind_template_lookup_to_coord
-fn coerce_kind_template_lookup_to_coord<'s>(_rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, _rule_builder: &mut Vec<IRulexSR<'s>>, _range: RangeS<'s>, _result_rune: RuneUsage<'s>, _name: &IImpreciseNameS<'s>, _ttt: TemplateTemplataType) {
-  panic!("Unimplemented: coerce_kind_template_lookup_to_coord");
+fn coerce_kind_template_lookup_to_coord<'s>(scout_arena: &ScoutArena<'s>, rune_a_to_type: &mut std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>>, rule_builder: &mut Vec<IRulexSR<'s>>, range: RangeS<'s>, result_rune: RuneUsage<'s>, name: &IImpreciseNameS<'s>, ttt: TemplateTemplataType<'s>) {
+  use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR};
+  use crate::postparsing::names::{IRuneValS, ImplicitCoercionTemplateRuneValS, ImplicitCoercionKindRuneValS};
+
+  let template_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionTemplateRune(ImplicitCoercionTemplateRuneValS {
+    range: range.clone(),
+    original_kind_rune: result_rune.rune.clone(),
+  }));
+  let template_rune = RuneUsage { range: range.clone(), rune: template_rune_s.clone() };
+
+  let kind_rune_s = scout_arena.intern_rune(IRuneValS::ImplicitCoercionKindRune(ImplicitCoercionKindRuneValS {
+    range: range.clone(),
+    original_coord_rune: result_rune.rune.clone(),
+  }));
+  let kind_rune = RuneUsage { range: range.clone(), rune: kind_rune_s.clone() };
+
+  rune_a_to_type.insert(template_rune_s, ITemplataType::TemplateTemplataType(ttt));
+  rune_a_to_type.insert(kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
+  rule_builder.push(IRulexSR::Lookup(LookupSR { range: range.clone(), rune: template_rune.clone(), name: name.clone() }));
+  rule_builder.push(IRulexSR::Call(CallSR { range: range.clone(), result_rune: kind_rune.clone(), template_rune: template_rune.clone(), args: &[] }));
+  rule_builder.push(IRulexSR::CoerceToCoord(CoerceToCoordSR { range, coord_rune: result_rune, kind_rune }));
 }
 /*
   private def coerceKindTemplateLookupToCoord(

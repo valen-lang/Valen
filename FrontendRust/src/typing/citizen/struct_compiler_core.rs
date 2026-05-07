@@ -3,6 +3,7 @@ use crate::postparsing::ast::{ICitizenAttributeS, IStructMemberS, LocationInDeni
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::typing::ast::ast::ICitizenAttributeT;
 use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
+use crate::typing::names::names::{CodeVarNameT, IVarNameT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironmentT};
@@ -61,7 +62,142 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         struct_a: &'s StructA<'s>,
     ) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
+        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
+        use crate::typing::types::types::StructTTValT;
+        use crate::typing::compiler_outputs::DeferredActionT;
+        use crate::typing::env::i_env_entry::IEnvEntryT;
+        use crate::typing::templata::templata::{ITemplataT, expect_mutability};
+        use crate::typing::hinputs_t::make;
+        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+        use crate::parsing::ast::IMacroInclusionP;
+        use std::collections::HashSet;
+
+        let template_args = IInstantiationNameT::try_from(struct_runes_env.id.local_name)
+            .unwrap()
+            .template_args();
+        let template_id_t = struct_runes_env.template_id;
+        let template_name_t = IStructTemplateNameT::try_from(template_id_t.local_name).unwrap();
+        let placeholdered_name_t = template_name_t.make_struct_name(self.typing_interner, template_args);
+        // Rust adaptation (SPDMX-B): Scala uses .copy(localName=...) — build new IdT via intern_id.
+        let template_id_steps = template_id_t.init_steps.to_vec();
+        let placeholdered_id_t = *self.typing_interner.intern_id(IdValT {
+            package_coord: template_id_t.package_coord,
+            init_steps: &template_id_steps,
+            local_name: placeholdered_name_t,
+        });
+
+        // Usually when we make a StructTT we put the instantiation bounds into the coutputs,
+        // but this isn't really an instantiation, so we don't here.
+        let placeholdered_struct_tt = *self.typing_interner.intern_struct_tt(StructTTValT { id: placeholdered_id_t });
+
+        let attributes_without_export_or_macros: Vec<ICitizenAttributeS<'s>> =
+            struct_a.attributes.iter().filter(|attr| {
+                match attr {
+                    ICitizenAttributeS::Export(_) => false,
+                    ICitizenAttributeS::MacroCall(_) => false,
+                    _ => true,
+                }
+            }).copied().collect();
+
+        let rune_name_s = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::RuneName(RuneNameValS { rune: struct_a.mutability_rune.rune }));
+        let struct_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(struct_runes_env);
+        let mutability_results = struct_runes_env_as_iindenizen
+            .lookup_nearest_with_imprecise_name(rune_name_s, {
+                let mut s = HashSet::new();
+                s.insert(ILookupContext::TemplataLookupContext);
+                s
+            }, self.typing_interner);
+        let mutability = match mutability_results {
+            Some(m) => expect_mutability(m),
+            None => panic!("vwat: no mutability rune found"),
+        };
+
+        let default_called_macros: Vec<crate::postparsing::ast::MacroCallS<'s>> = vec![
+            crate::postparsing::ast::MacroCallS {
+                range: struct_a.range,
+                include: IMacroInclusionP::CallMacro,
+                macro_name: self.keywords.derive_struct_drop,
+            },
+        ];
+        let mut macros_to_call = default_called_macros;
+        for attr in struct_a.attributes.iter() {
+            match attr {
+                ICitizenAttributeS::MacroCall(mc) if mc.include == IMacroInclusionP::CallMacro => {
+                    if macros_to_call.iter().any(|m| m.macro_name == mc.macro_name) {
+                        panic!("Calling macro twice: {:?}", mc.macro_name);
+                    }
+                    macros_to_call.push(*mc);
+                }
+                ICitizenAttributeS::MacroCall(mc) if mc.include == IMacroInclusionP::DontCallMacro => {
+                    macros_to_call.retain(|m| m.macro_name != mc.macro_name);
+                }
+                _ => {}
+            }
+        }
+
+        let inner_templatas = TemplatasStoreBuilder::new(
+            self.typing_interner.alloc(placeholdered_id_t)
+        ).build_in(self.typing_interner);
+        let struct_inner_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: struct_runes_env.global_env,
+            parent_env: IEnvironmentT::Citizen(struct_runes_env),
+            template_id: template_id_t,
+            id: placeholdered_id_t,
+            templatas: inner_templatas,
+        });
+        let struct_inner_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_inner_env));
+
+        let members_vec = self.make_struct_members(struct_inner_env_ref, coutputs, struct_a.members);
+
+        if mutability == ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }) {
+            for _member in members_vec.iter() {
+                panic!("implement: immutable struct member check");
+            }
+        }
+
+        for (name, entry) in outer_env.templatas().name_to_entry.iter() {
+            match entry {
+                IEnvEntryT::Function(function_a) => {
+                    let deferred_name = outer_env.id().add_step(self.typing_interner, *name);
+                    coutputs.defer_evaluating_function(DeferredActionT::EvaluateFunction {
+                        name: deferred_name,
+                        calling_env: outer_env,
+                        origin: function_a,
+                        template_args: &[],
+                    });
+                }
+                _ => panic!("vcurious: unexpected entry in outer_env.templatas"),
+            }
+        }
+
+        let rune_to_function_bound = self.assemble_rune_to_function_bound(struct_runes_env.templatas);
+        let rune_to_impl_bound = self.assemble_rune_to_impl_bound(struct_runes_env.templatas);
+
+        let attributes_t = self.translate_citizen_attributes(&attributes_without_export_or_macros);
+        let members_slice = self.typing_interner.alloc_slice_from_vec(members_vec);
+        let attributes_slice = self.typing_interner.alloc_slice_from_vec(attributes_t);
+        let instantiation_bound_params = make(
+            self.typing_interner,
+            rune_to_function_bound.into_iter().map(|(k, v)| (k, *v)).collect(),
+            vec![],
+            rune_to_impl_bound.into_iter().collect(),
+        );
+
+        let struct_def_t = self.typing_interner.alloc(StructDefinitionT {
+            template_name: template_id_t,
+            instantiated_citizen: placeholdered_struct_tt,
+            attributes: attributes_slice,
+            weakable: struct_a.weakable,
+            mutability,
+            members: members_slice,
+            is_closure: false,
+            instantiation_bound_params,
+        });
+
+        coutputs.add_struct(struct_def_t);
     }
 /*
   def compileStruct(
@@ -202,7 +338,13 @@ where 's: 't,
         &self,
         attrs: &[ICitizenAttributeS<'s>],
     ) -> Vec<ICitizenAttributeT<'s>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        attrs.iter().map(|attr| {
+            match attr {
+                ICitizenAttributeS::Sealed(_) => ICitizenAttributeT::Sealed,
+                ICitizenAttributeS::MacroCall(_) => panic!("vwat: MacroCallS should have been processed"),
+                x => panic!("vimpl: {:?}", x),
+            }
+        }).collect()
     }
 /*
   def translateCitizenAttributes(attrs: Vector[ICitizenAttributeS]): Vector[ICitizenAttributeT] = {
@@ -315,7 +457,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         members: &[IStructMemberS<'s>],
     ) -> Vec<IStructMemberT<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        members.iter().map(|m| self.make_struct_member(env, coutputs, *m)).collect()
     }
 /*
   private def makeStructMembers(
@@ -338,7 +480,41 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         member: IStructMemberS<'s>,
     ) -> IStructMemberT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use std::collections::HashSet;
+        use std::marker::PhantomData;
+        use crate::postparsing::names::{RuneNameValS, RuneNameS};
+        use crate::typing::templata::conversions::evaluate_variability;
+        use crate::typing::env::environment::ILookupContext;
+        let type_rune_s = (*member.type_rune()).rune;
+        let type_templata = match env.lookup_nearest_with_imprecise_name(
+            self.scout_arena.intern_imprecise_name(
+                crate::postparsing::names::IImpreciseNameValS::RuneName(RuneNameValS { rune: type_rune_s })
+            ),
+            {
+                let mut s = HashSet::new();
+                s.insert(ILookupContext::TemplataLookupContext);
+                s
+            },
+            self.typing_interner,
+        ) {
+            Some(t) => t,
+            None => panic!("Unimplemented: make_struct_member type not found"),
+        };
+        let variability_t = evaluate_variability(member.variability());
+        match member {
+            crate::postparsing::ast::IStructMemberS::NormalStructMember(n) => {
+                let coord = match type_templata {
+                    crate::typing::templata::templata::ITemplataT::Coord(c) => c.coord,
+                    _ => panic!("Unimplemented: make_struct_member non-coord type for NormalStructMemberS"),
+                };
+                IStructMemberT::Normal(crate::typing::ast::citizens::NormalStructMemberT {
+                    name: IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(CodeVarNameT { name: n.name, _phantom: PhantomData })),
+                    variability: variability_t,
+                    tyype: crate::typing::ast::citizens::IMemberTypeT::Reference(crate::typing::ast::citizens::ReferenceMemberTypeT { reference: coord }),
+                })
+            }
+            crate::postparsing::ast::IStructMemberS::VariadicStructMember(_) => panic!("Unimplemented: make_struct_member VariadicStructMemberS"),
+        }
     }
 /*
   private def makeStructMember(

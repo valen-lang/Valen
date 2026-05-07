@@ -12,6 +12,8 @@ use crate::typing::env::i_env_entry::*;
 use crate::typing::compiler_outputs::*;
 use crate::typing::compiler::Compiler;
 use crate::typing::templata::templata::*;
+use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT};
 use crate::postparsing::ast::LocationInDenizen;
 
 /*
@@ -64,7 +66,122 @@ where 's: 't,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: get_struct_sibling_entries_struct_drop");
+        use crate::postparsing::names::{IRuneValS, MacroVoidKindRuneS, MacroVoidCoordRuneS, SelfKindTemplateRuneS, SelfKindRuneS, SelfCoordRuneS, IVarNameS, CodeVarNameS, IFunctionDeclarationNameValS, INameValS, FunctionNameS, IFunctionDeclarationNameS};
+        use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
+        use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
+        use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS};
+        use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType, TemplateTemplataType, FunctionTemplataType};
+        use crate::typing::names::names::{IFunctionTemplateNameT, INameT};
+        use crate::utils::range::{RangeS, CodeLocationS};
+        use std::collections::HashMap;
+
+        let range = |n: i32| -> RangeS<'s> {
+            let loc = CodeLocationS::internal(self.scout_arena, n);
+            RangeS { begin: loc, end: loc }
+        };
+        let use_ = |n: i32, rune| RuneUsage { range: range(n), rune };
+
+        let mut rules: Vec<IRulexSR<'s>> = Vec::new();
+        // Use the same rules as the original struct, see MDSFONARFO.
+        for r in struct_a.header_rules.iter() { rules.push(*r); }
+        let mut rune_to_type: HashMap<_, _> = HashMap::new();
+        // Use the same runes as the original struct, see MDSFONARFO.
+        for (k, v) in struct_a.header_rune_to_type.iter() { rune_to_type.insert(*k, *v); }
+
+        let void_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidKindRune(MacroVoidKindRuneS {}));
+        rune_to_type.insert(void_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
+        rules.push(IRulexSR::Lookup(LookupSR {
+            range: range(-1672147),
+            rune: use_(-64002, void_kind_rune_s),
+            name: self.scout_arena.intern_imprecise_name(crate::postparsing::names::IImpreciseNameValS::CodeName(crate::postparsing::names::CodeNameS { name: self.keywords.void })),
+        }));
+        let void_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::MacroVoidCoordRune(MacroVoidCoordRuneS {}));
+        rune_to_type.insert(void_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
+            range: range(-1672147),
+            coord_rune: use_(-64002, void_coord_rune_s),
+            kind_rune: use_(-64002, void_kind_rune_s),
+        }));
+
+        let self_kind_template_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindTemplateRune(SelfKindTemplateRuneS { loc: struct_a.range.begin }));
+        rune_to_type.insert(self_kind_template_rune_s, ITemplataType::TemplateTemplataType(struct_a.tyype));
+        rules.push(IRulexSR::Lookup(LookupSR {
+            range: struct_a.name.range(),
+            rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_template_rune_s },
+            name: struct_a.name.get_imprecise_name(self.scout_arena),
+        }));
+
+        let self_kind_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfKindRune(SelfKindRuneS {}));
+        rune_to_type.insert(self_kind_rune_s, ITemplataType::KindTemplataType(KindTemplataType {}));
+        let generic_param_runes: Vec<_> = struct_a.generic_parameters.iter().map(|p| p.rune).collect();
+        let generic_param_runes_slice = self.scout_arena.alloc_slice_copy(&generic_param_runes);
+        rules.push(IRulexSR::Call(CallSR {
+            range: struct_a.name.range(),
+            result_rune: use_(-64002, self_kind_rune_s),
+            template_rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_template_rune_s },
+            args: generic_param_runes_slice,
+        }));
+
+        let self_coord_rune_s = self.scout_arena.intern_rune(IRuneValS::SelfCoordRune(SelfCoordRuneS {}));
+        rune_to_type.insert(self_coord_rune_s, ITemplataType::CoordTemplataType(CoordTemplataType {}));
+        rules.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
+            range: struct_a.name.range(),
+            coord_rune: RuneUsage { range: struct_a.name.range(), rune: self_coord_rune_s },
+            kind_rune: RuneUsage { range: struct_a.name.range(), rune: self_kind_rune_s },
+        }));
+
+        // Use the same generic parameters as the struct
+        let function_generic_parameters = struct_a.generic_parameters;
+
+        let function_templata_type = TemplateTemplataType {
+            param_types: self.scout_arena.alloc_slice_from_vec(
+                function_generic_parameters.iter().map(|p| *rune_to_type.get(&p.rune.rune).unwrap()).collect()
+            ),
+            return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})),
+        };
+
+        let name_s = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+            name: self.keywords.drop,
+            code_location: struct_a.range.begin,
+        });
+        let mut rune_to_type_map = self.scout_arena.alloc_index_map();
+        for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }
+        let rules_slice = self.scout_arena.alloc_slice_copy(&rules);
+        let drop_function_a = self.scout_arena.alloc(crate::higher_typing::ast::FunctionA::new(
+            struct_a.range,
+            name_s,
+            &[],
+            function_templata_type,
+            function_generic_parameters,
+            rune_to_type_map,
+            self.scout_arena.alloc_slice_from_vec(vec![ParameterS::new(
+                range(-1340),
+                None,
+                false,
+                AtomSP {
+                    range: range(-1340),
+                    name: Some(CaptureS { name: IVarNameS::CodeVarName(self.keywords.thiss), mutate: false }),
+                    coord_rune: Some(use_(-64002, self_coord_rune_s)),
+                    destructure: None,
+                },
+            )]),
+            Some(use_(-64002, void_coord_rune_s)),
+            rules_slice,
+            IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.drop_generator }),
+        ));
+        let drop_name_local = match self.translate_generic_function_name(drop_function_a.name) {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+            IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+            IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+            IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        };
+        let drop_name_t = struct_name.add_step(self.typing_interner, drop_name_local);
+        vec![(*drop_name_t, IEnvEntryT::Function(drop_function_a))]
     }
 /*
   override def getStructSiblingEntries(
@@ -324,15 +441,54 @@ where 's: 't,
         coutputs.declare_function_return_type(
             self.typing_interner.alloc(header.to_signature()), header.return_type);
 
-        let body_expr = match struct_def.mutability {
+        let body_expr: &'t ReferenceExpressionTE<'s, 't> = match struct_def.mutability {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
-                ReferenceExpressionTE::Discard(DiscardTE {
+                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE {
                     expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: struct_type })),
-                })
+                }))
             }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) |
             ITemplataT::Placeholder(_) => {
-                panic!("implement: generate_function_body_struct_drop mutable/placeholder case");
+                let member_local_variables: Vec<ReferenceLocalVariableT<'s, 't>> =
+                    struct_def.members.iter().flat_map(|member| {
+                        match member {
+                            IStructMemberT::Normal(n) => {
+                                match &n.tyype {
+                                    IMemberTypeT::Reference(r) => {
+                                        let substituter = self.get_placeholder_substituter(
+                                            self.opts.global_options.sanity_check,
+                                            env.template_id,
+                                            struct_tt.id,
+                                            IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                                        );
+                                        let reference = substituter.substitute_for_coord(coutputs, r.reference);
+                                        vec![ReferenceLocalVariableT { name: n.name, variability: VariabilityT::Final, coord: reference }]
+                                    }
+                                    IMemberTypeT::Address(_) => vec![],
+                                }
+                            }
+                            IStructMemberT::Variadic(_) => panic!("vimpl: VariadicStructMemberT in struct drop"),
+                        }
+                    }).collect();
+                let member_local_variables_slice = self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
+                let arg_lookup = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: struct_type }));
+                let destroy = self.typing_interner.alloc(ReferenceExpressionTE::Destroy(DestroyTE {
+                    expr: arg_lookup,
+                    struct_tt,
+                    destination_reference_variables: member_local_variables_slice,
+                }));
+                let origin_range: Vec<RangeS<'s>> = origin_function1.map(|f| f.range).into_iter().collect();
+                let drop_call_range: Vec<RangeS<'s>> = origin_range.into_iter().chain(call_range.iter().copied()).collect();
+                let drop_call_range_slice = self.typing_interner.alloc_slice_from_vec(drop_call_range);
+                let drop_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
+                    let unlet = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(UnletTE {
+                        variable: ILocalVariableT::Reference(*v),
+                    }));
+                    self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT {}, unlet)
+                }).collect();
+                let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = vec![destroy];
+                all_exprs.extend(drop_exprs.into_iter());
+                self.consecutive(&all_exprs)
             }
             _ => panic!("struct drop: unexpected mutability"),
         };
@@ -342,9 +498,8 @@ where 's: 't,
                 source_expr: self.typing_interner.alloc(
                     ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region: RegionT {}, _phantom: std::marker::PhantomData })),
             }));
-        let body_expr_ref = self.typing_interner.alloc(body_expr);
         let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.consecutive(&[body_expr_ref, return_expr]),
+            inner: self.consecutive(&[body_expr, return_expr]),
         });
 
         (header, body)

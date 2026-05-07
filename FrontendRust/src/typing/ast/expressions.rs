@@ -31,33 +31,55 @@ pub enum IExpressionResultT<'s, 't> {
 /*
 trait IExpressionResultT  {
 */
-fn expression_result_expect_reference<'s, 't>() -> ReferenceResultT<'s, 't> { panic!("Unimplemented: expect_reference"); }
-/*
-  def expectReference(): ReferenceResultT = {
-    this match {
-      case r @ ReferenceResultT(_) => r
-      case AddressResultT(_) => vfail("Expected a reference as a result, but got an address!")
+impl<'s, 't> IExpressionResultT<'s, 't> where 's: 't {
+    pub fn expect_reference(&self) -> ReferenceResultT<'s, 't> {
+        match self {
+            IExpressionResultT::Reference(r) => *r,
+            IExpressionResultT::Address(_) => panic!("Expected a reference as a result, but got an address!"),
+        }
     }
-  }
-*/
-fn expression_result_expect_address<'s, 't>() -> AddressResultT<'s, 't> { panic!("Unimplemented: expect_address"); }
-/*
-  def expectAddress(): AddressResultT = {
-    this match {
-      case a @ AddressResultT(_) => a
-      case ReferenceResultT(_) => vfail("Expected an address as a result, but got a reference!")
+    /*
+      def expectReference(): ReferenceResultT = {
+        this match {
+          case r @ ReferenceResultT(_) => r
+          case AddressResultT(_) => vfail("Expected a reference as a result, but got an address!")
+        }
+      }
+    */
+    pub fn expect_address(&self) -> AddressResultT<'s, 't> {
+        match self {
+            IExpressionResultT::Address(a) => *a,
+            IExpressionResultT::Reference(_) => panic!("Expected an address as a result, but got a reference!"),
+        }
     }
-  }
-*/
-fn expression_result_underlying_coord<'s, 't>() -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
-/*
-  def underlyingCoord: CoordT
-*/
-fn expression_result_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
-/*
-  def kind: KindT
+    /*
+      def expectAddress(): AddressResultT = {
+        this match {
+          case a @ AddressResultT(_) => a
+          case ReferenceResultT(_) => vfail("Expected an address as a result, but got a reference!")
+        }
+      }
+    */
+    pub fn underlying_coord(&self) -> CoordT<'s, 't> {
+        match self {
+            IExpressionResultT::Reference(r) => r.coord,
+            IExpressionResultT::Address(a) => a.coord,
+        }
+    }
+    /*
+      def underlyingCoord: CoordT
+    */
+    pub fn kind(&self) -> KindT<'s, 't> {
+        match self {
+            IExpressionResultT::Reference(r) => panic!("Unimplemented: kind Reference"),
+            IExpressionResultT::Address(a) => panic!("Unimplemented: kind Address"),
+        }
+    }
+    /*
+      def kind: KindT
+    }
+    */
 }
-*/
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AddressResultT<'s, 't> { pub coord: CoordT<'s, 't> }
@@ -135,15 +157,27 @@ pub enum ExpressionTE<'s, 't> {
 /*
 trait ExpressionT  {
 */
-fn expression_result<'s, 't>() -> IExpressionResultT<'s, 't> { panic!("Unimplemented: result"); }
-/*
-  def result: IExpressionResultT
-*/
-fn expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
-/*
-  def kind: KindT
+impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
+    pub fn result(&self) -> IExpressionResultT<'s, 't> {
+        match self {
+            ExpressionTE::Reference(e) => IExpressionResultT::Reference(e.result()),
+            ExpressionTE::Address(e) => IExpressionResultT::Address(e.result()),
+        }
+    }
+    /*
+      def result: IExpressionResultT
+    */
+    pub fn kind(&self) -> KindT<'s, 't> {
+        match self {
+            ExpressionTE::Reference(e) => panic!("Unimplemented: kind Reference"),
+            ExpressionTE::Address(e) => panic!("Unimplemented: kind Address"),
+        }
+    }
+    /*
+      def kind: KindT
+    }
+    */
 }
-*/
 /// Arena-allocated (see @TFITCX)
 //
 // No `PartialEq`/`Hash` derive or impl — opts out of equality entirely, mirroring
@@ -267,12 +301,14 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
     /*
       override def result: ReferenceResultT
     */
+    pub fn kind(&self) -> KindT<'s, 't> {
+        panic!("Unimplemented: kind");
+    }
+    /*
+      override def kind = result.coord.kind
+    }
+    */
 }
-fn reference_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
-/*
-  override def kind = result.coord.kind
-}
-*/
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub enum AddressExpressionTE<'s, 't> {
@@ -300,22 +336,40 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
     /*
       override def result: AddressResultT
     */
-}
-fn address_expression_kind<'s, 't>() -> KindT<'s, 't> { panic!("Unimplemented: kind"); }
-/*
-  override def kind = result.coord.kind
-*/
-fn address_expression_range<'s>() -> RangeS<'s> { panic!("Unimplemented: range"); }
-/*
-  def range: RangeS
-*/
-fn address_expression_variability() -> VariabilityT { panic!("Unimplemented: variability"); }
-/*
-  // Whether or not we can change where this address points to
-  def variability: VariabilityT
-}
+    pub fn kind(&self) -> KindT<'s, 't> {
+        panic!("Unimplemented: kind");
+    }
+    /*
+      override def kind = result.coord.kind
+    */
+    pub fn range(&self) -> RangeS<'s> {
+        match self {
+            AddressExpressionTE::LocalLookup(e) => panic!("Unimplemented: range LocalLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: range StaticSizedArrayLookup"),
+            AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: range RuntimeSizedArrayLookup"),
+            AddressExpressionTE::ReferenceMemberLookup(e) => e.range,
+            AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: range AddressMemberLookup"),
+        }
+    }
+    /*
+      def range: RangeS
+    */
+    pub fn variability(&self) -> VariabilityT {
+        match self {
+            AddressExpressionTE::LocalLookup(e) => panic!("Unimplemented: variability LocalLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: variability StaticSizedArrayLookup"),
+            AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: variability RuntimeSizedArrayLookup"),
+            AddressExpressionTE::ReferenceMemberLookup(e) => panic!("Unimplemented: variability ReferenceMemberLookup"),
+            AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: variability AddressMemberLookup"),
+        }
+    }
+    /*
+      // Whether or not we can change where this address points to
+      def variability: VariabilityT
+    }
 
-*/
+    */
+}
 /// Arena-allocated (see @TFITCX)
 #[derive(Debug)]
 pub struct LetAndLendTE<'s, 't>
@@ -366,7 +420,10 @@ impl<'s, 't> LetAndLendTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> LetAndLendTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        let CoordT { ownership: _old_ownership, region, kind } = self.expr.result().coord;
+        ReferenceResultT { coord: CoordT { ownership: self.target_ownership, region, kind } }
+    }
 /*
   override def result: ReferenceResultT = {
     val CoordT(oldOwnership, region, kind) = expr.result.coord
@@ -659,7 +716,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> DeferTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.inner_expr.result().coord }
+    }
 /*
   override def result = ReferenceResultT(innerExpr.result.coord)
 
@@ -1753,7 +1812,10 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ReferenceMemberLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> AddressResultT<'s, 't> {
+        // See RMLRMO why we just return the member type.
+        AddressResultT { coord: self.member_reference }
+    }
 /*
   override def result = {
     // See RMLRMO why we just return the member type.
@@ -2519,7 +2581,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> DestroyTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT {}) } }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(ShareT, expr.result.coord.region, VoidT()))

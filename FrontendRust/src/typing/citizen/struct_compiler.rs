@@ -9,6 +9,7 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
@@ -182,14 +183,14 @@ where 's: 't,
 {
     pub fn resolve_struct(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         uncoerced_template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
-        panic!("Unimplemented: resolve_struct");
+        self.resolve_struct_layer(coutputs, calling_env, call_range, call_location, struct_templata, uncoerced_template_args)
     }
 /*
   def resolveStruct(
@@ -213,10 +214,50 @@ where 's: 't,
 {
     pub fn precompile_struct(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> () {
-        panic!("Unimplemented: precompile_struct");
+        use std::marker::PhantomData;
+        let declaring_env = struct_templata.declaring_env;
+        let struct_a = struct_templata.origin_struct;
+        let struct_template_id = self.resolve_struct_template(
+            self.typing_interner.alloc(struct_templata)
+        );
+        coutputs.declare_type(struct_template_id);
+        match struct_a.maybe_predicted_mutability {
+            None => {}
+            Some(predicted_mutability) => {
+                coutputs.declare_type_mutability(
+                    struct_template_id,
+                    ITemplataT::Mutability(MutabilityTemplataT {
+                        mutability: crate::typing::templata::conversions::evaluate_mutability(predicted_mutability),
+                    }),
+                );
+            }
+        }
+        let sibling_key = struct_template_id.add_step(
+            self.typing_interner,
+            INameT::PackageTopLevel(self.typing_interner.intern_package_top_level_name(
+                PackageTopLevelNameT { _phantom: PhantomData }
+            )),
+        );
+        let sibling_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            declaring_env.global_env().name_to_top_level_environment.iter()
+                .filter(|(id, _)| **id == *sibling_key)
+                .flat_map(|(_, ts)| ts.name_to_entry.iter().map(|(n, e)| (*n, *e)))
+                .collect();
+        let mut outer_store = TemplatasStoreBuilder::new(struct_template_id);
+        outer_store.add_entries(self.scout_arena, sibling_entries);
+        let outer_templatas = outer_store.build_in(self.typing_interner);
+        let outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: declaring_env.global_env(),
+            parent_env: *declaring_env,
+            template_id: *struct_template_id,
+            id: *struct_template_id,
+            templatas: outer_templatas,
+        });
+        let outer_env_ref = self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(outer_env));
+        coutputs.declare_type_outer_env(struct_template_id, outer_env_ref);
     }
 /*
   def precompileStruct(
@@ -329,12 +370,12 @@ where 's: 't,
 {
     pub fn compile_struct(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> UncheckedDefiningConclusions<'s, 't> {
-        panic!("Unimplemented: compile_struct");
+        self.compile_struct_layer(coutputs, parent_ranges, call_location, struct_templata)
     }
 /*
   def compileStruct(
@@ -390,14 +431,14 @@ where 's: 't,
 {
     pub fn predict_struct(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         uncoerced_template_args: &[ITemplataT<'s, 't>],
     ) -> StructTT<'s, 't> {
-        panic!("Unimplemented: predict_struct");
+        self.predict_struct_layer(coutputs, calling_env, call_range, call_location, struct_templata, uncoerced_template_args)
     }
 /*
   def predictStruct(
@@ -559,7 +600,15 @@ where 's: 't,
         struct_tt: StructTT<'s, 't>,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let definition = coutputs.lookup_struct(struct_tt.id, self);
+        let transformer = self.get_placeholder_substituter(
+            sanity_check,
+            original_calling_denizen_id,
+            struct_tt.id,
+            bound_arguments_source,
+        );
+        let result = transformer.substitute_for_templata(coutputs, definition.mutability);
+        result
     }
     /* Guardian: disable-all */
     /*

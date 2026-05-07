@@ -1,8 +1,8 @@
 # Typing Pass Design — v3
 
-Architecture and design decisions for the Scala-to-Rust typing-pass migration. This is the authoritative design reference; operational handoff instructions are in `tl-handoff.md` at the repo root.
+Architecture and design decisions for the Scala-to-Rust typing-pass migration. This is the authoritative design reference; operational handoff instructions are in `TL.md` at the repo root.
 
-For historical slab-by-slab progress (Slabs 0–14b), see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
+For historical slab-by-slab progress, see `docs/historical/slab-chronicle.md`. Per-slab handoff docs with translation tables and gotchas are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (`docs/historical/typing-pass-design-v1.md`, `docs/historical/typing-pass-design-v2.md`, `docs/historical/typing-pass-migration-setup.md`) are obsolete — they each carry "DO NOT FOLLOW" banners.
 
 ---
 
@@ -68,51 +68,19 @@ Rust's drop order (reverse of declaration) naturally enforces `'t < 's < 'p` lif
 | `CompilerOutputs` | `<'s, 't>` | stack-owned; heap-backed HashMaps; dies at pass end |
 | `Compiler` (god struct) | `<'s, 'ctx, 't>` | stack; dies at pass end |
 
-### 1.5 Full Type Inventory — Which Arena Each Type Lives In
+### 1.5 Type Inventory By Arena
 
-A complete per-type checklist.
+Bucket-level summary. Per-type detail lives in §6.x (type system) and §3 (envs).
 
-**`'s` scout arena — existing, unchanged by the typing pass:**
-- `StrI<'s>`, `PackageCoordinate<'s>`, `FileCoordinate<'s>`, `RangeS<'s>`, `CodeLocationS<'s>` — postparser-interned, reused as-is
-- `INameS<'s>`, `IRuneS<'s>`, `IImpreciseNameS<'s>` — postparser names, reused as-is
-- `FunctionA<'s>`, `StructA<'s>`, `InterfaceA<'s>`, `ImplA<'s>` — higher-typing output, referenced directly by heavy templatas and envs
+- **`'s` scout arena (read-only inputs):** scout-interned coords/names (`StrI`, `RangeS`, `INameS`, `IRuneS`, `IImpreciseNameS`, …) plus higher-typing output (`FunctionA`, `StructA`, `InterfaceA`, `ImplA`).
+- **`'t` typing arena, interned:** ~75 concrete name types, `IdT`, the 5 sealed kind payloads + `KindPlaceholderT`, the 6 interned templata payloads, plus `PrototypeT` / `SignatureT` (Value-type, opt-in dedup). See §6.1.
+- **`'t` typing arena, allocated but not interned:** definitions (`FunctionDefinitionT`, `FunctionHeaderT`, `StructDefinitionT`, `InterfaceDefinitionT`, `ImplT`, `EdgeT`, `OverrideT`, `ParameterT`), the expression hierarchy (`ReferenceExpressionTE` 48 variants + `AddressExpressionTE` 5 variants), `InstantiationBoundArgumentsT`, the 5 heavy templata payloads, `HinputsT`, and the 9 concrete env types + `GlobalEnvironmentT`. `TemplatasStoreT` lives in this bucket and is held as `&'t TemplatasStoreT` inside envs.
+- **Inline Copy wrappers (16 bytes, not arena-stored):** `INameT` + 21 name sub-enums; `KindT` + 3 sub-enums (`ICitizenTT`, `ISubKindTT`, `ISuperKindTT`); `ITemplataT`; `CoordT`; `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT`/`RegionT`; small-Copy templata variants (`MutabilityTemplataT`, etc.); env wrapper enums (`IEnvironmentT` 9 variants, `IInDenizenEnvironmentT` 8-variant subset, `IEnvEntryT` 5, `IVariableT` 4, `ILocalVariableT` 2).
+- **Neither arena (stack/heap):** `CompilerOutputs` (stack accumulator), `Compiler` (stack god struct), env builders (heap-backed until `build_in`/`snapshot`), `DeferredActionT` entries in `VecDeque`.
 
-**`'t` typing arena — interned (dedup via `TypingInterner`):**
-- Concrete name structs (`FunctionNameT`, `StructNameT`, etc. — ~60 of them)
-- `IdT<'s, 't>` — monomorphic (always widest form with `local_name: INameT<'s, 't>`)
-- Concrete Kind payloads: `StructTT<'s, 't>`, `InterfaceTT<'s, 't>`, `StaticSizedArrayTT<'s, 't>`, `RuntimeSizedArrayTT<'s, 't>`, `KindPlaceholderT<'s, 't>`, `OverloadSetT<'s, 't>`
-- Interned templata payloads: `CoordTemplataT<'s, 't>`, `KindTemplataT<'s, 't>`, `PlaceholderTemplataT<'s, 't>`, `PrototypeTemplataT<'s, 't>`, `IsaTemplataT<'s, 't>`, `CoordListTemplataT<'s, 't>`
-- `PrototypeT<'s, 't>`, `SignatureT<'s, 't>` — monomorphic
+**Casting identity rule.** Wrapper enums compare structurally on their 16 bytes (tag + inner ref). Concrete payloads and interned templata payloads compare via `ptr::eq` on the `&'t` ref. Casting up a sub-enum hierarchy is a stack-only rewrap via `From`/`TryFrom`; no interner involvement.
 
-**`'t` typing arena — allocated but NOT interned:**
-- `FunctionDefinitionT<'s, 't>`, `FunctionHeaderT<'s, 't>`
-- `StructDefinitionT<'s, 't>`, `InterfaceDefinitionT<'s, 't>`, `ImplT<'s, 't>`
-- `EdgeT<'s, 't>`, `OverrideT<'s, 't>`
-- `ParameterT<'s, 't>`
-- `ReferenceExpressionTE<'s, 't>` (~48 variants), `AddressExpressionTE<'s, 't>` (~5 variants)
-- `InstantiationBoundArgumentsT<'s, 't>`
-- Heavy templata payloads: `FunctionTemplataT`, `StructDefinitionTemplataT`, `InterfaceDefinitionTemplataT`, `ImplDefinitionTemplataT`, `ExternFunctionTemplataT`
-- `HinputsT<'s, 't>` (pass output)
-- **Environments:** 9 concrete variants, plus `GlobalEnvironmentT<'s, 't>` (one per pass). `TemplatasStoreT<'s, 't>` is held inline inside envs (arena-allocated, non-Copy — uses `ArenaIndexMap`).
-
-**Inline Copy, NOT interned (Scala-verbatim structural equality):**
-- Name sub-enum families (22 of them): each is a 16-byte inline Copy value (tag + 8-byte concrete ref).
-- Kind wrapper enums: `KindT<'s, 't>`, `ICitizenTT<'s, 't>`, `ISubKindTT<'s, 't>`, `ISuperKindTT<'s, 't>` — same pattern. Non-primitive variants hold `&'t StructTT` etc.; primitive variants (`Never`, `Void`, `Int`, `Bool`, `Str`, `Float`) hold tiny Copy payloads inline.
-- `ITemplataT<'s, 't>` — also inline wrapper. Variants mix `&'t` refs to interned templata payloads with inline Copy-value variants (`Integer(i64)`, `Boolean(bool)`, `Mutability(MutabilityTemplataT)`, etc.).
-- `CoordT<'s, 't>` — passed by value, `kind: KindT<'s, 't>` inline.
-- `OwnershipT`, `MutabilityT`, `VariabilityT`, `LocationT`, `RegionT` — pure Copy enums.
-- Small templata value variants: `MutabilityTemplataT`, `VariabilityTemplataT`, `OwnershipTemplataT`, `RuntimeSizedArrayTemplateTemplataT`, `StaticSizedArrayTemplateTemplataT`.
-- Env wrapper enums: `IEnvironmentT<'s, 't>` (9 variants, each holding `&'t FooEnvironmentT`), `IInDenizenEnvironmentT<'s, 't>` (6-variant subset), `IEnvEntryT<'s, 't>` (5 variants), `IVariableT<'s, 't>` (4 concrete-by-value variants), `ILocalVariableT<'s, 't>` (2-variant subset).
-
-**Casting identity rule.** Wrapper enums compare structurally on their 16 bytes (tag + inner ref). Concrete payloads and interned templata payloads compare via `ptr::eq` on the `&'t` ref. Casting up a sub-enum hierarchy (concrete → sub-enum → super-sub-enum → widest) is a stack-only rewrap via `From`/`TryFrom` impls; no interner involvement.
-
-**Equality opt-out (vcurious mirror) for the expression hierarchy.** `ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, and the ~50 per-variant struct types (`UnletTE`, `BlockTE`, `ConstantIntTE`, etc.) intentionally have **no equality at all** — no `derive(PartialEq)`, no manual impl. This mirrors Scala's 52 `override def equals(obj: Any): Boolean = vcurious()` overrides on the same case classes in `ast/expressions.scala`. Scala panics at runtime; Rust gives a strictly stronger compile-time error. The `/// Arena-allocated` classification still applies (these types live in the typing arena for memory/lifetime reasons — large, deeply nested trees with `&'t` child pointers), but they don't carry identity semantics: two distinct allocations of the same expression are neither `==` (no impl) nor distinguishable by identity (nothing compares them). See @IEOIBZ "Exception — equality opt-outs (vcurious mirror)" for the rule and the Scala-counterpart check that determines when to apply it.
-
-**Neither arena (stack / heap-Vec / HashMap):**
-- `CompilerOutputs<'s, 't>` — stack-owned accumulator, dies at pass end
-- `Compiler<'s, 'ctx, 't>` — stack god struct
-- Env builders — stack-local with heap `Vec`s / `HashMap`s until `build_in(&TypingInterner<'t>)` freezes into `'t`.
-- `DeferredActionT` entries in `VecDeque` — owned structs, not `Box<dyn>`
+**Equality opt-out for the expression hierarchy** (`ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, ~50 per-variant struct types) — see @IEOIBZ.
 
 ### 1.6 Mutual-Recursion Shape
 
@@ -174,13 +142,13 @@ Environments are allocated directly into the typing arena `'t`. They reference s
 
 **Why `'t`, not `'s`**: envs hold TemplatasStoreT which stores `IEnvEntryT::Templata(ITemplataT<'s, 't>)`, which transitively holds `&'t` refs to interned typing-pass payloads. A struct with lifetime `'s` can only hold `&'x` references where `'x: 's`. Since `'s: 't`, `'t: 's` is false — so `'s`-allocated envs cannot hold `&'t` refs. Envs must live in `'t`. The lifetime ordering is still fine: `'t` outlives the typing pass; envs die together with all other typing-pass output when the typing arena drops.
 
-Two parallel wrapper enums. Both hold `&'t` refs to the same concrete payloads, so casting between them is stack-only rewraps (no interner involvement). `IInDenizenEnvironmentT` is a 6-variant subset of `IEnvironmentT`'s 9 — the envs that represent "a denizen currently being compiled."
+Two parallel wrapper enums. Both hold `&'t` refs to the same concrete payloads, so casting between them is stack-only rewraps (no interner involvement). `IInDenizenEnvironmentT` is an 8-variant subset of `IEnvironmentT`'s 9 — the envs that represent "a denizen currently being compiled" (everything except Package).
 
 ```
-pub enum IEnvironmentT<'s, 't> {       // 9 variants — Package/Citizen/Function/Node/
-    Package(&'t PackageEnvironmentT<'s, 't>),                  // BuildingWithClosureds/
-    Citizen(&'t CitizenEnvironmentT<'s, 't>),                  // BuildingWithClosuredsAndTemplateArgs/
-    Function(&'t FunctionEnvironmentT<'s, 't>),                // General/Export/Extern.
+pub enum IEnvironmentT<'s, 't> {       // 9 variants
+    Package(&'t PackageEnvironmentT<'s, 't>),
+    Citizen(&'t CitizenEnvironmentT<'s, 't>),
+    Function(&'t FunctionEnvironmentT<'s, 't>),
     Node(&'t NodeEnvironmentT<'s, 't>),
     BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
     BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
@@ -189,8 +157,9 @@ pub enum IEnvironmentT<'s, 't> {       // 9 variants — Package/Citizen/Functio
     Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 
-pub enum IInDenizenEnvironmentT<'s, 't> {  // 6-variant subset (no Package/Export/Extern).
-    Citizen, Function, Node, BuildingWithClosureds, BuildingWithClosuredsAndTemplateArgs, General
+pub enum IInDenizenEnvironmentT<'s, 't> {  // 8-variant subset (no Package).
+    Citizen, Function, Node, BuildingWithClosureds, BuildingWithClosuredsAndTemplateArgs,
+    General, Export, Extern
 }
 ```
 
@@ -215,7 +184,7 @@ pub struct TemplatasStoreT<'s, 't> {
 - **`name_to_entry`** — `ArenaIndexMap` keyed by `INameT`. Each Scala `entriesByNameT.get(name)` translates to `name_to_entry.get(&name)`.
 - **`imprecise_to_entries`** — `ArenaIndexMap` keyed by `&'s IImpreciseNameS`. Values are `&'t [IEnvEntryT]` slices (the per-imprecise-name overload buckets), matching Scala's `Map[IImpreciseNameS, Vector[IEnvEntry]]`.
 
-`ArenaIndexMap` is not `Copy`/`Clone`, so `TemplatasStoreT` is `/// Arena-allocated` (not value-type). Lives inline in env structs (~80 bytes: two `ArenaIndexMap`s + the `&'t IdT` back-ref).
+`ArenaIndexMap` is not `Copy`/`Clone`, so `TemplatasStoreT` is `/// Arena-allocated` (not value-type). Held as `&'t TemplatasStoreT<'s, 't>` in env structs (matches Scala's GC reference semantics — Scala envs hold a ref to the store, they don't own it). Arena-allocate the store before constructing an env; copy the `&'t` ref into child envs (no clone needed); arena-allocate the result of `add_entries` before storing. `TemplatasStoreBuilder::build_in` already returns `&'t TemplatasStoreT` (allocates internally).
 
 > **Future exploration:** Once body migration is complete and benchmarks exist, profile lookup-heavy paths (overload resolution, name-imprecise lookups during scout-name-to-typing-pass-name resolution). For env kinds where scope sizes are consistently small (block-local, function-local, node) and lookups are frequent, evaluate switching back to unsorted slice-of-pairs with linear scan on a per-env-kind basis.
 
@@ -415,42 +384,21 @@ Rationale + alternatives are recorded in `FrontendRust/docs/reasoning/idt-typed-
 
 ### 6.1 IDEPFL Dual-Enum Pattern, Sealing, and Scala-Parity Interning
 
-**The Interned set matches Scala's `IInterning` trait.** Per @WVSBIZ, a Rust type is `/// Interned (see @TFITCX)` if and only if its Scala counterpart `extends IInterning`. The Rust Interned set is therefore:
+The Interned-vs-Value-type rule (Scala's `IInterning` is the spec, plus `IdT` as a Rust-side divergence), the `MustIntern` seal pattern, and the dual-enum (Val + canonical) lookup machinery are documented in @WVSBIZ ("Scala Parity Overrides The Heuristics"), @SICZ, and @DSAUIMZ. Read those before adding a new Interned type. The typing-pass-specific shape:
 
-- All ~60 concrete name structs (`INameT extends IInterning` in Scala; everything below it inherits).
-- The 5 kind payloads that Scala explicitly marks: `StructTT`, `InterfaceTT` (via `ICitizenTT extends IInterning`), `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT` (each `extends KindT with IInterning`).
-- `IdT` — the one Rust-side divergence. Scala leaves `IdT` as a plain case class and gets correct equality from `Vector`'s structural compare; Rust interns it specifically for `&'t [INameT]` slice-pointer-equality performance.
+**Currently sealed (21 types):** `IdT`, the 15 transient (slice-bearing) Name types (`ImplNameT`, `ImplBoundNameT`, `OverrideDispatcherNameT`, `OverrideDispatcherCaseNameT`, `ExternFunctionNameT`, `FunctionNameT`, `FunctionBoundNameT`, `PredictedFunctionNameT`, `LambdaCallFunctionTemplateNameT`, `LambdaCallFunctionNameT`, `StructNameT`, `InterfaceNameT`, `AnonymousSubstructImplNameT`, `AnonymousSubstructConstructorNameT`, `AnonymousSubstructNameT`), and the 5 kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`). The ~57 simple Name types (`PrimitiveNameT`, `PackageTopLevelNameT`, etc.) are Interned per Scala-parity but **not yet sealed** — extending the seal requires `*NameValT` mirrors. Tracked in `FrontendRust/docs/todo.md`.
 
-**Reclassified to `/// Value-type` (Scala parity):** `SignatureT`, `PrototypeT`, `KindPlaceholderT`, all 11 Templata variants (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `FunctionTemplataT`, `StructDefinitionTemplataT`, `InterfaceDefinitionTemplataT`, `ImplDefinitionTemplataT`, `PrototypeTemplataT`, `IsaTemplataT`, `CoordListTemplataT`, `ExternFunctionTemplataT`). None of these `extend IInterning` in Scala. Their `==` works via auto-derived field equality, which is correct because their fields recurse into properly-canonical `IdT` (sealed) and properly-identity `&'t` env/scout refs (per @IEOIBZ).
+**Family-level `intern_*` HashMaps (4 families):**
+- `intern_name(INameValT) -> INameT` — names. The 15 transient ones above carry `'tmp` per @DSAUIMZ; the ~57 simple ones reuse the canonical as Val.
+- `intern_id(IdValT) -> &'t IdT` — monomorphic, slice-bearing (see §6.3).
+- `intern_kind_payload(InternedKindPayloadValT) -> InternedKindPayloadT` — the 5 sealed kind types have `*ValT` mirrors (`StructTTValT`, etc.); `KindPlaceholderT` (Value-type) reuses canonical-as-Val.
+- `intern_templata_payload(InternedTemplataPayloadValT) -> InternedTemplataPayloadT` — opt-in dedup. All 5 simple variants (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `PrototypeTemplataT`, `IsaTemplataT`) are Value-type now; `CoordListTemplataT` keeps a `'tmp` Val for its slice.
 
-**Sealing per @SICZ.** Interned types carry `pub _must_intern: MustIntern` as a private-constructor witness. Currently sealed: `IdT`, the 15 transient (slice-bearing) Name types, and the 5 kind payloads (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`) — 21 total. The ~57 simple Name types (`PrimitiveNameT`, `PackageTopLevelNameT`, `StructTemplateNameT`, etc.) are classified Interned per Scala-parity but not yet sealed; extending the seal to them requires introducing `*NameValT` mirror types so the macro-generated wrappers can take a Val instead of the canonical (same shape as the 5 kind-payload ValT mirrors). Tracked in `FrontendRust/docs/todo.md`.
+`SignatureT` / `PrototypeT` are Value-type per Scala parity but flow through opt-in `intern_signature` / `intern_prototype` helpers; other sites construct `SignatureT { id }` directly since the inner `IdT` is sealed-canonical.
 
-The seal field looks like:
+**Wrapper enums are NOT interned.** `INameT` + 21 name sub-enums, `KindT` + 3 Kind sub-enums (`ICitizenTT`/`ISubKindTT`/`ISuperKindTT`), and `ITemplataT` are all 16-byte inline Copy values. Sub-enum casts are stack-only rewraps via `From`/`TryFrom`.
 
-```rust
-/// Interned (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
-pub struct StructTT<'s, 't> {
-    pub id: IdT<'s, 't>,
-    pub _must_intern: crate::typing::typing_interner::MustIntern,
-}
-```
-
-`MustIntern(())` has a private unit field accessible only inside `typing_interner.rs`. Constructing the literal elsewhere fails with E0423. The only way to obtain an Interned type is via the corresponding `intern_*` method. This made the @TFITCX category compiler-enforced: "Interned" stops meaning "the author intended this to come from the interner" and starts meaning "every instance demonstrably came from the interner." The original bug we hit (`assemble_name` constructing un-interned `IdT` values whose `init_steps` slice pointer differed from the canonical interned one) is now a compile error rather than a runtime assertion failure.
-
-**Dual-enum pattern.** Every Interned type has a parallel `*ValT` lookup type. The Val carries the same fields *minus* `_must_intern`, with `'tmp`-borrowed slices when present per @DSAUIMZ. The Val is what callers construct and pass into `intern_*`; the canonical (sealed) is what comes back as `&'t Self`.
-
-Interned families with their own family-level `intern_*` HashMap:
-
-- **Names (~75 concrete + INameT enum):** `intern_name(INameValT) -> INameT`. 15 transient name types have `'tmp`-bearing `*NameValT<'s, 't, 'tmp>` for slice deferral (per @DSAUIMZ); the other ~57 reuse the canonical itself as its Val (no slice = no `'tmp` need = the `*ValT` mirror would be structurally identical). The 15 transient ones: `ImplNameT`, `ImplBoundNameT`, `OverrideDispatcherNameT`, `OverrideDispatcherCaseNameT`, `ExternFunctionNameT`, `FunctionNameT`, `FunctionBoundNameT`, `PredictedFunctionNameT`, `LambdaCallFunctionTemplateNameT`, `LambdaCallFunctionNameT`, `StructNameT`, `InterfaceNameT`, `AnonymousSubstructImplNameT`, `AnonymousSubstructConstructorNameT`, `AnonymousSubstructNameT`.
-- **`IdT` / `IdValT`:** monomorphic, slice-bearing (see §6.3).
-- **`SignatureT` / `SignatureValT` / `PrototypeT` / `PrototypeValT`:** still flow through `intern_signature` / `intern_prototype` even though they're now `/// Value-type` per Scala parity. The interner methods remain as opt-in dedup helpers used by some sites; they are *not* required-path. Other sites freely construct `SignatureT { id }` directly because the inner `IdT` is sealed/canonical and field equality recurses through it correctly.
-- **Kind payloads:** `intern_kind_payload(InternedKindPayloadValT) -> InternedKindPayloadT`. The 5 sealed types (`StructTT`, `InterfaceTT`, `StaticSizedArrayTT`, `RuntimeSizedArrayTT`, `OverloadSetT`) have `*ValT` mirrors (`StructTTValT`, etc.). `KindPlaceholderT` (Value-type) reuses canonical-as-Val.
-- **Interned templata payloads:** `intern_templata_payload(InternedTemplataPayloadValT) -> InternedTemplataPayloadT`. All 5 simple variants (`CoordTemplataT`, `KindTemplataT`, `PlaceholderTemplataT`, `PrototypeTemplataT`, `IsaTemplataT`) are now Value-type; the interner is opt-in dedup. `CoordListTemplataT` has a slice and so retains its `CoordListTemplataValT<'s, 't, 'tmp>` for @DSAUIMZ.
-
-**Wrapper enums are NOT interned.** INameT + 21 name sub-enums, KindT + 3 Kind sub-enums (ICitizenTT/ISubKindTT/ISuperKindTT), and ITemplataT are all 16-byte inline Copy values. Sub-enum casts between narrow and wide forms are stack-only rewraps via From/TryFrom.
-
-**Val types use content-based Hash, not ptr-based.** `*ValT` types (the interner lookup keys) use derived Hash/PartialEq/Eq (content-based) so query-Val (`'tmp`) and stored-Val (`'t`) hash consistently. The `ptr::eq` treatment stays for the canonical `&'t` refs and identity-bearing types per @IEOIBZ, where pointer identity is the intent.
+**Val types use content-based Hash, not ptr-based** — so query-Val (`'tmp`) and stored-Val (`'t`) hash consistently. The `ptr::eq` treatment stays for canonical `&'t` refs per @IEOIBZ.
 
 ### 6.2 INameT Hierarchy
 
@@ -634,23 +582,13 @@ The instantiator receives `HinputsT<'s, 't>` plus both arena references. When it
 
 ## Part 11: Invariants Summary
 
-For quick review during implementation:
+Invariants that aren't fully stated elsewhere in this doc:
 
-1. **`'s` outlives `'t`.** Declared via `where 's: 't` on every type that transitively holds `&'s` data. Rust does not enforce outlives via drop order; the bound must be written.
-2. **Arena types never contain Vec, HashMap, String, Rc, Box.** AASSNCMCX applies. Use arena slices. (One pre-existing exception — `LocationInFunctionEnvironmentT.path: Vec<i32>` — is known debt.)
-3. **All HashMap keys on interned refs use `PtrKey<'t, T>`** for pointer-based hash/eq.
-4. **Most `CompilerOutputs` HashMap values are pointer-sized Copy refs** (`&'s T`, `&'t T`) — enables the copy-out-then-mutate pattern. Exceptions: `sub_citizen_template_to_impls` and `super_interface_template_to_impls` hold `Vec<&'t ImplT>`; access via `mem::take` / `drain` + reinsert.
-5. **Speculative writes are idempotent.** No rollback machinery.
-6. **Overload resolution always completes during the typing pass.** No unresolved overloads reach the instantiator.
-7. **Env equality/hashing never used.** Envs keyed in CompilerOutputs by external (function/type template) ids, not their own id.
-8. **Envs live in the typing arena `'t`.** They transitively hold `&'t` refs (via ITemplataT in IEnvEntryT), so they can't live in `'s`. They drop when `'t` drops.
-9. **`DeferredActionT` variants never reference `CompilerOutputs`.** All captured context is owned or Copy. Preserves the drain pattern without self-borrow hazards.
-10. **Arena parameters use a short borrow lifetime.** `&ScoutArena<'s>` or `&'ctx ScoutArena<'s>`, never `&'s ScoutArena<'s>`.
-11. **Scala `+T <: SomeTrait` parameters erase to monomorphic widest-form.** No leaf-type generic parameter on the Rust port; pattern-match at use sites.
-12. **Val types use content-based Hash/Eq.** Canonical `&'t` refs use `ptr::eq`. Don't mix the two.
-13. **Heavy-templata env refs are `&'t`, payload (FunctionA / StructA / etc.) refs are `&'s`.** Don't put env refs in `&'s`.
-14. **Never use `'static`.** All data must live in `'p`, `'s`, or `'t` (or on the stack). `'static` bypasses the arena system: a `&'static T` has a different pointer than a structurally identical `&'s T`, breaking pointer equality for interned types and creating a latent bug for any type that gets interned later. See `Luz/shields/NeverUseStaticLifetime-NUSLX.md`.
-15. **Don't try to fix a `Box<dyn Fn> + &self` deferred-borrow with a lifetime parameter.** A boxed closure that captures `&self` keeps that shared borrow live for the full lifetime of the box, not just for closure construction. Holding the box across other `&self` calls on the same struct deadlocks the borrow checker — and threading a closure-lifetime parameter through the storage type (e.g. `'fn_lt` on `SimpleSolverState`) only sidesteps the `'static` default; it does not resolve the underlying conflict. The fix is always to drop the receiver: convert the captured method to a free function (per §2.5), or pass the data the closure needs by value into the closure body. Don't propose lifetime-threading as a fix without first checking whether the closure's call sites hold the box across other `&self` calls.
+1. **All HashMap keys on interned refs use `PtrKey<'t, T>`** for pointer-based hash/eq. (Caveat: `PtrKey` is wrong for content-canonical types like `IdT` whose own `==` is already pointer-equality on inner fields — wrapping in `PtrKey` would compare outer addresses instead. Use `PtrKey` only for `@IEOIBZ`-style identity types.)
+2. **Never use `'static`.** All data must live in `'p`, `'s`, or `'t` (or on the stack). `'static` bypasses the arena system: a `&'static T` has a different pointer than a structurally identical `&'s T`, breaking pointer equality for interned types. See `Luz/shields/NeverUseStaticLifetime-NUSLX.md`.
+3. **Don't try to fix a `Box<dyn Fn> + &self` deferred-borrow with a lifetime parameter.** A boxed closure capturing `&self` keeps that shared borrow live for the full lifetime of the box. Holding the box across other `&self` calls deadlocks the borrow checker — and threading a closure-lifetime parameter (e.g. `'fn_lt` on `SimpleSolverState`) only sidesteps the `'static` default; it doesn't resolve the conflict. The fix is always to drop the receiver: convert the captured method to a free function (§2.5), or pass the data the closure needs by value. Check call sites before proposing lifetime-threading.
+
+For the rest (`'s` outlives `'t`, AASSNCMCX, copy-out-before-`&mut`, speculative writes idempotent, overload resolution completes, env equality unused, envs live in `'t`, `DeferredActionT` never refs `CompilerOutputs`, arena-param short borrow, +T erasure, Val content-hash, heavy-templata refs) — see §1.1, §1.2, §3.1, §3.6, §4.3, §4.4, §4.5, §5.1, §6.0, §6.1, §6.6.
 
 ---
 
@@ -659,7 +597,7 @@ For quick review during implementation:
 - **LSP / long-running use**: scout arena retention through instantiation is memory-heavy; single-arena typing makes batch-only the safe mode. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
 - **Post-migration design revisits**: the inline-owned-wrapper philosophy makes casts free but gives up compile-time "this IdT's local_name is a FunctionName" assertions. See `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md`.
 - **TypingInterner perf**: six hashbrown HashMap maps with heterogeneous `'tmp`→`'t` lookup via Equivalent. Works today but hasn't been measured. Profile before optimizing.
-- **Body migration ordering**: the 141 panic stubs have implicit dependency ordering — some bodies call other stubbed methods. The test-driven approach naturally discovers this, but expect some batches to require implementing a chain of 3-5 bodies before a test passes end-to-end.
+- **Body migration ordering**: the panic stubs have implicit dependency ordering — some bodies call other stubbed methods. The test-driven approach naturally discovers this, but expect some batches to require implementing a chain of 3-5 bodies before a test passes end-to-end.
 - **Incremental compilation**: serializing HinputsT to disk requires a serialization boundary that breaks `'s` refs. Batch compilation only for now.
 - **Parallelization**: single-threaded design (`!Sync` arenas, stack CompilerOutputs). Per-function parallelization is a later topic.
 - **Typing storage → two-tier per-denizen arenas**: scheduled as a post-body-migration redesign. See `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md`.
@@ -670,11 +608,10 @@ For quick review during implementation:
 
 | Path | Purpose |
 |---|---|
-| `tl-handoff.md` | operational handoff — process, principles, current work |
+| `TL.md` | operational handoff — process, principles, current work |
 | `docs/architecture/typing-pass-design-v3.md` | this doc — architecture + design decisions |
 | `docs/historical/slab-chronicle.md` | slab-by-slab history (Slabs 0–14b) |
 | `FrontendRust/docs/migration/handoff-slab-*.md` | per-slab handoff docs (translation tables, gotchas) |
-| `FrontendRust/docs/architecture/typing-pass-arenas.md` | typing-pass arena architecture |
 | `FrontendRust/docs/reasoning/environments-per-denizen-long-term.md` | two-tier per-denizen target + LSP direction |
 | `FrontendRust/docs/reasoning/idt-typed-view-alternatives.md` | IdT monomorphic / typed-view decision |
 | `FrontendRust/docs/reasoning/` | other design-decision docs |

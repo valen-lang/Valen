@@ -238,13 +238,13 @@ where 's: 't,
                 unconverted_input_expr
             }
             Some(receiver_rune) => {
-                let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                let rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
                     rune_a_to_type_with_implicitly_coercing_lookups_s.clone();
                 // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
                 // loose. We intentionally ignored the types of the things they're looking up, so we could know
                 // what types we *expect* them to be, so we could coerce.
                 // That coercion is good, but lets make it more explicit.
-                let mut rule_builder: Vec<&'s IRulexSR<'s>> = Vec::new();
+                let rule_builder: Vec<&'s IRulexSR<'s>> = Vec::new();
                 if !rules_with_implicitly_coercing_lookups_s.is_empty() {
                     panic!("implement: infer_and_translate_pattern — explicifyLookups with non-empty rules");
                 }

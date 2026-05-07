@@ -476,6 +476,7 @@ where 's: 't,
 */
 }
 
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct AttemptedCandidate<'s, 't> {
     pub prototype: &'t PrototypeT<'s, 't>,
 }
@@ -564,9 +565,9 @@ where 's: 't,
                             // Note: create_rune_type_solver_env is a panic stub; explicify_lookups needs its return.
                             // For this test (no template args), rules_s_deref is empty so explicify_lookups
                             // would be a no-op and ruleBuilder.toVector would be empty.
-                            let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                            let rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
                                 HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-                            let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+                            let rule_builder: Vec<IRulexSR<'s>> = Vec::new();
                             if !rules_s_deref.is_empty() {
                                 panic!("implement: attemptCandidateBanner explicifyLookups path");
                             }
@@ -576,7 +577,7 @@ where 's: 't,
                             let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<&'s IRulexSR<'s>>) =
                                 rules_without_implicit_coercions_a.iter().fold(
                                     (Vec::new(), Vec::new()),
-                                    |(mut previous_conclusions, mut remaining_rules), _rule| {
+                                    |(previous_conclusions, remaining_rules), _rule| {
                                         panic!("implement: attemptCandidateBanner fold over rules");
                                     },
                                 );
@@ -1025,7 +1026,29 @@ where 's: 't,
         candidate: &'t PrototypeT<'s, 't>,
         arg_types: &[CoordT<'s, 't>],
     ) -> Option<Vec<bool>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let initial: Option<Vec<bool>> = Some(Vec::new());
+        let result = candidate.param_types().iter().zip(arg_types.iter()).fold(initial, |acc, (param_type, arg_type)| {
+            match acc {
+                None => None,
+                Some(mut previous) => {
+                    if arg_type == param_type {
+                        previous.push(false);
+                        Some(previous)
+                    } else {
+                        if self.is_type_convertible(coutputs, calling_env, parent_ranges, call_location, *arg_type, *param_type) {
+                            previous.push(true);
+                            Some(previous)
+                        } else {
+                            None
+                        }
+                    }
+                }
+            }
+        });
+        if let Some(ref a) = result {
+            assert_eq!(a.len(), arg_types.len());
+        }
+        result
     }
 /*
   // Returns either:
@@ -1078,7 +1101,78 @@ where 's: 't,
         unfiltered_banners: &[AttemptedCandidate<'s, 't>],
         arg_types: &[CoordT<'s, 't>],
     ) -> (AttemptedCandidate<'s, 't>, HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let deduped_banners: Vec<AttemptedCandidate<'s, 't>> = {
+            let mut seen = std::collections::HashSet::new();
+            unfiltered_banners.iter().filter(|b| seen.insert(**b)).copied().collect()
+        };
+        // Group by paramTypes, prefer ordinary over bound
+        let mut param_types_to_banners: HashMap<Vec<CoordT<'s, 't>>, Vec<AttemptedCandidate<'s, 't>>> = HashMap::new();
+        for banner in &deduped_banners {
+            param_types_to_banners.entry(banner.prototype.param_types().to_vec()).or_default().push(*banner);
+        }
+        let banners: Vec<AttemptedCandidate<'s, 't>> = param_types_to_banners.into_values().flat_map(|v| v).collect();
+
+        let banner_index_to_score: Vec<Vec<bool>> =
+            banners.iter().map(|banner| {
+                self.get_banner_param_scores(coutputs, calling_env, call_range, call_location, banner.prototype, arg_types)
+                    .unwrap_or_else(|| panic!("vassertSome: getBannerParamScores"))
+            }).collect();
+
+        let param_index_to_surviving_banner_indices: Vec<Vec<usize>> =
+            (0..arg_types.len()).map(|param_index| {
+                let banner_index_to_requires_conversion: Vec<bool> =
+                    banner_index_to_score.iter().map(|scores| scores[param_index]).collect();
+                if banner_index_to_requires_conversion.iter().all(|&b| b) {
+                    (0..banner_index_to_score.len()).collect()
+                } else if banner_index_to_requires_conversion.iter().all(|&b| !b) {
+                    (0..banner_index_to_score.len()).collect()
+                } else {
+                    banner_index_to_requires_conversion.iter().enumerate()
+                        .filter(|(_, &req)| req).map(|(i, _)| i).collect()
+                }
+            }).collect();
+
+        let all_indices: Vec<usize> = (0..banner_index_to_score.len()).collect();
+        let surviving_banner_indices: Vec<usize> =
+            param_index_to_surviving_banner_indices.iter().fold(all_indices, |a, b| {
+                a.into_iter().filter(|i| b.contains(i)).collect()
+            });
+
+        // Split normal vs bound candidates
+        let mut normal_indices_and_candidates: Vec<(usize, &'t PrototypeT<'s, 't>)> = Vec::new();
+        let mut bound_indices_and_candidates: Vec<(usize, &'t PrototypeT<'s, 't>)> = Vec::new();
+        for &i in &surviving_banner_indices {
+            let candidate = &banners[i];
+            match candidate.prototype.id.local_name {
+                INameT::FunctionBound(_) => { bound_indices_and_candidates.push((i, candidate.prototype)); }
+                _ => { normal_indices_and_candidates.push((i, candidate.prototype)); }
+            }
+        }
+
+        let final_banner_index =
+            if normal_indices_and_candidates.len() > 1 {
+                panic!("implement: narrow_down — CouldntNarrowDownCandidates (multiple normal candidates)");
+            } else if normal_indices_and_candidates.len() == 1 {
+                normal_indices_and_candidates[0].0
+            } else if !bound_indices_and_candidates.is_empty() {
+                let mut sorted_by_steps = bound_indices_and_candidates.clone();
+                sorted_by_steps.sort_by_key(|(_, proto)| proto.id.steps().len());
+                let (shortest_candidate_index, shortest_candidate) = sorted_by_steps[0];
+                for (_, other_candidate) in sorted_by_steps.iter().skip(1) {
+                    assert!(other_candidate.id.init_steps.starts_with(shortest_candidate.id.init_steps));
+                }
+                shortest_candidate_index
+            } else {
+                panic!("No candidate is a clear winner!")
+            };
+
+        let rejection_reason_by_banner: HashMap<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>> =
+            banners.iter().enumerate()
+                .filter(|(i, _)| *i != final_banner_index)
+                .map(|(_, banner)| (*banner, IFindFunctionFailureReason::Outscored))
+                .collect();
+
+        (banners[final_banner_index], rejection_reason_by_banner)
     }
 /*
   private def narrowDownCallableOverloads(

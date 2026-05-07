@@ -648,7 +648,7 @@ where 's: 't,
         let mut solver = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
 
-        let mut loop_check = function.generic_parameters.len() as i32 + 1;
+        let loop_check = function.generic_parameters.len() as i32 + 1;
 
         match self.incrementally_solve(
             envs, coutputs, &mut solver,

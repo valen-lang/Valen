@@ -375,7 +375,7 @@ pub enum IStructMemberS<'s> {
   VariadicStructMember(VariadicStructMemberS<'s>),
 }
 
-impl IStructMemberS<'_> {
+impl<'s> IStructMemberS<'s> {
   pub fn range(&self) -> RangeS<'_> {
     match self {
       IStructMemberS::NormalStructMember(m) => m.range.clone(),
@@ -392,7 +392,7 @@ impl IStructMemberS<'_> {
   }
   /* Guardian: disable-all */
 
-  pub fn type_rune(&self) -> &RuneUsage<'_> {
+  pub fn type_rune(&self) -> &RuneUsage<'s> {
     match self {
       IStructMemberS::NormalStructMember(m) => &m.type_rune,
       IStructMemberS::VariadicStructMember(m) => &m.type_rune,

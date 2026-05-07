@@ -1,5 +1,5 @@
 use crate::postparsing::ast::LocationInDenizen;
-use crate::typing::ast::expressions::{DiscardTE, ReferenceExpressionTE};
+use crate::typing::ast::expressions::{DiscardTE, FunctionCallTE, ReferenceExpressionTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::environment::IInDenizenEnvironmentT;
@@ -56,7 +56,14 @@ where 's: 't,
         context_region: RegionT,
         type_2: CoordT<'s, 't>,
     ) -> StampFunctionSuccess<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let name = self.scout_arena.intern_imprecise_name(
+            crate::postparsing::names::IImpreciseNameValS::CodeName(
+                crate::postparsing::names::CodeNameS { name: self.keywords.drop }));
+        let args = &[type_2];
+        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true) {
+            Err(e) => panic!("CouldntFindFunctionToCallT"),
+            Ok(x) => x,
+        }
     }
 /*
   def getDropFunction(
@@ -97,7 +104,15 @@ where 's: 't,
                 self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, _) => {
-                panic!("implement: drop — OwnT");
+                let StampFunctionSuccess { prototype: destructor_prototype, .. } =
+                    self.get_drop_function(env, coutputs, call_range, call_location, RegionT {}, result_coord);
+                assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
+                let result_tt = destructor_prototype.return_type;
+                self.typing_interner.alloc(ReferenceExpressionTE::FunctionCall(FunctionCallTE {
+                    callable: destructor_prototype,
+                    args: self.typing_interner.alloc_slice_from_vec(vec![undestructed_expr_2]),
+                    return_type: result_tt,
+                }))
             }
             (OwnershipT::Borrow, _) => {
                 self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))

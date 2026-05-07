@@ -1214,8 +1214,16 @@ where 's: 't,
                     }
                 }
             }
-            //     case LiteralSR(...) =>
-            IRulexSR::Literal(_) => { panic!("Unimplemented: solve_rule Literal"); }
+            //     case LiteralSR(range, rune, literal) =>
+            IRulexSR::Literal(r) => {
+                let templata = literal_to_templata(r.literal);
+                let mut conclusions = std::collections::HashMap::new();
+                conclusions.insert(r.rune.rune, templata);
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(_e) => { panic!("Unimplemented: solve_rule Literal InternalSolverError wrapping"); }
+                }
+            }
             //     case LookupSR(...) =>
             IRulexSR::Lookup(r) => {
                 let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
@@ -1284,8 +1292,12 @@ where 's: 't,
             }
             //     case PackSR(...) =>
             IRulexSR::Pack(_) => { panic!("Unimplemented: solve_rule Pack"); }
-            //     case CallSR(...) =>
-            IRulexSR::Call(_) => { panic!("Unimplemented: solve_rule Call"); }
+            //     case CallSR(range, resultRune, templateRune, argRunes) => {
+            //       solveCallRule(delegate, state, env, solverState, ruleIndex, range, resultRune, templateRune, argRunes)
+            //     }
+            IRulexSR::Call(r) => {
+                self.solve_call_rule(state, &env, solver_state, rule_index, r.range, r.result_rune, r.template_rune, r.args)
+            }
             //     case RefListCompoundMutabilitySR(...) =>
             IRulexSR::RefListCompoundMutability(_) => { panic!("Unimplemented: solve_rule RefListCompoundMutability"); }
             other => panic!("Unimplemented: solve_rule {:?}", other),
@@ -1712,19 +1724,56 @@ where 's: 't,
   }
 
 */
-fn solve_call_rule<'s, 't>(
-    state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    rule_index: i32,
-    range: RangeS<'s>,
-    result_rune: RuneUsage<'s>,
-    template_rune: RuneUsage<'s>,
-    arg_runes: Vec<RuneUsage<'s>>,
-) -> Result<(), ITypingPassSolverError<'s, 't>> {
-    panic!("Unimplemented: solve_call_rule");
+impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
+where 's: 't,
+{
+    fn solve_call_rule(
+        &self,
+        state: &mut CompilerOutputs<'s, 't>,
+        env: &InferEnv<'s, 't>,
+        solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+        rule_index: i32,
+        range: RangeS<'s>,
+        result_rune: RuneUsage<'s>,
+        template_rune: RuneUsage<'s>,
+        arg_runes: &[RuneUsage<'s>],
+    ) -> Result<(), ITypingPassSolverError<'s, 't>> {
+        match solver_state.get_conclusion(&result_rune.rune) {
+            Some(_result) => {
+                panic!("Unimplemented: solve_call_rule Some(result)");
+            }
+            None => {
+                let template = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in solve_call_rule None branch");
+                match template {
+                    ITemplataT::RuntimeSizedArrayTemplate(_) => { panic!("Unimplemented: solve_call_rule None RuntimeSizedArrayTemplate"); }
+                    ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: solve_call_rule None StaticSizedArrayTemplate"); }
+                    ITemplataT::StructDefinition(it) => {
+                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
+                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")
+                        }).collect();
+                        let kind = self.predict_struct(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.intern_struct_tt(StructTTValT { id: kind.id })) })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                    ITemplataT::InterfaceDefinition(_it) => { panic!("Unimplemented: solve_call_rule None InterfaceDefinition"); }
+                    ITemplataT::Kind(_kt) => { panic!("Unimplemented: solve_call_rule None Kind"); }
+                    other => panic!("vimpl: solve_call_rule None {:?}", other),
+                }
+            }
+        }
+    }
 }
 /*
+Guardian: temp-disable: ScalaParityDuringMigration-SPDMX — Rust adaptation (SPDMX-B): Scala does KindTemplataT(kind) directly on a GC-managed StructTT value, but Rust requires intern_struct_tt to get a &'t StructTT arena reference before wrapping in KindT::Struct and ITemplataT::Kind. The re-interning via StructTTValT { id: kind.id } is semantically identical — same id, same interned pointer — and is the standard Rust ownership pattern for value→reference promotion. — FrontendRust/guardian-logs/request-1215-1778107256903/hook-1215/solve_call_rule--1730.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def solveCallRule(
       delegate: IInfererDelegate,
       state: CompilerOutputs,
@@ -2110,8 +2159,17 @@ fn solve_call_rule<'s, 't>(
   }
 
 */
-fn literal_to_templata<'s, 't>(literal: ILiteralSL) -> ITemplataT<'s, 't> {
-    panic!("Unimplemented: literal_to_templata");
+fn literal_to_templata<'s, 't>(literal: ILiteralSL<'s>) -> ITemplataT<'s, 't> {
+    use crate::typing::templata::conversions::{evaluate_mutability, evaluate_ownership, evaluate_variability};
+    match literal {
+        ILiteralSL::MutabilityLiteral(m) => ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: evaluate_mutability(m.mutability) }),
+        ILiteralSL::OwnershipLiteral(o) => ITemplataT::Ownership(crate::typing::templata::templata::OwnershipTemplataT { ownership: evaluate_ownership(o.ownership) }),
+        ILiteralSL::VariabilityLiteral(v) => ITemplataT::Variability(crate::typing::templata::templata::VariabilityTemplataT { variability: evaluate_variability(v.variability) }),
+        ILiteralSL::StringLiteral(s) => ITemplataT::String(s.value),
+        ILiteralSL::IntLiteral(i) => ITemplataT::Integer(i.value),
+        ILiteralSL::BoolLiteral(_) => panic!("Unimplemented: literal_to_templata BoolLiteral"),
+        ILiteralSL::LocationLiteral(_) => panic!("Unimplemented: literal_to_templata LocationLiteral"),
+    }
 }
 /*
   private def literalToTemplata(literal: ILiteralSL) = {

@@ -12,7 +12,9 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
 use crate::typing::env::environment::*;
+use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::env::function_environment_t::*;
+use crate::postparsing::itemplatatype::ITemplataType;
 use crate::typing::compiler_outputs::*;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compiler::Compiler;
@@ -57,13 +59,96 @@ where 's: 't,
     pub fn resolve_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, StructTT<'s, 't>> {
-        panic!("Unimplemented: resolve_struct");
+        use crate::typing::infer_compiler::{InferEnv, InitialKnown};
+        use crate::typing::names::names::IStructTemplateNameT;
+        use crate::typing::types::types::{StructTTValT, RegionT};
+        use crate::typing::citizen::struct_compiler::{ResolveSuccess, ResolveFailure, IResolveOutcome};
+        use crate::typing::infer_compiler::IResolvingError;
+        use crate::postparsing::itemplatatype::ITemplataType;
+        use std::collections::HashMap;
+        use std::marker::PhantomData;
+
+        let declaring_env = struct_templata.declaring_env;
+        let struct_a = struct_templata.origin_struct;
+        let struct_template_name = self.translate_struct_name(struct_a.name);
+
+        // We no longer assume this:
+        //   vassert(templateArgs.size == structA.genericParameters.size)
+        // because we have default generic arguments now.
+        let initial_knowns: Vec<InitialKnown<'s, 't>> =
+            struct_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+                InitialKnown { rune: generic_param.rune, templata: *template_arg }
+            }).collect();
+
+        let call_site_rules = self.assemble_call_site_rules(
+            struct_a.header_rules, struct_a.generic_parameters, template_args.len() as i32);
+
+        let context_region = RegionT { };
+        let envs = InferEnv {
+            original_calling_env,
+            parent_ranges: call_range,
+            call_location,
+            self_env: *declaring_env,
+            context_region,
+        };
+        // Rust adaptation (SPDMX-B): header_rune_to_type is ArenaIndexMap in Rust; convert to HashMap for make_solver_state.
+        let header_rune_to_type_map: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            struct_a.header_rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+        let mut solver = self.make_solver_state(
+            envs,
+            coutputs,
+            &call_site_rules,
+            &header_rune_to_type_map,
+            call_range,
+            &initial_knowns,
+            &[],
+        );
+        match self.r#continue(envs, coutputs, &mut solver) {
+            Ok(()) => {}
+            Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
+                range: call_range.to_vec(),
+                x: IResolvingError::ResolvingSolveFailedOrIncomplete(x),
+                _phantom: PhantomData,
+            }),
+        }
+        let complete_resolve_solve = match self.check_resolving_conclusions_and_resolve(
+            envs, coutputs, call_range, call_location,
+            &header_rune_to_type_map, &call_site_rules, &[], &mut solver,
+        ) {
+            Ok(ccs) => ccs,
+            Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
+                range: call_range.to_vec(),
+                x,
+                _phantom: PhantomData,
+            }),
+        };
+
+        // We can't just make a StructTT with the args they gave us, because they may have been
+        // missing some, in which case we had to run some default rules.
+        // Let's use the inferences to make one.
+        let final_generic_args: Vec<ITemplataT<'s, 't>> =
+            struct_a.generic_parameters.iter()
+                .map(|gp| *complete_resolve_solve.conclusions.get(&gp.rune.rune).unwrap())
+                .collect();
+        let struct_name = struct_template_name.make_struct_name(self.typing_interner, &final_generic_args);
+        let id = *declaring_env.id().add_step(self.typing_interner, struct_name);
+
+        coutputs.add_instantiation_bounds(
+            self.opts.global_options.sanity_check,
+            self.typing_interner,
+            original_calling_env.denizen_template_id(),
+            id,
+            complete_resolve_solve.rune_to_bound,
+        );
+        let struct_tt = *self.typing_interner.intern_struct_tt(StructTTValT { id });
+
+        IResolveOutcome::ResolveSuccess(ResolveSuccess { kind: struct_tt, _phantom: PhantomData })
     }
 /*
   def resolveStruct(
@@ -233,13 +318,77 @@ where 's: 't,
     pub fn predict_struct_layer(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> StructTT<'s, 't> {
-        panic!("Unimplemented: predict_struct");
+        use crate::typing::infer_compiler::{InferEnv, InitialKnown, InitialSend};
+        use crate::typing::infer_compiler::include_rule_in_call_site_solve;
+        let StructDefinitionTemplataT { declaring_env, origin_struct: struct_a } = struct_templata;
+        let struct_template_name = self.translate_struct_name(struct_a.name);
+
+        // We no longer assume this:
+        //   vassert(templateArgs.size == structA.genericParameters.size)
+        // because we have default generic arguments now.
+
+        let initial_knowns: Vec<InitialKnown<'s, 't>> =
+            struct_a.generic_parameters.iter().zip(template_args.iter()).map(|(generic_param, template_arg)| {
+                InitialKnown { rune: RuneUsage { range: *call_range.first().expect("vassertSome: callRange.headOption"), rune: generic_param.rune.rune }, templata: *template_arg }
+            }).collect();
+
+        let call_site_rules = self.assemble_predict_rules(struct_a.generic_parameters, template_args.len() as i32);
+        let call_site_rule_runes: Vec<IRuneS<'s>> = call_site_rules.iter().flat_map(|r| r.rune_usages().into_iter().map(|ru| ru.rune)).collect();
+        let runes_for_prediction: std::collections::HashSet<IRuneS<'s>> =
+            struct_a.generic_parameters.iter().map(|gp| gp.rune.rune)
+            .chain(call_site_rule_runes.into_iter())
+            .collect();
+        let rune_to_type_for_prediction: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            runes_for_prediction.iter().map(|r| (*r, *struct_a.header_rune_to_type.get(r).expect("rune not in headerRuneToType"))).collect();
+
+        // This *doesnt* check to make sure it's a valid use of the template. Its purpose is really
+        // just to populate any generic parameter default values.
+
+        // Maybe we should make this incremental too, like when solving definitions?
+
+        let context_region = RegionT {};
+        // Rust adaptation (SPDMX-B): IRulexSR lives in 's (scout arena), so we alloc via scout_arena
+        // to get &'s references, matching the Vec<&'s IRulexSR<'s>> needed by partial_solve.
+        let call_site_rules_refs: Vec<&'s IRulexSR<'s>> = call_site_rules.into_iter().map(|r| {
+            self.scout_arena.alloc(r) as &'s IRulexSR<'s>
+        }).collect();
+
+        // We're just predicting, see STCMBDP.
+        let inferences =
+            match self.partial_solve(
+                InferEnv { original_calling_env, parent_ranges: call_range, call_location, self_env: *declaring_env, context_region },
+                coutputs,
+                &call_site_rules_refs,
+                &rune_to_type_for_prediction,
+                call_range,
+                &initial_knowns,
+                &[],
+            ) {
+                Ok(i) => i,
+                Err(_e) => panic!("vimpl: TypingPassSolverError in predict_struct_layer"),
+            };
+
+        // We can't just make a StructTT with the args they gave us, because they may have been
+        // missing some, in which case we had to run some default rules.
+        // Let's use the inferences to make one.
+
+        let final_generic_args: Vec<ITemplataT<'s, 't>> = struct_a.generic_parameters.iter().map(|gp| {
+            *inferences.get(&gp.rune.rune).expect("rune not in inferences")
+        }).collect();
+        let struct_name = struct_template_name.make_struct_name(self.typing_interner, &final_generic_args);
+        let id = declaring_env.id().add_step(self.typing_interner, struct_name);
+
+        // Usually when we make a StructTT we put the instantiation bounds into the coutputs,
+        // but we unfortunately can't here because we're just predicting a struct; we'll
+        // try to resolve it later and then put the bounds in. Hopefully this StructTT doesn't
+        // escape into the wild.
+        *self.typing_interner.intern_struct_tt(StructTTValT { id: *id })
     }
 /*
   // See SFWPRL for how this is different from resolveStruct.
@@ -401,7 +550,90 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
     ) -> UncheckedDefiningConclusions<'s, 't> {
-        panic!("Unimplemented: compile_struct");
+        use std::collections::HashMap;
+        use std::marker::PhantomData;
+        use crate::typing::infer_compiler::{InferEnv, include_rule_in_definition_solve};
+        let declaring_env = struct_templata.declaring_env;
+        let struct_a = struct_templata.origin_struct;
+        let struct_template_name = self.translate_struct_name(struct_a.name);
+        let local_name = match struct_template_name {
+            IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
+            IStructTemplateNameT::AnonymousSubstructTemplate(r) => INameT::AnonymousSubstructTemplate(r),
+            IStructTemplateNameT::LambdaCitizenTemplate(r) => INameT::LambdaCitizenTemplate(r),
+        };
+        let struct_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
+        // We declare the struct's outer environment in the precompile stage instead of here because of MDATOEF.
+        let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *struct_template_id);
+        let all_rules_s: Vec<&'s IRulexSR<'s>> =
+            struct_a.header_rules.iter().chain(struct_a.member_rules.iter()).collect();
+        let all_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            struct_a.header_rune_to_type.iter().chain(struct_a.members_rune_to_type.iter())
+                .map(|(k, v)| (*k, *v)).collect();
+        let definition_rules: Vec<&'s IRulexSR<'s>> =
+            all_rules_s.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
+        let mut all_ranges: Vec<RangeS<'s>> = vec![struct_a.range];
+        all_ranges.extend_from_slice(parent_ranges);
+        let outer_env_ienv = IEnvironmentT::from(*outer_env);
+        let envs = InferEnv {
+            original_calling_env: outer_env,
+            parent_ranges: self.typing_interner.alloc_slice_from_vec(vec![struct_a.range]),
+            call_location,
+            self_env: outer_env_ienv,
+            context_region: crate::typing::types::types::RegionT,
+        };
+        let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[], &[]);
+        match self.incrementally_solve(envs, coutputs, &mut solver, |_solver_state| {
+            panic!("Unimplemented: incrementally_solve callback in compile_struct_layer");
+        }) {
+            Err(_f) => panic!("Unimplemented: TypingPassSolverError in compile_struct_layer"),
+            Ok(_) => {}
+        }
+        let inferences = match self.interpret_results(&all_rune_to_type, &mut solver) {
+            Err(_e) => panic!("Unimplemented: TypingPassSolverError in compile_struct_layer interpretResults"),
+            Ok(conclusions) => conclusions,
+        };
+        let unchecked_defining_conclusions = UncheckedDefiningConclusions {
+            envs,
+            ranges: all_ranges,
+            call_location,
+            definition_rules: definition_rules.into_iter().map(|r| (*r).clone()).collect(),
+            conclusions: inferences.clone(),
+        };
+        match struct_a.maybe_predicted_mutability {
+            None => {
+                let mutability = crate::typing::templata::templata::expect_mutability(inferences[&struct_a.mutability_rune.rune]);
+                coutputs.declare_type_mutability(struct_template_id, mutability);
+            }
+            Some(_) => {}
+        }
+        let template_args: Vec<ITemplataT<'s, 't>> =
+            struct_a.generic_parameters.iter().map(|p| inferences[&p.rune.rune]).collect();
+        let id = self.assemble_struct_name(*struct_template_id, &template_args);
+        let id_steps = id.steps();
+        let inner_env_id = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+            package_coord: id.package_coord,
+            init_steps: &id_steps,
+            local_name: id.local_name,
+        });
+        let inner_env_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            inferences.iter().map(|(rune, templata)| {
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *rune, _phantom: PhantomData });
+                (INameT::Rune(rune_name), IEnvEntryT::Templata(*templata))
+            }).collect();
+        let mut inner_store = TemplatasStoreBuilder::new(inner_env_id);
+        inner_store.add_entries(self.scout_arena, inner_env_entries);
+        let inner_templatas = inner_store.build_in(self.typing_interner);
+        let inner_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: outer_env.global_env(),
+            parent_env: IEnvironmentT::from(*outer_env),
+            template_id: *struct_template_id,
+            id,
+            templatas: inner_templatas,
+        });
+        let inner_env_ref = self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(inner_env));
+        coutputs.declare_type_inner_env(struct_template_id, inner_env_ref);
+        self.compile_struct_core(outer_env, inner_env, coutputs, parent_ranges, call_location, struct_a);
+        unchecked_defining_conclusions
     }
 /*
   def compileStruct(
@@ -662,7 +894,19 @@ where 's: 't,
         template_name: IdT<'s, 't>,
         template_args: &[ITemplataT<'s, 't>],
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: assemble_struct_name");
+        let struct_template_name = match template_name.local_name {
+            INameT::StructTemplate(r) => IStructTemplateNameT::StructTemplate(r),
+            INameT::AnonymousSubstructTemplate(r) => IStructTemplateNameT::AnonymousSubstructTemplate(r),
+            INameT::LambdaCitizenTemplate(r) => IStructTemplateNameT::LambdaCitizenTemplate(r),
+            _ => panic!("Unimplemented: assemble_struct_name non-struct local_name"),
+        };
+        let new_local_name = struct_template_name.make_struct_name(self.typing_interner, template_args);
+        let steps = template_name.steps();
+        *self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+            package_coord: template_name.package_coord,
+            init_steps: &steps,
+            local_name: new_local_name,
+        })
     }
 /*
   def assembleStructName(

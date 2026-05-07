@@ -4,25 +4,29 @@ use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
 use crate::keywords::Keywords;
 use crate::postparsing::ast::{ICitizenAttributeS, LocationInDenizen, MacroCallS};
+use crate::typing::citizen::struct_compiler::UncheckedDefiningConclusions;
+use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
+use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::{ReferenceExpressionTE, ConsecutorTE, VoidLiteralTE};
-use crate::typing::ast::ast::{InterfaceEdgeBlueprintT, KindExportT};
+use crate::typing::ast::ast::{FunctionHeaderT, InterfaceEdgeBlueprintT, KindExportT};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::infer_compiler::InferEnv;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro, FunctionBodyMacro};
-use crate::typing::env::environment::{get_imprecise_name, GlobalEnvironmentT, IEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
+use crate::typing::env::environment::{get_imprecise_name, make_top_level_environment, GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::names::names::{
-    IdT, IdValT, INameT, IFunctionTemplateNameT, IInstantiationNameT, PackageTopLevelNameT, PrimitiveNameT,
+    IdT, IdValT, INameT, IFunctionTemplateNameT, IInstantiationNameT, IStructTemplateNameT,
+    IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
     CoordTemplataT, FunctionTemplataT, ITemplataT, KindTemplataT, MutabilityTemplataT, PlaceholderTemplataT,
-    RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT,
+    RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
@@ -755,6 +759,21 @@ where 's: 't,
       templataCompiler,
       inferCompiler,
       new IStructCompilerDelegate {
+    */
+    // mig: fn evaluate_generic_function_from_non_call_for_header
+    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's IStructCompilerDelegate
+    // anonymous-class `evaluateGenericFunctionFromNonCallForHeader` (Compiler.scala:536-544) is
+    // flattened onto Rust's Compiler struct. Its body delegates to functionCompiler.evaluateGenericFunctionFromNonCall.
+    pub fn evaluate_generic_function_from_non_call_for_header(
+        &self,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        parent_ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function_templata: FunctionTemplataT<'s, 't>,
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        self.evaluate_generic_function_from_non_call(coutputs, parent_ranges, call_location, function_templata)
+    }
+    /*
         override def evaluateGenericFunctionFromNonCallForHeader(
           coutputs: CompilerOutputs,
           parentRanges: List[RangeS],
@@ -962,19 +981,73 @@ where 's: 't,
         _code_map: &FileCoordinateMap<'p, String>,
         package_to_program_a: &PackageCoordinateMap<'s, ProgramA<'s>>,
     ) -> Result<HinputsT<'s, 't>, ICompileErrorT<'s, 't>> {
+        let name_to_struct_defined_macro: HashMap<StrI<'s>, OnStructDefinedMacro> = {
+            let mut m = HashMap::new();
+            m.insert(self.keywords.derive_struct_constructor, OnStructDefinedMacro::StructConstructor);
+            m.insert(self.keywords.derive_struct_drop, OnStructDefinedMacro::StructDrop);
+            m
+        };
+        let name_to_interface_defined_macro: HashMap<StrI<'s>, OnInterfaceDefinedMacro> = {
+            let mut m = HashMap::new();
+            m.insert(self.keywords.derive_interface_drop, OnInterfaceDefinedMacro::InterfaceDrop);
+            m.insert(self.keywords.derive_anonymous_substruct, OnInterfaceDefinedMacro::AnonymousInterface);
+            m
+        };
         let mut id_and_env_entry: Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
         for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
             let pkg_top_level_name =
                 self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
             let pkg_top_level = INameT::PackageTopLevel(pkg_top_level_name);
-            for _struct_a in program_a.structs.iter() {
-                panic!("Unimplemented: struct entries in evaluate");
+            for struct_a in program_a.structs.iter() {
+                let struct_template_name = self.translate_struct_name(struct_a.name);
+                let struct_name_local: INameT<'s, 't> = match struct_template_name {
+                    IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
+                    IStructTemplateNameT::AnonymousSubstructTemplate(r) => INameT::AnonymousSubstructTemplate(r),
+                    IStructTemplateNameT::LambdaCitizenTemplate(_) => panic!("Unimplemented: LambdaCitizenTemplate in struct translation"),
+                };
+                let package_name = self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &[],
+                    local_name: pkg_top_level,
+                });
+                let struct_name_t = package_name.add_step(self.typing_interner, struct_name_local);
+                id_and_env_entry.push((struct_name_t, IEnvEntryT::Struct(struct_a)));
+                let preprocess_entries = self.preprocess_struct(&name_to_struct_defined_macro, *struct_name_t, struct_a);
+                for entry in preprocess_entries {
+                    id_and_env_entry.push((entry.0, entry.1));
+                }
             }
-            for _interface_a in program_a.interfaces.iter() {
-                panic!("Unimplemented: interface entries in evaluate");
+            for interface_a in program_a.interfaces.iter() {
+                let interface_template_name = self.translate_interface_name(*interface_a.name);
+                let interface_name_local: INameT<'s, 't> = match interface_template_name {
+                    IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
+                };
+                let package_name = self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &[],
+                    local_name: pkg_top_level,
+                });
+                let interface_name_t = package_name.add_step(self.typing_interner, interface_name_local);
+                id_and_env_entry.push((interface_name_t, IEnvEntryT::Interface(interface_a)));
+                let preprocess_entries = self.preprocess_interface(&name_to_interface_defined_macro, *interface_name_t, interface_a);
+                for entry in preprocess_entries {
+                    id_and_env_entry.push((entry.0, entry.1));
+                }
             }
-            for _impl_a in program_a.impls.iter() {
-                panic!("Unimplemented: impl entries in evaluate");
+            for impl_a in program_a.impls.iter() {
+                let impl_template_name = self.translate_impl_name(impl_a.name);
+                let impl_name_local: INameT<'s, 't> = match impl_template_name {
+                    IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
+                    IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in impl translation"),
+                    IImplTemplateNameT::AnonymousSubstructImplTemplate(_) => panic!("Unimplemented: AnonymousSubstructImplTemplate in impl translation"),
+                };
+                let package_name = self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &[],
+                    local_name: pkg_top_level,
+                });
+                let impl_name_t = package_name.add_step(self.typing_interner, impl_name_local);
+                id_and_env_entry.push((impl_name_t, IEnvEntryT::Impl(impl_a)));
             }
             for function_a in program_a.functions.iter() {
                 let function_template_name =
@@ -1116,10 +1189,16 @@ where 's: 't,
         self.compile_runtime_sized_array(global_env, &mut coutputs);
 
         // Indexing phase
-        for (_package_id, templatas) in global_env.name_to_top_level_environment {
+        for (package_id, templatas) in global_env.name_to_top_level_environment {
+            let env = make_top_level_environment(global_env, **package_id, self.typing_interner);
+            let env_ref: &'t IEnvironmentT<'s, 't> =
+                self.typing_interner.alloc(IEnvironmentT::Package(env));
             for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
-                    IEnvEntryT::Struct(_) => panic!("Unimplemented: struct precompile in evaluate"),
+                    IEnvEntryT::Struct(struct_a) => {
+                        let templata = StructDefinitionTemplataT { declaring_env: env_ref, origin_struct: struct_a };
+                        self.precompile_struct(&mut coutputs, templata);
+                    }
                     IEnvEntryT::Interface(_) => panic!("Unimplemented: interface precompile in evaluate"),
                     _ => {}
                 }
@@ -1127,10 +1206,112 @@ where 's: 't,
         }
 
         // Compiling phase
-        for (_package_id, templatas) in global_env.name_to_top_level_environment {
-            for (_name, entry) in templatas.name_to_entry.iter() {
+        let mut unchecked_defining_conclusionses: Vec<UncheckedDefiningConclusions<'s, 't>> = Vec::new();
+        for (package_id, templatas) in global_env.name_to_top_level_environment {
+            let env = make_top_level_environment(global_env, **package_id, self.typing_interner);
+            let env_ref: &'t IEnvironmentT<'s, 't> =
+                self.typing_interner.alloc(IEnvironmentT::Package(env));
+            // This makes it so anything starting with an underscore is compiled in the order
+            // of their names.
+            // AFTERM: is there a better solution here? should we always order things?
+            let mut orderable_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
+            let mut unordered_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = Vec::new();
+            for (name, entry) in templatas.name_to_entry.iter() {
+                match name {
+                    INameT::StructTemplate(s) if s.human_name.0.starts_with("_") =>
+                        orderable_entries.push((*name, *entry)),
+                    INameT::InterfaceTemplate(i) if i.human_namee.0.starts_with("_") =>
+                        orderable_entries.push((*name, *entry)),
+                    _ => unordered_entries.push((*name, *entry)),
+                }
+            }
+            // orderedEntries = orderableEntries.sortBy(_._1.humanName.str)
+            orderable_entries.sort_by(|(a, _), (b, _)| panic!("Unimplemented: sort orderable entries"));
+            let all_entries = orderable_entries.into_iter().chain(unordered_entries.into_iter());
+            for (_name, entry) in all_entries {
                 match entry {
-                    IEnvEntryT::Struct(_) => panic!("Unimplemented: struct compile in evaluate"),
+                    IEnvEntryT::Struct(struct_a) => {
+                        let templata = StructDefinitionTemplataT { declaring_env: env_ref, origin_struct: struct_a };
+                        let unchecked_conclusions =
+                            self.compile_struct(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                        let maybe_export =
+                            struct_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(e) => Some(e), _ => None });
+                        match maybe_export {
+                            None => {}
+                            Some(export_s) => {
+                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
+                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
+                                use crate::typing::types::types::RegionT;
+                                use crate::typing::citizen::struct_compiler::IResolveOutcome;
+                                use crate::typing::types::types::KindT;
+                                use crate::postparsing::names::IStructDeclarationNameS;
+                                use std::marker::PhantomData;
+                                let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
+                                    code_loc: struct_a.range.begin,
+                                    _phantom: PhantomData,
+                                });
+                                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let template_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &template_id_steps,
+                                    local_name: INameT::ExportTemplate(template_name),
+                                });
+                                let template_id_ref = self.typing_interner.alloc(template_id);
+                                let export_outer_templatas = TemplatasStoreBuilder::new(template_id_ref).build_in(self.typing_interner);
+                                let _export_outer_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: env,
+                                    template_id,
+                                    id: template_id,
+                                    templatas: export_outer_templatas,
+                                });
+                                let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
+                                    template: template_name,
+                                    region: RegionT {},
+                                });
+                                let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &placeholdered_export_id_steps,
+                                    local_name: INameT::Export(placeholdered_export_name),
+                                });
+                                let placeholdered_export_id_ref = self.typing_interner.alloc(placeholdered_export_id);
+                                let export_templatas = TemplatasStoreBuilder::new(placeholdered_export_id_ref).build_in(self.typing_interner);
+                                let export_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: env,
+                                    template_id,
+                                    id: placeholdered_export_id,
+                                    templatas: export_templatas,
+                                });
+                                let export_env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Export(export_env));
+                                let export_call_range = self.typing_interner.alloc_slice_copy(&[struct_a.range]);
+                                let export_placeholdered_struct = match self.resolve_struct(
+                                    &mut coutputs,
+                                    export_env_as_iindenizen,
+                                    export_call_range,
+                                    LocationInDenizen { path: &[] },
+                                    templata,
+                                    &[],
+                                ) {
+                                    IResolveOutcome::ResolveSuccess(s) => self.typing_interner.alloc(s.kind),
+                                    IResolveOutcome::ResolveFailure(_f) => panic!("vwat: resolve struct failed for export"),
+                                };
+                                let export_name = match struct_a.name {
+                                    IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.name,
+                                    other => panic!("vwat: {:?}", other),
+                                };
+                                coutputs.add_kind_export(
+                                    struct_a.range,
+                                    KindT::Struct(export_placeholdered_struct),
+                                    placeholdered_export_id,
+                                    export_name,
+                                    self.typing_interner,
+                                );
+                            }
+                        }
+                        unchecked_defining_conclusionses.push(unchecked_conclusions);
+                    }
                     IEnvEntryT::Interface(_) => panic!("Unimplemented: interface compile in evaluate"),
                     _ => {}
                 }
@@ -1195,7 +1376,30 @@ where 's: 't,
         while coutputs.peek_next_deferred_function_body_compile().is_some() || coutputs.peek_next_deferred_function_compile().is_some() {
             // while (coutputs.peekNextDeferredFunctionCompile().nonEmpty)
             while coutputs.peek_next_deferred_function_compile().is_some() {
-                panic!("implement: deferred function compile");
+                // val nextDeferredEvaluatingFunction = coutputs.peekNextDeferredFunctionCompile().get
+                let next_deferred = coutputs.peek_next_deferred_function_compile().unwrap();
+                match next_deferred {
+                    DeferredActionT::EvaluateFunction {
+                        name, calling_env, origin, template_args: _,
+                    } => {
+                        let name = *name;
+                        let calling_env = *calling_env;
+                        let origin: &'s FunctionA<'s> = origin;
+
+                        // (nextDeferredEvaluatingFunction.call)(coutputs)
+                        // delegate.evaluateGenericFunctionFromNonCallForHeader(
+                        //   coutputs, parentRanges, callLocation, FunctionTemplataT(outerEnv, functionA))
+                        let outer_env: &'t IEnvironmentT<'s, 't> =
+                            self.typing_interner.alloc(IEnvironmentT::from(*calling_env));
+                        let templata = FunctionTemplataT { outer_env, function: origin };
+                        self.evaluate_generic_function_from_non_call_for_header(
+                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+
+                        // coutputs.markDeferredFunctionCompiled(nextDeferredEvaluatingFunction.name)
+                        coutputs.mark_deferred_function_compiled(name);
+                    }
+                    _ => panic!("vcurious: unexpected deferred action variant in function-compile loop"),
+                }
             }
             // if (coutputs.peekNextDeferredFunctionBodyCompile().nonEmpty)
             if coutputs.peek_next_deferred_function_body_compile().is_some() {
@@ -1242,7 +1446,7 @@ where 's: 't,
         let reachable_functions = coutputs.get_all_functions();
 
         // interfaceEdgeBlueprints.groupBy(_.interface).mapValues(vassertOne(_))
-        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
+        let interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
         for _blueprint in interface_edge_blueprints.iter() {
             panic!("implement: groupBy interface + vassertOne for non-empty edge blueprints");
         }
@@ -1980,8 +2184,36 @@ where 's: 't,
         name_to_struct_defined_macro: &HashMap<StrI<'s>, OnStructDefinedMacro>,
         struct_name_t: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
-    ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+        use crate::postparsing::ast::MacroCallS;
+        use crate::parsing::ast::ast::IMacroInclusionP;
+
+        let macro1 = self.scout_arena.alloc(MacroCallS {
+            range: struct_a.range,
+            include: IMacroInclusionP::CallMacro,
+            macro_name: self.keywords.derive_struct_constructor,
+        }) as &'s MacroCallS<'s>;
+        let macro2 = self.scout_arena.alloc(MacroCallS {
+            range: struct_a.range,
+            include: IMacroInclusionP::CallMacro,
+            macro_name: self.keywords.derive_struct_drop,
+        }) as &'s MacroCallS<'s>;
+        let default_called_macros = [macro1, macro2];
+        let attr_refs: Vec<&'s ICitizenAttributeS<'s>> = struct_a.attributes.iter().collect();
+        let macros_to_call = self.determine_macros_to_call(
+            name_to_struct_defined_macro,
+            &default_called_macros[..],
+            &[struct_a.range],
+            &attr_refs,
+        );
+        let mut result = Vec::new();
+        for macro_ in macros_to_call {
+            for (id, entry) in macro_.get_struct_sibling_entries(self, struct_name_t, struct_a) {
+                let id_val = IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name };
+                result.push((self.typing_interner.intern_id(id_val), entry));
+            }
+        }
+        result
     }
     /*
       private def preprocessStruct(
@@ -2006,10 +2238,38 @@ where 's: 't,
     pub fn preprocess_interface(
         &self,
         name_to_interface_defined_macro: &HashMap<StrI<'s>, OnInterfaceDefinedMacro>,
-        interface_name_t: IdT<'s, 't>,
+        _interface_name_t: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
-    ) -> Vec<(IdT<'s, 't>, &'t IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> Vec<(&'t IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
+        use crate::postparsing::ast::MacroCallS;
+        use crate::parsing::ast::ast::IMacroInclusionP;
+
+        let macro1 = self.scout_arena.alloc(MacroCallS {
+            range: interface_a.range,
+            include: IMacroInclusionP::CallMacro,
+            macro_name: self.keywords.derive_interface_drop,
+        }) as &'s MacroCallS<'s>;
+        let macro2 = self.scout_arena.alloc(MacroCallS {
+            range: interface_a.range,
+            include: IMacroInclusionP::CallMacro,
+            macro_name: self.keywords.derive_anonymous_substruct,
+        }) as &'s MacroCallS<'s>;
+        let default_called_macros = [macro1, macro2];
+        let attr_refs: Vec<&'s ICitizenAttributeS<'s>> = interface_a.attributes.iter().collect();
+        let macros_to_call = self.determine_macros_to_call(
+            name_to_interface_defined_macro,
+            &default_called_macros[..],
+            &[interface_a.range],
+            &attr_refs,
+        );
+        let mut result = Vec::new();
+        for macro_ in macros_to_call {
+            for (id, entry) in macro_.get_interface_sibling_entries(self, _interface_name_t, interface_a) {
+                let id_val = IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name };
+                result.push((self.typing_interner.intern_id(id_val), entry));
+            }
+        }
+        result
     }
     /*
       private def preprocessInterface(
@@ -2036,14 +2296,37 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn determine_macros_to_call<T>(
+    pub fn determine_macros_to_call<T: Clone>(
         &self,
         name_to_macro: &HashMap<StrI<'s>, T>,
         default_called_macros: &[&'s MacroCallS<'s>],
         parent_ranges: &[RangeS<'s>],
         attributes: &[&'s ICitizenAttributeS<'s>],
     ) -> Vec<T> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::parsing::ast::ast::IMacroInclusionP;
+        let macros_to_call: Vec<&'s MacroCallS<'s>> =
+            attributes.iter().fold(default_called_macros.to_vec(), |macros_to_call, attr| {
+                match attr {
+                    ICitizenAttributeS::MacroCall(mc) if mc.include == IMacroInclusionP::CallMacro => {
+                        if macros_to_call.iter().any(|m| m.macro_name == mc.macro_name) {
+                            panic!("Calling macro twice: {:?}", mc.macro_name);
+                        }
+                        let mut result = macros_to_call;
+                        result.push(mc);
+                        result
+                    }
+                    ICitizenAttributeS::MacroCall(mc) if mc.include == IMacroInclusionP::DontCallMacro => {
+                        macros_to_call.into_iter().filter(|m| m.macro_name != mc.macro_name).collect()
+                    }
+                    _ => macros_to_call,
+                }
+            });
+        macros_to_call.into_iter().map(|macro_call| {
+            match name_to_macro.get(&macro_call.macro_name) {
+                None => panic!("Macro not found: {:?}", macro_call.macro_name),
+                Some(m) => m.clone(),
+            }
+        }).collect()
     }
     /*
       private def determineMacrosToCall[T](
@@ -2139,9 +2422,48 @@ where 's: 't,
         // packageToKindToExport.foreach((packageCoord, exportedKindToExport) =>
         //   exportedKindToExport.foreach((exportedKind, (kind, export)) =>
         //     exportedKind match { case StructTT(_) => ...; case contentsStaticSizedArrayTT(...) => ...; ... }))
-        package_to_kind_to_export.iter().for_each(|(_package_coord, exported_kind_to_export)| {
-            exported_kind_to_export.iter().for_each(|(_exported_kind, _export)| {
-                panic!("implement: ensure_deep_exports — exportedKind struct/array member check");
+        package_to_kind_to_export.iter().for_each(|(package_coord, exported_kind_to_export)| {
+            exported_kind_to_export.iter().for_each(|(exported_kind, export)| {
+                match exported_kind {
+                    KindT::Struct(sr) => {
+                        let struct_def = coutputs.lookup_struct(sr.id, self);
+                        let substituter =
+                            self.get_placeholder_substituter(
+                                self.opts.global_options.sanity_check,
+                                struct_def.template_name,
+                                sr.id,
+                                IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                            );
+                        for member in struct_def.members.iter() {
+                            match member {
+                                IStructMemberT::Variadic(_) => {
+                                    panic!("implement: ensure_deep_exports — VariadicStructMemberT");
+                                }
+                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                                    panic!("implement: ensure_deep_exports — AddressMemberTypeT");
+                                }
+                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_member_coord }), .. }) => {
+                                    let member_coord = substituter.substitute_for_coord(coutputs, *unsubstituted_member_coord);
+                                    let member_kind = member_coord.kind;
+                                    if struct_def.mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
+                                        && !self.is_primitive(member_kind)
+                                        && !exported_kind_to_export.contains_key(&member_kind)
+                                    {
+                                        panic!("implement: ensure_deep_exports — ExportedImmutableKindDependedOnNonExportedKind");
+                                    }
+                                }
+                            }
+                        }
+                    }
+                    KindT::StaticSizedArray(_as_tt) => {
+                        panic!("implement: ensure_deep_exports — contentsStaticSizedArrayTT");
+                    }
+                    KindT::RuntimeSizedArray(_at) => {
+                        panic!("implement: ensure_deep_exports — contentsRuntimeSizedArrayTT");
+                    }
+                    // Scala: case InterfaceTT(_) => (intentional no-op)
+                    _ => {}
+                }
             });
         });
     }

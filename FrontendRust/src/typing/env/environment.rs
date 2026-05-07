@@ -1,6 +1,6 @@
 use std::collections::{HashMap as StdHashMap, HashSet};
 
-use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT};
+use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDefinitionTemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
 
@@ -304,6 +304,8 @@ where 's: 't,
     BuildingWithClosureds(&'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>),
     BuildingWithClosuredsAndTemplateArgs(&'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't>),
     General(&'t GeneralEnvironmentT<'s, 't>),
+    Export(&'t ExportEnvironmentT<'s, 't>),
+    Extern(&'t ExternEnvironmentT<'s, 't>),
 }
 /*
 trait IInDenizenEnvironmentT extends IEnvironmentT {
@@ -319,6 +321,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(_) => *self,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(_) => *self,
       IInDenizenEnvironmentT::General(_) => { panic!("Unimplemented: root_compiling_denizen_env for General"); }
+      IInDenizenEnvironmentT::Export(_) => *self,
+      IInDenizenEnvironmentT::Extern(_) => *self,
     }
   }
   /*
@@ -334,6 +338,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.id,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.id,
       IInDenizenEnvironmentT::General(e) => e.id,
+      IInDenizenEnvironmentT::Export(e) => e.id,
+      IInDenizenEnvironmentT::Extern(e) => e.id,
     }
   }
   /*
@@ -349,6 +355,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.id,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.id,
       IInDenizenEnvironmentT::General(e) => e.template_id,
+      IInDenizenEnvironmentT::Export(e) => e.template_id,
+      IInDenizenEnvironmentT::Extern(e) => e.template_id,
     }
   }
   /*
@@ -453,6 +461,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.templatas,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.templatas,
       IInDenizenEnvironmentT::General(e) => e.templatas,
+      IInDenizenEnvironmentT::Export(e) => e.templatas,
+      IInDenizenEnvironmentT::Extern(e) => e.templatas,
     }
   }
   /* Guardian: disable-all */
@@ -479,6 +489,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.global_env,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.global_env,
       IInDenizenEnvironmentT::General(e) => e.global_env,
+      IInDenizenEnvironmentT::Export(e) => e.global_env,
+      IInDenizenEnvironmentT::Extern(e) => e.global_env,
     }
   }
   /*
@@ -494,6 +506,8 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::BuildingWithClosureds(e) => e.id,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(e) => e.id,
       IInDenizenEnvironmentT::General(e) => e.id,
+      IInDenizenEnvironmentT::Export(e) => e.id,
+      IInDenizenEnvironmentT::Extern(e) => e.id,
     }
   }
   /*
@@ -650,7 +664,12 @@ where 's: 't,
             function: func,
         }))
     }
-    IEnvEntryT::Struct(_) => panic!("Unimplemented: entry_to_templata Struct"),
+    IEnvEntryT::Struct(struct_a) => {
+        ITemplataT::StructDefinition(interner.alloc(StructDefinitionTemplataT {
+            declaring_env: interner.alloc(defining_env),
+            origin_struct: struct_a,
+        }))
+    }
     IEnvEntryT::Interface(_) => panic!("Unimplemented: entry_to_templata Interface"),
     IEnvEntryT::Impl(_) => panic!("Unimplemented: entry_to_templata Impl"),
     IEnvEntryT::Templata(templata) => templata,
@@ -1137,8 +1156,17 @@ object PackageEnvironmentT {
 pub fn make_top_level_environment<'s, 't>(
   global_env: &'t GlobalEnvironmentT<'s, 't>,
   namespace_name: IdT<'s, 't>,
+  interner: &TypingInterner<'s, 't>,
 ) -> &'t PackageEnvironmentT<'s, 't> {
-  panic!("Unimplemented: make_top_level_environment");
+  // Rust adaptation (SPDMX-B): interner threaded to arena-allocate the global_namespaces slice.
+  let global_namespaces: Vec<&'t TemplatasStoreT<'s, 't>> =
+    global_env.name_to_top_level_environment.iter().map(|(_, ts)| *ts).collect();
+  let global_namespaces = interner.alloc_slice_from_vec(global_namespaces);
+  interner.alloc(PackageEnvironmentT {
+    global_env,
+    id: namespace_name,
+    global_namespaces,
+  })
 }
 /*
   // THIS IS TEMPORARY, it pulls in all global namespaces!
@@ -1877,7 +1905,7 @@ impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
   /* Guardian: disable-all */
 }
 
-// Concrete → IInDenizenEnvironmentT (6 variants; no Package/Export/Extern)
+// Concrete → IInDenizenEnvironmentT (8 variants; no Package)
 impl<'s, 't> From<&'t CitizenEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
   fn from(e: &'t CitizenEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Citizen(e) }
   /* Guardian: disable-all */
@@ -1906,6 +1934,14 @@ impl<'s, 't> From<&'t GeneralEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s
   fn from(e: &'t GeneralEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::General(e) }
   /* Guardian: disable-all */
 }
+impl<'s, 't> From<&'t ExportEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t ExportEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Export(e) }
+  /* Guardian: disable-all */
+}
+impl<'s, 't> From<&'t ExternEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
+  fn from(e: &'t ExternEnvironmentT<'s, 't>) -> Self { IInDenizenEnvironmentT::Extern(e) }
+  /* Guardian: disable-all */
+}
 
 // Widening: IInDenizenEnvironmentT → IEnvironmentT (always succeeds)
 impl<'s, 't> From<IInDenizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
@@ -1918,12 +1954,14 @@ impl<'s, 't> From<IInDenizenEnvironmentT<'s, 't>> for IEnvironmentT<'s, 't> {
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
         IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b),
       IInDenizenEnvironmentT::General(g) => IEnvironmentT::General(g),
+      IInDenizenEnvironmentT::Export(e) => IEnvironmentT::Export(e),
+      IInDenizenEnvironmentT::Extern(e) => IEnvironmentT::Extern(e),
     }
   }
   /* Guardian: disable-all */
 }
 
-// Narrowing: IEnvironmentT → IInDenizenEnvironmentT (errors on Package/Export/Extern)
+// Narrowing: IEnvironmentT → IInDenizenEnvironmentT (errors only on Package)
 impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
   type Error = IEnvironmentT<'s, 't>;
   fn try_from(e: IEnvironmentT<'s, 't>) -> Result<Self, Self::Error> {
@@ -1935,9 +1973,9 @@ impl<'s, 't> TryFrom<IEnvironmentT<'s, 't>> for IInDenizenEnvironmentT<'s, 't> {
       IEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b) =>
         Ok(IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(b)),
       IEnvironmentT::General(g) => Ok(IInDenizenEnvironmentT::General(g)),
-      other @ (IEnvironmentT::Package(_)
-        | IEnvironmentT::Export(_)
-        | IEnvironmentT::Extern(_)) => Err(other),
+      IEnvironmentT::Export(e) => Ok(IInDenizenEnvironmentT::Export(e)),
+      IEnvironmentT::Extern(e) => Ok(IInDenizenEnvironmentT::Extern(e)),
+      other @ IEnvironmentT::Package(_) => Err(other),
     }
   }
   /* Guardian: disable-all */

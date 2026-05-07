@@ -18,7 +18,10 @@ import dev.vale.typing.types._
 object Conversions {
 */
 pub fn evaluate_mutability(mutability: MutabilityP) -> MutabilityT {
-  panic!("Unimplemented: evaluate_mutability");
+  match mutability {
+    MutabilityP::Mutable => MutabilityT::Mutable,
+    MutabilityP::Immutable => MutabilityT::Immutable,
+  }
 }
 /*
   def evaluateMutability(mutability: MutabilityP): MutabilityT = {
@@ -40,7 +43,10 @@ pub fn evaluate_location(location: LocationP) -> LocationT {
   }
 */
 pub fn evaluate_variability(variability: VariabilityP) -> VariabilityT {
-  panic!("Unimplemented: evaluate_variability");
+  match variability {
+    VariabilityP::Final => VariabilityT::Final,
+    VariabilityP::Varying => VariabilityT::Varying,
+  }
 }
 /*
   def evaluateVariability(variability: VariabilityP): VariabilityT = {

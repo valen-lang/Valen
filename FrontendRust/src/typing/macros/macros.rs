@@ -100,9 +100,29 @@ pub enum OnStructDefinedMacro {
 }
 /*
 trait IOnStructDefinedMacro {
+*/
+impl OnStructDefinedMacro {
+    pub fn get_struct_sibling_entries<'s, 'ctx, 't>(
+        &self,
+        compiler: &crate::typing::compiler::Compiler<'s, 'ctx, 't>,
+        struct_name: crate::typing::names::names::IdT<'s, 't>,
+        struct_a: &'s crate::higher_typing::ast::StructA<'s>,
+    ) -> Vec<(crate::typing::names::names::IdT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)>
+    where 's: 't,
+    {
+        match self {
+            OnStructDefinedMacro::StructConstructor => compiler.get_struct_sibling_entries_struct_constructor(struct_name, struct_a),
+            OnStructDefinedMacro::StructDrop => compiler.get_struct_sibling_entries_struct_drop(struct_name, struct_a),
+        }
+    }
+    /*
   def getStructSiblingEntries(
     structName: IdT[INameT], structA: StructA):
   Vector[(IdT[INameT], IEnvEntry)]
+*/
+    /* Guardian: disable-all */
+}
+/*
 }
 */
 // Dispatch-tag enum replacing Scala's IOnInterfaceDefinedMacro trait; bodies live on impl Compiler.
@@ -113,9 +133,29 @@ pub enum OnInterfaceDefinedMacro {
 }
 /*
 trait IOnInterfaceDefinedMacro {
+*/
+impl OnInterfaceDefinedMacro {
+    pub fn get_interface_sibling_entries<'s, 'ctx, 't>(
+        &self,
+        compiler: &crate::typing::compiler::Compiler<'s, 'ctx, 't>,
+        interface_name: crate::typing::names::names::IdT<'s, 't>,
+        interface_a: &'s crate::higher_typing::ast::InterfaceA<'s>,
+    ) -> Vec<(crate::typing::names::names::IdT<'s, 't>, crate::typing::env::i_env_entry::IEnvEntryT<'s, 't>)>
+    where 's: 't,
+    {
+        match self {
+            OnInterfaceDefinedMacro::AnonymousInterface => compiler.get_interface_sibling_entries_anonymous_interface(interface_name, interface_a),
+            OnInterfaceDefinedMacro::InterfaceDrop => compiler.get_interface_sibling_entries_interface_drop(interface_name, interface_a),
+        }
+    }
+    /*
   def getInterfaceSiblingEntries(
     interfaceName: IdT[INameT], interfaceA: InterfaceA):
   Vector[(IdT[INameT], IEnvEntry)]
+*/
+    /* Guardian: disable-all */
+}
+/*
 }
 */
 // Dispatch-tag enum replacing Scala's IOnImplDefinedMacro trait; bodies live on impl Compiler.

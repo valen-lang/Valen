@@ -6,12 +6,13 @@ use crate::typing::templata::templata::*;
 use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::i_env_entry::IEnvEntryT;
-use crate::typing::typing_interner::MustIntern;
+use crate::typing::typing_interner::{MustIntern, TypingInterner};
+use crate::keywords::Keywords;
 use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
 use crate::postparsing::names::{IRuneS, IImpreciseNameS};
 use crate::postparsing::ast::{GenericParameterS, IRegionMutabilityS, LocationInDenizen};
 use crate::postparsing::itemplatatype::ITemplataType;
-use crate::postparsing::rules::rules::IRulexSR;
+use crate::postparsing::rules::rules::{EqualsSR, IRulexSR, RuneUsage};
 use crate::typing::infer_compiler::include_rule_in_call_site_solve;
 use crate::postparsing::rune_type_solver::IRuneTypeSolverEnv;
 use crate::utils::range::RangeS;
@@ -192,7 +193,25 @@ where 's: 't,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         num_explicit_template_args: i32,
     ) -> Vec<IRulexSR<'s>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let mut result: Vec<IRulexSR<'s>> = Vec::new();
+        for (index, generic_param) in generic_parameters.iter().enumerate() {
+            if (index as i32) >= num_explicit_template_args {
+                match &generic_param.default {
+                    Some(x) => {
+                        for rule in x.rules.iter() {
+                            result.push(**rule);
+                        }
+                        result.push(IRulexSR::Equals(EqualsSR {
+                            range: generic_param.range,
+                            left: generic_param.rune,
+                            right: RuneUsage { range: generic_param.range, rune: x.result_rune },
+                        }));
+                    }
+                    None => {}
+                }
+            }
+        }
+        result
     }
 }
 /*
@@ -222,7 +241,7 @@ where 's: 't,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         num_explicit_template_args: i32,
     ) -> Vec<&'s IRulexSR<'s>> {
-        let mut result: Vec<&'s IRulexSR<'s>> =
+        let result: Vec<&'s IRulexSR<'s>> =
             rules.iter().filter(|r| include_rule_in_call_site_solve(r)).collect();
         for (index, generic_param) in generic_parameters.iter().enumerate() {
             if index as i32 >= num_explicit_template_args {
@@ -607,7 +626,7 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> {
-        let mut result = HashMap::new();
+        let result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata))) => {
@@ -641,7 +660,7 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, IdT<'s, 't>> {
-        let mut result = HashMap::new();
+        let result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Isa(isa))) => {
@@ -672,16 +691,34 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_coord(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         coord: CoordT<'s, 't>,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let CoordT { ownership, region: original_region, kind } = coord;
+        let result_region = original_region;
+        match Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, kind) {
+            ITemplataT::Kind(k) => CoordT { ownership, region: result_region, kind: k.kind },
+            ITemplataT::Coord(c) => {
+                let result_ownership = match (ownership, c.coord.ownership) {
+                    (OwnershipT::Share, _) => OwnershipT::Share,
+                    (_, OwnershipT::Share) => OwnershipT::Share,
+                    (OwnershipT::Own, OwnershipT::Own) => OwnershipT::Own,
+                    (OwnershipT::Own, OwnershipT::Borrow) => OwnershipT::Borrow,
+                    (OwnershipT::Borrow, OwnershipT::Own) => OwnershipT::Borrow,
+                    (OwnershipT::Borrow, OwnershipT::Borrow) => OwnershipT::Borrow,
+                    _ => panic!("vimpl: unexpected ownership combination in substitute_templatas_in_coord"),
+                };
+                CoordT { ownership: result_ownership, region: result_region, kind: c.coord.kind }
+            }
+            _ => panic!("Unimplemented: substitute_templatas_in_coord unexpected templata result"),
+        }
     }
 }
 /*
@@ -721,16 +758,35 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_kind(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         kind: KindT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match kind {
+            KindT::Int(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Bool(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Str(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Float(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Void(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::Never(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
+            KindT::RuntimeSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind RuntimeSizedArray"),
+            KindT::StaticSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind StaticSizedArray"),
+            KindT::KindPlaceholder(p) => {
+                panic!("Unimplemented: substitute_templatas_in_kind KindPlaceholder");
+            }
+            KindT::Struct(s) => {
+                let new_struct = Compiler::substitute_templatas_in_struct(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, s);
+                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Struct(new_struct) }))
+            }
+            KindT::Interface(i) => panic!("Unimplemented: substitute_templatas_in_kind Interface"),
+            KindT::OverloadSet(_) => panic!("Unimplemented: substitute_templatas_in_kind OverloadSet"),
+        }
     }
 }
 /*
@@ -805,9 +861,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_struct(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -867,9 +924,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn translate_instantiation_bounds(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -981,9 +1039,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_impl_id(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -1041,9 +1100,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_bounds(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -1090,9 +1150,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_interface(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -1144,16 +1205,31 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_templata(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         templata: ITemplataT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match templata {
+            ITemplataT::Coord(c) => ITemplataT::Coord(interner.alloc(CoordTemplataT { coord: Compiler::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, c.coord) })),
+            ITemplataT::Kind(k) => Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, k.kind),
+            ITemplataT::Placeholder(p) => {
+                panic!("Unimplemented: substitute_templatas_in_templata Placeholder");
+            }
+            ITemplataT::Mutability(_) => templata,
+            ITemplataT::Variability(_) => templata,
+            ITemplataT::Integer(_) => templata,
+            ITemplataT::Boolean(_) => templata,
+            ITemplataT::Prototype(p) => {
+                panic!("Unimplemented: substitute_templatas_in_templata Prototype");
+            }
+            _ => panic!("vimpl: substitute_templatas_in_templata unexpected templata"),
+        }
     }
 }
 /*
@@ -1195,9 +1271,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_prototype(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -1258,9 +1335,10 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn substitute_templatas_in_function_bound_id(
-        &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         sanity_check: bool,
+        interner: &'ctx TypingInterner<'s, 't>,
+        keywords: &'ctx Keywords<'s>,
         original_calling_denizen_id: IdT<'s, 't>,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &[ITemplataT<'s, 't>],
@@ -1332,24 +1410,43 @@ where 's: 't,
 
 // IPlaceholderSubstituter: Scala source is a trait defined inside TemplataCompiler.getPlaceholderSubstituter,
 // so it has no separate top-level case-class anchor in TemplataCompiler.scala. Defined here as a struct per
-// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). The five fields below mirror
-// Scala's anonymous-trait-impl closure captures at TemplataCompiler.scala:808-824 (sanityCheck,
-// originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource).
-pub struct IPlaceholderSubstituter<'s, 't> {
+// Slab 14 Gotcha 9 (single-implementor trait → struct with inherent methods). The seven fields below mirror
+// Scala's anonymous-trait-impl closure captures at TemplataCompiler.scala:808-824 (sanityCheck, interner,
+// keywords, originalCallingDenizenId, needleTemplateName, newSubstitutingTemplatas, boundArgumentsSource).
+pub struct IPlaceholderSubstituter<'s, 'ctx, 't> {
     pub sanity_check: bool,
+    pub interner: &'ctx TypingInterner<'s, 't>,
+    pub keywords: &'ctx Keywords<'s>,
     pub original_calling_denizen_id: IdT<'s, 't>,
     pub needle_template_name: IdT<'s, 't>,
     pub new_substituting_templatas: &'t [ITemplataT<'s, 't>],
     pub bound_arguments_source: IBoundArgumentsSource<'s, 't>,
 }
-impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
+// Per TL.md "Guardian Annotations For New Definitions Without Scala Counterparts" and the
+// LetExprRuneTypeSolverEnv / OverloadRuneTypeSolverEnv precedent (Slab 15f): the methods below realize
+// Scala's anonymous `new IPlaceholderSubstituter { override def ... }` block at TemplataCompiler.scala:808-824.
+// The Scala bodies live inside getPlaceholderSubstituter (later in the file) so direct adjacency isn't possible
+// here — Guardian shields disabled on the impl methods.
+impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
+    /* Guardian: disable-all */
     pub fn substitute_for_coord(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         coord_t: CoordT<'s, 't>,
     ) -> CoordT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        Compiler::substitute_templatas_in_coord(
+            coutputs,
+            self.sanity_check,
+            self.interner,
+            self.keywords,
+            self.original_calling_denizen_id,
+            self.needle_template_name,
+            self.new_substituting_templatas,
+            self.bound_arguments_source,
+            coord_t,
+        )
     }
+    /* Guardian: disable-all */
     pub fn substitute_for_interface(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1357,13 +1454,25 @@ impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
     ) -> InterfaceTT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
     }
+    /* Guardian: disable-all */
     pub fn substitute_for_templata(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         templata: ITemplataT<'s, 't>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        Compiler::substitute_templatas_in_templata(
+            coutputs,
+            self.sanity_check,
+            self.interner,
+            self.keywords,
+            self.original_calling_denizen_id,
+            self.needle_template_name,
+            self.new_substituting_templatas,
+            self.bound_arguments_source,
+            templata,
+        )
     }
+    /* Guardian: disable-all */
     pub fn substitute_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1371,6 +1480,7 @@ impl<'s, 't> IPlaceholderSubstituter<'s, 't> {
     ) -> &'t PrototypeT<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
     }
+    /* Guardian: disable-all */
     pub fn substitute_for_impl_id(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -1408,7 +1518,7 @@ where 's: 't,
         original_calling_denizen_id: IdT<'s, 't>,
         name: IdT<'s, 't>,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-    ) -> IPlaceholderSubstituter<'s, 't> {
+    ) -> IPlaceholderSubstituter<'s, 'ctx, 't> {
         let top_level_denizen_id = self.get_top_level_denizen_id(name);
         let top_level_local_name: IInstantiationNameT<'s, 't> =
             top_level_denizen_id.local_name.try_into()
@@ -1459,9 +1569,11 @@ where 's: 't,
         needle_template_name: IdT<'s, 't>,
         new_substituting_templatas: &'t [ITemplataT<'s, 't>],
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
-    ) -> IPlaceholderSubstituter<'s, 't> {
+    ) -> IPlaceholderSubstituter<'s, 'ctx, 't> {
         IPlaceholderSubstituter {
             sanity_check,
+            interner: self.typing_interner,
+            keywords: self.keywords,
             original_calling_denizen_id,
             needle_template_name,
             new_substituting_templatas,
@@ -1540,7 +1652,40 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         citizen: ICitizenTT<'s, 't>,
     ) -> InstantiationReachableBoundArgumentsT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let citizen_id = match citizen {
+            ICitizenTT::Struct(s) => s.id,
+            ICitizenTT::Interface(i) => i.id,
+        };
+        let substituter =
+            self.get_placeholder_substituter(
+                sanity_check,
+                original_calling_denizen_id,
+                citizen_id,
+                IBoundArgumentsSource::InheritBoundsFromTypeItself,
+            );
+        let citizen_template_id = self.get_citizen_template(citizen_id);
+        let inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
+        let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> =
+            inner_env.templatas().name_to_entry.iter()
+                .filter_map(|(name, entry)| {
+                    match (name, entry) {
+                        (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_tt))) => {
+                            match proto_tt.prototype.id.local_name {
+                                INameT::FunctionBound(_) => {
+                                    let substituted = substituter.substitute_for_prototype(coutputs, proto_tt.prototype);
+                                    Some((rune_name.rune, *substituted))
+                                }
+                                _ => None,
+                            }
+                        }
+                        _ => None,
+                    }
+                })
+                .collect();
+        InstantiationReachableBoundArgumentsT {
+            citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
+                citizen_rune_to_reachable_prototype.into_iter()),
+        }
     }
 }
 /*
@@ -2169,8 +2314,16 @@ where 's: 't,
     pub fn resolve_struct_template(
         &self,
         struct_templata: &'t StructDefinitionTemplataT<'s, 't>,
-    ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> &'t IdT<'s, 't> {
+        let declaring_env = struct_templata.declaring_env;
+        let struct_a = struct_templata.origin_struct;
+        let translated = self.translate_struct_name(struct_a.name);
+        let local_name = match translated {
+            IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
+            IStructTemplateNameT::AnonymousSubstructTemplate(r) => INameT::AnonymousSubstructTemplate(r),
+            IStructTemplateNameT::LambdaCitizenTemplate(r) => INameT::LambdaCitizenTemplate(r),
+        };
+        declaring_env.id().add_step(self.typing_interner, local_name)
     }
 /*
   def resolveStructTemplate(structTemplata: StructDefinitionTemplataT): IdT[IStructTemplateNameT] = {

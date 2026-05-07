@@ -603,8 +603,9 @@ where 's: 't,
             self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1);
         match expr2 {
             ExpressionTE::Reference(r) => (r, returns_from_expr),
-            ExpressionTE::Address(_a) => {
-                panic!("implement: evaluateAndCoerceToReferenceExpression — AddressExpressionTE");
+            ExpressionTE::Address(a) => {
+                let expr = self.coerce_to_reference_expression(nenv, parent_ranges, ExpressionTE::Address(a), region);
+                (expr, returns_from_expr)
             }
         }
     }
@@ -647,8 +648,11 @@ where 's: 't,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         match expr_2 {
             ExpressionTE::Reference(r) => r,
-            ExpressionTE::Address(_a) => {
-                panic!("Unimplemented: coerce_to_reference_expression Address case");
+            ExpressionTE::Address(a) => {
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(a.range()).chain(parent_ranges.iter().copied()).collect();
+                let soft_loaded = self.soft_load(nenv, &range_with_parent, a, LoadAsP::Use, region);
+                self.typing_interner.alloc(soft_loaded)
             }
         }
     }
@@ -1002,7 +1006,27 @@ where 's: 't,
                 let result_expr_2 =
                     match source_te.result().coord.ownership {
                         OwnershipT::Own => {
-                            panic!("implement: Ownershipped OwnT");
+                            match ownershipped.target_ownership {
+                                LoadAsP::Move => {
+                                    // this can happen if we put a ^ on an owning reference. No harm, let it go.
+                                    source_te
+                                }
+                                LoadAsP::LoadAsBorrow => {
+                                    let range_with_parent: Vec<RangeS<'s>> =
+                                        std::iter::once(ownershipped.range).chain(parent_ranges.iter().copied()).collect();
+                                    let defer_te = self.make_temporary_local_defer(
+                                        coutputs, nenv, &range_with_parent, outer_call_location,
+                                        life.add(self.typing_interner, 1), region,
+                                        source_te, OwnershipT::Borrow);
+                                    self.typing_interner.alloc(ReferenceExpressionTE::Defer(defer_te))
+                                }
+                                LoadAsP::LoadAsWeak => {
+                                    panic!("implement: Ownershipped OwnT LoadAsWeakP");
+                                }
+                                LoadAsP::Use => {
+                                    panic!("implement: Ownershipped OwnT UseP (vcurious)");
+                                }
+                            }
                         }
                         OwnershipT::Borrow => {
                             panic!("implement: Ownershipped BorrowT");
@@ -1028,6 +1052,64 @@ where 's: 't,
                         }
                     };
                 (ExpressionTE::Reference(result_expr_2), returns_from_inner)
+            }
+            IExpressionSE::Dot(dot) => {
+                let member_name: IVarNameT<'s, 't> =
+                    IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(
+                        CodeVarNameT { name: dot.member, _phantom: std::marker::PhantomData }));
+                let (unborrowed_container_expr_2, returns_from_container_expr) =
+                    self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, dot.left);
+                let container_expr_2 = {
+                    let range_with_parent: Vec<RangeS<'s>> =
+                        std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
+                    self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2)
+                };
+                let expr_2 = match container_expr_2.result().coord.kind {
+                    KindT::Struct(struct_tt) => {
+                        let struct_def = coutputs.lookup_struct(struct_tt.id, self);
+                        let (struct_member, _member_index) =
+                            struct_def.get_member_and_index(&member_name)
+                                .unwrap_or_else(|| panic!("CouldntFindMemberT"));
+                        let unsubstituted_member_type = struct_member.tyype.expect_reference_member().reference;
+                        let instantiation_bounds =
+                            coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id)
+                                .unwrap_or_else(|| panic!("vassertSome: getInstantiationBounds"));
+                        let member_type =
+                            self.get_placeholder_substituter(
+                                self.opts.global_options.sanity_check,
+                                nenv.function_environment().template_id,
+                                struct_tt.id,
+                                IBoundArgumentsSource::UseBoundsFromContainer {
+                                    instantiation_bound_params: struct_def.instantiation_bound_params,
+                                    instantiation_bound_arguments: instantiation_bounds,
+                                })
+                            .substitute_for_coord(coutputs, unsubstituted_member_type);
+                        assert!(struct_def.members.iter().any(|m| m.name() == &member_name));
+                        self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                            range: dot.range,
+                            struct_expr: container_expr_2,
+                            member_name,
+                            member_reference: member_type,
+                            variability: struct_member.variability,
+                        }))
+                    }
+                    _ => panic!("implement: evaluate_expression Dot — non-struct container kind"),
+                };
+                match expr_2 {
+                    AddressExpressionTE::ReferenceMemberLookup(ref r) => {
+                        match r.member_reference.kind {
+                            KindT::Struct(s) => {
+                                assert!(coutputs.get_instantiation_bounds(self.typing_interner, s.id).is_some());
+                            }
+                            KindT::Interface(i) => {
+                                assert!(coutputs.get_instantiation_bounds(self.typing_interner, i.id).is_some());
+                            }
+                            _ => {}
+                        }
+                    }
+                    _ => panic!("implement: Dot expr_2 citizen check — unexpected AddressExpressionTE variant"),
+                }
+                (ExpressionTE::Address(expr_2), returns_from_container_expr)
             }
             _ => {
                 panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
@@ -2397,7 +2479,21 @@ where 's: 't,
         context_region: RegionT,
         undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match undecayed_unborrowed_container_expr_2 {
+            ExpressionTE::Address(a) => {
+                panic!("implement: dot_borrow — AddressExpressionTE arm (borrow_soft_load)");
+            }
+            ExpressionTE::Reference(r) => {
+                let unborrowed_container_expr_2 = r; // decaySoloPack(nenv, life + 0, r)
+                match unborrowed_container_expr_2.result().coord.ownership {
+                    OwnershipT::Own => {
+                        panic!("implement: dot_borrow — OwnT arm (makeTemporaryLocal)");
+                    }
+                    OwnershipT::Borrow | OwnershipT::Share => unborrowed_container_expr_2,
+                    OwnershipT::Weak => panic!("implement: dot_borrow — WeakT arm"),
+                }
+            }
+        }
     }
 /*
   // Borrow like the . does. If it receives an owning reference, itll make a temporary.

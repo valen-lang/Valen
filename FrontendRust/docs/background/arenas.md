@@ -24,7 +24,7 @@ Access: `typing_interner.intern_name(...)`, `typing_interner.intern_id(...)`, `t
 
 The typing arena's lifetime ordering: `'s` outlives `'t` (`where 's: 't` on every typing-pass type). Scout arena must not drop until the typing arena (and anything holding its `&'t` refs — e.g. `HinputsT` consumed by the instantiator) is done.
 
-See `FrontendRust/docs/architecture/typing-pass-arenas.md` for the typing pass's arena architecture.
+See `docs/architecture/typing-pass-design-v3.md` Part 1 for the typing pass's arena architecture.
 
 ## Data Flow
 

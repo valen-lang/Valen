@@ -391,9 +391,39 @@ impl<'s> IImplDeclarationNameS<'s> {
 
 /*
 trait ICitizenDeclarationNameS extends INameS {
+*/
+impl<'s> IStructDeclarationNameS<'s> {
+  pub fn range(&self) -> RangeS<'s> {
+    match self {
+      IStructDeclarationNameS::TopLevelStructDeclarationName(n) => n.range,
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => n.interface_name.range,
+    }
+  }
+  /*
   def range: RangeS
+  */
+  /* Guardian: disable-all */
+}
+/*
   def packageCoordinate: PackageCoordinate
+*/
+impl<'s> IStructDeclarationNameS<'s> {
+  pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
+    match self {
+      IStructDeclarationNameS::TopLevelStructDeclarationName(n) => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))
+      }
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(_) => {
+        panic!("Unimplemented: get_imprecise_name for AnonymousSubstructTemplateName")
+      }
+    }
+  }
+  /*
   def getImpreciseName(interner: Interner): IImpreciseNameS
+  */
+  /* Guardian: disable-all */
+}
+/*
 }
 */
 /*
@@ -484,10 +514,60 @@ pub enum TopLevelCitizenDeclarationNameS<'s> {
 
 /*
 sealed trait TopLevelCitizenDeclarationNameS extends ICitizenDeclarationNameS {
+*/
+impl<'s> TopLevelCitizenDeclarationNameS<'s> {
+  pub fn name(&self) -> StrI<'s> {
+    match self {
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.name,
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => x.name,
+    }
+  }
+  /*
   def name: StrI
+  */
+  /* Guardian: disable-all */
+}
+impl<'s> TopLevelCitizenDeclarationNameS<'s> {
+  pub fn range(&self) -> RangeS<'s> {
+    match self {
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.range,
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => x.range,
+    }
+  }
+  /*
   def range: RangeS
+  */
+  /* Guardian: disable-all */
+}
+impl<'s> TopLevelCitizenDeclarationNameS<'s> {
+  pub fn package_coordinate(&self) -> &'s PackageCoordinate<'s> {
+    match self {
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.range.begin.file.package_coord,
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => x.range.begin.file.package_coord,
+    }
+  }
+  /*
   override def packageCoordinate: PackageCoordinate = range.file.packageCoordinate
+  */
+  /* Guardian: disable-all */
+}
+impl<'s> TopLevelCitizenDeclarationNameS<'s> {
+  pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
+    match self {
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: x.name }))
+      }
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => {
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: x.name }))
+      }
+    }
+  }
+  /*
   override def getImpreciseName(interner: Interner): IImpreciseNameS = interner.intern(CodeNameS(name))
+  */
+  /* Guardian: disable-all */
+}
+/*
 }
 */
 /*
@@ -526,17 +606,6 @@ pub struct TopLevelInterfaceDeclarationNameS<'s> {
 case class TopLevelInterfaceDeclarationNameS(name: StrI, range: RangeS) extends IInterfaceDeclarationNameS with TopLevelCitizenDeclarationNameS {
 }
 */
-impl<'s> TopLevelCitizenDeclarationNameS<'s> {
-  pub fn name(&self) -> StrI<'s> {
-    match self {
-      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(x) => x.name,
-      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(x) => x.name,
-    }
-  }
-  /* Guardian: disable-all */
-}
-/* Guardian: disable-all */
-
 impl<'s> From<&TopLevelStructDeclarationNameS<'s>> for TopLevelCitizenDeclarationNameS<'s> {
   fn from(value: &TopLevelStructDeclarationNameS<'s>) -> Self {
     TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(value.clone())

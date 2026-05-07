@@ -297,10 +297,25 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 
 */
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
+#[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
   pub outer_env: &'t IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
+}
+impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
+  fn eq(&self, other: &Self) -> bool {
+    self.function.range == other.function.range
+      && self.function.name == other.function.name
+  }
+  /* Guardian: disable-all */
+}
+impl<'s, 't> Eq for FunctionTemplataT<'s, 't> {}
+impl<'s, 't> std::hash::Hash for FunctionTemplataT<'s, 't> {
+  fn hash<H: std::hash::Hasher>(&self, state: &mut H) {
+    self.function.range.hash(state);
+    self.function.name.hash(state);
+  }
+  /* Guardian: disable-all */
 }
 /*
 case class FunctionTemplataT(
@@ -364,6 +379,9 @@ case class FunctionTemplataT(
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
@@ -503,6 +521,9 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `declaring_env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
@@ -565,6 +586,9 @@ case class InterfaceDefinitionTemplataT(
 }
 
 */
+// AFTERM: figure out why some templatas compare environment and some don't —
+// `FunctionTemplataT.equals` ignores `outerEnv` (Scala templata.scala:161-169)
+// but this type's derived equality includes `env`.
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {

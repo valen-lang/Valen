@@ -27,6 +27,10 @@ use crate::typing::typing_interner::TypingInterner;
 use crate::utils::arena_index_map::ArenaIndexMap;
 // mig: struct InstantiationReachableBoundArgumentsT
 /// Arena-allocated (see @TFITCX)
+// Structural-equality opt-in: Scala uses case-class `==` on this type via
+// `vassert(existing == instantiationBoundArgs)` in addInstantiationBounds.
+// TFITCX/IEOIBZ ptr-eq is for identity types; this is a value-bag.
+#[derive(PartialEq, Eq)]
 pub struct InstantiationReachableBoundArgumentsT<'s, 't> {
     pub citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
 }
@@ -69,6 +73,10 @@ pub fn make<'s, 't>(
 */
 // mig: struct InstantiationBoundArgumentsT
 /// Arena-allocated (see @TFITCX)
+// Structural-equality opt-in: Scala uses case-class `==` on this type via
+// `vassert(existing == instantiationBoundArgs)` in addInstantiationBounds.
+// TFITCX/IEOIBZ ptr-eq is for identity types; this is a value-bag.
+#[derive(PartialEq, Eq)]
 pub struct InstantiationBoundArgumentsT<'s, 't> {
     pub rune_to_bound_prototype: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>>,
     pub rune_to_citizen_rune_to_reachable_prototype: ArenaIndexMap<'t, IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
@@ -184,7 +192,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       override def hashCode(): Int = vfail() // Would need a really good reason to hash something this big
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct(&self, struct_id: IdT) -> StructDefinitionT {
+    pub fn lookup_struct(&self, struct_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct");
     }
     /*
@@ -193,7 +201,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template
-    pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
+    pub fn lookup_struct_by_template(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template");
     }
     /*
@@ -202,7 +210,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template
-    pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_template(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template");
     }
     /*
@@ -211,7 +219,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_impl_by_template
-    pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT {
+    pub fn lookup_impl_by_template(&self, impl_template_name: ImplTemplateNameT) -> EdgeT<'s, 't> {
         panic!("Unimplemented: lookup_impl_by_template");
     }
     /*
@@ -220,7 +228,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface
-    pub fn lookup_interface(&self, interface_id: IdT) -> InterfaceDefinitionT {
+    pub fn lookup_interface(&self, interface_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface");
     }
     /*
@@ -229,7 +237,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_edge
-    pub fn lookup_edge(&self, impl_id: IdT) -> EdgeT {
+    pub fn lookup_edge(&self, impl_id: IdT<'s, 't>) -> EdgeT<'s, 't> {
         panic!("Unimplemented: lookup_edge");
     }
     /*
@@ -238,7 +246,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn get_instantiation_bound_args
-    pub fn get_instantiation_bound_args(&self, instantiation_name: IdT) -> InstantiationBoundArgumentsT {
+    pub fn get_instantiation_bound_args(&self, instantiation_name: IdT<'s, 't>) -> &'t InstantiationBoundArgumentsT<'s, 't> {
         panic!("Unimplemented: get_instantiation_bound_args");
     }
     /*
@@ -247,7 +255,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template_id
-    pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT) -> StructDefinitionT {
+    pub fn lookup_struct_by_template_id(&self, struct_template_id: IdT<'s, 't>) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template_id");
     }
     /*
@@ -256,7 +264,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_id
-    pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_template_id(&self, interface_template_id: IdT<'s, 't>) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template_id");
     }
     /*
@@ -265,7 +273,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_citizen_by_template_id
-    pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT) -> CitizenDefinitionT {
+    pub fn lookup_citizen_by_template_id(&self, citizen_template_id: IdT<'s, 't>) -> CitizenDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_citizen_by_template_id");
     }
     /*
@@ -281,7 +289,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template_name
-    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT {
+    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_template_name");
     }
     /*
@@ -290,7 +298,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_name
-    pub fn lookup_interface_by_template_name(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_template_name(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_template_name");
     }
     /*
@@ -299,7 +307,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_signature(&self, signature: SignatureT) -> Option<FunctionDefinitionT> {
+    pub fn lookup_function_by_signature(&self, signature: SignatureT<'s, 't>) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_function_by_signature");
     }
     /*
@@ -308,7 +316,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<FunctionDefinitionT> {
+    pub fn lookup_function_by_template(&self, func_template_name: FunctionTemplateNameT) -> Option<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_function_by_template");
     }
     /*
@@ -348,7 +356,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct_by_human_name(&self, human_name: &str) -> StructDefinitionT {
+    pub fn lookup_struct_by_human_name(&self, human_name: &str) -> StructDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_struct_by_human_name");
     }
     /*
@@ -368,7 +376,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_impl
-    pub fn lookup_impl(&self, sub_citizen_tt: IdT, interface_tt: IdT) -> EdgeT {
+    pub fn lookup_impl(&self, sub_citizen_tt: IdT<'s, 't>, interface_tt: IdT<'s, 't>) -> EdgeT<'s, 't> {
         panic!("Unimplemented: lookup_impl");
     }
     /*
@@ -382,7 +390,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface
-    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> InterfaceDefinitionT {
+    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> InterfaceDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_interface_by_human_name");
     }
     /*
@@ -402,7 +410,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_user_function
-    pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT {
+    pub fn lookup_user_function(&self, human_name: &str) -> FunctionDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_user_function");
     }
     /*
@@ -420,7 +428,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn name_is_lambda_in
-    pub fn name_is_lambda_in(&self, name: IdT, needle_function_human_name: &str) -> bool {
+    pub fn name_is_lambda_in(&self, name: IdT<'s, 't>, needle_function_human_name: &str) -> bool {
         panic!("Unimplemented: name_is_lambda_in");
     }
     /*
@@ -439,7 +447,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_lambdas_in
-    pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<FunctionDefinitionT> {
+    pub fn lookup_lambdas_in(&self, needle_function_human_name: &str) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: lookup_lambdas_in");
     }
     /*
@@ -448,7 +456,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_lambda_in
-    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> FunctionDefinitionT {
+    pub fn lookup_lambda_in(&self, needle_function_human_name: &str) -> FunctionDefinitionT<'s, 't> {
         panic!("Unimplemented: lookup_lambda_in");
     }
     /*
@@ -457,7 +465,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn get_all_user_functions
-    pub fn get_all_user_functions(&self) -> Vec<FunctionDefinitionT> {
+    pub fn get_all_user_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
         panic!("Unimplemented: get_all_user_functions");
     }
     /*

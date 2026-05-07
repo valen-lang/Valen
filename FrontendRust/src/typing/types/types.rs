@@ -180,29 +180,82 @@ sealed trait KindT {
   // Note, we don't have a mutability: Mutability in here because this Kind
   // should be enough to uniquely identify a type, and no more.
   // We can always get the mutability for a struct from the coutputs.
-
+*/
+impl<'s, 't> KindT<'s, 't> {
+  pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+    match self {
+      KindT::Struct(c) => ICitizenTT::Struct(c),
+      KindT::Interface(c) => ICitizenTT::Interface(c),
+      _ => panic!("vfail"),
+    }
+  }
+  /*
   def expectCitizen(): ICitizenTT = {
     this match {
       case c : ICitizenTT => c
       case _ => vfail()
     }
   }
-
+  */
+  /* Guardian: disable-all */
+}
+impl<'s, 't> KindT<'s, 't> {
+  pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+    match self {
+      KindT::Interface(c) => c,
+      _ => panic!("vfail"),
+    }
+  }
+  /*
   def expectInterface(): InterfaceTT = {
     this match {
       case c @ InterfaceTT(_) => c
       case _ => vfail()
     }
   }
-
+  */
+  /* Guardian: disable-all */
+}
+impl<'s, 't> KindT<'s, 't> {
+  pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+    match self {
+      KindT::Struct(c) => c,
+      _ => panic!("vfail"),
+    }
+  }
+  /*
   def expectStruct(): StructTT = {
     this match {
       case c @ StructTT(_) => c
       case _ => vfail()
     }
   }
-
+  */
+  /* Guardian: disable-all */
+}
+impl<'s, 't> KindT<'s, 't> {
+  pub fn is_primitive(&self) -> bool {
+    match self {
+      KindT::Never(_) => true,
+      KindT::Void(_) => true,
+      KindT::Int(_) => true,
+      KindT::Bool(_) => true,
+      KindT::Str(_) => false,
+      KindT::Float(_) => true,
+      KindT::Struct(_) => false,
+      KindT::Interface(_) => false,
+      KindT::StaticSizedArray(_) => false,
+      KindT::RuntimeSizedArray(_) => false,
+      KindT::KindPlaceholder(_) => false,
+      KindT::OverloadSet(_) => true,
+    }
+  }
+  /*
   def isPrimitive: Boolean
+  */
+  /* Guardian: disable-all */
+}
+/*
 }
 */
 /// Value-type (see @TFITCX)
@@ -366,8 +419,6 @@ object ICitizenTT {
 pub enum ISubKindTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
   Interface(&'t InterfaceTT<'s, 't>),
-  StaticSizedArray(&'t StaticSizedArrayTT<'s, 't>),
-  RuntimeSizedArray(&'t RuntimeSizedArrayTT<'s, 't>),
   KindPlaceholder(&'t KindPlaceholderT<'s, 't>),
 }
 /*
@@ -563,19 +614,11 @@ impl<'s, 't> From<&'t InterfaceTT<'s, 't>> for KindT<'s, 't> {
   /* Guardian: disable-all */
 }
 
-impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { ISubKindTT::StaticSizedArray(x) }
-  /* Guardian: disable-all */
-}
 impl<'s, 't> From<&'t StaticSizedArrayTT<'s, 't>> for KindT<'s, 't> {
   fn from(x: &'t StaticSizedArrayTT<'s, 't>) -> Self { KindT::StaticSizedArray(x) }
   /* Guardian: disable-all */
 }
 
-impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for ISubKindTT<'s, 't> {
-  fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { ISubKindTT::RuntimeSizedArray(x) }
-  /* Guardian: disable-all */
-}
 impl<'s, 't> From<&'t RuntimeSizedArrayTT<'s, 't>> for KindT<'s, 't> {
   fn from(x: &'t RuntimeSizedArrayTT<'s, 't>) -> Self { KindT::RuntimeSizedArray(x) }
   /* Guardian: disable-all */
@@ -624,8 +667,6 @@ impl<'s, 't> From<ISubKindTT<'s, 't>> for KindT<'s, 't> {
     match s {
       ISubKindTT::Struct(x) => KindT::Struct(x),
       ISubKindTT::Interface(x) => KindT::Interface(x),
-      ISubKindTT::StaticSizedArray(x) => KindT::StaticSizedArray(x),
-      ISubKindTT::RuntimeSizedArray(x) => KindT::RuntimeSizedArray(x),
       ISubKindTT::KindPlaceholder(x) => KindT::KindPlaceholder(x),
     }
   }
@@ -660,8 +701,6 @@ impl<'s, 't> TryFrom<KindT<'s, 't>> for ISubKindTT<'s, 't> {
     match k {
       KindT::Struct(x) => Ok(ISubKindTT::Struct(x)),
       KindT::Interface(x) => Ok(ISubKindTT::Interface(x)),
-      KindT::StaticSizedArray(x) => Ok(ISubKindTT::StaticSizedArray(x)),
-      KindT::RuntimeSizedArray(x) => Ok(ISubKindTT::RuntimeSizedArray(x)),
       KindT::KindPlaceholder(x) => Ok(ISubKindTT::KindPlaceholder(x)),
       _ => Err(()),
     }

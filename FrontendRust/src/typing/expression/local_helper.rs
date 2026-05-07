@@ -52,7 +52,11 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn make_temporary_local(&self, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'s, 't>, coord: CoordT<'s, 't>) -> ReferenceLocalVariableT<'s, 't> {
-        panic!("Unimplemented: make_temporary_local");
+        let var_id = self.typing_interner.intern_typing_pass_temporary_var_name(
+            crate::typing::names::names::TypingPassTemporaryVarNameT { life });
+        let rlv = ReferenceLocalVariableT { name: var_id.into(), variability: VariabilityT::Final, coord };
+        nenv.add_variable(IVariableT::ReferenceLocal(rlv));
+        rlv
     }
 /*
   def makeTemporaryLocal(
@@ -71,8 +75,25 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn make_temporary_local_defer(&self, coutputs: &CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s, 't>, context_region: RegionT, r: ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
-        panic!("Unimplemented: make_temporary_local");
+    pub fn make_temporary_local_defer(&self, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, range: &[RangeS<'s>], call_location: LocationInDenizen<'s>, life: LocationInFunctionEnvironmentT<'s, 't>, context_region: RegionT, r: &'t ReferenceExpressionTE<'s, 't>, target_ownership: OwnershipT) -> DeferTE<'s, 't> {
+        match target_ownership {
+            OwnershipT::Borrow => {}
+            _ => panic!("implement: make_temporary_local_defer non-Borrow target_ownership"),
+        }
+        let rlv = self.make_temporary_local(nenv, life, r.result().coord);
+        let let_expr_2 = ReferenceExpressionTE::LetAndLend(LetAndLendTE {
+            variable: ILocalVariableT::Reference(rlv),
+            expr: r,
+            target_ownership,
+        });
+        let unlet = self.unlet_local_without_dropping(nenv, &ILocalVariableT::Reference(rlv));
+        let unlet_te: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet));
+        let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
+        let env_in_denizen: &'t IInDenizenEnvironmentT<'s, 't> =
+            self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+        let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te);
+        assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
+        DeferTE { inner_expr: self.typing_interner.alloc(let_expr_2), deferred_expr: self.typing_interner.alloc(destruct_expr_2) }
     }
 /*
   // This makes a borrow ref, but can easily turn that into a weak
@@ -268,10 +289,57 @@ where 's: 't,
                 ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Share })
             }
             OwnershipT::Own => {
-                panic!("implement: soft_load — OwnT");
+                match load_as_p {
+                    LoadAsP::Use => {
+                        match a {
+                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                                nenv.mark_local_unstackified(lv_lookup.local_variable.name());
+                                ReferenceExpressionTE::Unlet(UnletTE { variable: lv_lookup.local_variable })
+                            }
+                            AddressExpressionTE::RuntimeSizedArrayLookup(_) => {
+                                ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })
+                            }
+                            AddressExpressionTE::StaticSizedArrayLookup(_) => {
+                                ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })
+                            }
+                            AddressExpressionTE::ReferenceMemberLookup(_) => {
+                                ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })
+                            }
+                            AddressExpressionTE::AddressMemberLookup(_) => {
+                                ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })
+                            }
+                        }
+                    }
+                    LoadAsP::Move => {
+                        match a {
+                            AddressExpressionTE::LocalLookup(ref lv_lookup) => {
+                                nenv.mark_local_unstackified(lv_lookup.local_variable.name());
+                                ReferenceExpressionTE::Unlet(UnletTE { variable: lv_lookup.local_variable })
+                            }
+                            AddressExpressionTE::ReferenceMemberLookup(ref r) => {
+                                panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
+                            }
+                            AddressExpressionTE::AddressMemberLookup(ref r) => {
+                                panic!("CantMoveOutOfMemberT: {:?}", r.member_name);
+                            }
+                            _ => panic!("implement: soft_load OwnT MoveP — unexpected address expr"),
+                        }
+                    }
+                    LoadAsP::LoadAsBorrow => {
+                        ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow })
+                    }
+                    LoadAsP::LoadAsWeak => {
+                        ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak })
+                    }
+                }
             }
             OwnershipT::Borrow => {
-                panic!("implement: soft_load — BorrowT");
+                match load_as_p {
+                    LoadAsP::Move => panic!("vfail: soft_load BorrowT + MoveP"),
+                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: a.result().coord.ownership }),
+                    LoadAsP::LoadAsBorrow => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Borrow }),
+                    LoadAsP::LoadAsWeak => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }),
+                }
             }
             OwnershipT::Weak => {
                 panic!("implement: soft_load — WeakT");

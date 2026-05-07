@@ -121,7 +121,25 @@ impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
     pub fn translate_struct_name(&self, name: IStructDeclarationNameS<'s>) -> IStructTemplateNameT<'s, 't> {
-        panic!("Unimplemented: translate_struct_name");
+        match name {
+            IStructDeclarationNameS::TopLevelStructDeclarationName(top_level) => {
+                let struct_template_name = StructTemplateNameT {
+                    human_name: top_level.name,
+                    _phantom: std::marker::PhantomData,
+                };
+                IStructTemplateNameT::StructTemplate(
+                    self.typing_interner.intern_struct_template_name(struct_template_name)
+                )
+            }
+            IStructDeclarationNameS::AnonymousSubstructTemplateName(anon) => {
+                let interface_template_name = self.translate_interface_name(anon.interface_name);
+                IStructTemplateNameT::AnonymousSubstructTemplate(
+                    self.typing_interner.intern_anonymous_substruct_template_name(
+                        AnonymousSubstructTemplateNameT { interface: interface_template_name }
+                    )
+                )
+            }
+        }
     }
 /*
   def translateStructName(name: IStructDeclarationNameS): IStructTemplateNameT = {
@@ -141,8 +159,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_interface_name(&self, name: IStructDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
-        panic!("Unimplemented: translate_interface_name");
+    pub fn translate_interface_name(&self, name: TopLevelInterfaceDeclarationNameS<'s>) -> IInterfaceTemplateNameT<'s, 't> {
+        let interface_template_name = InterfaceTemplateNameT {
+            human_namee: name.name,
+            _phantom: std::marker::PhantomData,
+        };
+        IInterfaceTemplateNameT::InterfaceTemplate(
+            self.typing_interner.intern_interface_template_name(interface_template_name)
+        )
     }
 /*
   def translateInterfaceName(name: IInterfaceDeclarationNameS): IInterfaceTemplateNameT = {
@@ -182,8 +206,64 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_name_step(&self, name: INameS) -> INameT<'_, '_> {
-        panic!("Unimplemented: translate_name_step");
+    // Guardian: temp-disable: SPDMX — Scala's translateCodeLocation is a documented identity function (CodeLocationS(line,col) => CodeLocationS(line,col)). Rust has no NameTranslator on Compiler — using code_location directly is semantically identical. Same pattern as the temp-disable on translate_generic_template_function_name.
+    pub fn translate_name_step(&self, name: INameS<'s>) -> INameT<'s, 't> {
+        use std::marker::PhantomData;
+        match name {
+            INameS::LambdaStructDeclaration(_) => panic!("Unimplemented: translate_name_step LambdaStructDeclaration"),
+            INameS::LetName(_) => panic!("Unimplemented: translate_name_step LetNameS"),
+            INameS::ExportAsName(_) => panic!("Unimplemented: translate_name_step ExportAsNameS"),
+            INameS::VarName(v) => panic!("Unimplemented: translate_name_step VarName {:?}", v),
+            INameS::TopLevelStructDeclaration(s) => {
+                match self.translate_struct_name(IStructDeclarationNameS::TopLevelStructDeclarationName(*s)) {
+                    IStructTemplateNameT::StructTemplate(r) => INameT::StructTemplate(r),
+                    IStructTemplateNameT::AnonymousSubstructTemplate(r) => INameT::AnonymousSubstructTemplate(r),
+                    IStructTemplateNameT::LambdaCitizenTemplate(_) => panic!("Unimplemented: translate_name_step LambdaCitizenTemplate"),
+                }
+            }
+            INameS::TopLevelInterfaceDeclaration(i) => {
+                match self.translate_interface_name(*i) {
+                    IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
+                }
+            }
+            INameS::AnonymousSubstructTemplateName(_) => panic!("Unimplemented: translate_name_step AnonymousSubstructTemplateNameS"),
+            INameS::AnonymousSubstructImplDeclaration(_) => panic!("Unimplemented: translate_name_step AnonymousSubstructImplDeclarationNameS"),
+            INameS::ImplDeclaration(_) => panic!("Unimplemented: translate_name_step ImplDeclarationNameS"),
+            INameS::RuneName(_) => panic!("Unimplemented: translate_name_step RuneNameS"),
+            INameS::RuntimeSizedArrayDeclarationName(_) => panic!("Unimplemented: translate_name_step RuntimeSizedArrayDeclarationName"),
+            INameS::StaticSizedArrayDeclarationName(_) => panic!("Unimplemented: translate_name_step StaticSizedArrayDeclarationName"),
+            INameS::GlobalFunctionFamilyName(_) => panic!("Unimplemented: translate_name_step GlobalFunctionFamilyName"),
+            INameS::ArbitraryName(_) => panic!("Unimplemented: translate_name_step ArbitraryName"),
+            INameS::FunctionDeclaration(fn_decl) => {
+                match fn_decl {
+                    IFunctionDeclarationNameS::LambdaDeclarationName(_) => panic!("Unimplemented: translate_name_step LambdaDeclarationNameS"),
+                    IFunctionDeclarationNameS::FunctionName(n) => {
+                        INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                            human_name: n.name,
+                            code_location: n.code_location,
+                            _phantom: PhantomData,
+                        }))
+                    }
+                    IFunctionDeclarationNameS::ConstructorName(ctor) => {
+                        match ctor.tlcd {
+                            TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(n) => {
+                                INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                                    human_name: n.name,
+                                    code_location: n.range.begin,
+                                    _phantom: PhantomData,
+                                }))
+                            }
+                            TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(_) => {
+                                panic!("Unimplemented: translate_name_step ConstructorNameS for interface")
+                            }
+                        }
+                    }
+                    IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(_) => panic!("Unimplemented: translate_name_step ForwarderFunctionDeclarationName"),
+                    IFunctionDeclarationNameS::ImmConcreteDestructorName(_) => panic!("Unimplemented: translate_name_step ImmConcreteDestructorName"),
+                    IFunctionDeclarationNameS::ImmInterfaceDestructorName(_) => panic!("Unimplemented: translate_name_step ImmInterfaceDestructorName"),
+                }
+            }
+        }
     }
 /*
   def translateNameStep(name: INameS): INameT = {
@@ -282,8 +362,27 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_impl_name(&self, n: IImplDeclarationNameS) -> IImplTemplateNameT<'_, '_> {
-        panic!("Unimplemented: translate_impl_name");
+    pub fn translate_impl_name(&self, n: IImplDeclarationNameS<'s>) -> IImplTemplateNameT<'s, 't> {
+        match n {
+            IImplDeclarationNameS::ImplDeclarationName(impl_decl) => {
+                let impl_template_name = ImplTemplateNameT {
+                    code_location_s: self.translate_code_location(impl_decl.code_location),
+                    _phantom: std::marker::PhantomData,
+                };
+                IImplTemplateNameT::ImplTemplate(
+                    self.typing_interner.intern_impl_template_name(impl_template_name)
+                )
+            }
+            IImplDeclarationNameS::AnonymousSubstructImplDeclarationName(anon) => {
+                let interface_template_name = self.translate_interface_name(anon.interface);
+                let anon_impl_template_name = AnonymousSubstructImplTemplateNameT {
+                    interface: interface_template_name,
+                };
+                IImplTemplateNameT::AnonymousSubstructImplTemplate(
+                    self.typing_interner.intern_anonymous_substruct_impl_template_name(anon_impl_template_name)
+                )
+            }
+        }
     }
 /*
   def translateImplName(n: IImplDeclarationNameS): IImplTemplateNameT = {

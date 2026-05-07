@@ -276,6 +276,27 @@ pub enum INameT<'s, 't> {
 /*
 sealed trait INameT extends IInterning
 */
+// (Rust adaptation: Scala expression `idT.localName.parameters` works
+// because Scala types `localName` as `IFunctionNameT` via `IdT[IFunctionNameT]`'s
+// type parameter. Rust's `IdT.local_name: INameT` loses that narrowing, so we
+// expose `parameters()` on the broad enum and panic for non-function variants.
+// Same shape as `PrototypeT::param_types` at ast.rs:1020.)
+impl<'s, 't> INameT<'s, 't> where 's: 't {
+    pub fn parameters(&self) -> &'t [CoordT<'s, 't>] {
+        match self {
+            INameT::OverrideDispatcher(f) => f.parameters,
+            INameT::ExternFunction(f) => f.parameters,
+            INameT::Function(f) => f.parameters,
+            INameT::ForwarderFunction(f) => f.inner.parameters(),
+            INameT::FunctionBound(f) => f.parameters,
+            INameT::PredictedFunction(f) => f.parameters,
+            INameT::LambdaCallFunction(f) => f.parameters,
+            INameT::AnonymousSubstructConstructor(f) => f.parameters,
+            other => panic!("INameT::parameters called on non-function name: {:?}", other),
+        }
+    }
+    /* */
+}
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplateNameT<'s, 't> {
@@ -422,8 +443,38 @@ pub enum IInstantiationNameT<'s, 't> {
 }
 /*
 sealed trait IInstantiationNameT extends INameT {
+*/
+impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
+    pub fn template(&self) -> ITemplateNameT<'s, 't> {
+        match self {
+            IInstantiationNameT::Export(x) => ITemplateNameT::ExportTemplate(x.template),
+            IInstantiationNameT::Impl(x) => ITemplateNameT::ImplTemplate(x.template),
+            IInstantiationNameT::ImplBound(x) => ITemplateNameT::ImplBoundTemplate(x.template),
+            IInstantiationNameT::StaticSizedArray(x) => ITemplateNameT::StaticSizedArrayTemplate(x.template),
+            IInstantiationNameT::RuntimeSizedArray(x) => ITemplateNameT::RuntimeSizedArrayTemplate(x.template),
+            IInstantiationNameT::KindPlaceholder(x) => ITemplateNameT::KindPlaceholderTemplate(x.template),
+            IInstantiationNameT::OverrideDispatcher(x) => ITemplateNameT::OverrideDispatcherTemplate(x.template),
+            IInstantiationNameT::OverrideDispatcherCase(_) => panic!("Unimplemented: template on OverrideDispatcherCaseNameT (Scala: override def template: ITemplateNameT = this — needs an OverrideDispatcherCaseTemplate variant in ITemplateNameT)"),
+            IInstantiationNameT::Extern(x) => ITemplateNameT::ExternTemplate(x.template),
+            IInstantiationNameT::ExternFunction(_) => panic!("Unimplemented: template on ExternFunctionNameT (Scala: override def template = ExternFunctionTemplateNameT(humanName) — needs interner)"),
+            IInstantiationNameT::Function(x) => ITemplateNameT::FunctionTemplate(x.template),
+            IInstantiationNameT::ForwarderFunction(x) => ITemplateNameT::ForwarderFunctionTemplate(x.template),
+            IInstantiationNameT::FunctionBound(x) => ITemplateNameT::FunctionBoundTemplate(x.template),
+            IInstantiationNameT::PredictedFunction(x) => ITemplateNameT::PredictedFunctionTemplate(x.template),
+            IInstantiationNameT::LambdaCallFunction(x) => ITemplateNameT::LambdaCallFunctionTemplate(x.template),
+            IInstantiationNameT::Struct(_) => panic!("Unimplemented: template on StructNameT (Scala: override def template: IStructTemplateNameT — needs flatten of IStructTemplateNameT into ITemplateNameT)"),
+            IInstantiationNameT::Interface(x) => ITemplateNameT::InterfaceTemplate(x.template),
+            IInstantiationNameT::LambdaCitizen(x) => ITemplateNameT::LambdaCitizenTemplate(x.template),
+            IInstantiationNameT::AnonymousSubstructImpl(x) => ITemplateNameT::AnonymousSubstructImplTemplate(x.template),
+            IInstantiationNameT::AnonymousSubstructConstructor(x) => ITemplateNameT::AnonymousSubstructConstructorTemplate(x.template),
+            IInstantiationNameT::AnonymousSubstruct(x) => ITemplateNameT::AnonymousSubstructTemplate(x.template),
+        }
+    }
+    /*
   def template: ITemplateNameT
 */
+    /* Guardian: disable-all */
+}
 impl<'s, 't> IInstantiationNameT<'s, 't> where 's: 't {
     pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
         match self {
@@ -473,7 +524,25 @@ pub enum IFunctionNameT<'s, 't> {
 sealed trait IFunctionNameT extends IInstantiationNameT {
   def template: IFunctionTemplateNameT
   def templateArgs: Vector[ITemplataT[ITemplataType]]
+*/
+impl<'s, 't> IFunctionNameT<'s, 't> where 's: 't {
+    pub fn parameters(&self) -> &'t [CoordT<'s, 't>] {
+        match self {
+            IFunctionNameT::OverrideDispatcher(f) => f.parameters,
+            IFunctionNameT::ExternFunction(f) => f.parameters,
+            IFunctionNameT::Function(f) => f.parameters,
+            IFunctionNameT::ForwarderFunction(f) => f.inner.parameters(),
+            IFunctionNameT::FunctionBound(f) => f.parameters,
+            IFunctionNameT::PredictedFunction(f) => f.parameters,
+            IFunctionNameT::LambdaCallFunction(f) => f.parameters,
+            IFunctionNameT::AnonymousSubstructConstructor(f) => f.parameters,
+        }
+    }
+    /*
   def parameters: Vector[CoordT]
+*/
+}
+/*
 }
 */
 /// Value-type (see @TFITCX)
@@ -1053,8 +1122,32 @@ pub enum IPlaceholderNameT<'s, 't> {
 }
 /*
 sealed trait IPlaceholderNameT extends INameT {
+*/
+impl<'s, 't> IPlaceholderNameT<'s, 't> {
+    pub fn index(&self) -> i32 {
+        match self {
+            IPlaceholderNameT::KindPlaceholder(x) => x.template.index,
+            IPlaceholderNameT::NonKindNonRegionPlaceholder(x) => x.index,
+        }
+    }
+    /*
   def index: Int
+  */
+    /* Guardian: disable-all */
+}
+impl<'s, 't> IPlaceholderNameT<'s, 't> {
+    pub fn rune(&self) -> IRuneS<'s> {
+        match self {
+            IPlaceholderNameT::KindPlaceholder(x) => x.template.rune,
+            IPlaceholderNameT::NonKindNonRegionPlaceholder(x) => x.rune,
+        }
+    }
+    /*
   def rune: IRuneS
+  */
+    /* Guardian: disable-all */
+}
+/*
 }
 
 // This exists because PlaceholderT is a kind, and all kinds need environments to assist

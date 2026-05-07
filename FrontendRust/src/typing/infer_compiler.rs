@@ -6,7 +6,7 @@ use crate::postparsing::rules::rules::CoordSendSR;
 use crate::postparsing::names::*;
 use crate::postparsing::rules::rules::*;
 use crate::typing::ast::ast::*;
-use crate::typing::citizen::struct_compiler::ResolveFailure;
+use crate::typing::citizen::struct_compiler::{IResolveOutcome, ResolveFailure};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::*;
 use crate::typing::env::environment::*;
@@ -17,7 +17,7 @@ use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
 use crate::typing::templata_compiler::IBoundArgumentsSource;
-use crate::solver::solver::{FailedSolve, ISolverError, SolveIncomplete};
+use crate::solver::solver::{FailedSolve, ISolverError, RuleError, SolveIncomplete};
 use crate::solver::simple_solver_state::SimpleSolverState;
 
 /*
@@ -374,10 +374,16 @@ where 's: 't,
         rules: &[&'s IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
-        initial_knowns: &[InitialKnown],
-        initial_sends: &[InitialSend],
+        initial_knowns: &[InitialKnown<'s, 't>],
+        initial_sends: &[InitialSend<'s, 't>],
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let mut solver_state =
+            self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
+        match self.r#continue(envs, coutputs, &mut solver_state) {
+            Ok(()) => {}
+            Err(e) => return Err(e),
+        }
+        Ok(solver_state.userify_conclusions().into_iter().collect())
     }
 /*
   def partialSolve(
@@ -553,10 +559,16 @@ where 's: 't,
                 .map(|rune| *conclusions.get(&rune).unwrap())
                 .filter_map(|templata| match templata {
                     ITemplataT::Kind(k) => {
-                        panic!("implement: citizensFromCalls KindTemplataT citizen check");
+                        match k.kind {
+                            KindT::Struct(_) | KindT::Interface(_) => Some(k.kind),
+                            _ => None,
+                        }
                     }
                     ITemplataT::Coord(c) => {
-                        panic!("implement: citizensFromCalls CoordTemplataT citizen check");
+                        match c.coord.kind {
+                            KindT::Struct(_) | KindT::Interface(_) => Some(c.coord.kind),
+                            _ => None,
+                        }
                     }
                     _ => None,
                 })
@@ -584,15 +596,58 @@ where 's: 't,
                 .collect();
 
         let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
-            include_reachable_bounds_for_runes_with_citizens.into_iter().map(|(rune, _citizen)| {
-                panic!("implement: checkResolvingConclusionsAndResolve reachableBounds mapValues");
+            include_reachable_bounds_for_runes_with_citizens.into_iter().map(|(rune, citizen)| {
+                let citizen_tt = match citizen {
+                    KindT::Struct(s) => ICitizenTT::Struct(s),
+                    KindT::Interface(i) => ICitizenTT::Interface(i),
+                    _ => panic!("implement: reachableBounds — unexpected citizen kind"),
+                };
+                let reachable = self.get_reachable_bounds(
+                    self.opts.global_options.sanity_check,
+                    envs.original_calling_env.denizen_template_id(),
+                    state,
+                    citizen_tt,
+                );
+                let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> =
+                    reachable.citizen_rune_to_reachable_prototype.iter()
+                        .map(|(citizen_rune, caller_placeholdered_citizen_bound)| {
+                            panic!("implement: reachableBounds resolveFunction for citizen bound");
+                        })
+                        .collect();
+                let result: &'t InstantiationReachableBoundArgumentsT<'s, 't> = self.typing_interner.alloc(InstantiationReachableBoundArgumentsT {
+                    citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
+                        citizen_rune_to_reachable_prototype.into_iter()),
+                });
+                (rune, result)
             }).collect();
+
+        let env_with_conclusions = self.import_reachable_bounds(envs.original_calling_env, &reachable_bounds);
 
         // Check all template calls
         for rule in rules.iter() {
             match rule {
                 IRulexSR::Call(call_sr) => {
-                    panic!("implement: checkResolvingConclusionsAndResolve resolveTemplateCallConclusion");
+                    let env_with_conclusions_in_denizen: &'t IInDenizenEnvironmentT<'s, 't> =
+                        self.typing_interner.alloc(IInDenizenEnvironmentT::General(env_with_conclusions));
+                    match self.resolve_template_call_conclusion(
+                        env_with_conclusions_in_denizen, state, ranges, call_location, *call_sr, &conclusions)
+                    {
+                        Ok(()) => {}
+                        Err(e) => {
+                            let rf = self.typing_interner.alloc(e);
+                            return Err(IResolvingError::ResolvingSolveFailedOrIncomplete(
+                                FailedSolve {
+                                    steps: solver_state.get_steps(),
+                                    conclusions: solver_state.get_conclusions().into_iter().collect(),
+                                    unsolved_rules: solver_state.get_unsolved_rules(),
+                                    unsolved_runes: solver_state.get_unsolved_runes(),
+                                    error: ISolverError::RuleError(RuleError {
+                                        err: ITypingPassSolverError::CouldntResolveKind { rf },
+                                        _phantom: std::marker::PhantomData,
+                                    }),
+                                }));
+                        }
+                    }
                 }
                 _ => {}
             }
@@ -969,12 +1024,29 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation (SPDMX-B): returns &'t reference because GeneralEnvironmentT is arena-allocated.
     pub fn import_reachable_bounds(
         &self,
         original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
-    ) -> GeneralEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> &'t GeneralEnvironmentT<'s, 't> {
+        let new_id: &'t IdT<'s, 't> = self.typing_interner.alloc(original_calling_env.id());
+        let new_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            reachable_bounds.values()
+                .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
+                .enumerate()
+                .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
+                    panic!("implement: import_reachable_bounds ReachablePrototypeNameT entry");
+                })
+                .collect();
+        child_of(
+            self.typing_interner,
+            self.scout_arena,
+            *original_calling_env,
+            original_calling_env.denizen_template_id(),
+            new_id,
+            new_entries,
+        )
     }
 /*
   def importReachableBounds(
@@ -1077,8 +1149,12 @@ where 's: 't,
         // Check all template calls
         for rule in rules {
             match rule {
-                IRulexSR::Call(_r) => {
-                    panic!("Unimplemented: resolve_conclusions_for_define CallSR");
+                IRulexSR::Call(r) => {
+                    let env_ref = self.typing_interner.alloc(env);
+                    match self.resolve_template_call_conclusion(env_ref, state, ranges, call_location, *r, conclusions) {
+                        Ok(()) => {}
+                        Err(e) => return Err(IConclusionResolveError::CouldntFindKindForConclusionResolve(e)),
+                    }
                 }
                 _ => {}
             }
@@ -1317,7 +1393,43 @@ where 's: 't,
         c: CallSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(), ResolveFailure<'s, 't, KindT<'s, 't>>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let CallSR { range, result_rune, template_rune, args: arg_runes } = c;
+
+        // If it was an incomplete solve, then just skip.
+        let template = match conclusions.get(&template_rune.rune) {
+            Some(t) => *t,
+            None => return Ok(()),
+        };
+        let args: Vec<ITemplataT<'s, 't>> = {
+            let mut v = Vec::new();
+            for arg_rune in arg_runes.iter() {
+                match conclusions.get(&arg_rune.rune) {
+                    Some(t) => v.push(*t),
+                    None => return Ok(()),
+                }
+            }
+            v
+        };
+
+        match template {
+            ITemplataT::RuntimeSizedArrayTemplate(_) => { panic!("Unimplemented: resolve_template_call_conclusion RuntimeSizedArrayTemplate"); }
+            ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: resolve_template_call_conclusion StaticSizedArrayTemplate"); }
+            ITemplataT::StructDefinition(it) => {
+                let mut call_ranges = vec![range];
+                call_ranges.extend_from_slice(ranges);
+                let call_ranges_slice = self.typing_interner.alloc_slice_from_vec(call_ranges);
+                match self.resolve_struct(state, calling_env, call_ranges_slice, call_location, *it, &args) {
+                    IResolveOutcome::ResolveSuccess(_kind) => {}
+                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
+                }
+                Ok(())
+            }
+            ITemplataT::InterfaceDefinition(_it) => { panic!("Unimplemented: resolve_template_call_conclusion InterfaceDefinition"); }
+            ITemplataT::Kind(_kt) => {
+                Ok(())
+            }
+            other => panic!("vimpl: resolve_template_call_conclusion {:?}", other),
+        }
     }
 /*
   def resolveTemplateCallConclusion(
