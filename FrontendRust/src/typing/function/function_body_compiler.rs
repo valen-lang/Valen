@@ -129,7 +129,7 @@ where 's: 't,
                         func_outer_env.default_region, call_location,
                         &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
                         is_destructor, Some(explicit_ret_coord))
-                    .unwrap_or_else(|_| panic!("implement: BodyResultDoesntMatch error handling"));
+                    .unwrap_or_else(|e| panic!("implement: BodyResultDoesntMatch error handling: explicit_ret={:?} fn={:?}", explicit_ret_coord, function_1.name));
 
                 // vcurious(returns.size <= 1)
                 assert!(returns.len() <= 1);

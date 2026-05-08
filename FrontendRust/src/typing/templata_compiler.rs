@@ -240,9 +240,9 @@ where 's: 't,
         rules: &'s [IRulexSR<'s>],
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         num_explicit_template_args: i32,
-    ) -> Vec<&'s IRulexSR<'s>> {
-        let result: Vec<&'s IRulexSR<'s>> =
-            rules.iter().filter(|r| include_rule_in_call_site_solve(r)).collect();
+    ) -> Vec<IRulexSR<'s>> {
+        let result: Vec<IRulexSR<'s>> =
+            rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
         for (index, generic_param) in generic_parameters.iter().enumerate() {
             if index as i32 >= num_explicit_template_args {
                 match &generic_param.default {
@@ -497,7 +497,6 @@ where 's: 't,
     }
 }
 /*
-Guardian: temp-disable: SPDMX — In Scala, LambdaCitizenNameT extends IStructNameT, so getStructTemplate's `last.template` handles it polymorphically. In Rust, IStructNameT is flattened into INameT enum, so we must explicitly match LambdaCitizen — this is the standard SSTREX pattern, not novel logic. — FrontendRust/guardian-logs/request-1332-1777936399967/hook-1332/get_struct_template--405.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getStructTemplate(id: IdT[IStructNameT]): IdT[IStructTemplateNameT] = {
     val IdT(packageCoord, initSteps, last) = id
     IdT(
@@ -871,7 +870,41 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         struct_tt: &'t StructTT<'s, 't>,
     ) -> &'t StructTT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::names::names::{INameValT, StructNameValT, INameT, IdValT};
+        use crate::typing::types::types::StructTTValT;
+        let id = struct_tt.id;
+        let new_local_name = match id.local_name {
+            INameT::AnonymousSubstruct(_) => panic!("implement: substituteTemplatasInStruct — AnonymousSubstructNameT"),
+            INameT::Struct(struct_name_t) => {
+                let new_template_args: Vec<ITemplataT<'s, 't>> = struct_name_t.template_args.iter()
+                    .map(|templata| Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata))
+                    .collect();
+                let new_template_args_ref = interner.alloc_slice_from_vec(new_template_args);
+                interner.intern_name(INameValT::Struct(StructNameValT {
+                    template: struct_name_t.template,
+                    template_args: new_template_args_ref,
+                }))
+            }
+            INameT::LambdaCitizen(lambda_citizen_name_t) => {
+                INameT::LambdaCitizen(lambda_citizen_name_t)
+            }
+            _ => panic!("implement: substituteTemplatasInStruct — unexpected local_name kind"),
+        };
+        let new_id = interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: new_local_name,
+        });
+        let new_struct = interner.intern_struct_tt(StructTTValT { id: *new_id });
+        // See SBITAFD, we need to register bounds for these new instantiations.
+        let instantiation_bound_args = coutputs.get_instantiation_bounds(interner, struct_tt.id).unwrap();
+        let translated_bounds = interner.alloc(Self::translate_instantiation_bounds(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, instantiation_bound_args));
+        coutputs.add_instantiation_bounds(
+            sanity_check, interner,
+            original_calling_denizen_id,
+            new_struct.id,
+            translated_bounds);
+        new_struct
     }
 }
 /*
@@ -934,7 +967,83 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> InstantiationBoundArgumentsT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match bound_arguments_source {
+            IBoundArgumentsSource::InheritBoundsFromTypeItself => {
+                let x = Self::substitute_templatas_in_bounds(
+                    coutputs, sanity_check, interner, keywords,
+                    original_calling_denizen_id, needle_template_name,
+                    new_substituting_templatas, bound_arguments_source,
+                    instantiation_bound_args);
+                x
+            }
+            IBoundArgumentsSource::UseBoundsFromContainer { instantiation_bound_params: container_instantiation_bound_params, instantiation_bound_arguments: container_instantiation_bound_args } => {
+                use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
+                use crate::typing::names::names::{INameT, FunctionBoundNameT, ImplBoundNameT};
+                let container_func_bound_to_bound_arg: std::collections::HashMap<PrototypeT<'s, 't>, PrototypeT<'s, 't>> =
+                    container_instantiation_bound_args.rune_to_bound_prototype.iter()
+                        .map(|(rune, container_func_bound_arg)| {
+                            let param_proto = *container_instantiation_bound_params.rune_to_bound_prototype.get(rune).unwrap();
+                            (param_proto, *container_func_bound_arg)
+                        })
+                        .collect();
+                let container_impl_bound_to_bound_arg: std::collections::HashMap<IdT<'s, 't>, IdT<'s, 't>> =
+                    container_instantiation_bound_args.rune_to_bound_impl.iter()
+                        .map(|(rune, container_impl_bound_arg)| {
+                            let param_impl = *container_instantiation_bound_params.rune_to_bound_impl.get(rune).unwrap();
+                            (param_impl, *container_impl_bound_arg)
+                        })
+                        .collect();
+                let rune_to_bound_prototype = interner.alloc_index_map_from_iter(
+                    instantiation_bound_args.rune_to_bound_prototype.iter().map(|(rune, func_bound_arg)| {
+                        let new_val = match func_bound_arg.id.local_name {
+                            INameT::FunctionBound(_) => {
+                                *container_func_bound_to_bound_arg.get(func_bound_arg).unwrap()
+                            }
+                            _ => {
+                                // Not sure if this call is really necessary...
+                                *Self::substitute_templatas_in_prototype(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, func_bound_arg)
+                            }
+                        };
+                        (*rune, new_val)
+                    }));
+                let rune_to_citizen_rune_to_reachable_prototype = interner.alloc_index_map_from_iter(
+                    instantiation_bound_args.rune_to_citizen_rune_to_reachable_prototype.iter().map(|(callee_rune, reachable_bound_args)| {
+                        let new_citizen = interner.alloc_index_map_from_iter(
+                            reachable_bound_args.citizen_rune_to_reachable_prototype.iter().map(|(citizen_rune, reachable_prototype)| {
+                                let new_val = match reachable_prototype.id.local_name {
+                                    INameT::FunctionBound(_) => {
+                                        *container_func_bound_to_bound_arg.get(reachable_prototype).unwrap()
+                                    }
+                                    _ => {
+                                        // Not sure if this call is really necessary...
+                                        *Self::substitute_templatas_in_prototype(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, reachable_prototype)
+                                    }
+                                };
+                                (*citizen_rune, new_val)
+                            }));
+                        let new_reachable: &'t InstantiationReachableBoundArgumentsT<'s, 't> = interner.alloc(InstantiationReachableBoundArgumentsT { citizen_rune_to_reachable_prototype: new_citizen });
+                        (*callee_rune, new_reachable)
+                    }));
+                let rune_to_bound_impl = interner.alloc_index_map_from_iter(
+                    instantiation_bound_args.rune_to_bound_impl.iter().map(|(rune, impl_bound_arg)| {
+                        let new_val = match impl_bound_arg.local_name {
+                            INameT::ImplBound(_) => {
+                                *container_impl_bound_to_bound_arg.get(impl_bound_arg).unwrap()
+                            }
+                            _ => {
+                                // Not sure if this call is really necessary...
+                                Self::substitute_templatas_in_impl_id(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *impl_bound_arg)
+                            }
+                        };
+                        (*rune, new_val)
+                    }));
+                InstantiationBoundArgumentsT {
+                    rune_to_bound_prototype,
+                    rune_to_citizen_rune_to_reachable_prototype,
+                    rune_to_bound_impl,
+                }
+            }
+        }
     }
 }
 /*
@@ -1110,7 +1219,29 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) -> InstantiationBoundArgumentsT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
+        let rune_to_bound_prototype = interner.alloc_index_map_from_iter(
+            bound_args.rune_to_bound_prototype.iter().map(|(rune, func_bound_arg)| {
+                (*rune, *Self::substitute_templatas_in_prototype(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, func_bound_arg))
+            }));
+        let rune_to_citizen_rune_to_reachable_prototype = interner.alloc_index_map_from_iter(
+            bound_args.rune_to_citizen_rune_to_reachable_prototype.iter().map(|(caller_rune, reachable_bound_args)| {
+                let new_citizen_rune_to_reachable_prototype = interner.alloc_index_map_from_iter(
+                    reachable_bound_args.citizen_rune_to_reachable_prototype.iter().map(|(citizen_rune, reachable_prototype)| {
+                        (*citizen_rune, *Self::substitute_templatas_in_prototype(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, reachable_prototype))
+                    }));
+                let new_reachable: &'t InstantiationReachableBoundArgumentsT<'s, 't> = interner.alloc(InstantiationReachableBoundArgumentsT { citizen_rune_to_reachable_prototype: new_citizen_rune_to_reachable_prototype });
+                (*caller_rune, new_reachable)
+            }));
+        let rune_to_bound_impl = interner.alloc_index_map_from_iter(
+            bound_args.rune_to_bound_impl.iter().map(|(rune, impl_bound_arg)| {
+                (*rune, Self::substitute_templatas_in_impl_id(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *impl_bound_arg))
+            }));
+        InstantiationBoundArgumentsT {
+            rune_to_bound_prototype,
+            rune_to_citizen_rune_to_reachable_prototype,
+            rune_to_bound_impl,
+        }
     }
 }
 /*
@@ -1726,7 +1857,11 @@ where 's: 't,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         is_solved: impl Fn(IRuneS<'s>) -> bool,
     ) -> Option<(&'s GenericParameterS<'s>, i32)> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        generic_parameters.iter().enumerate()
+            .map(|(index, generic_param)| (generic_param, index as i32, is_solved(generic_param.rune.rune)))
+            .filter(|(_, _, solved)| !solved)
+            .map(|(generic_param, index, _)| (*generic_param, index))
+            .next()
     }
 }
 /*
@@ -1832,10 +1967,12 @@ where
                             },
                         ))
                     }
-                    Some(_x) => {
-                        // Scala: case Some(x) => Ok(TemplataLookupResult(x.tyype))
-                        // Requires `ITemplataT::tyype()` getter — separate scaffolding gap (see TL.md residual items).
-                        panic!("TemplataCompilerRuneTypeSolverEnv: ITemplataT::tyype() not yet implemented");
+                    Some(x) => {
+                        Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
+                            crate::postparsing::rune_type_solver::TemplataLookupResult {
+                                templata: x.tyype(),
+                            },
+                        ))
                     }
                     None => Err(
                         crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(
@@ -1903,8 +2040,18 @@ where 's: 't,
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
             (a, b) if a == b => {}
+            (KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_), _) => {
+                return false;
+            }
+            (_, KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_)) => {
+                return false;
+            }
+            (_, KindT::Struct(_)) => return false,
+            (_, KindT::Interface(_)) => {
+                panic!("implement: isTypeConvertible — ISubKindTT to ISuperKindTT");
+            }
             _ => {
-                panic!("implement: isTypeConvertible — non-equal kind cases");
+                panic!("implement: isTypeConvertible — non-equal kind cases: {:?} -> {:?}", source_type, target_type);
             }
         }
 
@@ -2408,7 +2555,37 @@ where 's: 't,
         current_height: Option<i32>,
         register_with_compiler_outputs: bool,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, CoordTemplataType};
+        use crate::postparsing::ast::{IGenericParameterTypeS, CoordGenericParameterTypeS, IRegionMutabilityS};
+        let rune_type = *rune_to_type.get(&generic_param.rune.rune).unwrap();
+        let rune = generic_param.rune.rune;
+        match rune_type {
+            ITemplataType::KindTemplataType(_) => {
+                let (kind_mutable, _region_mutable) = match &generic_param.tyype {
+                    IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
+                        (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share }, *region_mutable)
+                    }
+                    _ => (OwnershipT::Own, false),
+                };
+                ITemplataT::Kind(self.typing_interner.alloc(self.create_kind_placeholder_inner(
+                    coutputs, env, name_prefix, index, rune, kind_mutable, register_with_compiler_outputs)))
+            }
+            ITemplataType::CoordTemplataType(_) => {
+                let (kind_mutable, region_mutability) = match &generic_param.tyype {
+                    IGenericParameterTypeS::CoordGenericParameterType(CoordGenericParameterTypeS { kind_mutable, region_mutable, .. }) => {
+                        (if *kind_mutable { OwnershipT::Own } else { OwnershipT::Share },
+                         if *region_mutable { IRegionMutabilityS::ReadWriteRegion } else { IRegionMutabilityS::ReadOnlyRegion })
+                    }
+                    _ => (OwnershipT::Own, IRegionMutabilityS::ReadOnlyRegion),
+                };
+                ITemplataT::Coord(self.typing_interner.alloc(self.create_coord_placeholder_inner(
+                    coutputs, env, name_prefix, index, rune, current_height,
+                    region_mutability, kind_mutable, register_with_compiler_outputs)))
+            }
+            other_type => {
+                self.create_non_kind_non_region_placeholder_inner(name_prefix, index, rune, other_type)
+            }
+        }
     }
 /*
   def createPlaceholder(

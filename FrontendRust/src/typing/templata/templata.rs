@@ -1,6 +1,11 @@
 use crate::interner::StrI;
 use crate::higher_typing::ast::*;
-use crate::postparsing::itemplatatype::ITemplataType;
+use crate::postparsing::itemplatatype::{
+  BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
+  IntegerTemplataType, KindTemplataType, LocationTemplataType,
+  MutabilityTemplataType, OwnershipTemplataType, PrototypeTemplataType,
+  StringTemplataType, VariabilityTemplataType,
+};
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
 use crate::typing::names::names::IdT;
@@ -216,6 +221,32 @@ pub enum ITemplataT<'s, 't> {
   ImplDefinition(&'t ImplDefinitionTemplataT<'s, 't>),
   ExternFunction(&'t ExternFunctionTemplataT<'s, 't>),
   Location(LocationTemplataT),
+}
+impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
+  pub fn tyype(&self) -> ITemplataType<'s> {
+    match self {
+      ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
+      ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
+      ITemplataT::Placeholder(p) => p.tyype,
+      ITemplataT::Mutability(_) => ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+      ITemplataT::Variability(_) => ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+      ITemplataT::Ownership(_) => ITemplataType::OwnershipTemplataType(OwnershipTemplataType {}),
+      ITemplataT::Integer(_) => ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+      ITemplataT::Boolean(_) => ITemplataType::BooleanTemplataType(BooleanTemplataType {}),
+      ITemplataT::String(_) => ITemplataType::StringTemplataType(StringTemplataType {}),
+      ITemplataT::Prototype(_) => ITemplataType::PrototypeTemplataType(PrototypeTemplataType {}),
+      ITemplataT::Isa(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
+      ITemplataT::ImplDefinition(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
+      ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
+      ITemplataT::CoordList(_) => panic!("Unimplemented: tyype on CoordList"),
+      ITemplataT::RuntimeSizedArrayTemplate(_) => panic!("Unimplemented: tyype on RuntimeSizedArrayTemplate"),
+      ITemplataT::StaticSizedArrayTemplate(_) => panic!("Unimplemented: tyype on StaticSizedArrayTemplate"),
+      ITemplataT::Function(_) => panic!("Unimplemented: tyype on Function"),
+      ITemplataT::StructDefinition(_) => panic!("Unimplemented: tyype on StructDefinition"),
+      ITemplataT::InterfaceDefinition(_) => panic!("Unimplemented: tyype on InterfaceDefinition"),
+      ITemplataT::ExternFunction(_) => panic!("Unimplemented: tyype on ExternFunction"),
+    }
+  }
 }
 /*
 sealed trait ITemplataT[+T <: ITemplataType]  {

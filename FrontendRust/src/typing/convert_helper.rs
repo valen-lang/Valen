@@ -121,6 +121,11 @@ where 's: 't,
             return source_expr;
         }
 
+        match source_expr.result().coord.kind {
+            KindT::Never(_) => return source_expr,
+            _ => {}
+        }
+
         panic!("implement: convert — non-trivial conversion");
     }
 /*

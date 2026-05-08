@@ -25,7 +25,7 @@ Here's what I want you to do:
 2. Try to build the project. if it doesn't build, then please make it build.
     * If you run into any easy lifetime fixes, please do them. If you run into any medium or complicated ones, or ones that span multiple definitions, please stop and tell me, because I like solving lifetime challenges.
     * **One-shot rule on lifetime fixes:** you get one attempt. If your first fix doesn't compile cleanly, stop and escalate immediately — don't iterate, don't try a second variant, even if you're confident you're close. Lifetime puzzles in this codebase fool rustc and they fool you; a "looks right" second fix usually compounds the original problem rather than solving it.
-3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, pick the next simplest-looking ignored test, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
+3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, mark the test done in `typing-test-todo.md` (change its `- [ ]` to `- [x]`), then pick the next `- [ ]` test in that file, un-ignore it in the test file, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
 4. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
     * DON'T IMPLEMENT ANYTHING ELSE. Just do the one step it gives you.
     * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
@@ -47,7 +47,7 @@ Here's what I want you to do:
 5. Run the test again.
     * If it panics with "implement" somewhere in the panic message, go to step 4.
     * If it panics without "implement" somewhere in the panic message, please stop. I like fixing logic bugs myself.
-    * If it passes, pick the next simplest-looking ignored test, un-ignore it, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
+    * If it passes, mark the test done in `typing-test-todo.md` (change its `- [ ]` to `- [x]`), then pick the next `- [ ]` test in that file, un-ignore it in the test file, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
 
 
 Notes:

@@ -190,7 +190,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_name: IImpreciseNameS<'s>,
-        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
@@ -496,7 +496,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
@@ -512,10 +512,17 @@ where 's: 't,
         impl<'a, 's, 't> IRuneTypeSolverEnv<'s> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             fn lookup(
                 &self,
-                _range: RangeS<'s>,
-                _name_s: IImpreciseNameS<'s>,
+                range: RangeS<'s>,
+                name_s: IImpreciseNameS<'s>,
             ) -> Result<IRuneTypeSolverLookupResult<'s>, IRuneTypingLookupFailedError<'s>> {
-                panic!("implement: OverloadRuneTypeSolverEnv lookup");
+                use crate::typing::env::environment::ILookupContext;
+                use crate::postparsing::rune_type_solver::{IRuneTypeSolverLookupResult, TemplataLookupResult, IRuneTypingLookupFailedError, RuneTypingCouldntFindType};
+                let mut filter = std::collections::HashSet::new();
+                filter.insert(ILookupContext::TemplataLookupContext);
+                match self.calling_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
+                    Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult { templata: x.tyype() })),
+                    None => Err(IRuneTypingLookupFailedError::CouldntFindType(RuneTypingCouldntFindType { range, name: name_s })),
+                }
             }
         }
         /* Guardian: disable-all */
@@ -543,7 +550,7 @@ where 's: 't,
                     // Scala: runeTypeSolver.solve(sanityCheck, useOptimizedSolver, env, ...)
                     // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)
                     let rules_s_deref: Vec<IRulexSR<'s>> =
-                        explicit_template_arg_rules_s.iter().map(|r| **r).collect();
+                        explicit_template_arg_rules_s.to_vec();
                     match solve_rune_type(
                         self.scout_arena,
                         self.opts.global_options.sanity_check,
@@ -559,26 +566,48 @@ where 's: 't,
                             panic!("implement: attemptCandidateBanner RuleTypeSolveFailure");
                         }
                         Ok(rune_a_to_type_with_implicitly_coercing_lookups_s) => {
-                            // Scala: val runeTypeSolveEnv = TemplataCompiler.createRuneTypeSolverEnv(callingEnv)
-                            // Scala: explicifyLookups(runeTypeSolveEnv, runeAToType, ruleBuilder, explicitTemplateArgRulesS)
-                            // Scala: val rulesWithoutImplicitCoercionsA = ruleBuilder.toVector
-                            // Note: create_rune_type_solver_env is a panic stub; explicify_lookups needs its return.
-                            // For this test (no template args), rules_s_deref is empty so explicify_lookups
-                            // would be a no-op and ruleBuilder.toVector would be empty.
-                            let rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                            let rune_type_solve_env = self.create_rune_type_solver_env(calling_env);
+                            let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
                                 HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
-                            let rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-                            if !rules_s_deref.is_empty() {
-                                panic!("implement: attemptCandidateBanner explicifyLookups path");
+                            let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+                            match crate::higher_typing::higher_typing_pass::explicify_lookups(
+                                &rune_type_solve_env,
+                                self.scout_arena,
+                                &mut rune_a_to_type,
+                                &mut rule_builder,
+                                rules_s_deref.clone(),
+                            ) {
+                                Err(_e) => {
+                                    panic!("implement: attemptCandidateBanner explicifyLookups error path");
+                                }
+                                Ok(()) => {}
                             }
                             let rules_without_implicit_coercions_a = rule_builder;
 
                             // We preprocess out the rune parent env lookups, see MKRFA.
-                            let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<&'s IRulexSR<'s>>) =
+                            let (initial_knowns, rules_without_rune_parent_env_lookups): (Vec<InitialKnown>, Vec<IRulexSR<'s>>) =
                                 rules_without_implicit_coercions_a.iter().fold(
                                     (Vec::new(), Vec::new()),
-                                    |(previous_conclusions, remaining_rules), _rule| {
-                                        panic!("implement: attemptCandidateBanner fold over rules");
+                                    |(mut previous_conclusions, mut remaining_rules), rule| {
+                                        use crate::postparsing::rules::rules::RuneParentEnvLookupSR;
+                                        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+                                        use crate::typing::env::environment::ILookupContext;
+                                        match rule {
+                                            IRulexSR::RuneParentEnvLookup(RuneParentEnvLookupSR { rune, .. }) => {
+                                                let name = self.scout_arena.intern_imprecise_name(
+                                                    IImpreciseNameValS::RuneName(RuneNameValS { rune: rune.rune }));
+                                                let mut filter = std::collections::HashSet::new();
+                                                filter.insert(ILookupContext::TemplataLookupContext);
+                                                let templata = calling_env.lookup_nearest_with_imprecise_name(
+                                                    name, filter, self.typing_interner).unwrap();
+                                                previous_conclusions.push(InitialKnown { rune: *rune, templata });
+                                                (previous_conclusions, remaining_rules)
+                                            }
+                                            rule => {
+                                                remaining_rules.push(*rule);
+                                                (previous_conclusions, remaining_rules)
+                                            }
+                                        }
                                     },
                                 );
 
@@ -611,7 +640,7 @@ where 's: 't,
                                 Ok(complete_resolve_solve) => {
                                     let explicitly_specified_template_arg_templatas: Vec<ITemplataT<'s, 't>> =
                                         explicit_template_arg_runes_s.iter()
-                                            .map(|_r| { panic!("implement: attemptCandidateBanner explicitRuneSToTemplata map"); })
+                                            .map(|r| *complete_resolve_solve.conclusions.get(r).unwrap())
                                             .collect();
 
                                     if ft.function.is_lambda() {
@@ -674,7 +703,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: NNDX — Scala uses anonymous `new IRuneTypeSolverEnv { override def lookup(...) }` inside attemptCandidateBanner. Rust doesn't support anonymous classes, so a named local struct OverloadRuneTypeSolverEnv is required. Same pattern as LetExprRuneTypeSolverEnv in expression_compiler.rs. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-119-1777743688330/hook-119/attempt_candidate_banner--475.0.NoNewDefinitions-NNDX.NoNewDefinitions-NNDX.verdict.md
   private def attemptCandidateBanner(
     callingEnv: IInDenizenEnvironmentT,
     coutputs: CompilerOutputs,
@@ -922,7 +950,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_name: IImpreciseNameS<'s>,
-        explicit_template_arg_rules_s: &[&'s IRulexSR<'s>],
+        explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],

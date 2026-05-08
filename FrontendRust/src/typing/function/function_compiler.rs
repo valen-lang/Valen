@@ -368,7 +368,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's nameTranslator.translateCodeLocation is a documented identity function (CodeLocationS(line,col) => CodeLocationS(line,col)). Rust has no NameTranslator on Compiler — using code_location directly is semantically identical. struct_compiler_core.rs:404 uses same pattern (self.translate_code_location) which also doesn't compile yet. — FrontendRust/guardian-logs/request-1702-1777945237454/hook-1702/evaluate_templated_function_from_call_for_prototype--321.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateTemplatedFunctionFromCallForPrototype(
     coutputs: CompilerOutputs,
     callingEnv: IInDenizenEnvironmentT, // See CSSNCE

@@ -767,7 +767,26 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> IfTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        let condition_result_coord = self.condition.result().coord;
+        let then_result_coord = self.then_call.result().coord;
+        let else_result_coord = self.else_call.result().coord;
+        match condition_result_coord {
+            CoordT { kind: KindT::Bool(_), ownership: OwnershipT::Share, .. } => {}
+            other => panic!("vwat: condition coord {:?}", other),
+        }
+        match (then_result_coord.kind, then_result_coord.kind) {
+            (KindT::Never(_), _) => {}
+            (_, KindT::Never(_)) => {}
+            (a, b) if a == b => {}
+            _ => panic!("vwat: then/else result kinds don't match"),
+        }
+        let common_supertype = match then_result_coord.kind {
+            KindT::Never(_) => else_result_coord,
+            _ => then_result_coord,
+        };
+        ReferenceResultT { coord: common_supertype }
+    }
 /*
   private val conditionResultCoord = condition.result.coord
   private val thenResultCoord = thenCall.result.coord
@@ -1500,7 +1519,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConstantBoolTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Bool(BoolT) } }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, region, BoolT()))
 }

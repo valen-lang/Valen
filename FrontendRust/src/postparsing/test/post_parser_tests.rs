@@ -10,9 +10,10 @@ use crate::scout_arena::ScoutArena;
 use crate::parsing::ast::{IMacroInclusionP, LoadAsP, VariabilityP};
 use crate::postparsing::ast::{IStructMemberS, ProgramS};
 use crate::postparsing::expressions::{
-  DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LocalLoadSE, OutsideLoadSE,
-  OwnershippedSE, ReturnSE,
+  ConstantIntSE, DotSE, FunctionCallSE, IExpressionSE, IVariableUseCertainty, LetSE, LocalLoadSE,
+  LocalS, OutsideLoadSE, OwnershippedSE, ReturnSE,
 };
+use crate::postparsing::patterns::patterns::{AtomSP, CaptureS};
 use crate::postparsing::names::{CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IRuneS, IRuneValS, IVarNameS};
 use crate::postparsing::post_parser::{ICompileErrorS, PostParser};
 use crate::postparsing::rules::rules::{ILiteralSL, LiteralSR, MaybeCoercingLookupSR};
@@ -1150,91 +1151,90 @@ fn constructing_members_borrowing_another_member() {
       self.y = &self.x;
     }",
   );
-  let mystruct = program.lookup_function("MyStruct");
-  let code_body = cast!(&mystruct.body, crate::postparsing::ast::IBodyS::CodeBody);
+  let main = program.lookup_function("MyStruct");
+  let code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
   let block = &code_body.body.block;
 
-  let (first_local, second_local) = expect_2(&block.locals);
-  assert!(matches!(
-    first_local.var_name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
-  ));
-  assert_eq!(first_local.self_borrowed, IVariableUseCertainty::Used);
-  assert_eq!(first_local.self_moved, IVariableUseCertainty::Used);
-  assert_eq!(first_local.self_mutated, IVariableUseCertainty::NotUsed);
-  assert_eq!(first_local.child_borrowed, IVariableUseCertainty::NotUsed);
-  assert_eq!(first_local.child_moved, IVariableUseCertainty::NotUsed);
-  assert_eq!(first_local.child_mutated, IVariableUseCertainty::NotUsed);
+  match &*block.locals {
+    [
+      LocalS {
+        var_name: IVarNameS::ConstructingMemberName(StrI("x")),
+        self_borrowed: IVariableUseCertainty::Used,
+        self_moved: IVariableUseCertainty::Used,
+        self_mutated: IVariableUseCertainty::NotUsed,
+        child_borrowed: IVariableUseCertainty::NotUsed,
+        child_moved: IVariableUseCertainty::NotUsed,
+        child_mutated: IVariableUseCertainty::NotUsed,
+      },
+      LocalS {
+        var_name: IVarNameS::ConstructingMemberName(StrI("y")),
+        self_borrowed: IVariableUseCertainty::NotUsed,
+        self_moved: IVariableUseCertainty::Used,
+        self_mutated: IVariableUseCertainty::NotUsed,
+        child_borrowed: IVariableUseCertainty::NotUsed,
+        child_moved: IVariableUseCertainty::NotUsed,
+        child_mutated: IVariableUseCertainty::NotUsed,
+      },
+    ] => {}
+    other => panic!("unexpected locals: {:?}", other),
+  }
 
-  assert!(matches!(
-    second_local.var_name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "y"
-  ));
-  assert_eq!(second_local.self_borrowed, IVariableUseCertainty::NotUsed);
-  assert_eq!(second_local.self_moved, IVariableUseCertainty::Used);
-  assert_eq!(second_local.self_mutated, IVariableUseCertainty::NotUsed);
-  assert_eq!(second_local.child_borrowed, IVariableUseCertainty::NotUsed);
-  assert_eq!(second_local.child_moved, IVariableUseCertainty::NotUsed);
-  assert_eq!(second_local.child_mutated, IVariableUseCertainty::NotUsed);
-
-  let consecutor = cast!(block.expr, IExpressionSE::Consecutor);
-  let (first_expr, second_expr, third_expr) = expect_3(&consecutor.exprs);
-
-  let let_x = cast!(first_expr, IExpressionSE::Let);
-  let let_x_capture = let_x.pattern.name.as_ref().unwrap();
-  assert!(matches!(
-    let_x_capture.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
-  ));
-  assert_eq!(let_x_capture.mutate, false);
-  assert_eq!(cast!(let_x.expr, IExpressionSE::ConstantInt).value, 4);
-
-  let let_y = cast!(second_expr, IExpressionSE::Let);
-  let let_y_capture = let_y.pattern.name.as_ref().unwrap();
-  assert!(matches!(
-    let_y_capture.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "y"
-  ));
-  assert_eq!(let_y_capture.mutate, false);
-  let local_load_x_borrow = cast!(let_y.expr, IExpressionSE::LocalLoad);
-  assert!(matches!(
-    local_load_x_borrow.name,
-    IVarNameS::ConstructingMemberName(ref member_name) if member_name.as_str() == "x"
-  ));
-  assert_eq!(local_load_x_borrow.target_ownership, LoadAsP::LoadAsBorrow);
-
-  match third_expr {
-    IExpressionSE::FunctionCall(FunctionCallSE {
-      callable_expr:
-        IExpressionSE::OutsideLoad(OutsideLoadSE {
-          name: IImpreciseNameS::CodeName(callable_name),
+  crate::collect_only_snode!(
+    NodeRefS::Expression(block.expr),
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
+        name: Some(CaptureS {
+          name: IVarNameS::ConstructingMemberName(StrI("x")),
+          mutate: false,
+        }),
+        destructure: None,
+        ..
+      },
+      expr: IExpressionSE::ConstantInt(ConstantIntSE { value: 4, .. }),
+      ..
+    })) => Some(())
+  );
+  crate::collect_only_snode!(
+    NodeRefS::Expression(block.expr),
+    NodeRefS::Expression(IExpressionSE::Let(LetSE {
+      pattern: AtomSP {
+        name: Some(CaptureS {
+          name: IVarNameS::ConstructingMemberName(StrI("y")),
+          mutate: false,
+        }),
+        destructure: None,
+        ..
+      },
+      expr: IExpressionSE::LocalLoad(LocalLoadSE {
+        name: IVarNameS::ConstructingMemberName(StrI("x")),
+        target_ownership: LoadAsP::LoadAsBorrow,
+        ..
+      }),
+      ..
+    })) => Some(())
+  );
+  crate::collect_only_snode!(
+    NodeRefS::Expression(block.expr),
+    NodeRefS::Expression(IExpressionSE::FunctionCall(FunctionCallSE {
+      callable_expr: IExpressionSE::OutsideLoad(OutsideLoadSE {
+        name: IImpreciseNameS::CodeName(CodeNameS { name: StrI("MyStruct"), .. }),
+        ..
+      }),
+      arg_exprs: [
+        IExpressionSE::LocalLoad(LocalLoadSE {
+          name: IVarNameS::ConstructingMemberName(StrI("x")),
+          target_ownership: LoadAsP::Use,
           ..
         }),
-      arg_exprs,
+        IExpressionSE::LocalLoad(LocalLoadSE {
+          name: IVarNameS::ConstructingMemberName(StrI("y")),
+          target_ownership: LoadAsP::Use,
+          ..
+        }),
+      ],
       ..
-    }) => {
-      assert_eq!(callable_name.name.as_str(), "MyStruct");
-      match arg_exprs {
-        [
-          IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(x_name),
-            target_ownership: LoadAsP::Use,
-            ..
-          }),
-          IExpressionSE::LocalLoad(LocalLoadSE {
-            name: IVarNameS::ConstructingMemberName(y_name),
-            target_ownership: LoadAsP::Use,
-            ..
-          }),
-        ] => {
-          assert_eq!(x_name.as_str(), "x");
-          assert_eq!(y_name.as_str(), "y");
-        }
-        other => panic!("unexpected constructor args: {:?}", other),
-      }
-    }
-    other => panic!("unexpected constructor call shape: {:?}", other),
-  }
+    })) => Some(())
+  );
 }
 /*
   test("Constructing members, borrowing another member") {

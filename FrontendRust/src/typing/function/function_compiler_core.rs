@@ -616,7 +616,6 @@ where 's: 't,
         function2.header
     }
 /*
-Guardian: temp-disable: SPDMX — False positive: the tuple-match-vs-vassertOne divergence predates this edit. My change is signature-only — instantiation_bound_params parameter goes from &InstantiationBoundArgumentsT to &'t InstantiationBoundArgumentsT per the AASSNCMCX directive. The function body is unchanged. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1107-1777920024618/hook-1107/finish_function_maybe_deferred--533.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.
   private def finishFunctionMaybeDeferred(
       coutputs: CompilerOutputs,

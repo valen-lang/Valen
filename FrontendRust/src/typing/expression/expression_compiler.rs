@@ -1,5 +1,5 @@
 use crate::typing::compiler::Compiler;
-use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS};
+use crate::postparsing::ast::{LocationInDenizen, FunctionS, IFunctionAttributeS, UserFunctionS, IExpressionSE as IExpressionSETrait};
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
@@ -849,14 +849,13 @@ where 's: 't,
                         panic!("implement: LetSE — HigherTypingInferError");
                     });
 
-                let rules_vec: Vec<&'s IRulexSR<'s>> = let_se.rules.iter().collect();
                 let result_te = self.infer_and_translate_pattern(
                     coutputs,
                     nenv,
                     life.add(self.typing_interner, 1),
                     parent_ranges,
                     outer_call_location,
-                    &rules_vec,
+                    let_se.rules,
                     &rune_to_type,
                     &let_se.pattern,
                     source_expr_2,
@@ -885,7 +884,10 @@ where 's: 't,
                     let expr_te = match undropped_expr_te.result().coord.kind {
                         KindT::Void(_) => undropped_expr_te,
                         _ => {
-                            panic!("implement: ConsecutorSE — drop non-void init expr");
+                            let snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)));
+                            let range_with_parent: Vec<RangeS<'s>> =
+                                std::iter::once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
+                            self.drop(snap, coutputs, &range_with_parent, outer_call_location, region, undropped_expr_te)
                         }
                     };
                     init_exprs_te.push(expr_te);
@@ -941,7 +943,6 @@ where 's: 't,
                         let template_arg_runes: Vec<IRuneS<'s>> = outside_load.maybe_template_args
                             .map(|args| args.iter().map(|a| a.rune).collect::<Vec<_>>())
                             .unwrap_or_default();
-                        let rules_refs: Vec<&'s IRulexSR<'s>> = outside_load.rules.iter().collect();
                         let call_expr_2 =
                             self.evaluate_prefix_call(
                                 coutputs,
@@ -951,7 +952,7 @@ where 's: 't,
                                 fc.location,
                                 region,
                                 callable_expr,
-                                &rules_refs,
+                                outside_load.rules,
                                 &template_arg_runes,
                                 &args_exprs_2);
                         (ExpressionTE::Reference(call_expr_2), returns_from_args)
@@ -1029,7 +1030,12 @@ where 's: 't,
                             }
                         }
                         OwnershipT::Borrow => {
-                            panic!("implement: Ownershipped BorrowT");
+                            match ownershipped.target_ownership {
+                                LoadAsP::Move => panic!("implement: Ownershipped BorrowT MoveP (vcurious)"),
+                                LoadAsP::LoadAsBorrow => source_te,
+                                LoadAsP::LoadAsWeak => panic!("implement: Ownershipped BorrowT LoadAsWeakP"),
+                                LoadAsP::Use => source_te,
+                            }
                         }
                         OwnershipT::Weak => {
                             panic!("implement: Ownershipped WeakT");
@@ -1111,13 +1117,206 @@ where 's: 't,
                 }
                 (ExpressionTE::Address(expr_2), returns_from_container_expr)
             }
-            _ => {
-                panic!("implement: evaluate_expression — {:?}", std::mem::discriminant(expr_1));
+            IExpressionSE::If(if_se) => {
+                // We make a block for the if-statement which contains its condition (the "if block"),
+                // and then two child blocks under that for the then and else blocks.
+                // The then and else blocks are children of the block which contains the condition
+                // so they can access any locals declared by the condition.
+
+                let (condition_expr, returns_from_condition) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition);
+                match condition_expr.result().coord {
+                    CoordT { kind: KindT::Bool(_), .. } => {}
+                    _ => panic!("implement: evaluate_expression If — IfConditionIsntBoolean"),
+                }
+
+                let then_body_se_as_expr: &'s IExpressionSE<'s> =
+                    self.scout_arena.alloc(IExpressionSE::Block(if_se.then_body));
+                let mut then_fate = NodeEnvironmentBox::new(nenv.make_child(self.typing_interner, then_body_se_as_expr, None));
+                let then_fate_starting = then_fate.snapshot(self.typing_interner);
+                let (then_expressions_with_result, then_returns_from_exprs) =
+                    self.evaluate_block_statements(
+                        coutputs,
+                        then_fate_starting,
+                        &mut then_fate,
+                        life.add(self.typing_interner, 2),
+                        parent_ranges,
+                        outer_call_location,
+                        nenv.default_region(),
+                        if_se.then_body);
+                let uncoerced_then_block_2 = BlockTE { inner: then_expressions_with_result };
+                let (then_unstackified_ancestor_locals, then_restackified_ancestor_locals) =
+                    then_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                let then_continues = match uncoerced_then_block_2.result().coord.kind {
+                    KindT::Never(_) => false,
+                    _ => true,
+                };
+
+                let else_body_se_as_expr: &'s IExpressionSE<'s> =
+                    self.scout_arena.alloc(IExpressionSE::Block(if_se.else_body));
+                let mut else_fate = NodeEnvironmentBox::new(nenv.make_child(self.typing_interner, else_body_se_as_expr, None));
+                let else_fate_starting = else_fate.snapshot(self.typing_interner);
+                let (else_expressions_with_result, else_returns_from_exprs) =
+                    self.evaluate_block_statements(
+                        coutputs,
+                        else_fate_starting,
+                        &mut else_fate,
+                        life.add(self.typing_interner, 3),
+                        parent_ranges,
+                        outer_call_location,
+                        nenv.default_region(),
+                        if_se.else_body);
+                let uncoerced_else_block_2 = BlockTE { inner: else_expressions_with_result };
+                let (else_unstackified_ancestor_locals, else_restackified_ancestor_locals) =
+                    else_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                let else_continues = match uncoerced_else_block_2.result().coord.kind {
+                    KindT::Never(_) => false,
+                    _ => true,
+                };
+
+                if then_continues && else_continues && uncoerced_then_block_2.result().coord.ownership != uncoerced_else_block_2.result().coord.ownership {
+                    panic!("implement: evaluate_expression If — CantReconcileBranchesResults ownership mismatch");
+                }
+
+                let common_type = match (uncoerced_then_block_2.result().coord.kind, uncoerced_else_block_2.result().coord.kind) {
+                    // If one side has a return-never, use the other side.
+                    (KindT::Never(NeverT { from_break: false }), _) => uncoerced_else_block_2.result().coord,
+                    (_, KindT::Never(NeverT { from_break: false })) => uncoerced_then_block_2.result().coord,
+                    // If we get here, theres no return-nevers in play.
+                    // If one side has a break-never, use the other side.
+                    (KindT::Never(NeverT { from_break: true }), _) => uncoerced_else_block_2.result().coord,
+                    (_, KindT::Never(NeverT { from_break: true })) => uncoerced_then_block_2.result().coord,
+                    (a, b) if a == b => uncoerced_then_block_2.result().coord,
+                    _ => panic!("implement: evaluate_expression If — commonType complex branch"),
+                };
+
+                let then_fate_snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(then_fate.snapshot(self.typing_interner)));
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
+                let then_expr_2 = self.convert(then_fate_snap, coutputs, &range_with_parent, outer_call_location,
+                    self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_then_block_2)), common_type);
+                let else_fate_snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(else_fate.snapshot(self.typing_interner)));
+                let else_expr_2 = self.convert(else_fate_snap, coutputs, &range_with_parent, outer_call_location,
+                    self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_else_block_2)), common_type);
+
+                let if_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::If(IfTE {
+                    condition: condition_expr,
+                    then_call: then_expr_2,
+                    else_call: else_expr_2,
+                }));
+
+                if then_continues == else_continues { // Both continue, or both don't
+                    // Each branch might have moved some things. Make sure they moved the same things.
+                    if then_unstackified_ancestor_locals != else_unstackified_ancestor_locals {
+                        panic!("implement: evaluate_expression If — must move same variables from inside branches");
+                    }
+                    if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
+                        panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (1)");
+                    }
+                    if then_restackified_ancestor_locals != else_restackified_ancestor_locals {
+                        panic!("implement: evaluate_expression If — must reinitialize same variables from inside branches (2)");
+                    }
+                    for local in &then_unstackified_ancestor_locals {
+                        nenv.mark_local_unstackified(*local);
+                    }
+                    for local in &then_restackified_ancestor_locals {
+                        nenv.mark_local_restackified(*local);
+                    }
+                } else {
+                    // One of them continues and the other does not.
+                    if then_continues {
+                        for local in &then_unstackified_ancestor_locals {
+                            nenv.mark_local_unstackified(*local);
+                        }
+                        for local in &then_restackified_ancestor_locals {
+                            nenv.mark_local_restackified(*local);
+                        }
+                    } else if else_continues {
+                        for local in &else_unstackified_ancestor_locals {
+                            nenv.mark_local_unstackified(*local);
+                        }
+                        for local in &else_restackified_ancestor_locals {
+                            nenv.mark_local_restackified(*local);
+                        }
+                    } else {
+                        panic!("implement: evaluate_expression If — vfail branch");
+                    }
+                }
+
+                let (if_block_unstackified_ancestor_locals, if_block_restackified_ancestor_locals) =
+                    nenv.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                for local in if_block_unstackified_ancestor_locals {
+                    nenv.mark_local_unstackified(local);
+                }
+                for local in if_block_restackified_ancestor_locals {
+                    nenv.mark_local_restackified(local);
+                }
+
+                let mut all_returns = returns_from_condition;
+                all_returns.extend(then_returns_from_exprs);
+                all_returns.extend(else_returns_from_exprs);
+                (ExpressionTE::Reference(if_expr_2), all_returns)
             }
+            IExpressionSE::Loop(_) => panic!("implement: evaluate_expression — Loop"),
+            IExpressionSE::Break(_) => panic!("implement: evaluate_expression — Break"),
+            IExpressionSE::While(_) => panic!("implement: evaluate_expression — While"),
+            IExpressionSE::Map(_) => panic!("implement: evaluate_expression — Map"),
+            IExpressionSE::ExprMutate(_) => panic!("implement: evaluate_expression — ExprMutate"),
+            IExpressionSE::GlobalMutate(_) => panic!("implement: evaluate_expression — GlobalMutate"),
+            IExpressionSE::LocalMutate(_) => panic!("implement: evaluate_expression — LocalMutate"),
+            IExpressionSE::ArgLookup(_) => panic!("implement: evaluate_expression — ArgLookup"),
+            IExpressionSE::RepeaterBlock(_) => panic!("implement: evaluate_expression — RepeaterBlock"),
+            IExpressionSE::RepeaterBlockIterator(_) => panic!("implement: evaluate_expression — RepeaterBlockIterator"),
+            IExpressionSE::Tuple(_) => panic!("implement: evaluate_expression — Tuple"),
+            IExpressionSE::StaticArrayFromValues(_) => panic!("implement: evaluate_expression — StaticArrayFromValues"),
+            IExpressionSE::StaticArrayFromCallable(_) => panic!("implement: evaluate_expression — StaticArrayFromCallable"),
+            IExpressionSE::NewRuntimeSizedArray(_) => panic!("implement: evaluate_expression — NewRuntimeSizedArray"),
+            IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
+            IExpressionSE::RepeaterPackIterator(_) => panic!("implement: evaluate_expression — RepeaterPackIterator"),
+            IExpressionSE::Block(b) => {
+                let mut child_environment = NodeEnvironmentBox::new(nenv.make_child(self.typing_interner, expr_1, None));
+                let child_starting = child_environment.snapshot(self.typing_interner);
+                let (expressions_with_result, returns_from_exprs) =
+                    self.evaluate_block_statements(
+                        coutputs,
+                        child_starting,
+                        &mut child_environment,
+                        life,
+                        parent_ranges,
+                        outer_call_location,
+                        nenv.default_region(),
+                        b);
+                let block_2 = self.typing_interner.alloc(ReferenceExpressionTE::Block(BlockTE { inner: expressions_with_result }));
+                let (unstackified_ancestor_locals, restackified_ancestor_locals) =
+                    child_environment.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+                for local in unstackified_ancestor_locals {
+                    nenv.mark_local_unstackified(local);
+                }
+                for local in restackified_ancestor_locals {
+                    nenv.mark_local_restackified(local);
+                }
+                (ExpressionTE::Reference(block_2), returns_from_exprs)
+            }
+            IExpressionSE::Pure(_) => panic!("implement: evaluate_expression — Pure"),
+            IExpressionSE::ConstantStr(_) => panic!("implement: evaluate_expression — ConstantStr"),
+            IExpressionSE::ConstantFloat(_) => panic!("implement: evaluate_expression — ConstantFloat"),
+            IExpressionSE::Destruct(_) => panic!("implement: evaluate_expression — Destruct"),
+            IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),
+            IExpressionSE::Index(_) => panic!("implement: evaluate_expression — Index"),
+            IExpressionSE::RuneLookup(_) => panic!("implement: evaluate_expression — RuneLookup"),
+            IExpressionSE::ConstantBool(c) => {
+                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantBool(ConstantBoolTE {
+                    value: c.value,
+                    region,
+                    _phantom: std::marker::PhantomData,
+                }));
+                (ExpressionTE::Reference(result), HashSet::new())
+            }
+            IExpressionSE::OutsideLoad(_) => panic!("implement: evaluate_expression — OutsideLoad"),
         }
     }
 /*
-Guardian: temp-disable: SPDMX — False positive: the OutsideLoad-arm collapse predates this edit. My change only threads the interner argument into existing life.add() calls per the AASSNCMCX directive (LIFE.add now takes interner). The match-arm structure is unchanged. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1088-1777919053718/hook-1088/evaluate_expression--682.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   // returns:
   // - resulting expression
   // - all the types that are returned from inside the body via return

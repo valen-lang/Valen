@@ -538,7 +538,7 @@ where 's: 't,
         _range: Vec<RangeS<'s>>,
         env: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
-        rules: Vec<&'s IRulexSR<'s>>,
+        rules: Vec<IRulexSR<'s>>,
         initial_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>>,
         initially_known_rune_to_templata: HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>> {
@@ -561,8 +561,7 @@ where 's: 't,
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&env, state, *rune, *templata);
             }
-            // vassert(templata.tyype == vassertSome(initialRuneToType.get(rune)))
-            // Not yet implemented: ITemplataT::tyype() method doesn't exist in Rust
+            assert_eq!(templata.tyype(), *initial_rune_to_type.get(rune).unwrap());
         }
 
         let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
@@ -572,14 +571,12 @@ where 's: 't,
         let rule_to_runes: &dyn Fn(&IRulexSR<'s>) -> Vec<IRuneS<'s>> =
             &|rule| self.get_runes(*rule);
 
-        let initial_rules: Vec<IRulexSR<'s>> = rules.into_iter().copied().collect();
-
         crate::solver::solver::make_solver_state(
             self.opts.global_options.sanity_check,
             self.opts.global_options.use_optimized_solver,
             rule_to_puzzles,
             rule_to_runes,
-            initial_rules,
+            rules,
             initially_known_rune_to_templata,
             all_runes,
         )
@@ -1773,7 +1770,6 @@ where 's: 't,
     }
 }
 /*
-Guardian: temp-disable: ScalaParityDuringMigration-SPDMX — Rust adaptation (SPDMX-B): Scala does KindTemplataT(kind) directly on a GC-managed StructTT value, but Rust requires intern_struct_tt to get a &'t StructTT arena reference before wrapping in KindT::Struct and ITemplataT::Kind. The re-interning via StructTTValT { id: kind.id } is semantically identical — same id, same interned pointer — and is the standard Rust ownership pattern for value→reference promotion. — FrontendRust/guardian-logs/request-1215-1778107256903/hook-1215/solve_call_rule--1730.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def solveCallRule(
       delegate: IInfererDelegate,
       state: CompilerOutputs,

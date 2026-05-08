@@ -652,7 +652,7 @@ where 's: 't,
 
         match self.incrementally_solve(
             envs, coutputs, &mut solver,
-            |solver_state| {
+            |_coutputs, _solver_state| {
                 panic!("implement: evaluateGenericFunctionFromCallForPrototype incrementallySolve callback");
             },
         ) {
@@ -709,7 +709,6 @@ where 's: 't,
         })
     }
 /*
-Guardian: temp-disable: SPDMX — The omitted Scala block is `outerEnv.id match { case IdT(_,Vector(),FunctionTemplateNameT(StrI("Bork"),_)) => vpass(); case _ => }` — a no-op debugging guardrail (vpass is a breakpoint-only function). It has no logical effect and is Exception F (debugging-only code). — FrontendRust/guardian-logs/request-254-1777775550299/hook-254/evaluate_generic_function_from_call_for_prototype--516.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateGenericFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -967,10 +966,10 @@ where 's: 't,
             IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
             IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
         };
-        let _function_template_id = near_env.parent_env.id().add_step(self.typing_interner, function_name_local);
+        let function_template_id = near_env.parent_env.id().add_step(self.typing_interner, function_name_local);
 
-        let definition_rules: Vec<&'s IRulexSR<'s>> = function.rules.iter()
-            .filter(|r| include_rule_in_definition_solve(*r))
+        let definition_rules: Vec<IRulexSR<'s>> = function.rules.iter().copied()
+            .filter(|r| include_rule_in_definition_solve(r))
             .collect();
 
         let mut seen = HashSet::new();
@@ -1006,9 +1005,32 @@ where 's: 't,
         let mut solver = self.make_solver_state(
             envs, coutputs, &definition_rules, &rune_to_type, &range, &[], &[]);
 
+        let get_first_unsolved = |generic_parameters: &'s [&'s GenericParameterS<'s>], is_solved: &dyn Fn(IRuneS<'s>) -> bool| {
+            self.get_first_unsolved_identifying_rune(generic_parameters, |rune| is_solved(rune))
+        };
         let result = self.incrementally_solve(
             envs, coutputs, &mut solver,
-            |_solver_state| { panic!("Unimplemented: incrementally_solve on_incomplete callback") });
+            |coutputs, solver_state| {
+                match get_first_unsolved(
+                    function.generic_parameters,
+                    &|rune| solver_state.get_conclusion(&rune).is_some(),
+                ) {
+                    None => false,
+                    Some((generic_param, index)) => {
+                        let placeholder_pure_height = None;
+                        let templata = self.create_placeholder(
+                            coutputs, near_env_as_in_denizen, *function_template_id,
+                            generic_param, index, &rune_to_type, placeholder_pure_height, true);
+                        solver_state.commit_step::<()>(
+                            false, vec![], {
+                                let mut m = HashMap::new();
+                                m.insert(generic_param.rune.rune, templata);
+                                m
+                            }, vec![]).unwrap();
+                        true
+                    }
+                }
+            });
         match result {
             Err(_f) => { panic!("Unimplemented: FailedSolve handling in evaluate_generic_function_from_non_call_solving") }
             Ok(true) => {}

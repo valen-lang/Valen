@@ -212,7 +212,6 @@ where 's: 't,
         Vec::new()
     }
 /*
-Guardian: temp-disable: SPDMX — False positive: the Vec::new() return predates this edit. My change is signature-only (Vec<InterfaceEdgeBlueprintT> → Vec<&'t InterfaceEdgeBlueprintT>) per architect's AASSNCMCX field-flip directive — InterfaceEdgeBlueprintT is now Arena-allocated so callers must hold &'t. The pre-existing body skeleton is unchanged. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1057-1777917939302/hook-1057/make_interface_edge_blueprints--176.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
     val x1 =
       coutputs.getAllFunctions().flatMap({ case function =>

@@ -670,7 +670,20 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     &self,
     earlier_node_env: &NodeEnvironmentT<'s, 't>,
   ) -> (Vec<IVarNameT<'s, 't>>, Vec<IVarNameT<'s, 't>>) {
-    panic!("Unimplemented: get_effects_since");
+    assert!(std::ptr::eq(self.parent_function_env, earlier_node_env.parent_function_env));
+    let earlier_node_env_declared_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env.declared_locals.iter().map(|v| v.name()).collect();
+    let earlier_node_env_unstackified: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env.unstackified_locals.iter().copied().collect();
+    let earlier_node_env_live_locals: std::collections::HashSet<IVarNameT<'s, 't>> =
+        earlier_node_env_declared_locals.difference(&earlier_node_env_unstackified).copied().collect();
+    let live_locals_introduced_since_earlier: std::collections::HashSet<IVarNameT<'s, 't>> =
+        self.declared_locals.iter().map(|v| v.name()).filter(|x| !earlier_node_env_live_locals.contains(x)).collect();
+    let unstackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+        self.unstackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
+    let restackified_ancestor_locals: Vec<IVarNameT<'s, 't>> =
+        self.restackified_locals.iter().copied().filter(|x| !live_locals_introduced_since_earlier.contains(x)).collect();
+    (unstackified_ancestor_locals, restackified_ancestor_locals)
   }
   /*
     // Gets the effects that this environment had on the outside world (on its parent
@@ -751,13 +764,26 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   */
 }
 // mig: fn make_child
+// Rust adaptation (SPDMX-B): NodeEnvironmentT is arena-allocated; Scala used GC.
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
   pub fn make_child(
     &'t self,
+    interner: &TypingInterner<'s, 't>,
     node: &'s IExpressionSE<'s>,
     maybe_new_default_region: Option<RegionT>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: make_child");
+    let empty_templatas = TemplatasStoreBuilder::new(&self.parent_function_env.id).build_in(interner);
+    interner.alloc(NodeEnvironmentT {
+      parent_function_env: self.parent_function_env,
+      parent_node_env: Some(self),
+      node,
+      life: self.life.clone(),
+      templatas: empty_templatas,
+      declared_locals: self.declared_locals, // See WTHPFE.
+      unstackified_locals: self.unstackified_locals, // See WTHPFE
+      restackified_locals: self.restackified_locals,
+      default_region: maybe_new_default_region.unwrap_or(self.default_region), // See WTHPFE.
+    })
   }
   /*
     def makeChild(
@@ -897,6 +923,27 @@ where 's: 't,
 /*
 case class NodeEnvironmentBox(var nodeEnvironment: NodeEnvironmentT) {
 */
+// mig: fn new
+// (Realizes Scala's case-class 1-arg apply `NodeEnvironmentBox(nodeEnvironment)`.
+//  Rust adaptation (SPDMX-B): Box stores fields out-of-arena (Vec instead of &'t [..])
+//  per design v3 §3.3, so wrapping a `&'t NodeEnvironmentT` requires copying slice
+//  fields into owned Vecs. The inverse of `snapshot`.)
+impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  pub fn new(node_env: &'t NodeEnvironmentT<'s, 't>) -> Self {
+    NodeEnvironmentBox {
+      parent_function_env: node_env.parent_function_env,
+      parent_node_env: node_env.parent_node_env,
+      node: node_env.node,
+      life: node_env.life.clone(),
+      templatas_builder: TemplatasStoreBuilder::from_store(&node_env.templatas),
+      declared_locals: node_env.declared_locals.to_vec(),
+      unstackified_locals: node_env.unstackified_locals.to_vec(),
+      restackified_locals: node_env.restackified_locals.to_vec(),
+      default_region: node_env.default_region,
+    }
+  }
+}
+/* Guardian: disable-all */
 // mig: override fn eq
 // (No Rust impl — Box deliberately doesn't impl PartialEq, mirroring Scala's vcurious panic-on-call. Misuse fails at compile time, which is strictly stronger than Scala's runtime vfail.)
 /*
@@ -1205,13 +1252,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 */
 }
 // mig: fn make_child
+// Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentT is arena-allocated.
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   pub fn make_child(
     &self,
-    _node: &'s IExpressionSE<'s>,
-    _maybe_new_default_region: Option<RegionT>,
+    interner: &TypingInterner<'s, 't>,
+    node: &'s IExpressionSE<'s>,
+    maybe_new_default_region: Option<RegionT>,
   ) -> &'t NodeEnvironmentT<'s, 't> {
-    panic!("Unimplemented: make_child");
+    self.snapshot(interner).make_child(interner, node, maybe_new_default_region)
   }
 /*
   def makeChild(

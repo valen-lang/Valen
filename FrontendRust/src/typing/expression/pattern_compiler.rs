@@ -15,6 +15,8 @@ use crate::typing::compiler_outputs::*;
 use crate::postparsing::rules::RuneUsage;
 use crate::typing::infer_compiler::{InferEnv, InitialSend};
 use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
 use crate::parsing::ast::LoadAsP;
 use crate::postparsing::expressions::IExpressionSE;
 use std::collections::HashMap;
@@ -219,7 +221,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        rules_with_implicitly_coercing_lookups_s: &[&'s IRulexSR<'s>],
+        rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         rune_a_to_type_with_implicitly_coercing_lookups_s: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         pattern: &'s AtomSP<'s>,
         unconverted_input_expr: &'t ReferenceExpressionTE<'s, 't>,
@@ -244,7 +246,7 @@ where 's: 't,
                 // loose. We intentionally ignored the types of the things they're looking up, so we could know
                 // what types we *expect* them to be, so we could coerce.
                 // That coercion is good, but lets make it more explicit.
-                let rule_builder: Vec<&'s IRulexSR<'s>> = Vec::new();
+                let rule_builder: Vec<IRulexSR<'s>> = Vec::new();
                 if !rules_with_implicitly_coercing_lookups_s.is_empty() {
                     panic!("implement: infer_and_translate_pattern — explicifyLookups with non-empty rules");
                 }
@@ -504,7 +506,11 @@ where 's: 't,
                 let mut result: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
                 match &pattern.name {
                     None => {
-                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — drop uncaptured");
+                        // If we didn't store it, and we aren't destructuring it, then we're just ignoring it. Let's drop it.
+                        let snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)));
+                        let ranges: Vec<RangeS<'s>> =
+                            std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                        result.push(self.drop(snap, coutputs, &ranges, call_location, region, expr_to_destructure_or_drop_or_pass_te));
                     }
                     Some(_) => {
                         // We aren't destructuring it, but we stored it, so just do nothing.
@@ -514,8 +520,26 @@ where 's: 't,
                     coutputs, nenv, life.add(self.typing_interner, 0), &live_capture_locals));
                 result
             }
-            Some(_) => {
-                panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure");
+            Some(list_of_maybe_destructure_member_patterns) => {
+                let ranges: Vec<RangeS<'s>> =
+                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
+                let list_refs: Vec<&'s AtomSP<'s>> =
+                    list_of_maybe_destructure_member_patterns.iter().map(|p| p as &'s AtomSP<'s>).collect();
+                match expr_to_destructure_or_drop_or_pass_te.result().coord.ownership {
+                    OwnershipT::Own => {
+                        vec![self.destructure_owning(
+                            coutputs, nenv, life.add(self.typing_interner, 1),
+                            &ranges, call_location, &live_capture_locals,
+                            expr_to_destructure_or_drop_or_pass_te,
+                            &list_refs,
+                            region,
+                            after_sub_pattern_success_continuation)]
+                    }
+                    OwnershipT::Borrow | OwnershipT::Share => {
+                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure non-owning")
+                    }
+                    OwnershipT::Weak => panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure weak"),
+                }
             }
         };
 
@@ -653,7 +677,36 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+        let expected_container_kind = match input_expr.result().coord.ownership {
+            OwnershipT::Own => input_expr.result().coord.kind.clone(),
+            _ => panic!("destructureOwning: expected Own"),
+        };
+        match expected_container_kind {
+            KindT::Struct(_) => {
+                // Example:
+                //   struct Marine { bork: Bork; }
+                //   Marine(b) = m;
+                // In this case, expectedStructType1 = TypeName1("Marine") and
+                // destructureMemberPatterns = Vector(CaptureSP("b", FinalP, None)).
+                // Since we're receiving an owning reference, and we're *not* capturing
+                // it in a variable, it will be destroyed and we will harvest its parts.
+                self.translate_destroy_struct_inner_and_maybe_continue(
+                    coutputs, nenv, life.add(self.typing_interner, 0),
+                    parent_ranges, call_location, initial_live_capture_locals,
+                    list_of_maybe_destructure_member_patterns, input_expr, region,
+                    after_destructure_success_continuation)
+            }
+            _ => panic!("implement: destructureOwning — non-struct kind"),
+        }
     }
 /*
   private def destructureOwning(
@@ -904,7 +957,70 @@ where 's: 't,
             &[ILocalVariableT<'s, 't>],
         ) -> &'t ReferenceExpressionTE<'s, 't>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+        let struct_tt = match &input_struct_expr.result().coord.kind {
+            KindT::Struct(s) => *s,
+            _ => panic!("translateDestroyStructInnerAndMaybeContinue: expected Struct kind"),
+        };
+        // We don't pattern match against closure structs.
+        let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
+        let substituter = self.get_placeholder_substituter(
+            self.opts.global_options.sanity_check,
+            nenv.function_environment().template_id,
+            struct_tt.id,
+            IBoundArgumentsSource::InheritBoundsFromTypeItself,
+        );
+        let member_locals: Vec<ReferenceLocalVariableT<'s, 't>> = struct_def_t.members.iter()
+            .enumerate()
+            .map(|(i, member)| {
+                let unsubstituted_member_coord = match member {
+                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
+                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: translateDestroyStructInnerAndMaybeContinue — AddressMemberTypeT"),
+                    IStructMemberT::Variadic(_) => panic!("implement: translateDestroyStructInnerAndMaybeContinue — VariadicStructMemberT"),
+                };
+                let member_type = substituter.substitute_for_coord(coutputs, unsubstituted_member_coord);
+                self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + i as i32), member_type)
+            })
+            .collect();
+        let struct_tt_ref = self.typing_interner.alloc(struct_tt);
+        let member_locals_ref = self.typing_interner.alloc_slice_copy(&member_locals);
+        let destroy_te = self.typing_interner.alloc(ReferenceExpressionTE::Destroy(DestroyTE {
+            expr: input_struct_expr,
+            struct_tt: struct_tt_ref,
+            destination_reference_variables: member_locals_ref,
+        }));
+        let live_capture_locals: Vec<ILocalVariableT<'s, 't>> = initial_live_capture_locals.iter().copied()
+            .chain(member_locals.iter().map(|l| ILocalVariableT::Reference(*l)))
+            .collect();
+        {
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+        if member_locals.len() != inner_patterns.len() {
+            panic!("WrongNumberOfDestructuresError: expected {} got {}", inner_patterns.len(), member_locals.len());
+        }
+        let member_locals_as_local: Vec<ILocalVariableT<'s, 't>> = member_locals.iter()
+            .map(|l| ILocalVariableT::Reference(*l))
+            .collect();
+        let rest_te = self.make_lets_for_own_and_maybe_continue(
+            coutputs, nenv, life.add(self.typing_interner, 0),
+            parent_ranges, call_location, &live_capture_locals,
+            &member_locals_as_local, inner_patterns, region,
+            Box::new(after_destroy_success_continuation));
+        self.consecutive(&[destroy_te, rest_te])
     }
 /*
   private def translateDestroyStructInnerAndMaybeContinue(
@@ -973,6 +1089,13 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation (SPDMX-B): the continuation parameter is boxed (Box<dyn FnOnce>)
+    // rather than `impl FnOnce`. Scala/JVM erases lambda types so the mutual recursion
+    // translate_destroy_struct_inner -> make_lets_for_own -> inner_translate_sub_pattern
+    // -> make_lets_for_own terminates trivially. In Rust, generic `impl FnOnce` forces
+    // monomorphization to nest the closure type at each recursion level, producing an
+    // infinite type and tripping the recursion limit. Boxing erases the type at the
+    // recursion boundary, restoring the JVM shape.
     pub fn make_lets_for_own_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
@@ -984,14 +1107,62 @@ where 's: 't,
         member_local_variables: &[ILocalVariableT<'s, 't>],
         inner_patterns: &[&'s AtomSP<'s>],
         region: RegionT,
-        after_lets_success_continuation: impl FnOnce(
+        after_lets_success_continuation: Box<dyn FnOnce(
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + '_>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+        assert!(member_local_variables.len() == inner_patterns.len());
+        match (member_local_variables, inner_patterns) {
+            ([], []) => {
+                after_lets_success_continuation(coutputs, nenv, life.add(self.typing_interner, 0), initial_live_capture_locals)
+            }
+            ([head_member_local_variable, tail_member_local_variables @ ..], [head_inner_pattern, tail_inner_pattern_maybes @ ..]) => {
+                let unlet_expr = self.unlet_local_without_dropping(nenv, head_member_local_variable);
+                let unlet_expr_te = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet_expr));
+                let live_capture_locals: Vec<ILocalVariableT<'s, 't>> = initial_live_capture_locals.iter().copied()
+                    .filter(|l| l.name() != head_member_local_variable.name())
+                    .collect();
+                assert!(live_capture_locals.len() == initial_live_capture_locals.len() - 1);
+                let head_inner_pattern_range = head_inner_pattern.range;
+                let ranges: Vec<RangeS<'s>> =
+                    std::iter::once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect();
+                let tail_member_local_variables = tail_member_local_variables.to_vec();
+                let tail_inner_pattern_maybes: Vec<&'s AtomSP<'s>> = tail_inner_pattern_maybes.iter().map(|p| *p).collect();
+                self.inner_translate_sub_pattern_and_maybe_continue(
+                    coutputs, nenv, life.add(self.typing_interner, 1),
+                    &ranges, call_location, head_inner_pattern,
+                    &live_capture_locals, unlet_expr_te, region,
+                    |coutputs, nenv, life, live_capture_locals| {
+                        {
+                            let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
+                            let distinct: Vec<_> = {
+                                let mut seen = Vec::new();
+                                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                                seen
+                            };
+                            assert!(names == distinct);
+                        }
+                        self.make_lets_for_own_and_maybe_continue(
+                            coutputs, nenv, life, parent_ranges, call_location,
+                            live_capture_locals, &tail_member_local_variables,
+                            &tail_inner_pattern_maybes, region,
+                            Box::new(after_lets_success_continuation))
+                    })
+            }
+            _ => panic!("make_lets_for_own_and_maybe_continue: mismatched lengths"),
+        }
     }
 /*
   private def makeLetsForOwnAndMaybeContinue(

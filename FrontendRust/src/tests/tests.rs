@@ -5,9 +5,24 @@ import scala.io.Source
 
 object Tests {
 */
+use std::collections::HashMap;
+use std::path::PathBuf;
+use crate::utils::code_hierarchy::PackageCoordinate;
+
 // mig: fn load
+// Rust adaptation: Scala's `vassert(source != null)` is dropped — `read_to_string`
+// returns Result<String>, so `.unwrap()` already enforces non-null by the type system.
 pub fn load(resource_filename: &str) -> Option<String> {
-  panic!("Unimplemented: load");
+  let full_path = PathBuf::from(env!("CARGO_MANIFEST_DIR"))
+    .join("src/tests")
+    .join(resource_filename);
+  let stream = std::fs::File::open(&full_path);
+  if stream.is_err() {
+    return None;
+  }
+  let stream = stream.unwrap();
+  let source = std::io::read_to_string(stream).unwrap();
+  Some(source)
 }
 /*
   def load(resourceFilename: String): Option[String] = {
@@ -21,7 +36,8 @@ pub fn load(resource_filename: &str) -> Option<String> {
 */
 // mig: fn load_expected
 pub fn load_expected(resource_filename: &str) -> String {
-  panic!("Unimplemented: load_expected");
+  load(resource_filename)
+    .unwrap_or_else(|| panic!("Failed to load resource: {}", resource_filename))
 }
 /*
   def loadExpected(resourceFilename: String): String = {
@@ -30,9 +46,9 @@ pub fn load_expected(resource_filename: &str) -> String {
 */
 // mig: fn resolve_package_to_resource
 pub fn resolve_package_to_resource(package_coord: &PackageCoordinate) -> Option<HashMap<String, String>> {
-  let directory = {
-    let mut v = vec![&package_coord.module];
-    v.extend(&package_coord.packages);
+  let directory: Vec<&str> = {
+    let mut v = vec![package_coord.module.as_str()];
+    v.extend(package_coord.packages.iter().map(|s| s.as_str()));
     v
   };
   let filename = format!("{}.vale", directory.last().unwrap());

@@ -416,10 +416,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
     let as_env: IEnvironmentT<'s, 't> = (*self).into();
     as_env.lookup_all_with_imprecise_name(name_s, lookup_filter, interner)
   }
-/*
-Guardian: temp-disable: NCWSRX — This is a Rust-only dispatch method that exists because Rust doesn't have inheritance — IInDenizenEnvironmentT extends IEnvironmentT in Scala, so this method is inherited, not explicitly defined. There is no separate Scala def to reference. The comment above it says "Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)". Adding interner parameter is SPDMX-B adaptation. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-151-1777699456955/hook-151/lookup_all_with_imprecise_name--384.0.NoChangesWithoutScalaReference-NCWSRX.NoChangesWithoutScalaReference-NCWSRX.verdict.md
-Guardian: disable-all
-*/
+/* Guardian: disable-all */
 }
 // Inherited from IEnvironmentT (Scala: IInDenizenEnvironmentT extends IEnvironmentT)
 impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
@@ -877,6 +874,25 @@ where 's: 't,
   }
   /* Guardian: disable-all */
 
+  // (no scala counterpart — inverse of `snapshot`. Copies an arena `TemplatasStoreT`
+  //  back into a heap builder so a `NodeEnvironmentBox` can be reconstructed from a
+  //  `&'t NodeEnvironmentT`. Symmetric with `snapshot`.)
+  pub fn from_store(store: &TemplatasStoreT<'s, 't>) -> Self {
+    let name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+      (&store.name_to_entry).into_iter().map(|(k, v)| (*k, *v)).collect();
+    let mut imprecise_to_entries: StdHashMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> =
+      StdHashMap::new();
+    for (k, v) in &store.imprecise_to_entries {
+      imprecise_to_entries.insert(*k, v.to_vec());
+    }
+    TemplatasStoreBuilder {
+      templatas_store_name: store.templatas_store_name,
+      name_to_entry,
+      imprecise_to_entries,
+    }
+  }
+  /* Guardian: disable-all */
+
   pub fn snapshot(
     &self,
     interner: &TypingInterner<'s, 't>,
@@ -1264,8 +1280,13 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
     result.extend(self.global_env.builtins.lookup_with_imprecise_name_inner(
       IEnvironmentT::Package(self), name, lookup_filter, interner));
     for global_namespace in self.global_namespaces {
+      let per_namespace_env = interner.alloc(PackageEnvironmentT {
+        global_env: self.global_env,
+        id: *global_namespace.templatas_store_name,
+        global_namespaces: self.global_namespaces,
+      });
       result.extend(global_namespace.lookup_with_imprecise_name_inner(
-        IEnvironmentT::Package(self), name, lookup_filter, interner));
+        IEnvironmentT::Package(per_namespace_env), name, lookup_filter, interner));
     }
     result
   }

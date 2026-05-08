@@ -1598,32 +1598,9 @@ fn create_magic_parameters(
             body0.inner,
             LoadAsP::Use,
           )?;
-        let expr_without_constructing_without_void: &'s IExpressionSE<'s> = match inner_expr {
-          IExpressionSE::Consecutor(consecutor) => {
-            let exprs: Vec<&'s IExpressionSE<'s>> = {
-              let mut v: Vec<_> = consecutor.exprs.iter().copied().collect();
-              while matches!(v.last(), Some(IExpressionSE::Void(_))) {
-                v.pop();
-              }
-              v
-            };
-            assert!(
-              !exprs.is_empty(),
-              "POSTPARSER_SCOUT_BODY_CONSECUTOR_EMPTY_AFTER_VOID_STRIP"
-            );
-            if exprs.len() == 1 {
-              exprs.into_iter().next().unwrap()
-            } else {
-              &*self.scout_arena.alloc(IExpressionSE::Consecutor(ConsecutorSE {
-                exprs: self.scout_arena.alloc_slice_from_vec(exprs),
-              }))
-            }
-          }
-          other => other,
-        };
         Ok((
           stack_frame2,
-          expr_without_constructing_without_void,
+          inner_expr,
           inner_self_uses,
           inner_child_uses,
         ))

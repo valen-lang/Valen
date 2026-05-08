@@ -802,8 +802,22 @@ fn lookup_rune_type<'s, E: IRuneTypeSolverEnv<'s>>(
         _ => panic!("lookup_rune_type Primitive error path not yet migrated"),
       }
     }
-    IRuneTypeSolverLookupResult::Templata(_t) => {
-      panic!("lookup_rune_type Templata not yet migrated");
+    IRuneTypeSolverLookupResult::Templata(t) => {
+      let actual_type = t.templata;
+      match (&actual_type, &expected_type) {
+        (x, y) if x == y => {} // Matches, so is fine
+        (ITemplataType::KindTemplataType(_), ITemplataType::CoordTemplataType(_)) => {} // Will convert, so is fine
+        (ITemplataType::TemplateTemplataType(tt), ITemplataType::CoordTemplataType(_) | ITemplataType::KindTemplataType(_))
+            if tt.param_types.is_empty()
+                && matches!(tt.return_type, ITemplataType::KindTemplataType(_) | ITemplataType::CoordTemplataType(_)) => {
+          // Then it's an implicit call.
+          match check_generic_call(vec![_range.clone()], &[], &[]) {
+            Ok(()) => {},
+            Err(e) => return Err(ISolverError::RuleError(RuleError { err: e, _phantom: std::marker::PhantomData })),
+          }
+        }
+        _ => panic!("lookup_rune_type Templata FoundTemplataDidntMatchExpectedType not yet migrated"),
+      }
     }
     IRuneTypeSolverLookupResult::Citizen(c) => {
       match &expected_type {

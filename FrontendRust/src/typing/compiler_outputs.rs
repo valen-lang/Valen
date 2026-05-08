@@ -424,7 +424,6 @@ where 's: 't,
         self.instantiation_name_to_bounds.insert(*instantiation_id_ref, instantiation_bound_args);
     }
     /*
-Guardian: temp-disable: SPDMX — The omitted Scala blocks are: (1) two `instantiationId match` with `vpass()` — no-op debugging guardrails (Exception F), and (2) a `sanityCheck` guarded `Collector.all` that requires the not-yet-migrated `Collector` utility. All three have no effect on the put operation which is the core logic. Will add when Collector is migrated. — FrontendRust/guardian-logs/request-366-1777779259089/hook-366/add_instantiation_bounds--381.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def addInstantiationBounds(
         sanityCheck: Boolean,
         interner: Interner,

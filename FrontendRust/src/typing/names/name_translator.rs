@@ -37,7 +37,6 @@ where 's: 't,
         }
     }
 /*
-Guardian: temp-disable: SPDMX — Scala's translateCodeLocation is a documented identity function (CodeLocationS(line,col) => CodeLocationS(line,col)). Rust has no NameTranslator on Compiler — using code_location directly is semantically identical. Same pattern as the temp-disable on evaluate_templated_function_from_call_for_prototype. — FrontendRust/guardian-logs/request-1792-1777947462984/hook-1792/translate_generic_template_function_name--27.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def translateGenericTemplateFunctionName(
     functionName: IFunctionDeclarationNameS,
     params: Vector[CoordT]):
@@ -206,7 +205,6 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    // Guardian: temp-disable: SPDMX — Scala's translateCodeLocation is a documented identity function (CodeLocationS(line,col) => CodeLocationS(line,col)). Rust has no NameTranslator on Compiler — using code_location directly is semantically identical. Same pattern as the temp-disable on translate_generic_template_function_name.
     pub fn translate_name_step(&self, name: INameS<'s>) -> INameT<'s, 't> {
         use std::marker::PhantomData;
         match name {

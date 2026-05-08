@@ -256,7 +256,7 @@ where 's: 't,
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        rules: &[&'s IRulexSR<'s>],
+        rules: &[IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -324,7 +324,7 @@ where 's: 't,
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        rules: &[&'s IRulexSR<'s>],
+        rules: &[IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -371,7 +371,7 @@ where 's: 't,
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        rules: &[&'s IRulexSR<'s>],
+        rules: &[IRulexSR<'s>],
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
@@ -414,7 +414,7 @@ where 's: 't,
         &self,
         envs: InferEnv<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
-        initial_rules: &[&'s IRulexSR<'s>],
+        initial_rules: &[IRulexSR<'s>],
         initial_rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         invocation_range: &[RangeS<'s>],
         initial_knowns: &[InitialKnown<'s, 't>],
@@ -424,13 +424,13 @@ where 's: 't,
         for send in initial_sends {
             rune_to_type.insert(send.sender_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
         }
-        let mut rules: Vec<&'s IRulexSR<'s>> = initial_rules.to_vec();
+        let mut rules: Vec<IRulexSR<'s>> = initial_rules.to_vec();
         for send in initial_sends {
-            rules.push(self.scout_arena.alloc(IRulexSR::CoordSend(CoordSendSR {
+            rules.push(IRulexSR::CoordSend(CoordSendSR {
                 range: send.receiver_rune.range,
                 sender_rune: send.sender_rune,
                 receiver_rune: send.receiver_rune,
-            })));
+            }));
         }
         let mut already_known: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = HashMap::new();
         for known in initial_knowns {
@@ -526,7 +526,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
-        rules: &[&'s IRulexSR<'s>],
+        rules: &[IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
@@ -878,7 +878,7 @@ where 's: 't,
         state: &mut CompilerOutputs<'s, 't>,
         invocation_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_rules: &[&'s IRulexSR<'s>],
+        initial_rules: &[IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
@@ -1142,7 +1142,7 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
-        rules: &[&'s IRulexSR<'s>],
+        rules: &[IRulexSR<'s>],
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> Result<&'t InstantiationBoundArgumentsT<'s, 't>, IConclusionResolveError<'s, 't>> {
@@ -1501,12 +1501,17 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation (SPDMX-B): Scala's callback was `(SolverState) => Boolean` and
+    // captured `coutputs` from its enclosing scope via JVM shared-reference semantics.
+    // Rust's borrow checker forbids capturing `&mut coutputs` while
+    // `incrementally_solve` itself holds it, so coutputs is threaded through the
+    // callback as an explicit parameter.
     pub fn incrementally_solve(
         &self,
         envs: InferEnv<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-        mut on_incomplete_solve: impl FnMut(&mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
+        mut on_incomplete_solve: impl FnMut(&mut CompilerOutputs<'s, 't>, &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>) -> bool,
     ) -> Result<bool, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
         // See IRAGP for why we have this incremental solving/placeholdering.
         //   while ( {
@@ -1522,7 +1527,7 @@ where 's: 't,
             //     if (!solverState.isComplete()) {
             if !solver_state.is_complete() {
                 //       val continue = onIncompleteSolve(solverState)
-                let should_continue = on_incomplete_solve(solver_state);
+                let should_continue = on_incomplete_solve(coutputs, solver_state);
                 //       if (!continue) {
                 //         return Ok(false)
                 //       }

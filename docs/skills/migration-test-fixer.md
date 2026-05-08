@@ -3,6 +3,11 @@ name: migration-test-fixer
 description: Migrate Scala code to Rust verbatim until a given test passes
 ---
 
+DEPRECATED. we shouldnt use this skill because migration-diagnoser would run in an agent, not ordained by guardian,
+so its edits would be rejected. on top of that its edits wouldnt be tracked nor revertible.
+
+
+
 Here's what I want you to do:
 
  1. First, look at these files:
@@ -25,7 +30,7 @@ Here's what I want you to do:
     * `cargo test`. DON'T JUST BUILD; don't just `cargo build` or `cargo check`, those aren't enough. Do `cargo test` with the right flags.
     * If it all passes, good! Stop, you're done.
     * If it fails, proceed to step 3.
- 4. Pick a the simplest-looking failing test, say it out loud like "The next simplest failing test is compiler_tests.rs's simple_program_returning_an_int_explicit test", and then run just that specific test.
+ 4. Pick the simplest-looking failing test, say it out loud like "The next simplest failing test is compiler_tests.rs's simple_program_returning_an_int_explicit test", and then run just that specific test.
  5. Run the "migrate-diagnoser" agent and give it the command line you used to run the specific test. It should report a status. Verify it made a tmp/migrate-direction.md file, but DON'T look at it. It will report one of:
     * `INCONCLUSIVE`: please stop and tell me what's going on.
     * `QUESTION`: please stop and ask me that question.

@@ -353,18 +353,13 @@ where 's: 't,
         // Maybe we should make this incremental too, like when solving definitions?
 
         let context_region = RegionT {};
-        // Rust adaptation (SPDMX-B): IRulexSR lives in 's (scout arena), so we alloc via scout_arena
-        // to get &'s references, matching the Vec<&'s IRulexSR<'s>> needed by partial_solve.
-        let call_site_rules_refs: Vec<&'s IRulexSR<'s>> = call_site_rules.into_iter().map(|r| {
-            self.scout_arena.alloc(r) as &'s IRulexSR<'s>
-        }).collect();
 
         // We're just predicting, see STCMBDP.
         let inferences =
             match self.partial_solve(
                 InferEnv { original_calling_env, parent_ranges: call_range, call_location, self_env: *declaring_env, context_region },
                 coutputs,
-                &call_site_rules_refs,
+                &call_site_rules,
                 &rune_to_type_for_prediction,
                 call_range,
                 &initial_knowns,
@@ -564,12 +559,12 @@ where 's: 't,
         let struct_template_id = declaring_env.id().add_step(self.typing_interner, local_name);
         // We declare the struct's outer environment in the precompile stage instead of here because of MDATOEF.
         let outer_env = coutputs.get_outer_env_for_type(parent_ranges, *struct_template_id);
-        let all_rules_s: Vec<&'s IRulexSR<'s>> =
-            struct_a.header_rules.iter().chain(struct_a.member_rules.iter()).collect();
+        let all_rules_s: Vec<IRulexSR<'s>> =
+            struct_a.header_rules.iter().copied().chain(struct_a.member_rules.iter().copied()).collect();
         let all_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
             struct_a.header_rune_to_type.iter().chain(struct_a.members_rune_to_type.iter())
                 .map(|(k, v)| (*k, *v)).collect();
-        let definition_rules: Vec<&'s IRulexSR<'s>> =
+        let definition_rules: Vec<IRulexSR<'s>> =
             all_rules_s.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
         let mut all_ranges: Vec<RangeS<'s>> = vec![struct_a.range];
         all_ranges.extend_from_slice(parent_ranges);
@@ -582,7 +577,7 @@ where 's: 't,
             context_region: crate::typing::types::types::RegionT,
         };
         let mut solver = self.make_solver_state(envs, coutputs, &definition_rules, &all_rune_to_type, &all_ranges, &[], &[]);
-        match self.incrementally_solve(envs, coutputs, &mut solver, |_solver_state| {
+        match self.incrementally_solve(envs, coutputs, &mut solver, |_coutputs, _solver_state| {
             panic!("Unimplemented: incrementally_solve callback in compile_struct_layer");
         }) {
             Err(_f) => panic!("Unimplemented: TypingPassSolverError in compile_struct_layer"),
@@ -596,7 +591,7 @@ where 's: 't,
             envs,
             ranges: all_ranges,
             call_location,
-            definition_rules: definition_rules.into_iter().map(|r| (*r).clone()).collect(),
+            definition_rules: definition_rules.clone(),
             conclusions: inferences.clone(),
         };
         match struct_a.maybe_predicted_mutability {

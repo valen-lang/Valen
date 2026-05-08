@@ -11,6 +11,8 @@ Human-initiated skill for periodic (typically weekly) triage and refinement
 of shield cases. Walk through each step with the human, presenting cases and
 proposed changes for approval.
 
+Do not use AskUserQuestion in this skill — present cases and proposals as plain text and let the human reply directly.
+
 See `docs/architecture/governance.md` for the separation-of-powers model and
 case-flow DAG that this workflow implements.
 
@@ -171,6 +173,19 @@ clear, specific reason why the shield is wrong, not just "it's probably
 fine." When tuning shields, add narrow, precise exceptions rather than
 broad carve-outs. The goal is rules that are unambiguous enough that an
 LLM can follow them mechanically.
+
+## Pre-existing Problems Flagged By Shields
+
+If a shield correctly flags something whose problematic shape pre-existed the
+current diff (the diff didn't introduce it; it was already there), the
+shield is right to fire — that's the system surfacing latent debt, not a
+false positive. The proper response is to (1) propose a fix to the prod
+code to the human, but do NOT implement the fix unless the human
+explicitly approves, and (2) discard the case (and strip its
+temp-disable). Don't route to need-shield-tuning, need-shield-amendment,
+or need-implementor-changes — the shield wording is correct, the
+implementor's local edit was correct, the underlying code is what's
+wrong.
 
 ## Notes
 

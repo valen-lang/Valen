@@ -238,8 +238,25 @@ pub fn explicify_lookups<'s: 's, E: IRuneTypeSolverEnv<'s>>(env: &E, scout_arena
               _ => panic!("FoundTemplataDidntMatchExpectedTypeA not yet migrated as IRuneTypingLookupFailedError variant")
             }
           }
-          IRuneTypeSolverLookupResult::Templata(_) => {
-            panic!("explicify_lookups: TemplataLookupResult not yet migrated");
+          IRuneTypeSolverLookupResult::Templata(t) => {
+            let actual_type = t.templata;
+            match (&actual_type, &desired_type) {
+              (x, y) if x == y => {
+                rule_builder.push(IRulexSR::Lookup(LookupSR { range, rune: result_rune, name }));
+              }
+              (ITemplataType::KindTemplataType(_), ITemplataType::CoordTemplataType(_)) => {
+                coerce_kind_lookup_to_coord(scout_arena, rune_a_to_type, rule_builder, range, result_rune, &name);
+              }
+              (ITemplataType::TemplateTemplataType(ttt), ITemplataType::KindTemplataType(_))
+                  if matches!(ttt.return_type, ITemplataType::KindTemplataType(_)) => {
+                coerce_kind_template_lookup_to_kind(scout_arena, rune_a_to_type, rule_builder, range, result_rune, &name, ttt.clone());
+              }
+              (ITemplataType::TemplateTemplataType(ttt), ITemplataType::CoordTemplataType(_))
+                  if matches!(ttt.return_type, ITemplataType::KindTemplataType(_)) => {
+                coerce_kind_template_lookup_to_coord(scout_arena, rune_a_to_type, rule_builder, range, result_rune, &name, ttt.clone());
+              }
+              _ => panic!("explicify_lookups TemplataLookupResult: unexpected coercion from {:?} to {:?}", actual_type, desired_type),
+            }
           }
         }
       }
