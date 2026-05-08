@@ -48,9 +48,11 @@ override def hashCode(): Int = vcurious()
 
 case class VariableUses(uses: Vector[VariableUse]) {
   override def equals(obj: Any): Boolean = vcurious();
-override def hashCode(): Int = vcurious()
+  override def hashCode(): Int = vcurious()
 
   vassert(uses.map(_.name).distinct == uses.map(_.name))
+
+  def isEmpty: Boolean = uses.isEmpty
 
   def allUsedNames: Vector[IVarNameS] = uses.map(_.name)
   def markBorrowed(name: IVarNameS): VariableUses = {
