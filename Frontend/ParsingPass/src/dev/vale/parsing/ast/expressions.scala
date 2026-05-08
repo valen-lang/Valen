@@ -289,6 +289,7 @@ override def hashCode(): Int = vcurious();
   override def producesResult(): Boolean = true
 }
 
+// AFTERM: DotCallPE
 case class MethodCallPE(
   range: RangeL,
   subjectExpr: IExpressionPE,

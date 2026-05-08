@@ -4,7 +4,7 @@ import dev.vale._
 import dev.vale.options.GlobalOptions
 import dev.vale.parsing.ast.{CallMacroP, DontCallMacroP, UseP}
 import dev.vale.postparsing.patterns.AtomSP
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing._
 import dev.vale.typing.OverloadResolver.FindFunctionFailure
 import dev.vale.typing.citizen._
@@ -407,6 +407,7 @@ class Compiler(
             interner.intern(CodeNameS(interner.intern(name))),
             Vector.empty,
             Vector.empty,
+            Vector.empty,
             envs.contextRegion,
             paramCoords,
             Vector.empty,
@@ -495,6 +496,7 @@ class Compiler(
             interner.intern(CodeNameS(interner.intern(name))),
             Vector.empty,
             Vector.empty,
+            Vector.empty,
             contextRegion,
             coords,
             Vector.empty,
@@ -575,7 +577,8 @@ class Compiler(
           callLocation: LocationInDenizen,
           functionName: IImpreciseNameS,
           explicitTemplateArgRulesS: Vector[IRulexSR],
-          explicitTemplateArgRunesS: Vector[IRuneS],
+          positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+          receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
           contextRegion: RegionT,
           args: Vector[CoordT],
           extraEnvsToLookIn: Vector[IInDenizenEnvironmentT],
@@ -588,7 +591,8 @@ class Compiler(
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             args,
             extraEnvsToLookIn,

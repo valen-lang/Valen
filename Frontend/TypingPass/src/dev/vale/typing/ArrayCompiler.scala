@@ -303,6 +303,7 @@ class ArrayCompiler(
               RuneParentEnvLookupSR(parentRanges.head, RuneUsage(parentRanges.head, e))
             }),
             Vector(CodeRuneS(keywords.M)) ++ maybeElementTypeRune,
+            Vector.empty,
             region,
             Vector(sizeTE.result.coord) ++
               maybeCallableTE.map(c => c.result.coord),

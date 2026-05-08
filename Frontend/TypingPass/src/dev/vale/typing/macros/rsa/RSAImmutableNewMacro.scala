@@ -71,6 +71,7 @@ class RSAImmutableNewMacro(
         interner.intern(CodeNameS(keywords.underscoresCall)),
         Vector(),
         Vector(),
+        Vector(),
         RegionT(DefaultRegionT),
         Vector(generatorArgCoord, CoordT(ShareT, RegionT(DefaultRegionT), IntT(32))),
         Vector(),

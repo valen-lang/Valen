@@ -579,6 +579,7 @@ class EdgeCompiler(
         overrideImpreciseName,
         Vector.empty,
         Vector.empty,
+        Vector.empty,
         RegionT(DefaultRegionT),
         overrideFunctionParamTypes,
         Vector(
