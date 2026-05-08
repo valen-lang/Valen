@@ -386,7 +386,7 @@ class AnonymousInterfaceMacro(
       Map(),
       Vector(),
       members,
-      Vector())  // internalMethods (PR 2.5)
+      Vector())
   }
 
   private def makeForwarderFunction(
