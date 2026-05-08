@@ -662,6 +662,7 @@ class PostParser(
         structEnv, lidb.child(), headerRuleBuilder, defaultRegionRuneS, mutability)
     headerRuneToExplicitType += ((mutabilityRuneS.rune, MutabilityTemplataType()))
 
+    val internalMethodsP = mutable.ArrayBuffer[FunctionP]()
     val membersS =
       members.flatMap({
         case NormalStructMemberP(range, name, variability, memberType) => {
@@ -678,8 +679,8 @@ class PostParser(
           membersRuneToExplicitType.put(memberRune.rune, PackTemplataType(CoordTemplataType()))
           Vector(VariadicStructMemberS(PostParser.evalRange(structEnv.file, range), variability, memberRune))
         }
-        case StructMethodP(_) => {
-          // Implement struct methods one day
+        case StructMethodP(funcP) => {
+          internalMethodsP += funcP
           Vector.empty
         }
       })
@@ -713,6 +714,17 @@ class PostParser(
 
 //    val runeSToCanonicalRune = ruleBuilder.runeSToTentativeRune.mapValues(tentativeRune => tentativeRuneToCanonicalRune(tentativeRune))
 
+    val internalMethodsS =
+      internalMethodsP.toVector.map(method => {
+        functionScout.scoutInterfaceMember(
+          ParentInterface(
+            structEnv,
+            genericParametersS.toVector,
+            allRulesS,
+            allRuneToExplicitType.toMap),
+          method)
+      })
+
     StructS(
       structRangeS,
       structName,
@@ -728,7 +740,8 @@ class PostParser(
       membersRuneToExplicitType.toMap,
       membersRuneToPredictedType,
       memberRulesS,
-      membersS)
+      membersS,
+      internalMethodsS)
   }
 
   def translateCitizenAttributes(file: FileCoordinate, denizenName: INameS, attrsP: Vector[IAttributeP]): Vector[ICitizenAttributeS] = {

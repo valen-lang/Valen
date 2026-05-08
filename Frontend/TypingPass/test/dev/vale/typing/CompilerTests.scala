@@ -1039,6 +1039,15 @@ class CompilerTests extends FunSuite with Matchers {
     }
   }
 
+  test("Extern function can depend on exported kind") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |exported struct Firefly imm { }
+        |extern func moo() &Firefly;
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
   test("Reports when exported struct depends on non-exported member") {
     val compile = CompilerTestCompilation.test(
       """
@@ -1072,17 +1081,19 @@ class CompilerTests extends FunSuite with Matchers {
       }
   }
 
-  test("Reports when reading nonexistant local") {
-    val compile = CompilerTestCompilation.test(
-      """
-        |exported func main() int {
-        |  moo
-        |}
-        |""".stripMargin)
-    compile.getCompilerOutputs() match {
-      case Err(CouldntFindIdentifierToLoadT(_, CodeNameS(StrI("moo")))) =>
-    }
-  }
+  // Removed this test because this is now caught in the postparser
+  // AFTERM: delete entirely
+  //test("Reports when reading nonexistant local") {
+  //  val compile = CompilerTestCompilation.test(
+  //    """
+  //      |exported func main() int {
+  //      |  moo
+  //      |}
+  //      |""".stripMargin)
+  //  compile.getCompilerOutputs() match {
+  //    case Err(CouldntFindIdentifierToLoadT(_, CodeNameS(StrI("moo")))) =>
+  //  }
+  //}
 
   test("Reports when mutating after moving") {
     val compile = CompilerTestCompilation.test(
@@ -1964,5 +1975,262 @@ class CompilerTests extends FunSuite with Matchers {
       """.stripMargin)
 
     val coutputs = compile.expectCompilerOutputs()
+  }
+
+
+
+  ignore("Call rust builtin") { // Rust import pipeline not yet implemented
+    val compile = CompilerTestCompilation.test(
+      """
+        |import rust.rstr;
+        |
+        |exported func main() {
+        |  rstr("hello");
+        |}
+  """.stripMargin)
+
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  ignore("Call rust free function") { // Rust import pipeline not yet implemented
+    val compile = CompilerTestCompilation.test(
+      """
+        |import frust.std.fs.create_dir;
+        |
+        |exported func main() {
+        |  create_dir();
+        |}
+    """.stripMargin)
+
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  ignore("Import rust object") { // Rust import pipeline not yet implemented
+    val compile = CompilerTestCompilation.test(
+      """
+        |import frust.std.vec.Vec;
+        |
+        |exported func main() {
+        |  v = Vec<int>.new();
+        |}
+  """.stripMargin)
+
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("Call member function") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct Vec<T> {
+        |  hp int;
+        |  func new() Vec<T> { Vec<T>(42) }
+        |}
+        |exported func main() int {
+        |  v = Vec<int>.new();
+        |  return v.hp;
+        |}
+        |""".stripMargin)
+
+    val coutputs = compile.expectCompilerOutputs()
+  }
+
+  test("Namespace method call with both container and method generic args") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct S<T> {
+        |  func foo<U>(x U) U { x }
+        |}
+        |exported func main() bool {
+        |  return S<int>.foo<bool>(true);
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  test("Namespace method call with multi-param container") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct Pair<A, B> {
+        |  func make() Pair<A, B> { Pair<A, B>() }
+        |}
+        |exported func main() {
+        |  p = Pair<int, bool>.make();
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  test("Namespace method call with defaulted container generic") {
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyVec<T Ref, N Int = 5> {
+        |  func make() MyVec<T, N> { MyVec<T, N>() }
+        |}
+        |exported func main() {
+        |  s = MyVec<bool>.make();
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  ignore("Namespace method call with nested container chain") {
+    // Parser does not yet support nested chains like `Outer<X>.Inner<Y>.foo()`.
+    // When it does, this test exercises the multi-part walk in
+    // ExpressionCompiler's FunctionCallSE(OutsideLoadSE(...)) arm.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct Outer<X> {
+        |  struct Inner<Y> {
+        |    func make() Inner<Y> { Inner<Y>() }
+        |  }
+        |}
+        |exported func main() {
+        |  i = Outer<int>.Inner<bool>.make();
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  ignore("Namespace method call with complex defaulted container generic") {
+    // Like "Namespace method call with defaulted container generic" but the defaulted
+    // generic's default is a COMPLEX templex (`int` translates into a
+    // MaybeCoercingLookupSR + CoerceToCoordSR chain, introducing extra default-only
+    // runes like coerceKindRune). Two latent gaps that combine to break this case:
+    //   (1) `default.runeToType` only types `resultRune`; coerceKindRune is missing,
+    //       so `commitStep`'s newRunes registration won't include it.
+    //   (2) `MaybeCoercingLookupSR` reaches the solver instead of being converted
+    //       to `LookupSR` via `explicifyLookups` first — the solver throws
+    //       `MatchError` in `getPuzzles` (CompilerSolver.scala:238) because it
+    //       has no case for it.
+    // The simple-defaulted variant works because `LiteralSR(rune, IntLiteralSL(5))`
+    // is fully explicit — no MaybeCoercing variant, no unregistered runes.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct MyBox<U Ref, T Ref = int> {
+        |  func make() MyBox<U, T> { MyBox<U, T>() }
+        |}
+        |exported func main() {
+        |  m = MyBox<bool>.make();
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  ignore("Namespace method call with defaulted container generic AND method generic args") {
+    // Latent positional-misalignment gap in the simplified flatten approach.
+    //
+    // ExpressionCompiler builds explicitTemplateArgRunesS via
+    //   parts.flatMap(_.explicitArgs).map(_.rune)
+    // which positionally zips against the function's identifying-rune-types in
+    // attemptCandidateBanner. Container-method calls have a syntactic split: the
+    // container's args sit in parts[0], the method's own args in parts.last. When
+    // the container has a TRAILING defaulted param AND the method has its own
+    // template args, the user-supplied args are non-contiguous over the function's
+    // identifying-rune sequence — and the positional zip can't represent
+    // "skip middle (defaulted)".
+    //
+    // Concrete example: struct S<T, M Mutability = mut> { func foo<F>(...) ... }
+    // call S<int>.foo<bool>(...).
+    //   parts[0].explicitArgs = [int_rune] (T supplied; M defaulted)
+    //   parts.last.explicitArgs = [bool_rune] (F supplied)
+    //   flat: [int_rune, bool_rune]
+    //   foo's identifying runes: [T, M, F]
+    //   zip: [(int, T-type), (bool, M-type)] — bool lands on M instead of F.
+    //
+    // The current flatten approach works for:
+    //   - All-supplied:   S<int, mut>.foo<F>()   ✓
+    //   - Trailing-default-only: MyVec<bool>.make() (no method <args>)   ✓
+    //   - Method-only:    Pair<int, bool>.make()   ✓
+    // It breaks for the case below because the defaulted middle slot can't be
+    // skipped positionally.
+    //
+    // Fix would require either a map-keyed channel for explicit template args,
+    // or padding the container's args to its full identifying-rune length using
+    // skip-sentinel runes that the explicit-template-args-solve leaves unsolved
+    // so the call-solve's default-apply loop can fire.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct S<T Ref, M Mutability = mut> {
+        |  func foo<F Ref>(self &S<T>, f F) F { f }
+        |}
+        |exported func main() bool {
+        |  s = S<int>();
+        |  return s.foo<bool>(true);
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  ignore("Struct internal method inheriting function-typed default") {
+    // Exercises function-typed bound default inheritance. Functor1's F generic
+    // param has a function-typed default `func(P1)R` whose translated rules
+    // include bound-contract rules (PackSR / CallSiteFuncSR / DefinitionFuncSR).
+    // Per the @SRHODP audit those rules stay hoisted into Functor1's main rules
+    // (always needed for the parent's own solve, default-firing or not).
+    //
+    // The existing "Test single parameter function" test (CompilerSolverTests.scala:139)
+    // works because Functor1's body is empty and `__call` is a free function that
+    // re-declares F with its own default, getting the bound-contract rules locally.
+    //
+    // This test adds an INTERNAL method `use` to Functor1's body that uses F.
+    // Currently fails — the precise failure mode depends on how
+    // FunctionScout/StructCompiler propagate generic params and bound-contract
+    // rules to internal methods (see commit 25a0202f's discussion of "function-typed
+    // bound default inheritance" follow-up). Will be unblocked when the
+    // bound-contract rules are made available to inheriting methods, e.g. via
+    // extending Option 1's pattern to PackSR/CallSiteFuncSR/DefinitionFuncSR.
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct Functor1<F Prot = func(P1)R> imm
+        |where P1 Ref, R Ref {
+        |  func use(self &Functor1<F>, x P1) R { F(x) }
+        |}
+        |
+        |func __call<F Prot = func(P1)R>(self &Functor1<F>, param1 P1) R
+        |where P1 Ref, R Ref {
+        |  F(param1)
+        |}
+        |
+        |exported func main() int {
+        |  Functor1({_})(4)
+        |}
+        |""".stripMargin)
+    compile.expectCompilerOutputs()
+  }
+
+  ignore("Reports WrongNumberOfTemplateArguments when namespace method call has too many positional args for method's own runes") {
+    // Logic gap in OverloadResolver.attemptCandidateBanner:
+    // Currently blocked by FunctionScout.scala:114 (`vassert(userDeclaredRunes.isEmpty)`)
+    // which rejects internal methods that have their own runes (like `<N>` here).
+    // Once that assertion is lifted (same blocker as "Namespace method call with both
+    // container and method generic args"), this test should then fail with a match error
+    // because the current check uses identifyingRuneTemplataTypes.size (2) instead of
+    // the correct own-rune count (1). Fix: subtract receivingRuneToExplicitTemplateArgRune.size.
+    //
+    //   if (positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size)
+    // After @PRIIROZ, a method `func zork<N>` inside `struct S<K>` has identifying runes
+    // [N, K] (size 2). The check allows up to 2 positional args, but only 1 (N) is the
+    // method's own — K is supplied via the container prefix as an EqualsSR rule.
+    // Calling S<int>.zork<float, bool>() supplies 2 positional args when only 1 is valid.
+    // The correct check is:
+    //   positionalExplicitTemplateArgRunesS.size > identifyingRuneTemplataTypes.size - receivingRuneToExplicitTemplateArgRune.size
+    val compile = CompilerTestCompilation.test(
+      """
+        |struct S<K> {
+        |  func zork<N>(x N) N { x }
+        |}
+        |exported func main() int {
+        |  // Two positional args, but zork only has 1 own rune (N); K comes from the container prefix.
+        |  S<int>.zork<int, bool>(42)
+        |}
+        |""".stripMargin)
+    compile.getCompilerOutputs() match {
+      case Err(CouldntFindFunctionToCallT(_, fff)) => {
+        vassert(fff.rejectedCalleeToReason.size == 1)
+        fff.rejectedCalleeToReason.head._2 match {
+          case WrongNumberOfTemplateArguments(2, 1) =>
+        }
+      }
+    }
   }
 }

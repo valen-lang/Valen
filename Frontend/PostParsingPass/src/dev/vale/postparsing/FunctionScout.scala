@@ -504,10 +504,11 @@ class FunctionScout(
 
     vregionmut() // Put back in regions
     val genericParametersS =
-      (extraGenericParamsFromParentS ++
-        functionUserSpecifiedGenericParametersS ++
+      (functionUserSpecifiedGenericParametersS ++
         extraGenericParamsFromExplicitParamsS ++
-        extraGenericParamsFromBodyS)
+        extraGenericParamsFromBodyS ++
+        // Parent ones go on the end, see @PRIIROZ.
+        extraGenericParamsFromParentS)
           .filter({
             case GenericParameterS(_, _, RegionGenericParameterTypeS(_), _) => false
             case _ => true
@@ -762,6 +763,7 @@ class FunctionScout(
     (bodySE, VariableUses(usesOfParentVariables), magicParamNames)
   }
 
+  // AFTERM: scoutCitizenMember
   def scoutInterfaceMember(
     parentInterface: ParentInterface,
     functionP: FunctionP):

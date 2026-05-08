@@ -99,7 +99,9 @@ case class StructS(
     membersPredictedRuneToType: Map[IRuneS, ITemplataType],
     memberRules: Vector[IRulexSR],
 
-    members: Vector[IStructMemberS]
+    members: Vector[IStructMemberS],
+
+    internalMethods: Vector[FunctionS]
 ) extends ICitizenS {
 
   vassert(

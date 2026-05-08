@@ -2,10 +2,10 @@ package dev.vale.typing.expression
 
 import dev.vale._
 import dev.vale.postparsing._
-import dev.vale.postparsing.rules.IRulexSR
+import dev.vale.postparsing.rules.{IRulexSR, RuneUsage}
 import dev.vale.postparsing.GlobalFunctionFamilyNameS
 import dev.vale.solver.{FailedSolve, RuleError}
-import dev.vale.typing.OverloadResolver.{FindFunctionFailure, InferFailure, FindFunctionResolveFailure}
+import dev.vale.typing.OverloadResolver.{FindFunctionFailure, FindFunctionResolveFailure, InferFailure}
 import dev.vale.typing._
 import dev.vale.typing.ast._
 import dev.vale.typing.env._
@@ -38,7 +38,8 @@ class CallCompiler(
     contextRegion: RegionT,
     callableExpr: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     callableExpr.result.coord.kind match {
@@ -86,7 +87,8 @@ class CallCompiler(
             callLocation,
             functionName,
             explicitTemplateArgRulesS,
-            explicitTemplateArgRunesS,
+            positionalExplicitTemplateArgRunesS,
+            receivingRuneToExplicitTemplateArgRune,
             contextRegion,
             unconvertedArgsPointerTypes2,
             Vector.empty,
@@ -140,7 +142,8 @@ class CallCompiler(
           contextRegion,
           callableExpr.result.coord.kind,
           explicitTemplateArgRulesS,
-          explicitTemplateArgRunesS,
+          positionalExplicitTemplateArgRunesS,
+          receivingRuneToExplicitTemplateArgRune,
           callableExpr,
           givenArgsExprs2)
       }
@@ -170,7 +173,8 @@ class CallCompiler(
     contextRegion: RegionT,
     kind: KindT,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
     givenCallableUnborrowedExpr2: ReferenceExpressionTE,
     givenArgsExprs2: Vector[ReferenceExpressionTE]):
     (FunctionCallTE) = {
@@ -209,7 +213,8 @@ class CallCompiler(
         callLocation,
         interner.intern(CodeNameS(keywords.underscoresCall)),
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         contextRegion,
         paramFilters,
         Vector.empty,
@@ -302,9 +307,9 @@ class CallCompiler(
     region: RegionT,
     callableReferenceExpr2: ReferenceExpressionTE,
     explicitTemplateArgRulesS: Vector[IRulexSR],
-    explicitTemplateArgRunesS: Vector[IRuneS],
-    argsExprs2: Vector[ReferenceExpressionTE]
-  ):
+    positionalExplicitTemplateArgRunesS: Vector[IRuneS],
+    receivingRuneToExplicitTemplateArgRune: Vector[(RuneUsage, RuneUsage)],
+    argsExprs2: Vector[ReferenceExpressionTE]):
   (ReferenceExpressionTE) = {
     val callExpr =
       evaluateCall(
@@ -316,7 +321,8 @@ class CallCompiler(
         region,
         callableReferenceExpr2,
         explicitTemplateArgRulesS,
-        explicitTemplateArgRunesS,
+        positionalExplicitTemplateArgRunesS,
+        receivingRuneToExplicitTemplateArgRune,
         argsExprs2)
     (callExpr)
   }
