@@ -574,7 +574,6 @@ exported func main() void {
     assert_eq!(let_normal.variable.coord().ownership, crate::typing::types::types::OwnershipT::Borrow);
 }
 /*
-Guardian: temp-disable: NNDX — False positive: "struct Moo {}" is Vale source code inside a Rust string literal, not a new Rust struct definition. The Scala test has identical Vale source code — this is a test-only string, not a Rust type declaration. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-2037-1778172009776/hook-2037/make_constraint_reference--536.0.NoNewDefinitions-NNDX.NoNewDefinitions-NNDX.verdict.md
   test("Make constraint reference") {
     val compile = CompilerTestCompilation.test(
       """
@@ -632,9 +631,25 @@ fn recursion() {
 */
 // mig: fn test_overloads
 #[test]
-#[ignore]
 fn test_overloads() {
-    panic!("Unmigrated test: test_overloads");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/functions/overloads.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    assert!(matches!(coutputs.lookup_function_by_human_name("main").header.return_type,
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }
+    ));
 }
 /*
   test("Test overloads") {
@@ -717,9 +732,76 @@ fn test_taking_a_callable_param() {
 */
 // mig: fn simple_struct
 #[test]
-#[ignore]
 fn simple_struct() {
-    panic!("Unmigrated test: simple_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "#!DeriveStructDrop\n",
+        "struct MyStruct { a int; }\n",
+        "exported func main() {\n",
+        "  ms = MyStruct(7);\n",
+        "  [_] = ms;\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    // Check the struct was made
+    let my_struct_def = coutputs.structs.iter().find(|def| {
+        matches!(def.template_name.local_name,
+            crate::typing::names::names::INameT::StructTemplate(st)
+            if st.human_name == "MyStruct"
+        ) && def.template_name.init_steps.is_empty()
+    }).unwrap();
+    assert!(matches!(my_struct_def.mutability, crate::typing::templata::templata::ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Mutable })));
+    assert_eq!(my_struct_def.members.len(), 1);
+    assert!(matches!(&my_struct_def.members[0],
+        crate::typing::ast::citizens::IStructMemberT::Normal(nm)
+        if matches!(nm.name, IVarNameT::CodeVar(cvn) if cvn.name == "a")
+            && matches!(nm.variability, crate::typing::types::types::VariabilityT::Final)
+            && matches!(nm.tyype, crate::typing::ast::citizens::IMemberTypeT::Reference(
+                crate::typing::ast::citizens::ReferenceMemberTypeT {
+                    reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }
+                }
+            ))
+    ));
+
+    // Check there's a constructor
+    let constructor = coutputs.lookup_function_by_human_name("MyStruct");
+    assert!(matches!(constructor.header.return_type,
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(_), .. }
+    ));
+    assert_eq!(constructor.header.params.len(), 1);
+    assert!(matches!(constructor.header.params[0],
+        ParameterT { tyype: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }, .. }
+    ));
+
+    // Check that we call the constructor
+    let main = coutputs.lookup_function_by_human_name("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(
+            crate::typing::ast::expressions::FunctionCallTE {
+                callable: crate::typing::ast::ast::PrototypeT { .. },
+                args: [crate::typing::ast::expressions::ReferenceExpressionTE::ConstantInt(
+                    crate::typing::ast::expressions::ConstantIntTE {
+                        value: crate::typing::templata::templata::ITemplataT::Integer(7),
+                        ..
+                    }
+                )],
+                ..
+            }
+        ) => Some(())
+    );
 }
 /*
   test("Simple struct") {
@@ -910,9 +992,44 @@ fn stamps_an_interface_template_via_a_function_return() {
 */
 // mig: fn reads_a_struct_member
 #[test]
-#[ignore]
 fn reads_a_struct_member() {
-    panic!("Unmigrated test: reads_a_struct_member");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "#!DeriveStructDrop\n",
+        "struct MyStruct { a int; }\n",
+        "exported func main() int {\n",
+        "  ms = MyStruct(7);\n",
+        "  x = ms.a;\n",
+        "  [_] = ms;\n",
+        "  return x;\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_human_name("main");
+    // check for the member access
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(
+            crate::typing::ast::expressions::ReferenceMemberLookupTE {
+                member_name: IVarNameT::CodeVar(cvn),
+                member_reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. },
+                variability: crate::typing::types::types::VariabilityT::Final,
+                ..
+            }
+        ) if cvn.name == "a" => Some(())
+    );
 }
 /*
   test("Reads a struct member") {
@@ -944,9 +1061,58 @@ fn reads_a_struct_member() {
 */
 // mig: fn automatically_drops_struct
 #[test]
-#[ignore]
 fn automatically_drops_struct() {
-    panic!("Unmigrated test: automatically_drops_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct MyStruct { a int; }\n",
+        "exported func main() int {\n",
+        "  ms = MyStruct(7);\n",
+        "  return ms.a;\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_human_name("main");
+    // check for the call to drop
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(
+            crate::typing::ast::expressions::FunctionCallTE {
+                callable: crate::typing::ast::ast::PrototypeT {
+                    id: crate::typing::names::names::IdT {
+                        init_steps: [crate::typing::names::names::INameT::StructTemplate(st)],
+                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+                        ..
+                    },
+                    return_type: CoordT { ownership: OwnershipT::Share, kind: KindT::Void(_), .. },
+                },
+                ..
+            }
+        ) if st.human_name == "MyStruct"
+        && fn_name.template.human_name == "drop"
+        && fn_name.template_args.is_empty()
+        && matches!(fn_name.parameters,
+            [CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. }]
+            if matches!(stt.id.local_name,
+                crate::typing::names::names::INameT::Struct(sn)
+                if matches!(sn.template,
+                    crate::typing::names::names::IStructTemplateNameT::StructTemplate(st2)
+                    if st2.human_name == "MyStruct"
+                )
+            )
+        ) => Some(())
+    );
 }
 /*
   test("Automatically drops struct") {
@@ -1087,9 +1253,40 @@ fn tests_exporting_interface() {
 */
 // mig: fn tests_single_expression_and_single_statement_functions_returns
 #[test]
-#[ignore]
 fn tests_single_expression_and_single_statement_functions_returns() {
-    panic!("Unmigrated test: tests_single_expression_and_single_statement_functions_returns");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct MyThing { value int; }\n",
+        "func moo() MyThing { return MyThing(4); }\n",
+        "exported func main() { moo(); }\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let moo = coutputs.lookup_function_by_human_name("moo");
+    assert!(matches!(moo.header.return_type,
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. }
+        if matches!(stt.id.local_name,
+            crate::typing::names::names::INameT::Struct(sn)
+            if matches!(sn.template,
+                crate::typing::names::names::IStructTemplateNameT::StructTemplate(st)
+                if st.human_name == "MyThing"
+            )
+        ) && stt.id.init_steps.is_empty()
+    ));
+    let main = coutputs.lookup_function_by_human_name("main");
+    assert!(matches!(main.header.return_type,
+        CoordT { kind: KindT::Void(_), .. }
+    ));
 }
 /*
   test("Tests single expression and single statement functions' returns") {
@@ -1266,9 +1463,27 @@ fn tests_calling_a_virtual_function_through_a_borrow_ref() {
 */
 // mig: fn tests_calling_a_templated_function_with_explicit_template_args
 #[test]
-#[ignore]
 fn tests_calling_a_templated_function_with_explicit_template_args() {
-    panic!("Unmigrated test: tests_calling_a_templated_function_with_explicit_template_args");
+    // Tests putting MyOption<int> as the type of x.
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "func moo<T> () where T Ref { }\n",
+        "exported func main() {\n",
+        "  moo<int>();\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Tests calling a templated function with explicit template args") {
@@ -1372,9 +1587,22 @@ fn tests_a_linked_list() {
 */
 // mig: fn test_borrow_ref
 #[test]
-#[ignore]
 fn test_borrow_ref() {
-    panic!("Unmigrated test: test_borrow_ref");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/borrowRef.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Test borrow ref") {
@@ -1506,9 +1734,52 @@ fn tests_a_foreach_for_a_linked_list() {
 */
 // mig: fn test_return_from_inside_if_destroys_locals
 #[test]
-#[ignore]
 fn test_return_from_inside_if_destroys_locals() {
-    panic!("Unmigrated test: test_return_from_inside_if_destroys_locals");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Marine { hp int; }\n",
+        "exported func main() int {\n",
+        "  m = Marine(5);\n",
+        "  x =\n",
+        "    if (true) {\n",
+        "      return 7;\n",
+        "    } else {\n",
+        "      m.hp\n",
+        "    };\n",
+        "  return x;\n",
+        "}",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    let destructor_calls = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(fpc)
+            if matches!(fpc.callable.id.local_name,
+                crate::typing::names::names::INameT::Function(fn_name)
+                if fn_name.template.human_name == "drop"
+                && matches!(fn_name.parameters,
+                    [crate::typing::types::types::CoordT { ownership: crate::typing::types::types::OwnershipT::Own, kind: crate::typing::types::types::KindT::Struct(stt), .. }]
+                    if matches!(stt.id.local_name,
+                        crate::typing::names::names::INameT::Struct(sn)
+                        if matches!(sn.template, crate::typing::names::names::IStructTemplateNameT::StructTemplate(st) if st.human_name == "Marine")
+                    )
+                )
+            ) && matches!(fpc.callable.id.init_steps,
+                [crate::typing::names::names::INameT::StructTemplate(st)] if st.human_name == "Marine"
+            ) => Some(fpc)
+    );
+    assert_eq!(destructor_calls.len(), 2);
 }
 /*
   test("Test return from inside if destroys locals") {
@@ -1600,9 +1871,33 @@ fn templated_imm_struct() {
 */
 // mig: fn borrow_load_member
 #[test]
-#[ignore]
 fn borrow_load_member() {
-    panic!("Unmigrated test: borrow_load_member");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Bork {\n",
+        "  x int;\n",
+        "}\n",
+        "func getX(bork &Bork) int { return bork.x; }\n",
+        "struct List {\n",
+        "  array! Bork;\n",
+        "}\n",
+        "exported func main() int {\n",
+        "  l = List(Bork(0));\n",
+        "  return getX(&l.array);\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
 }
 /*
   test("Borrow-load member") {
@@ -1681,9 +1976,26 @@ fn if_branches_returns_never_and_struct() {
 */
 // mig: fn test_return
 #[test]
-#[ignore]
 fn test_return() {
-    panic!("Unmigrated test: test_return");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int {\n  return 7;\n}";
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Return(_) => Some(())
+    );
 }
 /*
   test("Test return") {
@@ -1701,9 +2013,46 @@ fn test_return() {
 */
 // mig: fn test_return_from_inside_if
 #[test]
-#[ignore]
 fn test_return_from_inside_if() {
-    panic!("Unmigrated test: test_return_from_inside_if");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import v.builtins.panic.*;\nexported func main() int {\n  if (true) {\n    return 7;\n  } else {\n    return 9;\n  }\n  __vbi_panic();\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_human_name("main");
+    let returns = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Return(_) => Some(())
+    );
+    assert_eq!(returns.len(), 2);
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ConstantInt(
+            crate::typing::ast::expressions::ConstantIntTE {
+                value: crate::typing::templata::templata::ITemplataT::Integer(7),
+                ..
+            }
+        ) => Some(())
+    );
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ConstantInt(
+            crate::typing::ast::expressions::ConstantIntTE {
+                value: crate::typing::templata::templata::ITemplataT::Integer(9),
+                ..
+            }
+        ) => Some(())
+    );
 }
 /*
   test("Test return from inside if") {

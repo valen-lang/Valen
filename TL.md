@@ -57,6 +57,7 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 - **`IInstantiationNameT::template` panic stubs**: 3 variants un-implemented — `OverrideDispatcherCase` (Scala `template = this` requires an `OverrideDispatcherCaseTemplate` variant in `ITemplateNameT` that doesn't exist), `ExternFunction` (Scala builds a fresh `ExternFunctionTemplateNameT(humanName)` — needs interner), `Struct` (`x.template: IStructTemplateNameT` needs flattening into the wider `ITemplateNameT` enum). Add when a test path hits the panic.
 - **Revisit `/// Arena-allocated` vs `/// Temporary state` classifications.** Scaffolding may have over-eagerly marked types Arena-allocated when they're really transient solver outputs or function-return wrappers (`LocationInFunctionEnvironmentT`, `CompleteResolveSolve`/`CompleteDefineSolve`, `HinputsT`). Walk every `/// Arena-allocated` type and re-classify ones that don't need arena identity. Architect-level decision per type.
 - **Explore making every enum-of-only-references into inline-only** (e.g. `IEnvironmentT`, `IInDenizenEnvironmentT`) — drop the `&'t` wrapping on field/parameter sites, hold by value, dispatch eq/hash on the inner ref ptr.
+- **SPDMX recurring class: structural-shape diff that's a Rust→Scala bug-fix.** Seen on `compiler_tests.rs:1102-1114` (the "Automatically drops struct" test, where the Rust pattern was matching `template_args` against the OwnT/StructTT coord but Scala's third `FunctionNameT` field is `parameters`); SPDMX flagged the corrective re-shape. If it fires again, worth amending into SPDMX rather than temp-disabling each time.
 - **Eliminate sources of nondeterminism.** Ptr-hashing on `@IEOIBZ` identity types, `IdT`, and `PtrKey<T>` is nondeterministic across runs and leaks into output via `HashMap`/`HashSet` iteration. `ArenaIndexMap` (insertion-ordered) is unaffected — the AASSNCMCX sweep accidentally fixed most cases. Remaining at-risk: `HashMap<PtrKey<IdT>, V>` in `CompilerOutputs` and `HashMap<IdT, V>` in `HinputsT` (both Temporary state). **Short-term:** extend ArenaIndexMap to ptr-hashed-key maps regardless of containing-struct class. **Long-term:** content-based hashing on `@IEOIBZ` types + `IdT` (touches the @IEOIBZ pattern). Bit-reproducible output requires both. Defer until the instantiator gets attention or a test flakes.
 
 ---
@@ -95,6 +96,8 @@ Expect this on most emitter-shaped typing-pass functions (long `.map.groupBy.map
 - **Structural / lifetime / cross-file refactors** that need architect sign-off per "Run Solutions By The Architect First."
 
 **Everything else is JR's job, including signature shape changes that don't trip Guardian.** Adding an `interner` parameter to a method is JR's call — they don't need to escalate. Adding `&'t self` where needed for back-pointer-emitting methods is JR's call. Renaming a parameter from `env` to `nenv` to match Scala is JR's call. Threading a new field through three call sites is JR's call. The line is "would Guardian fire on this edit?" — if no, JR does it; if yes, TL does it.
+
+**JR can issue Guardian temp-disables themselves** via `mcp__guardian__guardian_temp_disable`; they only escalate to TL when the temp-disable itself fails or is rejected.
 
 **Threading an `interner: &TypingInterner<'s, 't>` parameter is always a fine Rust adaptation** — Scala didn't take an interner because it used GC, but Rust often needs one to arena-allocate a result Scala mutated in place. Document with `// Rust adaptation (SPDMX-B): <why>` above the fn. JR-level work; doesn't trip Guardian.
 
@@ -216,6 +219,10 @@ The typing/ skeleton has a `/* ... */` block with the Scala source directly belo
   ```
 
 ---
+
+## Writing Scala-Parity Tests
+
+Scala tests built on `Collector.only(scope, { case … })` should port to the existing `collect_only_*node!` traverse macros (`postparsing/test/traverse.rs`, `typing/test/traverse.rs`) — one macro call per Scala `Collector.only` call, the whole `case` pattern inlined verbatim — not to positional `expect_N` + `cast!` + `assert_eq!` chains, which over-constrain on element count and are invisible to a tree walker. Use literal patterns where Scala does: `StrI<'s>` is `pub struct StrI<'s>(pub &'s str)`, so `StrI("x")` matches inline exactly like Scala's `StrI("x")` — no `if name.as_str() == "x"` guard needed. Trailing `VoidSE` from semicolon-terminated blocks is invisible to recursive collectors, so don't add Rust-only stripping in the scout to "fix" a port — rewrite the over-constrained test instead.
 
 ## Test Promotion Workflow
 
