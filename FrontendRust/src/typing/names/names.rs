@@ -213,7 +213,7 @@ impl<'s, 't> Eq for IdT<'s, 't> where 's: 't, {}
 // Callers that need a specific leaf-name pattern-match on `local_name` directly,
 // like Scala does. See `docs/reasoning/idt-typed-view-alternatives.md`.
 
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum INameT<'s, 't> {
     ExportTemplate(&'t ExportTemplateNameT<'s, 't>),
@@ -3086,6 +3086,15 @@ impl<'s, 't> From<IInterfaceTemplateNameT<'s, 't>> for ICitizenTemplateNameT<'s,
         }
     }
 }
+
+impl<'s, 't> From<IInterfaceTemplateNameT<'s, 't>> for INameT<'s, 't> {
+    fn from(f: IInterfaceTemplateNameT<'s, 't>) -> Self {
+        match f {
+            IInterfaceTemplateNameT::InterfaceTemplate(x) => x.into(),
+        }
+    }
+}
+/* Guardian: disable-all */
 
 impl<'s, 't> From<ISuperKindNameT<'s, 't>> for IInstantiationNameT<'s, 't> {
     fn from(f: ISuperKindNameT<'s, 't>) -> Self {

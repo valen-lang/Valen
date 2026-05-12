@@ -1572,9 +1572,76 @@ where 's: 't,
                         let unchecked_conclusions =
                             self.compile_interface(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
                         let maybe_export =
-                            interface_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(_e) => Some(()), _ => None });
-                        if maybe_export.is_some() {
-                            panic!("implement: interface export in evaluate");
+                            interface_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(e) => Some(e), _ => None });
+                        match maybe_export {
+                            None => {}
+                            Some(_export_s) => {
+                                use std::marker::PhantomData;
+                                use crate::typing::types::types::KindT;
+                                use crate::typing::citizen::struct_compiler::IResolveOutcome;
+                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
+                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
+                                use crate::typing::types::types::RegionT;
+                                let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
+                                    code_loc: interface_a.range.begin,
+                                    _phantom: PhantomData,
+                                });
+                                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let template_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &template_id_steps,
+                                    local_name: INameT::ExportTemplate(template_name),
+                                });
+                                let template_id_ref = self.typing_interner.alloc(template_id);
+                                let export_outer_templatas = TemplatasStoreBuilder::new(template_id_ref).build_in(self.typing_interner);
+                                let _export_outer_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: env,
+                                    template_id,
+                                    id: template_id,
+                                    templatas: export_outer_templatas,
+                                });
+                                let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
+                                    template: template_name,
+                                    region: RegionT {},
+                                });
+                                let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &placeholdered_export_id_steps,
+                                    local_name: INameT::Export(placeholdered_export_name),
+                                });
+                                let placeholdered_export_id_ref = self.typing_interner.alloc(placeholdered_export_id);
+                                let export_templatas = TemplatasStoreBuilder::new(placeholdered_export_id_ref).build_in(self.typing_interner);
+                                let export_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: env,
+                                    template_id,
+                                    id: placeholdered_export_id,
+                                    templatas: export_templatas,
+                                });
+                                let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
+                                let export_call_range = self.typing_interner.alloc_slice_copy(&[interface_a.range]);
+                                let export_placeholdered_kind = match self.resolve_interface(
+                                    &mut coutputs,
+                                    export_env_as_iindenizen,
+                                    export_call_range,
+                                    LocationInDenizen { path: &[] },
+                                    templata,
+                                    &[],
+                                ) {
+                                    IResolveOutcome::ResolveSuccess(s) => self.typing_interner.alloc(s.kind),
+                                    IResolveOutcome::ResolveFailure(_f) => panic!("vwat: resolve interface failed for export"),
+                                };
+                                let export_name = interface_a.name.name;
+                                coutputs.add_kind_export(
+                                    interface_a.range,
+                                    KindT::Interface(export_placeholdered_kind),
+                                    placeholdered_export_id,
+                                    export_name,
+                                    self.typing_interner,
+                                );
+                            }
                         }
                         unchecked_defining_conclusionses.push(unchecked_conclusions);
                     }

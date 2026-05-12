@@ -108,7 +108,7 @@ where 's: 't,
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
             IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in resolve_impl"),
-            IImplTemplateNameT::AnonymousSubstructImplTemplate(_) => panic!("Unimplemented: AnonymousSubstructImplTemplate in resolve_impl"),
+            IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
 
@@ -251,7 +251,7 @@ where 's: 't,
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
             IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in partial_resolve_impl"),
-            IImplTemplateNameT::AnonymousSubstructImplTemplate(_) => panic!("Unimplemented: AnonymousSubstructImplTemplate in partial_resolve_impl"),
+            IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
 
@@ -373,7 +373,7 @@ where 's: 't,
         let impl_template_name_local: INameT<'s, 't> = match impl_template_name {
             IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
             IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in compile_impl"),
-            IImplTemplateNameT::AnonymousSubstructImplTemplate(_) => panic!("Unimplemented: AnonymousSubstructImplTemplate in compile_impl"),
+            IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
         };
         let impl_template_id: &'t IdT<'s, 't> = parent_env.id().add_step(self.typing_interner, impl_template_name_local);
 

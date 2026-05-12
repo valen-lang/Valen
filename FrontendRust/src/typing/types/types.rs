@@ -159,7 +159,7 @@ case class CoordT(
 // KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
 // (StructTT, InterfaceTT, etc.) are arena-interned and held as &'t refs here.
 // Primitives inline by value; compound types use &'t to keep the enum small (see @WVSBIZ).
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
   Never(NeverT),
@@ -414,7 +414,7 @@ object ICitizenTT {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -449,7 +449,7 @@ impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindTT<'s, 't> {
   Interface(&'t InterfaceTT<'s, 't>),
@@ -474,7 +474,7 @@ impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -614,7 +614,7 @@ where 's: 't,
   OverloadSet(OverloadSetTValT<'s, 't>),
 }
 
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadT<'s, 't>
 where 's: 't,

@@ -77,17 +77,35 @@ where 's: 't,
                 )
             }
             IFunctionDeclarationNameS::ConstructorName(r) => {
-                let (name, code_location) = match r.tlcd {
-                    TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(s) => (s.name, s.range.begin),
-                    TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(i) => (i.name, i.range.begin),
-                };
-                IFunctionTemplateNameT::FunctionTemplate(
-                    self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
-                        human_name: name,
-                        code_location: self.translate_code_location(code_location),
-                        _phantom: std::marker::PhantomData,
-                    })
-                )
+                match r.tlcd {
+                    ICitizenDeclarationNameS::TopLevelStructDeclarationName(s) => {
+                        IFunctionTemplateNameT::FunctionTemplate(
+                            self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                                human_name: s.name,
+                                code_location: self.translate_code_location(s.range.begin),
+                                _phantom: std::marker::PhantomData,
+                            })
+                        )
+                    }
+                    ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(i) => {
+                        IFunctionTemplateNameT::FunctionTemplate(
+                            self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
+                                human_name: i.name,
+                                code_location: self.translate_code_location(i.range.begin),
+                                _phantom: std::marker::PhantomData,
+                            })
+                        )
+                    }
+                    ICitizenDeclarationNameS::AnonymousSubstructTemplateName(astn) => {
+                        // See LNASC.
+                        let citizen_name = self.translate_citizen_name(ICitizenDeclarationNameS::AnonymousSubstructTemplateName(astn));
+                        IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(
+                            self.typing_interner.intern_anonymous_substruct_constructor_template_name(
+                                AnonymousSubstructConstructorTemplateNameT { substruct: citizen_name }
+                            )
+                        )
+                    }
+                }
             }
             IFunctionDeclarationNameS::ImmConcreteDestructorName(_) => panic!("Unimplemented: ImmConcreteDestructorName in translate_generic_function_name"),
             IFunctionDeclarationNameS::ImmInterfaceDestructorName(_) => panic!("Unimplemented: ImmInterfaceDestructorName in translate_generic_function_name"),
@@ -181,8 +199,34 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn translate_citizen_name(&self, name: IFunctionDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
-        panic!("Unimplemented: translate_citizen_name");
+    pub fn translate_citizen_name(&self, name: ICitizenDeclarationNameS<'s>) -> ICitizenTemplateNameT<'s, 't> {
+        match name {
+            ICitizenDeclarationNameS::TopLevelStructDeclarationName(n) => {
+                ICitizenTemplateNameT::StructTemplate(
+                    self.typing_interner.intern_struct_template_name(StructTemplateNameT {
+                        human_name: n.name,
+                        _phantom: std::marker::PhantomData,
+                    })
+                )
+            }
+            ICitizenDeclarationNameS::AnonymousSubstructTemplateName(astn) => {
+                // See LNASC.
+                let interface_template_name = self.translate_interface_name(astn.interface_name);
+                ICitizenTemplateNameT::AnonymousSubstructTemplate(
+                    self.typing_interner.intern_anonymous_substruct_template_name(
+                        AnonymousSubstructTemplateNameT { interface: interface_template_name }
+                    )
+                )
+            }
+            ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(n) => {
+                ICitizenTemplateNameT::InterfaceTemplate(
+                    self.typing_interner.intern_interface_template_name(InterfaceTemplateNameT {
+                        human_namee: n.name,
+                        _phantom: std::marker::PhantomData,
+                    })
+                )
+            }
+        }
     }
 /*
   def translateCitizenName(name: ICitizenDeclarationNameS): ICitizenTemplateNameT = {
@@ -224,8 +268,24 @@ where 's: 't,
                     IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
                 }
             }
-            INameS::AnonymousSubstructTemplateName(_) => panic!("Unimplemented: translate_name_step AnonymousSubstructTemplateNameS"),
-            INameS::AnonymousSubstructImplDeclaration(_) => panic!("Unimplemented: translate_name_step AnonymousSubstructImplDeclarationNameS"),
+            INameS::AnonymousSubstructTemplateName(n) => {
+                // See LNASC.
+                let interface_template_name = self.translate_interface_name(n.interface_name);
+                INameT::AnonymousSubstructTemplate(
+                    self.typing_interner.intern_anonymous_substruct_template_name(
+                        AnonymousSubstructTemplateNameT { interface: interface_template_name }
+                    )
+                )
+            }
+            INameS::AnonymousSubstructImplDeclaration(n) => {
+                // See LNASC.
+                let interface_template_name = self.translate_interface_name(n.interface);
+                INameT::AnonymousSubstructImplTemplate(
+                    self.typing_interner.intern_anonymous_substruct_impl_template_name(
+                        AnonymousSubstructImplTemplateNameT { interface: interface_template_name }
+                    )
+                )
+            }
             INameS::ImplDeclaration(_) => panic!("Unimplemented: translate_name_step ImplDeclarationNameS"),
             INameS::RuneName(_) => panic!("Unimplemented: translate_name_step RuneNameS"),
             INameS::RuntimeSizedArrayDeclarationName(_) => panic!("Unimplemented: translate_name_step RuntimeSizedArrayDeclarationName"),
@@ -244,15 +304,24 @@ where 's: 't,
                     }
                     IFunctionDeclarationNameS::ConstructorName(ctor) => {
                         match ctor.tlcd {
-                            TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(n) => {
+                            ICitizenDeclarationNameS::TopLevelStructDeclarationName(n) => {
                                 INameT::FunctionTemplate(self.typing_interner.intern_function_template_name(FunctionTemplateNameT {
                                     human_name: n.name,
                                     code_location: n.range.begin,
                                     _phantom: PhantomData,
                                 }))
                             }
-                            TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(_) => {
+                            ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(_) => {
                                 panic!("Unimplemented: translate_name_step ConstructorNameS for interface")
+                            }
+                            ICitizenDeclarationNameS::AnonymousSubstructTemplateName(astn) => {
+                                // See LNASC.
+                                let citizen_name = self.translate_citizen_name(ICitizenDeclarationNameS::AnonymousSubstructTemplateName(astn));
+                                INameT::AnonymousSubstructConstructorTemplate(
+                                    self.typing_interner.intern_anonymous_substruct_constructor_template_name(
+                                        AnonymousSubstructConstructorTemplateNameT { substruct: citizen_name }
+                                    )
+                                )
                             }
                         }
                     }

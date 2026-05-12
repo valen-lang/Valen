@@ -4,7 +4,8 @@ use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDef
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
 
-use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS, SelfNameS};
+use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS, SelfNameS, AnonymousSubstructTemplateImpreciseNameValS};
+use crate::typing::names::names::{ICitizenTemplateNameT, IInterfaceTemplateNameT};
 use crate::scout_arena::ScoutArena;
 use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
@@ -39,7 +40,7 @@ import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
 
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>
 where 's: 't,
@@ -281,7 +282,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 /*
 }
 */
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInDenizenEnvironmentT<'s, 't>
 where 's: 't,
@@ -714,6 +715,25 @@ pub fn get_imprecise_name<'s, 't>(
     // Scala: ImplTemplateNameT(_) => vwat() — should never be called for impl entries (they are
     // indexed under ImplImpreciseNameS in TemplatasStore.buildFor, never via getImpreciseName(key)).
     INameT::ImplTemplate(_) => panic!("Unimplemented or unreachable: ImplTemplateNameT — Scala vwat()"),
+    INameT::AnonymousSubstructTemplate(astn) => {
+        let inner_name = get_imprecise_name(scout_arena, astn.interface.into());
+        inner_name.map(|x| scout_arena.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructTemplateImpreciseName(AnonymousSubstructTemplateImpreciseNameValS { interface_imprecise_name: x })))
+    }
+    INameT::AnonymousSubstructConstructorTemplate(asct) => {
+        match asct.substruct {
+            ICitizenTemplateNameT::StructTemplate(st) => {
+                Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: st.human_name })))
+            }
+            ICitizenTemplateNameT::AnonymousSubstructTemplate(astn) => {
+                match astn.interface {
+                    IInterfaceTemplateNameT::InterfaceTemplate(it) => {
+                        Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: it.human_namee })))
+                    }
+                }
+            }
+            _ => panic!("Unimplemented: get_imprecise_name for AnonymousSubstructConstructorTemplate with substruct {:?}", asct.substruct),
+        }
+    }
     _ => panic!("Unimplemented: get_imprecise_name for {:?}", name_t),
   }
 }

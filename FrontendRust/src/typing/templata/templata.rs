@@ -198,7 +198,7 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 */
 // Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
 // Interned payloads behind &'t; scalar variants inline. See @WVSBIZ for why.
-/// Polyvalue (see @TFITCX)
+/// Polyvalue (see @TFITCX) — derive Eq/Hash; never hand-roll `ptr::eq` on the outer `&self` (see @PVECFPZ).
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),

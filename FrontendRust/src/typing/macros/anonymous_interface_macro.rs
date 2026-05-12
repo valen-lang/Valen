@@ -72,11 +72,149 @@ where 's: 't,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::ast::{ICitizenAttributeS, SealedS};
+        use crate::postparsing::ast::{ICitizenAttributeS, SealedS, NormalStructMemberS};
+        use crate::postparsing::names::{
+            IRuneValS, AnonymousSubstructTemplateNameS, AnonymousSubstructImplDeclarationNameS,
+            AnonymousSubstructTemplateRuneS, AnonymousSubstructKindRuneS,
+            AnonymousSubstructParentInterfaceTemplateRuneS, AnonymousSubstructParentInterfaceKindRuneS,
+            IImplDeclarationNameS,
+        };
+        use crate::postparsing::rules::rules::{LookupSR, CallSR, IRulexSR, RuneUsage};
+        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, TemplateTemplataType};
+        use crate::typing::names::names::IdValT;
+        use crate::higher_typing::ast::ImplA;
+        use crate::utils::arena_index_map::ArenaIndexMap;
+
         if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
             return vec![];
         }
-        panic!("implement: get_interface_sibling_entries_anonymous_interface non-sealed case");
+
+        let member_runes: Vec<RuneUsage<'s>> =
+            interface_a.internal_methods.iter().enumerate().map(|(_index, _method)| {
+                panic!("implement: member_runes for non-zero-method interface")
+            }).collect();
+        let members: Vec<NormalStructMemberS<'s>> =
+            interface_a.internal_methods.iter().zip(member_runes.iter()).enumerate().map(|(_index, (_method, _rune))| {
+                panic!("implement: members for non-zero-method interface")
+            }).collect();
+
+        let struct_name_s = AnonymousSubstructTemplateNameS { interface_name: *interface_a.name };
+        let struct_name_s_ref = self.scout_arena.alloc(struct_name_s);
+        let struct_local_name = self.translate_name_step(crate::postparsing::names::INameS::AnonymousSubstructTemplateName(struct_name_s_ref));
+        let struct_name_t_steps = interface_name.init_steps.to_vec();
+        let struct_name_t = *self.typing_interner.intern_id(IdValT {
+            package_coord: interface_name.package_coord,
+            init_steps: &struct_name_t_steps,
+            local_name: struct_local_name,
+        });
+
+        let struct_a = self.make_struct_anonymous_interface(
+            interface_a,
+            &member_runes,
+            &members,
+            struct_name_s,
+        );
+
+        let more_entries = self.get_struct_sibling_entries_struct_constructor(struct_name_t, struct_a);
+        let mut more_entries2 = self.get_struct_sibling_entries_struct_drop(struct_name_t, struct_a);
+        let mut more_entries_combined = more_entries;
+        more_entries_combined.append(&mut more_entries2);
+
+        let forwarder_methods: Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            interface_a.internal_methods.iter().zip(member_runes.iter()).enumerate().map(|(_method_index, (_method, _rune))| {
+                panic!("implement: forwarder_methods for non-zero-method interface")
+            }).collect();
+
+        let anon_template_rune = self.scout_arena.intern_rune(
+            IRuneValS::AnonymousSubstructTemplateRune(AnonymousSubstructTemplateRuneS {})
+        );
+        let anon_kind_rune = self.scout_arena.intern_rune(
+            IRuneValS::AnonymousSubstructKindRune(AnonymousSubstructKindRuneS {})
+        );
+        let parent_interface_template_rune = self.scout_arena.intern_rune(
+            IRuneValS::AnonymousSubstructParentInterfaceTemplateRune(AnonymousSubstructParentInterfaceTemplateRuneS {})
+        );
+        let parent_interface_kind_rune = self.scout_arena.intern_rune(
+            IRuneValS::AnonymousSubstructParentInterfaceKindRune(AnonymousSubstructParentInterfaceKindRuneS {})
+        );
+
+        let struct_imprecise_name = struct_a.name.get_imprecise_name(self.scout_arena);
+        let interface_imprecise_name = interface_a.name.get_imprecise_name(self.scout_arena);
+
+        let rules: Vec<IRulexSR<'s>> = vec![
+            IRulexSR::Lookup(LookupSR {
+                range: struct_a.range,
+                rune: RuneUsage { range: struct_a.range, rune: anon_template_rune },
+                name: struct_imprecise_name,
+            }),
+            IRulexSR::Call(CallSR {
+                range: struct_a.range,
+                result_rune: RuneUsage { range: struct_a.range, rune: anon_kind_rune },
+                template_rune: RuneUsage { range: struct_a.range, rune: anon_template_rune },
+                args: self.scout_arena.alloc_slice_from_vec(
+                    struct_a.generic_parameters.iter().map(|gp| gp.rune).collect()
+                ),
+            }),
+            IRulexSR::Lookup(LookupSR {
+                range: interface_a.range,
+                rune: RuneUsage { range: interface_a.range, rune: parent_interface_template_rune },
+                name: interface_imprecise_name,
+            }),
+            IRulexSR::Call(CallSR {
+                range: interface_a.range,
+                result_rune: RuneUsage { range: interface_a.range, rune: parent_interface_kind_rune },
+                template_rune: RuneUsage { range: interface_a.range, rune: parent_interface_template_rune },
+                args: self.scout_arena.alloc_slice_from_vec(
+                    interface_a.generic_parameters.iter().map(|gp| gp.rune).collect()
+                ),
+            }),
+        ];
+
+        let mut rune_to_type: ArenaIndexMap<'s, IRuneS<'s>, ITemplataType<'s>> = self.scout_arena.alloc_index_map();
+        for gp in struct_a.generic_parameters.iter() {
+            let tyype = *struct_a.header_rune_to_type.get(&gp.rune.rune).unwrap();
+            rune_to_type.insert(gp.rune.rune, tyype);
+        }
+        rune_to_type.insert(anon_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        rune_to_type.insert(anon_template_rune, ITemplataType::TemplateTemplataType(struct_a.tyype));
+        rune_to_type.insert(parent_interface_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {}));
+        rune_to_type.insert(parent_interface_template_rune, ITemplataType::TemplateTemplataType(interface_a.tyype));
+
+        let struct_kind_rune_s = RuneUsage { range: interface_a.range, rune: anon_kind_rune };
+        let interface_kind_rune_s = RuneUsage { range: interface_a.range, rune: parent_interface_kind_rune };
+
+        let impl_name_s = IImplDeclarationNameS::AnonymousSubstructImplDeclarationName(
+            AnonymousSubstructImplDeclarationNameS { interface: *interface_a.name }
+        );
+
+        let rules_slice = self.scout_arena.alloc_slice_from_vec(rules);
+        let impl_a = self.scout_arena.alloc(ImplA {
+            range: interface_a.range,
+            name: impl_name_s,
+            generic_params: struct_a.generic_parameters,
+            rules: rules_slice,
+            rune_to_type,
+            sub_citizen_rune: struct_kind_rune_s,
+            sub_citizen_imprecise_name: struct_imprecise_name,
+            interface_kind_rune: interface_kind_rune_s,
+            super_interface_imprecise_name: interface_imprecise_name,
+        });
+
+        let impl_local_name = self.translate_name_step(impl_a.name.to_i_name_s(self.scout_arena));
+        let impl_name_t_steps = struct_name_t.init_steps.to_vec();
+        let impl_name_t = *self.typing_interner.intern_id(IdValT {
+            package_coord: struct_name_t.package_coord,
+            init_steps: &impl_name_t_steps,
+            local_name: impl_local_name,
+        });
+
+        let mut result = vec![
+            (struct_name_t, IEnvEntryT::Struct(struct_a)),
+            (impl_name_t, IEnvEntryT::Impl(impl_a)),
+        ];
+        result.extend(more_entries_combined);
+        result.extend(forwarder_methods);
+        result
     }
 /*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], IEnvEntry)] = {
@@ -258,7 +396,96 @@ where 's: 't,
         members: &[NormalStructMemberS<'s>],
         struct_template_name_s: AnonymousSubstructTemplateNameS<'s>,
     ) -> &'s StructA<'s> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::postparsing::names::{IRuneValS, AnonymousSubstructVoidKindRuneS, AnonymousSubstructVoidCoordRuneS, CodeNameS, IImpreciseNameValS};
+        use crate::postparsing::itemplatatype::{ITemplataType, KindTemplataType, CoordTemplataType};
+        use crate::postparsing::rules::rules::{IRulexSR, LookupSR, CoerceToCoordSR};
+        use crate::utils::range::RangeS;
+
+        let range = |n: i32| RangeS::internal(self.scout_arena, n);
+        let use_rune = |n: i32, rune: crate::postparsing::names::IRuneS<'s>| RuneUsage { range: range(n), rune };
+
+        let mut rules_builder: Vec<IRulexSR<'s>> = Vec::new();
+        let mut rune_to_type: Vec<(crate::postparsing::names::IRuneS<'s>, ITemplataType<'s>)> = Vec::new();
+
+        for rule in interface_a.rules.iter() {
+            rules_builder.push(*rule);
+        }
+
+        for (rune, tyype) in interface_a.rune_to_type.iter() {
+            rune_to_type.push((*rune, *tyype));
+        }
+        for mr in member_runes.iter() {
+            rune_to_type.push((mr.rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        }
+
+        let void_kind_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidKindRune(AnonymousSubstructVoidKindRuneS {}));
+        rune_to_type.push((void_kind_rune, ITemplataType::KindTemplataType(KindTemplataType {})));
+        let void_imprecise_name = self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.void }));
+        rules_builder.push(IRulexSR::Lookup(LookupSR {
+            range: range(-1672147),
+            rune: use_rune(-64002, void_kind_rune),
+            name: void_imprecise_name,
+        }));
+
+        let void_coord_rune = self.scout_arena.intern_rune(IRuneValS::AnonymousSubstructVoidCoordRune(AnonymousSubstructVoidCoordRuneS {}));
+        rune_to_type.push((void_coord_rune, ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        rules_builder.push(IRulexSR::CoerceToCoord(CoerceToCoordSR {
+            range: range(-1672147),
+            coord_rune: use_rune(-64002, void_coord_rune),
+            kind_rune: use_rune(-64002, void_kind_rune),
+        }));
+
+        let mut struct_generic_params: Vec<&'s crate::postparsing::ast::GenericParameterS<'s>> = Vec::new();
+        for gp in interface_a.generic_parameters.iter() {
+            struct_generic_params.push(*gp);
+        }
+        for _mr in member_runes.iter() {
+            panic!("implement: member generic params for non-zero-method interface");
+        }
+
+        for ((_internal_method, _member_rune), _method_index) in
+            interface_a.internal_methods.iter().zip(member_runes.iter()).zip(0i32..) {
+            panic!("implement: method loop body in make_struct_anonymous_interface");
+        }
+
+        let member_coord_types: Vec<ITemplataType<'s>> = member_runes.iter()
+            .map(|_mr| ITemplataType::CoordTemplataType(CoordTemplataType {}))
+            .collect();
+        let mut param_types: Vec<ITemplataType<'s>> = interface_a.tyype.param_types.to_vec();
+        param_types.extend(member_coord_types);
+        let param_types_slice = self.scout_arena.alloc_slice_from_vec(param_types);
+        let kind_type = self.scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {}));
+        let tyype = crate::postparsing::itemplatatype::TemplateTemplataType {
+            param_types: param_types_slice,
+            return_type: kind_type,
+        };
+
+        let header_rune_to_type = self.scout_arena.alloc_index_map_from_iter(rune_to_type);
+        let header_rules_slice = self.scout_arena.alloc_slice_from_vec(rules_builder);
+        let members_rune_to_type = self.scout_arena.alloc_index_map::<crate::postparsing::names::IRuneS<'s>, ITemplataType<'s>>();
+        let member_rules_slice: &'s [IRulexSR<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
+        let generic_params_slice = self.scout_arena.alloc_slice_from_vec(struct_generic_params);
+        let attributes_slice: &'s [crate::postparsing::ast::ICitizenAttributeS<'s>] = self.scout_arena.alloc_slice_from_vec(vec![]);
+        let members_slice: &'s [crate::postparsing::ast::IStructMemberS<'s>] = self.scout_arena.alloc_slice_from_vec(
+            members.iter().map(|m| crate::postparsing::ast::IStructMemberS::NormalStructMember(*m)).collect::<Vec<_>>());
+
+        let struct_a = StructA::new(
+            interface_a.range,
+            crate::postparsing::names::IStructDeclarationNameS::AnonymousSubstructTemplateName(
+                *self.scout_arena.alloc(struct_template_name_s)),
+            attributes_slice,
+            false,
+            interface_a.mutability_rune,
+            interface_a.maybe_predicted_mutability,
+            tyype,
+            generic_params_slice,
+            header_rune_to_type,
+            header_rules_slice,
+            members_rune_to_type,
+            member_rules_slice,
+            members_slice,
+        );
+        self.scout_arena.alloc(struct_a)
     }
 /*
   private def makeStruct(interfaceA: InterfaceA, memberRunes: Vector[RuneUsage], members: Vector[NormalStructMemberS], structTemplateNameS: AnonymousSubstructTemplateNameS) = {

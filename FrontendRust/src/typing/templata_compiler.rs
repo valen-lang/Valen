@@ -300,6 +300,7 @@ where 's: 't,
             }
             INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
             INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
+            INameT::AnonymousSubstruct(a) => INameT::AnonymousSubstructTemplate(a.template),
             _ => panic!("get_citizen_template called with non-citizen name: {:?}", id.local_name),
         };
         *self.typing_interner.intern_id(IdValT {
@@ -443,6 +444,7 @@ where 's: 't,
             INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
             INameT::Function(f) => INameT::FunctionTemplate(f.template),
             INameT::FunctionBound(fb) => INameT::FunctionBoundTemplate(fb.template),
+            INameT::AnonymousSubstruct(a) => INameT::AnonymousSubstructTemplate(a.template),
             _ => panic!("get_template: not yet implemented for {:?}", id.local_name),
         };
         self.typing_interner.intern_id(IdValT {
@@ -531,6 +533,7 @@ where 's: 't,
                 }
             }
             INameT::LambdaCitizen(lc) => INameT::LambdaCitizenTemplate(lc.template),
+            INameT::AnonymousSubstruct(a) => INameT::AnonymousSubstructTemplate(a.template),
             _ => panic!("get_struct_template called with non-struct name: {:?}", id.local_name),
         };
         *self.typing_interner.intern_id(IdValT {

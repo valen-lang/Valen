@@ -71,7 +71,7 @@ where 's: 't,
         struct_name: IdT<'s, 't>,
         struct_a: &'s StructA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, TopLevelCitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
+        use crate::postparsing::names::{IRuneValS, ReturnRuneS, StructNameRuneS, ImplicitCoercionKindRuneValS, ICitizenDeclarationNameS, IVarNameS, IFunctionDeclarationNameValS, INameValS, IStructDeclarationNameS, ConstructorNameS};
         use crate::postparsing::rules::rules::{LookupSR, CallSR, CoerceToCoordSR, IRulexSR, RuneUsage};
         use crate::postparsing::patterns::patterns::{CaptureS, AtomSP};
         use crate::postparsing::ast::{ParameterS, IBodyS, GeneratedBodyS, IStructMemberS};
@@ -111,11 +111,8 @@ where 's: 't,
         let ret_rune = RuneUsage { range: struct_name_range, rune: ret_rune_s };
         rune_to_type.insert(ret_rune.rune, ITemplataType::CoordTemplataType(CoordTemplataType {}));
 
-        let struct_name_as_tlcd = match struct_a.name {
-            IStructDeclarationNameS::TopLevelStructDeclarationName(n) => TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(n),
-            IStructDeclarationNameS::AnonymousSubstructTemplateName(_) => panic!("Unimplemented: ConstructorNameS for anonymous substruct"),
-        };
-        let struct_generic_rune_s = self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS { struct_name: struct_name_as_tlcd }));
+        let struct_name_as_citizen: ICitizenDeclarationNameS<'s> = struct_a.name.into();
+        let struct_generic_rune_s = self.scout_arena.intern_rune(IRuneValS::StructNameRune(StructNameRuneS { struct_name: struct_name_as_citizen }));
         let struct_generic_rune = RuneUsage { range: struct_name_range, rune: struct_generic_rune_s };
         rune_to_type.insert(struct_generic_rune.rune, ITemplataType::TemplateTemplataType(struct_a.tyype));
 
@@ -174,7 +171,7 @@ where 's: 't,
         let function_a = self.scout_arena.alloc(crate::higher_typing::ast::FunctionA::new(
             struct_a.range,
             crate::postparsing::names::IFunctionDeclarationNameS::ConstructorName(
-                &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_tlcd })
+                &*self.scout_arena.alloc(ConstructorNameS { tlcd: struct_name_as_citizen })
             ),
             &[],
             TemplateTemplataType { param_types: struct_a.tyype.param_types, return_type: self.scout_arena.alloc(ITemplataType::FunctionTemplataType(FunctionTemplataType {})) },
@@ -186,7 +183,7 @@ where 's: 't,
             IBodyS::GeneratedBody(GeneratedBodyS { generator_id: self.keywords.struct_constructor_generator }),
         ));
         let function_name_s = self.scout_arena.intern_name(INameValS::FunctionDeclaration(IFunctionDeclarationNameValS::ConstructorName(
-            ConstructorNameS { tlcd: struct_name_as_tlcd }
+            ConstructorNameS { tlcd: struct_name_as_citizen }
         )));
         let translated_local_name = self.translate_name_step(function_name_s);
         let result_id = *self.typing_interner.intern_id(IdValT {

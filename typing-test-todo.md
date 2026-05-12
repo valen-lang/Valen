@@ -15,7 +15,7 @@
 - [x] templated_imm_struct
 - [x] tests_calling_a_templated_struct_s_constructor
 - [x] tests_defining_an_empty_interface_and_an_implementing_struct
-- [ ] tests_defining_a_non_empty_interface_and_an_implementing_struct
+- [x] tests_defining_a_non_empty_interface_and_an_implementing_struct
 - [ ] zero_method_anonymous_interface
 - [ ] tests_upcasting_from_a_struct_to_an_interface
 - [ ] tests_calling_a_function_with_an_upcast

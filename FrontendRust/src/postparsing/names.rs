@@ -330,8 +330,9 @@ impl<'s> IFunctionDeclarationNameS<'s> {
       IFunctionDeclarationNameS::ForwarderFunctionDeclarationName(r) => r.inner.package_coordinate(),
       IFunctionDeclarationNameS::ConstructorName(r) => {
         match &r.tlcd {
-          TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(s) => s.range.begin.file.package_coord,
-          TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(i) => i.range.begin.file.package_coord,
+          ICitizenDeclarationNameS::TopLevelStructDeclarationName(s) => s.range.begin.file.package_coord,
+          ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(i) => i.range.begin.file.package_coord,
+          ICitizenDeclarationNameS::AnonymousSubstructTemplateName(n) => n.interface_name.range.begin.file.package_coord,
         }
       }
       IFunctionDeclarationNameS::ImmConcreteDestructorName(r) => &r.package_coordinate,
@@ -387,11 +388,69 @@ impl<'s> IImplDeclarationNameS<'s> {
       IImplDeclarationNameS::AnonymousSubstructImplDeclarationName(x) => x.interface.range.begin.file.package_coord,
     }
   }
+
+  // Rust adaptation: Scala's `IImplDeclarationNameS extends INameS` allows implicit
+  // subtype upcast; Rust restates it as an explicit re-intern through the scout arena
+  // so the caller can hand the value to `INameS`-typed APIs (e.g. `translateNameStep`).
+  // Inverse of `INameS::as_top_level_citizen_name` (which narrows the other direction).
+  pub fn to_i_name_s(self, scout_arena: &ScoutArena<'s>) -> INameS<'s> {
+    match self {
+      IImplDeclarationNameS::ImplDeclarationName(p) => {
+        scout_arena.intern_name(INameValS::ImplDeclaration(p))
+      }
+      IImplDeclarationNameS::AnonymousSubstructImplDeclarationName(p) => {
+        let interface_ref = match scout_arena.intern_name(
+          INameValS::TopLevelInterfaceDeclaration(p.interface)
+        ) {
+          INameS::TopLevelInterfaceDeclaration(r) => r,
+          _ => unreachable!(),
+        };
+        scout_arena.intern_name(INameValS::AnonymousSubstructImplDeclaration(
+          AnonymousSubstructImplDeclarationNameValS { interface: interface_ref }
+        ))
+      }
+    }
+  }
 }
+/* Guardian: disable-all */
 
 /*
 trait ICitizenDeclarationNameS extends INameS {
 */
+#[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
+pub enum ICitizenDeclarationNameS<'s> {
+  TopLevelStructDeclarationName(TopLevelStructDeclarationNameS<'s>),
+  TopLevelInterfaceDeclarationName(TopLevelInterfaceDeclarationNameS<'s>),
+  AnonymousSubstructTemplateName(AnonymousSubstructTemplateNameS<'s>),
+}
+// Rust adaptation: Scala's `ICitizenDeclarationNameS` is a parent trait covering both
+// `TopLevelCitizenDeclarationNameS` subtypes and `AnonymousSubstructTemplateNameS`.
+// Rust restates it as an explicit enum so fields like `ConstructorNameS.tlcd` and the
+// citizen rune carriers can hold any citizen-shaped name.
+impl<'s> From<TopLevelCitizenDeclarationNameS<'s>> for ICitizenDeclarationNameS<'s> {
+  fn from(value: TopLevelCitizenDeclarationNameS<'s>) -> Self {
+    match value {
+      TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(n) =>
+        ICitizenDeclarationNameS::TopLevelStructDeclarationName(n),
+      TopLevelCitizenDeclarationNameS::TopLevelInterfaceDeclarationName(n) =>
+        ICitizenDeclarationNameS::TopLevelInterfaceDeclarationName(n),
+    }
+  }
+}
+/* Guardian: disable-all */
+
+impl<'s> From<IStructDeclarationNameS<'s>> for ICitizenDeclarationNameS<'s> {
+  fn from(value: IStructDeclarationNameS<'s>) -> Self {
+    match value {
+      IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
+        ICitizenDeclarationNameS::TopLevelStructDeclarationName(n),
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(n) =>
+        ICitizenDeclarationNameS::AnonymousSubstructTemplateName(n),
+    }
+  }
+}
+/* Guardian: disable-all */
+
 impl<'s> IStructDeclarationNameS<'s> {
   pub fn range(&self) -> RangeS<'s> {
     match self {
@@ -413,8 +472,9 @@ impl<'s> IStructDeclarationNameS<'s> {
       IStructDeclarationNameS::TopLevelStructDeclarationName(n) => {
         scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: n.name }))
       }
-      IStructDeclarationNameS::AnonymousSubstructTemplateName(_) => {
-        panic!("Unimplemented: get_imprecise_name for AnonymousSubstructTemplateName")
+      IStructDeclarationNameS::AnonymousSubstructTemplateName(n) => {
+        let interface_imprecise_name = n.interface_name.get_imprecise_name(scout_arena);
+        scout_arena.intern_imprecise_name(IImpreciseNameValS::AnonymousSubstructTemplateImpreciseName(AnonymousSubstructTemplateImpreciseNameValS { interface_imprecise_name }))
       }
     }
   }
@@ -606,6 +666,15 @@ pub struct TopLevelInterfaceDeclarationNameS<'s> {
 case class TopLevelInterfaceDeclarationNameS(name: StrI, range: RangeS) extends IInterfaceDeclarationNameS with TopLevelCitizenDeclarationNameS {
 }
 */
+// Rust adaptation: Scala inherits `getImpreciseName` from `TopLevelCitizenDeclarationNameS`
+// (`= interner.intern(CodeNameS(name))`). Rust doesn't auto-inherit across the
+// struct/enum split, so we restate the dispatch on the child struct.
+impl<'s> TopLevelInterfaceDeclarationNameS<'s> {
+  pub fn get_imprecise_name(&self, scout_arena: &ScoutArena<'s>) -> IImpreciseNameS<'s> {
+    scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: self.name }))
+  }
+}
+/* Guardian: disable-all */
 impl<'s> From<&TopLevelStructDeclarationNameS<'s>> for TopLevelCitizenDeclarationNameS<'s> {
   fn from(value: &TopLevelStructDeclarationNameS<'s>) -> Self {
     TopLevelCitizenDeclarationNameS::TopLevelStructDeclarationName(value.clone())
@@ -1437,14 +1506,14 @@ case class ReturnRuneS() extends IRuneS
 */
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct StructNameRuneS<'s> {
-  pub struct_name: TopLevelCitizenDeclarationNameS<'s>,
+  pub struct_name: ICitizenDeclarationNameS<'s>,
 }
 /*
 case class StructNameRuneS(structName: ICitizenDeclarationNameS) extends IRuneS
 */
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct InterfaceNameRuneS<'s> {
-  pub interface_name: TopLevelCitizenDeclarationNameS<'s>,
+  pub interface_name: ICitizenDeclarationNameS<'s>,
 }
 /*
 case class InterfaceNameRuneS(interfaceName: ICitizenDeclarationNameS) extends IRuneS
@@ -1729,7 +1798,7 @@ case class CaseRuneFromImplS(innerRune: IRuneS) extends IRuneS
 */
 #[derive(Copy, Clone, Debug, PartialEq, Eq, Hash)]
 pub struct ConstructorNameS<'s> {
-  pub tlcd: TopLevelCitizenDeclarationNameS<'s>,
+  pub tlcd: ICitizenDeclarationNameS<'s>,
 }
 /*
 case class ConstructorNameS(tlcd: ICitizenDeclarationNameS) extends IFunctionDeclarationNameS {

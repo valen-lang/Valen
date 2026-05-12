@@ -1034,9 +1034,60 @@ fn tests_defining_an_empty_interface_and_an_implementing_struct() {
 */
 // mig: fn tests_defining_a_non_empty_interface_and_an_implementing_struct
 #[test]
-#[ignore]
 fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
-    panic!("Unmigrated test: tests_defining_a_non_empty_interface_and_an_implementing_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "exported sealed interface MyInterface {\n",
+        "  func bork(virtual self &MyInterface);\n",
+        "}\n",
+        "exported struct MyStruct { }\n",
+        "impl MyInterface for MyStruct;\n",
+        "func bork(self &MyStruct) {}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    use crate::parsing::tests::utils::expect_1;
+    use crate::typing::templata::templata_utils::unapply_simple_name;
+    use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+    use crate::typing::types::types::MutabilityT;
+
+    let interfaces_matching: Vec<_> = coutputs.interfaces.iter()
+        .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
+            && !d.weakable
+            && matches!(d.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable })))
+        .collect();
+    let interface_def = expect_1(&interfaces_matching);
+
+    let bork_method = interface_def.internal_methods.iter()
+        .find(|(proto, _)| unapply_simple_name(&proto.id).as_deref() == Some("bork"))
+        .unwrap();
+    let _ = bork_method;
+
+    let structs_matching: Vec<_> = coutputs.structs.iter()
+        .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
+            && !d.weakable
+            && matches!(d.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))
+            && !d.is_closure)
+        .collect();
+    let struct_def = expect_1(&structs_matching);
+
+    assert!(coutputs.interface_to_sub_citizen_to_edge.iter()
+        .flat_map(|(_, sub_map)| sub_map.values())
+        .any(|edge| {
+            edge.sub_citizen.id() == struct_def.instantiated_citizen.id &&
+            edge.super_interface == interface_def.instantiated_interface.id
+        }));
 }
 /*
   test("Tests defining a non-empty interface and an implementing struct") {
@@ -2330,9 +2381,26 @@ fn test_return_from_inside_if() {
 */
 // mig: fn zero_method_anonymous_interface
 #[test]
-#[ignore]
 fn zero_method_anonymous_interface() {
-    panic!("Unmigrated test: zero_method_anonymous_interface");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "interface MyInterface {}\n",
+        "exported func main() {\n",
+        "  x = MyInterface();\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
 }
 /*
   test("Zero method anonymous interface") {
