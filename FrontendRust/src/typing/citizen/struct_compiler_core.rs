@@ -2,7 +2,7 @@ use crate::higher_typing::ast::{FunctionA, InterfaceA, StructA};
 use crate::postparsing::ast::{ICitizenAttributeS, IStructMemberS, LocationInDenizen};
 use crate::postparsing::names::IFunctionDeclarationNameS;
 use crate::typing::ast::ast::ICitizenAttributeT;
-use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
+use crate::typing::ast::citizens::{IStructMemberT, IMemberTypeT, InterfaceDefinitionT, NormalStructMemberT, StructDefinitionT};
 use crate::typing::names::names::{CodeVarNameT, IVarNameT};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::CompilerOutputs;
@@ -10,7 +10,7 @@ use crate::typing::env::environment::{CitizenEnvironmentT, IInDenizenEnvironment
 use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::templata::templata::FunctionTemplataT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
-use crate::typing::types::types::{MutabilityT, StructTT};
+use crate::typing::types::types::{MutabilityT, OwnershipT, StructTT, VariabilityT};
 use crate::utils::range::RangeS;
 
 /*
@@ -55,7 +55,7 @@ where 's: 't,
 {
     pub fn compile_struct_core(
         &self,
-        outer_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        outer_env: IInDenizenEnvironmentT<'s, 't>,
         struct_runes_env: &'t CitizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
@@ -147,14 +147,26 @@ where 's: 't,
             id: placeholdered_id_t,
             templatas: inner_templatas,
         });
-        let struct_inner_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_inner_env));
+        let struct_inner_env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Citizen(struct_inner_env);
 
         let members_vec = self.make_struct_members(struct_inner_env_ref, coutputs, struct_a.members);
 
         if mutability == ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }) {
-            for _member in members_vec.iter() {
-                panic!("implement: immutable struct member check");
+            for (_index, member) in members_vec.iter().enumerate() {
+                match member {
+                    IStructMemberT::Variadic(_) => {
+                        panic!("implement: immutable variadic struct member check");
+                    }
+                    IStructMemberT::Normal(NormalStructMemberT { variability, tyype, .. }) => {
+                        if *variability == VariabilityT::Varying {
+                            panic!("ImmStructCantHaveVaryingMember");
+                        }
+                        if tyype.reference().ownership != OwnershipT::Share {
+                            panic!("ImmStructCantHaveMutableMember");
+                        }
+                    }
+                }
             }
         }
 
@@ -364,14 +376,109 @@ where 's: 't,
 {
     pub fn compile_interface_core(
         &self,
-        outer_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        outer_env: IInDenizenEnvironmentT<'s, 't>,
         interface_runes_env: &'t CitizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_a: &'s InterfaceA<'s>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::names::names::{IInstantiationNameT, IInterfaceTemplateNameT, IdValT, INameT};
+        use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
+        use crate::typing::types::types::InterfaceTTValT;
+        use crate::typing::env::i_env_entry::IEnvEntryT;
+        use crate::typing::templata::templata::{ITemplataT, expect_mutability};
+        use crate::typing::hinputs_t::make;
+        use crate::postparsing::names::{IImpreciseNameValS, RuneNameValS};
+        use std::collections::HashSet;
+
+        let template_args = IInstantiationNameT::try_from(interface_runes_env.id.local_name)
+            .unwrap()
+            .template_args();
+        let template_id_t = interface_runes_env.template_id;
+        let template_name_t = IInterfaceTemplateNameT::try_from(template_id_t.local_name).unwrap();
+        let placeholdered_name_t = template_name_t.make_interface_name(self.typing_interner, template_args);
+        // Rust adaptation (SPDMX-B): Scala uses .copy(localName=...) — build new IdT via intern_id.
+        let template_id_steps = template_id_t.init_steps.to_vec();
+        let placeholdered_id_t = *self.typing_interner.intern_id(IdValT {
+            package_coord: template_id_t.package_coord,
+            init_steps: &template_id_steps,
+            local_name: placeholdered_name_t,
+        });
+
+        // Usually when we make an InterfaceTT we put the instantiation bounds into the coutputs,
+        // but this isn't really an instantiation, so we don't here.
+        let placeholdered_interface_tt = *self.typing_interner.intern_interface_tt(InterfaceTTValT { id: placeholdered_id_t });
+
+        let attributes_without_export_or_macros: Vec<ICitizenAttributeS<'s>> =
+            interface_a.attributes.iter().filter(|attr| {
+                match attr {
+                    ICitizenAttributeS::Export(_) => false,
+                    ICitizenAttributeS::MacroCall(_) => false,
+                    _ => true,
+                }
+            }).copied().collect();
+        let _maybe_export = interface_a.attributes.iter().find(|attr| matches!(attr, ICitizenAttributeS::Export(_)));
+
+        let rune_name_s = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::RuneName(RuneNameValS { rune: interface_a.mutability_rune.rune }));
+        let interface_runes_env_as_iindenizen = IInDenizenEnvironmentT::Citizen(interface_runes_env);
+        let mutability_results = interface_runes_env_as_iindenizen
+            .lookup_nearest_with_imprecise_name(rune_name_s, {
+                let mut s = HashSet::new();
+                s.insert(ILookupContext::TemplataLookupContext);
+                s
+            }, self.typing_interner);
+        let mutability = match mutability_results {
+            Some(m) => expect_mutability(m),
+            None => panic!("vwat: no mutability rune found for interface"),
+        };
+
+        let internal_methods: Vec<(crate::typing::ast::ast::PrototypeT<'s, 't>, usize)> =
+            outer_env.templatas().name_to_entry.iter().filter_map(|(name, entry)| {
+                match entry {
+                    IEnvEntryT::Function(function_a) => {
+                        use crate::typing::templata::templata::FunctionTemplataT;
+                        use crate::typing::env::environment::IEnvironmentT;
+                        let outer_env_ienv = IEnvironmentT::from(outer_env);
+                        let header = self.evaluate_generic_function_from_non_call_for_header(
+                            coutputs, parent_ranges, call_location,
+                            FunctionTemplataT { outer_env: outer_env_ienv, function: function_a });
+                        let virtual_index = header.get_virtual_index()
+                            .expect("vwat: interface internal method must have a virtual index");
+                        Some((header.to_prototype(), virtual_index))
+                    }
+                    _ => None,
+                }
+            }).collect();
+
+        let rune_to_function_bound = self.assemble_rune_to_function_bound(interface_runes_env.templatas);
+        let rune_to_impl_bound = self.assemble_rune_to_impl_bound(interface_runes_env.templatas);
+
+        let attributes_t = self.translate_citizen_attributes(&attributes_without_export_or_macros);
+        let attributes_slice = self.typing_interner.alloc_slice_from_vec(attributes_t);
+        let internal_methods_slice = self.typing_interner.alloc_slice_from_vec(internal_methods);
+        let instantiation_bound_params = make(
+            self.typing_interner,
+            rune_to_function_bound.into_iter().map(|(k, v)| (k, *v)).collect(),
+            vec![],
+            rune_to_impl_bound.into_iter().collect(),
+        );
+
+        let interface_def_t = self.typing_interner.alloc(InterfaceDefinitionT {
+            template_name: template_id_t,
+            instantiated_interface: placeholdered_interface_tt,
+            ref_: placeholdered_interface_tt,
+            attributes: attributes_slice,
+            weakable: interface_a.weakable,
+            mutability,
+            instantiation_bound_params,
+            internal_methods: internal_methods_slice,
+        });
+
+        coutputs.add_interface(interface_def_t);
+
+        interface_def_t
     }
 /*
   // Takes a IEnvironment because we might be inside a:
@@ -453,7 +560,7 @@ where 's: 't,
 {
     pub fn make_struct_members(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         members: &[IStructMemberS<'s>],
     ) -> Vec<IStructMemberT<'s, 't>> {
@@ -476,7 +583,7 @@ where 's: 't,
 {
     pub fn make_struct_member(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         member: IStructMemberS<'s>,
     ) -> IStructMemberT<'s, 't> {
@@ -684,15 +791,15 @@ where 's: 't,
         // We return this from the function in case we want to eagerly compile it (which we do
         // if it's not a template).
         let function_templata = FunctionTemplataT {
-            outer_env: self.typing_interner.alloc(IEnvironmentT::Citizen(struct_inner_env)),
+            outer_env: IEnvironmentT::Citizen(struct_inner_env),
             function: function_a,
         };
 
         coutputs.declare_type(understruct_templated_id);
         coutputs.declare_type_outer_env(understruct_templated_id,
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_outer_env)));
+            IInDenizenEnvironmentT::Citizen(struct_outer_env));
         coutputs.declare_type_inner_env(understruct_templated_id,
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(struct_inner_env)));
+            IInDenizenEnvironmentT::Citizen(struct_inner_env));
         coutputs.declare_type_mutability(understruct_templated_id, ITemplataT::Mutability(MutabilityTemplataT { mutability }));
 
         let closure_struct_definition = StructDefinitionT {

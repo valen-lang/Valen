@@ -224,7 +224,7 @@ where 's: 't,
                             self.translate_function_attributes(full_env.function.attributes),
                             params2,
                             ret_coord,
-                            Some(FunctionTemplataT { outer_env: &full_env.parent_env, function: full_env.function }));
+                            Some(FunctionTemplataT { outer_env: full_env.parent_env, function: full_env.function }));
                     header
                 }
                 IBodyS::AbstractBody(_) | IBodyS::GeneratedBody(_) => {
@@ -538,7 +538,7 @@ where 's: 't,
             params: self.typing_interner.alloc_slice_from_vec(params_t.to_vec()),
             return_type: return_coord,
             maybe_origin_function_templata: Some(FunctionTemplataT {
-                outer_env: self.typing_interner.alloc(full_env.parent_env),
+                outer_env: full_env.parent_env,
                 function: full_env.function,
             }),
         });

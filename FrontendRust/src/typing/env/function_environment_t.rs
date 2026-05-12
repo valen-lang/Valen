@@ -1,5 +1,6 @@
 use std::collections::HashSet;
 use crate::higher_typing::ast::FunctionA;
+use crate::scout_arena::ScoutArena;
 use crate::postparsing::expressions::IExpressionSE;
 use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::ast::ast::LocationInFunctionEnvironmentT;
@@ -61,7 +62,7 @@ case class BuildingFunctionEnvironmentWithClosuredsT(
 // mig: fn templata
 impl<'s, 't> BuildingFunctionEnvironmentWithClosuredsT<'s, 't> where 's: 't {
   pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
-    FunctionTemplataT { outer_env: &self.parent_env, function: self.function }
+    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)
@@ -1153,11 +1154,12 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
   // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_nearest_with_imprecise_name(
     &self,
-    _name_s: IImpreciseNameS<'s>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
-    _interner: &TypingInterner<'s, 't>,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Option<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_nearest_with_imprecise_name");
+    let node_env = self.snapshot(interner);
+    IEnvironmentT::Node(node_env).lookup_nearest_with_imprecise_name(name_s, lookup_filter.clone(), interner)
   }
 /*
   def lookupNearestWithImpreciseName(
@@ -1289,12 +1291,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn add_entries
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): scout_arena threaded because TemplatasStoreBuilder.add_entries
+  // needs it to maintain the imprecise-name lookup cache.
   pub fn add_entries(
     &mut self,
+    scout_arena: &ScoutArena<'s>,
     _interner: &TypingInterner<'s, 't>,
-    _new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
+    new_entries: &[(INameT<'s, 't>, IEnvEntryT<'s, 't>)],
   ) {
-    panic!("Unimplemented: add_entries");
+    self.templatas_builder.add_entries(scout_arena, new_entries.to_vec());
   }
 /*
   def addEntries(interner: Interner, newEntries: Vector[(INameT, IEnvEntry)]): Unit= {
@@ -1440,7 +1445,7 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
 // mig: fn templata
 impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
   pub fn templata(&'t self) -> FunctionTemplataT<'s, 't> {
-    FunctionTemplataT { outer_env: &self.parent_env, function: self.function }
+    FunctionTemplataT { outer_env: self.parent_env, function: self.function }
   }
   /*
     def templata = FunctionTemplataT(parentEnv, function)

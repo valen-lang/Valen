@@ -284,7 +284,7 @@ where 's: 't,
     pub fn evaluate_templated_light_function_from_call_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
@@ -324,7 +324,7 @@ where 's: 't,
     pub fn evaluate_templated_function_from_call_for_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
@@ -419,7 +419,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         function_templata: FunctionTemplataT<'s, 't>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
@@ -473,11 +473,13 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         function_templata: FunctionTemplataT<'s, 't>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> IDefineFunctionResult<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let FunctionTemplataT { outer_env, function } = function_templata;
+        self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
+            outer_env, coutputs, calling_env, call_range, call_location, function, args)
     }
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
@@ -506,7 +508,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         function_templata: FunctionTemplataT<'s, 't>,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,

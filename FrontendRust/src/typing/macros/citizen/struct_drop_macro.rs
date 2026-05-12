@@ -413,7 +413,7 @@ where 's: 't,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        let body_env = self.typing_interner.alloc(IInDenizenEnvironmentT::Function(env));
+        let body_env = IInDenizenEnvironmentT::Function(env);
 
         let struct_tt = match params2[0].tyype.kind {
             KindT::Struct(s) => s,

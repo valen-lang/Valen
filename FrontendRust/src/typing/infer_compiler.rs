@@ -130,7 +130,7 @@ case class DefiningResolveConclusionError(inner: IConclusionResolveError) extend
 */
 #[derive(Copy, Clone)]
 pub struct InferEnv<'s, 't> {
-    pub original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+    pub original_calling_env: IInDenizenEnvironmentT<'s, 't>,
     pub parent_ranges: &'t [RangeS<'s>],
     pub call_location: LocationInDenizen<'s>,
     pub self_env: IEnvironmentT<'s, 't>,
@@ -595,31 +595,50 @@ where 's: 't,
                 .filter(|(_rune, citizen)| citizens_from_calls.contains(citizen))
                 .collect();
 
-        let reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> =
-            include_reachable_bounds_for_runes_with_citizens.into_iter().map(|(rune, citizen)| {
-                let citizen_tt = match citizen {
-                    KindT::Struct(s) => ICitizenTT::Struct(s),
-                    KindT::Interface(i) => ICitizenTT::Interface(i),
-                    _ => panic!("implement: reachableBounds — unexpected citizen kind"),
+        let mut reachable_bounds: HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>> = HashMap::new();
+        for (rune, citizen) in include_reachable_bounds_for_runes_with_citizens.into_iter() {
+            let citizen_tt = match citizen {
+                KindT::Struct(s) => ICitizenTT::Struct(s),
+                KindT::Interface(i) => ICitizenTT::Interface(i),
+                _ => panic!("implement: reachableBounds — unexpected citizen kind"),
+            };
+            let reachable = self.get_reachable_bounds(
+                self.opts.global_options.sanity_check,
+                envs.original_calling_env.denizen_template_id(),
+                state,
+                citizen_tt,
+            );
+            let mut citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> = vec![];
+            for (citizen_rune, caller_placeholdered_citizen_bound) in reachable.citizen_rune_to_reachable_prototype.iter() {
+                let return_coord = caller_placeholdered_citizen_bound.return_type;
+                let param_coords = caller_placeholdered_citizen_bound.param_types();
+                let func_name = IFunctionNameT::try_from(caller_placeholdered_citizen_bound.id.local_name)
+                    .unwrap()
+                    .template()
+                    .human_name();
+                let func_success = match self.resolve_function(
+                    envs.original_calling_env, state, ranges, call_location,
+                    func_name, param_coords, envs.context_region, true,
+                ) {
+                    Err(e) => return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
+                        IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: self.typing_interner.alloc_slice_copy(ranges), fff: e }
+                    ))),
+                    Ok(x) => x,
                 };
-                let reachable = self.get_reachable_bounds(
-                    self.opts.global_options.sanity_check,
-                    envs.original_calling_env.denizen_template_id(),
-                    state,
-                    citizen_tt,
-                );
-                let citizen_rune_to_reachable_prototype: Vec<(IRuneS<'s>, PrototypeT<'s, 't>)> =
-                    reachable.citizen_rune_to_reachable_prototype.iter()
-                        .map(|(citizen_rune, caller_placeholdered_citizen_bound)| {
-                            panic!("implement: reachableBounds resolveFunction for citizen bound");
-                        })
-                        .collect();
-                let result: &'t InstantiationReachableBoundArgumentsT<'s, 't> = self.typing_interner.alloc(InstantiationReachableBoundArgumentsT {
-                    citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
-                        citizen_rune_to_reachable_prototype.into_iter()),
-                });
-                (rune, result)
-            }).collect();
+                if func_success.prototype.return_type != return_coord {
+                    return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
+                        IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: self.typing_interner.alloc_slice_copy(ranges), expected_return_type: return_coord, actual: func_success.prototype }
+                    )));
+                }
+                // citizenRune -> funcSuccess.prototype
+                citizen_rune_to_reachable_prototype.push((*citizen_rune, *func_success.prototype));
+            }
+            let result: &'t InstantiationReachableBoundArgumentsT<'s, 't> = self.typing_interner.alloc(InstantiationReachableBoundArgumentsT {
+                citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
+                    citizen_rune_to_reachable_prototype.into_iter()),
+            });
+            reachable_bounds.insert(rune, result);
+        }
 
         let env_with_conclusions = self.import_reachable_bounds(envs.original_calling_env, &reachable_bounds);
 
@@ -627,8 +646,8 @@ where 's: 't,
         for rule in rules.iter() {
             match rule {
                 IRulexSR::Call(call_sr) => {
-                    let env_with_conclusions_in_denizen: &'t IInDenizenEnvironmentT<'s, 't> =
-                        self.typing_interner.alloc(IInDenizenEnvironmentT::General(env_with_conclusions));
+                    let env_with_conclusions_in_denizen: IInDenizenEnvironmentT<'s, 't> =
+                        IInDenizenEnvironmentT::General(env_with_conclusions);
                     match self.resolve_template_call_conclusion(
                         env_with_conclusions_in_denizen, state, ranges, call_location, *call_sr, &conclusions)
                     {
@@ -653,13 +672,20 @@ where 's: 't,
             }
         }
 
-        let runes_and_prototypes: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)> =
-            rules.iter().filter_map(|rule| match rule {
+        let env_with_conclusions_in_denizen: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::General(env_with_conclusions);
+        let mut runes_and_prototypes: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)> = vec![];
+        for rule in rules.iter() {
+            match rule {
                 IRulexSR::Resolve(r) => {
-                    panic!("implement: checkResolvingConclusionsAndResolve resolveFunctionCallConclusion");
+                    match self.resolve_function_call_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions, envs.context_region) {
+                        Ok(x) => runes_and_prototypes.push(x),
+                        Err(e) => return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(e))),
+                    }
                 }
-                _ => None,
-            }).collect();
+                _ => {}
+            }
+        }
         let rune_to_prototype: HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> =
             runes_and_prototypes.iter().copied().collect();
         if rune_to_prototype.len() < runes_and_prototypes.len() {
@@ -904,7 +930,7 @@ where 's: 't,
                         None => self.typing_interner.alloc_index_map(),
                         Some((id, template_id)) => {
                             let inner_env = state.get_inner_env_for_type(template_id);
-                            let _substituter =
+                            let substituter =
                                 self.get_placeholder_substituter(
                                     self.opts.global_options.sanity_check,
                                     envs.original_calling_env.denizen_template_id(),
@@ -915,10 +941,19 @@ where 's: 't,
                                 inner_env.templatas().name_to_entry.iter()
                                     .filter_map(|(name, entry)| {
                                         match (name, entry) {
-                                            (INameT::Rune(_rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)))
+                                            (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)))
                                                 if matches!(proto_templata.prototype.id.local_name, INameT::FunctionBound(_)) =>
                                             {
-                                                panic!("implement: check_defining_conclusions_and_resolve FunctionBoundNameT entry");
+                                                match proto_templata.prototype.id.local_name {
+                                                    INameT::FunctionBound(fb) => {
+                                                        let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: fb.template, template_args: fb.template_args, parameters: fb.parameters });
+                                                        let new_id = self.typing_interner.intern_id(IdValT { package_coord: proto_templata.prototype.id.package_coord, init_steps: proto_templata.prototype.id.init_steps, local_name: INameT::FunctionBound(bound_name) });
+                                                        let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: new_id.package_coord, init_steps: new_id.init_steps, local_name: new_id.local_name }, return_type: proto_templata.prototype.return_type });
+                                                        let subst_prototype = substituter.substitute_for_prototype(state, prototype);
+                                                        Some((rune_name.rune, *subst_prototype))
+                                                    }
+                                                    _ => unreachable!(),
+                                                }
                                             }
                                             _ => None,
                                         }
@@ -1027,7 +1062,7 @@ where 's: 't,
     // Rust adaptation (SPDMX-B): returns &'t reference because GeneralEnvironmentT is arena-allocated.
     pub fn import_reachable_bounds(
         &self,
-        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> &'t GeneralEnvironmentT<'s, 't> {
         let new_id: &'t IdT<'s, 't> = self.typing_interner.alloc(original_calling_env.id());
@@ -1036,13 +1071,14 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    panic!("implement: import_reachable_bounds ReachablePrototypeNameT entry");
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                    (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(*reachable_bound) }))))
                 })
                 .collect();
         child_of(
             self.typing_interner,
             self.scout_arena,
-            *original_calling_env,
+            original_calling_env,
             original_calling_env.denizen_template_id(),
             new_id,
             new_entries,
@@ -1073,7 +1109,7 @@ where 's: 't,
 {
     pub fn import_conclusions_and_reachable_bounds(
         &self,
-        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         reachable_bounds: &HashMap<IRuneS<'s>, &'t InstantiationReachableBoundArgumentsT<'s, 't>>,
     ) -> &'t GeneralEnvironmentT<'s, 't> {
@@ -1093,14 +1129,16 @@ where 's: 't,
                 .flat_map(|rb| rb.citizen_rune_to_reachable_prototype.iter().map(|(_, proto)| proto))
                 .enumerate()
                 .map(|(index, reachable_bound)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    panic!("Unimplemented: import_conclusions_and_reachable_bounds ReachablePrototypeNameT entry");
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                    let entry = IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: reachable_bound })));
+                    (INameT::ReachablePrototype(name), entry)
                 })
         );
         let new_id: &'t IdT<'s, 't> = self.typing_interner.alloc(original_calling_env.id());
         child_of(
             self.typing_interner,
             self.scout_arena,
-            *original_calling_env,
+            original_calling_env,
             original_calling_env.denizen_template_id(),
             new_id,
             new_entries,
@@ -1150,8 +1188,7 @@ where 's: 't,
         for rule in rules {
             match rule {
                 IRulexSR::Call(r) => {
-                    let env_ref = self.typing_interner.alloc(env);
-                    match self.resolve_template_call_conclusion(env_ref, state, ranges, call_location, *r, conclusions) {
+                    match self.resolve_template_call_conclusion(env, state, ranges, call_location, *r, conclusions) {
                         Ok(()) => {}
                         Err(e) => return Err(IConclusionResolveError::CouldntFindKindForConclusionResolve(e)),
                     }
@@ -1163,8 +1200,22 @@ where 's: 't,
         let runes_and_prototypes: Vec<(IRuneS<'s>, &'t PrototypeT<'s, 't>)> =
             rules.iter().filter_map(|rule| {
                 match rule {
-                    IRulexSR::DefinitionFunc(_r) => {
-                        panic!("Unimplemented: resolve_conclusions_for_define DefinitionFuncSR");
+                    IRulexSR::DefinitionFunc(r) => {
+                        let result_rune = r.result_rune.rune;
+                        match conclusions.get(&result_rune).expect("DefinitionFunc result rune missing from conclusions") {
+                            ITemplataT::Prototype(proto_templata) => {
+                                match proto_templata.prototype.id.local_name {
+                                    INameT::FunctionBound(fb) => {
+                                        let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: fb.template, template_args: fb.template_args, parameters: fb.parameters });
+                                        let new_id = self.typing_interner.intern_id(IdValT { package_coord: proto_templata.prototype.id.package_coord, init_steps: proto_templata.prototype.id.init_steps, local_name: INameT::FunctionBound(bound_name) });
+                                        let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: new_id.package_coord, init_steps: new_id.init_steps, local_name: new_id.local_name }, return_type: proto_templata.prototype.return_type });
+                                        Some((result_rune, prototype))
+                                    }
+                                    _ => panic!("DefinitionFunc result conclusion is Prototype but not FunctionBound"),
+                                }
+                            }
+                            other => panic!("DefinitionFunc result conclusion is not Prototype: {:?}", other),
+                        }
                     }
                     _ => None,
                 }
@@ -1275,7 +1326,7 @@ where 's: 't,
 {
     pub fn resolve_function_call_conclusion(
         &self,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -1283,7 +1334,31 @@ where 's: 't,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         context_region: RegionT,
     ) -> Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let return_coord = match conclusions.get(&c.return_rune.rune) {
+            Some(ITemplataT::Coord(ct)) => ct.coord,
+            None => panic!("vwat: returnRune not in conclusions for ResolveSR"),
+            Some(other) => panic!("vwat: expected CoordTemplataT for returnRune, got {:?}", other),
+        };
+        let param_coords = match conclusions.get(&c.params_list_rune.rune) {
+            None => panic!("vwat: paramsListRune not in conclusions for ResolveSR"),
+            Some(ITemplataT::CoordList(cl)) => cl.coords,
+            Some(other) => panic!("vwat: expected CoordListTemplataT for paramsListRune, got {:?}", other),
+        };
+        let mut full_ranges = Vec::with_capacity(1 + ranges.len());
+        full_ranges.push(c.range);
+        full_ranges.extend_from_slice(ranges);
+        let func_success = match self.resolve_function(calling_env, state, &full_ranges, call_location, c.name, param_coords, context_region, true) {
+            Err(e) => {
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
+                return Err(IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: ranges_slice, fff: e });
+            }
+            Ok(x) => x,
+        };
+        if func_success.prototype.return_type != return_coord {
+            let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
+            return Err(IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: ranges_slice, expected_return_type: return_coord, actual: func_success.prototype });
+        }
+        Ok((c.result_rune.rune, func_success.prototype))
     }
 /*
   def resolveFunctionCallConclusion(
@@ -1332,7 +1407,7 @@ where 's: 't,
 {
     pub fn resolve_impl_conclusion(
         &self,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -1386,7 +1461,7 @@ where 's: 't,
 {
     pub fn resolve_template_call_conclusion(
         &self,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         state: &mut CompilerOutputs<'s, 't>,
         ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -1424,7 +1499,16 @@ where 's: 't,
                 }
                 Ok(())
             }
-            ITemplataT::InterfaceDefinition(_it) => { panic!("Unimplemented: resolve_template_call_conclusion InterfaceDefinition"); }
+            ITemplataT::InterfaceDefinition(it) => {
+                let mut call_ranges = vec![range];
+                call_ranges.extend_from_slice(ranges);
+                let call_ranges_slice = self.typing_interner.alloc_slice_from_vec(call_ranges);
+                match self.resolve_interface(state, calling_env, call_ranges_slice, call_location, *it, &args) {
+                    IResolveOutcome::ResolveSuccess(_kind) => {}
+                    IResolveOutcome::ResolveFailure(rf) => return Err(ResolveFailure { range: rf.range, x: rf.x, _phantom: std::marker::PhantomData }),
+                }
+                Ok(())
+            }
             ITemplataT::Kind(_kt) => {
                 Ok(())
             }

@@ -91,7 +91,7 @@ where 's: 't,
         &self,
         outer_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
@@ -180,7 +180,7 @@ where 's: 't,
         &self,
         declaring_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         already_specified_template_args: &[ITemplataT<'s, 't>],
@@ -271,7 +271,7 @@ where 's: 't,
         &self,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        original_calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
@@ -530,7 +530,8 @@ where 's: 't,
         let entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
             reachable_bounds_from_params_and_return.iter().enumerate()
                 .map(|(i, t)| -> (INameT<'s, 't>, IEnvEntryT<'s, 't>) {
-                    panic!("Unimplemented: add_runed_data_to_near_env ReachablePrototypeNameT");
+                    let name = self.typing_interner.intern_reachable_prototype_name(ReachablePrototypeNameT { num: i as i32, _phantom: std::marker::PhantomData });
+                    (INameT::ReachablePrototype(name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(*t))))
                 })
                 .chain(
                     templatas_by_rune.iter()
@@ -610,7 +611,7 @@ where 's: 't,
         &self,
         outer_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         explicit_template_args: &[ITemplataT<'s, 't>],
@@ -681,11 +682,8 @@ where 's: 't,
             function.generic_parameters.iter().map(|gp| gp.rune.rune).collect();
         let reachable_bound_protos: Vec<PrototypeTemplataT<'s, 't>> =
             rune_to_function_bound.rune_to_citizen_rune_to_reachable_prototype.iter()
-                .flat_map(|(_rune, x)| {
-                    panic!("implement: evaluateGenericFunctionFromCallForPrototype reachable_bound_protos");
-                    #[allow(unreachable_code)]
-                    std::iter::empty::<PrototypeTemplataT<'s, 't>>()
-                })
+                .flat_map(|(_rune, x)| x.citizen_rune_to_reachable_prototype.values().copied())
+                .map(|proto| PrototypeTemplataT { prototype: self.typing_interner.alloc(proto) })
                 .collect();
         let runed_env = self.typing_interner.alloc(self.add_runed_data_to_near_env(
             outer_env, &identifying_runes, &inferred_templatas, &reachable_bound_protos));
@@ -822,14 +820,114 @@ where 's: 't,
 {
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype_solving(
         &self,
-        near_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         args: &[Option<CoordT<'s, 't>>],
     ) -> IDefineFunctionResult<'s, 't> {
-        panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
+        let function = near_env.function;
+        self.check_closure_concerns_handled(near_env);
+
+        let function_definition_rules: Vec<IRulexSR<'s>> =
+            function.rules.iter().copied().filter(|r| include_rule_in_definition_solve(r)).collect();
+
+        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, args);
+
+        let preliminary_envs = InferEnv {
+            original_calling_env: calling_env,
+            parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
+            call_location,
+            self_env: IEnvironmentT::BuildingWithClosureds(near_env),
+            context_region: RegionT {},
+        };
+        let preliminary_rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+        let mut preliminary_solver_state =
+            self.make_solver_state(
+                preliminary_envs,
+                coutputs,
+                &function_definition_rules,
+                &preliminary_rune_to_type,
+                &{
+                    let mut ranges = vec![function.range];
+                    ranges.extend_from_slice(call_range);
+                    ranges
+                },
+                &[],
+                &initial_sends);
+        match self.r#continue(preliminary_envs, coutputs, &mut preliminary_solver_state) {
+            Ok(()) => {}
+            Err(_f) => { panic!("implement: TypingPassSolverError from preliminary continue"); }
+        }
+
+        let preliminary_inferences: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+            preliminary_solver_state.userify_conclusions().into_iter().collect();
+
+        let placeholder_initial_knowns_from_function: Vec<InitialKnown<'s, 't>> =
+            function.generic_parameters.iter().enumerate().flat_map(|(index, generic_param)| {
+                match preliminary_inferences.get(&generic_param.rune.rune) {
+                    Some(&x) => Some(InitialKnown { rune: generic_param.rune, templata: x }),
+                    None => { panic!("implement: create placeholder for missing preliminary inference"); }
+                }
+            }).collect();
+
+        let CompleteDefineSolve { conclusions: inferences, rune_to_bound: instantiation_bound_params } =
+            match self.solve_for_defining(
+                InferEnv {
+                    original_calling_env: calling_env,
+                    parent_ranges: self.typing_interner.alloc_slice_copy(call_range),
+                    call_location,
+                    self_env: IEnvironmentT::BuildingWithClosureds(near_env),
+                    context_region: RegionT {},
+                },
+                coutputs,
+                &function_definition_rules,
+                &preliminary_rune_to_type,
+                &{
+                    let mut ranges = vec![function.range];
+                    ranges.extend_from_slice(call_range);
+                    ranges
+                },
+                call_location,
+                &placeholder_initial_knowns_from_function,
+                &[],
+                &{
+                    let mut runes: Vec<IRuneS<'s>> = function.params.iter()
+                        .flat_map(|p| p.pattern.coord_rune.map(|r| r.rune))
+                        .collect();
+                    if let Some(r) = function.maybe_ret_coord_rune {
+                        runes.push(r.rune);
+                    }
+                    runes
+                },
+            ) {
+                Err(_f) => { panic!("implement: TypingPassDefiningError from solve_for_defining"); }
+                Ok(c) => c,
+            };
+        let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
+            instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.values()
+                .flat_map(|m| m.citizen_rune_to_reachable_prototype.values().copied())
+                .map(|p| PrototypeTemplataT { prototype: self.typing_interner.alloc(p) })
+                .collect();
+        let runed_env =
+            self.add_runed_data_to_near_env(
+                near_env,
+                &function.generic_parameters.iter().map(|p| p.rune.rune).collect::<Vec<_>>(),
+                &inferences,
+                &reachable_bounds);
+
+        let runed_env_ref = self.typing_interner.alloc(runed_env);
+        let prototype =
+            self.get_generic_function_prototype_from_call(
+                runed_env_ref, coutputs, call_range, function);
+
+        IDefineFunctionResult::DefineFunctionSuccess(DefineFunctionSuccess {
+            prototype: self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(prototype) }),
+            inferences,
+            instantiation_bound_params: instantiation_bound_params,
+        })
     }
 
 /*
@@ -988,8 +1086,7 @@ where 's: 't,
         }
 
         let parent_ranges_alloc = self.typing_interner.alloc_slice_from_vec(parent_ranges.to_vec());
-        let near_env_as_in_denizen = self.typing_interner.alloc(
-            IInDenizenEnvironmentT::BuildingWithClosureds(near_env));
+        let near_env_as_in_denizen = IInDenizenEnvironmentT::BuildingWithClosureds(near_env);
         let near_env_as_env = IEnvironmentT::BuildingWithClosureds(near_env);
         let envs = InferEnv {
             original_calling_env: near_env_as_in_denizen,
@@ -1045,7 +1142,15 @@ where 's: 't,
         let instantiation_bound_params = match self.check_defining_conclusions_and_resolve(
             envs, coutputs, &range, call_location, &definition_rules, &param_and_return_runes, &inferences,
         ) {
-            Err(_f) => { panic!("Unimplemented: checkDefiningConclusionsAndResolve error handling") }
+            Err(f) => {
+                use crate::typing::infer_compiler::IConclusionResolveError;
+                match f {
+                    IConclusionResolveError::CouldntFindFunctionForConclusionResolve { .. } => panic!("TypingPassDefiningError: CouldntFindFunctionForConclusionResolve"),
+                    IConclusionResolveError::ReturnTypeConflictInConclusionResolve { .. } => panic!("TypingPassDefiningError: ReturnTypeConflictInConclusionResolve"),
+                    IConclusionResolveError::CouldntFindImplForConclusionResolve { .. } => panic!("TypingPassDefiningError: CouldntFindImplForConclusionResolve"),
+                    IConclusionResolveError::CouldntFindKindForConclusionResolve(_) => panic!("TypingPassDefiningError: CouldntFindKindForConclusionResolve"),
+                }
+            }
             Ok(c) => c,
         };
 

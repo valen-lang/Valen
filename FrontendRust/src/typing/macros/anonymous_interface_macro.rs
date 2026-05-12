@@ -72,7 +72,11 @@ where 's: 't,
         interface_name: IdT<'s, 't>,
         interface_a: &'s InterfaceA<'s>,
     ) -> Vec<(IdT<'s, 't>, IEnvEntryT<'s, 't>)> {
-        panic!("Unimplemented: get_interface_sibling_entries_anonymous_interface");
+        use crate::postparsing::ast::{ICitizenAttributeS, SealedS};
+        if interface_a.attributes.iter().any(|a| matches!(a, ICitizenAttributeS::Sealed(_))) {
+            return vec![];
+        }
+        panic!("implement: get_interface_sibling_entries_anonymous_interface non-sealed case");
     }
 /*
   override def getInterfaceSiblingEntries(interfaceName: IdT[INameT], interfaceA: InterfaceA): Vector[(IdT[INameT], IEnvEntry)] = {

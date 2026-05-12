@@ -4,6 +4,8 @@ const VALID_PREFIXES: &[&str] = &[
     "/// Arena-allocated (see @TFITCX)",
     "/// Value-type (see @TFITCX)",
     "/// Interned (see @TFITCX)",
+    "/// Interning transient (see @TFITCX)",
+    "/// Polyvalue (see @TFITCX)",
     "/// Temporary state (see @TFITCX)",
     "/// Miscellaneous type (see @TFITCX)",
 ];
@@ -81,7 +83,7 @@ fn main() {
                     .next()
                     .unwrap_or("unknown");
                 violations.push(format!(
-                    "{} `{}` missing category annotation (expected one of: /// Arena-allocated, /// Value-type, /// Interned, /// Temporary state, /// Miscellaneous type)",
+                    "{} `{}` missing category annotation (expected one of: /// Arena-allocated, /// Value-type, /// Interned, /// Interning transient, /// Polyvalue, /// Temporary state, /// Miscellaneous type)",
                     kind, name
                 ));
             }

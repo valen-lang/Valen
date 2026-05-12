@@ -10,27 +10,31 @@ use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::postparsing::names::{IImpreciseNameS, IRuneS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::ast::expressions::{ReferenceExpressionTE, ConsecutorTE, VoidLiteralTE};
-use crate::typing::ast::ast::{FunctionHeaderT, InterfaceEdgeBlueprintT, KindExportT};
+use crate::typing::ast::ast::{FunctionHeaderT, InterfaceEdgeBlueprintT, KindExportT, PrototypeT};
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::compilation::TypingPassOptions;
 use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
 use crate::typing::infer_compiler::InferEnv;
+use crate::typing::templata::templata::ImplDefinitionTemplataT;
 use crate::typing::macros::macros::{OnStructDefinedMacro, OnInterfaceDefinedMacro, FunctionBodyMacro};
 use crate::typing::env::environment::{get_imprecise_name, make_top_level_environment, GlobalEnvironmentT, IEnvironmentT, IInDenizenEnvironmentT, PackageEnvironmentT, TemplatasStoreT, TemplatasStoreBuilder};
 use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::typing::hinputs_t::HinputsT;
 use crate::typing::names::names::{
-    IdT, IdValT, INameT, IFunctionTemplateNameT, IInstantiationNameT, IStructTemplateNameT,
-    IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
+    IdT, IdValT, INameT, IFunctionTemplateNameT, IInstantiationNameT, ITemplateNameT,
+    IStructTemplateNameT, IInterfaceTemplateNameT, IImplTemplateNameT, PackageTopLevelNameT, PrimitiveNameT,
 };
 use crate::typing::templata::templata::{
-    CoordTemplataT, FunctionTemplataT, ITemplataT, KindTemplataT, MutabilityTemplataT, PlaceholderTemplataT,
-    RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
+    CoordTemplataT, FunctionTemplataT, ITemplataT, InterfaceDefinitionTemplataT, KindTemplataT, MutabilityTemplataT, PlaceholderTemplataT,
+    PrototypeTemplataT, RuntimeSizedArrayTemplateTemplataT, StaticSizedArrayTemplateTemplataT, StructDefinitionTemplataT,
 };
 use crate::typing::types::types::CoordT;
 use crate::typing::types::types::{BoolT, FloatT, IntT, KindT, MutabilityT, NeverT, StrT, VoidT};
 use crate::typing::typing_interner::TypingInterner;
+use crate::typing::types::types::RegionT;
+use crate::typing::function::function_compiler::StampFunctionSuccess;
+use crate::typing::overload_resolver::FindFunctionFailure;
 use crate::utils::code_hierarchy::{FileCoordinateMap, PackageCoordinate, PackageCoordinateMap};
 use crate::utils::range::RangeS;
 
@@ -361,7 +365,35 @@ where 's: 't,
         self.get_placeholders_in_templata(&mut accum, templata);
 
         if !accum.is_empty() {
-            panic!("implement: sanityCheckConclusion non-empty accum path");
+            let root_denizen_env = envs.original_calling_env.root_compiling_denizen_env();
+            let root_id = root_denizen_env.id();
+            // Rust adaptation (SPDMX-B): Scala constructs IdT freely as a case class;
+            // Rust must intern it via typing_interner.
+            let original_calling_env_template_name: IdT<'s, 't> =
+                match ITemplateNameT::try_from(root_id.local_name) {
+                    Ok(_x) => root_id,
+                    Err(_) => {
+                        match IInstantiationNameT::try_from(root_id.local_name) {
+                            Ok(x) => {
+                                *self.typing_interner.intern_id(IdValT {
+                                    package_coord: root_id.package_coord,
+                                    init_steps: root_id.init_steps,
+                                    local_name: INameT::from(x.template()),
+                                })
+                            }
+                            Err(_) => panic!("sanityCheckConclusion: unexpected root id local_name: {:?}", root_id.local_name),
+                        }
+                    }
+                };
+            let template_steps = original_calling_env_template_name.steps();
+            for placeholder_name in &accum {
+                let placeholder_steps = placeholder_name.steps();
+                assert!(
+                    placeholder_steps.starts_with(&template_steps),
+                    "Placeholder {:?} steps don't start with template steps",
+                    placeholder_name
+                );
+            }
         }
     }
 /*
@@ -419,13 +451,25 @@ where 's: 't,
         kind: KindT<'s, 't>,
     ) -> bool {
         match kind {
-            KindT::KindPlaceholder(_) => { panic!("implement: is_descendant_kind KindPlaceholder"); }
+            KindT::KindPlaceholder(kp) => {
+                use crate::typing::types::types::ISubKindTT;
+                self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
+                    ISubKindTT::KindPlaceholder(kp))
+            }
             KindT::RuntimeSizedArray(_) => false,
             KindT::OverloadSet(_) => false,
             KindT::Never(_) => true,
             KindT::StaticSizedArray(_) => false,
-            KindT::Struct(_) => { panic!("implement: is_descendant_kind Struct"); }
-            KindT::Interface(_) => { panic!("implement: is_descendant_kind Interface"); }
+            KindT::Struct(s) => {
+                use crate::typing::types::types::ISubKindTT;
+                self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
+                    ISubKindTT::Struct(s))
+            }
+            KindT::Interface(i) => {
+                use crate::typing::types::types::ISubKindTT;
+                self.is_descendant(_coutputs, _envs.parent_ranges, _envs.call_location, _envs.original_calling_env,
+                    ISubKindTT::Interface(i))
+            }
             KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Str(_) | KindT::Void(_) => false,
         }
     }
@@ -517,7 +561,23 @@ where 's: 't,
         override def getMutability(state: CompilerOutputs, kind: KindT): ITemplataT[MutabilityTemplataType] = {
             Compiler.getMutability(state, kind)
         }
-
+*/
+    // mig: fn predict_static_sized_array_kind
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn predict_static_sized_array_kind(
+        &self,
+        _envs: InferEnv<'s, 't>,
+        _state: &mut CompilerOutputs<'s, 't>,
+        _mutability: ITemplataT<'s, 't>,
+        _variability: ITemplataT<'s, 't>,
+        _size: ITemplataT<'s, 't>,
+        _element: CoordT<'s, 't>,
+        _region: RegionT,
+    ) -> crate::typing::types::types::StaticSizedArrayTT<'s, 't> {
+        panic!("Unimplemented: predict_static_sized_array_kind");
+    }
+    /*
         override def predictStaticSizedArrayKind(
           envs: InferEnv,
           state: CompilerOutputs,
@@ -530,6 +590,21 @@ where 's: 't,
           arrayCompiler.resolveStaticSizedArray(mutability, variability, size, element, region)
         }
 
+*/
+    // mig: fn predict_runtime_sized_array_kind
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn predict_runtime_sized_array_kind(
+        &self,
+        _envs: InferEnv<'s, 't>,
+        _state: &mut CompilerOutputs<'s, 't>,
+        _element: CoordT<'s, 't>,
+        _array_mutability: ITemplataT<'s, 't>,
+        _region: RegionT,
+    ) -> crate::typing::types::types::RuntimeSizedArrayTT<'s, 't> {
+        panic!("Unimplemented: predict_runtime_sized_array_kind");
+    }
+    /*
         override def predictRuntimeSizedArrayKind(
           envs: InferEnv,
           state: CompilerOutputs,
@@ -560,6 +635,19 @@ where 's: 't,
             state, env.originalCallingEnv, env.parentRanges, env.callLocation, templata, templateArgs)
         }
 
+*/
+    // mig: fn kind_is_from_template
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn kind_is_from_template(
+        &self,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        _actual_citizen_ref: KindT<'s, 't>,
+        _expected_citizen_templata: ITemplataT<'s, 't>,
+    ) -> bool {
+        panic!("Unimplemented: kind_is_from_template");
+    }
+    /*
         override def kindIsFromTemplate(
           coutputs: CompilerOutputs,
           actualCitizenRef: KindT,
@@ -573,6 +661,20 @@ where 's: 't,
           }
         }
 
+*/
+    // mig: fn get_ancestors
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn get_ancestors(
+        &self,
+        _envs: InferEnv<'s, 't>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        _descendant: KindT<'s, 't>,
+        _include_self: bool,
+    ) -> std::collections::HashSet<KindT<'s, 't>> {
+        panic!("Unimplemented: get_ancestors");
+    }
+    /*
         override def getAncestors(
           envs: InferEnv,
           coutputs: CompilerOutputs,
@@ -590,11 +692,44 @@ where 's: 't,
               })
         }
 
+*/
+    // mig: fn struct_is_closure
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn struct_is_closure(
+        &self,
+        _state: &mut CompilerOutputs<'s, 't>,
+        _struct_tt: crate::typing::types::types::StructTT<'s, 't>,
+    ) -> bool {
+        panic!("Unimplemented: struct_is_closure");
+    }
+    /*
         override def structIsClosure(state: CompilerOutputs, structTT: StructTT): Boolean = {
             val structDef = state.lookupStruct(structTT.id)
             structDef.isClosure
         }
-
+*/
+    // mig: fn predict_function
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn predict_function(
+        &self,
+        envs: InferEnv<'s, 't>,
+        _state: &mut CompilerOutputs<'s, 't>,
+        _function_range: RangeS<'s>,
+        name: StrI<'s>,
+        param_coords: &'t [CoordT<'s, 't>],
+        return_coord: CoordT<'s, 't>,
+    ) -> PrototypeTemplataT<'s, 't> {
+        use crate::typing::names::names::{PredictedFunctionTemplateNameT, PredictedFunctionNameValT, IdValT};
+        use crate::typing::ast::ast::PrototypeValT;
+        let tmpl = self.typing_interner.intern_predicted_function_template_name(PredictedFunctionTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
+        let pred_name = self.typing_interner.intern_predicted_function_name(PredictedFunctionNameValT { template: tmpl, template_args: &[], parameters: param_coords });
+        let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::PredictedFunction(pred_name));
+        let prototype = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type: return_coord });
+        PrototypeTemplataT { prototype }
+    }
+    /*
         def predictFunction(
           envs: InferEnv,
           state: CompilerOutputs,
@@ -613,7 +748,36 @@ where 's: 't,
                     paramCoords))),
               returnCoord))
         }
-
+*/
+    // mig: fn assemble_prototype
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn assemble_prototype(
+        &self,
+        envs: InferEnv<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        _range: RangeS<'s>,
+        name: StrI<'s>,
+        coords: &'t [CoordT<'s, 't>],
+        return_type: CoordT<'s, 't>,
+    ) -> &'t PrototypeT<'s, 't> {
+        use crate::typing::names::names::{FunctionBoundTemplateNameT, FunctionBoundNameValT, IdValT};
+        use crate::typing::ast::ast::PrototypeValT;
+        use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
+        let tmpl = self.typing_interner.intern_function_bound_template_name(FunctionBoundTemplateNameT { human_name: name, _phantom: std::marker::PhantomData });
+        let bound_name = self.typing_interner.intern_function_bound_name(FunctionBoundNameValT { template: tmpl, template_args: &[], parameters: coords });
+        let id = envs.original_calling_env.denizen_id().add_step(self.typing_interner, INameT::FunctionBound(bound_name));
+        let result = self.typing_interner.intern_prototype(PrototypeValT { id: IdValT { package_coord: id.package_coord, init_steps: id.init_steps, local_name: id.local_name }, return_type });
+        // This is a function bound, and there's no such thing as a function bound with function bounds.
+        let empty_bounds = self.typing_interner.alloc(InstantiationBoundArgumentsT {
+            rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
+            rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
+            rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(std::iter::empty()),
+        });
+        state.add_instantiation_bounds(self.opts.global_options.sanity_check, self.typing_interner, envs.original_calling_env.denizen_template_id(), result.id, empty_bounds);
+        result
+    }
+    /*
         override def assemblePrototype(
             envs: InferEnv,
           state: CompilerOutputs,
@@ -642,7 +806,28 @@ where 's: 't,
 
           result
         }
-
+*/
+    // mig: fn assemble_impl
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn assemble_impl(
+        &self,
+        env: InferEnv<'s, 't>,
+        range: RangeS<'s>,
+        sub_kind: KindT<'s, 't>,
+        super_kind: KindT<'s, 't>,
+    ) -> crate::typing::templata::templata::IsaTemplataT<'s, 't> {
+        use crate::typing::names::names::{ImplBoundTemplateNameT, ImplBoundNameValT};
+        use crate::typing::templata::templata::IsaTemplataT;
+        let tmpl = self.typing_interner.intern_impl_bound_template_name(
+            ImplBoundTemplateNameT { code_location_s: range.begin, _phantom: std::marker::PhantomData });
+        let bound_name = self.typing_interner.intern_impl_bound_name(
+            ImplBoundNameValT { template: tmpl, template_args: &[] });
+        let id = *env.original_calling_env.denizen_id().add_step(
+            self.typing_interner, INameT::ImplBound(bound_name));
+        IsaTemplataT { declaration_range: range, impl_name: id, sub_kind, super_kind }
+    }
+    /*
         override def assembleImpl(env: InferEnv, range: RangeS, subKind: KindT, superKind: KindT): IsaTemplataT = {
           IsaTemplataT(
             range,
@@ -677,7 +862,37 @@ where 's: 't,
         IResolveOutcome[StructTT] = {
           structCompiler.resolveStruct(state, callingEnv, callRange,callLocation, templata, templateArgs)
         }
-
+*/
+    // Per "Compiler/ImplCompiler Name-Collision Disambiguation": Scala's IInferCompilerDelegate
+    // anonymous-class `resolveFunction` (Compiler.scala:455-477) is flattened onto Rust's Compiler.
+    pub fn resolve_function(
+        &self,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        state: &mut CompilerOutputs<'s, 't>,
+        ranges: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        name: StrI<'s>,
+        coords: &[CoordT<'s, 't>],
+        context_region: RegionT,
+        verify_conclusions: bool,
+    ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
+        let _ = verify_conclusions;
+        self.find_function(
+            calling_env,
+            state,
+            ranges,
+            call_location,
+            self.scout_arena.intern_imprecise_name(
+                crate::postparsing::names::IImpreciseNameValS::CodeName(
+                    crate::postparsing::names::CodeNameS { name })),
+            &[],
+            &[],
+            context_region,
+            coords,
+            &[],
+            true)
+    }
+    /*
         override def resolveFunction(
           callingEnv: IInDenizenEnvironmentT,
           state: CompilerOutputs,
@@ -701,7 +916,8 @@ where 's: 't,
             Vector.empty,
             true)
         }
-
+    */
+/*
         override def resolveStaticSizedArrayKind(
           coutputs: CompilerOutputs,
           mutability: ITemplataT[MutabilityTemplataType],
@@ -784,6 +1000,27 @@ where 's: 't,
             coutputs, parentRanges, callLocation, functionTemplata)
         }
 
+*/
+    // mig: fn scout_expected_function_for_prototype
+    // Rust adaptation: lifted from Compiler.scala's anonymous IInfererDelegate
+    // (which Rust flattened onto Compiler).
+    pub fn scout_expected_function_for_prototype(
+        &self,
+        _env: IInDenizenEnvironmentT<'s, 't>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        _call_range: &[RangeS<'s>],
+        _call_location: LocationInDenizen<'s>,
+        _function_name: IImpreciseNameS<'s>,
+        _explicit_template_arg_rules_s: &[crate::postparsing::rules::rules::IRulexSR<'s>],
+        _explicit_template_arg_runes_s: &[IRuneS<'s>],
+        _context_region: RegionT,
+        _args: &[CoordT<'s, 't>],
+        _extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
+        _exact: bool,
+    ) -> crate::typing::function::function_compiler::StampFunctionSuccess<'s, 't> {
+        panic!("Unimplemented: scout_expected_function_for_prototype");
+    }
+    /*
         override def scoutExpectedFunctionForPrototype(
           env: IInDenizenEnvironmentT,
           coutputs: CompilerOutputs,
@@ -852,6 +1089,26 @@ where 's: 't,
 //      virtualCompiler.evaluateParent(env, coutputs, callRange, sparkHeader)
 //    }
 
+*/
+    // mig: fn generate_function
+    // Rust adaptation: lifted from Compiler.scala's anonymous IFunctionCompilerDelegate
+    // (which Rust flattened onto Compiler). Scala's `functionCompilerCore: FunctionCompilerCore`,
+    // `structCompiler`, `destructorCompiler`, `arrayCompiler` parameters are absorbed
+    // into `&self` since all four compilers are flattened onto `Compiler` in Rust.
+    pub fn generate_function(
+        &self,
+        _generator: IFunctionGenerator,
+        _full_env: &'t crate::typing::env::function_environment_t::FunctionEnvironmentT<'s, 't>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        _life: crate::typing::ast::ast::LocationInFunctionEnvironmentT<'s, 't>,
+        _call_range: &[RangeS<'s>],
+        _origin_function: Option<&'s FunctionA<'s>>,
+        _param_coords: &[crate::typing::ast::ast::ParameterT<'s, 't>],
+        _maybe_ret_coord: Option<CoordT<'s, 't>>,
+    ) -> &'t FunctionHeaderT<'s, 't> {
+        panic!("Unimplemented: generate_function");
+    }
+    /*
     override def generateFunction(
       functionCompilerCore: FunctionCompilerCore,
       generator: IFunctionGenerator,
@@ -1091,12 +1348,7 @@ where 's: 't,
         let mut namespace_name_to_templatas_vec: Vec<(&'t IdT<'s, 't>, &'t TemplatasStoreT<'s, 't>)> = Vec::new();
         for (package_id, entries) in namespace_name_to_entries {
             let mut builder = TemplatasStoreBuilder::new(package_id);
-            for (local_name, env_entry) in entries {
-                builder.name_to_entry.push((local_name, env_entry));
-                if let Some(imprecise) = get_imprecise_name(self.scout_arena, local_name) {
-                    builder.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(env_entry);
-                }
-            }
+            builder.add_entries(self.scout_arena, entries);
             namespace_name_to_templatas_vec.push((package_id, builder.build_in(self.typing_interner)));
         }
 
@@ -1191,15 +1443,18 @@ where 's: 't,
         // Indexing phase
         for (package_id, templatas) in global_env.name_to_top_level_environment {
             let env = make_top_level_environment(global_env, **package_id, self.typing_interner);
-            let env_ref: &'t IEnvironmentT<'s, 't> =
-                self.typing_interner.alloc(IEnvironmentT::Package(env));
+            let env_ref: IEnvironmentT<'s, 't> =
+                IEnvironmentT::Package(env);
             for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Struct(struct_a) => {
                         let templata = StructDefinitionTemplataT { declaring_env: env_ref, origin_struct: struct_a };
                         self.precompile_struct(&mut coutputs, templata);
                     }
-                    IEnvEntryT::Interface(_) => panic!("Unimplemented: interface precompile in evaluate"),
+                    IEnvEntryT::Interface(interface_a) => {
+                        let templata = InterfaceDefinitionTemplataT { declaring_env: env_ref, origin_interface: interface_a };
+                        self.precompile_interface(&mut coutputs, templata);
+                    }
                     _ => {}
                 }
             }
@@ -1209,8 +1464,8 @@ where 's: 't,
         let mut unchecked_defining_conclusionses: Vec<UncheckedDefiningConclusions<'s, 't>> = Vec::new();
         for (package_id, templatas) in global_env.name_to_top_level_environment {
             let env = make_top_level_environment(global_env, **package_id, self.typing_interner);
-            let env_ref: &'t IEnvironmentT<'s, 't> =
-                self.typing_interner.alloc(IEnvironmentT::Package(env));
+            let env_ref: IEnvironmentT<'s, 't> =
+                IEnvironmentT::Package(env);
             // This makes it so anything starting with an underscore is compiled in the order
             // of their names.
             // AFTERM: is there a better solution here? should we always order things?
@@ -1284,7 +1539,7 @@ where 's: 't,
                                     id: placeholdered_export_id,
                                     templatas: export_templatas,
                                 });
-                                let export_env_as_iindenizen = self.typing_interner.alloc(IInDenizenEnvironmentT::Export(export_env));
+                                let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
                                 let export_call_range = self.typing_interner.alloc_slice_copy(&[struct_a.range]);
                                 let export_placeholdered_struct = match self.resolve_struct(
                                     &mut coutputs,
@@ -1312,17 +1567,53 @@ where 's: 't,
                         }
                         unchecked_defining_conclusionses.push(unchecked_conclusions);
                     }
-                    IEnvEntryT::Interface(_) => panic!("Unimplemented: interface compile in evaluate"),
+                    IEnvEntryT::Interface(interface_a) => {
+                        let templata = InterfaceDefinitionTemplataT { declaring_env: env_ref, origin_interface: interface_a };
+                        let unchecked_conclusions =
+                            self.compile_interface(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                        let maybe_export =
+                            interface_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(_e) => Some(()), _ => None });
+                        if maybe_export.is_some() {
+                            panic!("implement: interface export in evaluate");
+                        }
+                        unchecked_defining_conclusionses.push(unchecked_conclusions);
+                    }
                     _ => {}
                 }
             }
         }
 
+        // Struct/interface resolution phase
+        for unchecked in unchecked_defining_conclusionses.into_iter() {
+            let _instantiation_bound_args_unused =
+                match self.check_defining_conclusions_and_resolve(
+                    unchecked.envs,
+                    &mut coutputs,
+                    &unchecked.ranges,
+                    unchecked.call_location,
+                    &unchecked.definition_rules,
+                    &[],
+                    &unchecked.conclusions,
+                ) {
+                    Err(_f) => panic!("implement: check_defining_conclusions_and_resolve error in resolution phase"),
+                    Ok(c) => c,
+                };
+        }
+
         // Impl compile phase
-        for (_package_id, templatas) in global_env.name_to_top_level_environment {
+        for (package_id, templatas) in global_env.name_to_top_level_environment {
+            let package_env = make_top_level_environment(global_env, **package_id, self.typing_interner);
+            let package_env_t: IEnvironmentT<'s, 't> =
+                IEnvironmentT::Package(package_env);
             for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
-                    IEnvEntryT::Impl(_) => panic!("Unimplemented: impl compile in evaluate"),
+                    IEnvEntryT::Impl(impl_a) => {
+                        let impl_templata = self.typing_interner.alloc(ImplDefinitionTemplataT {
+                            env: package_env_t,
+                            impl_: impl_a,
+                        });
+                        self.compile_impl(&mut coutputs, LocationInDenizen { path: &[] }, impl_templata);
+                    }
                     _ => {}
                 }
             }
@@ -1341,8 +1632,8 @@ where 's: 't,
                 id: **package_id,
                 global_namespaces,
             });
-            let package_env_t: &'t IEnvironmentT<'s, 't> =
-                self.typing_interner.alloc(IEnvironmentT::Package(package_env));
+            let package_env_t: IEnvironmentT<'s, 't> =
+                IEnvironmentT::Package(package_env);
             for (_name, entry) in templatas.name_to_entry.iter() {
                 match entry {
                     IEnvEntryT::Function(function_a) => {
@@ -1389,8 +1680,8 @@ where 's: 't,
                         // (nextDeferredEvaluatingFunction.call)(coutputs)
                         // delegate.evaluateGenericFunctionFromNonCallForHeader(
                         //   coutputs, parentRanges, callLocation, FunctionTemplataT(outerEnv, functionA))
-                        let outer_env: &'t IEnvironmentT<'s, 't> =
-                            self.typing_interner.alloc(IEnvironmentT::from(*calling_env));
+                        let outer_env: IEnvironmentT<'s, 't> =
+                            IEnvironmentT::from(calling_env);
                         let templata = FunctionTemplataT { outer_env, function: origin };
                         self.evaluate_generic_function_from_non_call_for_header(
                             &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
@@ -1446,9 +1737,10 @@ where 's: 't,
         let reachable_functions = coutputs.get_all_functions();
 
         // interfaceEdgeBlueprints.groupBy(_.interface).mapValues(vassertOne(_))
-        let interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
-        for _blueprint in interface_edge_blueprints.iter() {
-            panic!("implement: groupBy interface + vassertOne for non-empty edge blueprints");
+        let mut interface_to_edge_blueprints: HashMap<IdT<'s, 't>, &'t InterfaceEdgeBlueprintT<'s, 't>> = HashMap::new();
+        for blueprint in interface_edge_blueprints.iter() {
+            let prev = interface_to_edge_blueprints.insert(blueprint.interface, blueprint);
+            assert!(prev.is_none(), "vassertOne: multiple blueprints for same interface");
         }
 
         // coutputs.getInstantiationNameToFunctionBoundToRune()
@@ -2755,7 +3047,7 @@ where 's: 't,
             KindT::Bool(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
             KindT::Str(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
             KindT::Void(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
-            KindT::KindPlaceholder(_) => { panic!("Unimplemented: get_mutability KindPlaceholderT"); }
+            KindT::KindPlaceholder(kp) => coutputs.lookup_mutability(self.get_placeholder_template(kp.id)),
             KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: get_mutability RuntimeSizedArray"); }
             KindT::StaticSizedArray(_) => { panic!("Unimplemented: get_mutability StaticSizedArray"); }
             KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),

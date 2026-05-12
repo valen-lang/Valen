@@ -148,7 +148,7 @@ pub enum NodeRefT<'s, 't> {
     // ---- Names + envs (trait-level only; we do not enumerate sub-variants) ----
     Name(&'t INameT<'s, 't>),
     VarName(&'t IVarNameT<'s, 't>),
-    Environment(&'t IEnvironmentT<'s, 't>),
+    Environment(IEnvironmentT<'s, 't>),
 
     // ---- Auxiliaries (trait-level only) ----
     FunctionAttribute(&'t IFunctionAttributeT<'s>),

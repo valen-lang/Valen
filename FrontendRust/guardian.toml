@@ -63,7 +63,6 @@ include_shields = [
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
-    { name = "NoAddingScalaComments-NASCX.md" },
     { name = "NeverUseStaticLifetime-NUSLX.md" },
 ]
 
@@ -91,6 +90,7 @@ include_shields = [
 
     { name = "PythonScriptMutation-PSMX.md" },
     { name = "ValidateReadonlyBash-VRBX.md" },
+    { name = "NoAddingScalaComments-NASCX.md" },
 ]
 
 [review_mode]

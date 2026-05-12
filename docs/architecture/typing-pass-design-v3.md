@@ -75,10 +75,11 @@ Bucket-level summary. Per-type detail lives in §6.x (type system) and §3 (envs
 - **`'s` scout arena (read-only inputs):** scout-interned coords/names (`StrI`, `RangeS`, `INameS`, `IRuneS`, `IImpreciseNameS`, …) plus higher-typing output (`FunctionA`, `StructA`, `InterfaceA`, `ImplA`).
 - **`'t` typing arena, interned:** ~75 concrete name types, `IdT`, the 5 sealed kind payloads + `KindPlaceholderT`, the 6 interned templata payloads, plus `PrototypeT` / `SignatureT` (Value-type, opt-in dedup). See §6.1.
 - **`'t` typing arena, allocated but not interned:** definitions (`FunctionDefinitionT`, `FunctionHeaderT`, `StructDefinitionT`, `InterfaceDefinitionT`, `ImplT`, `EdgeT`, `OverrideT`, `ParameterT`), the expression hierarchy (`ReferenceExpressionTE` 48 variants + `AddressExpressionTE` 5 variants), `InstantiationBoundArgumentsT`, the 5 heavy templata payloads, `HinputsT`, and the 9 concrete env types + `GlobalEnvironmentT`. `TemplatasStoreT` lives in this bucket and is held as `&'t TemplatasStoreT` inside envs.
-- **Inline Copy wrappers (16 bytes, not arena-stored):** `INameT` + 21 name sub-enums; `KindT` + 3 sub-enums (`ICitizenTT`, `ISubKindTT`, `ISuperKindTT`); `ITemplataT`; `CoordT`; `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT`/`RegionT`; small-Copy templata variants (`MutabilityTemplataT`, etc.); env wrapper enums (`IEnvironmentT` 9 variants, `IInDenizenEnvironmentT` 8-variant subset, `IEnvEntryT` 5, `IVariableT` 4, `ILocalVariableT` 2).
+- **Polyvalue enums (~16 bytes, not arena-stored) — closed-set fat pointers, see @TFITCX / @PVECFPZ:** `INameT` + 21 name sub-enums; `KindT` + 3 sub-enums (`ICitizenTT`, `ISubKindTT`, `ISuperKindTT`); `InternedKindPayloadT`; `ITemplataT`; env wrapper enums (`IEnvironmentT` 9 variants, `IInDenizenEnvironmentT` 8-variant subset, `IEnvEntryT` 5). Eq/Hash derive — never hand-roll `ptr::eq(self, other)` on the outer `&self` (silently breaks under by-value use).
+- **Inline Copy value-types (16 bytes, not arena-stored):** `CoordT`; `OwnershipT`/`MutabilityT`/`VariabilityT`/`LocationT`/`RegionT`; small-Copy templata variants (`MutabilityTemplataT`, etc.); `IVariableT` 4 variants, `ILocalVariableT` 2 (variant payloads are by-value structs, not refs).
 - **Neither arena (stack/heap):** `CompilerOutputs` (stack accumulator), `Compiler` (stack god struct), env builders (heap-backed until `build_in`/`snapshot`), `DeferredActionT` entries in `VecDeque`.
 
-**Casting identity rule.** Wrapper enums compare structurally on their 16 bytes (tag + inner ref). Concrete payloads and interned templata payloads compare via `ptr::eq` on the `&'t` ref. Casting up a sub-enum hierarchy is a stack-only rewrap via `From`/`TryFrom`; no interner involvement.
+**Casting identity rule.** Polyvalue enums compare structurally on their 16 bytes (tag + inner ref/value) — derive `PartialEq`/`Eq`/`Hash`, which delegates to each variant's inner eq (per-variant ref → inner's `id == id`, value → structural). Concrete payloads and interned templata payloads compare via `ptr::eq` on the `&'t` ref (see @IEOIBZ). Casting up a sub-enum hierarchy is a stack-only rewrap via `From`/`TryFrom`; no interner involvement.
 
 **Equality opt-out for the expression hierarchy** (`ReferenceExpressionTE`, `AddressExpressionTE`, `ExpressionTE`, ~50 per-variant struct types) — see @IEOIBZ.
 
@@ -165,9 +166,9 @@ pub enum IInDenizenEnvironmentT<'s, 't> {  // 8-variant subset (no Package).
 
 Every env variant carries `global_env: &'t GlobalEnvironmentT<'s, 't>` as a back-ref (Scala parity; Scala's `IEnvironmentT` has `def globalEnv`). `NodeEnvironmentT` omits it because it delegates via `parent_function_env.global_env` (matching Scala's `override def globalEnv = parentFunctionEnv.globalEnv`).
 
-`IEnvEntryT<'s, 't>` is a 5-variant inline Copy enum: `Function(&'s FunctionA<'s>)`, `Struct(&'s StructA<'s>)`, `Interface(&'s InterfaceA<'s>)`, `Impl(&'s ImplA<'s>)`, `Templata(ITemplataT<'s, 't>)`. Not interned. Lives inline in `TemplatasStoreT.name_to_entry`.
+`IEnvEntryT<'s, 't>` is a 5-variant Polyvalue enum (@TFITCX / @PVECFPZ): `Function(&'s FunctionA<'s>)`, `Struct(&'s StructA<'s>)`, `Interface(&'s InterfaceA<'s>)`, `Impl(&'s ImplA<'s>)`, `Templata(ITemplataT<'s, 't>)`. Not interned. Lives inline in `TemplatasStoreT.name_to_entry`.
 
-Env `Hash`/`PartialEq`/`Eq` are **manual impls**, not derived. The `IEnvironmentT` enum itself uses ptr-eq on `&self` per @IEOIBZ — `IEnvironmentT` is arena-allocated identity-bearing data; two distinct allocations are distinct envs, and comparisons via `&'t IEnvironmentT` (which is most of them) compare addresses. The variant env types (`PackageEnvironmentT`, `CitizenEnvironmentT`, `FunctionEnvironmentT`, `ExportEnvironmentT`, `ExternEnvironmentT`, `BuildingFunctionEnvironmentWithClosuredsT`, `BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT`) keep their `self.id == other.id` impls — a documented exception to @IEOIBZ that's sound because `id: IdT` is sealed/canonical (so id-eq is itself ptr-eq under the hood). `NodeEnvironmentT` uses `(id, life)`, `GeneralEnvironmentT` and `TemplatasStoreT` panic with `vcurious` per Scala. Deriving would walk into `TemplatasStoreT`'s maps and diverge from Scala.
+Env `Hash`/`PartialEq`/`Eq` come from two layers. The Polyvalue wrapper enums (`IEnvironmentT`, `IInDenizenEnvironmentT`) `#[derive(PartialEq, Eq, Hash)]`; the derive delegates into each variant's inner `&'t FooEnvironmentT::eq`, which compares `self.id == other.id`. `IdT` is interned and impls ptr-eq, so the chain reduces to identity equality on the inner arena ref. **Hand-rolling `std::ptr::eq(self, other)` on the outer `&self` would silently break under by-value use** — Polyvalues are held by value (16-byte Copy) at most call sites, and `self` is then a stack address, not the arena address; two by-value copies of `IEnvironmentT::Citizen(same_ref)` would compare unequal. Deriving avoids that trap (see @PVECFPZ). The variant env types (`PackageEnvironmentT`, `CitizenEnvironmentT`, `FunctionEnvironmentT`, `ExportEnvironmentT`, `ExternEnvironmentT`, `BuildingFunctionEnvironmentWithClosuredsT`, `BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT`) keep their manual `self.id == other.id` impls — a documented exception to @IEOIBZ that's sound because `id: IdT` is sealed/canonical (so id-eq is itself ptr-eq under the hood). `NodeEnvironmentT` uses `(id, life)`, `GeneralEnvironmentT` and `TemplatasStoreT` panic with `vcurious` per Scala. Deriving on the variant env types directly would walk into `TemplatasStoreT`'s maps and diverge from Scala.
 
 ### 3.2 `TemplatasStoreT` Uses `ArenaIndexMap`
 
@@ -256,7 +257,7 @@ Mutable accumulator threaded through the pass. Carries `<'s, 't>`. 23 fields:
 
 - **Function registries.** `return_types_by_signature: HashMap<PtrKey<'t, SignatureT>, CoordT>`; `signature_to_function: HashMap<PtrKey<'t, SignatureT>, &'t FunctionDefinitionT>`.
 - **Declaration tracking.** `function_declared_names: HashMap<PtrKey<'t, IdT>, RangeS>`; `type_declared_names: HashSet<PtrKey<'t, IdT>>`.
-- **Env back-refs (keyed by function/type template id).** `function_name_to_outer_env`, `function_name_to_inner_env`, `type_name_to_outer_env`, `type_name_to_inner_env` — all `HashMap<PtrKey<'t, IdT>, &'t IInDenizenEnvironmentT<'s, 't>>`. Narrower in-denizen wrapper, matching Scala.
+- **Env back-refs (keyed by function/type template id).** `function_name_to_outer_env`, `function_name_to_inner_env`, `type_name_to_outer_env`, `type_name_to_inner_env` — all `HashMap<PtrKey<'t, IdT>, IInDenizenEnvironmentT<'s, 't>>`. Narrower in-denizen wrapper, matching Scala.
 - **Type metadata.** `type_name_to_mutability: HashMap<PtrKey<'t, IdT>, ITemplataT>`; `interface_name_to_sealed: HashMap<PtrKey<'t, IdT>, bool>`.
 - **Definitions.** `struct_template_name_to_definition`, `interface_template_name_to_definition` — `HashMap<PtrKey<'t, IdT>, &'t {Struct|Interface}DefinitionT>`.
 - **Impls + reverse indexes.** `all_impls: HashMap<PtrKey<'t, IdT>, &'t ImplT>`; `sub_citizen_template_to_impls`, `super_interface_template_to_impls` — `HashMap<PtrKey<'t, IdT>, Vec<&'t ImplT>>` (the two `Vec`-valued exceptions to §4.3, mutated as new impls are discovered; OK because `CompilerOutputs` is stack-owned, not arena-allocated).
@@ -284,7 +285,7 @@ let env = coutputs.function_name_to_outer_env.get(&PtrKey(id)).unwrap();
 self.do_stuff(coutputs, env, ...);  // &mut coutputs rejected; env borrows from it
 
 // Works — copy out first:
-let env_t: &'t IInDenizenEnvironmentT<'s, 't> =
+let env_t: IInDenizenEnvironmentT<'s, 't> =
     *coutputs.function_name_to_outer_env.get(&PtrKey(id)).unwrap();
 self.do_stuff(coutputs, env_t, ...);  // OK; env_t is Copy'd out
 ```
@@ -306,7 +307,7 @@ pub enum DeferredActionT<'s, 't> {
     },
     EvaluateFunction {
         name: &'t IdT<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         origin: &'s FunctionA<'s>,
         template_args: &'t [ITemplataT<'s, 't>],
     },
@@ -314,7 +315,7 @@ pub enum DeferredActionT<'s, 't> {
 }
 ```
 
-`function_env` on `EvaluateFunctionBody` is `&'t FunctionEnvironmentT` (the concrete env type, matches Scala). `calling_env` on `EvaluateFunction` is `&'t IInDenizenEnvironmentT` (the narrow wrapper, also matches Scala).
+`function_env` on `EvaluateFunctionBody` is `&'t FunctionEnvironmentT` (the concrete env type, matches Scala). `calling_env` on `EvaluateFunction` is `IInDenizenEnvironmentT` (the narrow wrapper, also matches Scala).
 
 Drain loop: `pop_front()` → match → call `Compiler` method with `&mut coutputs`. No self-borrow because once the action is popped, it doesn't alias anything inside `coutputs`. No `Box`, no `dyn`, no hidden captures.
 
@@ -337,7 +338,7 @@ Since `'s` and `'t` live through instantiation, we hold the env directly — no 
 
 ```
 pub struct OverloadSetT<'s, 't> {
-    pub env: &'t IInDenizenEnvironmentT<'s, 't>,
+    pub env: IInDenizenEnvironmentT<'s, 't>,
     pub name: &'s IImpreciseNameS<'s>,  // scout-interned, fine to hold
 }
 
@@ -477,17 +478,17 @@ Heavy templata payloads hold `&'t` env refs and `&'s` scout refs:
 
 ```
 pub struct FunctionTemplataT<'s, 't> {
-    pub outer_env: &'t IInDenizenEnvironmentT<'s, 't>,
+    pub outer_env: IInDenizenEnvironmentT<'s, 't>,
     pub function: &'s FunctionA<'s>,
 }
 // StructDefinitionTemplataT / InterfaceDefinitionTemplataT / ImplDefinitionTemplataT
-// each hold `&'t IInDenizenEnvironmentT` and one of `&'s StructA` / `&'s InterfaceA` / `&'s ImplA`.
+// each hold `IInDenizenEnvironmentT` and one of `&'s StructA` / `&'s InterfaceA` / `&'s ImplA`.
 pub struct ExternFunctionTemplataT<'s, 't> {
     pub header: &'t FunctionHeaderT<'s, 't>,
 }
 ```
 
-Heavy-templata `Eq`/`Hash` per @IEOIBZ: each wrapper just `#[derive(PartialEq, Eq, Hash)]`, which deref-calls into the inner identity-bearing type's manual `std::ptr::eq` impl. The identity types (`IEnvironmentT`, `FunctionA`, `StructA`, `InterfaceA`, `ImplA`, `FunctionHeaderT`) carry the ptr-eq logic; the wrappers don't repeat it.
+Heavy-templata `Eq`/`Hash` per @IEOIBZ: each wrapper just `#[derive(PartialEq, Eq, Hash)]`, which deref-calls into the inner identity-bearing type's manual identity impl. For `FunctionA`/`StructA`/`InterfaceA`/`ImplA`/`FunctionHeaderT` that's `std::ptr::eq`; for the Polyvalue `IEnvironmentT` (@PVECFPZ) it's the derived enum impl, which in turn delegates to each variant env's `self.id == other.id` (resolving to `IdT` ptr-eq). Either way the wrapper doesn't repeat the identity logic.
 
 `PlaceholderTemplataT.tyype: ITemplataType<'s>` (the widest postparser enum, *not* ITemplataT). The Scala field is `tyype: T` where `T <: ITemplataType` — a *type descriptor*, not a templata value.
 

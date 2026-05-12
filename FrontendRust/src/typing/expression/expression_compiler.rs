@@ -753,11 +753,11 @@ where 's: 't,
                     None => uncasted_inner_expr_2,
                     Some(return_type) => {
                         let snapshot = nenv.snapshot(self.typing_interner);
-                        let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+                        let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
                         let range_list: Vec<RangeS<'s>> =
                             std::iter::once(ret.range).chain(parent_ranges.iter().copied()).collect();
                         match self.is_type_convertible(
-                            coutputs, &snapshot_env, &range_list, outer_call_location,
+                            coutputs, snapshot_env, &range_list, outer_call_location,
                             uncasted_inner_expr_2.result().coord, return_type) {
                             false => {
                                 panic!("implement: evaluate_expression ReturnSE — CouldntConvertForReturnT");
@@ -884,7 +884,7 @@ where 's: 't,
                     let expr_te = match undropped_expr_te.result().coord.kind {
                         KindT::Void(_) => undropped_expr_te,
                         _ => {
-                            let snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)));
+                            let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                             let range_with_parent: Vec<RangeS<'s>> =
                                 std::iter::once((*expr_se).range()).chain(parent_ranges.iter().copied()).collect();
                             self.drop(snap, coutputs, &range_with_parent, outer_call_location, region, undropped_expr_te)
@@ -933,8 +933,7 @@ where 's: 't,
                         let mut range_list = vec![fc.range];
                         range_list.extend_from_slice(parent_ranges);
                         let snapshot_env = nenv.snapshot(self.typing_interner);
-                        let env_ref = self.typing_interner.alloc(
-                            IInDenizenEnvironmentT::Node(snapshot_env));
+                        let env_ref = IInDenizenEnvironmentT::Node(snapshot_env);
                         let callable_expr = self.new_global_function_group_expression(
                             env_ref,
                             coutputs,
@@ -1191,12 +1190,12 @@ where 's: 't,
                     _ => panic!("implement: evaluate_expression If — commonType complex branch"),
                 };
 
-                let then_fate_snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(then_fate.snapshot(self.typing_interner)));
+                let then_fate_snap = IInDenizenEnvironmentT::Node(then_fate.snapshot(self.typing_interner));
                 let range_with_parent: Vec<RangeS<'s>> =
                     std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                 let then_expr_2 = self.convert(then_fate_snap, coutputs, &range_with_parent, outer_call_location,
                     self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_then_block_2)), common_type);
-                let else_fate_snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(else_fate.snapshot(self.typing_interner)));
+                let else_fate_snap = IInDenizenEnvironmentT::Node(else_fate.snapshot(self.typing_interner));
                 let else_expr_2 = self.convert(else_fate_snap, coutputs, &range_with_parent, outer_call_location,
                     self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_else_block_2)), common_type);
 
@@ -2815,7 +2814,7 @@ where 's: 't,
 {
     pub fn new_global_function_group_expression(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         region: RegionT,
         name: IImpreciseNameS<'s>,
@@ -2963,8 +2962,8 @@ where 's: 't,
         }
 
         let snapshot = nenv.snapshot(self.typing_interner);
-        let env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+        let env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Node(snapshot);
         let rune_type_solve_env = self.create_rune_type_solver_env(env_ref);
 
         let rune_type_solver = crate::postparsing::rune_type_solver::RuneTypeSolver {

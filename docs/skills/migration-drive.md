@@ -7,7 +7,7 @@ description: Iteratively replace panics in a Scala-to-Rust migration with minima
 
 Here's what I want you to do:
 
-1. First, look at these files:
+1. First, look at these files in full. Do not skip any. Read each one in full. You will need to adhere to all of these.
     * ./FrontendRust/zen/migration_principles.md
     * ./FrontendRust/zen/testing.md
     * ./Luz/shields/NoValidSimplifications-NVSEX.md
@@ -28,8 +28,7 @@ Here's what I want you to do:
 3. Run the non-ignored tests: `cargo nextest run --manifest-path ./FrontendRust/Cargo.toml > ./tmp/slab15-tests.txt 2>&1`. Most tests have `#[ignore]` — only the currently-active test(s) will run. Do NOT use `-E` to filter to a specific test — run all non-ignored tests so you catch regressions in previously-passing tests. If the active test panics with "implement", proceed to step 4. If it passes, mark the test done in `typing-test-todo.md` (change its `- [ ]` to `- [x]`), then pick the next `- [ ]` test in that file, un-ignore it in the test file, write its Rust test body (using the Scala comment as a guide), and start driving it through the same loop.
 4. Please replace that panic with a very *incremental* bit of logic to get *closer* to the equivalent of the old Scala logic. IMPORTANT:
     * DON'T IMPLEMENT ANYTHING ELSE. Just do the one step it gives you.
-    * DO NOT ADD ANY novel logic! All the functions you need should already exist as Scala code in a comment. NO adding new functions. You will only be modifying existing functions.
-    * Anything you add should be *directly immediately above* the Scala comment. NOT below the comment. NOT in a different file. Feel free to slice scala comments apart so the new rust code can be directly above the corresponding old scala code.
+    * DO NOT ADD ANY novel logic! All the Rust functions you need should already exist somewhere. NO adding new functions. You will only be modifying existing functions.
     * Do NOT add `// Scala:` comments in the Rust code. The Scala reference is already right there in the block comment below — no need to duplicate it inline.
     * Do NOT copy old Scala code into the Rust code as `//` comments above the new Rust code (e.g. `//   val results = env.lookupFoo(...)`). The Scala is already preserved in the `/* ... */` block below so you don't need to copy those into the new Rust. However, DO bring over any *explanatory* comments from the Scala (e.g. `// Changed this from AnythingLookupContext to TemplataLookupContext because...`) — those are real comments that belong in the Rust code too.
     * Only implement the bare minimum that you need to make it compile. Add panic!/assert! placeholders until it compiles, then implement only the panic!s/assert!s your test runs into.
@@ -52,12 +51,21 @@ Here's what I want you to do:
 
 Notes:
 
+* **Write escalations to `for-tl.md`.** Whenever you escalate to the TL (scaffolding gap, SPDMX skeleton, lifetime error, choice between alternatives, anything in the bullets below that says "stop and escalate"), write the escalation into `for-tl.md` at the repo root rather than only saying it in chat. Append a new section with a timestamp/heading, then include all the context the TL needs (file paths, line numbers, Scala counterpart, error message, options you considered). The TL reads `for-tl.md` to pick up escalations between turns. You can still mention in chat that you escalated, but `for-tl.md` is the source of truth — chat history is ephemeral, the file is not.
+
+* **When the architect says just "z," check for `for-jr.md` at the repo root; if it exists, read it (it's the TL's response to your escalation), apply the instructions, and then delete the file.**
+
 * **temp-disable:** Guardian will be running and watching any commands and edits. Pay attention to what it says, it's trying to keep things going in a good direction. However, if it's objectively wrong about something, or you feel an exception is extremely justified, then feel free to use the `guardian_temp_disable` command to temporarily turn off Guardian for a given definition.
+
 * **Scaffolding gap escalation:** If you need to call a method that doesn't exist yet on a Rust enum, but the Scala trait *does* have the corresponding `def` (e.g. `parentEnv.globalEnv` where `def globalEnv` exists on the Scala trait but no `fn global_env()` exists on the Rust enum) — this is a scaffolding gap from the slice pipeline. **Do NOT add the method yourself** (Guardian NNDX will rightly block you) and **do NOT temp-disable NNDX**. Instead, STOP and escalate: report what method is missing, which Scala trait defines it, and which Rust enum needs it. The TL will add it.
+
+* **No inlining:** Guardian will be running and watching any commands and edits, and make sure that your Rust code has 1:1 parity with the old Scala code. When Guardian rejects your code, **DO NOT INLINE** methods as a workaround! Either do what Guardian says, or temp-disable it if it's wrong, or escalate to the TL.
 
 * **Include enough context in every TL escalation that the TL can find what you're looking at without re-deriving your investigation.** The TL doesn't see your conversation — your escalation message is all they have. At minimum: the Rust file path and line number, the Scala counterpart's file/line, the exact error message if any, and the relevant TFITCX classifications. Quote, don't paraphrase. If you considered multiple options, list them with the trade-offs you saw.
 
-* **Before escalating "X doesn't exist," grep for it.** Rust names often diverge from Scala (operators like `def +` become `fn add`, etc.). Scan the type's `impl` blocks and the audit-trail `/* ... */` for a renamed counterpart before declaring something missing.
+* **Before escalating "X doesn't exist," grep for it.** Rust names often diverge from Scala (operators like `def +` become `fn add`, `object simpleNameT.unapply` becomes `fn unapply_simple_name`, etc.). Scan the type's `impl` blocks, sibling modules (e.g. `templata_utils.rs` for `TemplataUtils.scala`), and the audit-trail `/* ... */` for a renamed counterpart before declaring something missing.
+
+* **When citing a Scala method on a sealed trait, check parent traits too.** `sealed trait ISubKindTT extends KindT` inherits every `def` on `KindT` — the Scala source for an "ISubKindTT method" may actually live on `KindT`. Cite the parent in the escalation so the TL can find it.
 
 * **Cite Scala paths, not Rust audit-trail lines.** When pointing the TL at a Scala counterpart, cite the actual `Frontend/.../Foo.scala:line`, not the Rust file's quoted comment. Saves the TL a hop.
 
@@ -65,19 +73,13 @@ Notes:
 
 * **Guardian flags a pre-existing parity issue: fix it if easy, pause if not.** When Guardian rejects an edit because of a parity violation that predates your change (e.g. you're threading a parameter through a function and SPDMX flags a match-arm collapse that was already there), don't reflexively reach for a temp-disable. First ask: "is the underlying parity gap easy to close right here?" If it's a small adjustment (split one match arm into two with a `panic!` in the new arm, restore a `_ => {}` to the Scala-listed variant, add a missing `assert!` line, etc.), just fix it as part of your edit — the temp-disable is a worse outcome than a 5-line parity fix. If closing the gap would need deeper surgery (call-graph changes, new helpers, restructuring beyond the local function, or anything that needs a judgment call about how Scala's logic should land in Rust), **pause and ask the user**. Don't issue a temp-disable as the default escape hatch when the underlying complaint is legitimate.
 
-* **Adding an `interner` parameter is always a fine Rust adaptation.** When Scala parity wants something that needs the typing interner (e.g. materializing a `&'t T` snapshot, allocating a slice, re-interning a name) and Scala didn't take an interner because it used GC + mutable references, just thread `interner: &TypingInterner<'s, 't>` through the Rust signature. Don't escalate for this shape — it's JR-level work, doesn't trip Guardian (signature shape change on an existing definition is fine), and is the documented Rust adaptation pattern. Add a comment above the fn explaining why:
-    ```rust
-    // Rust adaptation (SPDMX-B): interner threaded because <reason — typically:
-    // arena-allocation of a result that Scala mutated in place, or re-allocation
-    // of a slice that Scala grew via GC>.
-    ```
-    Examples already in the codebase: `CompilerOutputs::add_function(signature, ...)`, `NodeEnvironmentBox::nearest_block_env(interner)`, `NodeEnvironmentBox::add_entry(interner, ...)`. If you're unsure whether the interner-add is the right shape (vs some other adaptation), escalate — but the default answer is yes.
+* **Adding an `interner` parameter is always a fine Rust adaptation.** When Scala parity wants something that needs the typing interner (e.g. materializing a `&'t T` snapshot, allocating a slice, re-interning a name) and Scala didn't take an interner because it used GC + mutable references, just thread `interner: &TypingInterner<'s, 't>` through the Rust signature. Don't escalate for this, it won't trip Guardian.
 
 * **Interner macro wrappers return struct references, not enum variants.** Methods like `intern_typing_pass_block_result_var_name` return `&'t StructType`, not `IVarNameT` — use `.into()` or the From impl to convert to the final enum variant needed.
 
-* **Understand the full type wrapper hierarchy before implementing.** When building values like `ReferenceLocalVariableT`, trace the full path to the final enum type (e.g., `ReferenceLocalVariableT` → `ILocalVariableT::Reference` → `IVariableT::ReferenceLocal`) and build from innermost out to avoid multiple rounds of type errors.
+* When building values like `ReferenceLocalVariableT` that implement traits in Scala, those will be enums in Rust. Trace the full path to the final enum type (e.g., `ReferenceLocalVariableT` → `ILocalVariableT::Reference` → `IVariableT::ReferenceLocal`) and build from innermost out to avoid multiple rounds of type errors.
 
-* **You do as many changes as possible. The TL only does Guardian-blocked changes.** If Guardian doesn't fire, you don't need to escalate. Threading a new parameter through call sites, renaming a local to match Scala, fixing an obvious lifetime annotation, adding a `&'t self` receiver where the body needs it — all yours. Escalate only when Guardian fires on something legitimate (NNDX on a missing definition, SPDMX on a Scala-shaped skeleton, etc.). This means more responsibility on you, but faster iteration overall.
+* **The TL only does Guardian-blocked changes.** If Guardian doesn't fire, you don't need to escalate. Threading a new interner/keywords/etc. parameter through call sites, renaming a local to match Scala, fixing an obvious lifetime annotation, adding a `&'t self` receiver where the body needs it — all yours. Escalate only when Guardian prevents you from getting closer to Scala parity.
 
 * **Check the `///` TFITCX classification before adding `Clone`/`Copy` or other derives to existing types.** When you hit an ownership/borrow error and the obvious fix looks like "add `Clone`" (or `Copy`, or `PartialEq`, or `Hash`), pause and look at the `///` doc comment on the type:
     * `/// Arena-allocated (see @TFITCX)` — Clone/Copy explicitly forbidden by the rule ("immutable after construction, no Clone"). The intended access pattern is `&'t T` everywhere; if you need the value in two places, restructure to pass references, not to clone. Common shape: build locally, arena-allocate into the parent struct, return `&parent.field` to get `&'t T`. Adding Clone also breaks @IEOIBZ identity-equality for the type — two arena allocations are supposed to be distinct things.
@@ -87,3 +89,7 @@ Notes:
     * `/// Miscellaneous` — case by case, ask.
 
   Same rule applies to `PartialEq`/`Hash` derives: check the classification + the Scala counterpart. If Scala has `vcurious()` equals overrides on the type, mirror with no impl in Rust (compile error > runtime panic). If Scala has structural-by-default and Rust is Value-type, derive. If Rust is Arena-allocated with identity, manual `std::ptr::eq` per @IEOIBZ. **The classification is the spec — don't paper over compile errors by adding derives that contradict it.** When in doubt, escalate.
+
+* When you need to implement a function, but it will depend on multiple other panicking functions, that's fine. Implement the function. Then run the test, and implement whatever panic you hit next.
+
+* When replacing a panic, just write the code with your best guess of what the Scala-parity Rust code should be, inspired by the corresponding Scala. Scala-parity higher priority than correctness. Then use feedback from the compiler and Guardian to know what you need to look for to make a more informed second iteration. Your first try should be immediate, then do informed iteration. Do not extensively research before your first attempt.

@@ -70,7 +70,7 @@ where 's: 't,
     pub fn evaluate_static_sized_array_from_callable(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         region: RegionT,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -380,7 +380,7 @@ where 's: 't,
     pub fn evaluate_static_sized_array_from_values(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
@@ -672,8 +672,8 @@ where 's: 't,
         // coutputs.declareType(templateId)
         coutputs.declare_type(template_id);
         // coutputs.declareTypeOuterEnv(templateId, arrayOuterEnv)
-        let array_outer_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_outer_env));
+        let array_outer_env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Citizen(array_outer_env);
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = StaticSizedArrayTemplateTemplataT().tyype
@@ -749,8 +749,8 @@ where 's: 't,
             id: *id,
             templatas: inner_templatas,
         });
-        let array_inner_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_inner_env));
+        let array_inner_env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Citizen(array_inner_env);
         // coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
         coutputs.declare_type_inner_env(template_id, array_inner_env_ref);
     }
@@ -883,8 +883,8 @@ where 's: 't,
         // coutputs.declareType(templateId)
         coutputs.declare_type(template_id);
         // coutputs.declareTypeOuterEnv(templateId, arrayOuterEnv)
-        let array_outer_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_outer_env));
+        let array_outer_env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Citizen(array_outer_env);
         coutputs.declare_type_outer_env(template_id, array_outer_env_ref);
 
         // val TemplateTemplataType(types, _) = RuntimeSizedArrayTemplateTemplataT().tyype
@@ -938,8 +938,8 @@ where 's: 't,
             id: *id,
             templatas: inner_templatas,
         });
-        let array_inner_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(array_inner_env));
+        let array_inner_env_ref: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Citizen(array_inner_env);
         // coutputs.declareTypeInnerEnv(templateId, arrayInnerEnv)
         coutputs.declare_type_inner_env(template_id, array_inner_env_ref);
     }

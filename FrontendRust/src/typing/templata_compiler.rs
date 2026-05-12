@@ -115,21 +115,7 @@ where 's: 't,
     ) -> IdT<'s, 't> {
         let steps = id.steps();
         let is_instantiation_name = |name: &INameT<'s, 't>| -> bool {
-            match name {
-                INameT::Function(_) |
-                INameT::LambdaCallFunction(_) |
-                INameT::ForwarderFunction(_) |
-                INameT::Struct(_) |
-                INameT::LambdaCitizen(_) |
-                INameT::Interface(_) |
-                INameT::Impl(_) |
-                INameT::Export(_) |
-                INameT::ExternFunction(_) |
-                INameT::KindPlaceholder(_) |
-                INameT::AnonymousSubstructImpl(_) |
-                INameT::OverrideDispatcher(_) => true,
-                _ => false,
-            }
+            IInstantiationNameT::try_from(*name).is_ok()
         };
         let index = steps.iter().position(is_instantiation_name);
         let index = index.expect("get_top_level_denizen_id: no IInstantiationNameT found in steps");
@@ -278,7 +264,14 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let func_name = IFunctionNameT::try_from(id.local_name)
+            .unwrap_or_else(|_| panic!("get_function_template: not a function name: {:?}", id.local_name));
+        let template_local: INameT<'s, 't> = ITemplateNameT::from(func_name.template()).into();
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: template_local,
+        })
     }
 }
 /*
@@ -328,11 +321,14 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getNameTemplate is a companion-object static.
     pub fn get_name_template(
-        &self,
         name: INameT<'s, 't>,
     ) -> INameT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match IInstantiationNameT::try_from(name) {
+            Ok(x) => INameT::from(x.template()),
+            Err(_) => name,
+        }
     }
 }
 /*
@@ -346,11 +342,20 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getSuperTemplate is a companion-object static.
+    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_super_template(
-        &self,
+        interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let new_init_steps: Vec<INameT<'s, 't>> =
+            id.init_steps.iter().map(|n| Self::get_name_template(*n)).collect();
+        let new_local_name = Self::get_name_template(id.local_name);
+        *interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: &new_init_steps,
+            local_name: new_local_name,
+        })
     }
 }
 /*
@@ -365,11 +370,33 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation: associated fn (no &self) — Scala's TemplataCompiler.getRootSuperTemplate is a companion-object static.
+    // Rust adaptation (SPDMX-B): interner threaded because Scala constructs IdT freely but Rust must intern slices.
     pub fn get_root_super_template(
-        &self,
+        interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let tentative_id = Self::get_super_template(interner, id);
+        loop {
+            let contains_lambda = tentative_id.init_steps.iter().any(|n| {
+                match n {
+                    INameT::LambdaCitizenTemplate(_) => true,
+                    INameT::LambdaCallFunctionTemplate(_) => true,
+                    INameT::OverrideDispatcherCase(_) => true,
+                    _ => false,
+                }
+            }) || match tentative_id.local_name {
+                INameT::LambdaCitizenTemplate(_) => true,
+                INameT::LambdaCallFunctionTemplate(_) => true,
+                INameT::OverrideDispatcherCase(_) => true,
+                _ => false,
+            };
+            if contains_lambda {
+                panic!("implement: get_root_super_template removeTrailingLambdas initId");
+            } else {
+                return tentative_id;
+            }
+        }
     }
 }
 /*
@@ -415,6 +442,7 @@ where 's: 't,
             }
             INameT::Interface(i) => INameT::InterfaceTemplate(i.template),
             INameT::Function(f) => INameT::FunctionTemplate(f.template),
+            INameT::FunctionBound(fb) => INameT::FunctionBoundTemplate(fb.template),
             _ => panic!("get_template: not yet implemented for {:?}", id.local_name),
         };
         self.typing_interner.intern_id(IdValT {
@@ -440,7 +468,15 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::names::names::IInstantiationNameT;
+        let last = IInstantiationNameT::try_from(id.local_name)
+            .unwrap_or_else(|_| panic!("get_sub_kind_template: unexpected local_name {:?}", id.local_name));
+        let template_name = INameT::from(last.template());
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: template_name,
+        })
     }
 }
 /*
@@ -459,7 +495,15 @@ where 's: 't,
         &self,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::names::names::{ISuperKindNameT, ITemplateNameT};
+        let last = ISuperKindNameT::try_from(id.local_name)
+            .unwrap_or_else(|_| panic!("get_super_kind_template: unexpected local_name {:?}", id.local_name));
+        let template_name = INameT::from(ITemplateNameT::from(last.template()));
+        *self.typing_interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: template_name,
+        })
     }
 }
 /*
@@ -625,13 +669,13 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> {
-        let result = HashMap::new();
+        let mut result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata))) => {
                     match &proto_templata.prototype.id.local_name {
                         INameT::FunctionBound(_) => {
-                            panic!("implement: assemble_rune_to_function_bound — FunctionBoundNameT match");
+                            result.insert(rune_name.rune, proto_templata.prototype);
                         }
                         _ => {}
                     }
@@ -777,13 +821,24 @@ where 's: 't,
             KindT::RuntimeSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind RuntimeSizedArray"),
             KindT::StaticSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind StaticSizedArray"),
             KindT::KindPlaceholder(p) => {
-                panic!("Unimplemented: substitute_templatas_in_kind KindPlaceholder");
+                let index = match p.id.local_name {
+                    INameT::KindPlaceholder(kp) => kp.template.index,
+                    _ => panic!("KindPlaceholderT has non-KindPlaceholder local_name"),
+                };
+                if p.id.init_id(interner) == needle_template_name {
+                    new_substituting_templatas[index as usize]
+                } else {
+                    ITemplataT::Kind(interner.alloc(KindTemplataT { kind }))
+                }
             }
             KindT::Struct(s) => {
                 let new_struct = Compiler::substitute_templatas_in_struct(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, s);
                 ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Struct(new_struct) }))
             }
-            KindT::Interface(i) => panic!("Unimplemented: substitute_templatas_in_kind Interface"),
+            KindT::Interface(i) => {
+                let new_interface = Compiler::substitute_templatas_in_interface(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, i);
+                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::Interface(new_interface) }))
+            }
             KindT::OverloadSet(_) => panic!("Unimplemented: substitute_templatas_in_kind OverloadSet"),
         }
     }
@@ -1291,7 +1346,37 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         interface_tt: &'t InterfaceTT<'s, 't>,
     ) -> &'t InterfaceTT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::names::names::{INameValT, InterfaceNameValT, INameT, IdValT};
+        use crate::typing::types::types::InterfaceTTValT;
+        let id = interface_tt.id;
+        let new_local_name = match id.local_name {
+            INameT::Interface(interface_name_t) => {
+                let new_template_args: Vec<ITemplataT<'s, 't>> = interface_name_t.template_args.iter()
+                    .map(|templata| Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata))
+                    .collect();
+                let new_template_args_ref = interner.alloc_slice_from_vec(new_template_args);
+                interner.intern_name(INameValT::Interface(InterfaceNameValT {
+                    template: interface_name_t.template,
+                    template_args: new_template_args_ref,
+                }))
+            }
+            _ => panic!("implement: substituteTemplatasInInterface — unexpected local_name kind"),
+        };
+        let new_id = interner.intern_id(IdValT {
+            package_coord: id.package_coord,
+            init_steps: id.init_steps,
+            local_name: new_local_name,
+        });
+        let new_interface = interner.intern_interface_tt(InterfaceTTValT { id: *new_id });
+        // See SBITAFD, we need to register bounds for these new instantiations.
+        let instantiation_bound_args = coutputs.get_instantiation_bounds(interner, interface_tt.id).unwrap();
+        let translated_bounds = interner.alloc(Self::translate_instantiation_bounds(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, instantiation_bound_args));
+        coutputs.add_instantiation_bounds(
+            sanity_check, interner,
+            original_calling_denizen_id,
+            new_interface.id,
+            translated_bounds);
+        new_interface
     }
 }
 /*
@@ -1412,7 +1497,54 @@ where 's: 't,
         bound_arguments_source: IBoundArgumentsSource<'s, 't>,
         original_prototype: &'t PrototypeT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::names::names::{IFunctionNameT, IdValT};
+        use crate::typing::ast::ast::PrototypeValT;
+        use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
+        let package_coord = original_prototype.id.package_coord;
+        let init_steps = original_prototype.id.init_steps;
+        let func_name = IFunctionNameT::try_from(original_prototype.id.local_name).unwrap();
+        let substituted_template_args_vec: Vec<ITemplataT<'s, 't>> = func_name.template_args().iter().map(|templata| {
+            Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *templata)
+        }).collect();
+        let substituted_template_args = interner.alloc_slice_from_vec(substituted_template_args_vec);
+        let substituted_params_vec: Vec<CoordT<'s, 't>> = func_name.parameters().iter().map(|coord| {
+            Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, *coord)
+        }).collect();
+        let substituted_params = interner.alloc_slice_from_vec(substituted_params_vec);
+        let substituted_return_type = Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, original_prototype.return_type);
+        let substituted_func_name = func_name.template().make_function_name(interner, keywords, substituted_template_args, substituted_params);
+        let tentative_id = *interner.intern_id(IdValT { package_coord, init_steps, local_name: substituted_func_name });
+        let perhaps_imported_id = match tentative_id.local_name {
+            INameT::FunctionBound(n) => {
+                // Always import a seen function bound into our own environment, see MFBFDP.
+                let imported_id = *original_calling_denizen_id.add_step(interner, INameT::FunctionBound(n));
+                // It's a function bound, it has no function bounds of its own.
+                coutputs.add_instantiation_bounds(
+                    sanity_check,
+                    interner,
+                    original_calling_denizen_id,
+                    imported_id,
+                    interner.alloc(InstantiationBoundArgumentsT {
+                        rune_to_bound_prototype: interner.alloc_index_map_from_iter(std::iter::empty()),
+                        rune_to_citizen_rune_to_reachable_prototype: interner.alloc_index_map_from_iter(std::iter::empty()),
+                        rune_to_bound_impl: interner.alloc_index_map_from_iter(std::iter::empty()),
+                    }),
+                );
+                imported_id
+            }
+            _ => {
+                // Not really sure if we're supposed to add bounds or something here.
+                assert!(coutputs.get_instantiation_bounds(interner, tentative_id).is_some());
+                tentative_id
+            }
+        };
+        // Rust adaptation: Scala had vassert(substitutedFuncName.getClass.equals(funcName.getClass))
+        // and vassert(originalPrototype.getClass.equals(prototype.getClass)) to guard the cast-back
+        // to T. Rust has no generic T to cast back to, so these class-equality asserts are omitted.
+        interner.intern_prototype(PrototypeValT {
+            id: IdValT { package_coord: perhaps_imported_id.package_coord, init_steps: perhaps_imported_id.init_steps, local_name: perhaps_imported_id.local_name },
+            return_type: substituted_return_type,
+        })
     }
 }
 /*
@@ -1609,7 +1741,17 @@ impl<'s, 'ctx, 't> IPlaceholderSubstituter<'s, 'ctx, 't> {
         coutputs: &mut CompilerOutputs<'s, 't>,
         proto: &'t PrototypeT<'s, 't>,
     ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        Compiler::substitute_templatas_in_prototype(
+            coutputs,
+            self.sanity_check,
+            self.interner,
+            self.keywords,
+            self.original_calling_denizen_id,
+            self.needle_template_name,
+            self.new_substituting_templatas,
+            self.bound_arguments_source,
+            proto,
+        )
     }
     /* Guardian: disable-all */
     pub fn substitute_for_impl_id(
@@ -1884,7 +2026,7 @@ where 's: 't,
 {
     pub fn create_rune_type_solver_env(
         &self,
-        parent_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        parent_env: IInDenizenEnvironmentT<'s, 't>,
     ) -> TemplataCompilerRuneTypeSolverEnv<'_, 's, 't> {
         TemplataCompilerRuneTypeSolverEnv {
             parent_env,
@@ -1910,7 +2052,7 @@ pub struct TemplataCompilerRuneTypeSolverEnv<'a, 's, 't>
 where
     's: 't,
 {
-    parent_env: &'t IInDenizenEnvironmentT<'s, 't>,
+    parent_env: IInDenizenEnvironmentT<'s, 't>,
     typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
 }
 /*
@@ -2028,7 +2170,7 @@ where 's: 't,
     pub fn is_type_convertible(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         source_pointer_type: CoordT<'s, 't>,
@@ -2375,7 +2517,7 @@ where 's: 't,
     pub fn coerce_to_coord(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         templata: ITemplataT<'s, 't>,
         region: RegionT,
@@ -2486,8 +2628,14 @@ where 's: 't,
     pub fn resolve_interface_template(
         &self,
         interface_templata: &'t InterfaceDefinitionTemplataT<'s, 't>,
-    ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> &'t IdT<'s, 't> {
+        let declaring_env = interface_templata.declaring_env;
+        let interface_a = interface_templata.origin_interface;
+        let translated = self.translate_interface_name(*interface_a.name);
+        let local_name = match translated {
+            IInterfaceTemplateNameT::InterfaceTemplate(r) => INameT::InterfaceTemplate(r),
+        };
+        declaring_env.id().add_step(self.typing_interner, local_name)
     }
 /*
   def resolveInterfaceTemplate(interfaceTemplata: InterfaceDefinitionTemplataT): IdT[IInterfaceTemplateNameT] = {
@@ -2524,7 +2672,24 @@ where 's: 't,
         actual_citizen_ref: ICitizenTT<'s, 't>,
         expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let citizen_template_id = match expected_citizen_templata {
+            ITemplataT::StructDefinition(st) => *self.resolve_struct_template(st),
+            ITemplataT::InterfaceDefinition(it) => *self.resolve_interface_template(it),
+            ITemplataT::Kind(kt) => {
+                match ISubKindTT::try_from(kt.kind) {
+                    Ok(sub) => self.get_citizen_template(sub.id()),
+                    Err(_) => return false,
+                }
+            }
+            ITemplataT::Coord(ct) => {
+                match (ct.coord.ownership, ISubKindTT::try_from(ct.coord.kind)) {
+                    (OwnershipT::Own, Ok(sub)) | (OwnershipT::Share, Ok(sub)) => self.get_citizen_template(sub.id()),
+                    _ => return false,
+                }
+            }
+            _ => return false,
+        };
+        self.get_citizen_template(ISubKindTT::from(actual_citizen_ref).id()) == citizen_template_id
     }
 /*
   def citizenIsFromTemplate(actualCitizenRef: ICitizenTT, expectedCitizenTemplata: ITemplataT[ITemplataType]): Boolean = {
@@ -2547,7 +2712,7 @@ where 's: 't,
     pub fn create_placeholder(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         name_prefix: IdT<'s, 't>,
         generic_param: &'s GenericParameterS<'s>,
         index: i32,
@@ -2647,7 +2812,7 @@ where 's: 't,
     pub fn create_coord_placeholder_inner(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         name_prefix: IdT<'s, 't>,
         index: i32,
         rune: IRuneS<'s>,
@@ -2703,7 +2868,7 @@ where 's: 't,
     pub fn create_kind_placeholder_inner(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         name_prefix: IdT<'s, 't>,
         index: i32,
         rune: IRuneS<'s>,
@@ -2753,13 +2918,13 @@ where 's: 't,
             let placeholder_env = child_of(
                 self.typing_interner,
                 self.scout_arena,
-                *env,
+                env,
                 *kind_placeholder_template_id,
                 kind_placeholder_template_id,
                 vec![],
             );
-            let placeholder_env_ref: &'t IInDenizenEnvironmentT<'s, 't> =
-                self.typing_interner.alloc(IInDenizenEnvironmentT::General(placeholder_env));
+            let placeholder_env_ref: IInDenizenEnvironmentT<'s, 't> =
+                IInDenizenEnvironmentT::General(placeholder_env);
             // coutputs.declareTypeOuterEnv(kindPlaceholderTemplateId, placeholderEnv)
             coutputs.declare_type_outer_env(kind_placeholder_template_id, placeholder_env_ref);
             // coutputs.declareTypeInnerEnv(kindPlaceholderTemplateId, placeholderEnv)

@@ -198,7 +198,7 @@ fn expect_kind_templata<'s, 't>(templata: ITemplataT<'s, 't>) -> KindTemplataT<'
 */
 // Inline-owned wrapper enum per §6.6. Scala's `ITemplataT[+T <: ITemplataType]`
 // Interned payloads behind &'t; scalar variants inline. See @WVSBIZ for why.
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ITemplataT<'s, 't> {
   Coord(&'t CoordTemplataT<'s, 't>),
@@ -330,7 +330,7 @@ case class StaticSizedArrayTemplateTemplataT() extends ITemplataT[TemplateTempla
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, Debug)]
 pub struct FunctionTemplataT<'s, 't> {
-  pub outer_env: &'t IEnvironmentT<'s, 't>,
+  pub outer_env: IEnvironmentT<'s, 't>,
   pub function: &'s FunctionA<'s>,
 }
 impl<'s, 't> PartialEq for FunctionTemplataT<'s, 't> {
@@ -416,7 +416,7 @@ case class FunctionTemplataT(
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct StructDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'t IEnvironmentT<'s, 't>,
+  pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_struct: &'s StructA<'s>,
 }
 /*
@@ -558,7 +558,7 @@ fn unapply<'s, 't>(c: CitizenDefinitionTemplataT<'s, 't>) -> Option<(IEnvironmen
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct InterfaceDefinitionTemplataT<'s, 't> {
-  pub declaring_env: &'t IEnvironmentT<'s, 't>,
+  pub declaring_env: IEnvironmentT<'s, 't>,
   pub origin_interface: &'s InterfaceA<'s>,
 }
 /*
@@ -623,7 +623,7 @@ case class InterfaceDefinitionTemplataT(
 /// Value-type (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct ImplDefinitionTemplataT<'s, 't> {
-  pub env: &'t IEnvironmentT<'s, 't>,
+  pub env: IEnvironmentT<'s, 't>,
   pub impl_: &'s ImplA<'s>,
 }
 /*

@@ -4,7 +4,7 @@ use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDef
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::utils::range::CodeLocationS;
 
-use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, RuneNameValS, SelfNameS};
+use crate::postparsing::names::{ArbitraryNameS, ClosureParamImpreciseNameS, CodeNameS, IImpreciseNameS, IImpreciseNameValS, LambdaImpreciseNameS, LambdaStructImpreciseNameValS, PlaceholderImpreciseNameS, PrototypeNameS, RuneNameValS, SelfNameS};
 use crate::scout_arena::ScoutArena;
 use crate::typing::env::function_environment_t::{
   BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT,
@@ -39,8 +39,8 @@ import scala.collection.immutable.{List, Map, Set}
 import scala.collection.mutable
 */
 
-/// Arena-allocated (see @TFITCX)
-#[derive(Copy, Clone, Debug)]
+/// Polyvalue (see @TFITCX)
+#[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IEnvironmentT<'s, 't>
 where 's: 't,
 {
@@ -53,18 +53,6 @@ where 's: 't,
     General(&'t GeneralEnvironmentT<'s, 't>),
     Export(&'t ExportEnvironmentT<'s, 't>),
     Extern(&'t ExternEnvironmentT<'s, 't>),
-}
-
-// Identity equality per @IEOIBZ — `IEnvironmentT` is arena-allocated and
-// accessed via `&'t IEnvironmentT`; ptr-eq is the right semantic.
-impl<'s, 't> PartialEq for IEnvironmentT<'s, 't> {
-    fn eq(&self, other: &Self) -> bool { std::ptr::eq(self, other) }
-    /* Guardian: disable-all */
-}
-impl<'s, 't> Eq for IEnvironmentT<'s, 't> {}
-impl<'s, 't> std::hash::Hash for IEnvironmentT<'s, 't> {
-    fn hash<H: std::hash::Hasher>(&self, state: &mut H) { std::ptr::hash(self, state) }
-    /* Guardian: disable-all */
 }
 /*
 trait IEnvironmentT {
@@ -293,7 +281,7 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
 /*
 }
 */
-/// Arena-allocated (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum IInDenizenEnvironmentT<'s, 't>
 where 's: 't,
@@ -320,7 +308,7 @@ impl<'s, 't> IInDenizenEnvironmentT<'s, 't> where 's: 't {
       IInDenizenEnvironmentT::Node(e) => e.parent_function_env.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::BuildingWithClosureds(_) => *self,
       IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(_) => *self,
-      IInDenizenEnvironmentT::General(_) => { panic!("Unimplemented: root_compiling_denizen_env for General"); }
+      IInDenizenEnvironmentT::General(e) => e.root_compiling_denizen_env(),
       IInDenizenEnvironmentT::Export(_) => *self,
       IInDenizenEnvironmentT::Extern(_) => *self,
     }
@@ -646,7 +634,7 @@ pub fn entry_matches_filter<'s, 't>(
 */
 // mig: fn entry_to_templata
 // Rust adaptation (SPDMX-B): interner threaded because FunctionTemplataT.outer_env
-// needs a &'t IEnvironmentT, which requires arena-allocation of the defining_env value.
+// needs a IEnvironmentT, which requires arena-allocation of the defining_env value.
 pub fn entry_to_templata<'s, 't>(
   defining_env: IEnvironmentT<'s, 't>,
   entry: IEnvEntryT<'s, 't>,
@@ -657,18 +645,26 @@ where 's: 't,
   match entry {
     IEnvEntryT::Function(func) => {
         ITemplataT::Function(interner.alloc(FunctionTemplataT {
-            outer_env: interner.alloc(defining_env),
+            outer_env: defining_env,
             function: func,
         }))
     }
     IEnvEntryT::Struct(struct_a) => {
         ITemplataT::StructDefinition(interner.alloc(StructDefinitionTemplataT {
-            declaring_env: interner.alloc(defining_env),
+            declaring_env: defining_env,
             origin_struct: struct_a,
         }))
     }
-    IEnvEntryT::Interface(_) => panic!("Unimplemented: entry_to_templata Interface"),
-    IEnvEntryT::Impl(_) => panic!("Unimplemented: entry_to_templata Impl"),
+    IEnvEntryT::Interface(interface_a) => {
+        ITemplataT::InterfaceDefinition(interner.alloc(crate::typing::templata::templata::InterfaceDefinitionTemplataT {
+            declaring_env: defining_env,
+            origin_interface: interface_a,
+        }))
+    }
+    IEnvEntryT::Impl(impl_a) => ITemplataT::ImplDefinition(interner.alloc(crate::typing::templata::templata::ImplDefinitionTemplataT {
+        env: defining_env,
+        impl_: impl_a,
+    })),
     IEnvEntryT::Templata(templata) => templata,
   }
 }
@@ -703,6 +699,21 @@ pub fn get_imprecise_name<'s, 't>(
     INameT::ClosureParam(_cp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ClosureParamImpreciseName(ClosureParamImpreciseNameS {}))),
     INameT::Self_(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::SelfName(SelfNameS {}))),
     INameT::Arbitrary(_) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::ArbitraryName(ArbitraryNameS {}))),
+    INameT::ReachablePrototype(_) => None,
+    INameT::FunctionBound(fb) => get_imprecise_name(scout_arena, INameT::FunctionBoundTemplate(fb.template)),
+    INameT::FunctionBoundTemplate(fbt) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: fbt.human_name }))),
+    INameT::PredictedFunction(pf) => get_imprecise_name(scout_arena, INameT::PredictedFunctionTemplate(pf.template)),
+    INameT::PredictedFunctionTemplate(pft) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: pft.human_name }))),
+    INameT::LambdaCallFunction(_) => None,
+    INameT::KindPlaceholder(kp) => Some(scout_arena.intern_imprecise_name(IImpreciseNameValS::PlaceholderImpreciseName(PlaceholderImpreciseNameS { index: kp.template.index }))),
+    INameT::Struct(s) => get_imprecise_name(scout_arena, s.template.into()),
+    INameT::Interface(i) => get_imprecise_name(scout_arena, INameT::InterfaceTemplate(i.template)),
+    INameT::Function(f) => get_imprecise_name(scout_arena, INameT::FunctionTemplate(f.template)),
+    INameT::ForwarderFunction(f) => get_imprecise_name(scout_arena, INameT::ForwarderFunctionTemplate(f.template)),
+    INameT::ForwarderFunctionTemplate(f) => get_imprecise_name(scout_arena, f.inner.into()),
+    // Scala: ImplTemplateNameT(_) => vwat() — should never be called for impl entries (they are
+    // indexed under ImplImpreciseNameS in TemplatasStore.buildFor, never via getImpreciseName(key)).
+    INameT::ImplTemplate(_) => panic!("Unimplemented or unreachable: ImplTemplateNameT — Scala vwat()"),
     _ => panic!("Unimplemented: get_imprecise_name for {:?}", name_t),
   }
 }
@@ -848,8 +859,31 @@ where 's: 't,
   ) {
     for (name, entry) in &new_entries_list {
       self.name_to_entry.push((*name, *entry));
-      if let Some(imprecise) = get_imprecise_name(scout_arena, *name) {
-        self.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(*entry);
+      match entry {
+        IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)) => {
+          if let Some(key_imprecise) = get_imprecise_name(scout_arena, *name) {
+            self.imprecise_to_entries.entry(key_imprecise).or_insert_with(Vec::new).push(*entry);
+          }
+          if let Some(local_imprecise) = get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name) {
+            self.imprecise_to_entries.entry(local_imprecise).or_insert_with(Vec::new).push(*entry);
+          }
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {}))).or_insert_with(Vec::new).push(*entry);
+        }
+        IEnvEntryT::Impl(impl_a) => {
+          let sub = impl_a.sub_citizen_imprecise_name;
+          let sup = impl_a.super_interface_imprecise_name;
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub, super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
+        }
+        IEnvEntryT::Templata(ITemplataT::Isa(_)) => {
+          panic!("Unimplemented: TemplatasStoreBuilder::add_entries IsaTemplataT case");
+        }
+        _ => {
+          if let Some(imprecise) = get_imprecise_name(scout_arena, *name) {
+            self.imprecise_to_entries.entry(imprecise).or_insert_with(Vec::new).push(*entry);
+          }
+        }
       }
     }
   }
@@ -959,8 +993,16 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     let new_entries_by_name_s: Vec<(IImpreciseNameS<'s>, IEnvEntryT<'s, 't>)> =
       new_entries.iter().flat_map(|(key, value)| {
         match value {
-          IEnvEntryT::Templata(ITemplataT::Prototype(_)) => {
-            panic!("Unimplemented: add_entries PrototypeTemplataT case");
+          IEnvEntryT::Templata(ITemplataT::Prototype(proto_templata)) => {
+            let mut entries = vec![];
+            if let Some(key_imprecise) = get_imprecise_name(scout_arena, *key) {
+              entries.push((key_imprecise, *value));
+            }
+            if let Some(local_imprecise) = get_imprecise_name(scout_arena, proto_templata.prototype.id.local_name) {
+              entries.push((local_imprecise, *value));
+            }
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::PrototypeName(PrototypeNameS {})), *value));
+            entries.into_iter().collect::<Vec<_>>()
           }
           IEnvEntryT::Impl(_) => {
             panic!("Unimplemented: add_entries ImplEnvEntry case");
@@ -1318,7 +1360,7 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
 // Id-based Hash/PartialEq — documented exception to @IEOIBZ. Compared via
 // `self.id == other.id` (where `id: IdT` is sealed/canonical, so this is
 // itself ptr-eq) instead of `std::ptr::eq(self, other)`. Comparisons via
-// `&'t IEnvironmentT` go through that enum's ptr-eq impl directly.
+// `IEnvironmentT` go through that enum's ptr-eq impl directly.
 impl<'s, 't> PartialEq for PackageEnvironmentT<'s, 't> where 's: 't {
   fn eq(&self, other: &Self) -> bool { self.id == other.id }
   /* Guardian: disable-all */
@@ -1813,7 +1855,7 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
 // mig: fn root_compiling_denizen_env
 impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
   pub fn root_compiling_denizen_env(&'t self) -> IInDenizenEnvironmentT<'s, 't> {
-    panic!("Unimplemented: root_compiling_denizen_env");
+    self.parent_env.root_compiling_denizen_env()
   }
   /*
     override def rootCompilingDenizenEnv: IInDenizenEnvironmentT = {
@@ -1856,7 +1898,9 @@ impl<'s, 't> GeneralEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    use crate::typing::env::function_environment_t::lookup_with_imprecise_name_inner;
+    lookup_with_imprecise_name_inner(
+      IEnvironmentT::General(self), self.templatas, IEnvironmentT::from(self.parent_env), name, lookup_filter, get_only_nearest, interner)
   }
   /*
     override def lookupWithImpreciseNameInner(

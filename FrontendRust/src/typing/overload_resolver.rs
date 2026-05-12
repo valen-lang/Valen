@@ -15,6 +15,7 @@ use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::FunctionEnvironmentT;
 use crate::typing::function::function_compiler::{StampFunctionSuccess, IResolveFunctionResult, IEvaluateFunctionResult};
 use crate::typing::infer_compiler::{InferEnv, InitialKnown};
+use crate::typing::templata_compiler::IBoundArgumentsSource;
 use crate::typing::names::names::*;
 use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
@@ -185,7 +186,7 @@ where 's: 't,
 {
     pub fn find_function(
         &self,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -194,7 +195,7 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
-        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
         let potential_banner = self.find_potential_function(
@@ -266,7 +267,7 @@ where 's: 't,
     pub fn params_match(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         desired_params: &[CoordT<'s, 't>],
@@ -330,7 +331,7 @@ where 's: 't,
 
 pub struct SearchedEnvironment<'s, 't> {
     pub needle: IImpreciseNameS<'s>,
-    pub environment: &'t IInDenizenEnvironmentT<'s, 't>,
+    pub environment: IInDenizenEnvironmentT<'s, 't>,
     pub matching_templatas: Vec<ITemplataT<'s, 't>>,
 }
 /*
@@ -345,12 +346,12 @@ where 's: 't,
 {
     pub fn get_candidate_banners(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         function_name: IImpreciseNameS<'s>,
         param_filters: &[CoordT<'s, 't>],
-        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         searched_envs: &mut Vec<SearchedEnvironment<'s, 't>>,
         results: &mut Vec<ICalleeCandidate<'s, 't>>,
     ) {
@@ -388,7 +389,7 @@ where 's: 't,
 {
     pub fn get_candidate_banners_inner(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         function_name: IImpreciseNameS<'s>,
@@ -421,8 +422,9 @@ where 's: 't,
                 ITemplataT::ExternFunction(_) => {
                     panic!("implement: get_candidate_banners_inner ExternFunction");
                 }
-                ITemplataT::Prototype(_) => {
-                    panic!("implement: get_candidate_banners_inner Prototype");
+                ITemplataT::Prototype(proto_templata) => {
+                    assert!(coutputs.get_instantiation_bounds(self.typing_interner, proto_templata.prototype.id).is_some());
+                    results.push(ICalleeCandidate::PrototypeTemplata(PrototypeTemplataCalleeCandidate { prototype_t: *proto_templata.prototype }));
                 }
                 ITemplataT::Function(ft) => {
                     results.push(ICalleeCandidate::Function(FunctionCalleeCandidate { ft: **ft }));
@@ -492,7 +494,7 @@ where 's: 't,
 {
     pub fn attempt_candidate_banner(
         &self,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -506,7 +508,7 @@ where 's: 't,
         // Scala: anonymous `new IRuneTypeSolverEnv { override def lookup(...) }` inside attemptCandidateBanner
         // Rust adaptation (SPDMX-B): named struct required since Rust has no anonymous classes
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
-            calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+            calling_env: IInDenizenEnvironmentT<'s, 't>,
             typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
         }
         impl<'a, 's, 't> IRuneTypeSolverEnv<'s> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
@@ -623,7 +625,7 @@ where 's: 't,
                                     original_calling_env: calling_env,
                                     parent_ranges: call_range_t,
                                     call_location,
-                                    self_env: (*ft.outer_env).into(),
+                                    self_env: ft.outer_env.into(),
                                     context_region,
                                 },
                                 coutputs,
@@ -697,8 +699,25 @@ where 's: 't,
             ICalleeCandidate::Header(_) => {
                 panic!("implement: attemptCandidateBanner HeaderCalleeCandidate");
             }
-            ICalleeCandidate::PrototypeTemplata(_) => {
-                panic!("implement: attemptCandidateBanner PrototypeTemplataCalleeCandidate");
+            ICalleeCandidate::PrototypeTemplata(PrototypeTemplataCalleeCandidate { prototype_t }) => {
+                // We get here if we're considering a function that's being passed in as a bound.
+                let substituter = self.get_placeholder_substituter(
+                    self.opts.global_options.sanity_check,
+                    calling_env.denizen_template_id(),
+                    prototype_t.id,
+                    IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                );
+                let func_name = IFunctionNameT::try_from(prototype_t.id.local_name).unwrap_or_else(|_| panic!("attemptCandidateBanner PrototypeTemplata: local_name not IFunctionNameT"));
+                let params: Vec<CoordT<'s, 't>> = func_name.parameters().iter().map(|param_type| {
+                    substituter.substitute_for_coord(coutputs, *param_type)
+                }).collect();
+                match self.params_match(coutputs, calling_env, call_range, call_location, args, &params, exact) {
+                    Err(rejection_reason) => Err(rejection_reason),
+                    Ok(()) => {
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype_t.id).is_some());
+                        Ok(AttemptedCandidate { prototype: self.typing_interner.alloc(prototype_t) })
+                    }
+                }
             }
         }
     }
@@ -913,12 +932,12 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         param_filters: &[CoordT<'s, 't>],
-    ) -> Vec<&'t IInDenizenEnvironmentT<'s, 't>> {
+    ) -> Vec<IInDenizenEnvironmentT<'s, 't>> {
         param_filters.iter().flat_map(|tyype| {
             match tyype.kind {
                 KindT::Struct(sr) => { vec![coutputs.get_outer_env_for_type(range, self.get_struct_template(sr.id))] }
-                KindT::Interface(_) => { panic!("implement: get_param_environments InterfaceTT"); }
-                KindT::KindPlaceholder(_) => { panic!("implement: get_param_environments KindPlaceholderT"); }
+                KindT::Interface(ir) => { vec![coutputs.get_outer_env_for_type(range, self.get_interface_template(ir.id))] }
+                KindT::KindPlaceholder(kp) => { vec![coutputs.get_outer_env_for_type(range, self.get_placeholder_template(kp.id))] }
                 _ => Vec::new()
             }
         }).collect()
@@ -945,7 +964,7 @@ where 's: 't,
 {
     pub fn find_potential_function(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -954,7 +973,7 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
-        extra_envs_to_look_in: &[&'t IInDenizenEnvironmentT<'s, 't>],
+        extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
     ) -> Result<AttemptedCandidate<'s, 't>, FindFunctionFailure<'s, 't>> {
         // This is here for debugging, so when we dont find something we can see what envs we searched
@@ -1048,7 +1067,7 @@ where 's: 't,
     pub fn get_banner_param_scores(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         candidate: &'t PrototypeT<'s, 't>,
@@ -1123,7 +1142,7 @@ where 's: 't,
     pub fn narrow_down_callable_overloads(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         unfiltered_banners: &[AttemptedCandidate<'s, 't>],
@@ -1416,7 +1435,7 @@ where 's: 't,
     pub fn get_array_generator_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         callable_te: ReferenceExpressionTE<'s, 't>,

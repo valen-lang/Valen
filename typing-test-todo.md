@@ -1,0 +1,80 @@
+- [x] test_return
+- [x] test_return_from_inside_if
+- [x] test_return_from_inside_if_destroys_locals
+- [x] tests_single_expression_and_single_statement_functions_returns
+- [x] test_overloads
+- [x] tests_calling_a_templated_function_with_explicit_template_args
+- [x] test_borrow_ref
+- [x] simple_struct
+- [x] reads_a_struct_member
+- [x] borrow_load_member
+- [x] automatically_drops_struct
+- [x] calls_destructor_on_local_var
+- [x] custom_destructor
+- [x] recursive_struct
+- [x] templated_imm_struct
+- [x] tests_calling_a_templated_struct_s_constructor
+- [x] tests_defining_an_empty_interface_and_an_implementing_struct
+- [ ] tests_defining_a_non_empty_interface_and_an_implementing_struct
+- [ ] zero_method_anonymous_interface
+- [ ] tests_upcasting_from_a_struct_to_an_interface
+- [ ] tests_calling_a_function_with_an_upcast
+- [ ] tests_calling_a_virtual_function
+- [ ] tests_calling_a_virtual_function_through_a_borrow_ref
+- [ ] tests_calling_an_abstract_function
+- [ ] tests_upcasting_has_the_right_stuff
+- [ ] tests_calling_a_templated_function_with_an_upcast
+- [ ] tests_upcast_with_generics_has_the_right_stuff
+- [ ] upcast_generic
+- [ ] test_templates
+- [ ] tests_stamping_an_interface_template_from_a_function_param
+- [ ] stamps_an_interface_template_via_a_function_return
+- [ ] tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
+- [ ] test_struct_default_generic_argument_in_type
+- [ ] test_struct_default_generic_argument_in_call
+- [ ] structs_can_resolve_other_structs_instantiation_bound_arguments
+- [ ] tests_making_a_variable_with_a_pattern
+- [ ] tests_destructuring_borrow_doesnt_compile_to_destroy
+- [ ] tests_destructuring_shared_doesnt_compile_to_destroy
+- [ ] checks_that_we_stored_a_borrowed_temporary_in_a_local
+- [ ] test_readonly_ufcs
+- [ ] test_readwrite_ufcs
+- [ ] test_taking_a_callable_param
+- [ ] closure_using_parent_function_s_bound
+- [ ] if_branches_returns_never_and_struct
+- [ ] recursive_struct_with_opt
+- [ ] tests_a_linked_list
+- [ ] tests_a_templated_linked_list
+- [ ] tests_a_foreach_for_a_linked_list
+- [ ] test_imm_array
+- [ ] make_array_and_dot_it
+- [ ] test_make_array
+- [ ] test_array_push_pop_len_capacity_drop
+- [ ] test_vector_of_struct_templata
+- [ ] tests_exporting_function
+- [ ] tests_exporting_struct
+- [ ] tests_exporting_interface
+- [ ] tests_export_struct_twice
+- [ ] lock_weak_member
+- [ ] generates_free_function_for_imm_struct
+- [ ] downcast_with_as
+- [ ] downcast_function_rrbfs
+- [ ] reports_mismatched_return_type_when_expecting_void
+- [ ] reports_when_reading_nonexistant_local
+- [ ] reports_when_mutating_after_moving
+- [ ] reports_when_reading_after_moving
+- [ ] reports_when_moving_from_inside_a_while
+- [ ] cant_subscript_non_subscriptable_type
+- [ ] report_when_multiple_types_in_array
+- [ ] report_when_abstract_method_defined_outside_open_interface
+- [ ] report_when_imm_struct_has_varying_member
+- [ ] report_imm_mut_mismatch_for_generic_type
+- [ ] report_when_imm_contains_varying_member
+- [ ] reports_when_exported_function_depends_on_non_exported_param
+- [ ] reports_when_exported_function_depends_on_non_exported_return
+- [ ] reports_when_extern_function_depends_on_non_exported_param
+- [ ] reports_when_extern_function_depends_on_non_exported_return
+- [ ] reports_when_exported_struct_depends_on_non_exported_member
+- [ ] reports_when_exported_ssa_depends_on_non_exported_element
+- [ ] reports_when_exported_rsa_depends_on_non_exported_element
+- [ ] humanize_errors

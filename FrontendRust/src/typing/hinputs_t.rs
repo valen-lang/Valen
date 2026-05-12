@@ -289,8 +289,25 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct_by_template_name
-    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT) -> StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_struct_by_template_name");
+    // Rust adaptation: Scala's `_.templateName.localName == structTemplateName`
+    // compares directly because Scala's covariant `templateName.localName`
+    // narrows to `IStructTemplateNameT`. Rust's `template_name.local_name`
+    // stays in the wide `INameT` enum, so we must extract the struct-template
+    // case before structural comparison. `vassertOne` is inlined as a match on
+    // the result count.
+    pub fn lookup_struct_by_template_name(&self, struct_template_name: StructTemplateNameT<'s, 't>) -> &'t StructDefinitionT<'s, 't> {
+        let matches: Vec<&'t StructDefinitionT<'s, 't>> = self.structs.iter()
+            .filter(|s| match s.template_name.local_name {
+                INameT::StructTemplate(t) => *t == struct_template_name,
+                _ => false,
+            })
+            .copied()
+            .collect();
+        match matches.len() {
+            1 => matches[0],
+            0 => panic!("lookup_struct_by_template_name: not found: {:?}", struct_template_name),
+            _ => panic!("lookup_struct_by_template_name: multiple found: {:?}", struct_template_name),
+        }
     }
     /*
       def lookupStructByTemplateName(structTemplateName: StructTemplateNameT): StructDefinitionT = {
@@ -325,7 +342,7 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_function
-    pub fn lookup_function_by_human_name(&self, human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
+    pub fn lookup_function_by_str(&self, human_name: &str) -> &'t FunctionDefinitionT<'s, 't> {
         let matches: Vec<_> = self.functions.iter().filter(|f| {
             match &f.header.id.local_name {
                 INameT::Function(func_name) if func_name.template.human_name.as_str() == human_name => true,

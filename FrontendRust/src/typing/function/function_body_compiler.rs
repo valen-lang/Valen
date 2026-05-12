@@ -311,7 +311,7 @@ where 's: 't,
         let unconverted_body_without_return =
             self.consecutive(&[patterns_te, statements_from_block]);
 
-        let starting_env_ref = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(starting_env));
+        let starting_env_ref = IInDenizenEnvironmentT::Node(starting_env);
         let converted_body_without_return = match maybe_expected_result_type {
             None => unconverted_body_without_return,
             Some(expected_result_type) => {
@@ -320,7 +320,7 @@ where 's: 't,
                     if unconverted_body_without_return.result().coord.kind == KindT::Never(NeverT { from_break: false }) {
                         unconverted_body_without_return
                     } else {
-                        let func_outer_env_ref = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Function(func_outer_env));
+                        let func_outer_env_ref = IInDenizenEnvironmentT::Function(func_outer_env);
                         self.convert(func_outer_env_ref, coutputs, &range_list, call_location,
                             unconverted_body_without_return, expected_result_type)
                     }
@@ -351,7 +351,15 @@ where 's: 't,
             };
 
         if is_destructor {
-            panic!("implement: evaluateFunctionBody — destructor check");
+            // If it's a destructor, make sure that we've actually destroyed/moved/unlet'd
+            // the parameter. For now, we'll just check if it's been moved away, but soon
+            // we'll want fate to track whether it's been destroyed, and do that check instead.
+            // We don't want the user to accidentally just move it somewhere, they need to
+            // promise it gets destroyed.
+            let destructee_name = params_2[0].name;
+            if !env.unstackified_locals.contains(&destructee_name) {
+                panic!("Destructee wasn't moved/destroyed!");
+            }
         }
 
         Ok((&*self.typing_interner.alloc(BlockTE { inner: converted_body_with_return }), returns))

@@ -90,8 +90,7 @@ where 's: 't,
                 };
 
                 let snapshot = nenv.snapshot(self.typing_interner);
-                let snapshot_env = self.typing_interner.alloc(
-                    IInDenizenEnvironmentT::Node(snapshot));
+                let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
                 let param_types = stamp_result.prototype.param_types();
                 let args_exprs_2 =
                     self.convert_exprs(
@@ -262,7 +261,7 @@ where 's: 't,
         let mut param_filters = vec![closure_param_type];
         param_filters.extend_from_slice(&args_types_2);
 
-        let env_ref = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(env));
+        let env_ref = IInDenizenEnvironmentT::Node(env);
         let resolved =
             self.find_function(
                 env_ref,
@@ -407,7 +406,7 @@ where 's: 't,
     pub fn check_types(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         params: &[CoordT<'s, 't>],

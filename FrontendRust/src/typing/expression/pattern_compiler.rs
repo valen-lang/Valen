@@ -12,6 +12,7 @@ use crate::typing::env::function_environment_t::*;
 use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::env::i_env_entry::IEnvEntryT;
 use crate::postparsing::rules::RuneUsage;
 use crate::typing::infer_compiler::{InferEnv, InitialSend};
 use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
@@ -240,20 +241,27 @@ where 's: 't,
                 unconverted_input_expr
             }
             Some(receiver_rune) => {
-                let rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
                     rune_a_to_type_with_implicitly_coercing_lookups_s.clone();
                 // We've now calculated all the types of all the runes, but the LookupSR rules are still a bit
                 // loose. We intentionally ignored the types of the things they're looking up, so we could know
                 // what types we *expect* them to be, so we could coerce.
                 // That coercion is good, but lets make it more explicit.
-                let rule_builder: Vec<IRulexSR<'s>> = Vec::new();
-                if !rules_with_implicitly_coercing_lookups_s.is_empty() {
-                    panic!("implement: infer_and_translate_pattern — explicifyLookups with non-empty rules");
+                let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+                let snapshot = nenv.snapshot(self.typing_interner);
+                let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
+                let rune_type_solve_env = self.create_rune_type_solver_env(snapshot_env);
+                match crate::higher_typing::higher_typing_pass::explicify_lookups(
+                    &rune_type_solve_env,
+                    self.scout_arena,
+                    &mut rune_a_to_type,
+                    &mut rule_builder,
+                    rules_with_implicitly_coercing_lookups_s.to_vec(),
+                ) {
+                    Err(_e) => panic!("implement: infer_and_translate_pattern — explicifyLookups error"),
+                    Ok(()) => {}
                 }
                 let rules_a = rule_builder;
-
-                let snapshot = nenv.snapshot(self.typing_interner);
-                let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
                 let invocation_range: Vec<RangeS<'s>> =
                     std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                 let complete_define_solve =
@@ -292,10 +300,13 @@ where 's: 't,
                     });
 
                 nenv.add_entries(
+                    self.scout_arena,
                     self.typing_interner,
                     &complete_define_solve.conclusions.iter()
                         .map(|(key, value)| {
-                            panic!("implement: infer_and_translate_pattern — addEntries mapping");
+                            let name: INameT<'s, 't> = self.typing_interner.intern_rune_name(RuneNameT { rune: *key, _phantom: std::marker::PhantomData }).into();
+                            let entry = IEnvEntryT::Templata(*value);
+                            (name, entry)
                         })
                         .collect::<Vec<_>>());
                 let expected_coord = match complete_define_solve.conclusions.get(&receiver_rune.rune) {
@@ -507,7 +518,7 @@ where 's: 't,
                 match &pattern.name {
                     None => {
                         // If we didn't store it, and we aren't destructuring it, then we're just ignoring it. Let's drop it.
-                        let snap = self.typing_interner.alloc(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)));
+                        let snap = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
                         let ranges: Vec<RangeS<'s>> =
                             std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
                         result.push(self.drop(snap, coutputs, &ranges, call_location, region, expr_to_destructure_or_drop_or_pass_te));
@@ -1234,7 +1245,7 @@ where 's: 't,
     pub fn load_from_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         load_range: RangeS<'s>,
         region: RegionT,
         container_alias: &'t ReferenceExpressionTE<'s, 't>,

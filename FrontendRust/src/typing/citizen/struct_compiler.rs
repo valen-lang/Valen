@@ -184,7 +184,7 @@ where 's: 't,
     pub fn resolve_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
@@ -251,12 +251,12 @@ where 's: 't,
         let outer_templatas = outer_store.build_in(self.typing_interner);
         let outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
             global_env: declaring_env.global_env(),
-            parent_env: *declaring_env,
+            parent_env: declaring_env,
             template_id: *struct_template_id,
             id: *struct_template_id,
             templatas: outer_templatas,
         });
-        let outer_env_ref = self.typing_interner.alloc(IInDenizenEnvironmentT::Citizen(outer_env));
+        let outer_env_ref = IInDenizenEnvironmentT::Citizen(outer_env);
         coutputs.declare_type_outer_env(struct_template_id, outer_env_ref);
     }
 /*
@@ -306,10 +306,77 @@ where 's: 't,
 {
     pub fn precompile_interface(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> () {
-        panic!("Unimplemented: precompile_interface");
+        use std::marker::PhantomData;
+        let declaring_env = interface_templata.declaring_env;
+        let interface_a = interface_templata.origin_interface;
+        let interface_template_id = self.resolve_interface_template(
+            self.typing_interner.alloc(interface_templata)
+        );
+        coutputs.declare_type(interface_template_id);
+        match interface_a.maybe_predicted_mutability {
+            None => {}
+            Some(predicted_mutability) => {
+                coutputs.declare_type_mutability(
+                    interface_template_id,
+                    ITemplataT::Mutability(MutabilityTemplataT {
+                        mutability: crate::typing::templata::conversions::evaluate_mutability(predicted_mutability),
+                    }),
+                );
+            }
+        }
+        // We do this here because we might compile a virtual function somewhere before we compile
+        // the interface. The virtual function will need to know if the type is sealed to know
+        // whether it's allowed to be virtual on this interface.
+        coutputs.declare_type_sealed(
+            *interface_template_id,
+            interface_a.attributes.iter().any(|a| matches!(a, crate::postparsing::ast::ICitizenAttributeS::Sealed(_))),
+        );
+        // Build internal method entries for the outer env
+        let internal_method_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            interface_a.internal_methods.iter().map(|internal_method| {
+                let function_name = self.translate_generic_function_name(internal_method.name);
+                let local_name = match function_name {
+                    IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+                    IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+                    IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+                    IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+                    IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+                    IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+                    IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+                    IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+                    IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+                };
+                (local_name, IEnvEntryT::Function(internal_method))
+            }).collect();
+        // Merge in sibling entries from the global environment
+        let sibling_key = interface_template_id.add_step(
+            self.typing_interner,
+            INameT::PackageTopLevel(self.typing_interner.intern_package_top_level_name(
+                PackageTopLevelNameT { _phantom: PhantomData }
+            )),
+        );
+        let sibling_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            declaring_env.global_env().name_to_top_level_environment.iter()
+                .filter(|(id, _)| **id == *sibling_key)
+                .flat_map(|(_, ts)| ts.name_to_entry.iter().map(|(n, e)| (*n, *e)))
+                .collect();
+        let all_outer_entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
+            internal_method_entries.into_iter().chain(sibling_entries.into_iter()).collect();
+        let mut outer_store = TemplatasStoreBuilder::new(interface_template_id);
+        outer_store.add_entries(self.scout_arena, all_outer_entries);
+        let outer_templatas = outer_store.build_in(self.typing_interner);
+        let outer_env = self.typing_interner.alloc(CitizenEnvironmentT {
+            global_env: declaring_env.global_env(),
+            parent_env: declaring_env,
+            template_id: *interface_template_id,
+            id: *interface_template_id,
+            templatas: outer_templatas,
+        });
+        let outer_env_ref = IInDenizenEnvironmentT::Citizen(outer_env);
+        coutputs.declare_type_outer_env(interface_template_id, outer_env_ref);
     }
 /*
   def precompileInterface(
@@ -398,14 +465,14 @@ where 's: 't,
 {
     pub fn predict_interface(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         uncoerced_template_args: &[ITemplataT<'s, 't>],
     ) -> InterfaceTT<'s, 't> {
-        panic!("Unimplemented: predict_interface");
+        self.predict_interface_layer(coutputs, calling_env, call_range, call_location, interface_templata, uncoerced_template_args)
     }
 /*
   def predictInterface(
@@ -432,7 +499,7 @@ where 's: 't,
     pub fn predict_struct(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
@@ -462,14 +529,14 @@ where 's: 't,
 {
     pub fn resolve_interface(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
-        calling_env: &IInDenizenEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        call_range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
         uncoerced_template_args: &[ITemplataT<'s, 't>],
     ) -> IResolveOutcome<'s, 't, InterfaceTT<'s, 't>> {
-        panic!("Unimplemented: resolve_interface");
+        self.resolve_interface_layer(coutputs, calling_env, call_range, call_location, interface_templata, uncoerced_template_args)
     }
 /*
   def resolveInterface(
@@ -496,12 +563,12 @@ where 's: 't,
 {
     pub fn compile_interface(
         &self,
-        coutputs: &CompilerOutputs<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
     ) -> UncheckedDefiningConclusions<'s, 't> {
-        panic!("Unimplemented: compile_interface");
+        self.compile_interface_layer(coutputs, parent_ranges, call_location, interface_templata)
     }
 /*
   def compileInterface(

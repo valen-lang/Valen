@@ -79,7 +79,7 @@ fn simple_program_returning_an_int_explicit() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
 }
 /*
@@ -114,7 +114,7 @@ fn hardcoding_negative_numbers() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::ConstantInt(
@@ -153,7 +153,7 @@ fn simple_local() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     assert!(main.header.return_type.kind == KindT::Int(IntT { bits: 32 }));
 }
 /*
@@ -188,7 +188,7 @@ fn tests_panic_return_type() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     let let_normal: &LetNormalTE = crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::LetNormal(l) => Some(l)
@@ -233,7 +233,7 @@ fn taking_an_argument_and_returning_it() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
 
     let param: &ParameterT = crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
@@ -286,7 +286,7 @@ fn tests_adding_two_numbers() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
 
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
@@ -377,7 +377,7 @@ fn simple_struct_read() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
 }
 /*
   test("Simple struct read") {
@@ -436,7 +436,7 @@ exported func main() Moo {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let _main = coutputs.lookup_function_by_human_name("main");
+    let _main = coutputs.lookup_function_by_str("main");
 }
 /*
   test("Simple struct instantiate") {
@@ -474,7 +474,7 @@ exported func main() int {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     let _drop_call: &crate::typing::ast::expressions::FunctionCallTE = crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::FunctionCall(call) => {
@@ -506,9 +506,46 @@ exported func main() int {
 */
 // mig: fn custom_destructor
 #[test]
-#[ignore]
 fn custom_destructor() {
-    panic!("Unmigrated test: custom_destructor");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "#!DeriveStructDrop\n",
+        "exported struct Moo { hp int; }\n",
+        "func drop(self ^Moo) {\n",
+        "  [_] = self;\n",
+        "}\n",
+        "exported func main() int {\n",
+        "  return Moo(42).hp;\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(
+            crate::typing::ast::expressions::FunctionCallTE {
+                callable: crate::typing::ast::ast::PrototypeT {
+                    id: crate::typing::names::names::IdT {
+                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }
+        ) if fn_name.template.human_name == "drop" => Some(())
+    );
 }
 /*
   test("Custom destructor") {
@@ -554,7 +591,7 @@ exported func main() void {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     let let_normal: &crate::typing::ast::expressions::LetNormalTE = crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::LetNormal(ln) => {
@@ -614,7 +651,7 @@ fn recursion() {
     let coutputs = compile.expect_compiler_outputs();
 
     // Make sure it inferred the param type and return type correctly
-    assert!(coutputs.lookup_function_by_human_name("main").header.return_type == CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
+    assert!(coutputs.lookup_function_by_str("main").header.return_type == CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT { bits: 32 }) });
 }
 /*
   test("Recursion") {
@@ -647,7 +684,7 @@ fn test_overloads() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    assert!(matches!(coutputs.lookup_function_by_human_name("main").header.return_type,
+    assert!(matches!(coutputs.lookup_function_by_str("main").header.return_type,
         CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }
     ));
 }
@@ -776,7 +813,7 @@ fn simple_struct() {
     ));
 
     // Check there's a constructor
-    let constructor = coutputs.lookup_function_by_human_name("MyStruct");
+    let constructor = coutputs.lookup_function_by_str("MyStruct");
     assert!(matches!(constructor.header.return_type,
         CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(_), .. }
     ));
@@ -786,7 +823,7 @@ fn simple_struct() {
     ));
 
     // Check that we call the constructor
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::FunctionCall(
@@ -850,9 +887,50 @@ fn simple_struct() {
 */
 // mig: fn calls_destructor_on_local_var
 #[test]
-#[ignore]
 fn calls_destructor_on_local_var() {
-    panic!("Unmigrated test: calls_destructor_on_local_var");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Muta { }\n",
+        "func destructor(m ^Muta) {\n",
+        "  Muta[ ] = m;\n",
+        "}\n",
+        "exported func main() {\n",
+        "  a = Muta();\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(
+            crate::typing::ast::expressions::FunctionCallTE {
+                callable: crate::typing::ast::ast::PrototypeT {
+                    id: crate::typing::names::names::IdT {
+                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }
+        ) if fn_name.template.human_name == "drop" => Some(())
+    );
+    let all_calls = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(_fpc) => Some(())
+    );
+    assert_eq!(all_calls.len(), 2);
 }
 /*
   test("Calls destructor on local var") {
@@ -877,9 +955,54 @@ fn calls_destructor_on_local_var() {
 */
 // mig: fn tests_defining_an_empty_interface_and_an_implementing_struct
 #[test]
-#[ignore]
 fn tests_defining_an_empty_interface_and_an_implementing_struct() {
-    panic!("Unmigrated test: tests_defining_an_empty_interface_and_an_implementing_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "sealed interface MyInterface { }\n",
+        "struct MyStruct { }\n",
+        "impl MyInterface for MyStruct;\n",
+        "func main(a MyStruct) {}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    use crate::parsing::tests::utils::expect_1;
+    use crate::typing::templata::templata_utils::unapply_simple_name;
+    use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+    use crate::typing::types::types::MutabilityT;
+
+    let interfaces_matching: Vec<_> = coutputs.interfaces.iter()
+        .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyInterface")
+            && !d.weakable
+            && matches!(d.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))
+            && d.internal_methods.is_empty())
+        .collect();
+    let interface_def = expect_1(&interfaces_matching);
+
+    let structs_matching: Vec<_> = coutputs.structs.iter()
+        .filter(|d| unapply_simple_name(&d.template_name).as_deref() == Some("MyStruct")
+            && !d.weakable
+            && matches!(d.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }))
+            && !d.is_closure)
+        .collect();
+    let struct_def = expect_1(&structs_matching);
+
+    assert!(coutputs.interface_to_sub_citizen_to_edge.iter()
+        .flat_map(|(_, sub_map)| sub_map.values())
+        .any(|edge| {
+            edge.sub_citizen.id() == struct_def.instantiated_citizen.id &&
+            edge.super_interface == interface_def.instantiated_interface.id
+        }));
 }
 /*
   test("Tests defining an empty interface and an implementing struct") {
@@ -1017,7 +1140,7 @@ fn reads_a_struct_member() {
     );
     let coutputs = compile.expect_compiler_outputs();
 
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     // check for the member access
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
@@ -1083,7 +1206,7 @@ fn automatically_drops_struct() {
     );
     let coutputs = compile.expect_compiler_outputs();
 
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     // check for the call to drop
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
@@ -1272,7 +1395,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let moo = coutputs.lookup_function_by_human_name("moo");
+    let moo = coutputs.lookup_function_by_str("moo");
     assert!(matches!(moo.header.return_type,
         CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. }
         if matches!(stt.id.local_name,
@@ -1283,7 +1406,7 @@ fn tests_single_expression_and_single_statement_functions_returns() {
             )
         ) && stt.id.init_steps.is_empty()
     ));
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     assert!(matches!(main.header.return_type,
         CoordT { kind: KindT::Void(_), .. }
     ));
@@ -1311,9 +1434,104 @@ fn tests_single_expression_and_single_statement_functions_returns() {
 */
 // mig: fn tests_calling_a_templated_struct_s_constructor
 #[test]
-#[ignore]
 fn tests_calling_a_templated_struct_s_constructor() {
-    panic!("Unmigrated test: tests_calling_a_templated_struct_s_constructor");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.drop.*;\n",
+        "struct MySome<T Ref> where func drop(T)void { value T; }\n",
+        "exported func main() int {\n",
+        "  return MySome<int>(4).value;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    coutputs.lookup_struct_by_template_name(
+        crate::typing::names::names::StructTemplateNameT {
+            human_name: scout_arena.intern_str("MySome"),
+            _phantom: std::marker::PhantomData,
+        });
+
+    let constructor = coutputs.lookup_function_by_str("MySome");
+    let header = &constructor.header;
+    let fn_name = match header.id.local_name {
+        crate::typing::names::names::INameT::Function(fn_name) => fn_name,
+        _ => panic!("expected Function local_name"),
+    };
+    assert_eq!(fn_name.template.human_name, "MySome");
+    assert_eq!(fn_name.template_args.len(), 1);
+    let template_arg_coord = match fn_name.template_args[0] {
+        crate::typing::templata::templata::ITemplataT::Coord(ct) => ct.coord,
+        _ => panic!("expected Coord template arg"),
+    };
+    assert!(matches!(template_arg_coord,
+        CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp), .. }
+        if matches!(kp.id.local_name,
+            crate::typing::names::names::INameT::KindPlaceholder(kpn)
+            if kpn.template.index == 0
+            && matches!(kpn.template.rune,
+                crate::postparsing::names::IRuneS::CodeRune(cr) if cr.name == "T"
+            )
+        )
+    ));
+    assert!(matches!(fn_name.parameters,
+        [CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(kp2), .. }]
+        if matches!(kp2.id.local_name,
+            crate::typing::names::names::INameT::KindPlaceholder(kpn2)
+            if kpn2.template.index == 0
+        )
+    ));
+    assert_eq!(header.attributes.len(), 0);
+    assert_eq!(header.params.len(), 1);
+    assert!(matches!(&header.params[0],
+        ParameterT {
+            name: crate::typing::names::names::IVarNameT::CodeVar(cv),
+            virtuality: None,
+            tyype: CoordT { ownership: OwnershipT::Own, kind: KindT::KindPlaceholder(_), .. },
+            ..
+        } if cv.name == "value"
+    ));
+    assert!(matches!(header.return_type,
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Struct(stt),
+            ..
+        } if matches!(stt.id.local_name,
+            crate::typing::names::names::INameT::Struct(sn)
+            if matches!(sn.template,
+                crate::typing::names::names::IStructTemplateNameT::StructTemplate(st)
+                if st.human_name == "MySome"
+            )
+        )
+    ));
+
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(
+            crate::typing::ast::expressions::FunctionCallTE {
+                callable: crate::typing::ast::ast::PrototypeT {
+                    id: crate::typing::names::names::IdT {
+                        local_name: crate::typing::names::names::INameT::Function(fn_name),
+                        ..
+                    },
+                    ..
+                },
+                ..
+            }
+        ) if fn_name.template.human_name == "MySome" => Some(())
+    );
 }
 /*
   test("Tests calling a templated struct's constructor") {
@@ -1761,7 +1979,7 @@ fn test_return_from_inside_if_destroys_locals() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     let destructor_calls = crate::collect_where_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::FunctionCall(fpc)
@@ -1812,9 +2030,26 @@ fn test_return_from_inside_if_destroys_locals() {
 */
 // mig: fn recursive_struct
 #[test]
-#[ignore]
 fn recursive_struct() {
-    panic!("Unmigrated test: recursive_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct ListNode imm {\n",
+        "  tail ListNode;\n",
+        "}\n",
+        "func main(a ListNode) {}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Recursive struct") {
@@ -1852,9 +2087,26 @@ fn recursive_struct_with_opt() {
 */
 // mig: fn templated_imm_struct
 #[test]
-#[ignore]
 fn templated_imm_struct() {
-    panic!("Unmigrated test: templated_imm_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct ListNode<T Ref> imm {\n",
+        "  tail ListNode<T>;\n",
+        "}\n",
+        "func main(a ListNode<int>) {}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Templated imm struct") {
@@ -1991,7 +2243,7 @@ fn test_return() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     crate::collect_only_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::Return(_) => Some(())
@@ -2029,7 +2281,7 @@ fn test_return_from_inside_if() {
         &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
     );
     let coutputs = compile.expect_compiler_outputs();
-    let main = coutputs.lookup_function_by_human_name("main");
+    let main = coutputs.lookup_function_by_str("main");
     let returns = crate::collect_where_tnode!(
         crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
         crate::typing::test::traverse::NodeRefT::Return(_) => Some(())

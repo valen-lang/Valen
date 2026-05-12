@@ -15,6 +15,8 @@ use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
+use crate::utils::arena_index_map::ArenaIndexMap;
+use crate::typing::function::function_compiler::IDefineFunctionResult;
 
 /*
 package dev.vale.typing
@@ -103,8 +105,46 @@ where 's: 't,
 
         // val itables = interfaceEdgeBlueprints.map(interfaceEdgeBlueprint => { ... })
         let itables: HashMap<IdT<'s, 't>, HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>>> =
-            interface_edge_blueprints.iter().map(|_interface_edge_blueprint| {
-                panic!("implement: compile_i_tables — itable construction per blueprint");
+            interface_edge_blueprints.iter().map(|interface_edge_blueprint| {
+                let interface_placeholdered_id = interface_edge_blueprint.interface;
+                let interface_template_id = self.get_interface_template(interface_placeholdered_id);
+                let interface_id = coutputs.lookup_interface_by_template_name(interface_template_id).instantiated_interface.id;
+                let overriding_impls = coutputs.get_child_impls_for_super_interface_template(interface_template_id);
+                let overriding_citizen_to_found_function: HashMap<IdT<'s, 't>, &'t EdgeT<'s, 't>> =
+                    overriding_impls.iter().map(|overriding_impl| -> (IdT<'s,'t>, &'t EdgeT<'s,'t>) {
+                        let overriding_citizen_template_id = overriding_impl.sub_citizen_template_id;
+                        let found_functions: Vec<(IdT<'s, 't>, &'t OverrideT<'s, 't>)> =
+                            interface_edge_blueprint.super_family_root_headers.iter().map(|(abstract_function_prototype, abstract_index)| -> (IdT<'s,'t>, &'t OverrideT<'s,'t>) {
+                                let overrride = self.look_for_override(
+                                    coutputs,
+                                    LocationInDenizen { path: &[] },
+                                    overriding_impl,
+                                    interface_template_id,
+                                    overriding_citizen_template_id,
+                                    *abstract_function_prototype,
+                                    *abstract_index,
+                                );
+                                (abstract_function_prototype.id, self.typing_interner.alloc(overrride))
+                            }).collect();
+                        let overriding_citizen = overriding_impl.sub_citizen;
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, ISubKindTT::from(overriding_citizen).id()).is_some());
+                        let super_interface_id = overriding_impl.super_interface.id;
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, super_interface_id).is_some());
+                        let mut abstract_func_to_override_func = ArenaIndexMap::new_in(self.typing_interner.bump());
+                        for (k, v) in found_functions {
+                            abstract_func_to_override_func.insert(k, v);
+                        }
+                        let edge = self.typing_interner.alloc(EdgeT {
+                            edge_id: overriding_impl.instantiated_id,
+                            sub_citizen: overriding_citizen,
+                            super_interface: super_interface_id,
+                            instantiation_bound_params: overriding_impl.instantiation_bound_params,
+                            abstract_func_to_override_func,
+                        });
+                        let overriding_citizen_def = coutputs.lookup_citizen_by_template_name(overriding_citizen_template_id);
+                        (ISubKindTT::from(overriding_citizen_def.instantiated_citizen()).id(), edge)
+                    }).collect();
+                (interface_id, overriding_citizen_to_found_function)
             }).collect();
 
         (interface_edge_blueprints, itables)
@@ -185,8 +225,9 @@ where 's: 't,
             coutputs.get_all_functions().iter().flat_map(|function| -> Vec<(IdT<'s, 't>, &'t FunctionDefinitionT<'s, 't>)> {
                 match function.header.get_abstract_interface() {
                     None => Vec::new(),
-                    Some(_abstract_interface) => {
-                        panic!("implement: make_interface_edge_blueprints — getInterfaceTemplate for abstract interface");
+                    Some(abstract_interface) => {
+                        let abstract_interface_template = self.get_interface_template(abstract_interface.id);
+                        vec![(abstract_interface_template, *function)]
                     }
                 }
             }).collect();
@@ -199,17 +240,53 @@ where 's: 't,
         }
 
         // val x4 = x3.map({ case (interfaceTemplateId, functions) => ... orderedMethods ... })
-        let _x4: HashMap<IdT<'s, 't>, ()> = x3.into_iter().map(|(_interface_template_id, _functions)| {
-            panic!("implement: make_interface_edge_blueprints — orderedMethods construction");
+        let x4: HashMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x3.into_iter().map(|(interface_template_id, functions)| {
+            // Sort so that the interface's internal methods are first and in the same order
+            // they were declared in. It feels right, and vivem also depends on it
+            // when it calls array generators/consumers' first method.
+            let interface_def =
+                coutputs.get_all_interfaces().into_iter()
+                    .find(|i| i.template_name == interface_template_id)
+                    .unwrap_or_else(|| panic!("vassertSome: find interface by templateName in x4"));
+            // Make sure `functions` has everything that the interface def wanted.
+            let functions_set: std::collections::HashSet<(SignatureT<'s, 't>, usize)> =
+                functions.iter().map(|f| (f.header.to_signature(), f.header.get_virtual_index().expect("vassertSome"))).collect();
+            let internal_methods_set: std::collections::HashSet<(SignatureT<'s, 't>, usize)> =
+                interface_def.internal_methods.iter().map(|(p, vi)| (p.to_signature(), *vi)).collect();
+            let missing = internal_methods_set.difference(&functions_set).count();
+            assert!(missing == 0, "vassert: functions missing some internal methods");
+            // Move all the internal methods to the front.
+            let mut ordered_methods: Vec<(PrototypeT<'s, 't>, usize)> =
+                interface_def.internal_methods.iter().map(|(p, vi)| (*p, *vi)).collect();
+            for function in functions.iter() {
+                let header = &function.header;
+                let prototype = header.to_prototype();
+                let already_in_internal = interface_def.internal_methods.iter().any(|(p, _)| p.to_signature() == prototype.to_signature());
+                if !already_in_internal {
+                    let virtual_index = header.get_virtual_index().expect("vassertSome: getVirtualIndex for abstract header");
+                    ordered_methods.push((prototype, virtual_index));
+                }
+            }
+            (interface_template_id, ordered_methods)
         }).collect();
 
         // val abstractFunctionHeadersByInterfaceTemplateId = x4 ++ coutputs.getAllInterfaces().map(...)
-        for _i in coutputs.get_all_interfaces().iter() {
-            panic!("implement: make_interface_edge_blueprints — augment with empty interfaces");
+        // Some interfaces would be empty and they wouldn't be in x4, so we add them here.
+        let mut abstract_function_headers: HashMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x4;
+        for interface_def in coutputs.get_all_interfaces().iter() {
+            abstract_function_headers.entry(interface_def.template_name).or_insert_with(Vec::new);
         }
 
         // val interfaceEdgeBlueprints = abstractFunctionHeadersByInterfaceTemplateId.map(...).toVector
-        Vec::new()
+        abstract_function_headers.into_iter().map(|(interface_template_id, function_headers)| -> &'t InterfaceEdgeBlueprintT<'s, 't> {
+            let interface_def = coutputs.lookup_interface_by_template_name(interface_template_id);
+            let super_family_root_headers = self.typing_interner.alloc_slice_from_vec(
+                function_headers.into_iter().map(|(p, vi)| (p, vi as i32)).collect());
+            self.typing_interner.alloc(InterfaceEdgeBlueprintT {
+                interface: interface_def.instantiated_interface.id,
+                super_family_root_headers,
+            })
+        }).collect()
     }
 /*
   private def makeInterfaceEdgeBlueprints(coutputs: CompilerOutputs): Vector[InterfaceEdgeBlueprintT] = {
@@ -274,7 +351,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_templata_to_mimic: ITemplataT<'s, 't>,
-        dispatcher_outer_env: &IInDenizenEnvironmentT<'s, 't>,
+        dispatcher_outer_env: IInDenizenEnvironmentT<'s, 't>,
         index: i32,
         rune: IRuneS<'s>,
     ) -> ITemplataT<'s, 't> {
@@ -368,13 +445,363 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
-        impl_t: &ImplT<'s, 't>,
+        impl_t: &'t ImplT<'s, 't>,
         interface_template_id: IdT<'s, 't>,
         sub_citizen_template_id: IdT<'s, 't>,
         abstract_function_prototype: PrototypeT<'s, 't>,
         abstract_index: i32,
     ) -> OverrideT<'s, 't> {
-        panic!("Unimplemented: look_for_override");
+        use crate::typing::infer_compiler::InitialKnown;
+        use crate::typing::templata_compiler::IBoundArgumentsSource;
+        use crate::postparsing::rules::rules::RuneUsage;
+        use crate::utils::range::CodeLocationS;
+
+        let abstract_func_template_id = self.get_function_template(abstract_function_prototype.id);
+        let abstract_function_param_unsubstituted_types = abstract_function_prototype.param_types();
+        assert!(abstract_index >= 0);
+        let abstract_param_unsubstituted_type = abstract_function_param_unsubstituted_types[abstract_index as usize];
+
+        let maybe_origin_function_templata =
+            coutputs.lookup_function(self.typing_interner.alloc(abstract_function_prototype.to_signature()))
+                .and_then(|f| f.header.maybe_origin_function_templata);
+
+        let range = maybe_origin_function_templata
+            .map(|o| o.function.range)
+            .unwrap_or_else(|| {
+                let loc = CodeLocationS::internal(self.scout_arena, -2976395);
+                RangeS { begin: loc, end: loc }
+            });
+
+        let origin_function_templata = maybe_origin_function_templata
+            .expect("vassertSome: originFunctionTemplata");
+
+        let abstract_func_outer_env = coutputs.get_outer_env_for_function(abstract_func_template_id);
+
+        let dispatcher_template_name = self.typing_interner.intern_override_dispatcher_template_name(
+            OverrideDispatcherTemplateNameT { impl_id: impl_t.template_id }
+        );
+        let dispatcher_template_id_ref = abstract_func_template_id.add_step(
+            self.typing_interner,
+            INameT::OverrideDispatcherTemplate(dispatcher_template_name),
+        );
+        let dispatcher_outer_env: &'t GeneralEnvironmentT<'s, 't> = child_of(
+            self.typing_interner,
+            self.scout_arena,
+            abstract_func_outer_env,
+            *dispatcher_template_id_ref,
+            dispatcher_template_id_ref,
+            vec![],
+        );
+
+        // Step 1: Get The Compiled Impl's Interface, see GTCII.
+
+        let instantiated_local = IInstantiationNameT::try_from(impl_t.instantiated_id.local_name)
+            .expect("impl instantiated_id local_name should be IInstantiationNameT");
+        let impl_placeholder_to_dispatcher_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)> =
+            instantiated_local.template_args().iter()
+                .zip(impl_t.rune_index_to_independence.iter())
+                .filter(|(_, &independent)| !independent)
+                .map(|(templata, _)| *templata)
+                .enumerate()
+                .map(|(_impl_placeholder_index, _impl_placeholder)| {
+                    panic!("Unimplemented: implPlaceholderToDispatcherPlaceholder entry")
+                })
+                .collect();
+        let dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
+            impl_placeholder_to_dispatcher_placeholder.iter().map(|(_, v)| *v).collect();
+
+        for (impl_placeholder_id, _) in impl_placeholder_to_dispatcher_placeholder.iter() {
+            assert!(impl_placeholder_id.init_id(self.typing_interner) == impl_t.template_id);
+        }
+
+        let dispatcher_placeholdered_interface: &'t InterfaceTT<'s, 't> = {
+            let super_interface_ref = self.typing_interner.alloc(impl_t.super_interface);
+            let substituted = Compiler::substitute_templatas_in_kind(
+                coutputs,
+                self.opts.global_options.sanity_check,
+                self.typing_interner,
+                self.keywords,
+                *dispatcher_template_id_ref,
+                impl_t.template_id,
+                &dispatcher_placeholders,
+                IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                KindT::Interface(super_interface_ref),
+            );
+            match substituted {
+                ITemplataT::Kind(k) => k.kind.expect_interface(),
+                _ => panic!("expected KindTemplataT from substituteTemplatasInKind"),
+            }
+        };
+        let dispatcher_placeholdered_abstract_param_type = CoordT {
+            kind: KindT::Interface(dispatcher_placeholdered_interface),
+            ..abstract_param_unsubstituted_type
+        };
+
+        // Step 2: Compile Dispatcher Function Given Interface, see CDFGI
+
+        let define_result = self.evaluate_generic_virtual_dispatcher_function_for_prototype(
+            coutputs,
+            &[range, impl_t.templata.impl_.range],
+            call_location,
+            IInDenizenEnvironmentT::from(dispatcher_outer_env),
+            origin_function_templata,
+            &{
+                let mut args: Vec<Option<CoordT<'s, 't>>> =
+                    abstract_function_prototype.param_types().iter().map(|_| None).collect();
+                args[abstract_index as usize] = Some(dispatcher_placeholdered_abstract_param_type);
+                args
+            },
+        );
+        let (dispatching_func_prototype, dispatcher_inner_inferences, dispatcher_instantiation_bound_params) =
+            match define_result {
+                IDefineFunctionResult::DefineFunctionFailure(_f) => {
+                    panic!("Unimplemented: CouldntEvaluateFunction error from dispatcher");
+                }
+                IDefineFunctionResult::DefineFunctionSuccess(s) => {
+                    (s.prototype, s.inferences, s.instantiation_bound_params)
+                }
+            };
+        let dispatcher_params: Vec<CoordT<'s, 't>> =
+            impl_t.templata.impl_.generic_params.iter().map(|_p| {
+                panic!("Unimplemented: dispatcher_params from dispatcherInnerInferences")
+            }).collect();
+        let dispatcher_id_ref = {
+            let func_name = IFunctionTemplateNameT::try_from(dispatcher_template_id_ref.local_name)
+                .expect("dispatcher_template_id local_name should be IFunctionTemplateNameT");
+            let local_name = func_name.make_function_name(
+                self.typing_interner,
+                self.keywords,
+                &dispatcher_placeholders,
+                &dispatcher_params,
+            );
+            self.typing_interner.intern_id(IdValT {
+                package_coord: dispatcher_template_id_ref.package_coord,
+                init_steps: dispatcher_template_id_ref.init_steps,
+                local_name,
+            })
+        };
+        let dispatcher_inner_env: &'t GeneralEnvironmentT<'s, 't> = child_of(
+            self.typing_interner,
+            self.scout_arena,
+            IInDenizenEnvironmentT::from(dispatcher_outer_env),
+            *dispatcher_template_id_ref,
+            dispatcher_id_ref,
+            dispatcher_inner_inferences.iter().map(|(name_s, templata): (&IRuneS<'s>, &ITemplataT<'s, 't>)| {
+                let rune_name = self.typing_interner.intern_rune_name(RuneNameT { rune: *name_s, _phantom: std::marker::PhantomData });
+                (INameT::from(rune_name), IEnvEntryT::Templata(*templata))
+            }).collect(),
+        );
+
+        // Step 3: Figure Out Dependent And Independent Runes, see FODAIR.
+
+        let impl_independent_rune_to_impl_placeholder_and_case_placeholder: Vec<(IRuneS<'s>, IdT<'s, 't>, ITemplataT<'s, 't>)> =
+            impl_t.templata.impl_.generic_params.iter()
+                .map(|p| p.rune.rune)
+                .zip(instantiated_local.template_args().iter())
+                .zip(impl_t.rune_index_to_independence.iter())
+                .filter(|((_, _), &independent)| independent)
+                .map(|((impl_rune, templata), _)| (impl_rune, *templata))
+                .enumerate()
+                .map(|(_index, (_impl_rune, _impl_placeholder_templata))| {
+                    panic!("Unimplemented: implIndependentRuneToImplPlaceholderAndCasePlaceholder entry")
+                })
+                .collect();
+        let impl_independent_rune_to_case_placeholder: Vec<(IRuneS<'s>, ITemplataT<'s, 't>)> =
+            impl_independent_rune_to_impl_placeholder_and_case_placeholder.iter()
+                .map(|(rune, _, case_placeholder)| (*rune, *case_placeholder))
+                .collect();
+        let impl_independent_placeholder_to_case_placeholder: Vec<(IdT<'s, 't>, ITemplataT<'s, 't>)> =
+            impl_independent_rune_to_impl_placeholder_and_case_placeholder.iter()
+                .map(|(_, impl_placeholder, case_placeholder)| (*impl_placeholder, *case_placeholder))
+                .collect();
+
+        let partial_resolve_conclusions =
+            self.partial_resolve_impl(
+                coutputs,
+                &[range],
+                call_location,
+                IInDenizenEnvironmentT::from(dispatcher_inner_env),
+                &{
+                    let mut knowns = vec![InitialKnown {
+                        rune: RuneUsage { range, rune: impl_t.templata.impl_.interface_kind_rune.rune },
+                        templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) })),
+                    }];
+                    for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {
+                        knowns.push(InitialKnown {
+                            rune: RuneUsage { range, rune: *rune },
+                            templata: *templata,
+                        });
+                    }
+                    knowns
+                },
+                &impl_t.templata,
+            ).unwrap_or_else(|_| panic!("vassert: partialResolveImpl should succeed"));
+
+        // Only grab sub_citizen entries, and assert we can't handle non-empty ones yet.
+        let dispatcher_and_case_placeholdered_impl_reachable_prototypes:
+                Vec<(IRuneS<'s>, IRuneS<'s>, PrototypeTemplataT<'s, 't>)> =
+            partial_resolve_conclusions.iter()
+                .filter(|(rune_in_impl, _)| **rune_in_impl == impl_t.templata.impl_.sub_citizen_rune.rune)
+                .filter_map(|(rune_in_impl, templata)| match templata {
+                    ITemplataT::Kind(kt)  => ICitizenTT::try_from(kt.kind).ok().map(|c| (*rune_in_impl, c)),
+                    ITemplataT::Coord(ct) => ICitizenTT::try_from(ct.coord.kind).ok().map(|c| (*rune_in_impl, c)),
+                    _ => None,
+                })
+                .flat_map(|(rune_in_impl, c)| {
+                    let citizen_id = c.id();
+                    let citizen_template_id = self.get_citizen_template(citizen_id);
+                    let substituter = self.get_placeholder_substituter(
+                        self.opts.global_options.sanity_check,
+                        *dispatcher_template_id_ref,
+                        citizen_id,
+                        IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                    );
+                    let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
+                    citizen_inner_env.templatas().name_to_entry.iter()
+                        .filter_map(move |(name, entry)| {
+                            let _rune_in_citizen = match name {
+                                INameT::Rune(r) => r,
+                                _ => return None,
+                            };
+                            let _proto_templata = match entry {
+                                IEnvEntryT::Templata(ITemplataT::Prototype(pt)) => pt,
+                                _ => return None,
+                            };
+                            let _function_bound = match _proto_templata.prototype.id.local_name {
+                                INameT::FunctionBound(fb) => fb,
+                                _ => return None,
+                            };
+                            panic!("implement: FunctionBoundNameT arm — build substituted prototype")
+                        })
+                        .collect::<Vec<_>>()
+                })
+                .collect();
+
+        let dispatcher_inner_env_with_bounds_for_sub_citizen: &'t GeneralEnvironmentT<'s, 't> = child_of(
+            self.typing_interner,
+            self.scout_arena,
+            IInDenizenEnvironmentT::from(dispatcher_inner_env),
+            *dispatcher_template_id_ref,
+            dispatcher_id_ref,
+            dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().enumerate()
+                .map(|(_index, _entry)| {
+                    panic!("Unimplemented: dispatcherInnerEnvWithBoundsForSubCitizen entries")
+                })
+                .collect(),
+        );
+
+        let resolve_result = self.resolve_impl(
+            coutputs,
+            &[range],
+            call_location,
+            IInDenizenEnvironmentT::from(dispatcher_inner_env_with_bounds_for_sub_citizen),
+            &{
+                let mut knowns = vec![InitialKnown {
+                    rune: RuneUsage { range, rune: impl_t.templata.impl_.interface_kind_rune.rune },
+                    templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(dispatcher_placeholdered_interface) })),
+                }];
+                for (rune, templata) in impl_independent_rune_to_case_placeholder.iter() {
+                    knowns.push(InitialKnown {
+                        rune: RuneUsage { range, rune: *rune },
+                        templata: *templata,
+                    });
+                }
+                knowns
+            },
+            &impl_t.templata,
+        );
+        let (impl_conclusions, _impl_instantiation_bound_args_unused) = match resolve_result {
+            Ok(crate::typing::infer_compiler::CompleteResolveSolve { conclusions, rune_to_bound }) => {
+                (conclusions, rune_to_bound)
+            }
+            Err(_e) => panic!("Unimplemented: TypingPassResolvingError from resolveImpl"),
+        };
+
+        // Step 4: Figure Out Struct For Case, see FOSFC.
+
+        let dispatcher_case_placeholdered_sub_citizen: ICitizenTT<'s, 't> = {
+            let templata = impl_conclusions.get(&impl_t.templata.impl_.sub_citizen_rune.rune)
+                .expect("vassertSome: implConclusions.get(subCitizenRune)");
+            match templata {
+                ITemplataT::Kind(k) => k.kind.expect_citizen(),
+                _ => panic!("expected KindTemplataT for subCitizenRune conclusion"),
+            }
+        };
+
+        // Step 5: Assemble the Case Environment For Resolving the Override, see ACEFRO
+
+        let override_imprecise_name = get_imprecise_name(self.scout_arena, abstract_function_prototype.id.local_name)
+            .expect("vassertSome: getImpreciseName for abstractFunctionPrototype");
+        let case_placeholder_templatas: Vec<ITemplataT<'s, 't>> =
+            impl_independent_rune_to_case_placeholder.iter().map(|(_, t)| *t).collect();
+        let dispatcher_case_name = self.typing_interner.intern_override_dispatcher_case_name(
+            OverrideDispatcherCaseNameValT {
+                independent_impl_template_args: &case_placeholder_templatas,
+            }
+        );
+        let dispatcher_case_id_ref = dispatcher_id_ref.add_step(
+            self.typing_interner,
+            INameT::OverrideDispatcherCase(dispatcher_case_name),
+        );
+        let dispatcher_case_env: &'t GeneralEnvironmentT<'s, 't> = child_of(
+            self.typing_interner,
+            self.scout_arena,
+            IInDenizenEnvironmentT::from(dispatcher_inner_env_with_bounds_for_sub_citizen),
+            *dispatcher_case_id_ref,
+            dispatcher_case_id_ref,
+            vec![],
+        );
+
+        // Step 6: Use Case Environment to Find Override, see UCEFO.
+
+        let overriding_param_coord = CoordT {
+            kind: KindT::from(dispatcher_case_placeholdered_sub_citizen),
+            ..dispatcher_placeholdered_abstract_param_type
+        };
+        let mut override_function_param_types: Vec<CoordT<'s, 't>> =
+            dispatching_func_prototype.prototype.param_types().to_vec();
+        override_function_param_types[abstract_index as usize] = overriding_param_coord;
+
+        let extra_envs: Vec<IInDenizenEnvironmentT<'s, 't>> = vec![
+            coutputs.get_outer_env_for_type(&[range], interface_template_id),
+            coutputs.get_outer_env_for_type(&[range], sub_citizen_template_id),
+        ];
+        let found_function = self.find_function(
+            IInDenizenEnvironmentT::from(dispatcher_case_env),
+            coutputs,
+            &[range, impl_t.templata.impl_.range],
+            call_location,
+            override_imprecise_name,
+            &[],
+            &[],
+            RegionT {},
+            &override_function_param_types,
+            &extra_envs,
+            true,
+        ).unwrap_or_else(|_e| panic!("Unimplemented: CouldntFindOverrideT error"));
+
+        assert!(coutputs.get_instantiation_bounds(self.typing_interner, found_function.prototype.id).is_some());
+
+        let impl_placeholder_to_dispatcher_placeholder_slice =
+            self.typing_interner.alloc_slice_from_vec(impl_placeholder_to_dispatcher_placeholder);
+        let impl_independent_placeholder_to_case_placeholder_slice =
+            self.typing_interner.alloc_slice_from_vec(impl_independent_placeholder_to_case_placeholder);
+
+        let reachable_map = self.typing_interner.alloc_index_map_from_iter(
+            dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().map(|_| {
+                panic!("Unimplemented: reachable_map computation from dispatcherAndCasePlaceholderedImplReachablePrototypes")
+            })
+        );
+
+        OverrideT {
+            dispatcher_call_id: *dispatcher_id_ref,
+            impl_placeholder_to_dispatcher_placeholder: impl_placeholder_to_dispatcher_placeholder_slice,
+            impl_placeholder_to_case_placeholder: impl_independent_placeholder_to_case_placeholder_slice,
+            dispatcher_and_case_placeholdered_impl_reachable_prototypes: reachable_map,
+            case_id: *dispatcher_case_id_ref,
+            override_prototype: *found_function.prototype,
+            dispatcher_instantiation_bound_params,
+        }
     }
 /*
   private def lookForOverride(

@@ -59,7 +59,7 @@ where 's: 't,
 {
     pub fn convert_exprs(
         &self,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -110,7 +110,7 @@ where 's: 't,
 {
     pub fn convert(
         &self,
-        env: &IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -208,7 +208,7 @@ where 's: 't,
 {
     pub fn convert_with_subkind(
         &self,
-        calling_env: &IInDenizenEnvironmentT,
+        calling_env: IInDenizenEnvironmentT,
         coutputs: &mut CompilerOutputs,
         range: &[RangeS],
         call_location: LocationInDenizen,

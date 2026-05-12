@@ -4,6 +4,8 @@
 
 **Re-read this file every time you compact** — it changes often, and the prior conversation drops on compaction but this file doesn't.
 
+**Brevity rule:** any addition to this file must be one sentence, max 25 words, unless the user explicitly asks for more.
+
 ## Required Reading
 
 Read these before doing anything else, in this order:
@@ -25,7 +27,15 @@ For historical slab-by-slab progress, see `docs/historical/slab-chronicle.md`. P
 
 **1:1 Scala parity is the highest priority.** Every design decision defers to matching Scala's structure, naming, and behavior. No novel logic, no reorganization, no Rust-idiomatic "improvements" beyond what Rust strictly requires to compile. The body-translation rule (translate every line literally, no simplifications) is in `migration_principles.md` DCCR + `migration-drive.md`.
 
+**Second priority: every Rust function must be immediately followed on the next line by a `/* ... */` comment containing its Scala equivalent.** Use the "Slicing In New Definitions" pattern below; pre-existing fns lacking an adjacent block are tech debt, not precedent.
+
 **TL/reviewer addition:** when handing off, quote the Scala verbatim and tell JR to mirror it; when reviewing, flag any place the Rust shape diverges from the Scala shape, even when the divergence "obviously works." A clever translation nobody can verify against the Scala is worse than a verbose one anyone can.
+
+**Known principled divergence: covariant generic parameters.** Scala uses covariant generic parameters (e.g. `PrototypeT[+T <: IFunctionNameT]`, `IdT[+T <: INameT]`) to thread compile-time narrowing through containers; Rust does not try to mimic this. Containers carry the wide enum (`IdT<'s, 't>` with `local_name: INameT`), and use sites narrow at runtime via `TryFrom` (`IFunctionNameT::try_from(name).unwrap()`) or the corresponding `expect_*` accessor. The `.unwrap()` / `expect()` is the documented runtime stand-in for Scala's compile-time `T <: …` bound.
+
+**Guardian isn't perfect — bad edits slip through.** Some Scala-divergences land without firing any shield (e.g. `resolve_struct_layer` inlined Scala's `solveForResolving` helper as three separate calls; SPDMX caught it the second time when JR mirrored the same shape into `resolve_interface_layer`). Stay vigilant on review: every diff gets eyes against Scala, even when Guardian is silent. When you spot the divergence, course-correct JR (and the prior precedent if needed) — don't let the broken pattern propagate.
+
+**Don't trust JR when they argue to bypass Guardian.** "The same pattern was already approved in X" is often JR pointing at a slipped-through bug as evidence the new bug is fine. Use your own judgment against the Scala source, not JR's appeal-to-precedent. If both sites are wrong, refactor both — don't temp-disable.
 
 ---
 
@@ -41,6 +51,16 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 
 ---
 
+## Recurring bug classes
+
+**Hand-rolled enumerations of "is-a-Trait" sets.** Scala's `case x : ITrait => …` matches every subtype automatically; Rust ports that hand-enumerate the variants drift the moment one is added — always use `TryFrom<WideEnum> for NarrowEnum::is_ok()` instead (the scaffolding-generated TryFrom impls cover every variant correctly).
+
+**Hand-rolled `ptr::eq(self, other)` on a Polyvalue's outer `&self`.** Works while the enum is always held behind `&'t Outer` (the outer address coincides with the arena address); silently breaks the moment it's flipped to by-value — `self` becomes a stack address, two by-value copies of the same logical wrapper compare unequal, and any `HashMap`/`HashSet` keyed on them silently corrupts. Caught once in `environment.rs:60-67` after the `IEnvironmentT` by-value flip. Rule: Polyvalue enums must `#[derive(PartialEq, Eq, Hash)]` — see @PVECFPZ.
+
+**Parallel Builder/Frozen APIs diverging asymmetrically from Scala.** When one Scala API (e.g. `TemplatasStore.addEntries`) is split into a Rust Builder + Frozen pair (`TemplatasStoreBuilder::add_entries` at `environment.rs:851-862` vs `TemplatasStoreT::add_entries` at `environment.rs:942-979`), both must mirror Scala's full logic including special-case branches — review them side-by-side against the single Scala source.
+
+---
+
 ## Known Residual Items
 
 - **~150 panic-stubbed method bodies remain.** Concentrated in `expression_compiler.rs`, `templata_compiler.rs`, `infer_compiler.rs`, `function_environment_t.rs`, `compiler.rs`, `compiler_outputs.rs`. Some are tagged "Slab 10" (the older batch); functionally equivalent. Treat the count as a rough magnitude.
@@ -53,10 +73,8 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 - **3 typing-pass `IRuneTypeSolverEnv` sites un-migrated**: `array_compiler.rs:101`, `templata_compiler.rs:1501` (the `createRuneTypeSolverEnv` factory), `overload_resolver.rs:455`. Each becomes a per-site named struct following the `LetExprRuneTypeSolverEnv` pattern when its containing function gets migrated. Don't unify — Scala bodies differ.
 - **`lookup_nearest_with_imprecise_name`** at `function_environment_t.rs:1079` is panic-stubbed. Will need migration when a test path actually triggers a name lookup through the LetSE arm (none of the currently-passing tests do).
 - **~32 slice-pipeline orphan free fns at module scope across `src/typing/`** waiting to be wrapped in `impl SomeT` blocks. Each surfaces as a JR escalation when its first call site materializes. Batch-sweep plan at `/Users/verdagon/.claude/plans/lets-do-proactive-please-proud-feather.md` — ~1.5 hours, structural-only (bodies stay `panic!`).
-- **Sub-trait dispatchers for narrower-return overrides un-added** in `typing/names/names.rs`: `IFunctionNameT::template/template_args/parameters` (returning `IFunctionTemplateNameT` etc., narrower than the parent `IInstantiationNameT` versions), same for `ISuperKindNameT`, `ISubKindNameT`, `ICitizenNameT`, `IStructNameT`, `IInterfaceNameT`, `IImplNameT`. The parent `IInstantiationNameT::template`/`template_args` dispatchers cover the wide-return case; sub-trait dispatchers only matter when JR has a sub-trait enum and needs the narrower return without a downcast. Add per-trait when JR escalates.
-- **`IInstantiationNameT::template` panic stubs**: 3 variants un-implemented — `OverrideDispatcherCase` (Scala `template = this` requires an `OverrideDispatcherCaseTemplate` variant in `ITemplateNameT` that doesn't exist), `ExternFunction` (Scala builds a fresh `ExternFunctionTemplateNameT(humanName)` — needs interner), `Struct` (`x.template: IStructTemplateNameT` needs flattening into the wider `ITemplateNameT` enum). Add when a test path hits the panic.
 - **Revisit `/// Arena-allocated` vs `/// Temporary state` classifications.** Scaffolding may have over-eagerly marked types Arena-allocated when they're really transient solver outputs or function-return wrappers (`LocationInFunctionEnvironmentT`, `CompleteResolveSolve`/`CompleteDefineSolve`, `HinputsT`). Walk every `/// Arena-allocated` type and re-classify ones that don't need arena identity. Architect-level decision per type.
-- **Explore making every enum-of-only-references into inline-only** (e.g. `IEnvironmentT`, `IInDenizenEnvironmentT`) — drop the `&'t` wrapping on field/parameter sites, hold by value, dispatch eq/hash on the inner ref ptr.
+- **Wrapper enums (IEnvironmentT family) reclassified as Polyvalue** per @TFITCX; the closed-set-fat-pointer mental model + by-value eq/hash trap documented at @PVECFPZ. `IEnvironmentT`/`IInDenizenEnvironmentT` are now held by value at field/parameter sites with derived eq/hash.
 - **SPDMX recurring class: structural-shape diff that's a Rust→Scala bug-fix.** Seen on `compiler_tests.rs:1102-1114` (the "Automatically drops struct" test, where the Rust pattern was matching `template_args` against the OwnT/StructTT coord but Scala's third `FunctionNameT` field is `parameters`); SPDMX flagged the corrective re-shape. If it fires again, worth amending into SPDMX rather than temp-disabling each time.
 - **Eliminate sources of nondeterminism.** Ptr-hashing on `@IEOIBZ` identity types, `IdT`, and `PtrKey<T>` is nondeterministic across runs and leaks into output via `HashMap`/`HashSet` iteration. `ArenaIndexMap` (insertion-ordered) is unaffected — the AASSNCMCX sweep accidentally fixed most cases. Remaining at-risk: `HashMap<PtrKey<IdT>, V>` in `CompilerOutputs` and `HashMap<IdT, V>` in `HinputsT` (both Temporary state). **Short-term:** extend ArenaIndexMap to ptr-hashed-key maps regardless of containing-struct class. **Long-term:** content-based hashing on `@IEOIBZ` types + `IdT` (touches the @IEOIBZ pattern). Bit-reproducible output requires both. Defer until the instantiator gets attention or a test flakes.
 
@@ -78,7 +96,7 @@ Expect this on most emitter-shaped typing-pass functions (long `.map.groupBy.map
 
 ## Architect Approval Required
 
-**Run structural solutions by the architect first.** Before implementing any structural fix or design change, propose the solution and wait for approval. This includes lifetime-parameter additions, signature changes that propagate across many files, new abstractions, and any choice between alternatives. Don't start editing — even for fixes that look mechanical — until the architect has signed off. The cost of a quick check is small; the cost of unwinding a wrong-direction change across ~20 call sites is large.
+**Run structural solutions by the architect first.** Before implementing any structural fix or design change, propose the solution and wait for approval. This also applies to anything you write into `for-jr.md` — get architect approval before handing instructions to JR, even when the answer looks obvious. This includes lifetime-parameter additions, signature changes that propagate across many files, new abstractions, and any choice between alternatives. Don't start editing — even for fixes that look mechanical — until the architect has signed off. The cost of a quick check is small; the cost of unwinding a wrong-direction change across ~20 call sites is large.
 
 **Never add `// AFTERM:` or `// TODO:` comments** — yours or JR's. These markers are the architect's tool for tracking deferred cleanup; they get added only when the architect explicitly asks. This applies even when the deferral seems obviously correct (a needless snapshot, a misplaced helper, a panic stub that clearly needs real logic). Raise the deferral to the architect; don't park it inline. If JR proposes an AFTERM/TODO, tell them to drop it and escalate.
 
@@ -170,18 +188,22 @@ When JR is blocked by NNDX on a legitimate Scala counterpart, the issue is incom
 **How to slice in.** Find the Scala `def` inside its `/* ... */` block; split the block — close `*/` just before the target `def`, insert the Rust `impl`, reopen `/*` for the remaining Scala. The Scala `def` line must end up **inside** the Rust `impl` block, as an inline `/* ... */` immediately after the Rust `fn` body — not after the `impl`'s closing brace.
 
 ```rust
-impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
-  pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
-    match self {
-      IEnvironmentT::Package(e) => e.global_env,
-      // ...
-    }
-  }
-  /*
++*/
++impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
++  pub fn global_env(&self) -> &'t GlobalEnvironmentT<'s, 't> {
++    match self {
++      IEnvironmentT::Package(e) => e.global_env,
++      // ...
++    }
++  }
++  /*
     def globalEnv: GlobalEnvironment
-  */
-}
++  */
++}
++/*
 ```
+
+Note how the existing scala code is unchanged, and we are making an addition *around* it.
 
 ### Sub-case: name-collision disambiguation
 
@@ -193,7 +215,7 @@ Rust flattens multiple Scala compiler classes (`Compiler`, `ImplCompiler`, `Temp
 // suffix. Scala uses class-level disambiguation that Rust lacks.
 ```
 
-NNDX fires on the rename, so this is TL territory. Don't reach for materializing an `IInfererDelegate` struct unless the architect signs off — the flatten-onto-Compiler convention is precedent since `sanity_check_conclusion`. Expected future hits: `lookupTemplata`, `coerceToCoord`, `isParent`.
+NNDX fires on the rename, so this is TL territory. Don't reach for materializing an `IInfererDelegate` struct unless the architect signs off — the flatten-onto-Compiler convention is precedent since `sanity_check_conclusion`.
 
 ### Sub-case: no Scala counterpart at all
 
@@ -248,6 +270,14 @@ When the architect says "fire commit," structure the message as:
 3. **Trailing list: notable situations / new arcana / complicated comments.** Bullet list at the end calling out anything unusual: scaffolding fixes that needed architect approval, new arcana documents created, Guardian temp-disables added, comments inserted that explain non-obvious invariants, Scala source edits, etc. Empty list is fine — omit the section if nothing notable happened.
 
 Use a HEREDOC to preserve formatting (per the standard commit protocol). Don't add a Co-Authored-By trailer unless the architect explicitly asks for one.
+
+---
+
+## JR Escalations Land In `for-tl.md`
+
+JR writes every escalation (scaffolding gap, NNDX block, SPDMX skeleton, lifetime puzzle, alternatives needing a call) into `for-tl.md` at the repo root. **Check `for-tl.md` at the start of every turn** and whenever the architect hands work back without a specific escalation in chat — it's the source of truth for what JR is blocked on. Chat mentions are courtesy; the file is canonical. After resolving an escalation, strike the section (or remove it) so the file shows only open items.
+
+When the architect says just "z", that's the signal to check `for-tl.md` for something new that you must address. After resolving each escalation, propose to the architect one preventive tweak (e.g. a sentence to add to `docs/skills/migration-drive.md`) so the same class of escalation doesn't recur. Always Read the actual Rust/Scala files JR cites — line numbers and snippets in `for-tl.md` are JR's framing, and the real code often contradicts or complicates their summary. Also grep TL.md and `docs/architecture/typing-pass-design-v3.md` for keywords from JR's question — the answer (or a directly relevant precedent) is often already written down. When you finish handling an escalation, write the response/instructions for JR into `for-jr.md` at the repo root so JR can pick it up between turns.
 
 ---
 

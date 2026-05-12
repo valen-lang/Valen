@@ -108,7 +108,7 @@ fn get_puzzles<'s>(rule: &IRulexSR<'s>) -> Vec<Vec<IRuneS<'s>>> {
     }
     IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in identifiability get_puzzles"),
     IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in identifiability get_puzzles"),
-    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in identifiability get_puzzles"),
+    IRulexSR::KindComponents(_) => vec![vec![]],
     IRulexSR::CoordComponents(_) => vec![vec![]],
     IRulexSR::PrototypeComponents(_) => vec![vec![]],
     IRulexSR::Resolve(_) => vec![vec![]],
@@ -180,7 +180,9 @@ fn solve_rule_impl<'s>(
   solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, bool>,
 ) -> Result<(), ISolverError<IRuneS<'s>, bool, IIdentifiabilityRuleError>> {
   match rule {
-    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in identifiability solve_rule"),
+    IRulexSR::KindComponents(x) => {
+      solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.kind_rune.rune.clone(), true), (x.mutability_rune.rune.clone(), true)].into_iter().collect(), vec![])
+    }
     IRulexSR::CoordComponents(x) => {
       solver_state.commit_step::<IIdentifiabilityRuleError>(false, vec![rule_index], [(x.result_rune.rune.clone(), true), (x.ownership_rune.rune.clone(), true), (x.kind_rune.rune.clone(), true)].into_iter().collect(), vec![])
     }

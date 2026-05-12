@@ -47,7 +47,7 @@ where 's: 't,
 {
     pub fn resolve_tuple(
         &self,
-        env: &IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -75,7 +75,7 @@ where 's: 't,
 {
     pub fn make_tuple_kind(
         &self,
-        env: &IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -111,7 +111,7 @@ where 's: 't,
 {
     pub fn make_tuple_coord(
         &self,
-        env: &IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,

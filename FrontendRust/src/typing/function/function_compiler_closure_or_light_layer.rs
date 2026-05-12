@@ -106,9 +106,9 @@ where 's: 't,
 {
     pub fn evaluate_templated_closure_function_from_call_for_banner(
         &self,
-        parent_env: &'t IEnvironmentT<'s, 't>,
+        parent_env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         closure_struct_ref: StructTT<'s, 't>,
@@ -247,9 +247,9 @@ where 's: 't,
 {
     pub fn evaluate_generic_light_function_from_call_for_prototype2(
         &self,
-        parent_env: &'t IEnvironmentT<'s, 't>,
+        parent_env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function: &'s FunctionA<'s>,
@@ -304,15 +304,31 @@ where 's: 't,
 {
     pub fn evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
         &self,
-        parent_env: IEnvironmentT,
-        coutputs: CompilerOutputs,
-        calling_env: IInDenizenEnvironmentT,
-        call_range: Vec<RangeS>,
-        call_location: LocationInDenizen,
-        function: FunctionA,
-        args: Vec<Option<CoordT>>,
-    ) -> IDefineFunctionResult<'_, '_> {
-        panic!("Unimplemented: evaluate_generic_virtual_dispatcher_function_for_prototype");
+        parent_env: IEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        call_range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        function: &'s FunctionA<'s>,
+        args: &[Option<CoordT<'s, 't>>],
+    ) -> IDefineFunctionResult<'s, 't> {
+        self.check_not_closure(function);
+        let function_template_name = self.translate_generic_function_name(function.name);
+        let function_name_local: INameT<'s, 't> = match function_template_name {
+            IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
+            IFunctionTemplateNameT::ForwarderFunctionTemplate(r) => INameT::ForwarderFunctionTemplate(r),
+            IFunctionTemplateNameT::ConstructorTemplate(r) => INameT::ConstructorTemplate(r),
+            IFunctionTemplateNameT::AnonymousSubstructConstructorTemplate(r) => INameT::AnonymousSubstructConstructorTemplate(r),
+            IFunctionTemplateNameT::LambdaCallFunctionTemplate(r) => INameT::LambdaCallFunctionTemplate(r),
+            IFunctionTemplateNameT::OverrideDispatcherTemplate(r) => INameT::OverrideDispatcherTemplate(r),
+            IFunctionTemplateNameT::ExternFunction(r) => INameT::ExternFunction(r),
+            IFunctionTemplateNameT::FunctionBoundTemplate(r) => INameT::FunctionBoundTemplate(r),
+            IFunctionTemplateNameT::PredictedFunctionTemplate(r) => INameT::PredictedFunctionTemplate(r),
+        };
+        let outer_env_id = parent_env.id().add_step(self.typing_interner, function_name_local);
+        let outer_env = self.make_env_without_closure_stuff(parent_env, function, outer_env_id, true);
+        self.evaluate_generic_virtual_dispatcher_function_for_prototype_solving(
+            outer_env, coutputs, calling_env, call_range, call_location, args)
     }
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
@@ -356,7 +372,7 @@ where 's: 't,
 {
     pub fn evaluate_generic_light_function_from_non_call(
         &self,
-        parent_env: &'t IEnvironmentT<'s, 't>,
+        parent_env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
@@ -557,9 +573,9 @@ where 's: 't,
 {
     pub fn evaluate_templated_light_banner_from_call_closure_or_light(
         &self,
-        parent_env: &'t IEnvironmentT<'s, 't>,
+        parent_env: IEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function: &'s FunctionA<'s>,
@@ -643,7 +659,7 @@ where 's: 't,
 {
     fn make_env_without_closure_stuff(
         &self,
-        outer_env: &'t IEnvironmentT<'s, 't>,
+        outer_env: IEnvironmentT<'s, 't>,
         function: &'s FunctionA<'s>,
         template_id: &'t IdT<'s, 't>,
         is_root_compiling_denizen: bool,
@@ -651,7 +667,7 @@ where 's: 't,
         let templatas = TemplatasStoreBuilder::new(template_id).build_in(self.typing_interner);
         self.typing_interner.alloc(BuildingFunctionEnvironmentWithClosuredsT {
             global_env: outer_env.global_env(),
-            parent_env: *outer_env,
+            parent_env: outer_env,
             id: *template_id,
             templatas,
             function,

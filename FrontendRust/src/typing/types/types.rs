@@ -159,7 +159,7 @@ case class CoordT(
 // KindT is inline-owned (not arena-interned). Concrete non-primitive payloads
 // (StructTT, InterfaceTT, etc.) are arena-interned and held as &'t refs here.
 // Primitives inline by value; compound types use &'t to keep the enum small (see @WVSBIZ).
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum KindT<'s, 't> {
   Never(NeverT),
@@ -414,7 +414,7 @@ object ICitizenTT {
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISubKindTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -424,11 +424,32 @@ pub enum ISubKindTT<'s, 't> {
 /*
 // Structs, interfaces, and placeholders
 sealed trait ISubKindTT extends KindT {
+*/
+impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
+    pub fn id(&self) -> IdT<'s, 't> {
+        match self {
+            ISubKindTT::Struct(s) => s.id,
+            ISubKindTT::Interface(i) => i.id,
+            ISubKindTT::KindPlaceholder(kp) => kp.id,
+        }
+    }
+    /*
   def id: IdT[ISubKindNameT]
+*/
+    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+        match self {
+            ISubKindTT::Struct(s) => ICitizenTT::Struct(s),
+            ISubKindTT::Interface(i) => ICitizenTT::Interface(i),
+            ISubKindTT::KindPlaceholder(_) => panic!("vfail"),
+        }
+    }
+    /* Guardian: disable-all */
+}
+/*
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ISuperKindTT<'s, 't> {
   Interface(&'t InterfaceTT<'s, 't>),
@@ -437,11 +458,23 @@ pub enum ISuperKindTT<'s, 't> {
 /*
 // Interfaces and placeholders
 sealed trait ISuperKindTT extends KindT {
+*/
+impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
+    pub fn id(&self) -> IdT<'s, 't> {
+        match self {
+            ISuperKindTT::Interface(i) => i.id,
+            ISuperKindTT::KindPlaceholder(kp) => kp.id,
+        }
+    }
+    /*
   def id: IdT[ISuperKindNameT]
+*/
+}
+/*
 }
 */
 // Inline-owned wrapper enum; concrete payloads are arena-interned &'t refs.
-/// Value-type (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub enum ICitizenTT<'s, 't> {
   Struct(&'t StructTT<'s, 't>),
@@ -449,7 +482,19 @@ pub enum ICitizenTT<'s, 't> {
 }
 /*
 sealed trait ICitizenTT extends ISubKindTT with IInterning {
+*/
+impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
+    pub fn id(&self) -> IdT<'s, 't> {
+        match self {
+            ICitizenTT::Struct(s) => s.id,
+            ICitizenTT::Interface(i) => i.id,
+        }
+    }
+    /*
   def id: IdT[ICitizenNameT]
+*/
+}
+/*
 }
 */
 /// Interned (see @TFITCX)
@@ -498,7 +543,7 @@ pub struct InterfaceTTValT<'s, 't> {
 /// Interned (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetT<'s, 't> {
-  pub env: &'t IInDenizenEnvironmentT<'s, 't>,
+  pub env: IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
   pub _must_intern: crate::typing::typing_interner::MustIntern,
 }
@@ -519,7 +564,7 @@ case class OverloadSetT(
 /// Interning transient (see @TFITCX)
 #[derive(Copy, Clone, PartialEq, Eq, Hash, Debug)]
 pub struct OverloadSetTValT<'s, 't> {
-  pub env: &'t IInDenizenEnvironmentT<'s, 't>,
+  pub env: IInDenizenEnvironmentT<'s, 't>,
   pub name: &'s IImpreciseNameS<'s>,
 }
 
@@ -569,7 +614,7 @@ where 's: 't,
   OverloadSet(OverloadSetTValT<'s, 't>),
 }
 
-/// Interning transient (see @TFITCX)
+/// Polyvalue (see @TFITCX)
 #[derive(Copy, Clone, Hash, PartialEq, Eq, Debug)]
 pub enum InternedKindPayloadT<'s, 't>
 where 's: 't,

@@ -1914,7 +1914,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> InterfaceFunctionCallTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result: ReferenceResultT = ReferenceResultT(resultReference)
 }

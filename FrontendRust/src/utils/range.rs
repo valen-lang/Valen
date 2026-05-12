@@ -31,10 +31,24 @@ object RangeS {
     RangeS(CodeLocationS.testZero(interner), CodeLocationS.testZero(interner))
   }
 
+*/
+
+impl<'a> RangeS<'a> {
+  pub fn internal(scout_arena: &ScoutArena<'a>, internal_num: i32) -> RangeS<'a> {
+    assert!(internal_num < 0, "RangeS::internal - internal_num must be negative");
+    RangeS::new(
+      CodeLocationS::internal(scout_arena, internal_num),
+      CodeLocationS::internal(scout_arena, internal_num))
+  }
+  /*
   def internal(interner: Interner, internalNum: Int): RangeS = {
     vassert(internalNum < 0)
     RangeS(CodeLocationS.internal(interner, internalNum), CodeLocationS.internal(interner, internalNum))
   }
+  */
+}
+
+/*
 }
 */
 

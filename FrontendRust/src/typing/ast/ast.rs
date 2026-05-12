@@ -405,7 +405,7 @@ impl<'s, 't> LocationInFunctionEnvironmentT<'s, 't> {
 */
 }
 /// Value-type (see @TFITCX)
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, PartialEq, Eq)]
 pub struct AbstractT;
 /*
 case class AbstractT()
@@ -922,7 +922,13 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn get_virtual_index(&self) -> Option<i32> { panic!("Unimplemented: get_virtual_index"); }
+    pub fn get_virtual_index(&self) -> Option<usize> {
+        let indices: Vec<usize> = self.params.iter().enumerate()
+            .filter_map(|(index, p)| if p.virtuality.is_some() { Some(index) } else { None })
+            .collect();
+        assert!(indices.len() <= 1);
+        indices.into_iter().next()
+    }
 /*
   def getVirtualIndex: Option[Int] = {
     val indices =
@@ -1018,12 +1024,9 @@ impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
 }
 impl<'s, 't> PrototypeT<'s, 't> where 's: 't, {
     pub fn param_types(&self) -> &'t [CoordT<'s, 't>] {
-        match self.id.local_name {
-            INameT::Function(f) => f.parameters,
-            INameT::LambdaCallFunction(f) => f.parameters,
-            INameT::ForwarderFunction(_) => panic!("implement: param_types for ForwarderFunction"),
-            _ => panic!("param_types called on non-function name: {:?}", self.id.local_name),
-        }
+        IFunctionNameT::try_from(self.id.local_name)
+            .unwrap_or_else(|_| panic!("param_types called on non-function name: {:?}", self.id.local_name))
+            .parameters()
     }
 /*
   def paramTypes: Vector[CoordT] = id.localName.parameters

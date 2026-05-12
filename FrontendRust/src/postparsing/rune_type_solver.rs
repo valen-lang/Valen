@@ -511,7 +511,12 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
   use crate::postparsing::itemplatatype::*;
 
   match rule {
-    IRulexSR::KindComponents(_) => panic!("IRulexSR::KindComponents not yet migrated in rune_type solve_rule"),
+    IRulexSR::KindComponents(x) => {
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+        (x.kind_rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {})),
+        (x.mutability_rune.rune.clone(), ITemplataType::MutabilityTemplataType(MutabilityTemplataType {})),
+      ].into_iter().collect(), vec![])
+    }
     IRulexSR::CoordComponents(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
         (x.result_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),

@@ -8,6 +8,7 @@ use crate::postparsing::*;
 use crate::solver::solver::*;
 use crate::solver::simple_solver_state::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::citizen::impl_compiler::IsParentResult;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::citizens::*;
 use crate::typing::ast::expressions::*;
@@ -819,7 +820,7 @@ fn complex_solve<'s, 't>(
     env: InferEnv<'s, 't>,
     solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
 ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-    panic!("Unimplemented: complex_solve");
+    complex_solve_inner(state, env, solver_state)
 }
 /*
   // Per @CSCDSRZ, complex solve infers conclusions from unsolved rules but doesn't solve them.
@@ -834,11 +835,36 @@ fn complex_solve<'s, 't>(
 
 */
 fn complex_solve_inner<'s, 't>(
-    state: CompilerOutputs<'s, 't>,
-    env: InferEnv<'s, 't>,
-    solver_state: SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
+    _state: &mut CompilerOutputs<'s, 't>,
+    _env: InferEnv<'s, 't>,
+    solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
 ) -> Result<(), ISolverError<IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
-    panic!("Unimplemented: complex_solve_inner");
+    let unsolved_rules = solver_state.get_unsolved_rules();
+
+    let unsolved_receiver_runes: Vec<IRuneS<'s>> = unsolved_rules.iter().filter_map(|rule| {
+        match rule {
+            IRulexSR::CoordSend(r) => Some(r.receiver_rune.rune),
+            IRulexSR::CallSiteCoordIsa(r) => Some(r.super_rune.rune),
+            _ => None,
+        }
+    }).collect();
+
+    let receiver_runes = crate::postparsing::rules::rule_scout::get_kind_equivalent_runes_iter(
+        &unsolved_rules,
+        unsolved_receiver_runes.into_iter(),
+    );
+
+    let new_conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = receiver_runes.iter().filter_map(|receiver| {
+        panic!("implement: complex_solve_inner — receiver loop body");
+    }).collect();
+
+    // Per @CSCDSRZ, complex solve only produces conclusions — empty solvedRules and newRules is correct.
+    match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(true, vec![], new_conclusions, vec![]) {
+        Ok(_) => {}
+        Err(e) => return Err(e),
+    }
+
+    Ok(())
 }
 /*
   private def complexSolveInner(delegate: IInfererDelegate, state: CompilerOutputs, env: InferEnv, solverState: SimpleSolverState[IRulexSR, IRuneS, ITemplataT[ITemplataType]]): Result[Unit, ISolverError[IRuneS, ITemplataT[ITemplataType], ITypingPassSolverError]] = {
@@ -1093,23 +1119,240 @@ where 's: 't,
         //   rule match {
         match rule {
             //     case KindComponentsSR(...) =>
-            IRulexSR::KindComponents(_) => { panic!("Unimplemented: solve_rule KindComponents"); }
-            //     case CoordComponentsSR(...) =>
-            IRulexSR::CoordComponents(_) => { panic!("Unimplemented: solve_rule CoordComponents"); }
+            //     case KindComponentsSR(range, kindRune, mutabilityRune) => {
+            IRulexSR::KindComponents(kc) => {
+                let kind = match solver_state.get_conclusion(&kc.kind_rune.rune).expect("kind rune not solved in KindComponentsSR") {
+                    ITemplataT::Kind(kt) => kt.kind,
+                    _ => panic!("Expected KindTemplataT in KindComponentsSR"),
+                };
+                let mutability = self.get_mutability(state, kind);
+                let mut conclusions = HashMap::new();
+                conclusions.insert(kc.mutability_rune.rune, mutability);
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        let ranges = std::iter::once(kc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                    }
+                }
+            }
+            //     case CoordComponentsSR(range, resultRune, ownershipRune, kindRune) => {
+            IRulexSR::CoordComponents(cc) => {
+                match solver_state.get_conclusion(&cc.result_rune.rune) {
+                    None => {
+                        let ownership = match solver_state.get_conclusion(&cc.ownership_rune.rune).expect("ownership rune not solved in CoordComponentsSR") {
+                            ITemplataT::Ownership(ot) => ot.ownership,
+                            _ => panic!("Expected OwnershipTemplataT in CoordComponentsSR"),
+                        };
+                        let kind = match solver_state.get_conclusion(&cc.kind_rune.rune).expect("kind rune not solved in CoordComponentsSR") {
+                            ITemplataT::Kind(kt) => kt.kind,
+                            _ => panic!("Expected KindTemplataT in CoordComponentsSR"),
+                        };
+                        let new_coord = match self.get_mutability(state, kind) {
+                            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
+                                CoordT { ownership: OwnershipT::Share, region: RegionT, kind }
+                            }
+                            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) | ITemplataT::Placeholder(PlaceholderTemplataT { .. }) => {
+                                CoordT { ownership, region: RegionT, kind }
+                            }
+                            other => panic!("implement: CoordComponents unexpected mutability {:?}", other),
+                        };
+                        let new_templata = ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: new_coord }));
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(cc.result_rune.rune, new_templata);
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                    Some(coord_templata) => {
+                        let coord = match coord_templata {
+                            ITemplataT::Coord(ct) => ct.coord,
+                            _ => panic!("Expected CoordTemplataT in CoordComponentsSR result"),
+                        };
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(cc.ownership_rune.rune, ITemplataT::Ownership(OwnershipTemplataT { ownership: coord.ownership }));
+                        conclusions.insert(cc.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(cc.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                }
+            }
             //     case PrototypeComponentsSR(...) =>
             IRulexSR::PrototypeComponents(_) => { panic!("Unimplemented: solve_rule PrototypeComponents"); }
-            //     case ResolveSR(...) =>
-            IRulexSR::Resolve(_) => { panic!("Unimplemented: solve_rule Resolve"); }
-            //     case CallSiteFuncSR(...) =>
-            IRulexSR::CallSiteFunc(_) => { panic!("Unimplemented: solve_rule CallSiteFunc"); }
-            //     case DefinitionFuncSR(...) =>
-            IRulexSR::DefinitionFunc(_) => { panic!("Unimplemented: solve_rule DefinitionFunc"); }
+            //     case ResolveSR(range, resultRune, name, paramListRune, returnRune) => {
+            IRulexSR::Resolve(resolve) => {
+                // If we're here, then we're resolving a prototype.
+                // This happens at the call-site.
+                // The function (or struct) can either supply a default resolve rule (usually
+                // via the `func moo(int)void` syntax) or let the caller pass it in.
+                let param_coords = match solver_state.get_conclusion(&resolve.params_list_rune.rune).expect("paramListRune not solved in ResolveSR") {
+                    ITemplataT::CoordList(cl) => cl.coords,
+                    _ => panic!("Expected CoordListTemplataT in ResolveSR paramListRune"),
+                };
+                let return_coord = match solver_state.get_conclusion(&resolve.return_rune.rune).expect("returnRune not solved in ResolveSR") {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("Expected CoordTemplataT in ResolveSR returnRune"),
+                };
+                // We only pretend this function exists for now, and postpone actually resolving it until later, see SFWPRL.
+                let prototype_templata = self.predict_function(env, state, resolve.range, resolve.name, param_coords, return_coord);
+                let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(prototype_templata));
+                let mut conclusions = HashMap::new();
+                conclusions.insert(resolve.result_rune.rune, new_templata);
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        let ranges = std::iter::once(resolve.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                    }
+                }
+            }
+            //     case CallSiteFuncSR(range, prototypeRune, name, paramListRune, returnRune) => {
+            IRulexSR::CallSiteFunc(csf) => {
+                // If we're here, then we're solving in the callsite, not the definition.
+                // This should look up a function with that name and param list, and make sure
+                // its return matches.
+                match solver_state.get_conclusion(&csf.prototype_rune.rune).expect("prototypeRune not solved in CallSiteFuncSR") {
+                    ITemplataT::Prototype(proto_templata) => {
+                        let prototype = proto_templata.prototype;
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(csf.params_list_rune.rune, ITemplataT::CoordList(self.typing_interner.alloc(CoordListTemplataT { coords: prototype.param_types() })));
+                        conclusions.insert(csf.return_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: prototype.return_type })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                    _ => {
+                        let ranges = std::iter::once(csf.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        Err(ITypingPassSolverError::CantCheckPlaceholder { range: ranges_slice })
+                    }
+                }
+            }
+            //     case DefinitionFuncSR(range, resultRune, name, paramListRune, returnRune) => {
+            IRulexSR::DefinitionFunc(def_func) => {
+                let param_coords = match solver_state.get_conclusion(&def_func.params_list_rune.rune).expect("DefinitionFunc paramListRune has no conclusion") {
+                    ITemplataT::CoordList(cl) => cl.coords,
+                    _ => panic!("implement: solve_rule DefinitionFunc non-CoordList paramList"),
+                };
+                let return_type = match solver_state.get_conclusion(&def_func.return_rune.rune).expect("DefinitionFunc returnRune has no conclusion") {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("implement: solve_rule DefinitionFunc non-Coord return"),
+                };
+                let new_prototype = self.assemble_prototype(env, state, def_func.range, def_func.name, param_coords, return_type);
+                let new_templata = ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: new_prototype }));
+                let mut conclusions = HashMap::new();
+                conclusions.insert(def_func.result_rune.rune, new_templata);
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(_e) => { panic!("implement: solve_rule DefinitionFunc InternalSolverError wrapping"); }
+                }
+            }
             //     case CallSiteCoordIsaSR(...) =>
-            IRulexSR::CallSiteCoordIsa(_) => { panic!("Unimplemented: solve_rule CallSiteCoordIsa"); }
+            IRulexSR::CallSiteCoordIsa(csia) => {
+                let sub_templata = solver_state.get_conclusion(&csia.sub_rune.rune)
+                    .expect("vassertSome: subRune not solved in CallSiteCoordIsaSR");
+                let sub_coord = match sub_templata {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("Expected CoordTemplataT for subRune in CallSiteCoordIsaSR"),
+                };
+                let super_templata = solver_state.get_conclusion(&csia.super_rune.rune)
+                    .expect("vassertSome: superRune not solved in CallSiteCoordIsaSR");
+                let super_coord = match super_templata {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("Expected CoordTemplataT for superRune in CallSiteCoordIsaSR"),
+                };
+
+                let resulting_isa_templata: ITemplataT<'s, 't> = if sub_coord == super_coord {
+                    ITemplataT::Isa(self.typing_interner.alloc(self.assemble_impl(env, csia.range, sub_coord.kind, super_coord.kind)))
+                } else if matches!(sub_coord.kind, KindT::Never(_)) {
+                    ITemplataT::Isa(self.typing_interner.alloc(self.assemble_impl(env, csia.range, sub_coord.kind, super_coord.kind)))
+                } else {
+                    let sub_kind = match ISubKindTT::try_from(sub_coord.kind) {
+                        Ok(k) => k,
+                        Err(_) => return Err(ITypingPassSolverError::BadIsaSubKind { kind: sub_coord.kind }),
+                    };
+                    let super_kind = match ISuperKindTT::try_from(super_coord.kind) {
+                        Ok(k) => k,
+                        Err(_) => return Err(ITypingPassSolverError::BadIsaSuperKind { kind: super_coord.kind }),
+                    };
+                    match self.is_parent(state, env.original_calling_env, env.parent_ranges, env.call_location, sub_kind, super_kind) {
+                        IsParentResult::IsntParent(_) => return Err(ITypingPassSolverError::IsaFailed { sub: sub_coord.kind, suuper: super_coord.kind }),
+                        IsParentResult::IsParent(is_parent) => is_parent.templata,
+                    }
+                };
+
+                let mut conclusions = HashMap::new();
+                if let Some(result_rune) = csia.result_rune {
+                    conclusions.insert(result_rune.rune, resulting_isa_templata);
+                }
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        let ranges = std::iter::once(csia.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                    }
+                }
+            }
             //     case DefinitionCoordIsaSR(...) =>
             IRulexSR::DefinitionCoordIsa(_) => { panic!("Unimplemented: solve_rule DefinitionCoordIsa"); }
-            //     case EqualsSR(...) =>
-            IRulexSR::Equals(_) => { panic!("Unimplemented: solve_rule Equals"); }
+            //     case EqualsSR(range, leftRune, rightRune) => {
+            IRulexSR::Equals(equals) => {
+                match solver_state.get_conclusion(&equals.left.rune) {
+                    None => {
+                        let right = solver_state.get_conclusion(&equals.right.rune).expect("Neither left nor right rune solved in EqualsSR");
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(equals.left.rune, right.clone());
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                    Some(left) => {
+                        let left = left.clone();
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(equals.right.rune, left);
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(equals.range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
+                }
+            }
             //     case CoordSendSR(...) =>
             IRulexSR::CoordSend(coord_send) => {
                 // See IRFU and SRCAMP for what's going on here.
@@ -1197,7 +1440,24 @@ where 's: 't,
             IRulexSR::CoerceToCoord(r) => {
                 match solver_state.get_conclusion(&r.kind_rune.rune) {
                     None => {
-                        panic!("Unimplemented: solve_rule CoerceToCoord coordRune->kindRune direction");
+                        let coord_templata = solver_state.get_conclusion(&r.coord_rune.rune).unwrap_or_else(|| panic!("implement: solve_rule CoerceToCoord no coord conclusion either"));
+                        let coord = match coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => panic!("implement: solve_rule CoerceToCoord coord conclusion not CoordTemplataT") };
+                        match coord.ownership {
+                            OwnershipT::Own | OwnershipT::Share => {
+                                let mut conclusions = std::collections::HashMap::new();
+                                conclusions.insert(r.kind_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: coord.kind })));
+                                let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                    Ok(_) => Ok(()),
+                                    Err(e) => {
+                                        let error = self.typing_interner.alloc(e);
+                                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                                    }
+                                }
+                            }
+                            _ => Err(ITypingPassSolverError::OwnershipDidntMatch { coord, expected_ownership: OwnershipT::Own }),
+                        }
                     }
                     Some(kind) => {
                         let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
@@ -1240,8 +1500,38 @@ where 's: 't,
             //     case AugmentSR(...) =>
             IRulexSR::Augment(augment) => {
                 match solver_state.get_conclusion(&augment.result_rune.rune) {
-                    Some(_outer_coord) => {
-                        panic!("implement: solve_rule Augment outerCoordRune known path");
+                    Some(outer_coord_templata) => {
+                        let outer_coord = match outer_coord_templata { ITemplataT::Coord(ct) => ct.coord, _ => panic!("implement: solve_rule Augment outerCoordRune not CoordTemplataT") };
+                        let inner_ownership = match augment.ownership {
+                            None => outer_coord.ownership,
+                            Some(augment_ownership) => {
+                                match self.get_mutability(state, outer_coord.kind) {
+                                    ITemplataT::Placeholder(_) | ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => {
+                                        if augment_ownership == OwnershipP::Share {
+                                            return Err(ITypingPassSolverError::CantShareMutable { kind: outer_coord.kind });
+                                        }
+                                        if outer_coord.ownership != evaluate_ownership(augment_ownership) {
+                                            return Err(ITypingPassSolverError::OwnershipDidntMatch { coord: outer_coord, expected_ownership: evaluate_ownership(augment_ownership) });
+                                        }
+                                        OwnershipT::Own
+                                    }
+                                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => outer_coord.ownership,
+                                    _ => panic!("implement: solve_rule Augment Some unexpected mutability"),
+                                }
+                            }
+                        };
+                        let inner_coord = CoordT { ownership: inner_ownership, region: RegionT, kind: outer_coord.kind };
+                        let ranges: Vec<RangeS<'s>> = std::iter::once(augment.range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(augment.inner_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: inner_coord })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
                     }
                     None => {
                         let inner_templata = solver_state.get_conclusion(&augment.inner_rune.rune).expect("Neither outerCoordRune nor innerRune solved in AugmentSR");
@@ -1287,8 +1577,39 @@ where 's: 't,
                     }
                 }
             }
-            //     case PackSR(...) =>
-            IRulexSR::Pack(_) => { panic!("Unimplemented: solve_rule Pack"); }
+            //     case PackSR(range, resultRune, memberRunes) => {
+            IRulexSR::Pack(pack) => {
+                match solver_state.get_conclusion(&pack.result_rune.rune) {
+                    None => {
+                        let members: Vec<CoordT<'s, 't>> = pack.members.iter().map(|member_rune| {
+                            match solver_state.get_conclusion(&member_rune.rune).expect("Pack member rune has no conclusion") {
+                                ITemplataT::Coord(ct) => ct.coord,
+                                _ => panic!("implement: solve_rule Pack member non-Coord templata"),
+                            }
+                        }).collect();
+                        let members_slice = self.typing_interner.alloc_slice_from_vec(members);
+                        let coord_list = self.typing_interner.alloc(CoordListTemplataT { coords: members_slice });
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(pack.result_rune.rune, ITemplataT::CoordList(coord_list));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(_e) => { panic!("implement: solve_rule Pack None InternalSolverError wrapping"); }
+                        }
+                    }
+                    Some(ITemplataT::CoordList(coord_list_templata)) => {
+                        let members = coord_list_templata.coords;
+                        assert_eq!(members.len(), pack.members.len());
+                        let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = pack.members.iter().zip(members.iter()).map(|(rune, coord)| {
+                            (rune.rune, ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: *coord })))
+                        }).collect();
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(_e) => { panic!("implement: solve_rule Pack Some InternalSolverError wrapping"); }
+                        }
+                    }
+                    Some(_other) => { panic!("implement: solve_rule Pack unexpected result conclusion type"); }
+                }
+            }
             //     case CallSR(range, resultRune, templateRune, argRunes) => {
             //       solveCallRule(delegate, state, env, solverState, ruleIndex, range, resultRune, templateRune, argRunes)
             //     }
@@ -1736,8 +2057,70 @@ where 's: 't,
         arg_runes: &[RuneUsage<'s>],
     ) -> Result<(), ITypingPassSolverError<'s, 't>> {
         match solver_state.get_conclusion(&result_rune.rune) {
-            Some(_result) => {
-                panic!("Unimplemented: solve_call_rule Some(result)");
+            Some(result) => {
+                let ranges: Vec<RangeS<'s>> = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect();
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                match result {
+                    ITemplataT::Kind(kt) => {
+                        match kt.kind {
+                            KindT::Struct(struct_tt) => {
+                                let struct_name = IStructNameT::try_from(struct_tt.id.local_name).unwrap_or_else(|_| panic!("solve_call_rule Some StructTT: local_name is not IStructNameT"));
+                                let template_def = solver_state.get_conclusion(&template_rune.rune).unwrap_or_else(|| panic!("solve_call_rule Some StructTT: template_rune not solved"));
+                                match template_def {
+                                    ITemplataT::StructDefinition(it) => {
+                                        if !self.citizen_is_from_template(ICitizenTT::Struct(struct_tt), template_def) {
+                                            return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
+                                        }
+                                        let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+                                            struct_name.template_args().iter().zip(arg_runes.iter())
+                                                .map(|(template_arg, arg_rune)| (arg_rune.rune, *template_arg))
+                                                .collect();
+                                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                            Ok(_) => return Ok(()),
+                                            Err(e) => {
+                                                let error = self.typing_interner.alloc(e);
+                                                return Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error });
+                                            }
+                                        }
+                                    }
+                                    other => return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: other, actual: result }),
+                                }
+                            }
+                            KindT::KindPlaceholder(_) => return Err(ITypingPassSolverError::CallResultIsntCallable { result }),
+                            KindT::Str(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Float(_) | KindT::Void(_) => {
+                                return Err(ITypingPassSolverError::CallResultIsntCallable { result });
+                            }
+                            KindT::Interface(interface_tt) => {
+                                let interface_inner_name = match interface_tt.id.local_name {
+                                    INameT::Interface(r) => r,
+                                    other => panic!("solve_call_rule Some InterfaceTT: local_name is not IInterfaceNameT: {:?}", other),
+                                };
+                                let template_def = solver_state.get_conclusion(&template_rune.rune).unwrap_or_else(|| panic!("solve_call_rule Some InterfaceTT: template_rune not solved"));
+                                match template_def {
+                                    ITemplataT::InterfaceDefinition(_it) => {
+                                        if !self.citizen_is_from_template(ICitizenTT::Interface(interface_tt), template_def) {
+                                            return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
+                                        }
+                                    }
+                                    other => return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: other, actual: result }),
+                                }
+                                let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
+                                    arg_runes.iter().zip(interface_inner_name.template_args.iter())
+                                        .map(|(arg_rune, template_arg)| (arg_rune.rune, *template_arg))
+                                        .collect();
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                    Ok(_) => return Ok(()),
+                                    Err(e) => {
+                                        let error = self.typing_interner.alloc(e);
+                                        return Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error });
+                                    }
+                                }
+                            }
+                            _ => panic!("Unimplemented: solve_call_rule Some Kind {:?}", kt.kind),
+                        }
+                    }
+                    _ => panic!("Unimplemented: solve_call_rule Some non-Kind {:?}", result),
+                }
             }
             None => {
                 let template = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in solve_call_rule None branch");
@@ -1761,7 +2144,24 @@ where 's: 't,
                             }
                         }
                     }
-                    ITemplataT::InterfaceDefinition(_it) => { panic!("Unimplemented: solve_call_rule None InterfaceDefinition"); }
+                    ITemplataT::InterfaceDefinition(it) => {
+                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
+                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")
+                        }).collect();
+                        // See SFWPRL for why we're calling predict_interface instead of resolve_interface
+                        let kind = self.predict_interface(state, env.original_calling_env, env.parent_ranges, env.call_location, *it, &args);
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Interface(self.typing_interner.intern_interface_tt(InterfaceTTValT { id: kind.id })) })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
                     ITemplataT::Kind(_kt) => { panic!("Unimplemented: solve_call_rule None Kind"); }
                     other => panic!("vimpl: solve_call_rule None {:?}", other),
                 }

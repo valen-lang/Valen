@@ -62,7 +62,7 @@ where 's: 't,
     */
     EvaluateFunction {
         name: &'t IdT<'s, 't>,
-        calling_env: &'t IInDenizenEnvironmentT<'s, 't>,
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
         origin: &'s FunctionA<'s>,
         template_args: &'t [ITemplataT<'s, 't>],
     },
@@ -87,13 +87,13 @@ where 's: 't,
         HashSet<IdT<'s, 't>>,
 
     pub function_name_to_outer_env:
-        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
     pub function_name_to_inner_env:
-        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
     pub type_name_to_outer_env:
-        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
     pub type_name_to_inner_env:
-        HashMap<IdT<'s, 't>, &'t IInDenizenEnvironmentT<'s, 't>>,
+        HashMap<IdT<'s, 't>, IInDenizenEnvironmentT<'s, 't>>,
 
     pub type_name_to_mutability:
         HashMap<IdT<'s, 't>, ITemplataT<'s, 't>>,
@@ -393,12 +393,38 @@ where 's: 't,
         instantiation_bound_args: &'t InstantiationBoundArgumentsT<'s, 't>,
     ) {
         for (_rune, reachable_bound_args) in &instantiation_bound_args.rune_to_citizen_rune_to_reachable_prototype {
-            for (_callee_rune, _reachable_prototype) in &reachable_bound_args.citizen_rune_to_reachable_prototype {
-                panic!("implement: addInstantiationBounds reachable bound assertion");
+            for (_callee_rune, reachable_prototype) in &reachable_bound_args.citizen_rune_to_reachable_prototype {
+                match reachable_prototype.id.local_name {
+                    INameT::FunctionBound(_) => {
+                        let reachable_func_super_template_id_init_steps =
+                            Compiler::get_super_template(interner, reachable_prototype.id).init_steps;
+                        let original_calling_super_template_id_init_steps =
+                            Compiler::get_super_template(interner, _original_calling_template_id).init_steps;
+                        assert!(
+                            reachable_func_super_template_id_init_steps.starts_with(original_calling_super_template_id_init_steps),
+                            "addInstantiationBounds: reachable func super template id init steps doesn't start with original calling super template id init steps"
+                        );
+                    }
+                    _ => {}
+                }
             }
         }
-        for (_rune, _caller_bound_arg_function) in &instantiation_bound_args.rune_to_bound_prototype {
-            panic!("implement: addInstantiationBounds bound prototype assertion");
+        for (_rune, caller_bound_arg_function) in &instantiation_bound_args.rune_to_bound_prototype {
+            match caller_bound_arg_function.id.local_name {
+                INameT::FunctionBound(_) => {
+                    if _sanity_check {
+                        let caller_bound_arg_func_super_template_id_init_steps =
+                            Compiler::get_super_template(interner, caller_bound_arg_function.id).init_steps;
+                        let original_calling_super_template_id_steps =
+                            Compiler::get_root_super_template(interner, _original_calling_template_id).init_steps;
+                        assert!(
+                            caller_bound_arg_func_super_template_id_init_steps.starts_with(original_calling_super_template_id_steps),
+                            "addInstantiationBounds: caller bound arg func super template id init steps doesn't start with original calling super template id steps"
+                        );
+                    }
+                }
+                _ => {}
+            }
         }
 
         let instantiation_id_ref = interner.intern_id(IdValT {
@@ -709,7 +735,9 @@ where 's: 't,
         template_name: IdT<'s, 't>,
         sealed: bool,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        assert!(self.type_declared_names.contains(&template_name));
+        assert!(!self.interface_name_to_sealed.contains_key(&template_name));
+        self.interface_name_to_sealed.insert(template_name, sealed);
     }
     /*
       def declareTypeSealed(
@@ -728,7 +756,7 @@ where 's: 't,
     pub fn declare_function_inner_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(functionDeclaredNames.contains(nameT))
         assert!(self.function_declared_names.contains_key(name_t));
@@ -756,7 +784,7 @@ where 's: 't,
     pub fn declare_function_outer_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(!functionNameToOuterEnv.contains(nameT))
         assert!(!self.function_name_to_outer_env.contains_key(name_t));
@@ -780,7 +808,7 @@ where 's: 't,
     pub fn declare_type_outer_env(
         &mut self,
         name_t: &'t IdT<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(typeDeclaredNames.contains(nameT))
         assert!(self.type_declared_names.contains(name_t));
@@ -809,7 +837,7 @@ where 's: 't,
     pub fn declare_type_inner_env(
         &mut self,
         template_id: &'t IdT<'s, 't>,
-        env: &'t IInDenizenEnvironmentT<'s, 't>,
+        env: IInDenizenEnvironmentT<'s, 't>,
     ) {
         // vassert(typeDeclaredNames.contains(templateId))
         assert!(self.type_declared_names.contains(template_id));
@@ -844,8 +872,20 @@ where 's: 't,
         struct_def: &'t StructDefinitionT<'s, 't>,
     ) {
         if struct_def.mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) {
-            struct_def.members.iter().for_each(|_m| {
-                panic!("implement: add_struct immutable member check")
+            struct_def.members.iter().for_each(|m| {
+                match m {
+                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => {
+                        panic!("Immutable structs cant contain address members");
+                    }
+                    IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(r), .. }) => {
+                        if r.reference.ownership != OwnershipT::Share {
+                            panic!("ImmutableP contains a non-immutable!");
+                        }
+                    }
+                    IStructMemberT::Variadic(_) => {
+                        panic!("implement: immutable struct with variadic members");
+                    }
+                }
             });
         }
         assert!(self.type_name_to_mutability.contains_key(&struct_def.template_name));
@@ -882,7 +922,10 @@ where 's: 't,
         &mut self,
         interface_def: &'t InterfaceDefinitionT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        assert!(self.type_name_to_mutability.contains_key(&interface_def.template_name));
+        assert!(self.interface_name_to_sealed.contains_key(&interface_def.template_name));
+        assert!(!self.interface_template_name_to_definition.contains_key(&interface_def.template_name));
+        self.interface_template_name_to_definition.insert(interface_def.template_name, interface_def);
     }
     /*
       def addInterface(interfaceDef: InterfaceDefinitionT): Unit = {
@@ -910,7 +953,16 @@ where 's: 't,
         &mut self,
         impl_t: &'t ImplT<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        assert!(!self.all_impls.contains_key(&impl_t.template_id));
+        self.all_impls.insert(impl_t.template_id, impl_t);
+        self.sub_citizen_template_to_impls
+            .entry(impl_t.sub_citizen_template_id)
+            .or_insert_with(Vec::new)
+            .push(impl_t);
+        self.super_interface_template_to_impls
+            .entry(impl_t.super_interface_template_id)
+            .or_insert_with(Vec::new)
+            .push(impl_t);
     }
     /*
       def addImpl(impl: ImplT): Unit = {
@@ -947,7 +999,10 @@ where 's: 't,
         &self,
         super_interface_template: IdT<'s, 't>,
     ) -> Vec<&'t ImplT<'s, 't>> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        self.super_interface_template_to_impls
+            .get(&super_interface_template)
+            .map(|v| v.clone())
+            .unwrap_or_default()
     }
     /*
       def getChildImplsForSuperInterfaceTemplate(superInterfaceTemplate: IdT[IInterfaceTemplateNameT]): Vector[ImplT] = {
@@ -1125,7 +1180,10 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match self.interface_name_to_sealed.get(&template_name) {
+            None => panic!("vfail: Still figuring out sealed for struct: {:?}", template_name), // See MFDBRE
+            Some(m) => *m,
+        }
     }
     /*
       def lookupSealed(templateName: IdT[IInterfaceTemplateNameT]): Boolean = {
@@ -1215,7 +1273,10 @@ where 's: 't,
         &self,
         template_name: IdT<'s, 't>,
     ) -> &'t InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        match self.interface_template_name_to_definition.get(&template_name) {
+            None => panic!("vfail: vassertSome: lookupInterface templateName not found: {:?}", template_name),
+            Some(d) => *d,
+        }
     }
     /*
       def lookupInterface(templateName: IdT[IInterfaceTemplateNameT]): InterfaceDefinitionT = {
@@ -1229,8 +1290,13 @@ where 's: 't,
     pub fn lookup_citizen_by_template_name(
         &self,
         template_name: IdT<'s, 't>,
-    ) -> &'t CitizenDefinitionT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+    ) -> CitizenDefinitionT<'s, 't> {
+        match template_name.local_name {
+            INameT::AnonymousSubstructTemplate(_) => CitizenDefinitionT::Struct(self.lookup_struct_template(template_name)),
+            INameT::StructTemplate(_) => CitizenDefinitionT::Struct(self.lookup_struct_template(template_name)),
+            INameT::InterfaceTemplate(_) => CitizenDefinitionT::Interface(self.lookup_interface_by_template_name(template_name)),
+            _ => panic!("lookup_citizen_by_template_name: unexpected local_name variant: {:?}", template_name),
+        }
     }
     /*
       def lookupCitizen(templateName: IdT[ICitizenTemplateNameT]): CitizenDefinitionT = {
@@ -1330,7 +1396,7 @@ where 's: 't,
         &self,
         range: &[RangeS<'s>],
         name: IdT<'s, 't>,
-    ) -> &'t IInDenizenEnvironmentT<'s, 't> {
+    ) -> IInDenizenEnvironmentT<'s, 't> {
         match self.type_name_to_outer_env.get(&name) {
             None => {
                 panic!("No outer env for type: {:?}", name);
@@ -1355,7 +1421,7 @@ where 's: 't,
     pub fn get_inner_env_for_type(
         &self,
         name: IdT<'s, 't>,
-    ) -> &'t IInDenizenEnvironmentT<'s, 't> {
+    ) -> IInDenizenEnvironmentT<'s, 't> {
         *self.type_name_to_inner_env.get(&name).unwrap()
     }
     /*
@@ -1370,7 +1436,7 @@ where 's: 't,
     pub fn get_inner_env_for_function(
         &self,
         name: IdT<'s, 't>,
-    ) -> &'t IInDenizenEnvironmentT<'s, 't> {
+    ) -> IInDenizenEnvironmentT<'s, 't> {
         panic!("Unimplemented: Slab 10 — body migration");
     }
     /*
@@ -1385,8 +1451,9 @@ where 's: 't,
     pub fn get_outer_env_for_function(
         &self,
         name: IdT<'s, 't>,
-    ) -> &'t IInDenizenEnvironmentT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+    ) -> IInDenizenEnvironmentT<'s, 't> {
+        *self.function_name_to_outer_env.get(&name)
+            .expect("vassertSome: get_outer_env_for_function")
     }
     /*
       def getOuterEnvForFunction(name: IdT[IFunctionTemplateNameT]): IInDenizenEnvironmentT = {

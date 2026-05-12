@@ -89,8 +89,8 @@ where 's: 't,
         let unlet = self.unlet_local_without_dropping(nenv, &ILocalVariableT::Reference(rlv));
         let unlet_te: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet));
         let snapshot: &'t NodeEnvironmentT<'s, 't> = nenv.snapshot(self.typing_interner);
-        let env_in_denizen: &'t IInDenizenEnvironmentT<'s, 't> =
-            self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+        let env_in_denizen: IInDenizenEnvironmentT<'s, 't> =
+            IInDenizenEnvironmentT::Node(snapshot);
         let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te);
         assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
         DeferTE { inner_expr: self.typing_interner.alloc(let_expr_2), deferred_expr: self.typing_interner.alloc(destruct_expr_2) }
@@ -151,7 +151,7 @@ where 's: 't,
             let unlet = self.unlet_local_without_dropping(nenv, variable);
             let unlet_ref = &*self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet));
             let snapshot = nenv.snapshot(self.typing_interner);
-            let snapshot_env = &*self.typing_interner.alloc(IInDenizenEnvironmentT::Node(snapshot));
+            let snapshot_env = IInDenizenEnvironmentT::Node(snapshot);
             self.drop(snapshot_env, coutputs, range, call_location, context_region, unlet_ref)
         }).collect()
     }
@@ -342,7 +342,12 @@ where 's: 't,
                 }
             }
             OwnershipT::Weak => {
-                panic!("implement: soft_load — WeakT");
+                match load_as_p {
+                    LoadAsP::Use => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }),
+                    LoadAsP::Move => panic!("vfail: soft_load WeakT + MoveP"),
+                    LoadAsP::LoadAsBorrow => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }),
+                    LoadAsP::LoadAsWeak => ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: a, target_ownership: OwnershipT::Weak }),
+                }
             }
         }
     }

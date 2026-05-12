@@ -174,6 +174,12 @@ fine." When tuning shields, add narrow, precise exceptions rather than
 broad carve-outs. The goal is rules that are unambiguous enough that an
 LLM can follow them mechanically.
 
+Don't trust the reasoning the implementor wrote into a temp-disable — read
+it skeptically and check whether it's actually a principled exception or
+just an excuse to hack in a violation when our guiding principles would
+have called for a more principled approach (refactor the prod code, add
+a real exception to the shield, escalate to the architect, etc.).
+
 ## Pre-existing Problems Flagged By Shields
 
 If a shield correctly flags something whose problematic shape pre-existed the
