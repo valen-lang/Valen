@@ -114,6 +114,7 @@ where 's: 't,
         self.bump.alloc_slice_fill_iter(vec.into_iter())
     }
 
+    // Per @IIIOZ, arena maps use ArenaIndexMap (insertion-ordered) rather than HashMap for cross-run determinism.
     pub fn alloc_index_map<K: std::hash::Hash + Eq + Clone, V>(&self) -> ArenaIndexMap<'t, K, V> {
         ArenaIndexMap::new_in(self.bump)
     }

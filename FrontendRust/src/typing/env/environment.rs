@@ -1,4 +1,5 @@
 use std::collections::{HashMap as StdHashMap, HashSet};
+use indexmap::IndexMap;
 
 use crate::typing::templata::templata::{FunctionTemplataT, ITemplataT, StructDefinitionTemplataT};
 use crate::utils::arena_index_map::ArenaIndexMap;
@@ -734,10 +735,12 @@ pub fn get_imprecise_name<'s, 't>(
             _ => panic!("Unimplemented: get_imprecise_name for AnonymousSubstructConstructorTemplate with substruct {:?}", asct.substruct),
         }
     }
+    INameT::AnonymousSubstruct(a) => get_imprecise_name(scout_arena, INameT::AnonymousSubstructTemplate(a.template)),
     _ => panic!("Unimplemented: get_imprecise_name for {:?}", name_t),
   }
 }
 /*
+Guardian: temp-disable: SPDMX — Scala's `AnonymousSubstructNameT(interfaceName, _)` extracts the first field (the `AnonymousSubstructTemplateNameT` template), and Rust's `INameT::AnonymousSubstructTemplate(a.template)` wraps that same value in the required enum variant because `get_imprecise_name` takes `INameT` — there is no direct pass-through possible. The parity is correct; the wrapping is a necessary Rust adaptation. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-736-1778630947070/hook-736/get_imprecise_name--686.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getImpreciseName(interner: Interner, name2: INameT): Option[IImpreciseNameS] = {
     name2 match {
       case StructTemplateNameT(humanName) => Some(interner.intern(CodeNameS(humanName)))
@@ -819,6 +822,7 @@ pub struct TemplatasStoreT<'s, 't>
 where 's: 't,
 {
   pub templatas_store_name: &'t IdT<'s, 't>,
+  // Per @IIIOZ, env lookup tables are ArenaIndexMap so iteration order is insertion-deterministic across runs.
   pub name_to_entry: ArenaIndexMap<'t, INameT<'s, 't>, IEnvEntryT<'s, 't>>,
   pub imprecise_to_entries: ArenaIndexMap<'t, IImpreciseNameS<'s>, &'t [IEnvEntryT<'s, 't>]>,
 }
@@ -844,8 +848,9 @@ where 's: 't,
 {
   pub templatas_store_name: &'t IdT<'s, 't>,
   pub name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
+  // Per @IIIOZ: IndexMap so build_in() iteration preserves insertion order (deterministic across runs).
   pub imprecise_to_entries:
-    StdHashMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>,
+    IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>>,
 }
 /*
 // See DBTSAE for difference between TemplatasStore and Environment.
@@ -867,7 +872,7 @@ where 's: 't,
     TemplatasStoreBuilder {
       templatas_store_name,
       name_to_entry: Vec::new(),
-      imprecise_to_entries: StdHashMap::new(),
+      imprecise_to_entries: IndexMap::new(),
     }
   }
   /* Guardian: disable-all */
@@ -896,8 +901,28 @@ where 's: 't,
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub }))).or_insert_with(Vec::new).push(*entry);
           self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: sup }))).or_insert_with(Vec::new).push(*entry);
         }
-        IEnvEntryT::Templata(ITemplataT::Isa(_)) => {
-          panic!("Unimplemented: TemplatasStoreBuilder::add_entries IsaTemplataT case");
+        IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
+          let sub_local_name = match isa.sub_kind {
+            crate::typing::types::types::KindT::Struct(stt) => stt.id.local_name,
+            crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
+            crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+            _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
+          };
+          let super_local_name = match isa.super_kind {
+            crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
+            crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+            _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
+          };
+          let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
+            .unwrap_or_else(|| panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind));
+          let super_imprecise = get_imprecise_name(scout_arena, super_local_name)
+            .unwrap_or_else(|| panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind));
+          if let Some(key_imprecise) = get_imprecise_name(scout_arena, *name) {
+            self.imprecise_to_entries.entry(key_imprecise).or_insert_with(Vec::new).push(*entry);
+          }
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise }))).or_insert_with(Vec::new).push(*entry);
+          self.imprecise_to_entries.entry(scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise }))).or_insert_with(Vec::new).push(*entry);
         }
         _ => {
           if let Some(imprecise) = get_imprecise_name(scout_arena, *name) {
@@ -934,8 +959,8 @@ where 's: 't,
   pub fn from_store(store: &TemplatasStoreT<'s, 't>) -> Self {
     let name_to_entry: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> =
       (&store.name_to_entry).into_iter().map(|(k, v)| (*k, *v)).collect();
-    let mut imprecise_to_entries: StdHashMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> =
-      StdHashMap::new();
+    let mut imprecise_to_entries: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> =
+      IndexMap::new();
     for (k, v) in &store.imprecise_to_entries {
       imprecise_to_entries.insert(*k, v.to_vec());
     }
@@ -992,7 +1017,8 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     scout_arena: &ScoutArena<'s>,
     new_entries_list: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>,
   ) -> TemplatasStoreT<'s, 't> {
-    let new_entries: StdHashMap<INameT<'s, 't>, IEnvEntryT<'s, 't>> = new_entries_list.iter().cloned().collect();
+    // Per @IIIOZ: IndexMap so iteration at line ~1007 preserves new_entries_list source order (deterministic).
+    let new_entries: IndexMap<INameT<'s, 't>, IEnvEntryT<'s, 't>> = new_entries_list.iter().cloned().collect();
     assert!(new_entries.len() == new_entries_list.len());
 
     // combinedEntries = oldEntries ++ newEntries
@@ -1027,8 +1053,30 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
           IEnvEntryT::Impl(_) => {
             panic!("Unimplemented: add_entries ImplEnvEntry case");
           }
-          IEnvEntryT::Templata(ITemplataT::Isa(_)) => {
-            panic!("Unimplemented: add_entries IsaTemplataT case");
+          IEnvEntryT::Templata(ITemplataT::Isa(isa)) => {
+            let sub_local_name = match isa.sub_kind {
+              crate::typing::types::types::KindT::Struct(stt) => stt.id.local_name,
+              crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
+              crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+              _ => panic!("vwat: unexpected sub_kind in IsaTemplataT add_entries: {:?}", isa.sub_kind),
+            };
+            let super_local_name = match isa.super_kind {
+              crate::typing::types::types::KindT::Interface(itt) => itt.id.local_name,
+              crate::typing::types::types::KindT::KindPlaceholder(kp) => kp.id.local_name,
+              _ => panic!("vwat: unexpected super_kind in IsaTemplataT add_entries: {:?}", isa.super_kind),
+            };
+            let sub_imprecise = get_imprecise_name(scout_arena, sub_local_name)
+              .unwrap_or_else(|| panic!("vassertSome: no imprecise name for sub_kind {:?}", isa.sub_kind));
+            let super_imprecise = get_imprecise_name(scout_arena, super_local_name)
+              .unwrap_or_else(|| panic!("vassertSome: no imprecise name for super_kind {:?}", isa.super_kind));
+            let mut entries = vec![];
+            if let Some(key_imprecise) = get_imprecise_name(scout_arena, *key) {
+              entries.push((key_imprecise, *value));
+            }
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplImpreciseName(crate::postparsing::names::ImplImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise, super_interface_imprecise_name: super_imprecise })), *value));
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSubCitizenImpreciseName(crate::postparsing::names::ImplSubCitizenImpreciseNameValS { sub_citizen_imprecise_name: sub_imprecise })), *value));
+            entries.push((scout_arena.intern_imprecise_name(IImpreciseNameValS::ImplSuperInterfaceImpreciseName(crate::postparsing::names::ImplSuperInterfaceImpreciseNameValS { super_interface_imprecise_name: super_imprecise })), *value));
+            entries
           }
           _ => {
             get_imprecise_name(scout_arena, *key).into_iter().map(|imprecise| (imprecise, *value)).collect::<Vec<_>>()
@@ -1037,7 +1085,8 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
       }).collect();
 
     // Group by imprecise name
-    let mut grouped: StdHashMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = StdHashMap::new();
+    // Per @IIIOZ: IndexMap so downstream iteration preserves new_entries_by_name_s source order.
+    let mut grouped: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::new();
     for (name, entry) in &new_entries_by_name_s {
       grouped.entry(*name).or_insert_with(Vec::new).push(*entry);
     }
@@ -1047,7 +1096,9 @@ impl<'s, 't> TemplatasStoreT<'s, 't> where 's: 't {
     //   newEntriesByNameS ++
     //   entriesByImpreciseNameS.keySet.intersect(newEntriesByNameS.keySet)
     //     .map(key => (key -> (entriesByImpreciseNameS(key) ++ newEntriesByNameS(key)))).toMap
-    let mut combined_by_name_s: StdHashMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = StdHashMap::new();
+    // Per @IIIOZ: IndexMap so the alloc_index_map_from_iter freeze at line ~1072 inherits deterministic order
+    // from upstream self.imprecise_to_entries (IndexMap) and grouped (IndexMap).
+    let mut combined_by_name_s: IndexMap<IImpreciseNameS<'s>, Vec<IEnvEntryT<'s, 't>>> = IndexMap::new();
     // Step 1: entriesByImpreciseNameS
     for (name, entries) in self.imprecise_to_entries.iter() {
       combined_by_name_s.insert(*name, entries.to_vec());

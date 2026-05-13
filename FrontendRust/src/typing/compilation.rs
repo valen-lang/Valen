@@ -62,7 +62,7 @@ where 's: 't,
   scout_arena: &'ctx ScoutArena<'s>,
   keywords: &'ctx Keywords<'s>,
   options: TypingPassOptions<'s>,
-  typing_interner: TypingInterner<'s, 't>,
+  pub typing_interner: TypingInterner<'s, 't>,
 }
 /*
 class TypingPassCompilation(

@@ -128,7 +128,7 @@ where 's: 't,
 
         let name_s = IFunctionDeclarationNameS::FunctionName(FunctionNameS {
             name: self.keywords.drop,
-            code_location: interface_a.range.begin,
+            code_location: interface_a.name.range.begin,
         });
         let mut rune_to_type_map = self.scout_arena.alloc_index_map();
         for (k, v) in rune_to_type { rune_to_type_map.insert(k, v); }

@@ -8,7 +8,7 @@
 
 ## Required Reading
 
-Read these before doing anything else, in this order:
+Read these, right now, before responding to the user. Read them in full.
 
 1. **This file** — read top to bottom before starting work
 2. **`docs/architecture/typing-pass-design-v3.md`** — architecture and design decisions for the typing pass migration
@@ -18,8 +18,8 @@ Read these before doing anything else, in this order:
 6. **`FrontendRust/zen/migration_principles.md`** — migration rules (DCCR, RCSBASC, architect-level escape hatch)
 7. **`FrontendRust/zen/testing.md`** — test conventions (`find_func_named`, `expect_1`/`expect_2`, etc.)
 8. **`docs/skills/migration-drive.md`** — the junior's instructions (know what they're following)
-
-For historical slab-by-slab progress, see `docs/historical/slab-chronicle.md`. Per-slab handoff docs are in `FrontendRust/docs/migration/handoff-slab-*.md`. The historical design docs (v1, v2, migration-setup) are obsolete — they each carry "DO NOT FOLLOW" banners.
+9. FrontendRust/docs/arcana/IdenticalInputsIdenticalOutputs-IIIOZ.md
+10. Luz/shields/ScalaParityDuringMigration-SPDMX.md
 
 ---
 
@@ -43,7 +43,7 @@ For historical slab-by-slab progress, see `docs/historical/slab-chronicle.md`. P
 
 The scaffolding phase is complete. Slabs 0–14b built out every type definition, every method signature with proper lifetimes, and all placeholder types (only `IRegionNameT` retains `_Phantom`). `cargo check --lib` is clean.
 
-**Current work: body migration (Slab 15+).** ~150 panic-stubbed method bodies remain. Work is test-driven: pick a test, run it, implement the body it hits, repeat.
+**Current work: body migration (Slab 15+).** Work is test-driven: pick a test, run it, implement the body it hits, repeat.
 
 Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (compiler_tests 91, compiler_solver_tests 27, compiler_virtual_tests 18, compiler_mutate_tests 12, compiler_lambda_tests 10, compiler_ownership_tests 11, compiler_project_tests 3, compiler_generics_tests 1). All currently panic at the first method body they exercise.
 
@@ -63,7 +63,6 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 
 ## Known Residual Items
 
-- **~150 panic-stubbed method bodies remain.** Concentrated in `expression_compiler.rs`, `templata_compiler.rs`, `infer_compiler.rs`, `function_environment_t.rs`, `compiler.rs`, `compiler_outputs.rs`. Some are tagged "Slab 10" (the older batch); functionally equivalent. Treat the count as a rough magnitude.
 - **dispatch_function_body_macro** and friends not wired.
 - **LocationInFunctionEnvironmentT.path: Vec<i32>** in `ast/ast.rs` violates AASSNCMCX. Future cleanup turns into `&'t [i32]`.
 - **IRegionNameT** retains `_Phantom` — 0 Scala implementors found, deferred.
@@ -76,6 +75,7 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 - **Revisit `/// Arena-allocated` vs `/// Temporary state` classifications.** Scaffolding may have over-eagerly marked types Arena-allocated when they're really transient solver outputs or function-return wrappers (`LocationInFunctionEnvironmentT`, `CompleteResolveSolve`/`CompleteDefineSolve`, `HinputsT`). Walk every `/// Arena-allocated` type and re-classify ones that don't need arena identity. Architect-level decision per type.
 - **Wrapper enums (IEnvironmentT family) reclassified as Polyvalue** per @TFITCX; the closed-set-fat-pointer mental model + by-value eq/hash trap documented at @PVECFPZ. `IEnvironmentT`/`IInDenizenEnvironmentT` are now held by value at field/parameter sites with derived eq/hash.
 - **SPDMX recurring class: structural-shape diff that's a Rust→Scala bug-fix.** Seen on `compiler_tests.rs:1102-1114` (the "Automatically drops struct" test, where the Rust pattern was matching `template_args` against the OwnT/StructTT coord but Scala's third `FunctionNameT` field is `parameters`); SPDMX flagged the corrective re-shape. If it fires again, worth amending into SPDMX rather than temp-disabling each time.
+- **Post-migration sweep: scrub `if`-guards inside test `matches!`/match patterns** — Scala-parity tests destructure literals all the way down, so any `if foo.bar == "..."` guard means JR shallowed out a pattern that should have been deepened.
 - **Eliminate sources of nondeterminism.** Ptr-hashing on `@IEOIBZ` identity types, `IdT`, and `PtrKey<T>` is nondeterministic across runs and leaks into output via `HashMap`/`HashSet` iteration. `ArenaIndexMap` (insertion-ordered) is unaffected — the AASSNCMCX sweep accidentally fixed most cases. Remaining at-risk: `HashMap<PtrKey<IdT>, V>` in `CompilerOutputs` and `HashMap<IdT, V>` in `HinputsT` (both Temporary state). **Short-term:** extend ArenaIndexMap to ptr-hashed-key maps regardless of containing-struct class. **Long-term:** content-based hashing on `@IEOIBZ` types + `IdT` (touches the @IEOIBZ pattern). Bit-reproducible output requires both. Defer until the instantiator gets attention or a test flakes.
 
 ---

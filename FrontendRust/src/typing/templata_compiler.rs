@@ -158,7 +158,19 @@ where 's: 't,
         &self,
         impl_placeholder: ITemplataT<'s, 't>,
     ) -> IdT<'s, 't> {
-        panic!("Unimplemented: Slab 10 — body migration");
+        use crate::typing::types::types::{KindPlaceholderT, KindT};
+        match impl_placeholder {
+            ITemplataT::Placeholder(pt) => pt.id,
+            ITemplataT::Kind(kt) => match kt.kind {
+                KindT::KindPlaceholder(kp) => kp.id,
+                _ => panic!("vwat: get_placeholder_templata_id unexpected kind: {:?}", kt.kind),
+            },
+            ITemplataT::Coord(ct) => match ct.coord.kind {
+                KindT::KindPlaceholder(kp) => kp.id,
+                _ => panic!("vwat: get_placeholder_templata_id unexpected coord kind: {:?}", ct.coord.kind),
+            },
+            other => panic!("vwat: get_placeholder_templata_id unexpected templata: {:?}", other),
+        }
     }
 }
 /*
@@ -377,7 +389,7 @@ where 's: 't,
         interner: &TypingInterner<'s, 't>,
         id: IdT<'s, 't>,
     ) -> IdT<'s, 't> {
-        let tentative_id = Self::get_super_template(interner, id);
+        let mut tentative_id = Self::get_super_template(interner, id);
         loop {
             let contains_lambda = tentative_id.init_steps.iter().any(|n| {
                 match n {
@@ -393,7 +405,7 @@ where 's: 't,
                 _ => false,
             };
             if contains_lambda {
-                panic!("implement: get_root_super_template removeTrailingLambdas initId");
+                tentative_id = tentative_id.init_id(interner);
             } else {
                 return tentative_id;
             }
@@ -706,13 +718,13 @@ where 's: 't,
         &self,
         templatas: &'t TemplatasStoreT<'s, 't>,
     ) -> HashMap<IRuneS<'s>, IdT<'s, 't>> {
-        let result = HashMap::new();
+        let mut result = HashMap::new();
         for (name, entry) in templatas.name_to_entry.iter() {
             match (name, entry) {
                 (INameT::Rune(rune_name), IEnvEntryT::Templata(ITemplataT::Isa(isa))) => {
-                    match &isa.impl_name.local_name {
+                    match isa.impl_name.local_name {
                         INameT::ImplBound(_) => {
-                            panic!("implement: assemble_rune_to_impl_bound — ImplBoundNameT match");
+                            result.insert(rune_name.rune, isa.impl_name);
                         }
                         _ => {}
                     }
@@ -2193,7 +2205,13 @@ where 's: 't,
             }
             (_, KindT::Struct(_)) => return false,
             (_, KindT::Interface(_)) => {
-                panic!("implement: isTypeConvertible — ISubKindTT to ISuperKindTT");
+                use crate::typing::citizen::impl_compiler::IsParentResult;
+                let source_sub_kind = ISubKindTT::try_from(source_type).unwrap_or_else(|_| panic!("vfail: source is not ISubKindTT: {:?}", source_type));
+                let target_super_kind = ISuperKindTT::try_from(target_type).unwrap_or_else(|_| panic!("vfail: target is not ISuperKindTT: {:?}", target_type));
+                match self.is_parent(coutputs, calling_env, parent_ranges, call_location, source_sub_kind, target_super_kind) {
+                    IsParentResult::IsParent(_) => {}
+                    IsParentResult::IsntParent(_) => return false,
+                }
             }
             _ => {
                 panic!("implement: isTypeConvertible — non-equal kind cases: {:?} -> {:?}", source_type, target_type);

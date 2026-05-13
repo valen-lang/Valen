@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use indexmap::IndexMap;
 use std::marker::PhantomData;
 use crate::higher_typing::ast::{ProgramA, StructA, InterfaceA, FunctionA};
 use crate::interner::StrI;
@@ -642,10 +643,14 @@ where 's: 't,
     pub fn kind_is_from_template(
         &self,
         _coutputs: &mut CompilerOutputs<'s, 't>,
-        _actual_citizen_ref: KindT<'s, 't>,
-        _expected_citizen_templata: ITemplataT<'s, 't>,
+        actual_citizen_ref: KindT<'s, 't>,
+        expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: kind_is_from_template");
+        use crate::typing::types::types::ICitizenTT;
+        match ICitizenTT::try_from(actual_citizen_ref) {
+            Ok(s) => self.citizen_is_from_template(s, expected_citizen_templata),
+            Err(_) => panic!("implement: kind_is_from_template non-citizen case: {:?}", actual_citizen_ref),
+        }
     }
     /*
         override def kindIsFromTemplate(
@@ -667,12 +672,25 @@ where 's: 't,
     // (which Rust flattened onto Compiler).
     pub fn get_ancestors(
         &self,
-        _envs: InferEnv<'s, 't>,
-        _coutputs: &mut CompilerOutputs<'s, 't>,
-        _descendant: KindT<'s, 't>,
-        _include_self: bool,
+        envs: InferEnv<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        descendant: KindT<'s, 't>,
+        include_self: bool,
     ) -> std::collections::HashSet<KindT<'s, 't>> {
-        panic!("Unimplemented: get_ancestors");
+        use crate::typing::types::types::ISubKindTT;
+        let mut result: std::collections::HashSet<KindT<'s, 't>> = std::collections::HashSet::new();
+        if include_self {
+            result.insert(descendant);
+        }
+        match ISubKindTT::try_from(descendant) {
+            Ok(s) => {
+                for parent in self.get_parents(coutputs, envs.parent_ranges, envs.call_location, envs.original_calling_env, s) {
+                    result.insert(KindT::from(parent));
+                }
+            }
+            Err(_) => {}
+        }
+        result
     }
     /*
         override def getAncestors(
@@ -1333,7 +1351,11 @@ where 's: 't,
         let pkg_top_level_for_group = INameT::PackageTopLevel(
             self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData })
         );
-        let mut namespace_name_to_entries: HashMap<&'t IdT<'s, 't>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> = HashMap::new();
+        // Per @IIIOZ: IndexMap so iteration at line ~1350 (into global_env.name_to_top_level_environment)
+        // preserves id_and_env_entry source order — otherwise the package env's `global_namespaces`
+        // slice ends up in random per-process HashMap order, and lookups that walk it nondeterministically
+        // pick a different "drop" overload per run.
+        let mut namespace_name_to_entries: IndexMap<&'t IdT<'s, 't>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>> = IndexMap::new();
         for (name, env_entry) in &id_and_env_entry {
             let package_id = self.typing_interner.intern_id(IdValT {
                 package_coord: name.package_coord,
@@ -1679,7 +1701,7 @@ where 's: 't,
                             env: package_env_t,
                             impl_: impl_a,
                         });
-                        self.compile_impl(&mut coutputs, LocationInDenizen { path: &[] }, impl_templata);
+                        self.compile_impl(&mut coutputs, LocationInDenizen { path: &[] }, *impl_templata);
                     }
                     _ => {}
                 }
@@ -2738,17 +2760,19 @@ where 's: 't,
             coutputs.get_kind_exports().iter()
                 .map(|ke| (ke.id.package_coord, ke.tyype, *ke))
                 .collect();
-        let mut grouped_by_package: HashMap<&'s PackageCoordinate<'s>, Vec<(KindT<'s, 't>, &'t KindExportT<'s, 't>)>> = HashMap::new();
+        // Per @IIIOZ: IndexMap so iteration at the package/kind loops below is deterministic.
+        // Upstream kind_export_triples is from coutputs.get_kind_exports() (Vec, deterministic).
+        let mut grouped_by_package: IndexMap<&'s PackageCoordinate<'s>, Vec<(KindT<'s, 't>, &'t KindExportT<'s, 't>)>> = IndexMap::new();
         for (pc, k, ke) in kind_export_triples.into_iter() {
             grouped_by_package.entry(pc).or_insert_with(Vec::new).push((k, ke));
         }
-        let package_to_kind_to_export: HashMap<&'s PackageCoordinate<'s>, HashMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> =
+        let package_to_kind_to_export: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> =
             grouped_by_package.into_iter().map(|(pc, kind_pairs)| {
-                let mut grouped_by_kind: HashMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = HashMap::new();
+                let mut grouped_by_kind: IndexMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = IndexMap::new();
                 for (k, ke) in kind_pairs.into_iter() {
                     grouped_by_kind.entry(k).or_insert_with(Vec::new).push(ke);
                 }
-                let inner: HashMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> =
+                let inner: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> =
                     grouped_by_kind.into_iter().map(|(k, exports)| {
                         let only = match exports.as_slice() {
                             [] => panic!("vwat"),

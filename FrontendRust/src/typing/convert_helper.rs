@@ -126,7 +126,37 @@ where 's: 't,
             _ => {}
         }
 
-        panic!("implement: convert — non-trivial conversion");
+        let target_ownership = target_pointer_type.ownership;
+        let target_type = target_pointer_type.kind;
+        let source_ownership = source_expr.result().coord.ownership;
+        let source_type = source_expr.result().coord.kind;
+
+        match target_pointer_type.kind {
+            KindT::Never(_) => panic!("vcurious: convert targeting Never"),
+            _ => {}
+        }
+
+        match (source_ownership, target_ownership) {
+            (OwnershipT::Own, OwnershipT::Own) => {}
+            (OwnershipT::Borrow, OwnershipT::Own) => panic!("Supplied a borrow but target wants to own the argument"),
+            (OwnershipT::Own, OwnershipT::Borrow) => panic!("Supplied an owning but target wants to only borrow"),
+            (OwnershipT::Borrow, OwnershipT::Borrow) => {}
+            (OwnershipT::Share, OwnershipT::Share) => {}
+            (OwnershipT::Weak, OwnershipT::Weak) => {}
+            _ => panic!("Supplied a {:?} but target wants {:?}", source_ownership, target_ownership),
+        }
+
+        if source_type == target_type {
+            return source_expr;
+        }
+
+        let converted = match (ISubKindTT::try_from(source_type), ISuperKindTT::try_from(target_type)) {
+            (Ok(source_sub_kind), Ok(target_super_kind)) => {
+                self.convert_with_subkind(env, coutputs, range, call_location, source_expr, source_sub_kind, target_super_kind)
+            }
+            _ => panic!("vfail: cannot convert {:?} to {:?}", source_type, target_type),
+        };
+        self.typing_interner.alloc(converted)
     }
 /*
   def convert(
@@ -208,15 +238,28 @@ where 's: 't,
 {
     pub fn convert_with_subkind(
         &self,
-        calling_env: IInDenizenEnvironmentT,
-        coutputs: &mut CompilerOutputs,
-        range: &[RangeS],
-        call_location: LocationInDenizen,
-        source_expr: ReferenceExpressionTE,
-        source_sub_kind: ISubKindTT,
-        target_super_kind: ISuperKindTT,
-    ) -> ReferenceExpressionTE<'_, '_> {
-        panic!("Unimplemented: convert");
+        calling_env: IInDenizenEnvironmentT<'s, 't>,
+        coutputs: &mut CompilerOutputs<'s, 't>,
+        range: &[RangeS<'s>],
+        call_location: LocationInDenizen<'s>,
+        source_expr: &'t ReferenceExpressionTE<'s, 't>,
+        source_sub_kind: ISubKindTT<'s, 't>,
+        target_super_kind: ISuperKindTT<'s, 't>,
+    ) -> ReferenceExpressionTE<'s, 't> {
+        use crate::typing::citizen::impl_compiler::IsParentResult;
+        match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
+            IsParentResult::IsParent(is_parent) => {
+                assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
+                ReferenceExpressionTE::Upcast(crate::typing::ast::expressions::UpcastTE {
+                    inner_expr: source_expr,
+                    target_super_kind,
+                    impl_name: is_parent.impl_id,
+                })
+            }
+            IsParentResult::IsntParent(_candidates) => {
+                panic!("Can't upcast a {:?} to a {:?}", source_sub_kind, target_super_kind)
+            }
+        }
     }
 /*
   def convert(

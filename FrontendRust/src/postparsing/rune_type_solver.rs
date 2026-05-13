@@ -11,7 +11,7 @@ import dev.vale.postparsing.rules._
 import scala.collection.immutable.Map
 */
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType, KindTemplataType};
-use crate::postparsing::names::{IRuneS, IImpreciseNameS};
+use crate::postparsing::names::{IRuneS, IImpreciseNameS, IImpreciseNameValS, RuneNameValS};
 use crate::postparsing::ast::GenericParameterS;
 use crate::postparsing::rules::rules::{IRulexSR, RuneUsage};
 use crate::scout_arena::ScoutArena;
@@ -561,8 +561,23 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
         (x.return_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
       ].into_iter().collect(), vec![])
     }
-    IRulexSR::DefinitionCoordIsa(_) => panic!("IRulexSR::DefinitionCoordIsa not yet migrated in rune_type solve_rule"),
-    IRulexSR::CallSiteCoordIsa(_) => panic!("IRulexSR::CallSiteCoordIsa not yet migrated in rune_type solve_rule"),
+    IRulexSR::DefinitionCoordIsa(x) => {
+        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [
+            (x.result_rune.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {})),
+            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        ].into_iter().collect(), vec![])
+    }
+    IRulexSR::CallSiteCoordIsa(x) => {
+        let mut conclusions: std::collections::HashMap<IRuneS<'s>, ITemplataType<'s>> = [
+            (x.sub_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+            (x.super_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})),
+        ].into_iter().collect();
+        if let Some(result_rune) = &x.result_rune {
+            conclusions.insert(result_rune.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {}));
+        }
+        solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], conclusions, vec![])
+    }
     IRulexSR::OneOf(x) => {
       let types: std::collections::HashSet<ITemplataType<'s>> = x.literals.iter().map(|l| l.get_type()).collect();
       if types.len() > 1 {
@@ -621,8 +636,15 @@ fn solve_rule<'s, E: IRuneTypeSolverEnv<'s>>(
       lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![])
     }
-    IRulexSR::RuneParentEnvLookup(_) => {
-      panic!("solve_rule RuneParentEnvLookupSR not yet migrated");
+    IRulexSR::RuneParentEnvLookup(x) => {
+      let lookup_name = scout_arena.intern_imprecise_name(IImpreciseNameValS::RuneName(RuneNameValS { rune: x.rune.rune.clone() }));
+      let actual_lookup_result =
+          match env.lookup(x.range.clone(), lookup_name) {
+            Err(_e) => panic!("RuneParentEnvLookupSR solve error path not yet migrated"),
+            Ok(r) => r,
+          };
+      lookup_rune_type(env, solver_state, x.range.clone(), &x.rune, actual_lookup_result)?;
+      solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], std::collections::HashMap::new(), vec![])
     }
     IRulexSR::Augment(x) => {
       solver_state.commit_step::<IRuneTypeRuleError<'s>>(false, vec![rule_index], [

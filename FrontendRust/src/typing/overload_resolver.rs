@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use indexmap::IndexMap;
 use crate::typing::compiler::Compiler;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::{LocationInDenizen, IRegionMutabilityS};
@@ -569,6 +570,9 @@ where 's: 't,
                         }
                         Ok(rune_a_to_type_with_implicitly_coercing_lookups_s) => {
                             let rune_type_solve_env = self.create_rune_type_solver_env(calling_env);
+                            // VIOLATES @IIIOZ: still HashMap because explicify_lookups takes &mut HashMap.
+                            // Determinism here is blocked on cascading explicify_lookups + calculate_rune_types
+                            // (in higher_typing_pass.rs) to IndexMap. Deferred to a separate sweep.
                             let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
                                 HashMap::from_iter(rune_a_to_type_with_implicitly_coercing_lookups_s.iter().map(|(k, v)| (*k, *v)));
                             let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();

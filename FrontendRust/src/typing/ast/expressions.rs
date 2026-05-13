@@ -1551,7 +1551,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConstantStrTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Str(StrT) } }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, region, StrT()))
 }
@@ -2495,7 +2497,16 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> UpcastTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        let inner_coord = self.inner_expr.result().coord;
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: inner_coord.ownership,
+                region: inner_coord.region,
+                kind: self.target_super_kind.into(),
+            }
+        }
+    }
 /*
   def result: ReferenceResultT = {
     ReferenceResultT(

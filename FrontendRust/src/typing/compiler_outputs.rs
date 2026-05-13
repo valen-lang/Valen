@@ -78,8 +78,9 @@ where 's: 't,
 {
     pub return_types_by_signature:
         HashMap<SignatureT<'s, 't>, CoordT<'s, 't>>,
+    // Per @IIIOZ, iterated by get_all_functions → IndexMap for cross-run determinism.
     pub signature_to_function:
-        HashMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
+        IndexMap<SignatureT<'s, 't>, &'t FunctionDefinitionT<'s, 't>>,
 
     pub function_declared_names:
         HashMap<IdT<'s, 't>, RangeS<'s>>,
@@ -100,10 +101,11 @@ where 's: 't,
     pub interface_name_to_sealed:
         HashMap<IdT<'s, 't>, bool>,
 
+    // Per @IIIOZ, iterated by get_all_structs / get_all_interfaces → IndexMap for cross-run determinism.
     pub struct_template_name_to_definition:
-        HashMap<IdT<'s, 't>, &'t StructDefinitionT<'s, 't>>,
+        IndexMap<IdT<'s, 't>, &'t StructDefinitionT<'s, 't>>,
     pub interface_template_name_to_definition:
-        HashMap<IdT<'s, 't>, &'t InterfaceDefinitionT<'s, 't>>,
+        IndexMap<IdT<'s, 't>, &'t InterfaceDefinitionT<'s, 't>>,
 
     pub all_impls:
         HashMap<IdT<'s, 't>, &'t ImplT<'s, 't>>,
@@ -120,6 +122,7 @@ where 's: 't,
     pub instantiation_name_to_bounds:
         HashMap<IdT<'s, 't>, &'t InstantiationBoundArgumentsT<'s, 't>>,
 
+    // Per @IIIOZ, deferred queues are IndexMap so drain order is insertion-ordered and deterministic across runs.
     pub deferred_function_body_compiles: IndexMap<PrototypeT<'s, 't>, DeferredActionT<'s, 't>>,
     pub deferred_function_compiles: IndexMap<IdT<'s, 't>, DeferredActionT<'s, 't>>,
     pub finished_deferred_function_body_compiles:
@@ -214,7 +217,7 @@ where 's: 't,
     pub fn new() -> Self {
         Self {
             return_types_by_signature: HashMap::new(),
-            signature_to_function: HashMap::new(),
+            signature_to_function: IndexMap::new(),
             function_declared_names: HashMap::new(),
             type_declared_names: HashSet::new(),
             function_name_to_outer_env: HashMap::new(),
@@ -223,8 +226,8 @@ where 's: 't,
             type_name_to_inner_env: HashMap::new(),
             type_name_to_mutability: HashMap::new(),
             interface_name_to_sealed: HashMap::new(),
-            struct_template_name_to_definition: HashMap::new(),
-            interface_template_name_to_definition: HashMap::new(),
+            struct_template_name_to_definition: IndexMap::new(),
+            interface_template_name_to_definition: IndexMap::new(),
             all_impls: HashMap::new(),
             sub_citizen_template_to_impls: HashMap::new(),
             super_interface_template_to_impls: HashMap::new(),

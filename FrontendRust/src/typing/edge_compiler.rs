@@ -1,6 +1,7 @@
 use crate::postparsing::ast::LocationInDenizen;
 use crate::typing::compiler::Compiler;
 use std::collections::HashMap;
+use indexmap::IndexMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::names::*;
 use crate::postparsing::*;
@@ -234,13 +235,15 @@ where 's: 't,
 
         // val x2 = x1.groupBy(_._1)
         // val x3 = x2.mapValues(_.map(_._2))
-        let mut x3: HashMap<IdT<'s, 't>, Vec<&'t FunctionDefinitionT<'s, 't>>> = HashMap::new();
+        // Per @IIIOZ: IndexMap so iteration at line 281 is deterministic across runs.
+        // x1 is a Vec built in deterministic source order (from get_all_functions, now IndexMap-backed).
+        let mut x3: IndexMap<IdT<'s, 't>, Vec<&'t FunctionDefinitionT<'s, 't>>> = IndexMap::new();
         for (k, v) in x1.into_iter() {
             x3.entry(k).or_insert_with(Vec::new).push(v);
         }
 
         // val x4 = x3.map({ case (interfaceTemplateId, functions) => ... orderedMethods ... })
-        let x4: HashMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x3.into_iter().map(|(interface_template_id, functions)| {
+        let x4: IndexMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x3.into_iter().map(|(interface_template_id, functions)| {
             // Sort so that the interface's internal methods are first and in the same order
             // they were declared in. It feels right, and vivem also depends on it
             // when it calls array generators/consumers' first method.
@@ -272,7 +275,7 @@ where 's: 't,
 
         // val abstractFunctionHeadersByInterfaceTemplateId = x4 ++ coutputs.getAllInterfaces().map(...)
         // Some interfaces would be empty and they wouldn't be in x4, so we add them here.
-        let mut abstract_function_headers: HashMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x4;
+        let mut abstract_function_headers: IndexMap<IdT<'s, 't>, Vec<(PrototypeT<'s, 't>, usize)>> = x4;
         for interface_def in coutputs.get_all_interfaces().iter() {
             abstract_function_headers.entry(interface_def.template_name).or_insert_with(Vec::new);
         }
@@ -355,7 +358,71 @@ where 's: 't,
         index: i32,
         rune: IRuneS<'s>,
     ) -> ITemplataT<'s, 't> {
-        panic!("Unimplemented: create_override_placeholder_mimicking");
+        use crate::typing::names::names::{KindPlaceholderNameT, KindPlaceholderTemplateNameT};
+        use crate::typing::types::types::{KindPlaceholderT, KindT, RegionT};
+        use crate::typing::templata::templata::PlaceholderTemplataT;
+        use crate::typing::env::environment::child_of;
+
+        let placeholder_name = self.typing_interner.intern_kind_placeholder_name(KindPlaceholderNameT {
+            template: self.typing_interner.intern_kind_placeholder_template_name(KindPlaceholderTemplateNameT {
+                index,
+                rune,
+                _phantom: std::marker::PhantomData,
+            }),
+        });
+        let placeholder_id_ref = dispatcher_outer_env.id().add_step(self.typing_interner, INameT::KindPlaceholder(placeholder_name));
+        let placeholder_id = *placeholder_id_ref;
+        let placeholder_template_id = self.get_placeholder_template(placeholder_id);
+        let placeholder_template_id_ref = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+            package_coord: placeholder_template_id.package_coord,
+            init_steps: placeholder_template_id.init_steps,
+            local_name: placeholder_template_id.local_name,
+        });
+        coutputs.declare_type(placeholder_template_id_ref);
+        coutputs.declare_type_outer_env(
+            placeholder_template_id_ref,
+            IInDenizenEnvironmentT::from(child_of(
+                self.typing_interner,
+                self.scout_arena,
+                dispatcher_outer_env,
+                placeholder_template_id,
+                placeholder_template_id_ref,
+                vec![],
+            )),
+        );
+
+        match original_templata_to_mimic {
+            ITemplataT::Placeholder(pt) => {
+                ITemplataT::Placeholder(self.typing_interner.alloc(PlaceholderTemplataT { id: placeholder_id, tyype: pt.tyype }))
+            }
+            ITemplataT::Kind(kt) => match kt.kind {
+                KindT::KindPlaceholder(kp) => {
+                    let original_placeholder_template_id = self.get_placeholder_template(kp.id);
+                    let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
+                    coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
+                    ITemplataT::Kind(self.typing_interner.alloc(crate::typing::templata::templata::KindTemplataT {
+                        kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
+                    }))
+                }
+                _ => panic!("vwat: create_override_placeholder_mimicking unexpected kind"),
+            },
+            ITemplataT::Coord(ct) => match ct.coord.kind {
+                KindT::KindPlaceholder(kp) => {
+                    let original_placeholder_template_id = self.get_placeholder_template(kp.id);
+                    let mutability = coutputs.lookup_mutability(original_placeholder_template_id);
+                    coutputs.declare_type_mutability(placeholder_template_id_ref, mutability);
+                    ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT {
+                        coord: crate::typing::types::types::CoordT {
+                            ownership: ct.coord.ownership,
+                            region: RegionT {},
+                            kind: KindT::KindPlaceholder(self.typing_interner.intern_kind_placeholder(KindPlaceholderT { id: placeholder_id })),
+                        },
+                    }))
+                }
+                _ => panic!("vwat: create_override_placeholder_mimicking unexpected coord kind"),
+            },
+            other => panic!("vwat: create_override_placeholder_mimicking unexpected templata: {:?}", other),
+        }
     }
 /*
   def createOverridePlaceholderMimicking(
@@ -503,8 +570,30 @@ where 's: 't,
                 .filter(|(_, &independent)| !independent)
                 .map(|(templata, _)| *templata)
                 .enumerate()
-                .map(|(_impl_placeholder_index, _impl_placeholder)| {
-                    panic!("Unimplemented: implPlaceholderToDispatcherPlaceholder entry")
+                .map(|(impl_placeholder_index, impl_placeholder)| {
+                    use crate::postparsing::names::{IRuneValS, DispatcherRuneFromImplValS};
+                    use crate::typing::names::names::{INameT, IPlaceholderNameT};
+                    let impl_placeholder_id = self.get_placeholder_templata_id(impl_placeholder);
+                    let impl_placeholder_local_name = IPlaceholderNameT::try_from(impl_placeholder_id.local_name)
+                        .unwrap_or_else(|_| panic!("vwat: expected IPlaceholderNameT for impl placeholder local_name"));
+                    let impl_rune = impl_placeholder_local_name.rune();
+                    // Sanity check we're in an impl template, we're about to replace it with a function template
+                    match impl_placeholder_id.init_steps.last() {
+                        Some(name) => {
+                            use crate::typing::names::names::IImplTemplateNameT;
+                            IImplTemplateNameT::try_from(*name).unwrap_or_else(|_| panic!("vwat: last init step should be IImplTemplateNameT, got {:?}", name));
+                        }
+                        None => panic!("vwat: last init step should be IImplTemplateNameT, got None"),
+                    }
+                    let dispatcher_rune = self.scout_arena.intern_rune(IRuneValS::DispatcherRuneFromImpl(DispatcherRuneFromImplValS { inner_rune: impl_rune }));
+                    let dispatcher_placeholder = self.create_override_placeholder_mimicking(
+                        coutputs,
+                        impl_placeholder,
+                        IInDenizenEnvironmentT::from(dispatcher_outer_env),
+                        impl_placeholder_index as i32,
+                        dispatcher_rune,
+                    );
+                    (impl_placeholder_id, dispatcher_placeholder)
                 })
                 .collect();
         let dispatcher_placeholders: Vec<ITemplataT<'s, 't>> =
@@ -562,9 +651,15 @@ where 's: 't,
                 }
             };
         let dispatcher_params: Vec<CoordT<'s, 't>> =
-            impl_t.templata.impl_.generic_params.iter().map(|_p| {
-                panic!("Unimplemented: dispatcher_params from dispatcherInnerInferences")
-            }).collect();
+            origin_function_templata.function.params.iter()
+                .map(|p| p.pattern.coord_rune.unwrap().rune)
+                .map(|rune| {
+                    use crate::typing::templata::templata::expect_coord_templata;
+                    let templata = *dispatcher_inner_inferences.get(&rune)
+                        .unwrap_or_else(|| panic!("vassertSome: rune {:?} not in dispatcherInnerInferences", rune));
+                    expect_coord_templata(templata).coord
+                })
+                .collect();
         let dispatcher_id_ref = {
             let func_name = IFunctionTemplateNameT::try_from(dispatcher_template_id_ref.local_name)
                 .expect("dispatcher_template_id local_name should be IFunctionTemplateNameT");
@@ -634,7 +729,7 @@ where 's: 't,
                     }
                     knowns
                 },
-                &impl_t.templata,
+                impl_t.templata,
             ).unwrap_or_else(|_| panic!("vassert: partialResolveImpl should succeed"));
 
         // Only grab sub_citizen entries, and assert we can't handle non-empty ones yet.
@@ -656,24 +751,46 @@ where 's: 't,
                         citizen_id,
                         IBoundArgumentsSource::InheritBoundsFromTypeItself,
                     );
-                    let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
-                    citizen_inner_env.templatas().name_to_entry.iter()
-                        .filter_map(move |(name, entry)| {
-                            let _rune_in_citizen = match name {
-                                INameT::Rune(r) => r,
-                                _ => return None,
-                            };
-                            let _proto_templata = match entry {
-                                IEnvEntryT::Templata(ITemplataT::Prototype(pt)) => pt,
-                                _ => return None,
-                            };
-                            let _function_bound = match _proto_templata.prototype.id.local_name {
-                                INameT::FunctionBound(fb) => fb,
-                                _ => return None,
-                            };
-                            panic!("implement: FunctionBoundNameT arm — build substituted prototype")
-                        })
-                        .collect::<Vec<_>>()
+                    // Rust adaptation: Scala iterates `citizenInnerEnv.templatas.nameToEntry` while
+                    // calling `substituter.substituteForPrototype(coutputs, …)` in the same pass.
+                    // In Rust the &coutputs (via citizenInnerEnv) and &mut coutputs (via substituter)
+                    // conflict, so we split into two phases: collect raw entries here, then mutate
+                    // in the second pass below.
+                    // Phase 1: collect raw entry data under immutable borrow of coutputs
+                    let raw_entries: Vec<(IRuneS<'s>, &'t FunctionBoundTemplateNameT<'s, 't>, &'t [ITemplataT<'s, 't>], &'t [CoordT<'s, 't>], CoordT<'s, 't>)> = {
+                        let citizen_inner_env = coutputs.get_inner_env_for_type(citizen_template_id);
+                        citizen_inner_env.templatas().name_to_entry.iter()
+                            .filter_map(|(name, entry)| {
+                                let rune_in_citizen = match name {
+                                    INameT::Rune(r) => r,
+                                    _ => return None,
+                                };
+                                let proto_templata = match entry {
+                                    IEnvEntryT::Templata(ITemplataT::Prototype(pt)) => pt,
+                                    _ => return None,
+                                };
+                                let function_bound = match proto_templata.prototype.id.local_name {
+                                    INameT::FunctionBound(fb) => fb,
+                                    _ => return None,
+                                };
+                                Some((rune_in_citizen.rune, function_bound.template, function_bound.template_args, function_bound.parameters, proto_templata.prototype.return_type))
+                            })
+                            .collect()
+                    }; // citizen_inner_env borrow released here
+                    // Phase 2: apply mutation, building substituted prototypes
+                    raw_entries.into_iter().map(|(rune_in_citizen, human_name, template_args, params, return_type)| {
+                        let function_bound_template_name = self.typing_interner.intern_function_bound_template_name(
+                            FunctionBoundTemplateNameT { human_name: human_name.human_name, _phantom: std::marker::PhantomData });
+                        let function_bound_name = self.typing_interner.intern_function_bound_name(
+                            FunctionBoundNameValT { template: function_bound_template_name, template_args, parameters: params });
+                        let sub_citizen_placeholdered_prototype = self.typing_interner.intern_prototype(PrototypeValT {
+                            id: IdValT { package_coord: dispatcher_id_ref.package_coord, init_steps: dispatcher_id_ref.init_steps, local_name: INameT::FunctionBound(function_bound_name) },
+                            return_type,
+                        });
+                        let dispatcher_placeholdered_prototype = substituter.substitute_for_prototype(coutputs, sub_citizen_placeholdered_prototype);
+                        let prototype_templata = self.typing_interner.alloc(PrototypeTemplataT { prototype: dispatcher_placeholdered_prototype });
+                        (rune_in_impl, rune_in_citizen, *prototype_templata)
+                    }).collect::<Vec<_>>()
                 })
                 .collect();
 
@@ -684,8 +801,10 @@ where 's: 't,
             *dispatcher_template_id_ref,
             dispatcher_id_ref,
             dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().enumerate()
-                .map(|(_index, _entry)| {
-                    panic!("Unimplemented: dispatcherInnerEnvWithBoundsForSubCitizen entries")
+                .map(|(index, (_rune_in_impl, _rune_in_citizen, dispatcher_placeholdered_reachable_prototype))| {
+                    let reachable_prototype_name = self.typing_interner.intern_reachable_prototype_name(
+                        ReachablePrototypeNameT { num: index as i32, _phantom: std::marker::PhantomData });
+                    (INameT::ReachablePrototype(reachable_prototype_name), IEnvEntryT::Templata(ITemplataT::Prototype(self.typing_interner.alloc(PrototypeTemplataT { prototype: dispatcher_placeholdered_reachable_prototype.prototype }))))
                 })
                 .collect(),
         );
@@ -708,7 +827,7 @@ where 's: 't,
                 }
                 knowns
             },
-            &impl_t.templata,
+            impl_t.templata,
         );
         let (impl_conclusions, _impl_instantiation_bound_args_unused) = match resolve_result {
             Ok(crate::typing::infer_compiler::CompleteResolveSolve { conclusions, rune_to_bound }) => {
@@ -787,11 +906,18 @@ where 's: 't,
         let impl_independent_placeholder_to_case_placeholder_slice =
             self.typing_interner.alloc_slice_from_vec(impl_independent_placeholder_to_case_placeholder);
 
-        let reachable_map = self.typing_interner.alloc_index_map_from_iter(
-            dispatcher_and_case_placeholdered_impl_reachable_prototypes.iter().map(|_| {
-                panic!("Unimplemented: reachable_map computation from dispatcherAndCasePlaceholderedImplReachablePrototypes")
-            })
-        );
+        let reachable_map = {
+            let mut grouped: std::collections::HashMap<IRuneS<'s>, Vec<(IRuneS<'s>, PrototypeT<'s, 't>)>> = std::collections::HashMap::new();
+            for (rune_in_impl, rune_in_citizen, prototype_templata) in &dispatcher_and_case_placeholdered_impl_reachable_prototypes {
+                grouped.entry(*rune_in_impl).or_default().push((*rune_in_citizen, *prototype_templata.prototype));
+            }
+            self.typing_interner.alloc_index_map_from_iter(
+                grouped.into_iter().map(|(rune_in_impl, inner_entries)| {
+                    let inner_map: ArenaIndexMap<'t, IRuneS<'s>, PrototypeT<'s, 't>> = self.typing_interner.alloc_index_map_from_iter(inner_entries.into_iter());
+                    (rune_in_impl, inner_map)
+                })
+            )
+        };
 
         OverrideT {
             dispatcher_call_id: *dispatcher_id_ref,

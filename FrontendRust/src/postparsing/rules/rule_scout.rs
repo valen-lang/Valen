@@ -191,9 +191,38 @@ fn translate_rulex<'s, 'p>(
           rune: arg_rune.rune,
         }
       } else if name.str() == keywords.implements {
+        assert_eq!(args.len(), 2, "POSTPARSER_IMPLEMENTS_ARGS_LEN");
+        let struct_rune = translate_rulex(scout_arena, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), &args[0]);
+        rune_to_explicit_type.push((struct_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})));
+        let interface_rune = translate_rulex(scout_arena, keywords, env.clone(), &mut lidb.child(), builder, rune_to_explicit_type, context_region.clone(), &args[1]);
+        rune_to_explicit_type.push((interface_rune.rune.clone(), ITemplataType::CoordTemplataType(CoordTemplataType {})));
+
+        let mut child_lidb = lidb.child();
+        let result_rune_s = RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(child_lidb.borrow_val()))),
+        };
+        rune_to_explicit_type.push((result_rune_s.rune.clone(), ITemplataType::ImplTemplataType(crate::postparsing::itemplatatype::ImplTemplataType {})));
+
         // Only appears in definition; filtered out when solving call site
+        builder.push(IRulexSR::DefinitionCoordIsa(crate::postparsing::rules::rules::DefinitionCoordIsaSR {
+          range: PostParser::eval_range(file, *range),
+          result_rune: result_rune_s.clone(),
+          sub_rune: struct_rune.clone(),
+          super_rune: interface_rune.clone(),
+        }));
         // Only appears in call site; filtered out when solving definition
-        panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_IMPLEMENTS_NOT_YET_IMPLEMENTED")
+        builder.push(IRulexSR::CallSiteCoordIsa(crate::postparsing::rules::rules::CallSiteCoordIsaSR {
+          range: PostParser::eval_range(file, *range),
+          result_rune: Some(result_rune_s),
+          sub_rune: struct_rune.clone(),
+          super_rune: interface_rune,
+        }));
+
+        RuneUsage {
+          range: PostParser::eval_range(file, *range),
+          rune: struct_rune.rune,
+        }
       } else if name.str() == keywords.ref_list_compound_mutability {
         panic!("POSTPARSER_TRANSLATE_RULEX_BUILTINCALL_REF_LIST_COMPOUND_MUTABILITY_NOT_YET_IMPLEMENTED")
       } else if name.str() == keywords.refs {

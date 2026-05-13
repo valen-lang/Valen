@@ -242,8 +242,12 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::RuntimeSizedArrayTemplate(_) => panic!("Unimplemented: tyype on RuntimeSizedArrayTemplate"),
       ITemplataT::StaticSizedArrayTemplate(_) => panic!("Unimplemented: tyype on StaticSizedArrayTemplate"),
       ITemplataT::Function(_) => panic!("Unimplemented: tyype on Function"),
-      ITemplataT::StructDefinition(_) => panic!("Unimplemented: tyype on StructDefinition"),
-      ITemplataT::InterfaceDefinition(_) => panic!("Unimplemented: tyype on InterfaceDefinition"),
+      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
+      // In Compiler, StructTemplatas are templates, even if they have zero arguments.
+      ITemplataT::StructDefinition(s) => ITemplataType::TemplateTemplataType(s.origin_struct.tyype),
+      // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
+      // In Compiler, InterfaceTemplatas are templates, even if they have zero arguments.
+      ITemplataT::InterfaceDefinition(i) => ITemplataType::TemplateTemplataType(i.origin_interface.tyype),
       ITemplataT::ExternFunction(_) => panic!("Unimplemented: tyype on ExternFunction"),
     }
   }
@@ -800,11 +804,12 @@ case class ExternFunctionTemplataT(header: FunctionHeaderT) extends ITemplataT[I
   override def tyype: ITemplataType = vfail()
 }
 */
-// FunctionHeaderT doesn't derive Debug yet; treat the header as an opaque ptr.
+// FunctionHeaderT doesn't derive Debug yet; render by content (id) for @IIIOZ
+// cross-run determinism — pointer addresses vary across runs due to ASLR.
 impl<'s, 't> std::fmt::Debug for ExternFunctionTemplataT<'s, 't> {
   fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
     f.debug_struct("ExternFunctionTemplataT")
-      .field("header", &(self.header as *const _))
+      .field("header_id", &self.header.id)
       .finish()
   }
   /* Guardian: disable-all */

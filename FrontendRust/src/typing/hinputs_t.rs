@@ -237,8 +237,14 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_edge
-    pub fn lookup_edge(&self, impl_id: IdT<'s, 't>) -> EdgeT<'s, 't> {
-        panic!("Unimplemented: lookup_edge");
+    pub fn lookup_edge(&self, impl_id: IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
+        let matches: Vec<&&'t EdgeT<'s, 't>> = self.interface_to_sub_citizen_to_edge
+            .values()
+            .flat_map(|m| m.values())
+            .filter(|edge| edge.edge_id == impl_id)
+            .collect();
+        assert!(matches.len() == 1, "vassertOne: expected exactly one edge for impl_id {:?}, got {}", impl_id, matches.len());
+        *matches[0]
     }
     /*
       def lookupEdge(implId: IdT[IImplNameT]): EdgeT = {
@@ -315,8 +321,10 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface_by_template_name
-    pub fn lookup_interface_by_template_name(&self, interface_template_name: InterfaceTemplateNameT) -> InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_interface_by_template_name");
+    pub fn lookup_interface_by_template_name(&self, interface_template_name: &'t InterfaceTemplateNameT<'s, 't>) -> &'t InterfaceDefinitionT<'s, 't> {
+        self.interfaces.iter().copied()
+            .find(|i| i.template_name.local_name == INameT::InterfaceTemplate(interface_template_name))
+            .unwrap_or_else(|| panic!("lookup_interface_by_template_name: not found"))
     }
     /*
       def lookupInterfaceByTemplateName(interfaceTemplateName: InterfaceTemplateNameT): InterfaceDefinitionT = {
@@ -393,8 +401,12 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_impl
-    pub fn lookup_impl(&self, sub_citizen_tt: IdT<'s, 't>, interface_tt: IdT<'s, 't>) -> EdgeT<'s, 't> {
-        panic!("Unimplemented: lookup_impl");
+    pub fn lookup_impl(&self, sub_citizen_tt: IdT<'s, 't>, interface_tt: IdT<'s, 't>) -> &'t EdgeT<'s, 't> {
+        self.interface_to_sub_citizen_to_edge
+            .get(&interface_tt)
+            .unwrap_or_else(|| panic!("lookup_impl: interface not found"))
+            .get(&sub_citizen_tt)
+            .unwrap_or_else(|| panic!("lookup_impl: sub citizen not found"))
     }
     /*
       def lookupImpl(
@@ -483,7 +495,7 @@ impl<'s, 't> HinputsT<'s, 't> {
     */
     // mig: fn get_all_user_functions
     pub fn get_all_user_functions(&self) -> Vec<&'t FunctionDefinitionT<'s, 't>> {
-        panic!("Unimplemented: get_all_user_functions");
+        self.functions.iter().copied().filter(|f| f.header.is_user_function()).collect()
     }
     /*
       // def getAllNonExternFunctions: Iterable[FunctionDefinitionT] = {

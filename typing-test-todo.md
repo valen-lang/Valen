@@ -16,20 +16,20 @@
 - [x] tests_calling_a_templated_struct_s_constructor
 - [x] tests_defining_an_empty_interface_and_an_implementing_struct
 - [x] tests_defining_a_non_empty_interface_and_an_implementing_struct
-- [ ] zero_method_anonymous_interface
-- [ ] tests_upcasting_from_a_struct_to_an_interface
-- [ ] tests_calling_a_function_with_an_upcast
-- [ ] tests_calling_a_virtual_function
-- [ ] tests_calling_a_virtual_function_through_a_borrow_ref
-- [ ] tests_calling_an_abstract_function
-- [ ] tests_upcasting_has_the_right_stuff
-- [ ] tests_calling_a_templated_function_with_an_upcast
-- [ ] tests_upcast_with_generics_has_the_right_stuff
-- [ ] upcast_generic
-- [ ] test_templates
-- [ ] tests_stamping_an_interface_template_from_a_function_param
-- [ ] stamps_an_interface_template_via_a_function_return
-- [ ] tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
+- [x] zero_method_anonymous_interface
+- [x] tests_upcasting_from_a_struct_to_an_interface
+- [x] tests_calling_a_function_with_an_upcast
+- [x] tests_calling_a_virtual_function
+- [x] tests_calling_a_virtual_function_through_a_borrow_ref
+- [x] tests_calling_an_abstract_function
+- [x] tests_upcasting_has_the_right_stuff
+- [x] tests_calling_a_templated_function_with_an_upcast
+- [x] tests_upcast_with_generics_has_the_right_stuff
+- [x] upcast_generic
+- [x] test_templates
+- [x] tests_stamping_an_interface_template_from_a_function_param
+- [x] stamps_an_interface_template_via_a_function_return
+- [x] tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
 - [ ] test_struct_default_generic_argument_in_type
 - [ ] test_struct_default_generic_argument_in_call
 - [ ] structs_can_resolve_other_structs_instantiation_bound_arguments

@@ -1298,7 +1298,14 @@ where 's: 't,
                 (ExpressionTE::Reference(block_2), returns_from_exprs)
             }
             IExpressionSE::Pure(_) => panic!("implement: evaluate_expression — Pure"),
-            IExpressionSE::ConstantStr(_) => panic!("implement: evaluate_expression — ConstantStr"),
+            IExpressionSE::ConstantStr(c) => {
+                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantStr(ConstantStrTE {
+                    value: c.value,
+                    region,
+                    _phantom: std::marker::PhantomData,
+                }));
+                (ExpressionTE::Reference(result), HashSet::new())
+            }
             IExpressionSE::ConstantFloat(_) => panic!("implement: evaluate_expression — ConstantFloat"),
             IExpressionSE::Destruct(_) => panic!("implement: evaluate_expression — Destruct"),
             IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),

@@ -25,6 +25,7 @@ Here's what I want you to do:
    Abilities and restrictions:
     * You are allowed to add debug printouts to the Rust program and run it, if it helps you figure out what the problem is.
     * You are allowed to add debug printouts to the Scala program and run it (this might be useful to compare the Rust printouts to the Scala printouts), but you MUST revert those printouts before youre done.
+       * Note that Scala and Rust hashing isn't exactly the same, so this won't always work.
     * You are not allowed to change the logic of the Rust program or Scala program.
     * **CRITICAL: YOU ARE NOT ALLOWED TO FIX THE BUG.** You are **only allowed to diagnose** and report your findings.
  7. Please clean up any debug printouts you may have made.
@@ -34,3 +35,7 @@ Here's what I want you to do:
  11. If it's something JR can fix, please write it to for-jr.md.
 
 If there is something that confuses you, stop and ask me for help. I like being a part of things, so please don't hesitate.
+
+Notes:
+
+ * If you encounter any nondeterminism, please stop immediately and tell me.

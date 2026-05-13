@@ -96,7 +96,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         initial_knowns: &[InitialKnown<'s, 't>],
-        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_templata: ImplDefinitionTemplataT<'s, 't>,
     ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
         use crate::typing::infer_compiler::include_rule_in_call_site_solve;
         use crate::postparsing::itemplatatype::ITemplataType;
@@ -239,7 +239,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         initial_knowns: &[InitialKnown<'s, 't>],
-        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_templata: ImplDefinitionTemplataT<'s, 't>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
         use crate::typing::infer_compiler::include_rule_in_call_site_solve;
         use crate::postparsing::itemplatatype::ITemplataType;
@@ -358,7 +358,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
-        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_templata: ImplDefinitionTemplataT<'s, 't>,
     ) {
         use crate::typing::env::environment::{child_of, TemplatasStoreBuilder};
         use crate::typing::hinputs_t::{InstantiationBoundArgumentsT, InstantiationReachableBoundArgumentsT};
@@ -513,7 +513,7 @@ where 's: 't,
         });
 
         let impl_t = ImplT {
-            templata: *impl_templata,
+            templata: impl_templata,
             instantiated_id,
             template_id: *impl_template_id,
             sub_citizen_template_id,
@@ -677,7 +677,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         call_location: LocationInDenizen<'s>,
-        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_templata: ImplDefinitionTemplataT<'s, 't>,
         impl_outer_env: IInDenizenEnvironmentT<'s, 't>,
         interface: InterfaceTT<'s, 't>,
     ) -> Vec<bool> {
@@ -999,10 +999,33 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
-        impl_templata: &'t ImplDefinitionTemplataT<'s, 't>,
+        impl_templata: ImplDefinitionTemplataT<'s, 't>,
         child: ICitizenTT<'s, 't>,
     ) -> Result<InterfaceTT<'s, 't>, IResolvingError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::infer_compiler::CompleteResolveSolve;
+        use crate::typing::types::types::{KindT, InterfaceTT};
+        use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
+
+        let initial_knowns = vec![
+            InitialKnown {
+                rune: impl_templata.impl_.sub_citizen_rune,
+                templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(child) })),
+            }
+        ];
+        let _child_env = coutputs.get_outer_env_for_type(parent_ranges, self.get_citizen_template(child.id()));
+        let conclusions = match self.resolve_impl(coutputs, parent_ranges, call_location, calling_env, &initial_knowns, impl_templata) {
+            Ok(CompleteResolveSolve { conclusions, .. }) => conclusions,
+            Err(x) => return Err(x),
+        };
+        let parent_tt = conclusions.get(&impl_templata.impl_.interface_kind_rune.rune)
+            .unwrap_or_else(|| panic!("vassertSome: interfaceKindRune not in conclusions"));
+        match *parent_tt {
+            ITemplataT::Kind(kt) => match kt.kind {
+                KindT::Interface(i) => Ok(*i),
+                _ => panic!("vwat: expected InterfaceTT from interfaceKindRune conclusions"),
+            },
+            _ => panic!("vwat: expected KindTemplataT from interfaceKindRune conclusions"),
+        }
     }
 /*
   def getImplParentGivenSubCitizen(
@@ -1078,8 +1101,14 @@ where 's: 't,
             .collect();
         let parents_from_impl_defs: Vec<ISuperKindTT<'s, 't>> = impl_defs.iter().flat_map(|impl_def| {
             match ICitizenTT::try_from(sub_kind) {
-                Ok(_sub_citizen) => {
-                    panic!("implement: getParents getImplParentGivenSubCitizen");
+                Ok(sub_citizen) => {
+                    match self.get_impl_parent_given_sub_citizen(coutputs, parent_ranges, call_location, calling_env, *impl_def, sub_citizen) {
+                        Ok(x) => vec![ISuperKindTT::from(&*self.typing_interner.alloc(x))],
+                        Err(_) => {
+                            // Throwing away error! TODO: Use an index or something instead.
+                            vec![]
+                        }
+                    }
                 }
                 Err(_) => vec![],
             }
@@ -1232,7 +1261,7 @@ where 's: 't,
                     InitialKnown { rune: impl_def.impl_.sub_citizen_rune, templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(sub_kind_tt) })) },
                     InitialKnown { rune: impl_def.impl_.interface_kind_rune, templata: ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::from(super_kind_tt) })) },
                 ];
-                self.resolve_impl(coutputs, parent_ranges, call_location, calling_env, &initial_knowns, self.typing_interner.alloc(*impl_def))
+                self.resolve_impl(coutputs, parent_ranges, call_location, calling_env, &initial_knowns, *impl_def)
                     .map(|ccs| (*impl_def, ccs))
             }).collect();
 
@@ -1245,7 +1274,7 @@ where 's: 't,
                 let impl_template_name: INameT<'s, 't> = match self.translate_impl_name(impl_templata.impl_.name) {
                     IImplTemplateNameT::ImplTemplate(r) => INameT::ImplTemplate(r),
                     IImplTemplateNameT::ImplBoundTemplate(_) => panic!("Unimplemented: ImplBoundTemplate in isParent"),
-                    IImplTemplateNameT::AnonymousSubstructImplTemplate(_) => panic!("Unimplemented: AnonymousSubstructImplTemplate in isParent"),
+                    IImplTemplateNameT::AnonymousSubstructImplTemplate(r) => INameT::AnonymousSubstructImplTemplate(r),
                 };
                 let impl_template_id = impl_templata.env.id().add_step(self.typing_interner, impl_template_name);
                 let instantiated_id = self.assemble_impl_name(*impl_template_id, &template_args, sub_kind_tt.expect_citizen());

@@ -689,7 +689,7 @@ impl<'s, 't> FunctionBannerT<'s, 't> {
 */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub enum IFunctionAttributeT<'s> {
     Extern(ExternT<'s>),
     Pure,
@@ -708,7 +708,7 @@ pub enum ICitizenAttributeT<'s> {
 sealed trait ICitizenAttributeT
 */
 /// Arena-allocated (see @TFITCX)
-#[derive(Clone)]
+#[derive(Clone, PartialEq)]
 pub struct ExternT<'s> {
     pub package_coord: PackageCoordinate<'s>,
 }
@@ -871,7 +871,7 @@ impl<'s, 't> FunctionHeaderT<'s, 't> {
 */
 }
 impl<'s, 't> FunctionHeaderT<'s, 't> {
-    fn is_user_function(&self) -> bool { panic!("Unimplemented: is_user_function"); }
+    pub fn is_user_function(&self) -> bool { self.attributes.contains(&IFunctionAttributeT::UserFunction) }
 /*
   def isUserFunction = attributes.contains(UserFunctionT)
 */

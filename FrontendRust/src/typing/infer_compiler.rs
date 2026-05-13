@@ -1,4 +1,5 @@
 use std::collections::HashMap;
+use indexmap::IndexMap;
 use crate::utils::range::RangeS;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
@@ -695,7 +696,10 @@ where 's: 't,
         let runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
             rules.iter().filter_map(|rule| match rule {
                 IRulexSR::CallSiteCoordIsa(r) => {
-                    panic!("implement: checkResolvingConclusionsAndResolve resolveImplConclusion");
+                    match self.resolve_impl_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions) {
+                        Ok(x) => Some(x),
+                        Err(e) => panic!("implement: ResolvingResolveConclusionError wrapping in checkResolvingConclusionsAndResolve"),
+                    }
                 }
                 _ => None,
             }).collect();
@@ -856,6 +860,9 @@ where 's: 't,
         rune_to_type: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<HashMap<IRuneS<'s>, ITemplataT<'s, 't>>, FailedSolve<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>, ITypingPassSolverError<'s, 't>>> {
+        // VIOLATES @IIIOZ: still HashMap because the conclusions cascade through 6 files of
+        // `&HashMap<IRuneS<'s>, ITemplataT<'s, 't>>` signatures (FailedSolve fields, add_runed_data_to_near_env,
+        // check_defining_conclusions_and_resolve, etc.). Determinism here deferred to a follow-up sweep.
         let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> = solver_state.userify_conclusions().into_iter().collect();
         let mut all_runes: std::collections::HashSet<IRuneS<'s>> = rune_to_type.keys().cloned().collect();
         all_runes.extend(solver_state.get_all_runes());
@@ -1220,6 +1227,8 @@ where 's: 't,
                     _ => None,
                 }
             }).collect();
+        // VIOLATES @IIIOZ: still HashMap because the downstream make() consumer takes HashMap (cascade through ~6 files).
+        // Deferred with site 5 main offender (line 861 conclusions).
         let rune_to_prototype: HashMap<IRuneS<'s>, &'t PrototypeT<'s, 't>> = runes_and_prototypes.iter().cloned().collect();
         if rune_to_prototype.len() < runes_and_prototypes.len() {
             panic!("resolve_conclusions_for_define: duplicate rune in runesAndPrototypes");
@@ -1228,12 +1237,34 @@ where 's: 't,
         let maybe_runes_and_impls: Vec<(IRuneS<'s>, IdT<'s, 't>)> =
             rules.iter().filter_map(|rule| {
                 match rule {
-                    IRulexSR::DefinitionCoordIsa(_r) => {
-                        panic!("Unimplemented: resolve_conclusions_for_define DefinitionCoordIsaSR");
+                    IRulexSR::DefinitionCoordIsa(r) => {
+                        let result_rune = r.result_rune.rune;
+                        let isa_templata = match conclusions.get(&result_rune) {
+                            Some(ITemplataT::Isa(isa)) => isa,
+                            Some(other) => panic!("vwat: expected IsaTemplataT for resultRune in DefinitionCoordIsaSR, got {:?}", other),
+                            None => panic!("vassertSome: resultRune not in conclusions for DefinitionCoordIsaSR"),
+                        };
+                        let impl_bound_name_t = match isa_templata.impl_name.local_name {
+                            INameT::ImplBound(bound) => bound,
+                            other => panic!("vwat: expected ImplBoundNameT in isa implName local_name, got {:?}", other),
+                        };
+                        let impl_bound_name = self.typing_interner.intern_impl_bound_name(
+                            crate::typing::names::names::ImplBoundNameValT {
+                                template: impl_bound_name_t.template,
+                                template_args: impl_bound_name_t.template_args,
+                            }
+                        );
+                        let impl_id = self.typing_interner.intern_id(crate::typing::names::names::IdValT {
+                            package_coord: isa_templata.impl_name.package_coord,
+                            init_steps: isa_templata.impl_name.init_steps,
+                            local_name: INameT::ImplBound(impl_bound_name),
+                        });
+                        Some((result_rune, *impl_id))
                     }
                     _ => None,
                 }
             }).collect();
+        // VIOLATES @IIIOZ: HashMap; same cascade as rune_to_prototype above. Deferred.
         let rune_to_impl: HashMap<IRuneS<'s>, IdT<'s, 't>> = maybe_runes_and_impls.iter().cloned().collect();
         if rune_to_impl.len() < maybe_runes_and_impls.len() {
             panic!("resolve_conclusions_for_define: duplicate rune in maybeRunesAndImpls");
@@ -1414,7 +1445,38 @@ where 's: 't,
         c: CallSiteCoordIsaSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
     ) -> Result<(IRuneS<'s>, IdT<'s, 't>), IConclusionResolveError<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::types::types::{ISubKindTT, ISuperKindTT};
+        use crate::typing::citizen::impl_compiler::IsParentResult;
+        let CallSiteCoordIsaSR { range, result_rune, sub_rune, super_rune } = c;
+        let sub_coord = match conclusions.get(&sub_rune.rune) {
+            Some(ITemplataT::Coord(ct)) => ct.coord,
+            Some(other) => panic!("vwat: expected CoordTemplataT for subRune in resolveImplConclusion, got {:?}", other),
+            None => panic!("vwat: subRune not in conclusions for resolveImplConclusion"),
+        };
+        let sub_kind = match ISubKindTT::try_from(sub_coord.kind) {
+            Ok(k) => k,
+            Err(_) => panic!("vwat: sub_kind is not ISubKindTT in resolveImplConclusion: {:?}", sub_coord.kind),
+        };
+        let super_coord = match conclusions.get(&super_rune.rune) {
+            Some(ITemplataT::Coord(ct)) => ct.coord,
+            Some(other) => panic!("vwat: expected CoordTemplataT for superRune in resolveImplConclusion, got {:?}", other),
+            None => panic!("vwat: superRune not in conclusions for resolveImplConclusion"),
+        };
+        let super_kind = match ISuperKindTT::try_from(super_coord.kind) {
+            Ok(k) => k,
+            Err(_) => panic!("vwat: super_kind is not ISuperKindTT in resolveImplConclusion: {:?}", super_coord.kind),
+        };
+        let mut full_ranges = vec![range];
+        full_ranges.extend_from_slice(ranges);
+        let impl_success = match self.is_parent(state, calling_env, &full_ranges, call_location, sub_kind, super_kind) {
+            IsParentResult::IsntParent(x) => {
+                let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
+                return Err(IConclusionResolveError::CouldntFindImplForConclusionResolve { range: ranges_slice, fail: x });
+            }
+            IsParentResult::IsParent(x) => x,
+        };
+        let result_rune_s = result_rune.expect("vassertSome: resultRune in CallSiteCoordIsaSR resolveImplConclusion").rune;
+        Ok((result_rune_s, impl_success.impl_id))
     }
 /*
   def resolveImplConclusion(

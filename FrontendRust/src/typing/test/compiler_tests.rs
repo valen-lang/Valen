@@ -726,9 +726,27 @@ fn test_readwrite_ufcs() {
 */
 // mig: fn test_templates
 #[test]
-#[ignore]
 fn test_templates() {
-    panic!("Unmigrated test: test_templates");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "func bork<T>(a T) T { return a; }\n",
+        "exported func main() int { bork(true); bork(2); bork(3) }\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    // Tests that there's only two functions, because we have generics not templates
+    assert!(coutputs.get_all_user_functions().len() == 2);
 }
 /*
   test("Test templates") {
@@ -1124,9 +1142,38 @@ fn tests_defining_a_non_empty_interface_and_an_implementing_struct() {
 */
 // mig: fn stamps_an_interface_template_via_a_function_return
 #[test]
-#[ignore]
 fn stamps_an_interface_template_via_a_function_return() {
-    panic!("Unmigrated test: stamps_an_interface_template_via_a_function_return");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.drop.*;\n",
+        "\n",
+        "sealed interface MyInterface<X Ref> where func drop(X)void { }\n",
+        "\n",
+        "struct SomeStruct<X Ref> where func drop(X)void { x X; }\n",
+        "impl<X> MyInterface<X> for SomeStruct<X>;\n",
+        "\n",
+        "func doAThing<T>(t T) SomeStruct<T>\n",
+        "where func drop(T)void {\n",
+        "  return SomeStruct<T>(t);\n",
+        "}\n",
+        "\n",
+        "exported func main() {\n",
+        "  doAThing(4);\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Stamps an interface template via a function return") {
@@ -1318,9 +1365,63 @@ fn automatically_drops_struct() {
 */
 // mig: fn tests_stamping_an_interface_template_from_a_function_param
 #[test]
-#[ignore]
 fn tests_stamping_an_interface_template_from_a_function_param() {
-    panic!("Unmigrated test: tests_stamping_an_interface_template_from_a_function_param");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "interface MyOption<T Ref> { }\n",
+        "func main(a &MyOption<int>) { }\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let interface_template_name = compile.typing_interner.intern_interface_template_name(
+        crate::typing::names::names::InterfaceTemplateNameT {
+            human_namee: scout_arena.intern_str("MyOption"),
+            _phantom: std::marker::PhantomData,
+        });
+    let template_args_vec = vec![
+        crate::typing::templata::templata::ITemplataT::Coord(
+            compile.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT {
+                coord: CoordT {
+                    ownership: OwnershipT::Share,
+                    region: crate::typing::types::types::RegionT,
+                    kind: KindT::Int(IntT { bits: 32 }),
+                },
+            })
+        ),
+    ];
+    let interface_name = compile.typing_interner.intern_interface_name(
+        crate::typing::names::names::InterfaceNameValT {
+            template: interface_template_name,
+            template_args: &template_args_vec,
+        });
+    let test_tld = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
+    let interface_id = compile.typing_interner.intern_id(
+        crate::typing::names::names::IdValT {
+            package_coord: test_tld,
+            init_steps: &[],
+            local_name: crate::typing::names::names::INameT::Interface(interface_name),
+        });
+    let interface_tt = compile.typing_interner.intern_interface_tt(
+        crate::typing::types::types::InterfaceTTValT { id: *interface_id });
+    let expected_coord = CoordT {
+        ownership: OwnershipT::Borrow,
+        region: crate::typing::types::types::RegionT,
+        kind: KindT::Interface(interface_tt),
+    };
+
+    let coutputs = compile.expect_compiler_outputs();
+    coutputs.lookup_interface_by_template_name(interface_template_name);
+    let main = coutputs.lookup_function_by_str("main");
+    assert_eq!(main.header.params[0].tyype, expected_coord);
 }
 /*
   test("Tests stamping an interface template from a function param") {
@@ -1640,9 +1741,81 @@ fn tests_calling_a_templated_struct_s_constructor() {
 */
 // mig: fn tests_upcasting_from_a_struct_to_an_interface
 #[test]
-#[ignore]
 fn tests_upcasting_from_a_struct_to_an_interface() {
-    panic!("Unmigrated test: tests_upcasting_from_a_struct_to_an_interface");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = include_str!("../../tests/programs/virtuals/upcasting.vale");
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::LetNormal(l)
+            if matches!(&l.variable,
+                ILocalVariableT::Reference(ReferenceLocalVariableT {
+                    name: crate::typing::names::names::IVarNameT::CodeVar(cv),
+                    variability: crate::typing::types::types::VariabilityT::Final,
+                    coord: CoordT { ownership: OwnershipT::Own, kind: KindT::Interface(_), .. },
+                }) if cv.name == "x"
+            ) => Some(())
+    );
+
+    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u) => Some(u)
+    );
+
+    let upcast_result_coord = upcast.result().coord;
+    match upcast_result_coord {
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Interface(stt), .. } => {
+            match stt.id.local_name {
+                crate::typing::names::names::INameT::Interface(
+                    crate::typing::names::names::InterfaceNameT {
+                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                        template_args: &[],
+                        ..
+                    }
+                ) => {
+                    assert_eq!(human_namee, "MyInterface");
+                    assert!(stt.id.init_steps.is_empty());
+                    assert!(stt.id.package_coord.is_test());
+                }
+                other => panic!("upcast result coord local_name: {:?}", other),
+            }
+        }
+        other => panic!("upcast result coord: {:?}", other),
+    }
+
+    let inner_coord = upcast.inner_expr.result().coord;
+    match inner_coord {
+        CoordT { ownership: OwnershipT::Own, kind: KindT::Struct(stt), .. } => {
+            match stt.id.local_name {
+                crate::typing::names::names::INameT::Struct(sn) => {
+                    assert!(stt.id.init_steps.is_empty());
+                    assert!(stt.id.package_coord.is_test());
+                    match sn.template {
+                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
+                            assert_eq!(tmpl.human_name, "MyStruct");
+                        }
+                        other => panic!("inner coord struct template: {:?}", other),
+                    }
+                }
+                other => panic!("inner coord local_name: {:?}", other),
+            }
+        }
+        other => panic!("inner expr coord: {:?}", other),
+    }
 }
 /*
   test("Tests upcasting from a struct to an interface") {
@@ -1661,9 +1834,77 @@ fn tests_upcasting_from_a_struct_to_an_interface() {
 */
 // mig: fn tests_calling_a_virtual_function
 #[test]
-#[ignore]
 fn tests_calling_a_virtual_function() {
-    panic!("Unmigrated test: tests_calling_a_virtual_function");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = include_str!("../../tests/programs/virtuals/calling.vale");
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u)
+            if matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            ..
+                        }
+                    )
+                    if human_namee == "Car"
+                )
+            ) => Some(u)
+    );
+
+    match upcast.inner_expr.result().coord.kind {
+        KindT::Struct(stt) => {
+            match stt.id.local_name {
+                crate::typing::names::names::INameT::Struct(sn) => {
+                    match sn.template {
+                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
+                            assert_eq!(tmpl.human_name, "Toyota");
+                        }
+                        other => panic!("inner expr struct template: {:?}", other),
+                    }
+                }
+                other => panic!("inner expr local_name: {:?}", other),
+            }
+        }
+        other => panic!("inner expr kind: {:?}", other),
+    }
+
+    match upcast.result().coord.kind {
+        KindT::Interface(it) => {
+            match it.id.local_name {
+                crate::typing::names::names::INameT::Interface(
+                    crate::typing::names::names::InterfaceNameT {
+                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                        template_args: &[],
+                        ..
+                    }
+                ) => {
+                    assert_eq!(human_namee, "Car");
+                    assert!(it.id.init_steps.is_empty());
+                    assert!(it.id.package_coord.is_test());
+                }
+                other => panic!("upcast result local_name: {:?}", other),
+            }
+        }
+        other => panic!("upcast result kind: {:?}", other),
+    }
 }
 /*
   test("Tests calling a virtual function") {
@@ -1684,9 +1925,80 @@ fn tests_calling_a_virtual_function() {
 */
 // mig: fn tests_upcasting_has_the_right_stuff
 #[test]
-#[ignore]
 fn tests_upcasting_has_the_right_stuff() {
-    panic!("Unmigrated test: tests_upcasting_has_the_right_stuff");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = include_str!("../../tests/programs/virtuals/calling.vale");
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    let upcast: &crate::typing::ast::expressions::UpcastTE = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u)
+            if matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            ..
+                        }
+                    )
+                    if human_namee == "Car"
+                )
+            ) => Some(u)
+    );
+
+    match upcast.inner_expr.result().coord.kind {
+        KindT::Struct(stt) => {
+            match stt.id.local_name {
+                crate::typing::names::names::INameT::Struct(sn) => {
+                    match sn.template {
+                        crate::typing::names::names::IStructTemplateNameT::StructTemplate(tmpl) => {
+                            assert_eq!(tmpl.human_name, "Toyota");
+                        }
+                        other => panic!("inner expr struct template: {:?}", other),
+                    }
+                }
+                other => panic!("inner expr local_name: {:?}", other),
+            }
+        }
+        other => panic!("inner expr kind: {:?}", other),
+    }
+
+    match upcast.result().coord.kind {
+        KindT::Interface(it) => {
+            match it.id.local_name {
+                crate::typing::names::names::INameT::Interface(
+                    crate::typing::names::names::InterfaceNameT {
+                        template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                        ..
+                    }
+                ) => {
+                    assert_eq!(human_namee, "Car");
+                    assert!(it.id.init_steps.is_empty());
+                    assert!(it.id.package_coord.is_test());
+                }
+                other => panic!("upcast result local_name: {:?}", other),
+            }
+        }
+        other => panic!("upcast result kind: {:?}", other),
+    }
+
+    let impl_edge = coutputs.lookup_edge(upcast.impl_name);
+    assert!(impl_edge.sub_citizen.id() == upcast.inner_expr.result().coord.kind.expect_citizen().id());
+    assert!(impl_edge.super_interface == upcast.result().coord.kind.expect_citizen().id());
 }
 /*
   test("Tests upcasting has the right stuff") {
@@ -1712,9 +2024,39 @@ fn tests_upcasting_has_the_right_stuff() {
 */
 // mig: fn tests_calling_a_virtual_function_through_a_borrow_ref
 #[test]
-#[ignore]
 fn tests_calling_a_virtual_function_through_a_borrow_ref() {
-    panic!("Unmigrated test: tests_calling_a_virtual_function_through_a_borrow_ref");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = include_str!("../../tests/programs/virtuals/callingThroughBorrow.vale");
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::FunctionCall(f)
+            if matches!(f.callable.id.local_name,
+                crate::typing::names::names::INameT::Function(
+                    crate::typing::names::names::FunctionNameT {
+                        template: crate::typing::names::names::FunctionTemplateNameT { human_name, .. },
+                        ..
+                    }
+                )
+                if human_name == "doCivicDance"
+            ) && matches!(f.callable.return_type,
+                CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT::I32), .. }
+            ) => Some(())
+    );
 }
 /*
   test("Tests calling a virtual function through a borrow ref") {
@@ -1882,9 +2224,48 @@ fn test_borrow_ref() {
 */
 // mig: fn tests_calling_a_function_with_an_upcast
 #[test]
-#[ignore]
 fn tests_calling_a_function_with_an_upcast() {
-    panic!("Unmigrated test: tests_calling_a_function_with_an_upcast");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "interface ISpaceship {}\n",
+        "struct Firefly {}\n",
+        "impl ISpaceship for Firefly;\n",
+        "func launch(ship &ISpaceship) { }\n",
+        "func main() {\n",
+        "  launch(&Firefly());\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u)
+            if matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            ..
+                        }
+                    )
+                    if human_namee == "ISpaceship"
+                )
+            ) => Some(())
+    );
 }
 /*
   test("Tests calling a function with an upcast") {
@@ -1911,9 +2292,48 @@ fn tests_calling_a_function_with_an_upcast() {
 */
 // mig: fn tests_calling_a_templated_function_with_an_upcast
 #[test]
-#[ignore]
 fn tests_calling_a_templated_function_with_an_upcast() {
-    panic!("Unmigrated test: tests_calling_a_templated_function_with_an_upcast");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "interface ISpaceship<T> where T Ref {}\n",
+        "struct Firefly<T> where T Ref {}\n",
+        "impl<T> ISpaceship<T> for Firefly<T>;\n",
+        "func launch<T>(ship &ISpaceship<T>) { }\n",
+        "func main() {\n",
+        "  launch(&Firefly<int>());\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u)
+            if matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            ..
+                        }
+                    )
+                    if human_namee == "ISpaceship"
+                )
+            ) => Some(())
+    );
 }
 /*
   test("Tests calling a templated function with an upcast") {
@@ -1941,9 +2361,48 @@ fn tests_calling_a_templated_function_with_an_upcast() {
 */
 // mig: fn tests_upcast_with_generics_has_the_right_stuff
 #[test]
-#[ignore]
 fn tests_upcast_with_generics_has_the_right_stuff() {
-    panic!("Unmigrated test: tests_upcast_with_generics_has_the_right_stuff");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "interface ISpaceship<T> where T Ref {}\n",
+        "struct Firefly<T> where T Ref {}\n",
+        "impl<T> ISpaceship<T> for Firefly<T>;\n",
+        "func launch<T>(ship &ISpaceship<T>) { }\n",
+        "func main() {\n",
+        "  launch(&Firefly<int>());\n",
+        "}\n",
+    );
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let main = coutputs.lookup_function_by_str("main");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Upcast(u)
+            if matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            ..
+                        }
+                    )
+                    if human_namee == "ISpaceship"
+                )
+            ) => Some(())
+    );
 }
 /*
   test("Tests upcast with generics has the right stuff") {
@@ -2976,9 +3435,46 @@ fn report_imm_mut_mismatch_for_generic_type() {
 */
 // mig: fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
 #[test]
-#[ignore]
 fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param() {
-    panic!("Unmigrated test: tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.panicutils.*;\n",
+        "import v.builtins.drop.*;\n",
+        "import panicutils.*;\n",
+        "sealed interface MyOption<T Ref> where func drop(T)void { }\n",
+        "struct MySome<T Ref> where func drop(T)void { value T; }\n",
+        "impl<T> MyOption<T> for MySome<T> where func drop(T)void;\n",
+        "func moo(a MySome<int>) { }\n",
+        "exported func main() { moo(__pretend<MySome<int>>()); }\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let interface_template_name = compile.typing_interner.intern_interface_template_name(
+        crate::typing::names::names::InterfaceTemplateNameT {
+            human_namee: scout_arena.intern_str("MyOption"),
+            _phantom: std::marker::PhantomData,
+        });
+    let struct_template_name = crate::typing::names::names::StructTemplateNameT {
+        human_name: scout_arena.intern_str("MySome"),
+        _phantom: std::marker::PhantomData,
+    };
+
+    let coutputs = compile.expect_compiler_outputs();
+
+    let interface = coutputs.lookup_interface_by_template_name(interface_template_name);
+    let my_struct = coutputs.lookup_struct_by_template_name(struct_template_name);
+
+    coutputs.lookup_impl(my_struct.instantiated_citizen.id, interface.instantiated_interface.id);
 }
 /*
   test("Tests stamping a struct and its implemented interface from a function param") {
@@ -3056,9 +3552,33 @@ fn test_imm_array() {
 */
 // mig: fn tests_calling_an_abstract_function
 #[test]
-#[ignore]
 fn tests_calling_an_abstract_function() {
-    panic!("Unmigrated test: tests_calling_an_abstract_function");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = include_str!("../../tests/programs/genericvirtuals/callingAbstract.vale");
+    let resolver = code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()])
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    coutputs.functions.iter().find(|f| {
+        matches!(f.header.id.local_name,
+            crate::typing::names::names::INameT::Function(
+                crate::typing::names::names::FunctionNameT {
+                    template: crate::typing::names::names::FunctionTemplateNameT { human_name, .. },
+                    ..
+                }
+            )
+            if human_name == "doThing"
+        ) && f.header.get_abstract_interface().is_some()
+    }).unwrap();
 }
 /*
   test("Tests calling an abstract function") {
@@ -3328,9 +3848,62 @@ fn test_array_push_pop_len_capacity_drop() {
 */
 // mig: fn upcast_generic
 #[test]
-#[ignore]
 fn upcast_generic() {
-    panic!("Unmigrated test: upcast_generic");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.drop.*;\n",
+        "\n",
+        "interface IShip {}\n",
+        "\n",
+        "struct Raza { fuel int; }\n",
+        "impl IShip for Raza;\n",
+        "\n",
+        "func doUpcast<T>(x T) IShip\n",
+        "where implements(T, IShip) {\n",
+        "  i IShip = x;\n",
+        "  return i;\n",
+        "}\n",
+        "\n",
+        "exported func main() {\n",
+        "  doUpcast(Raza(42));\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+
+    let do_upcast = coutputs.lookup_function_by_str("doUpcast");
+
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(do_upcast),
+        crate::typing::test::traverse::NodeRefT::Upcast(u) => {
+            assert!(matches!(u.inner_expr.result().coord.kind, KindT::KindPlaceholder(_)));
+            assert!(matches!(u.target_super_kind,
+                crate::typing::types::types::ISuperKindTT::Interface(it)
+                if matches!(it.id.local_name,
+                    crate::typing::names::names::INameT::Interface(
+                        crate::typing::names::names::InterfaceNameT {
+                            template: crate::typing::names::names::InterfaceTemplateNameT { human_namee, .. },
+                            template_args: &[],
+                            ..
+                        }
+                    )
+                    if it.id.init_steps.is_empty() && human_namee == "IShip"
+                )
+            ));
+            Some(())
+        }
+    );
 }
 /*
   test("Upcast generic") {
