@@ -1749,7 +1749,16 @@ impl<'s, 't> ExportEnvironmentT<'s, 't> where 's: 't {
     get_only_nearest: bool,
     interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_imprecise_name_inner");
+    let result = self.templatas.lookup_with_imprecise_name_inner(
+      IEnvironmentT::Export(self), name, lookup_filter, interner,
+    );
+    if !result.is_empty() && get_only_nearest {
+      result
+    } else {
+      let mut combined = result;
+      combined.extend(self.parent_env.lookup_with_imprecise_name_inner(name, lookup_filter, get_only_nearest, interner));
+      combined
+    }
   }
   /*
     override def lookupWithImpreciseNameInner(

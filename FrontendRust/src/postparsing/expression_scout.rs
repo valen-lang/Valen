@@ -1895,6 +1895,30 @@ fn scout_expression(
           throw CompileErrorExceptionS(UnimplementedExpression(evalRange(range), "shortcalling"));
         }
         */
+    IExpressionPE::Not(not) => {
+      let callable_expr_s = &*self.scout_arena.alloc(IExpressionSE::OutsideLoad(OutsideLoadSE {
+        range: PostParser::eval_range(&file_coordinate, not.range),
+        rules: &[],
+        name: self.scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS {
+          name: self.keywords.not,
+        })),
+        maybe_template_args: None,
+        target_ownership: LoadAsP::LoadAsBorrow,
+      }));
+      let (stack_frame1, inner_expr_s, inner_self_uses, inner_child_uses): (StackFrame<'s>, &'s IExpressionSE<'s>, VariableUses<'s>, VariableUses<'s>) = {
+        let mut inner_lidb = lidb.child();
+        self.scout_expression_and_coerce(stack_frame, &mut inner_lidb, not.inner, LoadAsP::Use)?
+      };
+      let result = IScoutResult::NormalResult(NormalResultS {
+        expr: &*self.scout_arena.alloc(IExpressionSE::FunctionCall(FunctionCallSE {
+          range: PostParser::eval_range(&file_coordinate, not.range),
+          location: lidb.child().consume_in_arena(self.scout_arena),
+          callable_expr: callable_expr_s,
+          arg_exprs: self.scout_arena.alloc_slice_from_vec(vec![inner_expr_s]),
+        })),
+      });
+      Ok((stack_frame1, result, inner_self_uses, inner_child_uses))
+    }
     _ => panic!(
       "POSTPARSER_SCOUT_EXPRESSION_NOT_YET_IMPLEMENTED: {:?}",
       expression

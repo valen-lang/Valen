@@ -1042,8 +1042,11 @@ where 's: 't,
         function: &'t PrototypeT<'s, 't>,
         export_id: IdT<'s, 't>,
         exported_name: StrI<'s>,
+        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        assert!(self.get_instantiation_bounds(interner, function.id).is_some());
+        let export = interner.alloc(FunctionExportT { range, prototype: *function, export_id, exported_name });
+        self.function_exports.push(export);
     }
     /*
       def addFunctionExport(range: RangeS, function: PrototypeT[IFunctionNameT], exportId: IdT[ExportNameT], exportedName: StrI): Unit = {
@@ -1078,8 +1081,10 @@ where 's: 't,
         extern_placeholdered_id: IdT<'s, 't>,
         function: &'t PrototypeT<'s, 't>,
         exported_name: StrI<'s>,
+        interner: &crate::typing::typing_interner::TypingInterner<'s, 't>,
     ) {
-        panic!("Unimplemented: Slab 10 — body migration");
+        let function_extern = interner.alloc(FunctionExternT { range, extern_placeholdered_id, prototype: *function, extern_name: exported_name });
+        self.function_externs.push(function_extern);
     }
     /*
       def addFunctionExtern(range: RangeS, externPlaceholderedId: IdT[ExternNameT], function: PrototypeT[IFunctionNameT], exportedName: StrI): Unit = {

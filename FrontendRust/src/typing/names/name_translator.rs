@@ -402,6 +402,10 @@ where 's: 't,
                 IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(
                     ClosureParamNameT { code_location: closure_param_name_s.code_location, _phantom: std::marker::PhantomData }))
             }
+            IVarNameS::MagicParamName(code_location) => {
+                IVarNameT::MagicParam(self.typing_interner.intern_magic_param_name(
+                    MagicParamNameT { code_location2: self.translate_code_location(code_location), _phantom: std::marker::PhantomData }))
+            }
             _ => {
                 panic!("implement: translate_var_name_step — {:?}", std::mem::discriminant(&name));
             }

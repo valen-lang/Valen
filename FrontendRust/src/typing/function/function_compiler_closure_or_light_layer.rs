@@ -117,7 +117,26 @@ where 's: 't,
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: evaluate_templated_closure_function_from_call_for_banner");
+        let (variables, entries) = self.make_closure_variables_and_entries(coutputs, calling_env.denizen_template_id(), closure_struct_ref);
+        let name = self.typing_interner.alloc(
+            parent_env.id().add_step(self.typing_interner,
+                self.translate_generic_template_function_name(function.name, arg_types)));
+        let mut builder = TemplatasStoreBuilder::new(name);
+        builder.add_entries(self.scout_arena, entries);
+        let templatas = builder.build_in(self.typing_interner);
+        let variables_t = self.typing_interner.alloc_slice_from_vec(variables);
+        let outer_env = self.typing_interner.alloc(BuildingFunctionEnvironmentWithClosuredsT {
+            global_env: parent_env.global_env(),
+            parent_env,
+            id: **name,
+            templatas,
+            function,
+            variables: variables_t,
+            is_root_compiling_denizen: false,
+        });
+        self.evaluate_templated_function_from_call_for_banner(
+            outer_env, coutputs, calling_env, call_range, call_location,
+            already_specified_template_args, context_region, arg_types)
     }
 /*
   def evaluateTemplatedClosureFunctionFromCallForBanner(
@@ -725,11 +744,49 @@ where 's: 't,
 {
     fn make_closure_variables_and_entries(
         &self,
-        coutputs: CompilerOutputs,
+        coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_denizen_id: IdT<'s, 't>,
         closure_struct_ref: StructTT<'s, 't>,
-    ) -> (Vec<IVariableT<'_, '_>>, Vec<(INameT<'_, '_>, IEnvEntryT<'_, '_>)>) {
-        panic!("Unimplemented: make_closure_variables_and_entries");
+    ) -> (Vec<IVariableT<'s, 't>>, Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)>) {
+        use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+        use crate::typing::env::function_environment_t::{IVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
+        use crate::typing::env::i_env_entry::IEnvEntryT;
+        use crate::typing::templata_compiler::IBoundArgumentsSource;
+        use crate::typing::templata::templata::KindTemplataT;
+        let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
+        let substituter = self.get_placeholder_substituter(
+            self.opts.global_options.sanity_check,
+            original_calling_denizen_id,
+            closure_struct_ref.id,
+            // This is a parameter, so we can grab bounds from it.
+            IBoundArgumentsSource::InheritBoundsFromTypeItself,
+        );
+        let variables: Vec<IVariableT<'s, 't>> =
+            closure_struct_def.members.iter().map(|member| {
+                match member {
+                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, variability, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) }) => {
+                        IVariableT::ReferenceClosure(ReferenceClosureVariableT {
+                            name: *var_name,
+                            closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
+                            variability: *variability,
+                            coord: substituter.substitute_for_coord(coutputs, *reference),
+                        })
+                    }
+                    IStructMemberT::Normal(NormalStructMemberT { name: var_name, variability, tyype: IMemberTypeT::Address(AddressMemberTypeT { reference }) }) => {
+                        IVariableT::AddressibleClosure(AddressibleClosureVariableT {
+                            name: *var_name,
+                            closured_vars_struct_type: self.typing_interner.alloc(closure_struct_ref),
+                            variability: *variability,
+                            coord: substituter.substitute_for_coord(coutputs, *reference),
+                        })
+                    }
+                    IStructMemberT::Variadic(_) => panic!("implement: make_closure_variables_and_entries — VariadicStructMemberT"),
+                }
+            }).collect();
+        let entries: Vec<(INameT<'s, 't>, IEnvEntryT<'s, 't>)> = vec![
+            (closure_struct_ref.id.local_name, IEnvEntryT::Templata(ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::Struct(self.typing_interner.alloc(closure_struct_ref)) })))),
+        ];
+        (variables, entries)
     }
 /*
   private def makeClosureVariablesAndEntries(

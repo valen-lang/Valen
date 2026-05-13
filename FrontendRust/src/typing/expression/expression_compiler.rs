@@ -159,7 +159,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         exprs_1: &[&'s IExpressionSE<'s>],
@@ -254,7 +254,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         region: RegionT,
         load_range: RangeS<'s>,
         name_a: IVarNameS<'s>,
@@ -376,11 +376,68 @@ where 's: 't,
                     local_variable: ILocalVariableT::Reference(rlv),
                 })))
             }
-            Some(IVariableT::AddressibleClosure(_)) => {
-                panic!("implement: evaluate_addressible_lookup — AddressibleClosure");
+            Some(IVariableT::AddressibleClosure(acv)) => {
+                let closured_vars_struct_ref = *acv.closured_vars_struct_type;
+                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
+                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
+                    INameT::LambdaCitizenTemplate(n) => n,
+                    _ => panic!("evaluate_addressible_lookup AddressibleClosure: expected LambdaCitizenTemplateNameT"),
+                };
+                let mutability = self.get_mutability(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
+                let ownership = match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup AddressibleClosure — PlaceholderTemplataT mutability"),
+                    _ => panic!("implement: evaluate_addressible_lookup AddressibleClosure — unexpected mutability"),
+                };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
+                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: ranges[0],
+                    local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
+                })));
+                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
+                assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &acv.name));
+                Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                    range: ranges[0],
+                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    member_name: acv.name,
+                    result_type2: acv.coord,
+                    variability: acv.variability,
+                })))
             }
-            Some(IVariableT::ReferenceClosure(_)) => {
-                panic!("implement: evaluate_addressible_lookup — ReferenceClosure");
+            Some(IVariableT::ReferenceClosure(rcv)) => {
+                let closured_vars_struct_ref = *rcv.closured_vars_struct_type;
+                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
+                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
+                    INameT::LambdaCitizenTemplate(n) => n,
+                    _ => panic!("evaluate_addressible_lookup ReferenceClosure: expected LambdaCitizenTemplateNameT"),
+                };
+                let mutability = self.get_mutability(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
+                let ownership = match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup ReferenceClosure — PlaceholderTemplataT mutability"),
+                    _ => panic!("implement: evaluate_addressible_lookup ReferenceClosure — unexpected mutability"),
+                };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
+                assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &rcv.name));
+                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: ranges[0],
+                    local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
+                        name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData })),
+                        variability: VariabilityT::Final,
+                        coord: closured_vars_struct_ref_coord,
+                    }),
+                })));
+                Some(self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                    range: ranges[0],
+                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    member_name: rcv.name,
+                    member_reference: rcv.coord,
+                    variability: rcv.variability,
+                })))
             }
             None => None,
         }
@@ -499,7 +556,31 @@ where 's: 't,
         // Note, this is where the unordered closuredNames set becomes ordered.
         let lookup_expressions2: Vec<ExpressionTE<'s, 't>> =
             closure_struct_def.members.iter().map(|member| {
-                panic!("Unimplemented: make_closure_struct_construct_expression member loop");
+                use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+                match member {
+                    IStructMemberT::Variadic(_) => panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)"),
+                    IStructMemberT::Normal(NormalStructMemberT { name: member_name, tyype, .. }) => {
+                        let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
+                            .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
+                        match tyype {
+                            IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_coord }) => {
+                                let coord = substituter.substitute_for_coord(coutputs, *unsubstituted_coord);
+                                assert_eq!(coord.kind, lookup.result().coord.kind);
+                                // Closures never contain owning references.
+                                // If we're capturing an own, then on the inside of the closure
+                                // it's a borrow or a weak. See "Captured own is borrow" test for more.
+                                assert!(coord.ownership != OwnershipT::Own);
+                                let borrow_loaded = self.borrow_soft_load(coutputs, lookup);
+                                ExpressionTE::Reference(self.typing_interner.alloc(borrow_loaded))
+                            }
+                            IMemberTypeT::Address(AddressMemberTypeT { reference: unsubstituted_coord }) => {
+                                let coord = substituter.substitute_for_coord(coutputs, *unsubstituted_coord);
+                                assert_eq!(coord, lookup.result().coord);
+                                ExpressionTE::Address(lookup)
+                            }
+                        }
+                    }
+                }
             }).collect();
         let ownership =
             match closure_struct_def.mutability {
@@ -594,7 +675,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
@@ -642,7 +723,7 @@ where 's: 't,
     pub fn coerce_to_reference_expression(
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
@@ -683,7 +764,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
@@ -722,7 +803,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         outer_call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
@@ -860,8 +941,8 @@ where 's: 't,
                     &let_se.pattern,
                     source_expr_2,
                     region,
-                    |_coutputs, nenv, _life, _live_capture_locals| {
-                        self.typing_interner.alloc(
+                    |compiler, _coutputs, nenv, _life, _live_capture_locals| {
+                        compiler.typing_interner.alloc(
                             ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
                                 region: nenv.default_region(),
                                 _phantom: std::marker::PhantomData,
@@ -993,10 +1074,10 @@ where 's: 't,
             }
             IExpressionSE::Function(function_se) => {
                 let function_s = function_se.function;
-                let mut range_list = vec![function_s.range];
-                range_list.extend_from_slice(parent_ranges);
+                let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                    &std::iter::once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
-                    coutputs, nenv, &range_list, outer_call_location, region, *function_s.name, function_s);
+                    coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s);
                 (ExpressionTE::Reference(call_expr_2), HashSet::new())
             }
             IExpressionSE::Ownershipped(ownershipped) => {
@@ -2747,7 +2828,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         name: IFunctionDeclarationNameS<'s>,
@@ -2869,7 +2950,7 @@ where 's: 't,
         starting_nenv: &'t NodeEnvironmentT<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         block: &'s BlockSE<'s>,
@@ -2904,17 +2985,17 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        patterns_1: &[&'s AtomSP<'s>],
-        pattern_input_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
+        patterns_1: &'t [&'s AtomSP<'s>],
+        pattern_input_exprs_2: &'t [&'t ReferenceExpressionTE<'s, 't>],
         region: RegionT,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         self.translate_pattern_list_pattern(
             coutputs, nenv, life, parent_ranges, call_location,
             patterns_1, pattern_input_exprs_2, region,
-            |_coutputs, nenv, _live_capture_locals| {
-                self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+            |compiler, _coutputs, nenv, _live_capture_locals| {
+                compiler.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
                     region: nenv.default_region,
                     _phantom: std::marker::PhantomData,
                 }))
@@ -2946,7 +3027,7 @@ where 's: 't,
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         function_s: &'s FunctionS<'s>,
     ) -> &'s FunctionA<'s> {
         let range_s = function_s.range;
@@ -3325,10 +3406,12 @@ where
                     },
                 ))
             }
-            Some(_x) => {
-                // Scala: `case Some(x) => Ok(TemplataLookupResult(x.tyype))`.
-                // Requires `ITemplataT::tyype()` getter — separate scaffolding gap.
-                panic!("LetExprRuneTypeSolverEnv: ITemplataT::tyype() not yet implemented");
+            Some(x) => {
+                Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
+                    crate::postparsing::rune_type_solver::TemplataLookupResult {
+                        templata: x.tyype(),
+                    },
+                ))
             }
             None => Err(
                 crate::postparsing::rune_type_solver::IRuneTypingLookupFailedError::CouldntFindType(

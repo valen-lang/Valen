@@ -611,7 +611,36 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         name: IVarNameS<'s>,
     ) -> &'t NormalStructMemberT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+        use crate::typing::env::function_environment_t::{IVariableT, ReferenceLocalVariableT, AddressibleLocalVariableT, ReferenceClosureVariableT, AddressibleClosureVariableT};
+        let translated_name = self.translate_var_name_step(name);
+        let (variability, tyype) = match env.get_variable(translated_name).unwrap() {
+            IVariableT::ReferenceLocal(ReferenceLocalVariableT { variability, coord, .. }) => {
+                // See "Captured own is borrow" test for why we do this
+                let tyype = match coord.ownership {
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
+                    OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
+                    OwnershipT::Weak => panic!("implement: determine_closure_variable_member — ReferenceLocalVariableT WeakT"),
+                };
+                (variability, tyype)
+            }
+            IVariableT::AddressibleLocal(AddressibleLocalVariableT { variability, coord: reference, .. }) => {
+                (variability, IMemberTypeT::Address(AddressMemberTypeT { reference }))
+            }
+            IVariableT::ReferenceClosure(ReferenceClosureVariableT { variability, coord, .. }) => {
+                // See "Captured own is borrow" test for why we do this
+                let tyype = match coord.ownership {
+                    OwnershipT::Own => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: CoordT { ownership: OwnershipT::Borrow, region: coord.region, kind: coord.kind } }),
+                    OwnershipT::Borrow | OwnershipT::Share => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: coord }),
+                    OwnershipT::Weak => panic!("implement: determine_closure_variable_member — ReferenceClosureVariableT WeakT"),
+                };
+                (variability, tyype)
+            }
+            IVariableT::AddressibleClosure(AddressibleClosureVariableT { variability, coord: reference, .. }) => {
+                (variability, IMemberTypeT::Address(AddressMemberTypeT { reference }))
+            }
+        };
+        self.typing_interner.alloc(NormalStructMemberT { name: translated_name, variability, tyype })
     }
 /*
   private def determineClosureVariableMember(

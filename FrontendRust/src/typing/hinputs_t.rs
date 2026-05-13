@@ -381,8 +381,19 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_struct
-    pub fn lookup_struct_by_human_name(&self, human_name: &str) -> StructDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_struct_by_human_name");
+    pub fn lookup_struct_by_str(&self, human_name: &str) -> &'t StructDefinitionT<'s, 't> {
+        let matches: Vec<_> = self.structs.iter().filter(|s| {
+            match &s.template_name.local_name {
+                INameT::StructTemplate(t) if t.human_name.as_str() == human_name => true,
+                _ => false,
+            }
+        }).copied().collect();
+        if matches.is_empty() {
+            panic!("Struct \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
     /*
       def lookupStruct(humanName: String): StructDefinitionT = {

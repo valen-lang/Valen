@@ -1285,8 +1285,46 @@ fn translate_impl(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, im
 
 */
 // mig: fn translate_export
-fn translate_export(&self, _astrouts: &mut Astrouts<'s>, _env: &EnvironmentA<'s>, _export_s: &ExportAsS<'s>) -> &'s ExportAsA<'s> {
-  panic!("Unimplemented: translate_export");
+fn translate_export(&self, astrouts: &mut Astrouts<'s>, env: &EnvironmentA<'s>, export_s: &ExportAsS<'s>) -> &'s ExportAsA<'s> {
+  let range_s = export_s.range.clone();
+  let rules_with_implicitly_coercing_lookups_s = export_s.rules;
+  let rune = export_s.rune.clone();
+  let rune_a_to_type_with_implicitly_coercing_lookups_s =
+    self.calculate_rune_types(
+      astrouts,
+      range_s.clone(),
+      Vec::new(),
+      std::iter::once((rune.rune.clone(), ITemplataType::KindTemplataType(KindTemplataType {}))).collect(),
+      &[],
+      rules_with_implicitly_coercing_lookups_s,
+      env,
+    );
+  let mut rune_a_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+    rune_a_to_type_with_implicitly_coercing_lookups_s;
+  let mut rule_builder: Vec<IRulexSR<'s>> = Vec::new();
+  let rune_typing_env = HigherTypingRuneTypeSolverEnv {
+    pass: self,
+    astrouts,
+    env,
+    range_s: range_s.clone(),
+  };
+  match explicify_lookups(
+    &rune_typing_env,
+    self.scout_arena,
+    &mut rune_a_to_type,
+    &mut rule_builder,
+    rules_with_implicitly_coercing_lookups_s.to_vec(),
+  ) {
+    Ok(()) => {},
+    Err(_e) => panic!("explicify_lookups failed"),
+  }
+  self.scout_arena.alloc(ExportAsA {
+    range: range_s,
+    exported_name: export_s.exported_name,
+    rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+    rune_to_type: self.scout_arena.alloc_index_map_from_iter(rune_a_to_type.into_iter()),
+    type_rune: rune,
+  })
 }
 /*
   def translateExport(astrouts: Astrouts,  env: EnvironmentA, exportS: ExportAsS): ExportAsA = {

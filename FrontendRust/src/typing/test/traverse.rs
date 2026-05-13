@@ -15,7 +15,10 @@ use crate::typing::ast::ast::{
     ICitizenAttributeT, IFunctionAttributeT, InterfaceEdgeBlueprintT, KindExportT, KindExternT,
     OverrideT, ParameterT, PrototypeT, SignatureT,
 };
-use crate::typing::ast::citizens::{IStructMemberT, InterfaceDefinitionT, StructDefinitionT};
+use crate::typing::ast::citizens::{
+    AddressMemberTypeT, IMemberTypeT, IStructMemberT, InterfaceDefinitionT, ReferenceMemberTypeT,
+    StructDefinitionT,
+};
 use crate::typing::ast::expressions::{
     AddressExpressionTE, AddressMemberLookupTE, ArgLookupTE, ArrayLengthTE, ArraySizeTE,
     AsSubtypeTE, BlockTE, BorrowToWeakTE, BreakTE, ConsecutorTE, ConstantBoolTE, ConstantFloatTE,
@@ -154,6 +157,8 @@ pub enum NodeRefT<'s, 't> {
     FunctionAttribute(&'t IFunctionAttributeT<'s>),
     CitizenAttribute(&'t ICitizenAttributeT<'s>),
     StructMember(&'t IStructMemberT<'s, 't>),
+    ReferenceMemberType(&'t ReferenceMemberTypeT<'s, 't>),
+    AddressMemberType(&'t AddressMemberTypeT<'s, 't>),
     LocalVariable(&'t ILocalVariableT<'s, 't>),
 
     // ---- Override / Edge children ----
@@ -1580,6 +1585,27 @@ where
     's: 't,
 {
     collect_if(pred, out, NodeRefT::StructMember(m));
+    match m {
+        IStructMemberT::Normal(n) => visit_member_type(pred, out, &n.tyype),
+        IStructMemberT::Variadic(_) => {}
+    }
+}
+
+fn visit_member_type<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, m: &'t IMemberTypeT<'s, 't>)
+where
+    F: Fn(NodeRefT<'s, 't>) -> Option<T>,
+    's: 't,
+{
+    match m {
+        IMemberTypeT::Reference(r) => {
+            collect_if(pred, out, NodeRefT::ReferenceMemberType(r));
+            visit_coord(pred, out, &r.reference);
+        }
+        IMemberTypeT::Address(a) => {
+            collect_if(pred, out, NodeRefT::AddressMemberType(a));
+            visit_coord(pred, out, &a.reference);
+        }
+    }
 }
 
 fn visit_local_variable<'s, 't, T, F>(

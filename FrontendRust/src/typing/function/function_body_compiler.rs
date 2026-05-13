@@ -82,7 +82,7 @@ where 's: 't,
         func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_1: &'s FunctionA<'s>,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
@@ -279,7 +279,7 @@ where 's: 't,
         func_outer_env: &'t FunctionEnvironmentT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         region: RegionT,
         call_location: LocationInDenizen<'s>,
         params_1: &[&'s ParameterS<'s>],
@@ -296,12 +296,12 @@ where 's: 't,
         let starting_env = env.snapshot(self.typing_interner);
 
         // val patternsTE = evaluateLets(env, coutputs, life + 0, body1.range :: parentRanges, callLocation, region, params1, params2)
-        let range_list: Vec<RangeS<'s>> =
-            std::iter::once(body_1.range).chain(parent_ranges.iter().copied()).collect();
+        let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+            &std::iter::once(body_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
         let params_2_refs: Vec<&'t ParameterT<'s, 't>> = params_2.iter().collect();
         let patterns_te = self.evaluate_lets(
             &mut env, coutputs, life.add(self.typing_interner, 0),
-            &range_list, call_location, region, params_1, &params_2_refs);
+            range_list, call_location, region, params_1, &params_2_refs);
 
         let (statements_from_block, returns_from_inside_maybe_with_never) =
             self.evaluate_block_statements(
@@ -462,7 +462,7 @@ where 's: 't,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        range: &[RangeS<'s>],
+        range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         params_1: &[&'s ParameterS<'s>],
@@ -477,12 +477,14 @@ where 's: 't,
                 })
             }).collect();
 
-        let param_lookups_2_refs: Vec<&'t ReferenceExpressionTE<'s, 't>> =
-            param_lookups_2.into_iter().map(|e| &*self.typing_interner.alloc(e)).collect();
-        let patterns: Vec<&'s AtomSP<'s>> = params_1.iter().map(|p| &p.pattern).collect();
+        let param_lookups_2_refs: &'t [&'t ReferenceExpressionTE<'s, 't>] =
+            self.typing_interner.alloc_slice_copy(
+                &param_lookups_2.into_iter().map(|e| &*self.typing_interner.alloc(e)).collect::<Vec<_>>());
+        let patterns: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
+            &params_1.iter().map(|p| &p.pattern).collect::<Vec<_>>());
         let let_exprs_2 = self.translate_pattern_list(
             coutputs, nenv, life, range, call_location,
-            &patterns, &param_lookups_2_refs, region);
+            patterns, param_lookups_2_refs, region);
 
         // todo: at this point, to allow for recursive calls, add a callable type to the environment
         // for everything inside the body to use

@@ -178,7 +178,7 @@ where 's: 't,
 {
     pub fn evaluate_templated_function_from_call_for_banner(
         &self,
-        declaring_env: &BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
+        declaring_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         coutputs: &mut CompilerOutputs<'s, 't>,
         original_calling_env: IInDenizenEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
@@ -187,7 +187,96 @@ where 's: 't,
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
     ) -> IEvaluateFunctionResult<'s, 't> {
-        panic!("Unimplemented: evaluate_templated_function_from_call_for_banner");
+        let function = declaring_env.function;
+        // Check preconditions
+        self.check_closure_concerns_handled(declaring_env);
+
+        let call_site_rules =
+            self.assemble_call_site_rules(
+                function.rules, function.generic_parameters, 0);
+
+        let initial_sends = self.assemble_initial_sends_from_args(call_range[0], function, &args.iter().map(|a| Some(*a)).collect::<Vec<_>>());
+        let initial_knowns = self.assemble_known_templatas(function, already_specified_template_args);
+
+        let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+            function.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+
+        let call_range_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(call_range);
+
+        // We could probably just solveForResolving (see DBDAR) but seems more future-proof to solveForDefining.
+        let CompleteDefineSolve { conclusions: inferences, rune_to_bound: instantiation_bound_params } =
+            match self.solve_for_defining(
+                InferEnv {
+                    original_calling_env,
+                    parent_ranges: call_range_t,
+                    call_location,
+                    self_env: declaring_env.into(),
+                    context_region,
+                },
+                coutputs,
+                &call_site_rules,
+                &rune_to_type,
+                call_range_t,
+                call_location,
+                &initial_knowns,
+                &initial_sends,
+                &[],
+            ) {
+                Err(e) => return IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e }),
+                Ok(inferred_templatas) => inferred_templatas,
+            };
+
+        // See FunctionCompiler doc for what outer/runes/inner envs are.
+        let reachable_bounds: Vec<PrototypeTemplataT<'s, 't>> =
+            instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.values()
+                .flat_map(|r| {
+                    panic!("implement: evaluate_templated_function_from_call_for_banner reachable bounds");
+                    #[allow(unreachable_code)]
+                    std::iter::empty::<PrototypeTemplataT<'s, 't>>()
+                })
+                .collect();
+
+        // Rust adaptation (SPDMX-B): arena-allocate so callee can borrow as &'t; Scala relies on GC.
+        let runed_env: &'t BuildingFunctionEnvironmentWithClosuredsAndTemplateArgsT<'s, 't> =
+            self.typing_interner.alloc(self.add_runed_data_to_near_env(
+                declaring_env,
+                &function.generic_parameters.iter().map(|gp| gp.rune.rune).collect::<Vec<_>>(),
+                &inferences,
+                &reachable_bounds));
+
+        let prototype_templata =
+            self.get_or_evaluate_templated_function_for_banner(
+                declaring_env, runed_env, coutputs, call_range_t, call_location, function, instantiation_bound_params);
+
+        // Lambdas cant have bounds, right?
+        assert!(instantiation_bound_params.rune_to_bound_prototype.is_empty(), "vcurious");
+        assert!(instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.is_empty(), "vcurious");
+        assert!(instantiation_bound_params.rune_to_bound_impl.is_empty(), "vcurious");
+        let instantiation_bound_args = self.typing_interner.alloc(InstantiationBoundArgumentsT {
+            rune_to_bound_prototype: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_bound_prototype.iter()
+                    .map(|(_k, _v)| panic!("implement: evaluate_templated_function_from_call_for_banner — rune_to_bound_prototype passthrough"))
+            ),
+            rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_citizen_rune_to_reachable_prototype.iter()
+                    .map(|(_x, _v)| panic!("implement: evaluate_templated_function_from_call_for_banner — InstantiationReachableBoundArgumentsT mapping"))
+            ),
+            rune_to_bound_impl: self.typing_interner.alloc_index_map_from_iter(
+                instantiation_bound_params.rune_to_bound_impl.iter()
+                    .map(|(_k, _v)| panic!("implement: evaluate_templated_function_from_call_for_banner — rune_to_bound_impl passthrough"))
+            ),
+        });
+        coutputs.add_instantiation_bounds(
+            self.opts.global_options.sanity_check,
+            self.typing_interner,
+            original_calling_env.denizen_template_id(),
+            prototype_templata.prototype.id,
+            instantiation_bound_args);
+        IEvaluateFunctionResult::EvaluateFunctionSuccess(EvaluateFunctionSuccess {
+            prototype: self.typing_interner.alloc(prototype_templata),
+            inferences,
+            instantiation_bound_args,
+        })
     }
 
 /*
@@ -482,8 +571,9 @@ where 's: 't,
         let function = near_env.function;
         match &function.body {
             IBodyS::CodeBody(code_body) => {
-                for _name in code_body.body.closured_names.iter() {
-                    panic!("Unimplemented: check_closure_concerns_handled — closured name assertion");
+                for name in code_body.body.closured_names.iter() {
+                    let translated = self.translate_var_name_step(*name);
+                    assert!(near_env.variables.iter().any(|v| v.name() == translated));
                 }
             }
             _ => {}

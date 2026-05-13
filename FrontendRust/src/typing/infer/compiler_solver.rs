@@ -2297,7 +2297,30 @@ where 's: 't,
             None => {
                 let template = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in solve_call_rule None branch");
                 match template {
-                    ITemplataT::RuntimeSizedArrayTemplate(_) => { panic!("Unimplemented: solve_call_rule None RuntimeSizedArrayTemplate"); }
+                    ITemplataT::RuntimeSizedArrayTemplate(_) => {
+                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
+                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule RuntimeSizedArrayTemplate")
+                        }).collect();
+                        let m = args[0];
+                        let coord = match args[1] {
+                            ITemplataT::Coord(ct) => ct.coord,
+                            _ => panic!("Expected CoordTemplataT as second arg in solve_call_rule RuntimeSizedArrayTemplate"),
+                        };
+                        let context_region = RegionT;
+                        let mutability = crate::typing::templata::templata::expect_mutability(m);
+                        let rsa_kind = self.predict_runtime_sized_array_kind(*env, state, coord, mutability, context_region);
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: rsa_kind.name })) })));
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let ranges = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect::<Vec<_>>();
+                                let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
                     ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: solve_call_rule None StaticSizedArrayTemplate"); }
                     ITemplataT::StructDefinition(it) => {
                         let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {

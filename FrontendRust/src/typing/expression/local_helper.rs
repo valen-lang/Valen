@@ -421,8 +421,9 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &AddressExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: borrow_soft_load");
+    pub fn borrow_soft_load(&self, coutputs: &CompilerOutputs<'s, 't>, expr2: &'t AddressExpressionTE<'s, 't>) -> ReferenceExpressionTE<'s, 't> {
+        let ownership = self.get_borrow_ownership(coutputs, expr2.result().coord.kind);
+        ReferenceExpressionTE::SoftLoad(SoftLoadTE { expr: expr2, target_ownership: ownership })
     }
 /*
   def borrowSoftLoad(coutputs: CompilerOutputs, expr2: AddressExpressionTE):
@@ -436,8 +437,61 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
-    pub fn get_borrow_ownership(&self, coutputs: &CompilerOutputs<'s, 't>, kind: &KindT<'s, 't>) -> OwnershipT {
-        panic!("Unimplemented: get_borrow_ownership");
+    pub fn get_borrow_ownership(&self, coutputs: &CompilerOutputs<'s, 't>, kind: KindT<'s, 't>) -> OwnershipT {
+        match kind {
+            KindT::Int(_) => OwnershipT::Share,
+            KindT::Bool(_) => OwnershipT::Share,
+            KindT::Float(_) => OwnershipT::Share,
+            KindT::Str(_) => OwnershipT::Share,
+            KindT::Void(_) => OwnershipT::Share,
+            KindT::StaticSizedArray(_) => {
+                let mutability = self.get_mutability(coutputs, kind);
+                match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                    _ => panic!("implement: get_borrow_ownership StaticSizedArray unexpected mutability"),
+                }
+            }
+            KindT::RuntimeSizedArray(_) => {
+                let mutability = self.get_mutability(coutputs, kind);
+                match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                    _ => panic!("implement: get_borrow_ownership RuntimeSizedArray unexpected mutability"),
+                }
+            }
+            KindT::KindPlaceholder(_) => {
+                let mutability = self.get_mutability(coutputs, kind);
+                match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                    _ => panic!("implement: get_borrow_ownership KindPlaceholder unexpected mutability"),
+                }
+            }
+            KindT::Struct(_) => {
+                let mutability = self.get_mutability(coutputs, kind);
+                match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                    _ => panic!("implement: get_borrow_ownership Struct unexpected mutability"),
+                }
+            }
+            KindT::Interface(_) => {
+                let mutability = self.get_mutability(coutputs, kind);
+                match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => OwnershipT::Borrow,
+                    _ => panic!("implement: get_borrow_ownership Interface unexpected mutability"),
+                }
+            }
+            KindT::OverloadSet(_) => OwnershipT::Share,
+            KindT::Never(_) => panic!("implement: get_borrow_ownership Never"),
+        }
     }
 /*
   def getBorrowOwnership(coutputs: CompilerOutputs, kind: KindT):

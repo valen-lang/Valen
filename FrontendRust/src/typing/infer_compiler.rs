@@ -1549,7 +1549,17 @@ where 's: 't,
         };
 
         match template {
-            ITemplataT::RuntimeSizedArrayTemplate(_) => { panic!("Unimplemented: resolve_template_call_conclusion RuntimeSizedArrayTemplate"); }
+            ITemplataT::RuntimeSizedArrayTemplate(_) => {
+                let m = args[0];
+                let coord = match args[1] {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("Expected CoordTemplataT as second arg in resolve_template_call_conclusion RuntimeSizedArrayTemplate"),
+                };
+                let mutability = crate::typing::templata::templata::expect_mutability(m);
+                let context_region = RegionT;
+                let _rsa = self.resolve_runtime_sized_array(coord, mutability, context_region);
+                Ok(())
+            }
             ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: resolve_template_call_conclusion StaticSizedArrayTemplate"); }
             ITemplataT::StructDefinition(it) => {
                 let mut call_ranges = vec![range];

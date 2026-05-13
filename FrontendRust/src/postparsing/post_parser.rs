@@ -20,7 +20,8 @@ use crate::parsing::ast::IRuneAttributeP::{
 use crate::parsing::ast::rules::get_ordered_rune_declarations_from_rulexes_with_duplicates;
 use crate::parsing::parser::ParserCompilation;
 use crate::postparsing::ast::{
-  CoordGenericParameterTypeS, GenericParameterS, IBodyS, ICitizenAttributeS,
+  CoordGenericParameterTypeS, ExportAsS, GenericParameterDefaultS, GenericParameterS,
+  IBodyS, ICitizenAttributeS,
   IGenericParameterTypeS, IRegionMutabilityS, ImportS, ImplS, InterfaceS, IStructMemberS,
   LocationInDenizenBuilder, MacroCallS, NormalStructMemberS, OtherGenericParameterTypeS,
   ProgramS, RegionGenericParameterTypeS, StructS, VariadicStructMemberS,
@@ -29,17 +30,17 @@ use crate::postparsing::expressions::{ConsecutorSE, IExpressionSE};
 use crate::postparsing::function_scout::IFunctionParent;
 use crate::postparsing::itemplatatype::{
   CoordTemplataType, ITemplataType, KindTemplataType, MutabilityTemplataType, PackTemplataType,
-  TemplateTemplataType,
+  RegionTemplataType, TemplateTemplataType,
 };
 use crate::postparsing::names::{
-  CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS, INameS,
-  INameValS, DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
+  CodeNameS, CodeRuneS, ExportAsNameS, IFunctionDeclarationNameS, IImpreciseNameS, IImpreciseNameValS,
+  INameS, INameValS, DenizenDefaultRegionRuneS, IRuneS, IRuneValS, IVarNameS, ImplDeclarationNameS,
   TopLevelInterfaceDeclarationNameS, TopLevelStructDeclarationNameS,
 };
 use crate::postparsing::rules::rule_scout::{translate_rulexes, translate_type};
 use crate::postparsing::rules::templex_scout::translate_templex;
 use crate::postparsing::rules::rules::{
-  IRulexSR, RuneUsage,
+  EqualsSR, IRulexSR, RuneUsage,
 };
 use crate::postparsing::variable_uses::{VariableDeclarations, VariableUses};
 use crate::utils::code_hierarchy::FileCoordinateMap;
@@ -729,13 +730,13 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
 pub(crate) fn scout_generic_parameter(
   &self,
   env: IEnvironmentS<'s>,
-  _lidb: &mut LocationInDenizenBuilder,
+  lidb: &mut LocationInDenizenBuilder,
   rune_to_explicit_type: &mut Vec<(IRuneS<'s>, ITemplataType<'s>)>,
-  _rule_builder: &mut Vec<IRulexSR<'s>>,
+  rule_builder: &mut Vec<IRulexSR<'s>>,
   // This might seem a bit weird, because the region rune usually comes last and is usually
   // mentioned at the end of the header too. But indeed we need it for knowing the region to use
   // for generic params' default values.
-  _context_region: IRuneS<'s>,
+  context_region: IRuneS<'s>,
   generic_param_p: &GenericParameterP<'p>,
   param_rune_s: RuneUsage<'s>,
   // Returns a possible implicit region generic param (see MNRFGC), and the translated original
@@ -845,15 +846,42 @@ pub(crate) fn scout_generic_parameter(
       )
     }
   };
-  if generic_param_p.maybe_default.is_some() {
-    panic!("POSTPARSER_SCOUT_GENERIC_PARAMETER_DEFAULT_NOT_YET_IMPLEMENTED");
-  }
+  let default_s = generic_param_p.maybe_default.map(|default_pt| {
+    let mut uncategorized_rules = Vec::new();
+    let result_rune = translate_templex(
+      self.scout_arena, self.keywords, env, lidb, &mut uncategorized_rules, context_region, &default_pt,
+    );
+    uncategorized_rules.push(IRulexSR::Equals(EqualsSR {
+      range: generic_param_range_s,
+      left: rune_s.clone(),
+      right: result_rune.clone(),
+    }));
+
+    let mut rules_to_leave_in_default_argument = Vec::new();
+    for r in uncategorized_rules {
+      match r {
+        IRulexSR::Pack(_) => rule_builder.push(r), // Hoist it up into regular rules
+        IRulexSR::Literal(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
+        IRulexSR::MaybeCoercingLookup(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
+        IRulexSR::Resolve(_) => rules_to_leave_in_default_argument.push(&*self.scout_arena.alloc(r)),
+        IRulexSR::Equals(_) => rule_builder.push(r), // Hoist it up into regular rules
+        IRulexSR::CallSiteFunc(_) => rule_builder.push(r), // Hoist it up into regular rules
+        IRulexSR::DefinitionFunc(_) => rule_builder.push(r), // Hoist it up into regular rules
+        other => panic!("vwat: {:?}", other),
+      }
+    }
+
+    GenericParameterDefaultS {
+      result_rune: result_rune.rune,
+      rules: rules_to_leave_in_default_argument,
+    }
+  });
 
   return GenericParameterS {
       range: generic_param_range_s,
       rune: rune_s,
       tyype: generic_param_type_s,
-      default: None,
+      default: default_s,
     };
   }
 /*
@@ -1071,10 +1099,10 @@ impl<'s, 'p, 'ctx> PostParser<'s, 'p, 'ctx>
       }
     }
 
-    let exports: Vec<&'s crate::postparsing::ast::ExportAsS<'s>> = Vec::new();
+    let mut exports: Vec<&'s crate::postparsing::ast::ExportAsS<'s>> = Vec::new();
     for denizen in parsed.denizens {
-      if let IDenizenP::TopLevelExportAs(_export_as_p) = denizen {
-        panic!("POSTPARSER_SCOUT_PROGRAM_TOP_LEVEL_EXPORT_AS_NOT_YET_IMPLEMENTED");
+      if let IDenizenP::TopLevelExportAs(export_as_p) = denizen {
+        exports.push(&*self.scout_arena.alloc(self.scout_export_as(file_coordinate, export_as_p)));
       }
     }
 
@@ -1545,10 +1573,49 @@ fn scout_impl(
   }
 */
 fn scout_export_as(
-  _file: &crate::utils::code_hierarchy::FileCoordinate<'s>,
-  _export_as_p: &crate::parsing::ast::ExportAsP<'p>,
+  &self,
+  file: &'s crate::utils::code_hierarchy::FileCoordinate<'s>,
+  export_as_p: &crate::parsing::ast::ExportAsP<'p>,
 ) -> crate::postparsing::ast::ExportAsS<'s> {
-  panic!("Unimplemented scout_export_as");
+  let range_s = Self::eval_range(file, export_as_p.range);
+  let pos = range_s.begin.clone();
+  let export_name = self.scout_arena.intern_name(INameValS::ExportAsName(ExportAsNameS { code_location: pos }));
+  let export_env = IEnvironmentS::Environment(EnvironmentS {
+    file,
+    parent_env: None,
+    name: export_name,
+    user_declared_runes: Default::default(),
+  });
+  let mut lidb = LocationInDenizenBuilder::new(Vec::new());
+  let mut rule_builder = Vec::<IRulexSR<'s>>::new();
+  let mut rune_to_explicit_type = Vec::<(IRuneS<'s>, ITemplataType<'s>)>::new();
+  let region_range = RangeS { begin: range_s.end.clone(), end: range_s.end.clone() };
+  let default_region_rune_s = self.scout_arena.intern_rune(IRuneValS::DenizenDefaultRegionRune(
+    DenizenDefaultRegionRuneS { denizen_name: export_name },
+  ));
+  rune_to_explicit_type.push((default_region_rune_s.clone(), ITemplataType::RegionTemplataType(RegionTemplataType {})));
+  let _region_generic_param = GenericParameterS {
+    range: region_range.clone(),
+    rune: RuneUsage { range: region_range, rune: default_region_rune_s.clone() },
+    tyype: IGenericParameterTypeS::RegionGenericParameterType(RegionGenericParameterTypeS { mutability: IRegionMutabilityS::ReadWriteRegion }),
+    default: None,
+  };
+  let rune_s = translate_templex(
+    self.scout_arena,
+    self.keywords,
+    export_env,
+    &mut lidb,
+    &mut rule_builder,
+    default_region_rune_s,
+    &export_as_p.struct_,
+  );
+  ExportAsS {
+    range: range_s,
+    rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+    export_name: ExportAsNameS { code_location: pos },
+    rune: rune_s,
+    exported_name: self.scout_arena.intern_str(export_as_p.exported_name.str().as_str()),
+  }
 }
 /*
   private def scoutExportAs(file: FileCoordinate, exportAsP: ExportAsP): ExportAsS = {
@@ -2313,10 +2380,6 @@ pub(crate) fn check_identifiability(
     // VA: (before generic params instead of after internalMethods), and predictRuneTypes receives
     // VA: &identifying_runes_s instead of Scala's empty ArrayBuffer.
     assert!(
-      interface.mutability.is_none(),
-      "POSTPARSER_SCOUT_INTERFACE_MUTABILITY_NOT_YET_IMPLEMENTED"
-    );
-    assert!(
       interface.maybe_default_region_rune.is_none(),
       "POSTPARSER_SCOUT_INTERFACE_DEFAULT_REGION_RUNE_NOT_YET_IMPLEMENTED"
     );
@@ -2431,12 +2494,13 @@ pub(crate) fn check_identifiability(
       &rules_p,
     );
 
-    let mutability = ITemplexPT::Mutability(
+    let default_mutability = ITemplexPT::Mutability(
       MutabilityPT(
         RangeL(interface.body_range.begin(), interface.body_range.begin()),
         MutabilityP::Mutable,
       ),
     );
+    let mutability: &ITemplexPT<'p> = interface.mutability.as_ref().unwrap_or(&default_mutability);
     let mutability_rune_s = translate_templex(
       self.scout_arena,
       self.keywords,
@@ -2444,7 +2508,7 @@ pub(crate) fn check_identifiability(
       &mut lidb.child(),
       &mut rule_builder,
       default_region_rune_s.clone(),
-      &mutability,
+      mutability,
     );
 
     let rules_s = rule_builder;

@@ -239,14 +239,12 @@ where 's: 't,
         generic_parameters: &'s [&'s GenericParameterS<'s>],
         num_explicit_template_args: i32,
     ) -> Vec<IRulexSR<'s>> {
-        let result: Vec<IRulexSR<'s>> =
+        let mut result: Vec<IRulexSR<'s>> =
             rules.iter().copied().filter(|r| include_rule_in_call_site_solve(r)).collect();
         for (index, generic_param) in generic_parameters.iter().enumerate() {
             if index as i32 >= num_explicit_template_args {
                 match &generic_param.default {
-                    Some(x) => {
-                        panic!("implement: assembleCallSiteRules default rules");
-                    }
+                    Some(x) => result.extend(x.rules.iter().map(|r| **r)),
                     None => {}
                 }
             }

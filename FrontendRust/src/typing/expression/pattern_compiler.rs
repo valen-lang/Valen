@@ -68,27 +68,33 @@ class PatternCompiler(
     localHelper: LocalHelper) {
 */
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn translate_pattern_list_pattern(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        patterns_a: &[&'s AtomSP<'s>],
-        pattern_inputs_te: &[&'t ReferenceExpressionTE<'s, 't>],
+        patterns_a: &'t [&'s AtomSP<'s>],
+        pattern_inputs_te: &'t [&'t ReferenceExpressionTE<'s, 't>],
         region: RegionT,
+        // Rust adaptation (SPDMX-B): the `after_*_continuation` receives `&Compiler` as
+        // its first parameter at invocation time, rather than capturing `self`. Without
+        // this, the `+ 't` bound on the continuation would require `'ctx: 't` on every
+        // impl block. Scala's lambda captures `this` implicitly via GC; Rust threads
+        // the receiver explicitly. Functionally equivalent to Scala.
         after_patterns_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         self.iterate_translate_list_and_maybe_continue(
             coutputs, nenv, life, parent_ranges, call_location,
-            &[], patterns_a, pattern_inputs_te, region,
+            self.typing_interner.alloc_slice_copy(&[]), patterns_a, pattern_inputs_te, region,
             after_patterns_success_continuation)
     }
 /*
@@ -125,46 +131,49 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn iterate_translate_list_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        live_capture_locals: &[ILocalVariableT<'s, 't>],
-        patterns_a: &[&'s AtomSP<'s>],
-        pattern_inputs_te: &[&'t ReferenceExpressionTE<'s, 't>],
+        live_capture_locals: &'t [ILocalVariableT<'s, 't>],
+        patterns_a: &'t [&'s AtomSP<'s>],
+        pattern_inputs_te: &'t [&'t ReferenceExpressionTE<'s, 't>],
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_patterns_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
         let distinct: HashSet<_> = names.iter().collect();
         assert!(names.len() == distinct.len());
 
         match (patterns_a.is_empty(), pattern_inputs_te.is_empty()) {
-            (true, true) => after_patterns_success_continuation(coutputs, nenv, live_capture_locals),
+            (true, true) => after_patterns_success_continuation(self, coutputs, nenv, live_capture_locals),
             (false, false) => {
                 let head_pattern_a = patterns_a[0];
                 let head_pattern_input_te = pattern_inputs_te[0];
-                let tail_patterns_a = &patterns_a[1..];
-                let tail_pattern_inputs_te = &pattern_inputs_te[1..];
+                let tail_patterns_a: &'t [&'s AtomSP<'s>] = &patterns_a[1..];
+                let tail_pattern_inputs_te: &'t [&'t ReferenceExpressionTE<'s, 't>] = &pattern_inputs_te[1..];
                 self.inner_translate_sub_pattern_and_maybe_continue(
                     coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, call_location,
                     head_pattern_a, live_capture_locals, head_pattern_input_te, region,
-                    |coutputs, nenv, _life, live_capture_locals| {
+                    move |compiler, coutputs, nenv, _life, live_capture_locals_raw| {
+                        let live_capture_locals: &'t [ILocalVariableT<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
                         let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
                         let distinct: HashSet<_> = names.iter().collect();
                         assert!(names.len() == distinct.len());
 
-                        self.iterate_translate_list_and_maybe_continue(
-                            coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, call_location,
+                        compiler.iterate_translate_list_and_maybe_continue(
+                            coutputs, nenv, life.add(compiler.typing_interner, 1), parent_ranges, call_location,
                             live_capture_locals, tail_patterns_a, tail_pattern_inputs_te, region,
                             after_patterns_success_continuation)
                     })
@@ -213,26 +222,28 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn infer_and_translate_pattern(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         rules_with_implicitly_coercing_lookups_s: &[IRulexSR<'s>],
         rune_a_to_type_with_implicitly_coercing_lookups_s: &HashMap<IRuneS<'s>, ITemplataType<'s>>,
         pattern: &'s AtomSP<'s>,
         unconverted_input_expr: &'t ReferenceExpressionTE<'s, 't>,
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_patterns_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         // The rules are different depending on the incoming type.
         // See Impl Rule For Upcasts (IRFU).
@@ -324,8 +335,10 @@ where 's: 't,
 
         self.inner_translate_sub_pattern_and_maybe_continue(
             coutputs, nenv, life, parent_ranges, call_location,
-            pattern, &[], converted_input_expr, region,
-            after_patterns_success_continuation)
+            pattern, self.typing_interner.alloc_slice_copy(&[]), converted_input_expr, region,
+            move |compiler, coutputs, nenv, life, live_capture_locals| {
+                after_patterns_success_continuation(compiler, coutputs, nenv, life, live_capture_locals)
+            })
     }
 /*
   // Note: This will unlet/drop the input expression. Be warned.
@@ -416,25 +429,27 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn inner_translate_sub_pattern_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         pattern: &'s AtomSP<'s>,
-        previous_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        previous_live_capture_locals: &'t [ILocalVariableT<'s, 't>],
         input_expr: &'t ReferenceExpressionTE<'s, 't>,
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_sub_pattern_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         {
             let names: Vec<_> = previous_live_capture_locals.iter().map(|l| l.name()).collect();
@@ -528,26 +543,33 @@ where 's: 't,
                     }
                 }
                 result.push(after_sub_pattern_success_continuation(
-                    coutputs, nenv, life.add(self.typing_interner, 0), &live_capture_locals));
+                    self, coutputs, nenv, life.add(self.typing_interner, 0), &live_capture_locals));
                 result
             }
             Some(list_of_maybe_destructure_member_patterns) => {
-                let ranges: Vec<RangeS<'s>> =
-                    std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect();
-                let list_refs: Vec<&'s AtomSP<'s>> =
-                    list_of_maybe_destructure_member_patterns.iter().map(|p| p as &'s AtomSP<'s>).collect();
+                let ranges: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                    &std::iter::once(pattern.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                let list_refs: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(
+                    &list_of_maybe_destructure_member_patterns.iter().collect::<Vec<_>>());
+                let live_capture_locals_t: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(&live_capture_locals);
                 match expr_to_destructure_or_drop_or_pass_te.result().coord.ownership {
                     OwnershipT::Own => {
                         vec![self.destructure_owning(
                             coutputs, nenv, life.add(self.typing_interner, 1),
-                            &ranges, call_location, &live_capture_locals,
+                            ranges, call_location, live_capture_locals_t,
                             expr_to_destructure_or_drop_or_pass_te,
-                            &list_refs,
+                            list_refs,
                             region,
                             after_sub_pattern_success_continuation)]
                     }
                     OwnershipT::Borrow | OwnershipT::Share => {
-                        panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure non-owning")
+                        vec![self.destructure_non_owning_and_maybe_continue(
+                            coutputs, nenv, life.add(self.typing_interner, 2),
+                            ranges, call_location, live_capture_locals_t,
+                            expr_to_destructure_or_drop_or_pass_te,
+                            list_refs,
+                            region,
+                            after_sub_pattern_success_continuation)]
                     }
                     OwnershipT::Weak => panic!("implement: innerTranslateSubPatternAndMaybeContinue — destructure weak"),
                 }
@@ -668,25 +690,27 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn destructure_owning(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
+        initial_live_capture_locals: &'t [ILocalVariableT<'s, 't>],
         input_expr: &'t ReferenceExpressionTE<'s, 't>,
-        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destructure_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         {
             let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
@@ -788,27 +812,56 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn destructure_non_owning_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        range: &[RangeS<'s>],
+        range: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        live_capture_locals: &[ILocalVariableT<'s, 't>],
+        live_capture_locals: &'t [ILocalVariableT<'s, 't>],
         container_te: &'t ReferenceExpressionTE<'s, 't>,
-        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destructure_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+
+        let local_t = self.make_temporary_local(nenv, life.add(self.typing_interner, 0), container_te.result().coord);
+        let let_te = self.typing_interner.alloc(ReferenceExpressionTE::LetNormal(LetNormalTE {
+            variable: ILocalVariableT::Reference(local_t),
+            expr: container_te,
+        }));
+        let local_lookup = self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+            range: range[0],
+            local_variable: ILocalVariableT::Reference(local_t),
+        }));
+        let container_aliasing_expr_te: &'t ReferenceExpressionTE<'s, 't> = {
+            let expr = self.soft_load(nenv, range, local_lookup, LoadAsP::LoadAsBorrow, region);
+            self.typing_interner.alloc(expr)
+        };
+        let iterate_expr = self.iterate_destructure_non_owning_and_maybe_continue(
+            coutputs, nenv, life.add(self.typing_interner, 1), range, call_location, live_capture_locals,
+            container_te.result().coord, container_aliasing_expr_te, 0,
+            list_of_maybe_destructure_member_patterns, region, Box::new(after_destructure_success_continuation));
+        self.consecutive(&[let_te, iterate_expr])
     }
 /*
   private def destructureNonOwningAndMaybeContinue(
@@ -841,29 +894,84 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn iterate_destructure_non_owning_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        live_capture_locals: &[ILocalVariableT<'s, 't>],
+        live_capture_locals: &'t [ILocalVariableT<'s, 't>],
         expected_container_coord: CoordT<'s, 't>,
         container_aliasing_expr_te: &'t ReferenceExpressionTE<'s, 't>,
         member_index: i32,
-        list_of_maybe_destructure_member_patterns: &[&'s AtomSP<'s>],
+        list_of_maybe_destructure_member_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
-        after_destructure_success_continuation: impl FnOnce(
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
+        after_destructure_success_continuation: Box<dyn FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        {
+            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+            let distinct: Vec<_> = {
+                let mut seen = Vec::new();
+                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                seen
+            };
+            assert!(names == distinct);
+        }
+
+        let CoordT { kind: expected_container_kind, .. } = expected_container_coord;
+
+        match list_of_maybe_destructure_member_patterns {
+            [] => after_destructure_success_continuation(self, coutputs, nenv, life.add(self.typing_interner, 0), live_capture_locals),
+            [head_maybe_destructure_member_pattern, tail_destructure_member_pattern_maybes @ ..] => {
+                let head_maybe_destructure_member_pattern = *head_maybe_destructure_member_pattern;
+                let tail_destructure_member_pattern_maybes: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(tail_destructure_member_pattern_maybes);
+                let env = IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner));
+                let member_addr_expr_te = match expected_container_kind {
+                    KindT::Struct(struct_tt) => {
+                        self.load_from_struct(coutputs, env, head_maybe_destructure_member_pattern.range, region, container_aliasing_expr_te, *struct_tt, member_index)
+                    }
+                    KindT::StaticSizedArray(_) => panic!("implement: iterate_destructure_non_owning_and_maybe_continue — StaticSizedArray"),
+                    _ => panic!("implement: iterate_destructure_non_owning_and_maybe_continue — unknown container kind"),
+                };
+                let member_ownership_in_struct = member_addr_expr_te.result().coord.ownership;
+                let coerce_to_ownership = self.load_result_ownership(member_ownership_in_struct);
+                let load_expr = self.typing_interner.alloc(ReferenceExpressionTE::SoftLoad(SoftLoadTE {
+                    expr: member_addr_expr_te,
+                    target_ownership: coerce_to_ownership,
+                }));
+                let next_member_index = member_index + 1;
+                self.inner_translate_sub_pattern_and_maybe_continue(
+                    coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, call_location,
+                    head_maybe_destructure_member_pattern, live_capture_locals, load_expr, region,
+                    Box::new(move |compiler: &Compiler<'s, 'ctx, 't>, coutputs: &mut CompilerOutputs<'s, 't>, nenv: &mut NodeEnvironmentBox<'s, 't>, life: LocationInFunctionEnvironmentT<'s, 't>, live_capture_locals: &[ILocalVariableT<'s, 't>]| {
+                        let live_capture_locals: &'t [ILocalVariableT<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals);
+                        {
+                            let names: Vec<_> = live_capture_locals.iter().map(|l| l.name()).collect();
+                            let distinct: Vec<_> = {
+                                let mut seen = Vec::new();
+                                for n in &names { if !seen.contains(n) { seen.push(*n); } }
+                                seen
+                            };
+                            assert!(names == distinct);
+                        }
+                        compiler.iterate_destructure_non_owning_and_maybe_continue(
+                            coutputs, nenv, life,
+                            parent_ranges, call_location, live_capture_locals,
+                            expected_container_coord, container_aliasing_expr_te, next_member_index,
+                            tail_destructure_member_pattern_maybes, region, after_destructure_success_continuation)
+                    }))
+            }
+        }
     }
 /*
   private def iterateDestructureNonOwningAndMaybeContinue(
@@ -948,25 +1056,27 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn translate_destroy_struct_inner_and_maybe_continue(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
-        inner_patterns: &[&'s AtomSP<'s>],
+        initial_live_capture_locals: &'t [ILocalVariableT<'s, 't>],
+        inner_patterns: &'t [&'s AtomSP<'s>],
         input_struct_expr: &'t ReferenceExpressionTE<'s, 't>,
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_destroy_success_continuation: impl FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         {
             let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
@@ -1023,13 +1133,13 @@ where 's: 't,
         if member_locals.len() != inner_patterns.len() {
             panic!("WrongNumberOfDestructuresError: expected {} got {}", inner_patterns.len(), member_locals.len());
         }
-        let member_locals_as_local: Vec<ILocalVariableT<'s, 't>> = member_locals.iter()
-            .map(|l| ILocalVariableT::Reference(*l))
-            .collect();
+        let live_capture_locals: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(&live_capture_locals);
+        let member_locals_as_local: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(
+            &member_locals.iter().map(|l| ILocalVariableT::Reference(*l)).collect::<Vec<_>>());
         let rest_te = self.make_lets_for_own_and_maybe_continue(
             coutputs, nenv, life.add(self.typing_interner, 0),
-            parent_ranges, call_location, &live_capture_locals,
-            &member_locals_as_local, inner_patterns, region,
+            parent_ranges, call_location, live_capture_locals,
+            member_locals_as_local, inner_patterns, region,
             Box::new(after_destroy_success_continuation));
         self.consecutive(&[destroy_te, rest_te])
     }
@@ -1098,7 +1208,7 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     // Rust adaptation (SPDMX-B): the continuation parameter is boxed (Box<dyn FnOnce>)
     // rather than `impl FnOnce`. Scala/JVM erases lambda types so the mutual recursion
@@ -1112,18 +1222,20 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        parent_ranges: &[RangeS<'s>],
+        parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        initial_live_capture_locals: &[ILocalVariableT<'s, 't>],
-        member_local_variables: &[ILocalVariableT<'s, 't>],
-        inner_patterns: &[&'s AtomSP<'s>],
+        initial_live_capture_locals: &'t [ILocalVariableT<'s, 't>],
+        member_local_variables: &'t [ILocalVariableT<'s, 't>],
+        inner_patterns: &'t [&'s AtomSP<'s>],
         region: RegionT,
+        // Rust adaptation (SPDMX-B): see translate_pattern_list_pattern for explanation.
         after_lets_success_continuation: Box<dyn FnOnce(
+            &Compiler<'s, 'ctx, 't>,
             &mut CompilerOutputs<'s, 't>,
             &mut NodeEnvironmentBox<'s, 't>,
             LocationInFunctionEnvironmentT<'s, 't>,
             &[ILocalVariableT<'s, 't>],
-        ) -> &'t ReferenceExpressionTE<'s, 't> + '_>,
+        ) -> &'t ReferenceExpressionTE<'s, 't> + 'ctx>,
     ) -> &'t ReferenceExpressionTE<'s, 't> {
         {
             let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
@@ -1137,25 +1249,27 @@ where 's: 't,
         assert!(member_local_variables.len() == inner_patterns.len());
         match (member_local_variables, inner_patterns) {
             ([], []) => {
-                after_lets_success_continuation(coutputs, nenv, life.add(self.typing_interner, 0), initial_live_capture_locals)
+                after_lets_success_continuation(self, coutputs, nenv, life.add(self.typing_interner, 0), initial_live_capture_locals)
             }
             ([head_member_local_variable, tail_member_local_variables @ ..], [head_inner_pattern, tail_inner_pattern_maybes @ ..]) => {
                 let unlet_expr = self.unlet_local_without_dropping(nenv, head_member_local_variable);
                 let unlet_expr_te = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet_expr));
-                let live_capture_locals: Vec<ILocalVariableT<'s, 't>> = initial_live_capture_locals.iter().copied()
-                    .filter(|l| l.name() != head_member_local_variable.name())
-                    .collect();
+                let live_capture_locals: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(
+                    &initial_live_capture_locals.iter().copied()
+                        .filter(|l| l.name() != head_member_local_variable.name())
+                        .collect::<Vec<_>>());
                 assert!(live_capture_locals.len() == initial_live_capture_locals.len() - 1);
                 let head_inner_pattern_range = head_inner_pattern.range;
-                let ranges: Vec<RangeS<'s>> =
-                    std::iter::once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect();
-                let tail_member_local_variables = tail_member_local_variables.to_vec();
-                let tail_inner_pattern_maybes: Vec<&'s AtomSP<'s>> = tail_inner_pattern_maybes.iter().map(|p| *p).collect();
+                let ranges: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                    &std::iter::once(head_inner_pattern_range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                let tail_member_local_variables: &'t [ILocalVariableT<'s, 't>] = self.typing_interner.alloc_slice_copy(tail_member_local_variables);
+                let tail_inner_pattern_maybes: &'t [&'s AtomSP<'s>] = self.typing_interner.alloc_slice_copy(tail_inner_pattern_maybes);
                 self.inner_translate_sub_pattern_and_maybe_continue(
                     coutputs, nenv, life.add(self.typing_interner, 1),
-                    &ranges, call_location, head_inner_pattern,
-                    &live_capture_locals, unlet_expr_te, region,
-                    |coutputs, nenv, life, live_capture_locals| {
+                    ranges, call_location, head_inner_pattern,
+                    live_capture_locals, unlet_expr_te, region,
+                    move |compiler, coutputs, nenv, life, live_capture_locals_raw| {
+                        let live_capture_locals: &'t [ILocalVariableT<'s, 't>] = compiler.typing_interner.alloc_slice_copy(live_capture_locals_raw);
                         {
                             let names: Vec<_> = initial_live_capture_locals.iter().map(|l| l.name()).collect();
                             let distinct: Vec<_> = {
@@ -1165,11 +1279,11 @@ where 's: 't,
                             };
                             assert!(names == distinct);
                         }
-                        self.make_lets_for_own_and_maybe_continue(
+                        compiler.make_lets_for_own_and_maybe_continue(
                             coutputs, nenv, life, parent_ranges, call_location,
-                            live_capture_locals, &tail_member_local_variables,
-                            &tail_inner_pattern_maybes, region,
-                            Box::new(after_lets_success_continuation))
+                            live_capture_locals, tail_member_local_variables,
+                            tail_inner_pattern_maybes, region,
+                            after_lets_success_continuation)
                     })
             }
             _ => panic!("make_lets_for_own_and_maybe_continue: mismatched lengths"),
@@ -1218,13 +1332,18 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn load_result_ownership(
         &self,
         member_ownership_in_struct: OwnershipT,
     ) -> OwnershipT {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match member_ownership_in_struct {
+            OwnershipT::Own => OwnershipT::Borrow,
+            OwnershipT::Borrow => OwnershipT::Borrow,
+            OwnershipT::Weak => OwnershipT::Weak,
+            OwnershipT::Share => OwnershipT::Share,
+        }
     }
 /*
   private def loadResultOwnership(memberOwnershipInStruct: OwnershipT): OwnershipT = {
@@ -1240,7 +1359,7 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn load_from_struct(
         &self,
@@ -1252,7 +1371,30 @@ where 's: 't,
         struct_tt: StructTT<'s, 't>,
         index: i32,
     ) -> &'t AddressExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let struct_def_t = coutputs.lookup_struct(struct_tt.id, self);
+        let member = &struct_def_t.members[index as usize];
+        let (variability, unsubstituted_member_coord) = match member {
+            IStructMemberT::Normal(NormalStructMemberT { variability, tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => (*variability, *reference),
+            IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: load_from_struct — AddressMemberTypeT"),
+            IStructMemberT::Variadic(_) => panic!("implement: load_from_struct — VariadicStructMemberT"),
+        };
+        let instantiation_bounds = coutputs.get_instantiation_bounds(self.typing_interner, struct_tt.id).unwrap();
+        let member_type = self.get_placeholder_substituter(
+            self.opts.global_options.sanity_check,
+            env.denizen_template_id(),
+            struct_tt.id,
+            IBoundArgumentsSource::UseBoundsFromContainer {
+                instantiation_bound_params: struct_def_t.instantiation_bound_params,
+                instantiation_bound_arguments: instantiation_bounds,
+            },
+        ).substitute_for_coord(coutputs, unsubstituted_member_coord);
+        self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+            range: load_range,
+            struct_expr: container_alias,
+            member_name: *struct_def_t.members[index as usize].name(),
+            member_reference: member_type,
+            variability,
+        }))
     }
 /*
   private def loadFromStruct(
@@ -1299,7 +1441,7 @@ where 's: 't,
 }
 
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
-where 's: 't,
+where 's: 't, 't: 'ctx, 's: 'ctx,
 {
     pub fn load_from_static_sized_array(
         &self,

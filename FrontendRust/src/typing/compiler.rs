@@ -599,11 +599,11 @@ where 's: 't,
         &self,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
-        _element: CoordT<'s, 't>,
-        _array_mutability: ITemplataT<'s, 't>,
-        _region: RegionT,
+        element: CoordT<'s, 't>,
+        array_mutability: ITemplataT<'s, 't>,
+        region: RegionT,
     ) -> crate::typing::types::types::RuntimeSizedArrayTT<'s, 't> {
-        panic!("Unimplemented: predict_runtime_sized_array_kind");
+        self.resolve_runtime_sized_array(element, array_mutability, region)
     }
     /*
         override def predictRuntimeSizedArrayKind(
@@ -1732,6 +1732,194 @@ where 's: 't,
                         };
                         self.evaluate_generic_function_from_non_call(
                             &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                        use crate::postparsing::ast::IFunctionAttributeS;
+                        let maybe_extern = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Extern(e) => Some(e), _ => None });
+                        match maybe_extern {
+                            None => {}
+                            Some(_extern_s) => {
+                                use crate::typing::names::names::{ExternTemplateNameT, ExternNameT, ExternFunctionNameValT, IdValT};
+                                use crate::typing::env::environment::{ExternEnvironmentT, TemplatasStoreBuilder};
+                                use crate::typing::types::types::RegionT;
+                                use crate::typing::function::function_compiler::IResolveFunctionResult;
+                                use crate::postparsing::names::IFunctionDeclarationNameS;
+                                use std::marker::PhantomData;
+
+                                let extern_name = match function_a.name {
+                                    IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
+                                    other => panic!("vwat: {:?}", other),
+                                };
+                                let template_name = self.typing_interner.intern_extern_template_name(ExternTemplateNameT {
+                                    code_loc: function_a.range.begin,
+                                    _phantom: PhantomData,
+                                });
+                                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let template_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &template_id_steps,
+                                    local_name: INameT::ExternTemplate(template_name),
+                                });
+                                let region_placeholder = RegionT {};
+                                let placeholdered_extern_name = self.typing_interner.intern_extern_name(ExternNameT {
+                                    template: template_name,
+                                    template_arg: region_placeholder,
+                                });
+                                let placeholdered_extern_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let placeholdered_extern_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &placeholdered_extern_id_steps,
+                                    local_name: INameT::Extern(placeholdered_extern_name),
+                                });
+                                let placeholdered_extern_id_ref = self.typing_interner.alloc(placeholdered_extern_id);
+                                let extern_templatas = TemplatasStoreBuilder::new(placeholdered_extern_id_ref).build_in(self.typing_interner);
+                                let extern_env = self.typing_interner.alloc(ExternEnvironmentT {
+                                    global_env,
+                                    parent_env: package_env,
+                                    template_id,
+                                    id: placeholdered_extern_id,
+                                    templatas: extern_templatas,
+                                });
+                                let extern_env_as_iindenizen = IInDenizenEnvironmentT::Extern(extern_env);
+                                let call_ranges = self.typing_interner.alloc_slice_copy(&[function_a.range]);
+                                // We evaluate this and then don't do anything for it on purpose, we just do
+                                // this to cause the compiler to make instantiation bounds for all the types
+                                // in terms of this extern. That way, further below, when we do the
+                                // substituting templatas, the bounds are already made for these types.
+                                let extern_placeholdered_wrapper_prototype =
+                                    match self.evaluate_generic_light_function_from_call_for_prototype(
+                                        &mut coutputs,
+                                        call_ranges,
+                                        LocationInDenizen { path: &[] },
+                                        extern_env_as_iindenizen,
+                                        templata,
+                                        &[],
+                                        region_placeholder,
+                                        &[],
+                                    ) {
+                                        IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
+                                        IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from extern function"),
+                                    };
+                                // We don't actually want to call the wrapper function, we want to call the extern.
+                                // The extern's prototype is always similar to the wrapper function, so we do
+                                // a straightforward replace of the names.
+                                // We don't have to worry about placeholders, they're already phrased in terms
+                                // of the calling FunctionExternT.
+                                let extern_prototype_id = match extern_placeholdered_wrapper_prototype.id.local_name {
+                                    INameT::Function(fn_name) => {
+                                        let extern_fn_name = self.typing_interner.intern_extern_function_name(ExternFunctionNameValT {
+                                            human_name: fn_name.template.human_name,
+                                            parameters: fn_name.parameters,
+                                        });
+                                        *self.typing_interner.intern_id(IdValT {
+                                            package_coord: extern_placeholdered_wrapper_prototype.id.package_coord,
+                                            init_steps: extern_placeholdered_wrapper_prototype.id.init_steps,
+                                            local_name: INameT::ExternFunction(extern_fn_name),
+                                        })
+                                    }
+                                    other => panic!("vwat: {:?}", other),
+                                };
+                                let extern_prototype = self.typing_interner.alloc(PrototypeT {
+                                    id: extern_prototype_id,
+                                    return_type: extern_placeholdered_wrapper_prototype.return_type,
+                                });
+                                // Though, we do need to add some instantiation bounds for this new IdT we
+                                // just made.
+                                let wrapper_bounds = coutputs.get_instantiation_bounds(self.typing_interner, extern_placeholdered_wrapper_prototype.id)
+                                    .unwrap_or_else(|| panic!("vassertSome: no instantiation bounds for extern wrapper prototype"));
+                                coutputs.add_instantiation_bounds(
+                                    self.opts.global_options.sanity_check,
+                                    self.typing_interner,
+                                    template_id,
+                                    extern_prototype_id,
+                                    wrapper_bounds,
+                                );
+                                coutputs.add_function_extern(
+                                    function_a.range,
+                                    placeholdered_extern_id,
+                                    extern_prototype,
+                                    extern_name,
+                                    self.typing_interner,
+                                );
+                            }
+                        }
+                        let maybe_export = function_a.attributes.iter().find_map(|a| match a { IFunctionAttributeS::Export(e) => Some(e), _ => None });
+                        match maybe_export {
+                            None => {}
+                            Some(_export_s) => {
+                                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT};
+                                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
+                                use crate::typing::types::types::RegionT;
+                                use crate::typing::function::function_compiler::IResolveFunctionResult;
+                                use crate::postparsing::names::IFunctionDeclarationNameS;
+                                use std::marker::PhantomData;
+
+                                let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
+                                    code_loc: function_a.range.begin,
+                                    _phantom: PhantomData,
+                                });
+                                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let template_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &template_id_steps,
+                                    local_name: INameT::ExportTemplate(template_name),
+                                });
+                                let template_id_ref = self.typing_interner.alloc(template_id);
+                                let export_outer_templatas = TemplatasStoreBuilder::new(template_id_ref).build_in(self.typing_interner);
+                                let _export_outer_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: package_env,
+                                    template_id,
+                                    id: template_id,
+                                    templatas: export_outer_templatas,
+                                });
+                                let region_placeholder = RegionT {};
+                                let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
+                                    template: template_name,
+                                    region: region_placeholder,
+                                });
+                                let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
+                                let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
+                                    package_coord: package_id.package_coord,
+                                    init_steps: &placeholdered_export_id_steps,
+                                    local_name: INameT::Export(placeholdered_export_name),
+                                });
+                                let placeholdered_export_id_ref = self.typing_interner.alloc(placeholdered_export_id);
+                                let export_templatas = TemplatasStoreBuilder::new(placeholdered_export_id_ref).build_in(self.typing_interner);
+                                let export_env = self.typing_interner.alloc(ExportEnvironmentT {
+                                    global_env,
+                                    parent_env: package_env,
+                                    template_id,
+                                    id: placeholdered_export_id,
+                                    templatas: export_templatas,
+                                });
+                                let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
+                                let call_ranges = self.typing_interner.alloc_slice_copy(&[function_a.range]);
+                                let export_placeholdered_prototype =
+                                    match self.evaluate_generic_light_function_from_call_for_prototype(
+                                        &mut coutputs,
+                                        call_ranges,
+                                        LocationInDenizen { path: &[] },
+                                        export_env_as_iindenizen,
+                                        templata,
+                                        &[],
+                                        region_placeholder,
+                                        &[],
+                                    ) {
+                                        IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
+                                        IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from export function"),
+                                    };
+                                let export_name = match function_a.name {
+                                    IFunctionDeclarationNameS::FunctionName(fn_name_s) => fn_name_s.name,
+                                    other => panic!("vwat: {:?}", other),
+                                };
+                                coutputs.add_function_export(
+                                    function_a.range,
+                                    export_placeholdered_prototype,
+                                    placeholdered_export_id,
+                                    export_name,
+                                    self.typing_interner,
+                                );
+                            }
+                        }
                     }
                     _ => {}
                 }
@@ -1740,9 +1928,110 @@ where 's: 't,
 
         // Export compile phase
         // packageToProgramA.flatMap({ case (packageCoord, programA) => ... programA.exports.foreach(...) })
-        for (_coord, program_a) in &package_to_program_a.package_coord_to_contents {
-            for _export in program_a.exports.iter() {
-                panic!("implement: export compile");
+        for (coord, program_a) in &package_to_program_a.package_coord_to_contents {
+            for export in program_a.exports.iter() {
+                use crate::typing::names::names::{ExportTemplateNameT, ExportNameT, IdValT, PackageTopLevelNameT};
+                use crate::typing::env::environment::{ExportEnvironmentT, TemplatasStoreBuilder};
+                use crate::typing::types::types::RegionT;
+                use crate::typing::types::types::KindT;
+                use crate::typing::infer_compiler::InferEnv;
+                use crate::postparsing::itemplatatype::ITemplataType;
+                use std::marker::PhantomData;
+
+                let package_top_level_name = self.typing_interner.intern_package_top_level_name(PackageTopLevelNameT { _phantom: PhantomData });
+                let package_id_steps: Vec<INameT<'s, 't>> = vec![];
+                let package_id = *self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &package_id_steps,
+                    local_name: INameT::PackageTopLevel(package_top_level_name),
+                });
+                let package_env = make_top_level_environment(global_env, package_id, self.typing_interner);
+
+                let type_rune_t = export.type_rune.clone();
+
+                let template_name = self.typing_interner.intern_export_template_name(ExportTemplateNameT {
+                    code_loc: export.range.begin,
+                    _phantom: PhantomData,
+                });
+                let template_id_steps: Vec<INameT<'s, 't>> = vec![];
+                let template_id = *self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &template_id_steps,
+                    local_name: INameT::ExportTemplate(template_name),
+                });
+                let template_id_ref = self.typing_interner.alloc(template_id);
+                let export_outer_templatas = TemplatasStoreBuilder::new(template_id_ref).build_in(self.typing_interner);
+                let _export_outer_env = self.typing_interner.alloc(ExportEnvironmentT {
+                    global_env,
+                    parent_env: package_env,
+                    template_id,
+                    id: template_id,
+                    templatas: export_outer_templatas,
+                });
+
+                let region_placeholder = RegionT {};
+
+                let placeholdered_export_name = self.typing_interner.intern_export_name(ExportNameT {
+                    template: template_name,
+                    region: region_placeholder,
+                });
+                let placeholdered_export_id_steps: Vec<INameT<'s, 't>> = vec![];
+                let placeholdered_export_id = *self.typing_interner.intern_id(IdValT {
+                    package_coord: coord,
+                    init_steps: &placeholdered_export_id_steps,
+                    local_name: INameT::Export(placeholdered_export_name),
+                });
+                let placeholdered_export_id_ref = self.typing_interner.alloc(placeholdered_export_id);
+                let export_templatas = TemplatasStoreBuilder::new(placeholdered_export_id_ref).build_in(self.typing_interner);
+                let export_env = self.typing_interner.alloc(ExportEnvironmentT {
+                    global_env,
+                    parent_env: package_env,
+                    template_id,
+                    id: placeholdered_export_id,
+                    templatas: export_templatas,
+                });
+                let export_env_as_iindenizen = IInDenizenEnvironmentT::Export(export_env);
+                let export_env_as_ienv = IEnvironmentT::Export(export_env);
+
+                let rune_to_type: HashMap<IRuneS<'s>, ITemplataType<'s>> =
+                    export.rune_to_type.iter().map(|(k, v)| (*k, *v)).collect();
+
+                let parent_ranges_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(&[export.range]);
+
+                let complete_define_solve = match self.solve_for_defining(
+                    InferEnv {
+                        original_calling_env: export_env_as_iindenizen,
+                        parent_ranges: parent_ranges_t,
+                        call_location: LocationInDenizen { path: &[] },
+                        self_env: export_env_as_ienv,
+                        context_region: region_placeholder,
+                    },
+                    &mut coutputs,
+                    export.rules,
+                    &rune_to_type,
+                    parent_ranges_t,
+                    LocationInDenizen { path: &[] },
+                    &[],
+                    &[],
+                    &[],
+                ) {
+                    Err(_f) => panic!("implement: TypingPassDefiningError from export solve_for_defining"),
+                    Ok(c) => c,
+                };
+
+                match complete_define_solve.conclusions.get(&type_rune_t.rune) {
+                    Some(ITemplataT::Kind(kt)) => {
+                        coutputs.add_kind_export(
+                            export.range,
+                            kt.kind,
+                            placeholdered_export_id,
+                            export.exported_name,
+                            self.typing_interner,
+                        );
+                    }
+                    Some(_) => panic!("vimpl"),
+                    None => panic!("vfail"),
+                }
             }
         }
 
@@ -2793,13 +3082,25 @@ where 's: 't,
         //       }
         //     })
         // })
-        coutputs.get_function_exports().iter().for_each(|_func_export| {
-            panic!("implement: ensure_deep_exports — function export paramType check");
+        let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
+        coutputs.get_function_exports().iter().for_each(|func_export| {
+            let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
+            let all_types: Vec<CoordT<'s, 't>> = std::iter::once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
+            for param_type in all_types {
+                if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
+                    panic!("implement: ExportedFunctionDependedOnNonExportedKind");
+                }
+            }
         });
 
-        // coutputs.getFunctionExterns.foreach(functionExtern => { ... })
-        coutputs.get_function_externs().iter().for_each(|_function_extern| {
-            panic!("implement: ensure_deep_exports — function extern paramType check");
+        coutputs.get_function_externs().iter().for_each(|function_extern| {
+            let exported_kind_to_export = package_to_kind_to_export.get(function_extern.extern_placeholdered_id.package_coord).unwrap_or(&empty_kind_map);
+            let all_types: Vec<CoordT<'s, 't>> = std::iter::once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
+            for param_type in all_types {
+                if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
+                    panic!("implement: ExternFunctionDependedOnNonExportedKind");
+                }
+            }
         });
 
         // packageToKindToExport.foreach((packageCoord, exportedKindToExport) =>
@@ -2841,11 +3142,27 @@ where 's: 't,
                     KindT::StaticSizedArray(_as_tt) => {
                         panic!("implement: ensure_deep_exports — contentsStaticSizedArrayTT");
                     }
-                    KindT::RuntimeSizedArray(_at) => {
-                        panic!("implement: ensure_deep_exports — contentsRuntimeSizedArrayTT");
+                    KindT::RuntimeSizedArray(rsa) => {
+                        let mutability = match rsa.name.local_name {
+                            INameT::RuntimeSizedArray(rsan) => rsan.arr.mutability,
+                            _ => panic!("vwat"),
+                        };
+                        let element_kind = match rsa.name.local_name {
+                            INameT::RuntimeSizedArray(rsan) => rsan.arr.element_type.kind,
+                            _ => panic!("vwat"),
+                        };
+                        if mutability == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
+                            && !self.is_primitive(element_kind)
+                            && !exported_kind_to_export.contains_key(&element_kind)
+                        {
+                            panic!("implement: ensure_deep_exports — ExportedImmutableKindDependedOnNonExportedKind (rsa)");
+                        }
                     }
-                    // Scala: case InterfaceTT(_) => (intentional no-op)
-                    _ => {}
+                    KindT::Interface(_) => {}
+                    KindT::KindPlaceholder(_) | KindT::OverloadSet(_) |
+                    KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_) | KindT::Never(_) => {
+                        panic!("vwat: unexpected kind in exportedKindToExport");
+                    }
                 }
             });
         });
@@ -3088,7 +3405,15 @@ where 's: 't,
         &self,
         kind: KindT<'s, 't>,
     ) -> bool {
-        panic!("Unimplemented: Slab 15 — body migration");
+        match kind {
+            KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Never(_) | KindT::Float(_) => true,
+            KindT::KindPlaceholder(_) => false,
+            KindT::Struct(_) => false,
+            KindT::Interface(_) => false,
+            KindT::StaticSizedArray(_) => false,
+            KindT::RuntimeSizedArray(_) => false,
+            KindT::OverloadSet(_) => false,
+        }
     }
     /*
       def isPrimitive(kind: KindT): Boolean = {
@@ -3139,7 +3464,12 @@ where 's: 't,
             KindT::Str(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
             KindT::Void(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),
             KindT::KindPlaceholder(kp) => coutputs.lookup_mutability(self.get_placeholder_template(kp.id)),
-            KindT::RuntimeSizedArray(_) => { panic!("Unimplemented: get_mutability RuntimeSizedArray"); }
+            KindT::RuntimeSizedArray(rsa) => {
+                match rsa.name.local_name {
+                    INameT::RuntimeSizedArray(rsan) => rsan.arr.mutability,
+                    _ => panic!("Expected RuntimeSizedArray local_name in get_mutability"),
+                }
+            }
             KindT::StaticSizedArray(_) => { panic!("Unimplemented: get_mutability StaticSizedArray"); }
             KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),
             KindT::Interface(i) => coutputs.lookup_mutability(self.get_interface_template(i.id)),
@@ -3147,6 +3477,7 @@ where 's: 't,
         }
     }
     /*
+Guardian: temp-disable: SPDMX — The Scala uses `contentsRuntimeSizedArrayTT(mutability, _, _)` which is a Scala extractor equivalent to `rsa.name.local_name → RuntimeSizedArrayNameT { arr, .. } → arr.mutability`. The Rust data model stores mutability on `RawArrayNameT` (accessed via `name.local_name → INameT::RuntimeSizedArray → .arr.mutability`), so an extra nested match arm is structurally required for exhaustiveness. This is the Rust-idiomatic translation of the Scala extractor, not novel logic (Exception R). — FrontendRust/guardian-logs/request-413-1778705498733/hook-413/get_mutability--3129.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
       def getMutability(coutputs: CompilerOutputs, concreteValue2: KindT):
       ITemplataT[MutabilityTemplataType] = {
         concreteValue2 match {

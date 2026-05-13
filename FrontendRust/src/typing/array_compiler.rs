@@ -996,9 +996,26 @@ where 's: 't,
         mutability: ITemplataT<'s, 't>,
         region: RegionT,
     ) -> RuntimeSizedArrayTT<'s, 't> {
-        panic!("Unimplemented: resolve_runtime_sized_array");
+        let builtin_package: &'s PackageCoordinate<'s> =
+            self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[]);
+        let template_name = self.typing_interner.intern_runtime_sized_array_template_name(
+            RuntimeSizedArrayTemplateNameT { _phantom: std::marker::PhantomData }
+        );
+        let arr_name = self.typing_interner.intern_raw_array_name(
+            RawArrayNameT { mutability, element_type: type_2, self_region: region }
+        );
+        let rsa_name = self.typing_interner.intern_runtime_sized_array_name(
+            RuntimeSizedArrayNameT { template: template_name, arr: arr_name }
+        );
+        let id = *self.typing_interner.intern_id(IdValT {
+            package_coord: builtin_package,
+            init_steps: &[],
+            local_name: INameT::RuntimeSizedArray(rsa_name),
+        });
+        *self.typing_interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: id })
     }
 /*
+Guardian: temp-disable: SPDMX — The `self.scout_arena.intern_package_coordinate(self.keywords.empty_string, &[])` pattern IS the established Rust equivalent of `PackageCoordinate.BUILTIN(interner, keywords)` — this exact pattern is already used in `compile_runtime_sized_array` (line 846) and `compile_static_sized_array` (line 635) in this same file, both with the Scala `BUILTIN` comment alongside. This is a documented, consistent Rust adaptation, not a parity drift. — FrontendRust/guardian-logs/request-386-1778704896207/hook-386/resolve_runtime_sized_array--993.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def resolveRuntimeSizedArray(
     type2: CoordT,
     mutability: ITemplataT[MutabilityTemplataType],

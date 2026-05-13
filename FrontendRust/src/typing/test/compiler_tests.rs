@@ -39,8 +39,9 @@ use crate::typing::types::types::{CoordT, IntT, KindT, OwnershipT, RegionT};
 use crate::typing::ast::ast::ParameterT;
 use crate::typing::ast::expressions::{LetNormalTE, LocalLookupTE};
 use crate::typing::env::function_environment_t::{ILocalVariableT, ReferenceLocalVariableT};
-use crate::typing::names::names::IVarNameT;
-use crate::typing::types::types::NeverT;
+use crate::typing::names::names::{INameT, IVarNameT};
+use crate::typing::types::types::{MutabilityT, NeverT};
+use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
 // mig: struct CompilerTests
 pub struct CompilerTests {}
 // mig: impl CompilerTests
@@ -700,9 +701,22 @@ fn test_overloads() {
 */
 // mig: fn test_readonly_ufcs
 #[test]
-#[ignore]
 fn test_readonly_ufcs() {
-    panic!("Unmigrated test: test_readonly_ufcs");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/ufcs.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
 }
 /*
   test("Test readonly UFCS") {
@@ -713,9 +727,22 @@ fn test_readonly_ufcs() {
 */
 // mig: fn test_readwrite_ufcs
 #[test]
-#[ignore]
 fn test_readwrite_ufcs() {
-    panic!("Unmigrated test: test_readwrite_ufcs");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/readwriteufcs.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
 }
 /*
   test("Test readwrite UFCS") {
@@ -764,9 +791,33 @@ fn test_templates() {
 */
 // mig: fn test_taking_a_callable_param
 #[test]
-#[ignore]
 fn test_taking_a_callable_param() {
-    panic!("Unmigrated test: test_taking_a_callable_param");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "func do<F>(callable F) int\n",
+        "where func(&F)int, func drop(F)void\n",
+        "{\n",
+        "  return callable();\n",
+        "}\n",
+        "exported func main() int { return do({ return 3; }); }\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let do_fn = coutputs.lookup_function_by_str("do");
+    assert!(matches!(do_fn.header.return_type,
+        CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. }
+    ));
 }
 /*
   test("Test taking a callable param") {
@@ -2115,9 +2166,71 @@ fn tests_calling_a_templated_function_with_explicit_template_args() {
 */
 // mig: fn tests_destructuring_borrow_doesnt_compile_to_destroy
 #[test]
-#[ignore]
 fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
-    panic!("Unmigrated test: tests_destructuring_borrow_doesnt_compile_to_destroy");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "\n",
+        "struct Vec3i {\n",
+        "  x int;\n",
+        "  y int;\n",
+        "  z int;\n",
+        "}\n",
+        "\n",
+        "exported func main() int {\n",
+        "  v = Vec3i(3, 4, 5);\n",
+        "\t [x, y, z] = &v;\n",
+        "  return y;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    let destroys = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Destroy(_) => Some(())
+    );
+    assert_eq!(destroys.len(), 0);
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::ReferenceMemberLookup(
+            crate::typing::ast::expressions::ReferenceMemberLookupTE {
+                struct_expr: crate::typing::ast::expressions::ReferenceExpressionTE::SoftLoad(
+                    crate::typing::ast::expressions::SoftLoadTE {
+                        expr: crate::typing::ast::expressions::AddressExpressionTE::LocalLookup(
+                            crate::typing::ast::expressions::LocalLookupTE {
+                                local_variable: crate::typing::env::function_environment_t::ILocalVariableT::Reference(
+                                    crate::typing::env::function_environment_t::ReferenceLocalVariableT {
+                                        variability: crate::typing::types::types::VariabilityT::Final,
+                                        coord: CoordT { kind: KindT::Struct(_), .. },
+                                        ..
+                                    }
+                                ),
+                                ..
+                            }
+                        ),
+                        target_ownership: OwnershipT::Borrow,
+                    }
+                ),
+                member_name: crate::typing::names::names::IVarNameT::CodeVar(
+                    crate::typing::names::names::CodeVarNameT { name: crate::interner::StrI("x"), .. }
+                ),
+                member_reference: CoordT { ownership: OwnershipT::Share, kind: KindT::Int(IntT { bits: 32 }), .. },
+                variability: crate::typing::types::types::VariabilityT::Final,
+                ..
+            }
+        ) => Some(())
+    );
 }
 /*
   test("Tests destructuring borrow doesnt compile to destroy") {
@@ -2154,9 +2267,38 @@ fn tests_destructuring_borrow_doesnt_compile_to_destroy() {
 */
 // mig: fn tests_making_a_variable_with_a_pattern
 #[test]
-#[ignore]
 fn tests_making_a_variable_with_a_pattern() {
-    panic!("Unmigrated test: tests_making_a_variable_with_a_pattern");
+    // Tests putting MyOption<int> as the type of x.
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "\n",
+        "sealed interface MyOption<T> where T Ref { }\n",
+        "\n",
+        "struct MySome<T> where T Ref {}\n",
+        "impl<T> MyOption<T> for MySome<T>;\n",
+        "\n",
+        "func doSomething(opt MyOption<int>) int {\n",
+        "  return 9;\n",
+        "}\n",
+        "\n",
+        "exported func main() int {\n",
+        "\tx MyOption<int> = MySome<int>();\n",
+        "\treturn doSomething(x);\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Tests making a variable with a pattern") {
@@ -2184,9 +2326,22 @@ fn tests_making_a_variable_with_a_pattern() {
 */
 // mig: fn tests_a_linked_list
 #[test]
-#[ignore]
 fn tests_a_linked_list() {
-    panic!("Unmigrated test: tests_a_linked_list");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/virtuals/ordinarylinkedlist.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Tests a linked list") {
@@ -2429,9 +2584,22 @@ fn tests_upcast_with_generics_has_the_right_stuff() {
 */
 // mig: fn tests_a_templated_linked_list
 #[test]
-#[ignore]
 fn tests_a_templated_linked_list() {
-    panic!("Unmigrated test: tests_a_templated_linked_list");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/genericvirtuals/templatedlinkedlist.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Tests a templated linked list") {
@@ -2443,9 +2611,22 @@ fn tests_a_templated_linked_list() {
 */
 // mig: fn tests_a_foreach_for_a_linked_list
 #[test]
-#[ignore]
 fn tests_a_foreach_for_a_linked_list() {
-    panic!("Unmigrated test: tests_a_foreach_for_a_linked_list");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = crate::tests::tests::load_expected("programs/genericvirtuals/foreachlinkedlist.vale");
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Tests a foreach for a linked list") {
@@ -2576,9 +2757,28 @@ fn recursive_struct() {
 */
 // mig: fn recursive_struct_with_opt
 #[test]
-#[ignore]
 fn recursive_struct_with_opt() {
-    panic!("Unmigrated test: recursive_struct_with_opt");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.opt.*;\n",
+        "struct ListNode {\n",
+        "  tail Opt<ListNode>;\n",
+        "}\n",
+        "func main(a ListNode) {}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Recursive struct with Opt") {
@@ -2711,9 +2911,32 @@ fn test_vector_of_struct_templata() {
 */
 // mig: fn if_branches_returns_never_and_struct
 #[test]
-#[ignore]
 fn if_branches_returns_never_and_struct() {
-    panic!("Unmigrated test: if_branches_returns_never_and_struct");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.panicutils.*;\n",
+        "exported struct Moo {}\n",
+        "exported func main() Moo {\n",
+        "  if true {\n",
+        "    Moo()\n",
+        "  } else {\n",
+        "    panic(\"Error in CreateDir\");\n",
+        "  }\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("If branches returns never and struct") {
@@ -2977,9 +3200,38 @@ fn reports_when_exported_struct_depends_on_non_exported_member() {
 */
 // mig: fn checks_that_we_stored_a_borrowed_temporary_in_a_local
 #[test]
-#[ignore]
 fn checks_that_we_stored_a_borrowed_temporary_in_a_local() {
-    panic!("Unmigrated test: checks_that_we_stored_a_borrowed_temporary_in_a_local");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Muta { }\n",
+        "func doSomething(m &Muta, i int) {}\n",
+        "exported func main() {\n",
+        "  doSomething(&Muta(), 1)\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::LetAndLend(
+            crate::typing::ast::expressions::LetAndLendTE {
+                target_ownership: OwnershipT::Borrow,
+                ..
+            }
+        ) => Some(())
+    );
 }
 /*
   test("Checks that we stored a borrowed temporary in a local") {
@@ -3528,9 +3780,41 @@ fn report_when_imm_contains_varying_member() {
 */
 // mig: fn test_imm_array
 #[test]
-#[ignore]
 fn test_imm_array() {
-    panic!("Unmigrated test: test_imm_array");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.panic.*;\n",
+        "import v.builtins.drop.*;\n",
+        "export #[]int as ImmArrInt;\n",
+        "exported func main(arr #[]int) {\n",
+        "  __vbi_panic();\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(|_: &PackageCoordinate<'_>| -> Option<HashMap<String, String>> { None });
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    match main.header.params[0].tyype.kind {
+        KindT::RuntimeSizedArray(rsa) => {
+            match rsa.name.local_name {
+                INameT::RuntimeSizedArray(rsan) => {
+                    assert_eq!(rsan.arr.mutability, ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }));
+                }
+                _ => panic!("Expected RuntimeSizedArray local_name"),
+            }
+        }
+        _ => panic!("Expected RuntimeSizedArray kind"),
+    }
 }
 /*
   test("Test imm array") {
@@ -3594,11 +3878,65 @@ fn tests_calling_an_abstract_function() {
 */
 // mig: fn test_struct_default_generic_argument_in_type
 #[test]
-#[ignore]
 fn test_struct_default_generic_argument_in_type() {
-    panic!("Unmigrated test: test_struct_default_generic_argument_in_type");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct MyHashSet<K Ref, H Int = 5> { }\n",
+        "struct MyStruct {\n",
+        "  x MyHashSet<bool>();\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let moo = coutputs.lookup_struct_by_str("MyStruct");
+    let tyype = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::StructDefinition(moo),
+        crate::typing::test::traverse::NodeRefT::ReferenceMemberType(rmt) => Some(rmt.reference)
+    );
+    match tyype {
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Struct(crate::typing::types::types::StructTT {
+                id: crate::typing::names::names::IdT {
+                    local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
+                        template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(
+                            crate::typing::names::names::StructTemplateNameT {
+                                human_name: crate::interner::StrI("MyHashSet"),
+                                ..
+                            }
+                        ),
+                        template_args: [
+                            crate::typing::templata::templata::ITemplataT::Coord(
+                                crate::typing::templata::templata::CoordTemplataT {
+                                    coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. }
+                                }
+                            ),
+                            crate::typing::templata::templata::ITemplataT::Integer(5),
+                        ],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        _ => panic!("unexpected tyype"),
+    }
 }
 /*
+Guardian: temp-disable: IIDX — StrI("MyHashSet") appears in a match pattern arm (destructuring), not as a value construction call. IIDX's DENY example is about constructing StrI values outside the interner; pattern matching is not construction. The TL explicitly approved this inline literal pattern approach. — FrontendRust/guardian-logs/request-1715-1778687371724/hook-1715/test_struct_default_generic_argument_in_type--3598.0.ImmediateInterningDiscipline-IIDX.ImmediateInterningDiscipline-IIDX.verdict.md
   test("Test struct default generic argument in type") {
     val compile = CompilerTestCompilation.test(
       """
@@ -3674,9 +4012,40 @@ fn lock_weak_member() {
 */
 // mig: fn tests_destructuring_shared_doesnt_compile_to_destroy
 #[test]
-#[ignore]
 fn tests_destructuring_shared_doesnt_compile_to_destroy() {
-    panic!("Unmigrated test: tests_destructuring_shared_doesnt_compile_to_destroy");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "\n",
+        "struct Vec3i imm {\n",
+        "  x int;\n",
+        "  y int;\n",
+        "  z int;\n",
+        "}\n",
+        "\n",
+        "exported func main() int {\n",
+        "\t Vec3i[x, y, z] = Vec3i(3, 4, 5);\n",
+        "  return y;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let main = coutputs.lookup_function_by_str("main");
+    let destroys = crate::collect_where_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(main),
+        crate::typing::test::traverse::NodeRefT::Destroy(_) => Some(())
+    );
+    assert_eq!(destroys.len(), 0);
 }
 /*
   test("Tests destructuring shared doesnt compile to destroy") {
@@ -4154,9 +4523,32 @@ fn downcast_with_as() {
 */
 // mig: fn closure_using_parent_function_s_bound
 #[test]
-#[ignore]
 fn closure_using_parent_function_s_bound() {
-    panic!("Unmigrated test: closure_using_parent_function_s_bound");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.arith.*;\n",
+        "\n",
+        "func genFunc<T>(a &T) T\n",
+        "where func +(&T, &T)T {\n",
+        "  { a + a }()\n",
+        "}\n",
+        "exported func main() int {\n",
+        "  genFunc(7)\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    compile.expect_compiler_outputs();
 }
 /*
   test("Closure using parent function's bound") {
@@ -4178,9 +4570,62 @@ fn closure_using_parent_function_s_bound() {
 */
 // mig: fn test_struct_default_generic_argument_in_call
 #[test]
-#[ignore]
 fn test_struct_default_generic_argument_in_call() {
-    panic!("Unmigrated test: test_struct_default_generic_argument_in_call");
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct MyHashSet<K Ref, H Int = 5> { }\n",
+        "func moo() {\n",
+        "  x = MyHashSet<bool>();\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let coutputs = compile.expect_compiler_outputs();
+    let moo = coutputs.lookup_function_by_str("moo");
+    let variable = crate::collect_only_tnode!(
+        crate::typing::test::traverse::NodeRefT::FunctionDefinition(moo),
+        crate::typing::test::traverse::NodeRefT::LetNormal(let_normal) => Some(let_normal.variable)
+    );
+    match variable.coord() {
+        CoordT {
+            ownership: OwnershipT::Own,
+            kind: KindT::Struct(crate::typing::types::types::StructTT {
+                id: crate::typing::names::names::IdT {
+                    local_name: crate::typing::names::names::INameT::Struct(crate::typing::names::names::StructNameT {
+                        template: crate::typing::names::names::IStructTemplateNameT::StructTemplate(
+                            crate::typing::names::names::StructTemplateNameT {
+                                human_name: crate::interner::StrI("MyHashSet"),
+                                ..
+                            }
+                        ),
+                        template_args: [
+                            crate::typing::templata::templata::ITemplataT::Coord(
+                                crate::typing::templata::templata::CoordTemplataT {
+                                    coord: CoordT { ownership: OwnershipT::Share, kind: KindT::Bool(_), .. }
+                                }
+                            ),
+                            crate::typing::templata::templata::ITemplataT::Integer(5),
+                        ],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        _ => panic!("unexpected coord"),
+    }
 }
 /*
   test("Test struct default generic argument in call") {
@@ -4211,9 +4656,41 @@ fn test_struct_default_generic_argument_in_call() {
 */
 // mig: fn structs_can_resolve_other_structs_instantiation_bound_arguments
 #[test]
-#[ignore]
 fn structs_can_resolve_other_structs_instantiation_bound_arguments() {
-    panic!("Unmigrated test: structs_can_resolve_other_structs_instantiation_bound_arguments");
+    // The definition of Marine<T> was trying to resolve the existence of func drop(int)void.
+    // Unfortunately, we don't have an overload index at the time of struct definitions yet, that comes later when
+    // we define the functions.
+    // Normally this wouldnt be a problem as we can usually use things before we compile them, we just use the templata
+    // and solve the whole thing on our own, don't even need to know if it's been compiled yet.
+    // However, now that we want to rely on the overload index, and the overload index doesn't exist until we compile
+    // the functions, we rely on things being compiled before we use them, hence this problem.
+    // The solution is to delay resolving function bounds until functions are compiled, see MCFBRBF.
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "import v.builtins.drop.*;\n",
+        "\n",
+        "struct XNone<T> where func drop(T)void { }\n",
+        "\n",
+        "// This function will try to do a resolve for func drop(int)void.\n",
+        "struct Marine { weapon XNone<int>; }\n",
+        "\n",
+        "exported func main() {\n",
+        "  m = Marine(XNone<int>());\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(
+        &scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump,
+    );
+    let _coutputs = compile.expect_compiler_outputs();
 }
 /*
   test("Structs can resolve other structs' instantiation bound arguments") {

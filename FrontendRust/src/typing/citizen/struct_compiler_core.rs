@@ -677,8 +677,21 @@ where 's: 't,
         use crate::typing::templata::templata::*;
         use crate::typing::types::types::*;
 
-        let is_mutable = members.iter().any(|_m| {
-            panic!("implement: is_mutable check in make_closure_understruct_core")
+        let is_mutable = members.iter().any(|m| {
+            use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT};
+            if m.variability == VariabilityT::Varying {
+                true
+            } else {
+                match &m.tyype {
+                    IMemberTypeT::Address(_) => true,
+                    IMemberTypeT::Reference(ReferenceMemberTypeT { reference }) => {
+                        match reference.ownership {
+                            OwnershipT::Own | OwnershipT::Borrow | OwnershipT::Weak => true,
+                            OwnershipT::Share => false,
+                        }
+                    }
+                }
+            }
         });
         let mutability = if is_mutable { MutabilityT::Mutable } else { MutabilityT::Immutable };
 
@@ -808,8 +821,13 @@ where 's: 't,
             attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
             weakable: false,
             mutability: ITemplataT::Mutability(MutabilityTemplataT { mutability }),
-            members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|_m| {
-                panic!("implement: convert NormalStructMemberT ref to owned IStructMemberT")
+            members: self.typing_interner.alloc_slice_from_vec(members.iter().map(|m| {
+                use crate::typing::ast::citizens::{IMemberTypeT, ReferenceMemberTypeT, AddressMemberTypeT};
+                let tyype = match &m.tyype {
+                    IMemberTypeT::Address(a) => IMemberTypeT::Address(AddressMemberTypeT { reference: a.reference }),
+                    IMemberTypeT::Reference(r) => IMemberTypeT::Reference(ReferenceMemberTypeT { reference: r.reference }),
+                };
+                IStructMemberT::Normal(NormalStructMemberT { name: m.name, variability: m.variability, tyype })
             }).collect::<Vec<_>>()),
             is_closure: true,
             instantiation_bound_params: self.typing_interner.alloc(InstantiationBoundArgumentsT {
