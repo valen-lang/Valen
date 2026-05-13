@@ -30,23 +30,23 @@
 - [x] tests_stamping_an_interface_template_from_a_function_param
 - [x] stamps_an_interface_template_via_a_function_return
 - [x] tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param
-- [ ] test_struct_default_generic_argument_in_type
-- [ ] test_struct_default_generic_argument_in_call
-- [ ] structs_can_resolve_other_structs_instantiation_bound_arguments
-- [ ] tests_making_a_variable_with_a_pattern
-- [ ] tests_destructuring_borrow_doesnt_compile_to_destroy
-- [ ] tests_destructuring_shared_doesnt_compile_to_destroy
-- [ ] checks_that_we_stored_a_borrowed_temporary_in_a_local
-- [ ] test_readonly_ufcs
-- [ ] test_readwrite_ufcs
-- [ ] test_taking_a_callable_param
-- [ ] closure_using_parent_function_s_bound
-- [ ] if_branches_returns_never_and_struct
-- [ ] recursive_struct_with_opt
-- [ ] tests_a_linked_list
-- [ ] tests_a_templated_linked_list
-- [ ] tests_a_foreach_for_a_linked_list
-- [ ] test_imm_array
+- [x] test_struct_default_generic_argument_in_type
+- [x] test_struct_default_generic_argument_in_call
+- [x] structs_can_resolve_other_structs_instantiation_bound_arguments
+- [x] tests_making_a_variable_with_a_pattern
+- [x] tests_destructuring_borrow_doesnt_compile_to_destroy
+- [x] tests_destructuring_shared_doesnt_compile_to_destroy
+- [x] checks_that_we_stored_a_borrowed_temporary_in_a_local
+- [x] test_readonly_ufcs
+- [x] test_readwrite_ufcs
+- [x] test_taking_a_callable_param
+- [x] closure_using_parent_function_s_bound
+- [x] if_branches_returns_never_and_struct
+- [x] recursive_struct_with_opt
+- [x] tests_a_linked_list
+- [x] tests_a_templated_linked_list
+- [x] tests_a_foreach_for_a_linked_list
+- [x] test_imm_array
 - [ ] make_array_and_dot_it
 - [ ] test_make_array
 - [ ] test_array_push_pop_len_capacity_drop

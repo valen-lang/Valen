@@ -57,6 +57,8 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 
 **Hand-rolled `ptr::eq(self, other)` on a Polyvalue's outer `&self`.** Works while the enum is always held behind `&'t Outer` (the outer address coincides with the arena address); silently breaks the moment it's flipped to by-value — `self` becomes a stack address, two by-value copies of the same logical wrapper compare unequal, and any `HashMap`/`HashSet` keyed on them silently corrupts. Caught once in `environment.rs:60-67` after the `IEnvironmentT` by-value flip. Rule: Polyvalue enums must `#[derive(PartialEq, Eq, Hash)]` — see @PVECFPZ.
 
+**`'t: 'ctx` / `'s: 'ctx` are already implied by the `Compiler` struct** (via well-formedness on its `&'ctx X<'s, 't>` fields — the struct couldn't exist otherwise), so it's fine to restate them explicitly on a local `impl` `where` clause when rustc fails to propagate the implied bound through HRTB/invariance (e.g. `Box<dyn FnOnce(&Compiler<'s, 'ctx, 't>, ...) + 'ctx>` in pattern_compiler.rs's CPS chain). Never declare the reverse `'ctx: 't` — that's the bound rustc *suggests* but it's architecturally backwards (Compiler is stack/`'ctx` data and dies before `'t`).
+
 **Parallel Builder/Frozen APIs diverging asymmetrically from Scala.** When one Scala API (e.g. `TemplatasStore.addEntries`) is split into a Rust Builder + Frozen pair (`TemplatasStoreBuilder::add_entries` at `environment.rs:851-862` vs `TemplatasStoreT::add_entries` at `environment.rs:942-979`), both must mirror Scala's full logic including special-case branches — review them side-by-side against the single Scala source.
 
 ---
