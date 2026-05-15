@@ -14,6 +14,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::higher_typing::ast::*;
 use crate::interner::Interner;
 use crate::keywords::Keywords;
@@ -116,7 +117,7 @@ where 's: 't,
         already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
-    ) -> IEvaluateFunctionResult<'s, 't> {
+    ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let (variables, entries) = self.make_closure_variables_and_entries(coutputs, calling_env.denizen_template_id(), closure_struct_ref);
         let name = self.typing_interner.alloc(
             parent_env.id().add_step(self.typing_interner,
@@ -275,7 +276,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
-    ) -> IResolveFunctionResult<'s, 't> {
+    ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         self.check_not_closure(function);
 
         let function_template_name = self.translate_generic_function_name(function.name);
@@ -396,7 +397,8 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function: &'s FunctionA<'s>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let function_template_name = self.translate_generic_function_name(function.name);
         let function_name_local: INameT<'s, 't> = match function_template_name {
             IFunctionTemplateNameT::FunctionTemplate(r) => INameT::FunctionTemplate(r),
@@ -601,7 +603,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
-    ) -> IEvaluateFunctionResult<'s, 't> {
+    ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         self.check_not_closure(function);
 
         let outer_env_id = parent_env.id().add_step(

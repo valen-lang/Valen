@@ -11,6 +11,7 @@ use crate::typing::ast::ast::*;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::{LocationInDenizen, ParameterS};
 use crate::postparsing::ast::AbstractSP;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
@@ -180,7 +181,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function1: &FunctionA<'s>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
-    ) -> PrototypeTemplataT<'s, 't> {
+    ) -> Result<PrototypeTemplataT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
         let rued_env_as_i = IInDenizenEnvironmentT::BuildingWithClosuredsAndTemplateArgs(rued_env);
         for template_param in function1.rune_to_type.keys() {
@@ -207,7 +208,7 @@ where 's: 't,
         let signature = self.typing_interner.alloc(SignatureT { id: banner.name });
         match coutputs.lookup_function(signature) {
             Some(function_def) => {
-                PrototypeTemplataT { prototype: self.typing_interner.alloc(function_def.header.to_prototype()) }
+                Ok(PrototypeTemplataT { prototype: self.typing_interner.alloc(function_def.header.to_prototype()) })
             }
             None => {
                 coutputs.declare_function(call_range, &named_env.id);
@@ -219,12 +220,12 @@ where 's: 't,
                 coutputs.declare_function_inner_env(&named_env.id, named_env_as_i);
 
                 let header =
-                    self.evaluate_function_for_header_core(named_env, coutputs, call_range, call_location, &params2, instantiation_bound_params);
+                    self.evaluate_function_for_header_core(named_env, coutputs, call_range, call_location, &params2, instantiation_bound_params)?;
                 if !header.to_banner().same(&banner) {
                     panic!("wut: banner mismatch in get_or_evaluate_templated_function_for_banner");
                 }
 
-                PrototypeTemplataT { prototype: self.typing_interner.alloc(header.to_prototype()) }
+                Ok(PrototypeTemplataT { prototype: self.typing_interner.alloc(header.to_prototype()) })
             }
         }
     }
@@ -292,7 +293,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function1: &FunctionA<'s>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // Check preconditions
         // function1.runeToType.keySet.foreach(rune => {
         //   vassert(
@@ -332,7 +334,7 @@ where 's: 't,
         match coutputs.lookup_function(needle_signature) {
             //   case Some(FunctionDefinitionT(header, _, _)) => { (header) }
             Some(func_def) => {
-                &func_def.header
+                Ok(&func_def.header)
             }
             //   case None => {
             None => {
@@ -372,14 +374,14 @@ where 's: 't,
 
                 // val header = core.evaluateFunctionForHeader(namedEnv, coutputs, callRange, callLocation, params2, instantiationBoundParams)
                 let header = self.evaluate_function_for_header_core(
-                    named_env_ref, coutputs, call_range, call_location, &params2, instantiation_bound_params);
+                    named_env_ref, coutputs, call_range, call_location, &params2, instantiation_bound_params)?;
 
                 // vassert(header.toSignature == needleSignature)
                 let header_sig = header.to_signature();
                 assert!(header_sig.id == needle_signature.id);
 
                 // (header)
-                self.typing_interner.alloc(header)
+                Ok(self.typing_interner.alloc(header))
             }
         }
     }

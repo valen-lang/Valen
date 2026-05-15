@@ -828,7 +828,7 @@ fn visit_static_array_from_values<'s, 't, T, F>(
 {
     collect_if(pred, out, NodeRefT::StaticArrayFromValues(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
     visit_coord(pred, out, &x.result_reference);
     visit_static_sized_array_tt(pred, out, x.array_type);

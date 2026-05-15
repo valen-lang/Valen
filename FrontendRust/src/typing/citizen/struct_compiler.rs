@@ -16,6 +16,7 @@ use crate::interner::Interner;
 use crate::typing::templata_compiler::*;
 use crate::typing::infer_compiler::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::rules::rules::*;
 
@@ -567,7 +568,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-    ) -> UncheckedDefiningConclusions<'s, 't> {
+    ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         self.compile_interface_layer(coutputs, parent_ranges, call_location, interface_templata)
     }
 /*
@@ -599,7 +600,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
+    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }

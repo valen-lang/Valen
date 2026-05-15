@@ -38,7 +38,7 @@ where 's: 't,
     pub fn generate_function_body_ssa_drop_into(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &FunctionEnvironmentT<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
@@ -46,8 +46,36 @@ where 's: 't,
         origin_function: Option<&FunctionA<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        panic!("Unimplemented: generate_function_body_ssa_drop_into");
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        use crate::typing::types::types::RegionT;
+        let header = FunctionHeaderT {
+            id: env.id,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            params: self.typing_interner.alloc_slice_from_vec(param_coords.to_vec()),
+            return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
+            maybe_origin_function_templata: Some(env.templata()),
+        };
+        coutputs.declare_function_return_type(
+            self.typing_interner.alloc(header.to_signature()),
+            header.return_type,
+        );
+        let arr_arg = ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype });
+        let callable_arg = ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype });
+        let destroy_te = self.evaluate_destroy_static_sized_array_into_callable(
+            coutputs,
+            env,
+            call_range,
+            call_location,
+            arr_arg,
+            callable_arg,
+            RegionT,
+        )?;
+        let body = ReferenceExpressionTE::Block(BlockTE {
+            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(destroy_te)),
+            })),
+        });
+        Ok((header, body))
     }
 /*
   def generateFunctionBody(

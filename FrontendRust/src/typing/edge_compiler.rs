@@ -885,7 +885,7 @@ where 's: 't,
             coutputs.get_outer_env_for_type(&[range], interface_template_id),
             coutputs.get_outer_env_for_type(&[range], sub_citizen_template_id),
         ];
-        let found_function = self.find_function(
+        let found_function = match self.find_function(
             IInDenizenEnvironmentT::from(dispatcher_case_env),
             coutputs,
             &[range, impl_t.templata.impl_.range],
@@ -897,7 +897,10 @@ where 's: 't,
             &override_function_param_types,
             &extra_envs,
             true,
-        ).unwrap_or_else(|_e| panic!("Unimplemented: CouldntFindOverrideT error"));
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from find_function in look_for_override")) {
+            Err(_e) => panic!("Unimplemented: CouldntFindOverrideT error"),
+            Ok(x) => x,
+        };
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, found_function.prototype.id).is_some());
 

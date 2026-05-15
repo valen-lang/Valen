@@ -11,6 +11,7 @@ use crate::typing::templata::templata::*;
 use crate::typing::types::types::*;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::ILookupContext;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use std::collections::HashSet;
 use crate::utils::range::RangeS;
 
@@ -240,7 +241,8 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let env = function_templata.outer_env;
         let function = function_templata.function;
         if function.is_light() {
@@ -331,7 +333,7 @@ where 's: 't,
         already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         arg_types: &[CoordT<'s, 't>],
-    ) -> IEvaluateFunctionResult<'s, 't> {
+    ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env: declaring_env, function } = function_templata;
         if function.is_light() {
             self.evaluate_templated_light_banner_from_call_closure_or_light(
@@ -513,7 +515,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
-    ) -> IResolveFunctionResult<'s, 't> {
+    ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env: env, function } = function_templata;
         self.evaluate_generic_light_function_from_call_for_prototype2(
             env, coutputs, calling_env, call_range, call_location, function, explicit_template_args,
@@ -553,7 +555,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_a: &'s FunctionA<'s>,
         verify_conclusions: bool,
-    ) -> StructTT<'s, 't> {
+    ) -> Result<StructTT<'s, 't>, ICompileErrorT<'s, 't>> {
         let code_body = match &function_a.body {
             IBodyS::CodeBody(code_body) => code_body,
             _ => panic!("evaluate_closure_struct: expected CodeBodyS"),
@@ -569,9 +571,9 @@ where 's: 't,
         let (struct_tt, _, _function_templata) =
             self.make_closure_understruct(
                 containing_node_env, coutputs, call_range, call_location, name, function_a,
-                &closured_var_names_and_types);
+                &closured_var_names_and_types)?;
 
-        struct_tt
+        Ok(struct_tt)
     }
 /*
   def evaluateClosureStruct(

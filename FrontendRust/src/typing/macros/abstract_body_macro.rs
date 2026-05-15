@@ -47,7 +47,7 @@ where 's: 't,
         origin_function: Option<&'s FunctionA<'s>>,
         params2: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         use crate::typing::env::environment::get_imprecise_name;
         use crate::typing::types::types::RegionT;
         use crate::typing::templata::templata::FunctionTemplataT;
@@ -84,7 +84,7 @@ where 's: 't,
             &param_types,
             &[],
             true,
-        ) {
+        )? {
             Ok(stamp) => stamp.prototype,
             Err(_fff) => panic!("CouldntFindFunctionToCallT"),
         };
@@ -115,7 +115,7 @@ where 's: 't,
             ),
         });
 
-        (header, body)
+        Ok((header, body))
     }
 /*
   override def generateFunctionBody(

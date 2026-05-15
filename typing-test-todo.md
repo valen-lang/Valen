@@ -47,20 +47,20 @@
 - [x] tests_a_templated_linked_list
 - [x] tests_a_foreach_for_a_linked_list
 - [x] test_imm_array
-- [ ] make_array_and_dot_it
-- [ ] test_make_array
-- [ ] test_array_push_pop_len_capacity_drop
-- [ ] test_vector_of_struct_templata
-- [ ] tests_exporting_function
-- [ ] tests_exporting_struct
-- [ ] tests_exporting_interface
-- [ ] tests_export_struct_twice
-- [ ] lock_weak_member
-- [ ] generates_free_function_for_imm_struct
-- [ ] downcast_with_as
-- [ ] downcast_function_rrbfs
-- [ ] reports_mismatched_return_type_when_expecting_void
-- [ ] reports_when_reading_nonexistant_local
+- [x] make_array_and_dot_it
+- [x] test_make_array
+- [x] test_array_push_pop_len_capacity_drop
+- [x] test_vector_of_struct_templata
+- [x] tests_exporting_function
+- [x] tests_exporting_struct
+- [x] tests_exporting_interface
+- [x] tests_export_struct_twice
+- [x] lock_weak_member
+- [x] generates_free_function_for_imm_struct
+- [x] downcast_with_as
+- [x] downcast_function_rrbfs
+- [x] reports_mismatched_return_type_when_expecting_void
+- [x] reports_when_reading_nonexistant_local
 - [ ] reports_when_mutating_after_moving
 - [ ] reports_when_reading_after_moving
 - [ ] reports_when_moving_from_inside_a_while

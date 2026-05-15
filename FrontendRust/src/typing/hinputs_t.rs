@@ -430,8 +430,19 @@ impl<'s, 't> HinputsT<'s, 't> {
       }
     */
     // mig: fn lookup_interface
-    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> InterfaceDefinitionT<'s, 't> {
-        panic!("Unimplemented: lookup_interface_by_human_name");
+    pub fn lookup_interface_by_human_name(&self, human_name: &str) -> &'t InterfaceDefinitionT<'s, 't> {
+        let matches: Vec<_> = self.interfaces.iter().filter(|i| {
+            match &i.template_name.local_name {
+                INameT::InterfaceTemplate(t) if t.human_namee.as_str() == human_name => true,
+                _ => false,
+            }
+        }).copied().collect();
+        if matches.is_empty() {
+            panic!("Interface \"{}\" not found!", human_name);
+        } else if matches.len() > 1 {
+            panic!("Multiple found!");
+        }
+        matches[0]
     }
     /*
       def lookupInterface(humanName: String): InterfaceDefinitionT = {

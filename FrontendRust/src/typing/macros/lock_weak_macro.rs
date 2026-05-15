@@ -45,7 +45,7 @@ where 's: 't,
     pub fn generate_function_body_lock_weak(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &FunctionEnvironmentT<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
@@ -54,7 +54,34 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        panic!("Unimplemented: generate_function_body_lock_weak");
+        use crate::typing::types::types::RegionT;
+        let header = FunctionHeaderT {
+            id: env.id,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            params: self.typing_interner.alloc_slice_from_vec(param_coords.to_vec()),
+            return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
+            maybe_origin_function_templata: Some(env.templata()),
+        };
+        let borrow_coord = CoordT { ownership: OwnershipT::Borrow, ..param_coords[0].tyype };
+        let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
+            self.get_option(coutputs, env, call_range, call_location, RegionT, borrow_coord);
+        let lock_expr = self.typing_interner.alloc(ReferenceExpressionTE::LockWeak(LockWeakTE {
+            inner_expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                param_index: 0,
+                coord: param_coords[0].tyype,
+            })),
+            result_opt_borrow_type: opt_coord,
+            some_constructor: self.typing_interner.alloc(some_constructor),
+            none_constructor: self.typing_interner.alloc(none_constructor),
+            some_impl_name: some_impl_id,
+            none_impl_name: none_impl_id,
+        }));
+        let body = ReferenceExpressionTE::Block(BlockTE {
+            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+                source_expr: lock_expr,
+            })),
+        });
+        (header, body)
     }
 /*
   def generateFunctionBody(

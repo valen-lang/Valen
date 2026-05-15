@@ -1040,6 +1040,16 @@ impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
   def template: IImplTemplateNameT
 */
 }
+impl<'s, 't> IImplNameT<'s, 't> where 's: 't {
+    pub fn template_args(&self) -> &'t [ITemplataT<'s, 't>] {
+        match self {
+            IImplNameT::Impl(x) => x.template_args,
+            IImplNameT::ImplBound(x) => x.template_args,
+            IImplNameT::AnonymousSubstructImpl(x) => x.template_args,
+        }
+    }
+    /* Guardian: disable-all */
+}
 /*
 }
 

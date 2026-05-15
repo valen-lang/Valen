@@ -42,7 +42,7 @@ where 's: 't,
     pub fn generate_function_body_ssa_len(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &FunctionEnvironmentT<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
@@ -51,7 +51,42 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        panic!("Unimplemented: generate_function_body_ssa_len");
+        use crate::typing::types::types::{KindT, RegionT};
+        use crate::typing::templata::templata::ITemplataT;
+        let header = FunctionHeaderT {
+            id: env.id,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            params: self.typing_interner.alloc_slice_from_vec(param_coords.to_vec()),
+            return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
+            maybe_origin_function_templata: Some(env.templata()),
+        };
+        coutputs.declare_function_return_type(
+            self.typing_interner.alloc(header.to_signature()),
+            header.return_type,
+        );
+        let len = match param_coords[0].tyype.kind {
+            KindT::StaticSizedArray(ssa) => ssa.size(),
+            other => panic!("SSALenMacro received non-SSA param: {:?}", other),
+        };
+        let discard_te = self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE {
+            expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                param_index: 0,
+                coord: param_coords[0].tyype,
+            })),
+        }));
+        let return_te = self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+            source_expr: self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                value: len,
+                bits: 32,
+                region: RegionT,
+            })),
+        }));
+        let body = ReferenceExpressionTE::Block(BlockTE {
+            inner: self.typing_interner.alloc(ReferenceExpressionTE::Consecutor(ConsecutorTE {
+                exprs: self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
+            })),
+        });
+        (header, body)
     }
 /*
   def generateFunctionBody(

@@ -1,6 +1,7 @@
 use crate::postparsing::names::IImpreciseNameS;
 use crate::typing::names::names::*;
 use crate::typing::env::environment::*;
+use crate::typing::templata::templata::ITemplataT;
 
 /*
 package dev.vale.typing.types
@@ -358,10 +359,52 @@ case class StaticSizedArrayTT(
 */
 /*
   override def isPrimitive: Boolean = false
+*/
+impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
+  pub fn mutability(&self) -> ITemplataT<'s, 't> {
+    match self.name.local_name {
+      INameT::StaticSizedArray(ssa_name) => ssa_name.arr.mutability,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def mutability: ITemplataT[MutabilityTemplataType] = name.localName.arr.mutability
+  */
+}
+impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
+  pub fn element_type(&self) -> CoordT<'s, 't> {
+    match self.name.local_name {
+      INameT::StaticSizedArray(ssa_name) => ssa_name.arr.element_type,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def elementType = name.localName.arr.elementType
+  */
+}
+impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
+  pub fn size(&self) -> ITemplataT<'s, 't> {
+    match self.name.local_name {
+      INameT::StaticSizedArray(ssa_name) => ssa_name.size,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def size = name.localName.size
+  */
+}
+impl<'s, 't> StaticSizedArrayTT<'s, 't> where 's: 't {
+  pub fn variability(&self) -> ITemplataT<'s, 't> {
+    match self.name.local_name {
+      INameT::StaticSizedArray(ssa_name) => ssa_name.variability,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def variability = name.localName.variability
+  */
+}
+/*
 }
 */
 fn unapply_contents_runtime_sized_array_tt() {
@@ -393,8 +436,30 @@ case class RuntimeSizedArrayTT(
   name: IdT[RuntimeSizedArrayNameT]
 ) extends KindT with IInterning {
   override def isPrimitive: Boolean = false
+*/
+impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
+  pub fn mutability(&self) -> ITemplataT<'s, 't> {
+    match self.name.local_name {
+      INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.mutability,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def mutability = name.localName.arr.mutability
+  */
+}
+impl<'s, 't> RuntimeSizedArrayTT<'s, 't> where 's: 't {
+  pub fn element_type(&self) -> CoordT<'s, 't> {
+    match self.name.local_name {
+      INameT::RuntimeSizedArray(rsa_name) => rsa_name.arr.element_type,
+      _ => panic!("vwat"),
+    }
+  }
+  /*
   def elementType = name.localName.arr.elementType
+  */
+}
+/*
 }
 */
 /// Interning transient (see @TFITCX)
@@ -445,6 +510,24 @@ impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
     }
     /* Guardian: disable-all */
 }
+impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
+    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+        KindT::from(*self).expect_interface()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
+    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+        KindT::from(*self).expect_struct()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ISubKindTT<'s, 't> where 's: 't {
+    pub fn is_primitive(&self) -> bool {
+        KindT::from(*self).is_primitive()
+    }
+    /* Guardian: disable-all */
+}
 /*
 }
 */
@@ -470,6 +553,30 @@ impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
   def id: IdT[ISuperKindNameT]
 */
 }
+impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
+    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+        KindT::from(*self).expect_citizen()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
+    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+        KindT::from(*self).expect_interface()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
+    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+        KindT::from(*self).expect_struct()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ISuperKindTT<'s, 't> where 's: 't {
+    pub fn is_primitive(&self) -> bool {
+        KindT::from(*self).is_primitive()
+    }
+    /* Guardian: disable-all */
+}
 /*
 }
 */
@@ -493,6 +600,30 @@ impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
     /*
   def id: IdT[ICitizenNameT]
 */
+}
+impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
+    pub fn expect_citizen(&self) -> ICitizenTT<'s, 't> {
+        *self
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
+    pub fn expect_interface(&self) -> &'t InterfaceTT<'s, 't> {
+        KindT::from(*self).expect_interface()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
+    pub fn expect_struct(&self) -> &'t StructTT<'s, 't> {
+        KindT::from(*self).expect_struct()
+    }
+    /* Guardian: disable-all */
+}
+impl<'s, 't> ICitizenTT<'s, 't> where 's: 't {
+    pub fn is_primitive(&self) -> bool {
+        KindT::from(*self).is_primitive()
+    }
+    /* Guardian: disable-all */
 }
 /*
 }

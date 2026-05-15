@@ -2288,6 +2288,63 @@ where 's: 't,
                                     }
                                 }
                             }
+                            KindT::RuntimeSizedArray(rsa_tt) => {
+                                if arg_runes.len() != 2 {
+                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 2, expected_max_num_args: 2 });
+                                }
+                                let template_def = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in RuntimeSizedArray arm");
+                                match template_def {
+                                    ITemplataT::RuntimeSizedArrayTemplate(_) => {
+                                        if !self.kind_is_from_template(state, KindT::RuntimeSizedArray(rsa_tt), template_def) {
+                                            return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
+                                        }
+                                    }
+                                    other => return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: other, actual: result }),
+                                }
+                                let mutability_rune = arg_runes[0];
+                                let element_rune = arg_runes[1];
+                                let mut conclusions = HashMap::new();
+                                conclusions.insert(mutability_rune.rune, rsa_tt.mutability());
+                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: rsa_tt.element_type() })));
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                    Ok(_) => return Ok(()),
+                                    Err(e) => {
+                                        let error = self.typing_interner.alloc(e);
+                                        return Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error });
+                                    }
+                                }
+                            }
+                            KindT::StaticSizedArray(ssa_tt) => {
+                                if arg_runes.len() != 4 {
+                                    return Err(ITypingPassSolverError::WrongNumberOfTemplateArgs { expected_min_num_args: 4, expected_max_num_args: 4 });
+                                }
+                                let template_def = solver_state.get_conclusion(&template_rune.rune).expect("vassertSome: template_rune not solved in StaticSizedArray arm");
+                                match template_def {
+                                    ITemplataT::StaticSizedArrayTemplate(_) => {
+                                        if !self.kind_is_from_template(state, KindT::StaticSizedArray(ssa_tt), template_def) {
+                                            return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: template_def, actual: result });
+                                        }
+                                    }
+                                    other => return Err(ITypingPassSolverError::CallResultWasntExpectedType { expected: other, actual: result }),
+                                }
+                                // We don't take in the region rune here because there's no syntactical way to specify it.
+                                let size_rune = arg_runes[0];
+                                let mutability_rune = arg_runes[1];
+                                let variability_rune = arg_runes[2];
+                                let element_rune = arg_runes[3];
+                                let mut conclusions = HashMap::new();
+                                conclusions.insert(size_rune.rune, ssa_tt.size());
+                                conclusions.insert(mutability_rune.rune, ssa_tt.mutability());
+                                conclusions.insert(variability_rune.rune, ssa_tt.variability());
+                                conclusions.insert(element_rune.rune, ITemplataT::Coord(self.typing_interner.alloc(crate::typing::templata::templata::CoordTemplataT { coord: ssa_tt.element_type() })));
+                                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                                    Ok(_) => return Ok(()),
+                                    Err(e) => {
+                                        let error = self.typing_interner.alloc(e);
+                                        return Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error });
+                                    }
+                                }
+                            }
                             _ => panic!("Unimplemented: solve_call_rule Some Kind {:?}", kt.kind),
                         }
                     }
@@ -2321,7 +2378,34 @@ where 's: 't,
                             }
                         }
                     }
-                    ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: solve_call_rule None StaticSizedArrayTemplate"); }
+                    ITemplataT::StaticSizedArrayTemplate(_) => {
+                        let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
+                            solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule StaticSizedArrayTemplate")
+                        }).collect();
+                        let s = args[0];
+                        let m = args[1];
+                        let v = args[2];
+                        let coord = match args[3] {
+                            ITemplataT::Coord(ct) => ct.coord,
+                            _ => panic!("Expected CoordTemplataT as fourth arg in solve_call_rule StaticSizedArrayTemplate"),
+                        };
+                        let context_region = RegionT;
+                        let size = crate::typing::templata::templata::expect_integer(s);
+                        let mutability = crate::typing::templata::templata::expect_mutability(m);
+                        let variability = crate::typing::templata::templata::expect_variability(v);
+                        let ssa_kind = self.predict_static_sized_array_kind(*env, state, mutability, variability, size, coord, context_region);
+                        let mut conclusions = HashMap::new();
+                        conclusions.insert(result_rune.rune, ITemplataT::Kind(self.typing_interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(self.typing_interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: ssa_kind.name })) })));
+                        let ranges: Vec<RangeS<'s>> = std::iter::once(range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], conclusions, vec![]) {
+                            Ok(_) => Ok(()),
+                            Err(e) => {
+                                let error = self.typing_interner.alloc(e);
+                                Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                            }
+                        }
+                    }
                     ITemplataT::StructDefinition(it) => {
                         let args: Vec<ITemplataT<'s, 't>> = arg_runes.iter().map(|arg_rune| {
                             solver_state.get_conclusion(&arg_rune.rune).expect("vassertSome: arg_rune not solved in solve_call_rule")

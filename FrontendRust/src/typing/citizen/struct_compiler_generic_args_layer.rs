@@ -18,6 +18,7 @@ use crate::postparsing::itemplatatype::ITemplataType;
 use crate::typing::compiler_outputs::*;
 use crate::typing::citizen::struct_compiler::*;
 use crate::typing::compiler::Compiler;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::solver::solver::*;
 
 /*
@@ -104,7 +105,7 @@ where 's: 't,
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &header_rune_to_type_map,
             call_range, call_location, &initial_knowns, &[],
-        ) {
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveStruct")) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
                 range: call_range.to_vec(),
@@ -548,7 +549,7 @@ where 's: 't,
         let complete_resolve_solve = match self.solve_for_resolving(
             envs, coutputs, &call_site_rules, &rune_to_type_map,
             call_range, call_location, &initial_knowns, &[],
-        ) {
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from solve_for_resolving in resolveInterface")) {
             Ok(ccs) => ccs,
             Err(x) => return IResolveOutcome::ResolveFailure(ResolveFailure {
                 range: call_range.to_vec(),
@@ -872,7 +873,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_templata: InterfaceDefinitionTemplataT<'s, 't>,
-    ) -> UncheckedDefiningConclusions<'s, 't> {
+    ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         use std::collections::HashMap;
         use std::marker::PhantomData;
         use crate::typing::infer_compiler::{InferEnv, include_rule_in_definition_solve};
@@ -971,8 +972,8 @@ where 's: 't,
         });
         let inner_env_ref = IInDenizenEnvironmentT::Citizen(inner_env);
         coutputs.declare_type_inner_env(interface_template_id, inner_env_ref);
-        self.compile_interface_core(outer_env, inner_env, coutputs, parent_ranges, call_location, interface_a);
-        unchecked_defining_conclusions
+        self.compile_interface_core(outer_env, inner_env, coutputs, parent_ranges, call_location, interface_a)?;
+        Ok(unchecked_defining_conclusions)
     }
 /*
   def compileInterface(
@@ -1085,7 +1086,7 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
+    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
         self.make_closure_understruct_core(
             containing_function_env, coutputs, parent_ranges, call_location, name, function_s, members)
     }

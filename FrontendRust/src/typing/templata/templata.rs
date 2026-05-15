@@ -402,15 +402,26 @@ case class FunctionTemplataT(
   }
 
 */
-/*
-
-
+impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
+  pub fn get_template_name(&self) -> IdT<'s, 't> {
+    panic!("Unimplemented: get_template_name");
+  }
+  /*
   def getTemplateName(): IdT[INameT] = {
     vimpl()
 //    outerEnv.fullName.addStep(nameTranslator.translateFunctionNameToTemplateName(function.name))
   }
-
+  */
+}
+impl<'s, 't> FunctionTemplataT<'s, 't> where 's: 't {
+  pub fn debug_string(&self) -> String {
+    panic!("Unimplemented: debug_string");
+  }
+  /*
   def debugString: String = outerEnv.id + ":" + function.name
+  */
+}
+/*
 }
 
 */
@@ -536,8 +547,24 @@ pub enum CitizenDefinitionTemplataT<'s, 't> {
 }
 /*
 sealed trait CitizenDefinitionTemplataT extends ITemplataT[TemplateTemplataType] {
+*/
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
+  pub fn declaring_env(&self) -> IEnvironmentT<'s, 't> {
+    panic!("Unimplemented: declaring_env");
+  }
+  /*
   def declaringEnv: IEnvironmentT
+  */
+}
+impl<'s, 't> CitizenDefinitionTemplataT<'s, 't> where 's: 't {
+  pub fn origin_citizen(&self) -> &'s dyn crate::higher_typing::ast::CitizenA<'s> {
+    panic!("Unimplemented: origin_citizen");
+  }
+  /*
   def originCitizen: CitizenA
+  */
+}
+/*
 }
 */
 /*

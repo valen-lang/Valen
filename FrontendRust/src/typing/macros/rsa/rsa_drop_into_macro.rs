@@ -50,7 +50,7 @@ where 's: 't,
         origin_function: Option<&FunctionA<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
-    ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
+    ) -> Result<(FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         panic!("Unimplemented: generate_function_body_rsa_drop_into");
     }
 /*

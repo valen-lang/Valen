@@ -1,6 +1,7 @@
 use std::collections::HashMap;
 use indexmap::IndexMap;
 use crate::utils::range::RangeS;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::postparsing::ast::LocationInDenizen;
 use crate::postparsing::itemplatatype::{ITemplataType, CoordTemplataType};
 use crate::postparsing::rules::rules::CoordSendSR;
@@ -331,17 +332,18 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         initial_knowns: &[InitialKnown<'s, 't>],
         initial_sends: &[InitialSend<'s, 't>],
-    ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
+    ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let mut solver =
             self.make_solver_state(envs, coutputs, rules, rune_to_type, invocation_range, initial_knowns, initial_sends);
         match self.r#continue(envs, coutputs, &mut solver) {
             Ok(()) => {}
-            Err(e) => return Err(IResolvingError::ResolvingSolveFailedOrIncomplete(e)),
+            Err(e) => return Ok(Err(IResolvingError::ResolvingSolveFailedOrIncomplete(e))),
         }
         self.check_resolving_conclusions_and_resolve(
             envs, coutputs, invocation_range, call_location, rune_to_type, rules, &[], &mut solver)
     }
 /*
+Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IResolvingError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IResolvingError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1198-1778814285524/hook-1198/solve_for_resolving--325.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def solveForResolving(
       envs: InferEnv, // See CSSNCE
       coutputs: CompilerOutputs,
@@ -530,7 +532,7 @@ where 's: 't,
         rules: &[IRulexSR<'s>],
         include_reachable_bounds_for_runes: &[IRuneS<'s>],
         solver_state: &mut SimpleSolverState<IRulexSR<'s>, IRuneS<'s>, ITemplataT<'s, 't>>,
-    ) -> Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>> {
+    ) -> Result<Result<CompleteResolveSolve<'s, 't>, IResolvingError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let _steps_stream = solver_state.get_steps();
         let conclusions: HashMap<IRuneS<'s>, ITemplataT<'s, 't>> =
             solver_state.userify_conclusions().into_iter().collect();
@@ -541,14 +543,14 @@ where 's: 't,
         // During the solve, we postponed resolving structs and interfaces, see SFWPRL.
         // Caller should remember to do that!
         if all_runes.iter().any(|r| !conclusions.contains_key(r)) {
-            return Err(IResolvingError::ResolvingSolveFailedOrIncomplete(
+            return Ok(Err(IResolvingError::ResolvingSolveFailedOrIncomplete(
                 FailedSolve {
                     steps: solver_state.get_steps(),
                     conclusions: solver_state.get_conclusions().into_iter().collect(),
                     unsolved_rules: solver_state.get_unsolved_rules(),
                     unsolved_runes: solver_state.get_unsolved_runes(),
                     error: ISolverError::SolveIncomplete(SolveIncomplete { _phantom: std::marker::PhantomData }),
-                }));
+                })));
         }
 
         let citizens_from_calls: Vec<KindT<'s, 't>> =
@@ -620,16 +622,16 @@ where 's: 't,
                 let func_success = match self.resolve_function(
                     envs.original_calling_env, state, ranges, call_location,
                     func_name, param_coords, envs.context_region, true,
-                ) {
-                    Err(e) => return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
+                )? {
+                    Err(e) => return Ok(Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
                         IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: self.typing_interner.alloc_slice_copy(ranges), fff: e }
-                    ))),
+                    )))),
                     Ok(x) => x,
                 };
                 if func_success.prototype.return_type != return_coord {
-                    return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
+                    return Ok(Err(IResolvingError::ResolvingResolveConclusionError(Box::new(
                         IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: self.typing_interner.alloc_slice_copy(ranges), expected_return_type: return_coord, actual: func_success.prototype }
-                    )));
+                    ))));
                 }
                 // citizenRune -> funcSuccess.prototype
                 citizen_rune_to_reachable_prototype.push((*citizen_rune, *func_success.prototype));
@@ -655,7 +657,7 @@ where 's: 't,
                         Ok(()) => {}
                         Err(e) => {
                             let rf = self.typing_interner.alloc(e);
-                            return Err(IResolvingError::ResolvingSolveFailedOrIncomplete(
+                            return Ok(Err(IResolvingError::ResolvingSolveFailedOrIncomplete(
                                 FailedSolve {
                                     steps: solver_state.get_steps(),
                                     conclusions: solver_state.get_conclusions().into_iter().collect(),
@@ -665,7 +667,7 @@ where 's: 't,
                                         err: ITypingPassSolverError::CouldntResolveKind { rf },
                                         _phantom: std::marker::PhantomData,
                                     }),
-                                }));
+                                })));
                         }
                     }
                 }
@@ -679,9 +681,9 @@ where 's: 't,
         for rule in rules.iter() {
             match rule {
                 IRulexSR::Resolve(r) => {
-                    match self.resolve_function_call_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions, envs.context_region) {
+                    match self.resolve_function_call_conclusion(env_with_conclusions_in_denizen, state, ranges, call_location, *r, &conclusions, envs.context_region)? {
                         Ok(x) => runes_and_prototypes.push(x),
-                        Err(e) => return Err(IResolvingError::ResolvingResolveConclusionError(Box::new(e))),
+                        Err(e) => return Ok(Err(IResolvingError::ResolvingResolveConclusionError(Box::new(e)))),
                     }
                 }
                 _ => {}
@@ -720,12 +722,14 @@ where 's: 't,
                     rune_to_impl.into_iter()),
             });
 
-        Ok(CompleteResolveSolve {
+        Ok(Ok(CompleteResolveSolve {
             conclusions,
             rune_to_bound: instantiation_bound_args,
-        })
+        }))
     }
 /*
+Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IConclusionResolveError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IConclusionResolveError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1120-1778813145341/hook-1120/check_resolving_conclusions_and_resolve--523.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
+Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates past the explicit `Result[..., IResolvingError]` business channel — SPDMX Exception I. Nested `Result<Result<_, IResolvingError>, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1120-1778813145341/hook-1120/check_resolving_conclusions_and_resolve--523.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def checkResolvingConclusionsAndResolve(
       envs: InferEnv, // See CSSNCE
       state: CompilerOutputs,
@@ -1364,7 +1368,7 @@ where 's: 't,
         c: ResolveSR<'s>,
         conclusions: &HashMap<IRuneS<'s>, ITemplataT<'s, 't>>,
         context_region: RegionT,
-    ) -> Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>> {
+    ) -> Result<Result<(IRuneS<'s>, &'t PrototypeT<'s, 't>), IConclusionResolveError<'s, 't>>, ICompileErrorT<'s, 't>> {
         let return_coord = match conclusions.get(&c.return_rune.rune) {
             Some(ITemplataT::Coord(ct)) => ct.coord,
             None => panic!("vwat: returnRune not in conclusions for ResolveSR"),
@@ -1378,18 +1382,18 @@ where 's: 't,
         let mut full_ranges = Vec::with_capacity(1 + ranges.len());
         full_ranges.push(c.range);
         full_ranges.extend_from_slice(ranges);
-        let func_success = match self.resolve_function(calling_env, state, &full_ranges, call_location, c.name, param_coords, context_region, true) {
+        let func_success = match self.resolve_function(calling_env, state, &full_ranges, call_location, c.name, param_coords, context_region, true)? {
             Err(e) => {
                 let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
-                return Err(IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: ranges_slice, fff: e });
+                return Ok(Err(IConclusionResolveError::CouldntFindFunctionForConclusionResolve { range: ranges_slice, fff: e }));
             }
             Ok(x) => x,
         };
         if func_success.prototype.return_type != return_coord {
             let ranges_slice = self.typing_interner.alloc_slice_from_vec(full_ranges);
-            return Err(IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: ranges_slice, expected_return_type: return_coord, actual: func_success.prototype });
+            return Ok(Err(IConclusionResolveError::ReturnTypeConflictInConclusionResolve { range: ranges_slice, expected_return_type: return_coord, actual: func_success.prototype }));
         }
-        Ok((c.result_rune.rune, func_success.prototype))
+        Ok(Ok((c.result_rune.rune, func_success.prototype)))
     }
 /*
   def resolveFunctionCallConclusion(
@@ -1560,7 +1564,21 @@ where 's: 't,
                 let _rsa = self.resolve_runtime_sized_array(coord, mutability, context_region);
                 Ok(())
             }
-            ITemplataT::StaticSizedArrayTemplate(_) => { panic!("Unimplemented: resolve_template_call_conclusion StaticSizedArrayTemplate"); }
+            ITemplataT::StaticSizedArrayTemplate(_) => {
+                let s = args[0];
+                let m = args[1];
+                let v = args[2];
+                let coord = match args[3] {
+                    ITemplataT::Coord(ct) => ct.coord,
+                    _ => panic!("Expected CoordTemplataT as fourth arg in resolve_template_call_conclusion StaticSizedArrayTemplate"),
+                };
+                let size = crate::typing::templata::templata::expect_integer(s);
+                let mutability = crate::typing::templata::templata::expect_mutability(m);
+                let variability = crate::typing::templata::templata::expect_variability(v);
+                let context_region = RegionT;
+                let _ssa = self.resolve_static_sized_array(mutability, variability, size, coord, context_region);
+                Ok(())
+            }
             ITemplataT::StructDefinition(it) => {
                 let mut call_ranges = vec![range];
                 call_ranges.extend_from_slice(ranges);

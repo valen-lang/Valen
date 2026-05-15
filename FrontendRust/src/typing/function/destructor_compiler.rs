@@ -60,8 +60,10 @@ where 's: 't,
             crate::postparsing::names::IImpreciseNameValS::CodeName(
                 crate::postparsing::names::CodeNameS { name: self.keywords.drop }));
         let args = &[type_2];
-        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true) {
-            Err(e) => panic!("CouldntFindFunctionToCallT"),
+        match self.find_function(env, coutputs, call_range, call_location, name, &[], &[], context_region, args, &[], true)
+            .unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from find_function in get_drop_function"))
+        {
+            Err(_e) => panic!("CouldntFindFunctionToCallT"),
             Ok(x) => x,
         }
     }

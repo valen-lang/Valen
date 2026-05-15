@@ -7,6 +7,7 @@ use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::{ArgLookupTE, BlockTE, ExternFunctionCallTE, ReferenceExpressionTE, ReturnTE};
 use crate::typing::compiler::Compiler;
 use crate::typing::compiler_outputs::{CompilerOutputs, DeferredActionT};
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::*;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
@@ -105,7 +106,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         params2: &[ParameterT<'s, 't>],
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // fullEnv.id match { case IdT(...drop...) => vpass(); case _ => }
         // (debug pattern match, not functionally needed)
 
@@ -209,7 +211,7 @@ where 's: 't,
                                 self.typing_interner.alloc_slice_from_vec(params2.to_vec());
                             let header =
                                 self.finish_function_maybe_deferred(
-                                    coutputs, full_env, call_range_arena, call_location, life, attributes_t_arena, params_t_arena, is_destructor, None, instantiation_bound_params);
+                                    coutputs, full_env, call_range_arena, call_location, life, attributes_t_arena, params_t_arena, is_destructor, None, instantiation_bound_params)?;
                             header
                         }
                     }
@@ -241,7 +243,7 @@ where 's: 't,
                         .expect("generator not found in name_to_function_body_macro");
                     let (header, body) = generator.generate_function_body(
                         self, coutputs, full_env, generator_id, life, call_range, call_location,
-                        Some(full_env.function), params2, maybe_ret_coord);
+                        Some(full_env.function), params2, maybe_ret_coord)?;
 
                     let header: &'t FunctionHeaderT<'s, 't> =
                         self.typing_interner.alloc(header);
@@ -270,7 +272,7 @@ where 's: 't,
             // (Scala has commented-out purity checks here)
         }
 
-        header
+        Ok(header)
     }
 /*
   // Preconditions:
@@ -584,7 +586,8 @@ where 's: 't,
         is_destructor: bool,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
         instantiation_bound_params: &'t InstantiationBoundArgumentsT<'s, 't>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // val (maybeEvaluatedRetCoord, body2) =
         //   bodyCompiler.declareAndEvaluateFunctionBody(
         //     fullEnvSnapshot, coutputs, life, callRange, callLocation,
@@ -592,7 +595,7 @@ where 's: 't,
         let (maybe_evaluated_ret_coord, body2) =
             self.declare_and_evaluate_function_body(
                 full_env_snapshot, coutputs, life, call_range, call_location,
-                full_env_snapshot.function, maybe_explicit_return_coord, params_t, is_destructor);
+                full_env_snapshot.function, maybe_explicit_return_coord, params_t, is_destructor)?;
 
         let ret_coord = match (maybe_explicit_return_coord, maybe_evaluated_ret_coord) {
             (Some(c), None) => c,
@@ -613,7 +616,7 @@ where 's: 't,
             body: ReferenceExpressionTE::Block(BlockTE { inner: body2.inner }),
         });
         coutputs.add_function(header_sig, function2);
-        function2.header
+        Ok(function2.header)
     }
 /*
   // By MaybeDeferred we mean that this function might be called later, to reduce reentrancy.

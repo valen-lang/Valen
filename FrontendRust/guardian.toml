@@ -1,12 +1,6 @@
 shields_dirs = ["../Luz/shields", "docs/shields"]
 backend = "claude"
 port = 7878
-simple_smart_config = "../Guardian/kimi.config.json"
-simple_medium_config = "../Guardian/gpt-oss-20b.config.json"
-simple_small_config = "../Guardian/gpt-oss-20b.config.json"
-agentic_smart_model = "claude-opus-4-20250514"
-agentic_medium_model = "claude-sonnet-4-20250514"
-agentic_small_model = "claude-haiku-4-5-20251001"
 exclude_shields = [
     "AvoidIfMatchesInTestsIfPossible-AIMITIPX.md",
     "BaseDirPathDiscipline-BDPDX.md",

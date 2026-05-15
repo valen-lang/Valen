@@ -312,8 +312,16 @@ where 's: 't,
             KindT::Void(_) => {}
             KindT::Never(_) => {}
             KindT::Str(_) => {}
-            KindT::RuntimeSizedArray(_) => { panic!("implement: get_placeholders_in_kind RuntimeSizedArray"); }
-            KindT::StaticSizedArray(_) => { panic!("implement: get_placeholders_in_kind StaticSizedArray"); }
+            KindT::RuntimeSizedArray(rsa) => {
+                self.get_placeholders_in_templata(accum, rsa.mutability());
+                self.get_placeholders_in_kind(accum, rsa.element_type().kind);
+            }
+            KindT::StaticSizedArray(ssa) => {
+                self.get_placeholders_in_templata(accum, ssa.size());
+                self.get_placeholders_in_templata(accum, ssa.mutability());
+                self.get_placeholders_in_templata(accum, ssa.variability());
+                self.get_placeholders_in_kind(accum, ssa.element_type().kind);
+            }
             // Rust adaptation (SPDMX-B): IdT.local_name is type-erased INameT in Rust; narrow via TryFrom<INameT> for IInstantiationNameT to call the dispatch method (per AASSNCMCX-session precedent in templata_compiler.rs).
             KindT::Struct(s) => {
                 let inst_name = IInstantiationNameT::try_from(s.id.local_name).expect(
@@ -570,13 +578,13 @@ where 's: 't,
         &self,
         _envs: InferEnv<'s, 't>,
         _state: &mut CompilerOutputs<'s, 't>,
-        _mutability: ITemplataT<'s, 't>,
-        _variability: ITemplataT<'s, 't>,
-        _size: ITemplataT<'s, 't>,
-        _element: CoordT<'s, 't>,
-        _region: RegionT,
+        mutability: ITemplataT<'s, 't>,
+        variability: ITemplataT<'s, 't>,
+        size: ITemplataT<'s, 't>,
+        element: CoordT<'s, 't>,
+        region: RegionT,
     ) -> crate::typing::types::types::StaticSizedArrayTT<'s, 't> {
-        panic!("Unimplemented: predict_static_sized_array_kind");
+        self.resolve_static_sized_array(mutability, variability, size, element, region)
     }
     /*
         override def predictStaticSizedArrayKind(
@@ -647,9 +655,15 @@ where 's: 't,
         expected_citizen_templata: ITemplataT<'s, 't>,
     ) -> bool {
         use crate::typing::types::types::ICitizenTT;
-        match ICitizenTT::try_from(actual_citizen_ref) {
-            Ok(s) => self.citizen_is_from_template(s, expected_citizen_templata),
-            Err(_) => panic!("implement: kind_is_from_template non-citizen case: {:?}", actual_citizen_ref),
+        match actual_citizen_ref {
+            KindT::RuntimeSizedArray(_) => matches!(expected_citizen_templata, ITemplataT::RuntimeSizedArrayTemplate(_)),
+            KindT::StaticSizedArray(_) => matches!(expected_citizen_templata, ITemplataT::StaticSizedArrayTemplate(_)),
+            other => {
+                match ICitizenTT::try_from(other) {
+                    Ok(s) => self.citizen_is_from_template(s, expected_citizen_templata),
+                    Err(_) => false,
+                }
+            }
         }
     }
     /*
@@ -893,7 +907,7 @@ where 's: 't,
         coords: &[CoordT<'s, 't>],
         context_region: RegionT,
         verify_conclusions: bool,
-    ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
+    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
         let _ = verify_conclusions;
         self.find_function(
             calling_env,
@@ -911,6 +925,7 @@ where 's: 't,
             true)
     }
     /*
+Guardian: temp-disable: SPDMX — Scala's `overloadResolver.findFunction` throws `CompileErrorExceptionT`; `resolveFunction` does not catch it, so the exception transparently propagates — SPDMX Exception I. Nested `Result<Result<_, FindFunctionFailure>, ICompileErrorT>` is the Rust mirror of that passthrough. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1067-1778812154320/hook-1067/resolve_function--900.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
         override def resolveFunction(
           callingEnv: IInDenizenEnvironmentT,
           state: CompilerOutputs,
@@ -1004,7 +1019,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         function_templata: FunctionTemplataT<'s, 't>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
         self.evaluate_generic_function_from_non_call(coutputs, parent_ranges, call_location, function_templata)
     }
     /*
@@ -1592,7 +1607,7 @@ where 's: 't,
                     IEnvEntryT::Interface(interface_a) => {
                         let templata = InterfaceDefinitionTemplataT { declaring_env: env_ref, origin_interface: interface_a };
                         let unchecked_conclusions =
-                            self.compile_interface(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                            self.compile_interface(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
                         let maybe_export =
                             interface_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(e) => Some(e), _ => None });
                         match maybe_export {
@@ -1794,7 +1809,7 @@ where 's: 't,
                                         &[],
                                         region_placeholder,
                                         &[],
-                                    ) {
+                                    )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
                                         IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from extern function"),
                                     };
@@ -1903,7 +1918,7 @@ where 's: 't,
                                         &[],
                                         region_placeholder,
                                         &[],
-                                    ) {
+                                    )? {
                                         IResolveFunctionResult::ResolveFunctionSuccess(success) => success.prototype.prototype,
                                         IResolveFunctionResult::ResolveFunctionFailure(_reason) => panic!("implement: TypingPassResolvingError from export function"),
                                     };
@@ -2062,7 +2077,7 @@ where 's: 't,
                             IEnvironmentT::from(calling_env);
                         let templata = FunctionTemplataT { outer_env, function: origin };
                         self.evaluate_generic_function_from_non_call_for_header(
-                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                            &mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
 
                         // coutputs.markDeferredFunctionCompiled(nextDeferredEvaluatingFunction.name)
                         coutputs.mark_deferred_function_compiled(name);
@@ -2095,7 +2110,7 @@ where 's: 't,
                         self.finish_function_maybe_deferred(
                             &mut coutputs, full_env_snapshot, call_range, call_location,
                             life, attributes_t, params_t, is_destructor,
-                            maybe_explicit_return_coord, instantiation_bound_params);
+                            maybe_explicit_return_coord, instantiation_bound_params)?;
 
                         // coutputs.markDeferredFunctionBodyCompiled(nextDeferredEvaluatingFunctionBody.prototypeT)
                         coutputs.mark_deferred_function_body_compiled(prototype);
@@ -2106,7 +2121,7 @@ where 's: 't,
         }
 
         // ensureDeepExports(coutputs)
-        self.ensure_deep_exports(&mut coutputs);
+        self.ensure_deep_exports(&mut coutputs)?;
 
         // val (reachableInterfaces, reachableStructs, reachableFunctions) =
         //   (coutputs.getAllInterfaces(), coutputs.getAllStructs(), coutputs.getAllFunctions())
@@ -3032,7 +3047,7 @@ where 's: 't,
     pub fn ensure_deep_exports(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-    ) {
+    ) -> Result<(), ICompileErrorT<'s, 't>> {
         // val packageToKindToExport =
         //   coutputs.getKindExports
         //     .map(kindExport => (kindExport.id.packageCoord, kindExport.tyype, kindExport))
@@ -3055,23 +3070,40 @@ where 's: 't,
         for (pc, k, ke) in kind_export_triples.into_iter() {
             grouped_by_package.entry(pc).or_insert_with(Vec::new).push((k, ke));
         }
-        let package_to_kind_to_export: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> =
-            grouped_by_package.into_iter().map(|(pc, kind_pairs)| {
+        let package_to_kind_to_export: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> = {
+            let mut result: IndexMap<&'s PackageCoordinate<'s>, IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>>> = IndexMap::new();
+            for (pc, kind_pairs) in grouped_by_package.into_iter() {
                 let mut grouped_by_kind: IndexMap<KindT<'s, 't>, Vec<&'t KindExportT<'s, 't>>> = IndexMap::new();
                 for (k, ke) in kind_pairs.into_iter() {
                     grouped_by_kind.entry(k).or_insert_with(Vec::new).push(ke);
                 }
-                let inner: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> =
-                    grouped_by_kind.into_iter().map(|(k, exports)| {
-                        let only = match exports.as_slice() {
-                            [] => panic!("vwat"),
-                            [only] => *only,
-                            _ => panic!("implement: TypeExportedMultipleTimes"),
-                        };
-                        (k, only)
-                    }).collect();
-                (pc, inner)
-            }).collect();
+                let mut inner: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
+                for (k, exports) in grouped_by_kind.into_iter() {
+                    let only = match exports.as_slice() {
+                        [] => panic!("vwat"),
+                        [only] => *only,
+                        _ => {
+                            let exports_copies: Vec<KindExportT<'s, 't>> = exports.iter().map(|ke| KindExportT {
+                                range: ke.range,
+                                tyype: ke.tyype,
+                                id: ke.id,
+                                exported_name: ke.exported_name,
+                            }).collect();
+                            let exports_slice = self.typing_interner.alloc_slice_from_vec(exports_copies);
+                            let range_slice = self.typing_interner.alloc_slice_copy(&[exports[0].range]);
+                            return Err(ICompileErrorT::TypeExportedMultipleTimes {
+                                range: range_slice,
+                                paackage: *exports[0].id.package_coord,
+                                exports: exports_slice,
+                            });
+                        }
+                    };
+                    inner.insert(k, only);
+                }
+                result.insert(pc, inner);
+            }
+            result
+        };
 
         // coutputs.getFunctionExports.foreach(funcExport => {
         //   val exportedKindToExport = packageToKindToExport.getOrElse(funcExport.exportId.packageCoord, Map())
@@ -3166,6 +3198,7 @@ where 's: 't,
                 }
             });
         });
+        Ok(())
     }
     /*
       def ensureDeepExports(coutputs: CompilerOutputs): Unit = {
@@ -3470,7 +3503,7 @@ where 's: 't,
                     _ => panic!("Expected RuntimeSizedArray local_name in get_mutability"),
                 }
             }
-            KindT::StaticSizedArray(_) => { panic!("Unimplemented: get_mutability StaticSizedArray"); }
+            KindT::StaticSizedArray(ssa) => ssa.mutability(),
             KindT::Struct(s) => coutputs.lookup_mutability(self.get_struct_template(s.id)),
             KindT::Interface(i) => coutputs.lookup_mutability(self.get_interface_template(i.id)),
             KindT::OverloadSet(_) => ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }),

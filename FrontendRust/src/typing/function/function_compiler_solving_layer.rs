@@ -22,6 +22,7 @@ use crate::typing::names::names::*;
 use crate::typing::types::types::*;
 use crate::typing::templata::templata::*;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::higher_typing::ast::*;
 use crate::solver::solver::*;
 use crate::interner::Interner;
@@ -186,7 +187,7 @@ where 's: 't,
         already_specified_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
-    ) -> IEvaluateFunctionResult<'s, 't> {
+    ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = declaring_env.function;
         // Check preconditions
         self.check_closure_concerns_handled(declaring_env);
@@ -222,7 +223,7 @@ where 's: 't,
                 &initial_sends,
                 &[],
             ) {
-                Err(e) => return IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e }),
+                Err(e) => return Ok(IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e })),
                 Ok(inferred_templatas) => inferred_templatas,
             };
 
@@ -246,7 +247,7 @@ where 's: 't,
 
         let prototype_templata =
             self.get_or_evaluate_templated_function_for_banner(
-                declaring_env, runed_env, coutputs, call_range_t, call_location, function, instantiation_bound_params);
+                declaring_env, runed_env, coutputs, call_range_t, call_location, function, instantiation_bound_params)?;
 
         // Lambdas cant have bounds, right?
         assert!(instantiation_bound_params.rune_to_bound_prototype.is_empty(), "vcurious");
@@ -272,11 +273,11 @@ where 's: 't,
             original_calling_env.denizen_template_id(),
             prototype_templata.prototype.id,
             instantiation_bound_args);
-        IEvaluateFunctionResult::EvaluateFunctionSuccess(EvaluateFunctionSuccess {
+        Ok(IEvaluateFunctionResult::EvaluateFunctionSuccess(EvaluateFunctionSuccess {
             prototype: self.typing_interner.alloc(prototype_templata),
             inferences,
             instantiation_bound_args,
-        })
+        }))
     }
 
 /*
@@ -366,7 +367,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[CoordT<'s, 't>],
-    ) -> IEvaluateFunctionResult<'s, 't> {
+    ) -> Result<IEvaluateFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = near_env.function;
         // Check preconditions
         match &function.body {
@@ -405,7 +406,7 @@ where 's: 't,
                 &initial_sends,
                 &[],
             ) {
-                Err(e) => return IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e }),
+                Err(e) => return Ok(IEvaluateFunctionResult::EvaluateFunctionFailure(EvaluateFunctionFailure { reason: e })),
                 Ok(inferred_templatas) => inferred_templatas,
             };
 
@@ -429,7 +430,7 @@ where 's: 't,
 
         let prototype_templata =
             self.get_or_evaluate_templated_function_for_banner(
-                near_env, runed_env, coutputs, call_range_t, call_location, function, instantiation_bound_params);
+                near_env, runed_env, coutputs, call_range_t, call_location, function, instantiation_bound_params)?;
 
         // Lambdas cant have bounds, right?
         assert!(instantiation_bound_params.rune_to_bound_prototype.is_empty(), "vcurious");
@@ -446,11 +447,11 @@ where 's: 't,
             original_calling_env.denizen_template_id(),
             prototype_templata.prototype.id,
             instantiation_bound_args);
-        IEvaluateFunctionResult::EvaluateFunctionSuccess(EvaluateFunctionSuccess {
+        Ok(IEvaluateFunctionResult::EvaluateFunctionSuccess(EvaluateFunctionSuccess {
             prototype: self.typing_interner.alloc(prototype_templata),
             inferences,
             instantiation_bound_args,
-        })
+        }))
     }
 
 /*
@@ -707,7 +708,7 @@ where 's: 't,
         explicit_template_args: &[ITemplataT<'s, 't>],
         context_region: RegionT,
         args: &[Option<CoordT<'s, 't>>],
-    ) -> IResolveFunctionResult<'s, 't> {
+    ) -> Result<IResolveFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = outer_env.function;
         self.check_closure_concerns_handled(outer_env);
 
@@ -739,18 +740,47 @@ where 's: 't,
         let mut solver = self.make_solver_state(
             envs, coutputs, &call_site_rules, &rune_to_type, invocation_range, &initial_knowns, &initial_sends);
 
-        let loop_check = function.generic_parameters.len() as i32 + 1;
+        let mut loop_check = function.generic_parameters.len() as i32 + 1;
 
         match self.incrementally_solve(
             envs, coutputs, &mut solver,
-            |_coutputs, _solver_state| {
-                panic!("implement: evaluateGenericFunctionFromCallForPrototype incrementallySolve callback");
+            |_coutputs, solver_state| {
+                if loop_check == 0 {
+                    panic!("RangedInternalErrorT: Infinite loop detected in incremental call solve!");
+                }
+                loop_check -= 1;
+
+                match self.get_first_unsolved_identifying_rune(
+                    function.generic_parameters,
+                    |rune| solver_state.get_conclusion(&rune).is_some(),
+                ) {
+                    None => false,
+                    Some((generic_param, index)) => {
+                        assert!(index >= explicit_template_args.len() as i32);
+
+                        match &generic_param.default {
+                            Some(default_rules) => {
+                                match solver_state.commit_step::<crate::typing::infer::compiler_solver::ITypingPassSolverError>(
+                                    false, vec![], std::collections::HashMap::new(),
+                                    default_rules.rules.iter().map(|r| **r).collect(),
+                                ) {
+                                    Ok(()) => {}
+                                    Err(_) => panic!("getOrDie"),
+                                };
+                                true
+                            }
+                            None => {
+                                false
+                            }
+                        }
+                    }
+                }
             },
         ) {
             Err(f) => {
-                return IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
+                return Ok(IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
                     reason: IResolvingError::ResolvingSolveFailedOrIncomplete(f),
-                });
+                }));
             }
             Ok(true) => {}
             Ok(false) => {} // Incomplete, will be detected as SolveIncomplete below.
@@ -759,11 +789,11 @@ where 's: 't,
         let CompleteResolveSolve { conclusions: inferred_templatas, rune_to_bound: rune_to_function_bound } =
             match self.check_resolving_conclusions_and_resolve(
                 envs, coutputs, invocation_range, call_location, &rune_to_type, &call_site_rules, &include_reachable_bounds_for_runes, &mut solver,
-            ) {
+            )? {
                 Err(e) => {
-                    return IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
+                    return Ok(IResolveFunctionResult::ResolveFunctionFailure(ResolveFunctionFailure {
                         reason: e,
-                    });
+                    }));
                 }
                 Ok(i) => i,
             };
@@ -791,12 +821,13 @@ where 's: 't,
             self.typing_interner.alloc(rune_to_function_bound),
         );
 
-        IResolveFunctionResult::ResolveFunctionSuccess(ResolveFunctionSuccess {
+        Ok(IResolveFunctionResult::ResolveFunctionSuccess(ResolveFunctionSuccess {
             prototype: prototype_templata,
             inferences: inferred_templatas,
-        })
+        }))
     }
 /*
+Guardian: temp-disable: SPDMX — Scala's `checkResolvingConclusionsAndResolve` throws `CompileErrorExceptionT`; this fn does not catch it, so the exception transparently propagates — SPDMX Exception I. `Result<IResolveFunctionResult, ICompileErrorT>` is the Rust mirror. Architect-approved for Addendum 6 option 1. — /Volumes/V/Sylvan/FrontendRust/guardian-logs/request-1182-1778813808483/hook-1182/evaluate_generic_function_from_call_for_prototype--701.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def evaluateGenericFunctionFromCallForPrototype(
     // The environment the function was defined in.
     outerEnv: BuildingFunctionEnvironmentWithClosuredsT,
@@ -1134,7 +1165,8 @@ where 's: 't,
         near_env: &'t BuildingFunctionEnvironmentWithClosuredsT<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-    ) -> &'t FunctionHeaderT<'s, 't> {
+    ) -> Result<&'t FunctionHeaderT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         let function = near_env.function;
 
         let mut range: Vec<RangeS<'s>> = Vec::with_capacity(1 + parent_ranges.len());
@@ -1258,9 +1290,9 @@ where 's: 't,
             self.typing_interner.alloc(runed_env);
 
         let header = self.get_or_evaluate_function_for_header(
-            near_env, runed_env, coutputs, parent_ranges, call_location, function, instantiation_bound_params);
+            near_env, runed_env, coutputs, parent_ranges, call_location, function, instantiation_bound_params)?;
 
-        header
+        Ok(header)
     }
 
 /*

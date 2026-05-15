@@ -9,6 +9,7 @@ use crate::typing::compiler_outputs::CompilerOutputs;
 use crate::typing::env::function_environment_t::{FunctionEnvironmentT, NodeEnvironmentBox};
 use crate::typing::env::environment::IInDenizenEnvironmentT;
 use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, RegionT};
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 use std::collections::HashSet;
 
@@ -88,7 +89,8 @@ where 's: 't,
         maybe_explicit_return_coord: Option<CoordT<'s, 't>>,
         params_2: &'t [ParameterT<'s, 't>],
         is_destructor: bool,
-    ) -> (Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>) {
+    ) -> Result<(Option<CoordT<'s, 't>>, &'t BlockTE<'s, 't>), ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         // val bodyS = function1.body match { case CodeBodyS(b) => b; case _ => vwat() }
         let body_s = match &function_1.body {
             IBodyS::CodeBody(b) => b,
@@ -98,13 +100,24 @@ where 's: 't,
         // maybeExplicitReturnCoord match { ... }
         match maybe_explicit_return_coord {
             None => {
-                let (body2, returns) =
-                    self.evaluate_function_body(
-                        func_outer_env, coutputs, life, parent_ranges,
-                        func_outer_env.default_region, call_location,
-                        &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
-                        is_destructor, None)
-                    .unwrap_or_else(|_| panic!("implement: BodyResultDoesntMatch error handling (None ret)"));
+                let (body2, returns) = match self.evaluate_function_body(
+                    func_outer_env, coutputs, life, parent_ranges,
+                    func_outer_env.default_region, call_location,
+                    &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
+                    is_destructor, None)?
+                {
+                    Err(ResultTypeMismatchError { expected_type, actual_type }) => {
+                        let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                            &std::iter::once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                        return Err(ICompileErrorT::BodyResultDoesntMatch {
+                            range: range_list,
+                            function_name: function_1.name,
+                            expected_return_type: expected_type,
+                            result_type: actual_type,
+                        });
+                    }
+                    Ok((body, returns)) => (body, returns),
+                };
 
                 assert!(body2.result().coord.kind != KindT::Never(NeverT { from_break: true }));
                 let return_type2 =
@@ -119,17 +132,28 @@ where 's: 't,
                         *returns.iter().next().unwrap()
                     };
 
-                (Some(return_type2), body2)
+                Ok((Some(return_type2), body2))
             }
             Some(explicit_ret_coord) => {
                 // val (body2, returns) = evaluateFunctionBody(...)
-                let (body2, returns) =
-                    self.evaluate_function_body(
-                        func_outer_env, coutputs, life, parent_ranges,
-                        func_outer_env.default_region, call_location,
-                        &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
-                        is_destructor, Some(explicit_ret_coord))
-                    .unwrap_or_else(|e| panic!("implement: BodyResultDoesntMatch error handling: explicit_ret={:?} fn={:?}", explicit_ret_coord, function_1.name));
+                let (body2, returns) = match self.evaluate_function_body(
+                    func_outer_env, coutputs, life, parent_ranges,
+                    func_outer_env.default_region, call_location,
+                    &function_1.params.iter().collect::<Vec<_>>(), params_2, body_s.body,
+                    is_destructor, Some(explicit_ret_coord))?
+                {
+                    Err(ResultTypeMismatchError { expected_type, actual_type }) => {
+                        let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                            &std::iter::once(function_1.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                        return Err(ICompileErrorT::BodyResultDoesntMatch {
+                            range: range_list,
+                            function_name: function_1.name,
+                            expected_return_type: expected_type,
+                            result_type: actual_type,
+                        });
+                    }
+                    Ok((body, returns)) => (body, returns),
+                };
 
                 // vcurious(returns.size <= 1)
                 assert!(returns.len() <= 1);
@@ -150,7 +174,7 @@ where 's: 't,
                     }
                 }
 
-                (None, body2)
+                Ok((None, body2))
             }
         }
     }
@@ -260,7 +284,10 @@ where 's: 't,
 */
 }
 
-pub struct ResultTypeMismatchError;
+pub struct ResultTypeMismatchError<'s, 't> {
+    pub expected_type: CoordT<'s, 't>,
+    pub actual_type: CoordT<'s, 't>,
+}
 /*
   case class ResultTypeMismatchError(expectedType: CoordT, actualType: CoordT) {
     val hash = runtime.ScalaRunTime._hashCode(this)
@@ -287,7 +314,10 @@ where 's: 't,
         body_1: &'s BodySE<'s>,
         is_destructor: bool,
         maybe_expected_result_type: Option<CoordT<'s, 't>>,
-    ) -> Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError> {
+    ) -> Result<
+        Result<(&'t BlockTE<'s, 't>, HashSet<CoordT<'s, 't>>), ResultTypeMismatchError<'s, 't>>,
+        ICompileErrorT<'s, 't>,
+    > {
         // val env = NodeEnvironmentBox(funcOuterEnv.makeChildNodeEnvironment(body1.block, life))
         let block_as_expr: &'s IExpressionSE<'s> =
             self.scout_arena.alloc(IExpressionSE::Block(body_1.block));
@@ -306,7 +336,7 @@ where 's: 't,
         let (statements_from_block, returns_from_inside_maybe_with_never) =
             self.evaluate_block_statements(
                 coutputs, starting_env, &mut env, life.add(self.typing_interner, 1),
-                parent_ranges, call_location, starting_env.default_region, body_1.block);
+                parent_ranges, call_location, starting_env.default_region, body_1.block)?;
 
         let unconverted_body_without_return =
             self.consecutive(&[patterns_te, statements_from_block]);
@@ -325,7 +355,10 @@ where 's: 't,
                             unconverted_body_without_return, expected_result_type)
                     }
                 } else {
-                    return Err(ResultTypeMismatchError);
+                    return Ok(Err(ResultTypeMismatchError {
+                        expected_type: expected_result_type,
+                        actual_type: unconverted_body_without_return.result().coord,
+                    }));
                 }
             }
         };
@@ -362,7 +395,7 @@ where 's: 't,
             }
         }
 
-        Ok((&*self.typing_interner.alloc(BlockTE { inner: converted_body_with_return }), returns))
+        Ok(Ok((&*self.typing_interner.alloc(BlockTE { inner: converted_body_with_return }), returns)))
     }
 /*
   private def evaluateFunctionBody(

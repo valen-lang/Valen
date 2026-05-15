@@ -158,7 +158,7 @@ where 's: 't,
             &call_site_rules,
             &[impl_a.sub_citizen_rune.rune],
             &mut solver_state,
-        )
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from check_resolving_conclusions_and_resolve in resolve_impl"))
     }
 /*
   def resolveImpl(

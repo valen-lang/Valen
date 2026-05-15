@@ -43,7 +43,7 @@ where 's: 't,
     pub fn generate_function_body_rsa_mutable_pop(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &FunctionEnvironmentT<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
         generator_id: StrI<'s>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         call_range: &[RangeS<'s>],
@@ -52,7 +52,33 @@ where 's: 't,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        panic!("Unimplemented: generate_function_body_rsa_mutable_pop");
+        let header = FunctionHeaderT {
+            id: env.id,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            params: self.typing_interner.alloc_slice_from_vec(param_coords.to_vec()),
+            return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
+            maybe_origin_function_templata: Some(env.templata()),
+        };
+        let body = ReferenceExpressionTE::Block(BlockTE {
+            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::PopRuntimeSizedArray({
+                    // Rust adaptation: Scala's PopRuntimeSizedArrayTE has a `private val elementType`
+                    // computed in the class body from `arrayExpr.result.coord.kind`. Rust has no
+                    // class-body computed fields, so element_type is stored on the struct and
+                    // computed here at construction.
+                    let array_expr = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                        param_index: 0,
+                        coord: param_coords[0].tyype,
+                    }));
+                    let element_type = match array_expr.result().coord.kind {
+                        crate::typing::types::types::KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
+                        other => panic!("vwat: {:?}", other),
+                    };
+                    PopRuntimeSizedArrayTE { array_expr, element_type }
+                })),
+            })),
+        });
+        (header, body)
     }
 /*
   def generateFunctionBody(

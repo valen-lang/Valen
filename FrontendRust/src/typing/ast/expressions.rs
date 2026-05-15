@@ -130,7 +130,7 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 */
 }
 impl<'s, 't> ReferenceResultT<'s, 't> {
-    fn underlying_coord(&self) -> CoordT<'s, 't> { panic!("Unimplemented: underlying_coord"); }
+    pub fn underlying_coord(&self) -> CoordT<'s, 't> { self.coord }
 /*
   override def underlyingCoord: CoordT = coord
 */
@@ -345,8 +345,8 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
     pub fn range(&self) -> RangeS<'s> {
         match self {
             AddressExpressionTE::LocalLookup(e) => panic!("Unimplemented: range LocalLookup"),
-            AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: range StaticSizedArrayLookup"),
-            AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: range RuntimeSizedArrayLookup"),
+            AddressExpressionTE::StaticSizedArrayLookup(e) => e.range,
+            AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.range,
             AddressExpressionTE::ReferenceMemberLookup(e) => e.range,
             AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: range AddressMemberLookup"),
         }
@@ -356,7 +356,7 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
     */
     pub fn variability(&self) -> VariabilityT {
         match self {
-            AddressExpressionTE::LocalLookup(e) => panic!("Unimplemented: variability LocalLookup"),
+            AddressExpressionTE::LocalLookup(e) => e.variability(),
             AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: variability StaticSizedArrayLookup"),
             AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: variability RuntimeSizedArrayLookup"),
             AddressExpressionTE::ReferenceMemberLookup(e) => panic!("Unimplemented: variability ReferenceMemberLookup"),
@@ -478,7 +478,7 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 */
 }
 impl<'s, 't> LockWeakTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_opt_borrow_type } }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(resultOptBorrowType)
@@ -725,10 +725,19 @@ impl<'s, 't> DeferTE<'s, 't> {
 */
 }
 impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
-    fn new(
+    pub fn new(
         inner_expr: &'t ReferenceExpressionTE<'s, 't>,
         deferred_expr: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> DeferTE<'s, 't> { panic!("Unimplemented: DeferTE::new"); }
+    ) -> DeferTE<'s, 't> {
+        // Rust adaptation: Scala class-body vassert moved to constructor.
+        let inner_coord = inner_expr.result().coord;
+        assert!(deferred_expr.result().coord == CoordT {
+            ownership: OwnershipT::Share,
+            region: inner_coord.region,
+            kind: KindT::Void(VoidT),
+        });
+        DeferTE { inner_expr, deferred_expr }
+    }
 /*
   vassert(deferredExpr.result.coord == CoordT(ShareT, innerExpr.result.coord.region, VoidT()))
 }
@@ -744,6 +753,8 @@ where 's: 't,
     pub condition: &'t ReferenceExpressionTE<'s, 't>,
     pub then_call: &'t ReferenceExpressionTE<'s, 't>,
     pub else_call: &'t ReferenceExpressionTE<'s, 't>,
+    // Rust adaptation: Scala's `private val commonSupertype` stored as a field.
+    pub common_supertype: CoordT<'s, 't>,
 }
 /*
 // Eventually, when we want to do if-let, we'll have a different construct
@@ -767,49 +778,62 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> IfTE<'s, 't> {
-    pub fn result(&self) -> ReferenceResultT<'s, 't> {
-        let condition_result_coord = self.condition.result().coord;
-        let then_result_coord = self.then_call.result().coord;
-        let else_result_coord = self.else_call.result().coord;
+    // Rust adaptation: Scala's class-body `private val`s and runtime `match`
+    // assertions live here in the constructor. Only `common_supertype` escapes
+    // as a stored field; the other three intermediates are locals.
+    pub fn new(
+        condition: &'t ReferenceExpressionTE<'s, 't>,
+        then_call: &'t ReferenceExpressionTE<'s, 't>,
+        else_call: &'t ReferenceExpressionTE<'s, 't>,
+    ) -> IfTE<'s, 't> {
+        let condition_result_coord = condition.result().coord;
+        let then_result_coord = then_call.result().coord;
+        let else_result_coord = else_call.result().coord;
         match condition_result_coord {
             CoordT { kind: KindT::Bool(_), ownership: OwnershipT::Share, .. } => {}
-            other => panic!("vwat: condition coord {:?}", other),
+            other => panic!("vfail: {:?}", other),
         }
         match (then_result_coord.kind, then_result_coord.kind) {
             (KindT::Never(_), _) => {}
             (_, KindT::Never(_)) => {}
             (a, b) if a == b => {}
-            _ => panic!("vwat: then/else result kinds don't match"),
+            _ => panic!("vwat"),
         }
         let common_supertype = match then_result_coord.kind {
             KindT::Never(_) => else_result_coord,
             _ => then_result_coord,
         };
-        ReferenceResultT { coord: common_supertype }
+        IfTE { condition, then_call, else_call, common_supertype }
+    }
+    /*
+    private val conditionResultCoord = condition.result.coord
+    private val thenResultCoord = thenCall.result.coord
+    private val elseResultCoord = elseCall.result.coord
+
+    conditionResultCoord match {
+      case CoordT(ShareT, _, BoolT()) =>
+      case other => vfail(other)
+    }
+
+    (thenResultCoord.kind, thenResultCoord.kind) match {
+      case (NeverT(_), _) =>
+      case (_, NeverT(_)) =>
+      case (a, b) if a == b =>
+      case _ => vwat()
+    }
+
+    private val commonSupertype =
+      thenResultCoord.kind match {
+        case NeverT(_) => elseResultCoord
+        case _ => thenResultCoord
+      }
+    */
+}
+impl<'s, 't> IfTE<'s, 't> {
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.common_supertype }
     }
 /*
-  private val conditionResultCoord = condition.result.coord
-  private val thenResultCoord = thenCall.result.coord
-  private val elseResultCoord = elseCall.result.coord
-
-  conditionResultCoord match {
-    case CoordT(ShareT, _, BoolT()) =>
-    case other => vfail(other)
-  }
-
-  (thenResultCoord.kind, thenResultCoord.kind) match {
-    case (NeverT(_), _) =>
-    case (_, NeverT(_)) =>
-    case (a, b) if a == b =>
-    case _ => vwat()
-  }
-
-  private val commonSupertype =
-    thenResultCoord.kind match {
-      case NeverT(_) => elseResultCoord
-      case _ => thenResultCoord
-    }
-
   override def result = ReferenceResultT(commonSupertype)
 }
 
@@ -821,6 +845,8 @@ pub struct WhileTE<'s, 't>
 where 's: 't,
 {
     pub block: BlockTE<'s, 't>,
+    // Rust adaptation (SPDMX-B): class body `val resultCoord` stored as a field.
+    pub result_coord: CoordT<'s, 't>,
 }
 /*
 // The block is expected to return a boolean (false = stop, true = keep going).
@@ -829,13 +855,36 @@ case class WhileTE(block: BlockTE) extends ReferenceExpressionTE {
   // While loops must always produce void.
   // If we want a foreach/map/whatever construct, the loop should instead
   // add things to a list inside; WhileTE shouldnt do it for it.
-  val resultCoord =
-    block.result.coord match {
-      case CoordT(_, _, VoidT()) => block.result.coord
-      case CoordT(_, region, NeverT(true)) => CoordT(ShareT, region, VoidT())
-      case CoordT(_, _, NeverT(false)) => block.result.coord
-      case _ => vwat()
+*/
+impl<'s, 't> WhileTE<'s, 't> {
+    // Rust adaptation: Scala's `val resultCoord = ... match { ... }` is a class-body
+    // computed val. Rust has no class-body computed fields, so the same computation
+    // lives in this constructor and the result is stored on the struct.
+    pub fn new(block: BlockTE<'s, 't>) -> WhileTE<'s, 't> {
+        use crate::typing::types::types::{CoordT, KindT, NeverT, OwnershipT, VoidT};
+        let result_coord = match block.result().coord.kind {
+            KindT::Void(_) => block.result().coord,
+            KindT::Never(NeverT { from_break: true }) => CoordT {
+                ownership: OwnershipT::Share,
+                region: block.result().coord.region,
+                kind: KindT::Void(VoidT),
+            },
+            KindT::Never(NeverT { from_break: false }) => block.result().coord,
+            _ => panic!("vwat"),
+        };
+        WhileTE { block, result_coord }
     }
+    /*
+    val resultCoord =
+      block.result.coord match {
+        case CoordT(_, _, VoidT()) => block.result.coord
+        case CoordT(_, region, NeverT(true)) => CoordT(ShareT, region, VoidT())
+        case CoordT(_, _, NeverT(false)) => block.result.coord
+        case _ => vwat()
+      }
+    */
+}
+/*
 
 */
 impl<'s, 't> WhileTE<'s, 't> {
@@ -851,7 +900,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> WhileTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_coord } }
 /*
   override def result = ReferenceResultT(resultCoord)
   vpass()
@@ -886,7 +935,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> MutateTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.destination_expr.result().coord }
+    }
 /*
   override def result = ReferenceResultT(destinationExpr.result.coord)
 }
@@ -1027,7 +1078,10 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> BreakTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{OwnershipT, CoordT, KindT, NeverT};
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.region, kind: KindT::Never(NeverT { from_break: true }) } }
+    }
 /*
   override def result = {
     ReferenceResultT(CoordT(ShareT, region, NeverT(true)))
@@ -1266,7 +1320,7 @@ impl<'s, 't> TupleTE<'s, 't> {
 pub struct StaticArrayFromValuesTE<'s, 't>
 where 's: 't,
 {
-    pub elements: &'t [ReferenceExpressionTE<'s, 't>],
+    pub elements: &'t [&'t ReferenceExpressionTE<'s, 't>],
     pub result_reference: CoordT<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
 }
@@ -1290,7 +1344,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result = ReferenceResultT(resultReference)
 }
@@ -1418,7 +1472,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> AsSubtypeTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_result_type } }
 /*
   override def result = ReferenceResultT(resultResultType)
 }
@@ -1624,7 +1678,7 @@ impl<'s, 't> LocalLookupTE<'s, 't> {
 */
 }
 impl<'s, 't> LocalLookupTE<'s, 't> {
-    fn variability(&self) -> VariabilityT { panic!("Unimplemented: variability"); }
+    pub fn variability(&self) -> VariabilityT { self.local_variable.variability() }
 /*
   override def variability: VariabilityT = localVariable.variability
 }
@@ -1702,7 +1756,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> StaticSizedArrayLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> AddressResultT<'s, 't> { AddressResultT { coord: self.element_type } }
 /*
   override def result = {
     // See RMLRMO why we just return the element type.
@@ -1746,20 +1800,26 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> where 's: 't, {
-    fn new(
+    pub fn new(
         range: RangeS<'s>,
         array_expr: &'t ReferenceExpressionTE<'s, 't>,
         array_type: &'t RuntimeSizedArrayTT<'s, 't>,
         index_expr: &'t ReferenceExpressionTE<'s, 't>,
         variability: VariabilityT,
-    ) -> RuntimeSizedArrayLookupTE<'s, 't> { panic!("Unimplemented: RuntimeSizedArrayLookupTE::new"); }
+    ) -> RuntimeSizedArrayLookupTE<'s, 't> {
+        assert_eq!(array_expr.result().coord.kind, KindT::RuntimeSizedArray(array_type));
+        RuntimeSizedArrayLookupTE { range, array_expr, array_type, index_expr, variability }
+    }
 /*
   vassert(arrayExpr.result.coord.kind == arrayType)
 
 */
 }
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
-    fn result(&self) -> AddressResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> AddressResultT<'s, 't> {
+        // See RMLRMO why we just return the element type.
+        AddressResultT { coord: self.array_type.element_type() }
+    }
 /*
   override def result = {
     // See RMLRMO why we just return the element type.
@@ -1792,7 +1852,16 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ArrayLengthTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{OwnershipT, CoordT, KindT, IntT};
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.array_expr.result().coord.region,
+                kind: KindT::Int(IntT::I32),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, IntT.i32))
 }
@@ -2149,7 +2218,23 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> NewMutRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+        use crate::typing::types::types::{MutabilityT, OwnershipT, CoordT, KindT};
+        let ownership = match self.array_type.mutability() {
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+            ITemplataT::Placeholder(_) => panic!("vimpl"),
+            _ => panic!("vwat"),
+        };
+        ReferenceResultT {
+            coord: CoordT {
+                ownership,
+                region: self.region,
+                kind: KindT::RuntimeSizedArray(self.array_type),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(
@@ -2271,7 +2356,16 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{OwnershipT, CoordT, KindT, VoidT};
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.array_expr.result().coord.region,
+                kind: KindT::Void(VoidT),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
 }
@@ -2310,7 +2404,9 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: CoordT { ownership: OwnershipT::Share, region: self.expr.result().coord.region, kind: KindT::Void(VoidT) } }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, expr.result.coord.region, VoidT()))
 
@@ -2344,7 +2440,15 @@ case class DestroyMutRuntimeSizedArrayTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.array_expr.result().coord.region,
+                kind: KindT::Void(VoidT),
+            }
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
@@ -2366,7 +2470,16 @@ case class RuntimeSizedArrayCapacityTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{OwnershipT, CoordT, KindT, IntT};
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.array_expr.result().coord.region,
+                kind: KindT::Int(IntT { bits: 32 }),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, IntT(32)))
 }
@@ -2390,7 +2503,16 @@ case class PushRuntimeSizedArrayTE(
 ) extends ReferenceExpressionTE {
 */
 impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::types::types::{OwnershipT, CoordT, KindT, VoidT};
+        ReferenceResultT {
+            coord: CoordT {
+                ownership: OwnershipT::Share,
+                region: self.array_expr.result().coord.region,
+                kind: KindT::Void(VoidT),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(CoordT(ShareT, arrayExpr.result.coord.region, VoidT()))
 }
@@ -2403,6 +2525,7 @@ pub struct PopRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
     pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub element_type: CoordT<'s, 't>,
 }
 /*
 case class PopRuntimeSizedArrayTE(
@@ -2415,7 +2538,9 @@ case class PopRuntimeSizedArrayTE(
     }
 */
 impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT { coord: self.element_type }
+    }
 /*
   override def result: ReferenceResultT = ReferenceResultT(elementType)
 }
@@ -2740,7 +2865,23 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> NewImmRuntimeSizedArrayTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    fn result(&self) -> ReferenceResultT<'s, 't> {
+        use crate::typing::templata::templata::{ITemplataT, MutabilityTemplataT};
+        use crate::typing::types::types::{MutabilityT, OwnershipT, CoordT, KindT};
+        let ownership = match self.array_type.mutability() {
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Own,
+            ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+            ITemplataT::Placeholder(_) => panic!("vimpl"),
+            _ => panic!("vwat"),
+        };
+        ReferenceResultT {
+            coord: CoordT {
+                ownership,
+                region: self.region,
+                kind: KindT::RuntimeSizedArray(self.array_type),
+            },
+        }
+    }
 /*
   override def result: ReferenceResultT = {
     ReferenceResultT(

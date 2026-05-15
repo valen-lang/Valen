@@ -18,6 +18,7 @@ use crate::typing::compiler_outputs::*;
 use crate::parsing::ast::*;
 use std::collections::{HashMap, HashSet};
 use crate::typing::templata_compiler::IBoundArgumentsSource;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 /*
 package dev.vale.typing.expression
@@ -163,16 +164,16 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         exprs_1: &[&'s IExpressionSE<'s>],
-    ) -> (Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>) {
+    ) -> Result<(Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let mut result_exprs = Vec::new();
         let mut all_returns = HashSet::new();
         for (index, expr) in exprs_1.iter().enumerate() {
             let (ref_expr, returns) = self.evaluate_and_coerce_to_reference_expression(
-                coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, call_location, region, expr);
+                coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, call_location, region, expr)?;
             result_exprs.push(ref_expr);
             all_returns.extend(returns);
         }
-        (result_exprs, all_returns)
+        Ok((result_exprs, all_returns))
     }
 /*
   def evaluateAndCoerceToReferenceExpressions(
@@ -259,7 +260,28 @@ where 's: 't,
         load_range: RangeS<'s>,
         name_a: IVarNameS<'s>,
     ) -> Option<&'t AddressExpressionTE<'s, 't>> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let name_2 = self.translate_var_name_step(name_a);
+        match nenv.get_variable(name_2, self.typing_interner) {
+            Some(IVariableT::AddressibleLocal(alv)) => {
+                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: load_range,
+                    local_variable: ILocalVariableT::Addressible(alv),
+                })))
+            }
+            Some(IVariableT::ReferenceLocal(rlv)) => {
+                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: load_range,
+                    local_variable: ILocalVariableT::Reference(rlv),
+                })))
+            }
+            Some(IVariableT::AddressibleClosure(_)) => {
+                panic!("implement: evaluate_addressible_lookup_for_mutate — AddressibleClosureVariableT");
+            }
+            Some(IVariableT::ReferenceClosure(_)) => {
+                panic!("implement: evaluate_addressible_lookup_for_mutate — ReferenceClosureVariableT");
+            }
+            None => None,
+        }
     }
 /*
   private def evaluateAddressibleLookupForMutate(
@@ -679,14 +701,14 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
-    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+    ) -> Result<(&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (expr2, returns_from_expr) =
-            self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1);
+            self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
         match expr2 {
-            ExpressionTE::Reference(r) => (r, returns_from_expr),
+            ExpressionTE::Reference(r) => Ok((r, returns_from_expr)),
             ExpressionTE::Address(a) => {
                 let expr = self.coerce_to_reference_expression(nenv, parent_ranges, ExpressionTE::Address(a), region);
-                (expr, returns_from_expr)
+                Ok((expr, returns_from_expr))
             }
         }
     }
@@ -807,28 +829,28 @@ where 's: 't,
         outer_call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
-    ) -> (ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+    ) -> Result<(ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         match expr_1 {
             IExpressionSE::Void(_) => {
-                (ExpressionTE::Reference(self.typing_interner.alloc(
+                Ok((ExpressionTE::Reference(self.typing_interner.alloc(
                     ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
                         region,
                         _phantom: std::marker::PhantomData,
-                    }))), HashSet::new())
+                    }))), HashSet::new()))
             }
             IExpressionSE::ConstantInt(c) => {
-                (ExpressionTE::Reference(self.typing_interner.alloc(
+                Ok((ExpressionTE::Reference(self.typing_interner.alloc(
                     ReferenceExpressionTE::ConstantInt(ConstantIntTE {
                         value: ITemplataT::Integer(c.value),
                         bits: c.bits,
                         region,
-                    }))), HashSet::new())
+                    }))), HashSet::new()))
             }
             IExpressionSE::Return(ret) => {
                 let (uncasted_inner_expr_2, returns_from_inner_expr) =
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges,
-                        outer_call_location, region, ret.inner);
+                        outer_call_location, region, ret.inner)?;
 
                 let inner_expr_2 = match nenv.maybe_return_type() {
                     None => uncasted_inner_expr_2,
@@ -902,12 +924,12 @@ where 's: 't,
                         source_expr: consecutor,
                     }));
 
-                (ExpressionTE::Reference(return_te), returns)
+                Ok((ExpressionTE::Reference(return_te), returns))
             }
             IExpressionSE::Let(let_se) => {
                 let (source_expr_2, returns_from_source) =
                     self.evaluate_and_coerce_to_reference_expression(
-                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr);
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr)?;
 
                 let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner };
                 let rune_to_initially_known_type: HashMap<_, _> =
@@ -950,7 +972,7 @@ where 's: 't,
                     },
                 );
 
-                (ExpressionTE::Reference(result_te), returns_from_source)
+                Ok((ExpressionTE::Reference(result_te), returns_from_source))
             }
             IExpressionSE::Consecutor(consecutor_se) => {
                 assert!(region == nenv.default_region());
@@ -961,7 +983,7 @@ where 's: 't,
                 for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
                     let (undropped_expr_te, returns) =
                         self.evaluate_and_coerce_to_reference_expression(
-                            coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se);
+                            coutputs, nenv, life.add(self.typing_interner, index as i32), parent_ranges, outer_call_location, region_for_inners, expr_se)?;
                     let expr_te = match undropped_expr_te.result().coord.kind {
                         KindT::Void(_) => undropped_expr_te,
                         _ => {
@@ -982,13 +1004,13 @@ where 's: 't,
                         parent_ranges,
                         outer_call_location,
                         region_for_inners,
-                        consecutor_se.exprs.last().unwrap());
+                        consecutor_se.exprs.last().unwrap())?;
 
                 init_exprs_te.push(last_expr_te);
                 init_returns.extend(last_returns);
 
                 let result = self.consecutive(&init_exprs_te);
-                (ExpressionTE::Reference(result), init_returns)
+                Ok((ExpressionTE::Reference(result), init_returns))
             }
             IExpressionSE::LocalLoad(local_load) => {
                 let name = self.translate_var_name_step(local_load.name);
@@ -999,7 +1021,7 @@ where 's: 't,
                     None => {
                         panic!("Couldnt find {:?}", name);
                     }
-                    Some(x) => (x, HashSet::new()),
+                    Some(x) => Ok((x, HashSet::new())),
                 }
             }
             IExpressionSE::FunctionCall(fc) => {
@@ -1010,7 +1032,7 @@ where 's: 't,
                                 coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location,
                                 // See SRIE
                                 nenv.default_region(),
-                                fc.arg_exprs);
+                                fc.arg_exprs)?;
                         let mut range_list = vec![fc.range];
                         range_list.extend_from_slice(parent_ranges);
                         let snapshot_env = nenv.snapshot(self.typing_interner);
@@ -1034,13 +1056,13 @@ where 's: 't,
                                 callable_expr,
                                 outside_load.rules,
                                 &template_arg_runes,
-                                &args_exprs_2);
-                        (ExpressionTE::Reference(call_expr_2), returns_from_args)
+                                &args_exprs_2)?;
+                        Ok((ExpressionTE::Reference(call_expr_2), returns_from_args))
                     }
                     _ => {
                         let (undecayed_callable_expr_2, returns_from_callable) =
                             self.evaluate_and_coerce_to_reference_expression(
-                                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location, region, fc.callable_expr);
+                                coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, fc.location, region, fc.callable_expr)?;
                         let decayed_callable_expr_2_ref =
                             self.maybe_borrow_soft_load(coutputs, &ExpressionTE::Reference(undecayed_callable_expr_2));
                         let decayed_callable_reference_expr_2 =
@@ -1049,7 +1071,7 @@ where 's: 't,
                             self.evaluate_and_coerce_to_reference_expressions(
                                 coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, fc.location,
                                 nenv.default_region(),
-                                fc.arg_exprs);
+                                fc.arg_exprs)?;
                         let function_pointer_call_2 =
                             self.evaluate_prefix_call(
                                 coutputs,
@@ -1065,10 +1087,10 @@ where 's: 't,
                                 decayed_callable_reference_expr_2,
                                 &[],
                                 &[],
-                                &args_exprs_2);
+                                &args_exprs_2)?;
                         let mut all_returns = returns_from_callable;
                         all_returns.extend(returns_from_args);
-                        (ExpressionTE::Reference(function_pointer_call_2), all_returns)
+                        Ok((ExpressionTE::Reference(function_pointer_call_2), all_returns))
                     }
                 }
             }
@@ -1077,13 +1099,13 @@ where 's: 't,
                 let range_list: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
                     &std::iter::once(function_s.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
                 let call_expr_2 = self.evaluate_closure(
-                    coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s);
-                (ExpressionTE::Reference(call_expr_2), HashSet::new())
+                    coutputs, nenv, range_list, outer_call_location, region, *function_s.name, function_s)?;
+                Ok((ExpressionTE::Reference(call_expr_2), HashSet::new()))
             }
             IExpressionSE::Ownershipped(ownershipped) => {
                 let (source_te, returns_from_inner) =
                     self.evaluate_and_coerce_to_reference_expression(
-                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, ownershipped.inner_expr);
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, ownershipped.inner_expr)?;
                 let result_expr_2 =
                     match source_te.result().coord.ownership {
                         OwnershipT::Own => {
@@ -1137,14 +1159,14 @@ where 's: 't,
                             }
                         }
                     };
-                (ExpressionTE::Reference(result_expr_2), returns_from_inner)
+                Ok((ExpressionTE::Reference(result_expr_2), returns_from_inner))
             }
             IExpressionSE::Dot(dot) => {
                 let member_name: IVarNameT<'s, 't> =
                     IVarNameT::CodeVar(self.typing_interner.intern_code_var_name(
                         CodeVarNameT { name: dot.member, _phantom: std::marker::PhantomData }));
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
-                    self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, dot.left);
+                    self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, dot.left)?;
                 let container_expr_2 = {
                     let range_with_parent: Vec<RangeS<'s>> =
                         std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
@@ -1179,23 +1201,33 @@ where 's: 't,
                             variability: struct_member.variability,
                         }))
                     }
-                    _ => panic!("implement: evaluate_expression Dot — non-struct container kind"),
-                };
-                match expr_2 {
-                    AddressExpressionTE::ReferenceMemberLookup(ref r) => {
-                        match r.member_reference.kind {
-                            KindT::Struct(s) => {
-                                assert!(coutputs.get_instantiation_bounds(self.typing_interner, s.id).is_some());
-                            }
-                            KindT::Interface(i) => {
-                                assert!(coutputs.get_instantiation_bounds(self.typing_interner, i.id).is_some());
-                            }
-                            _ => {}
+                    KindT::StaticSizedArray(ssa) => {
+                        if dot.member.0.chars().all(|c| c.is_ascii_digit()) {
+                            let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
+                            let index_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                                value: ITemplataT::Integer(index),
+                                bits: 32,
+                                region,
+                            }));
+                            self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(
+                                self.lookup_in_static_sized_array(dot.range, container_expr_2, index_expr_2, *ssa)
+                            ))
+                        } else {
+                            panic!("implement: evaluate_expression Dot StaticSizedArray — RangedInternalErrorT: Sequence has no member named");
                         }
                     }
-                    _ => panic!("implement: Dot expr_2 citizen check — unexpected AddressExpressionTE variant"),
+                    _ => panic!("implement: evaluate_expression Dot — non-struct container kind"),
+                };
+                match expr_2.result().coord.kind {
+                    KindT::Struct(s) => {
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, s.id).is_some());
+                    }
+                    KindT::Interface(i) => {
+                        assert!(coutputs.get_instantiation_bounds(self.typing_interner, i.id).is_some());
+                    }
+                    _ => {}
                 }
-                (ExpressionTE::Address(expr_2), returns_from_container_expr)
+                Ok((ExpressionTE::Address(expr_2), returns_from_container_expr))
             }
             IExpressionSE::If(if_se) => {
                 // We make a block for the if-statement which contains its condition (the "if block"),
@@ -1205,7 +1237,7 @@ where 's: 't,
 
                 let (condition_expr, returns_from_condition) =
                     self.evaluate_and_coerce_to_reference_expression(
-                        coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition);
+                        coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, nenv.default_region(), if_se.condition)?;
                 match condition_expr.result().coord {
                     CoordT { kind: KindT::Bool(_), .. } => {}
                     _ => panic!("implement: evaluate_expression If — IfConditionIsntBoolean"),
@@ -1224,7 +1256,7 @@ where 's: 't,
                         parent_ranges,
                         outer_call_location,
                         nenv.default_region(),
-                        if_se.then_body);
+                        if_se.then_body)?;
                 let uncoerced_then_block_2 = BlockTE { inner: then_expressions_with_result };
                 let (then_unstackified_ancestor_locals, then_restackified_ancestor_locals) =
                     then_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
@@ -1246,7 +1278,7 @@ where 's: 't,
                         parent_ranges,
                         outer_call_location,
                         nenv.default_region(),
-                        if_se.else_body);
+                        if_se.else_body)?;
                 let uncoerced_else_block_2 = BlockTE { inner: else_expressions_with_result };
                 let (else_unstackified_ancestor_locals, else_restackified_ancestor_locals) =
                     else_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
@@ -1280,11 +1312,11 @@ where 's: 't,
                 let else_expr_2 = self.convert(else_fate_snap, coutputs, &range_with_parent, outer_call_location,
                     self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_else_block_2)), common_type);
 
-                let if_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::If(IfTE {
-                    condition: condition_expr,
-                    then_call: then_expr_2,
-                    else_call: else_expr_2,
-                }));
+                let if_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::If(IfTE::new(
+                    condition_expr,
+                    then_expr_2,
+                    else_expr_2,
+                )));
 
                 if then_continues == else_continues { // Both continue, or both don't
                     // Each branch might have moved some things. Make sure they moved the same things.
@@ -1336,20 +1368,141 @@ where 's: 't,
                 let mut all_returns = returns_from_condition;
                 all_returns.extend(then_returns_from_exprs);
                 all_returns.extend(else_returns_from_exprs);
-                (ExpressionTE::Reference(if_expr_2), all_returns)
+                Ok((ExpressionTE::Reference(if_expr_2), all_returns))
             }
             IExpressionSE::Loop(_) => panic!("implement: evaluate_expression — Loop"),
-            IExpressionSE::Break(_) => panic!("implement: evaluate_expression — Break"),
-            IExpressionSE::While(_) => panic!("implement: evaluate_expression — While"),
+            IExpressionSE::Break(b) => {
+                // See BEAFB, we need to find the nearest while to see local since then.
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(b.range).chain(parent_ranges.iter().copied()).collect();
+                match nenv.nearest_loop_env(self.typing_interner) {
+                    None => {
+                        panic!("RangedInternalErrorT: Using break while not inside loop!");
+                    }
+                    Some((while_nenv, _)) => {
+                        assert!(region == nenv.default_region()); // vcurious
+                        let void_literal = self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+                        let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal);
+                        let break_te = self.typing_interner.alloc(ReferenceExpressionTE::Break(BreakTE { region, _phantom: std::marker::PhantomData }));
+                        let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
+                        Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::new()))
+                    }
+                }
+            }
+            IExpressionSE::While(w) => {
+                // We make a block for the while-statement which contains its condition (the "if block"),
+                // and the body block, so they can access any locals declared by the condition.
+
+                // See BEAFB for why we make a new environment for the While
+                let loop_nenv = nenv.make_child(self.typing_interner, expr_1, None);
+
+                let body_se_as_expr: &'s IExpressionSE<'s> =
+                    self.scout_arena.alloc(IExpressionSE::Block(w.body));
+                let mut loop_block_fate = NodeEnvironmentBox::new(loop_nenv.make_child(self.typing_interner, body_se_as_expr, None));
+                let loop_block_fate_starting = loop_block_fate.snapshot(self.typing_interner);
+                let (body_expressions_with_result, body_returns_from_exprs) =
+                    self.evaluate_block_statements(
+                        coutputs,
+                        loop_block_fate_starting,
+                        &mut loop_block_fate,
+                        life.add(self.typing_interner, 1),
+                        parent_ranges,
+                        outer_call_location,
+                        nenv.default_region(),
+                        w.body)?;
+                let uncoerced_body_block_2 = BlockTE { inner: body_expressions_with_result };
+
+                match uncoerced_body_block_2.result().coord.kind {
+                    KindT::Never(_) => {}
+                    _ => {
+                        let (body_unstackified_ancestor_locals, body_restackified_ancestor_locals) =
+                            loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
+
+                        if !body_unstackified_ancestor_locals.is_empty() {
+                            panic!("CantUnstackifyOutsideLocalFromInsideWhile");
+                        }
+                        if !body_restackified_ancestor_locals.is_empty() {
+                            panic!("CantRestackifyOutsideLocalFromInsideWhile");
+                        }
+                        // BUG: Scala checks bodyRestackifiedAncestorLocals twice (same condition, same error) — mirroring as-is
+                        if !body_restackified_ancestor_locals.is_empty() {
+                            panic!("CantRestackifyOutsideLocalFromInsideWhile");
+                        }
+                    }
+                }
+
+                let loop_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::While(WhileTE::new(uncoerced_body_block_2)));
+                Ok((ExpressionTE::Reference(loop_expr_2), body_returns_from_exprs))
+            }
             IExpressionSE::Map(_) => panic!("implement: evaluate_expression — Map"),
             IExpressionSE::ExprMutate(_) => panic!("implement: evaluate_expression — ExprMutate"),
             IExpressionSE::GlobalMutate(_) => panic!("implement: evaluate_expression — GlobalMutate"),
-            IExpressionSE::LocalMutate(_) => panic!("implement: evaluate_expression — LocalMutate"),
+            IExpressionSE::LocalMutate(lm) => {
+                let (unconverted_source_expr_2, returns_from_source) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, lm.expr)?;
+                // We do this after the source because of statements like these:
+                //   set ship = foo(ship);
+                // which move the thing on the right and then restackify it on the left.
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(lm.range).chain(parent_ranges.iter().copied()).collect();
+                let destination_expr_2 =
+                    self.evaluate_addressible_lookup_for_mutate(coutputs, nenv, parent_ranges, region, lm.range, lm.name)
+                        .unwrap_or_else(|| panic!("Couldnt find {:?}", lm.name));
+                // We should have inferred variability from the presents of sets
+                assert_eq!(destination_expr_2.variability(), VariabilityT::Varying);
+                let is_convertible =
+                    self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
+                        unconverted_source_expr_2.result().coord, destination_expr_2.result().coord);
+                if !is_convertible {
+                    panic!("implement: LocalMutate — CouldntConvertForMutateT");
+                }
+                assert!(is_convertible);
+                let converted_source_expr_2 =
+                    self.convert(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), coutputs, &range_with_parent, outer_call_location,
+                        unconverted_source_expr_2, destination_expr_2.result().coord);
+                let expr_te = match destination_expr_2 {
+                    AddressExpressionTE::LocalLookup(local_lookup) if nenv.unstackifieds().contains(&local_lookup.local_variable.name()) => {
+                        nenv.mark_local_restackified(local_lookup.local_variable.name());
+                        self.typing_interner.alloc(ReferenceExpressionTE::Restackify(RestackifyTE {
+                            variable: local_lookup.local_variable,
+                            source_expr: converted_source_expr_2,
+                        }))
+                    }
+                    _ => {
+                        self.typing_interner.alloc(ReferenceExpressionTE::Mutate(MutateTE {
+                            destination_expr: destination_expr_2,
+                            source_expr: converted_source_expr_2,
+                        }))
+                    }
+                };
+                Ok((ExpressionTE::Reference(expr_te), returns_from_source))
+            }
             IExpressionSE::ArgLookup(_) => panic!("implement: evaluate_expression — ArgLookup"),
             IExpressionSE::RepeaterBlock(_) => panic!("implement: evaluate_expression — RepeaterBlock"),
             IExpressionSE::RepeaterBlockIterator(_) => panic!("implement: evaluate_expression — RepeaterBlockIterator"),
             IExpressionSE::Tuple(_) => panic!("implement: evaluate_expression — Tuple"),
-            IExpressionSE::StaticArrayFromValues(_) => panic!("implement: evaluate_expression — StaticArrayFromValues"),
+            IExpressionSE::StaticArrayFromValues(sav) => {
+                let (exprs_2, returns_from_elements) =
+                    self.evaluate_and_coerce_to_reference_expressions(
+                        coutputs, nenv, life, parent_ranges, outer_call_location, nenv.default_region(), sav.elements)?;
+                let new_parent_ranges: Vec<RangeS<'s>> =
+                    std::iter::once(sav.range).chain(parent_ranges.iter().copied()).collect();
+                let expr_2 = self.evaluate_static_sized_array_from_values(
+                    coutputs,
+                    IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
+                    &new_parent_ranges,
+                    outer_call_location,
+                    sav.rules,
+                    sav.maybe_element_type_st.map(|r| r.rune),
+                    sav.size_st.rune,
+                    sav.mutability_st.rune,
+                    sav.variability_st.rune,
+                    exprs_2,
+                    region,
+                );
+                Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromValues(expr_2))), returns_from_elements))
+            }
             IExpressionSE::StaticArrayFromCallable(_) => panic!("implement: evaluate_expression — StaticArrayFromCallable"),
             IExpressionSE::NewRuntimeSizedArray(_) => panic!("implement: evaluate_expression — NewRuntimeSizedArray"),
             IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
@@ -1366,7 +1519,7 @@ where 's: 't,
                         parent_ranges,
                         outer_call_location,
                         nenv.default_region(),
-                        b);
+                        b)?;
                 let block_2 = self.typing_interner.alloc(ReferenceExpressionTE::Block(BlockTE { inner: expressions_with_result }));
                 let (unstackified_ancestor_locals, restackified_ancestor_locals) =
                     child_environment.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
@@ -1376,7 +1529,7 @@ where 's: 't,
                 for local in restackified_ancestor_locals {
                     nenv.mark_local_restackified(local);
                 }
-                (ExpressionTE::Reference(block_2), returns_from_exprs)
+                Ok((ExpressionTE::Reference(block_2), returns_from_exprs))
             }
             IExpressionSE::Pure(_) => panic!("implement: evaluate_expression — Pure"),
             IExpressionSE::ConstantStr(c) => {
@@ -1385,22 +1538,108 @@ where 's: 't,
                     region,
                     _phantom: std::marker::PhantomData,
                 }));
-                (ExpressionTE::Reference(result), HashSet::new())
+                Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
             IExpressionSE::ConstantFloat(_) => panic!("implement: evaluate_expression — ConstantFloat"),
             IExpressionSE::Destruct(_) => panic!("implement: evaluate_expression — Destruct"),
             IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),
-            IExpressionSE::Index(_) => panic!("implement: evaluate_expression — Index"),
-            IExpressionSE::RuneLookup(_) => panic!("implement: evaluate_expression — RuneLookup"),
+            IExpressionSE::Index(index_se) => {
+                let (unborrowed_container_expr_2, returns_from_container_expr) =
+                    self.evaluate_expression(coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), index_se.left)?;
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(index_se.range).chain(parent_ranges.iter().copied()).collect();
+                let container_expr_2 =
+                    self.dot_borrow(coutputs, nenv, &range_with_parent, outer_call_location, life.add(self.typing_interner, 1), region, unborrowed_container_expr_2);
+                let (index_expr_2, returns_from_index_expr) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 2), parent_ranges, outer_call_location, nenv.default_region(), index_se.index_expr)?;
+                let expr_templata = match container_expr_2.result().coord.kind {
+                    KindT::RuntimeSizedArray(rsa) => {
+                        let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa);
+                        ExpressionTE::Address(self.typing_interner.alloc(AddressExpressionTE::RuntimeSizedArrayLookup(lookup)))
+                    }
+                    KindT::StaticSizedArray(at) => {
+                        let lookup = self.lookup_in_static_sized_array(index_se.range, container_expr_2, index_expr_2, *at);
+                        ExpressionTE::Address(self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(lookup)))
+                    }
+                    _ => panic!("implement: evaluate_expression Index — CannotSubscript"),
+                };
+                let mut returns = returns_from_container_expr;
+                returns.extend(returns_from_index_expr);
+                Ok((expr_templata, returns))
+            }
+            IExpressionSE::RuneLookup(r) => {
+                let rune_name_s = self.scout_arena.intern_imprecise_name(
+                    IImpreciseNameValS::RuneName(RuneNameValS { rune: r.rune }));
+                let templata = nenv.lookup_nearest_with_imprecise_name(rune_name_s, &{
+                    let mut s = std::collections::HashSet::new();
+                    s.insert(ILookupContext::TemplataLookupContext);
+                    s
+                }, self.typing_interner).unwrap();
+                match templata {
+                    ITemplataT::Integer(value) => {
+                        let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                            value: ITemplataT::Integer(value),
+                            bits: 32,
+                            region,
+                        }));
+                        Ok((ExpressionTE::Reference(result), HashSet::new()))
+                    }
+                    ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => {
+                        let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                            value: ITemplataT::Placeholder(p),
+                            bits: 32,
+                            region,
+                        }));
+                        Ok((ExpressionTE::Reference(result), HashSet::new()))
+                    }
+                    ITemplataT::Prototype(pt) => {
+                        panic!("implement: evaluate_expression RuneLookup — PrototypeTemplataT")
+                    }
+                    _ => panic!("implement: evaluate_expression RuneLookup — unexpected templata"),
+                }
+            }
             IExpressionSE::ConstantBool(c) => {
                 let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantBool(ConstantBoolTE {
                     value: c.value,
                     region,
                     _phantom: std::marker::PhantomData,
                 }));
-                (ExpressionTE::Reference(result), HashSet::new())
+                Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
-            IExpressionSE::OutsideLoad(_) => panic!("implement: evaluate_expression — OutsideLoad"),
+            IExpressionSE::OutsideLoad(outside_load) => {
+                use crate::typing::env::environment::ILookupContext;
+                let mut lookup_filter = std::collections::HashSet::new();
+                lookup_filter.insert(ILookupContext::ExpressionLookupContext);
+                let templatas_from_env = nenv.lookup_all_with_imprecise_name(outside_load.name, &lookup_filter, self.typing_interner);
+                let range_list: Vec<RangeS<'s>> = std::iter::once(outside_load.range).chain(parent_ranges.iter().copied()).collect();
+                let range_list_t: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_from_vec(range_list);
+                let templata_from_env = match templatas_from_env.as_slice() {
+                    [ITemplataT::Boolean(_value)] => {
+                        panic!("implement: evaluate_expression OutsideLoad — BooleanTemplataT")
+                    }
+                    [ITemplataT::Integer(_value)] => {
+                        panic!("implement: evaluate_expression OutsideLoad — IntegerTemplataT")
+                    }
+                    [ITemplataT::Placeholder(_t)] => {
+                        panic!("implement: evaluate_expression OutsideLoad — PlaceholderTemplataT IntegerTemplataType")
+                    }
+                    _ if !templatas_from_env.is_empty() && templatas_from_env.iter().all(|t| matches!(t, ITemplataT::Function(_))) => {
+                        panic!("implement: evaluate_expression OutsideLoad — all functions")
+                    }
+                    _ if templatas_from_env.len() > 1 => {
+                        panic!("implement: evaluate_expression OutsideLoad — too many")
+                    }
+                    [] => {
+                        return Err(ICompileErrorT::CouldntFindIdentifierToLoadT {
+                            range: range_list_t,
+                            name: outside_load.name,
+                        });
+                    }
+                    _ => panic!("implement: evaluate_expression OutsideLoad — unexpected"),
+                };
+                Ok((ExpressionTE::Reference(templata_from_env), HashSet::new()))
+            }
         }
     }
 /*
@@ -2539,9 +2778,120 @@ where 's: 't,
         context_region: RegionT,
         contained_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, IdT<'s, 't>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
+        use crate::typing::env::environment::{IEnvironmentT, IInDenizenEnvironmentT, ILookupContext};
+        use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+        use crate::typing::citizen::struct_compiler::IResolveOutcome;
+        use crate::typing::function::function_compiler::IResolveFunctionResult;
+        use crate::typing::types::types::{CoordT, OwnershipT, KindT, ISubKindTT, ISuperKindTT, InterfaceTTValT};
+        use crate::typing::citizen::impl_compiler::IsParentResult;
+
+        let opt_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.opt }));
+        let interface_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            opt_name,
+            [ILookupContext::TemplataLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::InterfaceDefinition(it)) => *it,
+            _ => panic!("vfail"),
+        };
+
+        let call_range_t = self.typing_interner.alloc_slice_copy(range);
+        let opt_interface_val = match self.resolve_interface(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            call_range_t,
+            call_location,
+            interface_templata,
+            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+        ) {
+            IResolveOutcome::ResolveSuccess(s) => s.kind,
+            _ => panic!("vfail"),
+        };
+        let opt_interface_ref = self.typing_interner.intern_interface_tt(InterfaceTTValT { id: opt_interface_val.id });
+        let own_opt_coord = CoordT { ownership: OwnershipT::Own, region: context_region, kind: KindT::Interface(opt_interface_ref) };
+
+        let some_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.some }));
+        let some_constructor_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            some_name,
+            [ILookupContext::ExpressionLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::Function(ft)) => *ft,
+            _ => panic!("vwat"),
+        };
+        let some_constructor = match self.evaluate_generic_light_function_from_call_for_prototype(
+            coutputs,
+            range,
+            call_location,
+            IInDenizenEnvironmentT::from(nenv),
+            some_constructor_templata,
+            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+            context_region,
+            &[contained_coord],
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option some_constructor")) {
+            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
+                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            }
+            IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
+        };
+
+        let none_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.none }));
+        let none_constructor_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            none_name,
+            [ILookupContext::ExpressionLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::Function(ft)) => *ft,
+            _ => panic!("vwat"),
+        };
+        let none_constructor = match self.evaluate_generic_light_function_from_call_for_prototype(
+            coutputs,
+            range,
+            call_location,
+            IInDenizenEnvironmentT::from(nenv),
+            none_constructor_templata,
+            &[ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_coord }))],
+            context_region,
+            &[],
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_option none_constructor")) {
+            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
+                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            }
+            IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
+        };
+
+        let some_impl_id = match self.is_parent(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            range,
+            call_location,
+            ISubKindTT::from(some_constructor.return_type.kind.expect_citizen()),
+            ISuperKindTT::Interface(opt_interface_ref),
+        ) {
+            IsParentResult::IsParent(p) => p.impl_id,
+            IsParentResult::IsntParent(_) => panic!("vwat"),
+        };
+
+        let none_impl_id = match self.is_parent(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            range,
+            call_location,
+            ISubKindTT::from(none_constructor.return_type.kind.expect_citizen()),
+            ISuperKindTT::Interface(opt_interface_ref),
+        ) {
+            IsParentResult::IsParent(p) => p.impl_id,
+            IsParentResult::IsntParent(_) => panic!("vwat"),
+        };
+
+        (own_opt_coord, *some_constructor, *none_constructor, some_impl_id, none_impl_id)
     }
 /*
+Guardian: temp-disable: SPDMX — `evaluate_generic_light_function_from_call_for_prototype` is the established Rust equivalent of Scala's `delegate.evaluateGenericFunctionFromCallForPrototype` — the `_light_` infix distinguishes light functions from closures in the Rust codebase. This exact function is already called without temp-disable in compiler.rs:1802 and overload_resolver.rs:676 as the parity equivalent of the same Scala method. — FrontendRust/guardian-logs/request-661-1778784031199/hook-661/get_option--2739.0.ScalaParityDuringMigration-SPDMX.ScalaParityDuringMigration-SPDMX.verdict.md
   def getOption(
     coutputs: CompilerOutputs,
     nenv: FunctionEnvironmentT,
@@ -2626,7 +2976,126 @@ where 's: 't,
         contained_success_coord: CoordT<'s, 't>,
         contained_fail_coord: CoordT<'s, 't>,
     ) -> (CoordT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>, PrototypeT<'s, 't>, IdT<'s, 't>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
+        use crate::typing::env::environment::{IEnvironmentT, IInDenizenEnvironmentT, ILookupContext};
+        use crate::typing::templata::templata::{ITemplataT, CoordTemplataT};
+        use crate::typing::citizen::struct_compiler::IResolveOutcome;
+        use crate::typing::function::function_compiler::IResolveFunctionResult;
+        use crate::typing::types::types::{CoordT, OwnershipT, KindT, ISubKindTT, ISuperKindTT, InterfaceTTValT};
+        use crate::typing::citizen::impl_compiler::IsParentResult;
+
+        let result_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.result }));
+        let interface_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            result_name,
+            [ILookupContext::TemplataLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::InterfaceDefinition(it)) => *it,
+            _ => panic!("vfail"),
+        };
+
+        let call_range_t = self.typing_interner.alloc_slice_copy(range);
+        let result_interface_val = match self.resolve_interface(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            call_range_t,
+            call_location,
+            interface_templata,
+            &[
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+            ],
+        ) {
+            IResolveOutcome::ResolveSuccess(s) => s.kind,
+            _ => panic!("vfail"),
+        };
+        let result_interface_ref = self.typing_interner.intern_interface_tt(InterfaceTTValT { id: result_interface_val.id });
+        let own_result_coord = CoordT { ownership: OwnershipT::Own, region, kind: KindT::Interface(result_interface_ref) };
+
+        let ok_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.ok }));
+        let ok_constructor_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            ok_name,
+            [ILookupContext::ExpressionLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::Function(ft)) => *ft,
+            _ => panic!("vwat"),
+        };
+        let ok_constructor = match self.evaluate_generic_light_function_from_call_for_prototype(
+            coutputs,
+            range,
+            call_location,
+            IInDenizenEnvironmentT::from(nenv),
+            ok_constructor_templata,
+            &[
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+            ],
+            region,
+            &[contained_success_coord],
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result ok_constructor")) {
+            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
+                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            }
+            IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
+        };
+        let ok_kind = ok_constructor.return_type.kind;
+        let ok_result_impl = match self.is_parent(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            range,
+            call_location,
+            ISubKindTT::from(ok_kind.expect_struct()),
+            ISuperKindTT::Interface(result_interface_ref),
+        ) {
+            IsParentResult::IsParent(p) => p.impl_id,
+            IsParentResult::IsntParent(_) => panic!("vfail"),
+        };
+
+        let err_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.err }));
+        let err_constructor_templata = match IEnvironmentT::from(nenv).lookup_nearest_with_imprecise_name(
+            err_name,
+            [ILookupContext::ExpressionLookupContext].into_iter().collect(),
+            self.typing_interner,
+        ) {
+            Some(ITemplataT::Function(ft)) => *ft,
+            _ => panic!("vwat"),
+        };
+        let err_constructor = match self.evaluate_generic_light_function_from_call_for_prototype(
+            coutputs,
+            range,
+            call_location,
+            IInDenizenEnvironmentT::from(nenv),
+            err_constructor_templata,
+            &[
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_success_coord })),
+                ITemplataT::Coord(self.typing_interner.alloc(CoordTemplataT { coord: contained_fail_coord })),
+            ],
+            region,
+            &[contained_fail_coord],
+        ).unwrap_or_else(|_e| panic!("Unimplemented: ICompileErrorT from evaluate_generic_light_function_from_call_for_prototype in get_result err_constructor")) {
+            IResolveFunctionResult::ResolveFunctionFailure(_fff) => {
+                panic!("CompileErrorExceptionT: RangedInternalErrorT")
+            }
+            IResolveFunctionResult::ResolveFunctionSuccess(p) => p.prototype.prototype,
+        };
+        let err_kind = err_constructor.return_type.kind;
+        let err_result_impl = match self.is_parent(
+            coutputs,
+            IInDenizenEnvironmentT::from(nenv),
+            range,
+            call_location,
+            ISubKindTT::from(err_kind.expect_struct()),
+            ISuperKindTT::Interface(result_interface_ref),
+        ) {
+            IsParentResult::IsParent(p) => p.impl_id,
+            IsParentResult::IsntParent(_) => panic!("vfail"),
+        };
+
+        (own_result_coord, *ok_constructor, ok_result_impl, *err_constructor, err_result_impl)
     }
 /*
   def getResult(
@@ -2833,12 +3302,12 @@ where 's: 't,
         region: RegionT,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let function_a = self.astronomize_lambda(coutputs, nenv, parent_ranges, function_s);
 
         let snapshot_env = nenv.snapshot(self.typing_interner);
         let closure_struct_tt =
-            self.evaluate_closure_struct(coutputs, snapshot_env, parent_ranges, call_location, name, function_a, true);
+            self.evaluate_closure_struct(coutputs, snapshot_env, parent_ranges, call_location, name, function_a, true)?;
         let closure_coord =
             self.pointify_kind(coutputs, KindT::Struct(self.typing_interner.alloc(closure_struct_tt)), region, OwnershipT::Own);
 
@@ -2848,7 +3317,7 @@ where 's: 't,
             self.make_closure_struct_construct_expression(coutputs, nenv, &range_list, region, closure_struct_tt);
         assert!(construct_expr_2.result().coord == closure_coord);
 
-        construct_expr_2
+        Ok(construct_expr_2)
     }
 /*
   // Given a function1, this will give a closure (an OrdinaryClosure2 or a TemplatedClosure2)
@@ -2954,7 +3423,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         block: &'s BlockSE<'s>,
-    ) -> (&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
+    ) -> Result<(&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         self.evaluate_block_statements_block(
             coutputs, starting_nenv, nenv, parent_ranges, call_location,
             life, region, block)

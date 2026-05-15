@@ -740,6 +740,56 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     list_of_maybe_destructure_member_patterns, input_expr, region,
                     after_destructure_success_continuation)
             }
+            KindT::StaticSizedArray(static_sized_array_t) => {
+                let size_templata = static_sized_array_t.size();
+                let size = match size_templata {
+                    ITemplataT::Placeholder(_) => panic!("implement: destructureOwning StaticSizedArray — RangedInternalErrorT: Can't create static sized array by values, can't guarantee size is correct!"),
+                    ITemplataT::Integer(size) => {
+                        if size != list_of_maybe_destructure_member_patterns.len() as i64 {
+                            panic!("implement: destructureOwning StaticSizedArray — RangedInternalErrorT: Wrong num exprs!");
+                        }
+                        size
+                    }
+                    _ => panic!("vwat"),
+                };
+                let element_type = static_sized_array_t.element_type();
+                let element_locals: Vec<ReferenceLocalVariableT<'s, 't>> = (0..size as usize).map(|i| {
+                    self.make_temporary_local(nenv, life.add(self.typing_interner, (3 + i) as i32), element_type)
+                }).collect();
+                let destroy_te = self.typing_interner.alloc(ReferenceExpressionTE::DestroyStaticSizedArrayIntoLocals(DestroyStaticSizedArrayIntoLocalsTE {
+                    expr: input_expr,
+                    static_sized_array: self.typing_interner.alloc(*static_sized_array_t),
+                    destination_reference_variables: self.typing_interner.alloc_slice_from_vec(element_locals.clone()),
+                }));
+                let live_capture_locals: Vec<ILocalVariableT<'s, 't>> = initial_live_capture_locals.iter().copied()
+                    .chain(element_locals.iter().map(|l: &ReferenceLocalVariableT<'s, 't>| ILocalVariableT::Reference(*l)))
+                    .collect();
+                {
+                    let names: Vec<_> = live_capture_locals.iter().map(|l: &ILocalVariableT<'s, 't>| l.name()).collect();
+                    let distinct: Vec<_> = { let mut seen = Vec::new(); for n in &names { if !seen.contains(n) { seen.push(*n); } } seen };
+                    assert!(names == distinct);
+                }
+                if element_locals.len() != list_of_maybe_destructure_member_patterns.len() {
+                    panic!("implement: destructureOwning StaticSizedArray — WrongNumberOfDestructuresError");
+                }
+                let live_capture_locals_slice = self.typing_interner.alloc_slice_from_vec(live_capture_locals);
+                let element_locals_slice = self.typing_interner.alloc_slice_from_vec(
+                    element_locals.into_iter().map(|l| ILocalVariableT::Reference(l)).collect()
+                );
+                let lets = self.make_lets_for_own_and_maybe_continue(
+                    coutputs, nenv, life.add(self.typing_interner, 4), parent_ranges, call_location,
+                    live_capture_locals_slice, element_locals_slice, list_of_maybe_destructure_member_patterns, region,
+                    Box::new(after_destructure_success_continuation));
+                self.consecutive(&[destroy_te, lets])
+            }
+            KindT::RuntimeSizedArray(_) => {
+                if !list_of_maybe_destructure_member_patterns.is_empty() {
+                    panic!("implement: destructureOwning RuntimeSizedArray — RangedInternalErrorT: Can only destruct RSA with zero destructure targets.");
+                }
+                self.typing_interner.alloc(ReferenceExpressionTE::DestroyMutRuntimeSizedArray(DestroyMutRuntimeSizedArrayTE {
+                    array_expr: input_expr,
+                }))
+            }
             _ => panic!("implement: destructureOwning — non-struct kind"),
         }
     }

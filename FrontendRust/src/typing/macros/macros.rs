@@ -54,24 +54,24 @@ impl FunctionBodyMacro {
         origin_function: Option<&'s crate::higher_typing::ast::FunctionA<'s>>,
         param_coords: &[crate::typing::ast::ast::ParameterT<'s, 't>],
         maybe_ret_coord: Option<crate::typing::types::types::CoordT<'s, 't>>,
-    ) -> (crate::typing::ast::ast::FunctionHeaderT<'s, 't>, crate::typing::ast::expressions::ReferenceExpressionTE<'s, 't>)
+    ) -> Result<(crate::typing::ast::ast::FunctionHeaderT<'s, 't>, crate::typing::ast::expressions::ReferenceExpressionTE<'s, 't>), crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>>
     where 's: 't,
     {
         match self {
-            FunctionBodyMacro::LockWeak => compiler.generate_function_body_lock_weak(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::AsSubtype => compiler.generate_function_body_as_subtype(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::StructDrop => compiler.generate_function_body_struct_drop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::StructConstructor => compiler.generate_function_body_struct_constructor(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
+            FunctionBodyMacro::LockWeak => Ok(compiler.generate_function_body_lock_weak(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::AsSubtype => Ok(compiler.generate_function_body_as_subtype(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::StructDrop => Ok(compiler.generate_function_body_struct_drop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::StructConstructor => Ok(compiler.generate_function_body_struct_constructor(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
             FunctionBodyMacro::AbstractBody => compiler.generate_function_body_abstract_body(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::SameInstance => compiler.generate_function_body_same_instance(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::RsaLen => compiler.generate_function_body_rsa_len(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::RsaMutableNew => compiler.generate_function_body_rsa_mutable_new(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
+            FunctionBodyMacro::SameInstance => Ok(compiler.generate_function_body_same_instance(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::RsaLen => Ok(compiler.generate_function_body_rsa_len(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::RsaMutableNew => Ok(compiler.generate_function_body_rsa_mutable_new(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
             FunctionBodyMacro::RsaImmutableNew => compiler.generate_function_body_rsa_immutable_new(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
             FunctionBodyMacro::RsaDropInto => compiler.generate_function_body_rsa_drop_into(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::RsaMutableCapacity => compiler.generate_function_body_rsa_mutable_capacity(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::RsaMutablePop => compiler.generate_function_body_rsa_mutable_pop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::RsaMutablePush => compiler.generate_function_body_rsa_mutable_push(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
-            FunctionBodyMacro::SsaLen => compiler.generate_function_body_ssa_len(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
+            FunctionBodyMacro::RsaMutableCapacity => Ok(compiler.generate_function_body_rsa_mutable_capacity(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::RsaMutablePop => Ok(compiler.generate_function_body_rsa_mutable_pop(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::RsaMutablePush => Ok(compiler.generate_function_body_rsa_mutable_push(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
+            FunctionBodyMacro::SsaLen => Ok(compiler.generate_function_body_ssa_len(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord)),
             FunctionBodyMacro::SsaDropInto => compiler.generate_function_body_ssa_drop_into(coutputs, env, generator_id, life, call_range, call_location, origin_function, param_coords, maybe_ret_coord),
         }
     }

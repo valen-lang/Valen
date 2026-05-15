@@ -58,7 +58,7 @@ where 's: 't,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         match callable_expr.result().coord.kind {
             KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
             KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
@@ -71,8 +71,7 @@ where 's: 't,
                 // We want to get the prototype here, not the entire header, because
                 // we might be in the middle of a recursive call like:
                 // func main():Int(main())
-                let stamp_result =
-                    self.find_function(
+                let stamp_result = match self.find_function(
                         overload_set.env,
                         coutputs,
                         range,
@@ -83,8 +82,8 @@ where 's: 't,
                         context_region,
                         &unconverted_args_pointer_types_2,
                         &[],
-                        false);
-                let stamp_result = match stamp_result {
+                        false)?
+                {
                     Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
                     Ok(x) => x,
                 };
@@ -108,12 +107,12 @@ where 's: 't,
 
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
                 let result_te = stamp_result.prototype.return_type;
-                self.typing_interner.alloc(
+                Ok(self.typing_interner.alloc(
                     ReferenceExpressionTE::FunctionCall(FunctionCallTE {
                         callable: stamp_result.prototype,
                         args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
                         return_type: result_te,
-                    }))
+                    })))
             }
             other => {
                 self.evaluate_custom_call(
@@ -243,7 +242,7 @@ where 's: 't,
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         given_callable_unborrowed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
         given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         // Whether we're given a borrow or an own, the call itself will be given a borrow.
         let given_callable_borrow_expr_2: &'t ReferenceExpressionTE<'s, 't> =
             match given_callable_unborrowed_expr_2.result().coord {
@@ -262,8 +261,7 @@ where 's: 't,
         param_filters.extend_from_slice(&args_types_2);
 
         let env_ref = IInDenizenEnvironmentT::Node(env);
-        let resolved =
-            self.find_function(
+        let resolved = match self.find_function(
                 env_ref,
                 coutputs,
                 range,
@@ -274,8 +272,8 @@ where 's: 't,
                 context_region,
                 &param_filters,
                 &[],
-                false);
-        let resolved = match resolved {
+                false)?
+        {
             Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
             Ok(x) => x,
         };
@@ -303,12 +301,12 @@ where 's: 't,
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
         let result_te = resolved.prototype.return_type;
-        self.typing_interner.alloc(
+        Ok(self.typing_interner.alloc(
             ReferenceExpressionTE::FunctionCall(FunctionCallTE {
                 callable: resolved.prototype,
                 args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
                 return_type: result_te,
-            }))
+            })))
     }
 /*
   private def evaluateCustomCall(
@@ -502,7 +500,7 @@ where 's: 't,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
         args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let call_expr =
             self.evaluate_call(
                 coutputs,
@@ -514,8 +512,8 @@ where 's: 't,
                 callable_reference_expr_2,
                 explicit_template_arg_rules_s,
                 explicit_template_arg_runes_s,
-                args_exprs_2);
-        call_expr
+                args_exprs_2)?;
+        Ok(call_expr)
     }
 /*
   def evaluatePrefixCall(

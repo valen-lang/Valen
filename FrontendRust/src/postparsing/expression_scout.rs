@@ -1,15 +1,19 @@
 use crate::lexing::ast::RangeL;
 use crate::parsing::ast::{
   BlockPE, DotPE, FunctionCallPE, IArraySizeP, IExpressionPE, IImpreciseNameP, ITemplexPT, LoadAsP,
-  LookupPE, NameP, OwnershipP,
+  LookupPE, MutabilityP, NameP, OwnershipP, StaticSizedArraySizeP, VariabilityP,
 };
 use crate::interner::StrI;
 use crate::postparsing::ast::LocationInDenizenBuilder;
 use crate::postparsing::ast::IExpressionSE as IExpressionSETrait;
 use crate::postparsing::expressions::{
   BlockSE, ConstantBoolSE, ConstantIntSE, ConstantStrSE, DotSE, ExprMutateSE, FunctionCallSE, FunctionSE,
-  IExpressionSE, IfSE, LetSE, LocalLoadSE, LocalMutateSE, LocalS, OutsideLoadSE, OwnershippedSE, PureSE,
-  ReturnSE, RuneLookupSE, VoidSE,
+  IExpressionSE, IfSE, IndexSE, LetSE, LocalLoadSE, LocalMutateSE, LocalS, OutsideLoadSE, OwnershippedSE, PureSE,
+  ReturnSE, RuneLookupSE, StaticArrayFromCallableSE, StaticArrayFromValuesSE, VoidSE,
+};
+use crate::postparsing::names::ImplicitRuneValS;
+use crate::postparsing::rules::rules::{
+  ILiteralSL, IRulexSR, IntLiteralSL, LiteralSR, MutabilityLiteralSL, RuneUsage, VariabilityLiteralSL,
 };
 use crate::postparsing::names::{
   CodeNameS, CodeRuneS, IFunctionDeclarationNameS, IImpreciseNameS,
@@ -1241,10 +1245,70 @@ fn scout_expression(
         */
     IExpressionPE::ConstructArray(construct_array) => {
       let range_s = PostParser::eval_range(&file_coordinate, construct_array.range);
+      let mut rule_builder = Vec::new();
+      let parent_env = IEnvironmentS::FunctionEnvironment(stack_frame.parent_env.clone());
+      let context_region = stack_frame.context_region.clone();
+      let maybe_type_rune_s = construct_array.type_pt.as_ref().map(|type_pt| {
+        translate_templex(
+          self.scout_arena,
+          self.keywords,
+          parent_env.clone(),
+          &mut lidb.child(),
+          &mut rule_builder,
+          context_region.clone(),
+          type_pt,
+        )
+      });
+      let mutability_rune_s = match &construct_array.mutability_pt {
+        None => {
+          let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+          let rune_usage = RuneUsage { range: range_s, rune };
+          rule_builder.push(IRulexSR::Literal(LiteralSR {
+            range: range_s,
+            rune: rune_usage,
+            literal: ILiteralSL::MutabilityLiteral(MutabilityLiteralSL { mutability: MutabilityP::Mutable }),
+          }));
+          rune_usage
+        }
+        Some(mutability_pt) => {
+          translate_templex(
+            self.scout_arena,
+            self.keywords,
+            parent_env.clone(),
+            &mut lidb.child(),
+            &mut rule_builder,
+            context_region.clone(),
+            mutability_pt,
+          )
+        }
+      };
+      let variability_rune_s = match &construct_array.variability_pt {
+        None => {
+          let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+          let rune_usage = RuneUsage { range: range_s, rune };
+          rule_builder.push(IRulexSR::Literal(LiteralSR {
+            range: range_s,
+            rune: rune_usage,
+            literal: ILiteralSL::VariabilityLiteral(VariabilityLiteralSL { variability: VariabilityP::Final }),
+          }));
+          rune_usage
+        }
+        Some(variability_pt) => {
+          translate_templex(
+            self.scout_arena,
+            self.keywords,
+            parent_env.clone(),
+            &mut lidb.child(),
+            &mut rule_builder,
+            context_region.clone(),
+            variability_pt,
+          )
+        }
+      };
       let mut args_lidb = lidb.child();
-      let (_stack_frame1, args_s, _self_uses, _child_uses): (StackFrame<'s>, Vec<&'s IExpressionSE<'s>>, VariableUses<'s>, VariableUses<'s>) =
+      let (stack_frame1, args_s, self_uses, child_uses) =
           self.scout_elements_as_expressions(stack_frame, &mut args_lidb, &construct_array.args)?;
-      match construct_array.size {
+      let result = match &construct_array.size {
         IArraySizeP::RuntimeSized => {
           assert!(
             !construct_array.initializing_individual_elements,
@@ -1259,17 +1323,72 @@ fn scout_expression(
           }
           panic!("POSTPARSER_SCOUT_CONSTRUCT_ARRAY_RUNTIME_NOT_YET_IMPLEMENTED");
         }
-        IArraySizeP::StaticSized(_) => {
-          if !construct_array.initializing_individual_elements && args_s.len() != 1 {
-            return Err(
-              ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(
-                InitializingStaticSizedArrayRequiresSizeAndCallable { range: range_s },
-              ),
-            );
+        IArraySizeP::StaticSized(StaticSizedArraySizeP { size_pt: maybe_size_pt }) => {
+          let maybe_size_rune_s = maybe_size_pt.as_ref().map(|size_pt| {
+            translate_templex(
+              self.scout_arena,
+              self.keywords,
+              parent_env.clone(),
+              &mut lidb.child(),
+              &mut rule_builder,
+              context_region.clone(),
+              size_pt,
+            )
+          });
+          if construct_array.initializing_individual_elements {
+            let size_rune_s = match maybe_size_rune_s {
+              Some(s) => s,
+              None => {
+                let rune = self.scout_arena.intern_rune(IRuneValS::ImplicitRune(ImplicitRuneValS::new(lidb.child().borrow_val())));
+                let rune_usage = RuneUsage { range: range_s, rune };
+                rule_builder.push(IRulexSR::Literal(LiteralSR {
+                  range: range_s,
+                  rune: rune_usage,
+                  literal: ILiteralSL::IntLiteral(IntLiteralSL { value: args_s.len() as i64 }),
+                }));
+                rune_usage
+              }
+            };
+            IExpressionSE::StaticArrayFromValues(StaticArrayFromValuesSE {
+              range: range_s,
+              rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+              maybe_element_type_st: maybe_type_rune_s,
+              mutability_st: mutability_rune_s,
+              variability_st: variability_rune_s,
+              size_st: size_rune_s,
+              elements: self.scout_arena.alloc_slice_from_vec(args_s),
+            })
+          } else {
+            if args_s.len() != 1 {
+              return Err(
+                ICompileErrorS::InitializingStaticSizedArrayRequiresSizeAndCallable(
+                  InitializingStaticSizedArrayRequiresSizeAndCallable { range: range_s },
+                ),
+              );
+            }
+            let size_rune_s = match maybe_size_rune_s {
+              Some(s) => s,
+              None => panic!("vassertSome: no size rune for static array from callable"),
+            };
+            let callable_se = args_s[0];
+            IExpressionSE::StaticArrayFromCallable(StaticArrayFromCallableSE {
+              range: range_s,
+              rules: self.scout_arena.alloc_slice_from_vec(rule_builder),
+              maybe_element_type_st: maybe_type_rune_s,
+              mutability_st: mutability_rune_s,
+              variability_st: variability_rune_s,
+              size_st: size_rune_s,
+              callable: callable_se,
+            })
           }
-          panic!("POSTPARSER_SCOUT_CONSTRUCT_ARRAY_STATIC_NOT_YET_IMPLEMENTED");
         }
-      }
+      };
+      Ok((
+        stack_frame1,
+        IScoutResult::NormalResult(NormalResultS { expr: &*self.scout_arena.alloc(result) }),
+        self_uses,
+        child_uses,
+      ))
     }
     /*
     case ConstructArrayPE(rangeP, maybeTypePT, maybeMutabilityPT, maybeVariabilityPT, size, initializingIndividualElements, argsPE) => {
@@ -1918,6 +2037,24 @@ fn scout_expression(
         })),
       });
       Ok((stack_frame1, result, inner_self_uses, inner_child_uses))
+    }
+    IExpressionPE::BraceCall(brace_call) => {
+      let load_subject_as = match brace_call.subject_expr {
+        IExpressionPE::SubExpression(_) => LoadAsP::Use,
+        _ => LoadAsP::LoadAsBorrow,
+      };
+      assert!(brace_call.arg_exprs.len() == 1);
+      let arg_pe = brace_call.arg_exprs[0];
+      let (stack_frame1, callable_se, callable_self_uses, callable_child_uses) =
+        self.scout_expression_and_coerce(stack_frame, &mut lidb.child(), brace_call.subject_expr, load_subject_as)?;
+      let (stack_frame2, arg_se, arg_self_uses, arg_child_uses) =
+        self.scout_expression_and_coerce(stack_frame1, &mut lidb.child(), arg_pe, LoadAsP::Use)?;
+      let result_se = IExpressionSE::Index(IndexSE {
+        range: PostParser::eval_range(&file_coordinate, brace_call.range),
+        left: callable_se,
+        index_expr: arg_se,
+      });
+      Ok((stack_frame2, IScoutResult::NormalResult(NormalResultS { expr: self.scout_arena.alloc(result_se) }), callable_self_uses.then_merge(&arg_self_uses), callable_child_uses.then_merge(&arg_child_uses)))
     }
     _ => panic!(
       "POSTPARSER_SCOUT_EXPRESSION_NOT_YET_IMPLEMENTED: {:?}",

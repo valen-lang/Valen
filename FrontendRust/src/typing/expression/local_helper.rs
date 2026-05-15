@@ -93,7 +93,7 @@ where 's: 't,
             IInDenizenEnvironmentT::Node(snapshot);
         let destruct_expr_2 = self.drop(env_in_denizen, coutputs, range, call_location, context_region, unlet_te);
         assert_eq!(destruct_expr_2.result().coord.kind, KindT::Void(VoidT));
-        DeferTE { inner_expr: self.typing_interner.alloc(let_expr_2), deferred_expr: self.typing_interner.alloc(destruct_expr_2) }
+        DeferTE::new(self.typing_interner.alloc(let_expr_2), self.typing_interner.alloc(destruct_expr_2))
     }
 /*
   // This makes a borrow ref, but can easily turn that into a weak

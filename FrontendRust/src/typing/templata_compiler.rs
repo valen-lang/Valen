@@ -831,8 +831,48 @@ where 's: 't,
             KindT::Float(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
             KindT::Void(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
             KindT::Never(_) => ITemplataT::Kind(interner.alloc(KindTemplataT { kind })),
-            KindT::RuntimeSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind RuntimeSizedArray"),
-            KindT::StaticSizedArray(_) => panic!("Unimplemented: substitute_templatas_in_kind StaticSizedArray"),
+            KindT::RuntimeSizedArray(rsa) => {
+                use crate::typing::names::names::{INameValT, IdValT};
+                let INameT::RuntimeSizedArray(rsa_name) = rsa.name.local_name else { panic!("vwat") };
+                let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
+                    mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.mutability)),
+                    element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, rsa_name.arr.element_type),
+                    self_region: RegionT {},
+                });
+                let new_rsa_name = interner.intern_runtime_sized_array_name(RuntimeSizedArrayNameT {
+                    template: rsa_name.template,
+                    arr: new_arr_name,
+                });
+                let new_id = *interner.intern_id(IdValT {
+                    package_coord: rsa.name.package_coord,
+                    init_steps: rsa.name.init_steps,
+                    local_name: INameT::RuntimeSizedArray(new_rsa_name),
+                });
+                let new_rsa = interner.intern_runtime_sized_array_tt(RuntimeSizedArrayTTValT { name: new_id });
+                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::RuntimeSizedArray(new_rsa) }))
+            }
+            KindT::StaticSizedArray(ssa) => {
+                use crate::typing::names::names::{INameValT, IdValT};
+                let INameT::StaticSizedArray(ssa_name) = ssa.name.local_name else { panic!("vwat") };
+                let new_arr_name = interner.intern_raw_array_name(RawArrayNameT {
+                    mutability: expect_mutability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.mutability)),
+                    element_type: Self::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.arr.element_type),
+                    self_region: RegionT {},
+                });
+                let new_ssa_name = interner.intern_static_sized_array_name(StaticSizedArrayNameT {
+                    template: ssa_name.template,
+                    size: expect_integer(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.size)),
+                    variability: expect_variability(Self::substitute_templatas_in_templata(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, ssa_name.variability)),
+                    arr: new_arr_name,
+                });
+                let new_id = *interner.intern_id(IdValT {
+                    package_coord: ssa.name.package_coord,
+                    init_steps: ssa.name.init_steps,
+                    local_name: INameT::StaticSizedArray(new_ssa_name),
+                });
+                let new_ssa = interner.intern_static_sized_array_tt(StaticSizedArrayTTValT { name: new_id });
+                ITemplataT::Kind(interner.alloc(KindTemplataT { kind: KindT::StaticSizedArray(new_ssa) }))
+            }
             KindT::KindPlaceholder(p) => {
                 let index = match p.id.local_name {
                     INameT::KindPlaceholder(kp) => kp.template.index,
@@ -1448,7 +1488,13 @@ where 's: 't,
             ITemplataT::Coord(c) => ITemplataT::Coord(interner.alloc(CoordTemplataT { coord: Compiler::substitute_templatas_in_coord(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, c.coord) })),
             ITemplataT::Kind(k) => Compiler::substitute_templatas_in_kind(coutputs, sanity_check, interner, keywords, original_calling_denizen_id, needle_template_name, new_substituting_templatas, bound_arguments_source, k.kind),
             ITemplataT::Placeholder(p) => {
-                panic!("Unimplemented: substitute_templatas_in_templata Placeholder");
+                use crate::typing::names::names::IPlaceholderNameT;
+                let pn = IPlaceholderNameT::try_from(p.id.local_name).unwrap();
+                if p.id.init_id(interner) == needle_template_name {
+                    new_substituting_templatas[pn.index() as usize]
+                } else {
+                    templata
+                }
             }
             ITemplataT::Mutability(_) => templata,
             ITemplataT::Variability(_) => templata,

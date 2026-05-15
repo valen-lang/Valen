@@ -12,6 +12,7 @@ use crate::solver::solver::FailedSolve;
 use crate::typing::ast::ast::*;
 use crate::typing::ast::expressions::ReferenceExpressionTE;
 use crate::typing::compiler_outputs::*;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::typing::env::environment::*;
 use crate::typing::env::function_environment_t::FunctionEnvironmentT;
 use crate::typing::function::function_compiler::{StampFunctionSuccess, IResolveFunctionResult, IEvaluateFunctionResult};
@@ -198,7 +199,7 @@ where 's: 't,
         args: &[CoordT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
-    ) -> Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>> {
+    ) -> Result<Result<StampFunctionSuccess<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
         let potential_banner = self.find_potential_function(
             calling_env,
             coutputs,
@@ -210,14 +211,14 @@ where 's: 't,
             context_region,
             args,
             extra_envs_to_look_in,
-            exact);
+            exact)?;
         match potential_banner {
-            Err(e) => Err(e),
+            Err(e) => Ok(Err(e)),
             Ok(potential_banner) => {
-                Ok(StampFunctionSuccess {
+                Ok(Ok(StampFunctionSuccess {
                     prototype: potential_banner.prototype,
                     inferences: std::collections::HashMap::new(),
-                })
+                }))
             }
         }
     }
@@ -505,7 +506,7 @@ where 's: 't,
         args: &[CoordT<'s, 't>],
         candidate: ICalleeCandidate<'s, 't>,
         exact: bool,
-    ) -> Result<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>> {
+    ) -> Result<Result<AttemptedCandidate<'s, 't>, IFindFunctionFailureReason<'s, 't>>, ICompileErrorT<'s, 't>> {
         // Scala: anonymous `new IRuneTypeSolverEnv { override def lookup(...) }` inside attemptCandidateBanner
         // Rust adaptation (SPDMX-B): named struct required since Rust has no anonymous classes
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
@@ -639,7 +640,7 @@ where 's: 't,
                                 call_location,
                                 &initial_knowns,
                                 &[],
-                            ) {
+                            )? {
                                 Err(_e) => {
                                     panic!("implement: attemptCandidateBanner FindFunctionResolveFailure");
                                 }
@@ -654,7 +655,7 @@ where 's: 't,
                                         match self.evaluate_templated_function_from_call_for_prototype(
                                             coutputs, calling_env, call_range, call_location, ft,
                                             &explicitly_specified_template_arg_templatas, context_region, args,
-                                        ) {
+                                        )? {
                                             IEvaluateFunctionResult::EvaluateFunctionFailure(_reason) => {
                                                 panic!("implement: attemptCandidateBanner EvaluateFunctionFailure");
                                             }
@@ -663,10 +664,10 @@ where 's: 't,
                                                     coutputs, calling_env, call_range, call_location,
                                                     args, &eval_success.prototype.prototype.param_types(), exact,
                                                 ) {
-                                                    Err(rejection_reason) => Err(rejection_reason),
+                                                    Err(rejection_reason) => Ok(Err(rejection_reason)),
                                                     Ok(()) => {
                                                         assert!(coutputs.get_instantiation_bounds(self.typing_interner, eval_success.prototype.prototype.id).is_some());
-                                                        Ok(AttemptedCandidate { prototype: eval_success.prototype.prototype })
+                                                        Ok(Ok(AttemptedCandidate { prototype: eval_success.prototype.prototype }))
                                                     }
                                                 }
                                             }
@@ -676,19 +677,19 @@ where 's: 't,
                                         match self.evaluate_generic_light_function_from_call_for_prototype(
                                             coutputs, call_range, call_location, calling_env, ft,
                                             &explicitly_specified_template_arg_templatas, RegionT, args,
-                                        ) {
+                                        )? {
                                             IResolveFunctionResult::ResolveFunctionFailure(failure) => {
-                                                Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason })
+                                                Ok(Err(IFindFunctionFailureReason::FindFunctionResolveFailure { reason: failure.reason }))
                                             }
                                             IResolveFunctionResult::ResolveFunctionSuccess(resolve_success) => {
                                                 match self.params_match(
                                                     coutputs, calling_env, call_range, call_location,
                                                     args, &resolve_success.prototype.prototype.param_types(), exact,
                                                 ) {
-                                                    Err(rejection_reason) => Err(rejection_reason),
+                                                    Err(rejection_reason) => Ok(Err(rejection_reason)),
                                                     Ok(()) => {
                                                         assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolve_success.prototype.prototype.id).is_some());
-                                                        Ok(AttemptedCandidate { prototype: resolve_success.prototype.prototype })
+                                                        Ok(Ok(AttemptedCandidate { prototype: resolve_success.prototype.prototype }))
                                                     }
                                                 }
                                             }
@@ -716,10 +717,10 @@ where 's: 't,
                     substituter.substitute_for_coord(coutputs, *param_type)
                 }).collect();
                 match self.params_match(coutputs, calling_env, call_range, call_location, args, &params, exact) {
-                    Err(rejection_reason) => Err(rejection_reason),
+                    Err(rejection_reason) => Ok(Err(rejection_reason)),
                     Ok(()) => {
                         assert!(coutputs.get_instantiation_bounds(self.typing_interner, prototype_t.id).is_some());
-                        Ok(AttemptedCandidate { prototype: self.typing_interner.alloc(prototype_t) })
+                        Ok(Ok(AttemptedCandidate { prototype: self.typing_interner.alloc(prototype_t) }))
                     }
                 }
             }
@@ -979,7 +980,7 @@ where 's: 't,
         args: &[CoordT<'s, 't>],
         extra_envs_to_look_in: &[IInDenizenEnvironmentT<'s, 't>],
         exact: bool,
-    ) -> Result<AttemptedCandidate<'s, 't>, FindFunctionFailure<'s, 't>> {
+    ) -> Result<Result<AttemptedCandidate<'s, 't>, FindFunctionFailure<'s, 't>>, ICompileErrorT<'s, 't>> {
         // This is here for debugging, so when we dont find something we can see what envs we searched
         let mut searched_envs: Vec<SearchedEnvironment<'s, 't>> = Vec::new();
         let mut undeduped_candidates: Vec<ICalleeCandidate<'s, 't>> = Vec::new();
@@ -994,7 +995,7 @@ where 's: 't,
         for candidate in candidates.iter() {
             match self.attempt_candidate_banner(
                 env, coutputs, call_range, call_location, explicit_template_arg_rules_s,
-                explicit_template_arg_runes_s, context_region, args, *candidate, exact)
+                explicit_template_arg_runes_s, context_region, args, *candidate, exact)?
             {
                 Ok(s) => { successes.push(s); }
                 Err(e) => { failed_to_reason.push((*candidate, e)); }
@@ -1002,17 +1003,17 @@ where 's: 't,
         }
 
         if successes.is_empty() {
-            Err(FindFunctionFailure {
+            Ok(Err(FindFunctionFailure {
                 name: function_name,
                 args: self.typing_interner.alloc_slice_copy(args),
                 rejected_callee_to_reason: self.typing_interner.alloc_slice_from_vec(failed_to_reason),
-            })
+            }))
         } else if successes.len() == 1 {
-            Ok(successes.into_iter().next().unwrap())
+            Ok(Ok(successes.into_iter().next().unwrap()))
         } else {
             let (best, _outscore_reason_by_banner) =
                 self.narrow_down_callable_overloads(coutputs, env, call_range, call_location, &successes, args);
-            Ok(best)
+            Ok(Ok(best))
         }
     }
 /*
@@ -1475,17 +1476,28 @@ where 's: 't,
 impl<'s, 'ctx, 't> Compiler<'s, 'ctx, 't>
 where 's: 't,
 {
+    // Rust adaptation: arena-allocated ReferenceExpressionTE — caller needs to keep the value to pass to DestroyStaticSizedArrayIntoFunctionTE, so we take &'t.
     pub fn get_array_consumer_prototype(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        fate: &FunctionEnvironmentT<'s, 't>,
+        fate: &'t FunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: ReferenceExpressionTE<'s, 't>,
+        callable_te: &'t ReferenceExpressionTE<'s, 't>,
         element_type: CoordT<'s, 't>,
         context_region: RegionT,
-    ) -> &'t PrototypeT<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
+        use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
+        use crate::typing::env::environment::{IInDenizenEnvironmentT};
+        let func_name = self.scout_arena.intern_imprecise_name(
+            IImpreciseNameValS::CodeName(CodeNameS { name: self.keywords.underscores_call }));
+        let param_filters = vec![callable_te.result().underlying_coord(), element_type];
+        let calling_env = IInDenizenEnvironmentT::from(fate);
+        match self.find_function(calling_env, coutputs, range, call_location, func_name, &[], &[], context_region, &param_filters, &[], false)?
+        {
+            Err(_e) => panic!("CouldntFindFunctionToCallT"),
+            Ok(sfs) => Ok(sfs.prototype),
+        }
     }
 /*
   def getArrayConsumerPrototype(

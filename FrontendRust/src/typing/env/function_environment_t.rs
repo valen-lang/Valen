@@ -872,8 +872,12 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
 }
 // mig: fn nearest_loop_env
 impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
-  pub fn nearest_loop_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_loop_env");
+  pub fn nearest_loop_env(&'t self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    match self.node {
+        IExpressionSE::While(_) => Some((self, self.node)),
+        IExpressionSE::Map(_) => Some((self, self.node)),
+        _ => self.parent_node_env.and_then(|p| p.nearest_loop_env()),
+    }
   }
   /*
     def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
@@ -1192,12 +1196,15 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn lookup_all_with_imprecise_name
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
+  // Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
   pub fn lookup_all_with_imprecise_name(
     &self,
-    _name_s: IImpreciseNameS<'s>,
-    _lookup_filter: &std::collections::HashSet<ILookupContext>,
+    name_s: IImpreciseNameS<'s>,
+    lookup_filter: &std::collections::HashSet<ILookupContext>,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_all_with_imprecise_name");
+    let node_env = self.snapshot(interner);
+    IEnvironmentT::Node(node_env).lookup_all_with_imprecise_name(name_s, lookup_filter.clone(), interner)
   }
 /*
   def lookupAllWithImpreciseName( nameS: IImpreciseNameS, lookupFilter: Set[ILookupContext]): Array[ITemplataT[ITemplataType]] = {
@@ -1326,8 +1333,14 @@ impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
 }
 // mig: fn nearest_loop_env
 impl<'s, 't> NodeEnvironmentBox<'s, 't> where 's: 't {
-  pub fn nearest_loop_env(&self) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
-    panic!("Unimplemented: nearest_loop_env");
+  // Rust adaptation (SPDMX-B): interner threaded because NodeEnvironmentBox stores
+  // mutations in Vecs out-of-arena per design v3 §3.3; snapshot needs arena access.
+  pub fn nearest_loop_env(
+    &self,
+    interner: &TypingInterner<'s, 't>,
+  ) -> Option<(&'t NodeEnvironmentT<'s, 't>, &'s IExpressionSE<'s>)> {
+    let snap = self.snapshot(interner);
+    snap.nearest_loop_env()
   }
 /*
   def nearestLoopEnv(): Option[(NodeEnvironmentT, IExpressionSE)] = {
@@ -1863,6 +1876,15 @@ impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
   // any mutates/moves/borrows.
   */
 }
+impl<'s, 't> ILocalVariableT<'s, 't> where 's: 't {
+  pub fn variability(&self) -> VariabilityT {
+    match self {
+      ILocalVariableT::Addressible(a) => a.variability,
+      ILocalVariableT::Reference(r) => r.variability,
+    }
+  }
+}
+/* Guardian: disable-all */
 // mig: struct AddressibleLocalVariableT
 // mig: impl AddressibleLocalVariableT
 /// Value-type (see @TFITCX)

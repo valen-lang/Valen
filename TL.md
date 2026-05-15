@@ -61,6 +61,8 @@ Test infrastructure: 14 test files in `src/typing/test/` with 173 test bodies (c
 
 **Parallel Builder/Frozen APIs diverging asymmetrically from Scala.** When one Scala API (e.g. `TemplatasStore.addEntries`) is split into a Rust Builder + Frozen pair (`TemplatasStoreBuilder::add_entries` at `environment.rs:851-862` vs `TemplatasStoreT::add_entries` at `environment.rs:942-979`), both must mirror Scala's full logic including special-case branches — review them side-by-side against the single Scala source.
 
+**Two-channel errors collapsed into one.** When a Scala fn both `throw`s `CompileErrorExceptionT` *and* returns `Result[_, SomeLocalError]`, the Rust mirror is nested `Result<Result<_, SomeLocalError>, ICompileErrorT>` — outer is the exception channel (every caller `?`-propagates), inner is the business channel (callers inspect and react). Merging them into a single Result loses the "always propagate" vs "caller decides" distinction.
+
 ---
 
 ## Known Residual Items
@@ -175,7 +177,7 @@ The slice-orchestrator runs all six steps. If the file already has hand-written 
 
 ## Proactively Add Inherited Dispatch Methods
 
-The slice pipeline only stubs methods defined directly on a Scala trait's body. Scala trait-extends-trait inheritance, abstract factory methods, and dispatch-tag enums all need explicit Rust delegation the pipeline doesn't generate. When you see a Scala child trait extending a parent (or a sealed trait with named implementors per SSTREX), proactively add all inherited dispatch methods on the child enum — don't wait for serial JR escalations. See "Slicing In New Definitions" below for the slice-in mechanics; annotate the new methods with `/* Guardian: disable-all */`. Defer dispatch enums with zero implementors until a call site needs them.
+The slice pipeline only stubs methods defined directly on a Scala trait's body. Scala trait-extends-trait inheritance, abstract factory methods, and dispatch-tag enums all need explicit Rust delegation the pipeline doesn't generate. When you see a Scala child trait extending a parent (or a sealed trait with named implementors per SSTREX), proactively add all inherited dispatch methods on the child enum — don't wait for serial JR escalations. See "Slicing In New Definitions" below for the slice-in mechanics; annotate the new methods with `/* Guardian: disable-all */`.
 
 ---
 

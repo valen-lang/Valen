@@ -11,6 +11,7 @@ use crate::typing::env::function_environment_t::NodeEnvironmentT;
 use crate::typing::templata::templata::FunctionTemplataT;
 use crate::typing::hinputs_t::InstantiationBoundArgumentsT;
 use crate::typing::types::types::{MutabilityT, OwnershipT, StructTT, VariabilityT};
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 use crate::utils::range::RangeS;
 
 /*
@@ -382,7 +383,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         interface_a: &'s InterfaceA<'s>,
-    ) -> &'t InterfaceDefinitionT<'s, 't> {
+    ) -> Result<&'t InterfaceDefinitionT<'s, 't>, ICompileErrorT<'s, 't>> {
         use crate::typing::names::names::{IInstantiationNameT, IInterfaceTemplateNameT, IdValT, INameT};
         use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
         use crate::typing::types::types::InterfaceTTValT;
@@ -434,23 +435,20 @@ where 's: 't,
             None => panic!("vwat: no mutability rune found for interface"),
         };
 
-        let internal_methods: Vec<(crate::typing::ast::ast::PrototypeT<'s, 't>, usize)> =
-            outer_env.templatas().name_to_entry.iter().filter_map(|(name, entry)| {
-                match entry {
-                    IEnvEntryT::Function(function_a) => {
-                        use crate::typing::templata::templata::FunctionTemplataT;
-                        use crate::typing::env::environment::IEnvironmentT;
-                        let outer_env_ienv = IEnvironmentT::from(outer_env);
-                        let header = self.evaluate_generic_function_from_non_call_for_header(
-                            coutputs, parent_ranges, call_location,
-                            FunctionTemplataT { outer_env: outer_env_ienv, function: function_a });
-                        let virtual_index = header.get_virtual_index()
-                            .expect("vwat: interface internal method must have a virtual index");
-                        Some((header.to_prototype(), virtual_index))
-                    }
-                    _ => None,
-                }
-            }).collect();
+        let mut internal_methods: Vec<(crate::typing::ast::ast::PrototypeT<'s, 't>, usize)> = Vec::new();
+        for (_name, entry) in outer_env.templatas().name_to_entry.iter() {
+            if let IEnvEntryT::Function(function_a) = entry {
+                use crate::typing::templata::templata::FunctionTemplataT;
+                use crate::typing::env::environment::IEnvironmentT;
+                let outer_env_ienv = IEnvironmentT::from(outer_env);
+                let header = self.evaluate_generic_function_from_non_call_for_header(
+                    coutputs, parent_ranges, call_location,
+                    FunctionTemplataT { outer_env: outer_env_ienv, function: function_a })?;
+                let virtual_index = header.get_virtual_index()
+                    .expect("vwat: interface internal method must have a virtual index");
+                internal_methods.push((header.to_prototype(), virtual_index));
+            }
+        }
 
         let rune_to_function_bound = self.assemble_rune_to_function_bound(interface_runes_env.templatas);
         let rune_to_impl_bound = self.assemble_rune_to_impl_bound(interface_runes_env.templatas);
@@ -478,7 +476,7 @@ where 's: 't,
 
         coutputs.add_interface(interface_def_t);
 
-        interface_def_t
+        Ok(interface_def_t)
     }
 /*
   // Takes a IEnvironment because we might be inside a:
@@ -672,7 +670,8 @@ where 's: 't,
         name: IFunctionDeclarationNameS<'s>,
         function_a: &'s FunctionA<'s>,
         members: &[&'t NormalStructMemberT<'s, 't>],
-    ) -> (StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>) {
+    ) -> Result<(StructTT<'s, 't>, MutabilityT, FunctionTemplataT<'s, 't>), ICompileErrorT<'s, 't>> {
+        use crate::typing::compiler_error_reporter::ICompileErrorT;
         use crate::typing::names::names::*;
         use crate::typing::templata::templata::*;
         use crate::typing::types::types::*;
@@ -856,9 +855,9 @@ where 's: 't,
             }
         };
         self.evaluate_generic_function_from_non_call(
-            coutputs, parent_ranges, call_location, drop_function_templata);
+            coutputs, parent_ranges, call_location, drop_function_templata)?;
 
-        (closured_vars_struct_ref, mutability, function_templata)
+        Ok((closured_vars_struct_ref, mutability, function_templata))
     }
 /*
   // Makes a struct to back a closure
