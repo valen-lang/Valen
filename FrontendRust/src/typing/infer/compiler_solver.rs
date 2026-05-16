@@ -57,6 +57,7 @@ import scala.collection.immutable.{HashSet, Map}
 import scala.collection.mutable
 
 */
+#[derive(Copy, Clone)]
 pub enum ITypingPassSolverError<'s, 't> {
     KindIsNotConcrete { kind: KindT<'s, 't> },
     KindIsNotInterface { kind: KindT<'s, 't> },

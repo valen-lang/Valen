@@ -1525,7 +1525,7 @@ where 's: 't,
                     IEnvEntryT::Struct(struct_a) => {
                         let templata = StructDefinitionTemplataT { declaring_env: env_ref, origin_struct: struct_a };
                         let unchecked_conclusions =
-                            self.compile_struct(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata);
+                            self.compile_struct(&mut coutputs, &[], LocationInDenizen { path: &[] }, templata)?;
                         let maybe_export =
                             struct_a.attributes.iter().find_map(|a| match a { ICitizenAttributeS::Export(e) => Some(e), _ => None });
                         match maybe_export {
@@ -3115,31 +3115,45 @@ where 's: 't,
         //     })
         // })
         let empty_kind_map: IndexMap<KindT<'s, 't>, &'t KindExportT<'s, 't>> = IndexMap::new();
-        coutputs.get_function_exports().iter().for_each(|func_export| {
+        for func_export in coutputs.get_function_exports().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(func_export.export_id.package_coord).unwrap_or(&empty_kind_map);
             let all_types: Vec<CoordT<'s, 't>> = std::iter::once(func_export.prototype.return_type).chain(func_export.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
-                    panic!("implement: ExportedFunctionDependedOnNonExportedKind");
+                    let range_t = self.typing_interner.alloc_slice_copy(&[func_export.range]);
+                    let signature_t = self.typing_interner.alloc(func_export.prototype.to_signature());
+                    return Err(ICompileErrorT::ExportedFunctionDependedOnNonExportedKind {
+                        range: range_t,
+                        paackage: *func_export.export_id.package_coord,
+                        signature: signature_t,
+                        non_exported_kind: param_type.kind,
+                    });
                 }
             }
-        });
+        }
 
-        coutputs.get_function_externs().iter().for_each(|function_extern| {
+        for function_extern in coutputs.get_function_externs().iter() {
             let exported_kind_to_export = package_to_kind_to_export.get(function_extern.extern_placeholdered_id.package_coord).unwrap_or(&empty_kind_map);
             let all_types: Vec<CoordT<'s, 't>> = std::iter::once(function_extern.prototype.return_type).chain(function_extern.prototype.param_types().iter().copied()).collect();
             for param_type in all_types {
                 if !self.is_primitive(param_type.kind) && !exported_kind_to_export.contains_key(&param_type.kind) {
-                    panic!("implement: ExternFunctionDependedOnNonExportedKind");
+                    let range_t = self.typing_interner.alloc_slice_copy(&[function_extern.range]);
+                    let signature_t = self.typing_interner.alloc(function_extern.prototype.to_signature());
+                    return Err(ICompileErrorT::ExternFunctionDependedOnNonExportedKind {
+                        range: range_t,
+                        paackage: *function_extern.extern_placeholdered_id.package_coord,
+                        signature: signature_t,
+                        non_exported_kind: param_type.kind,
+                    });
                 }
             }
-        });
+        }
 
         // packageToKindToExport.foreach((packageCoord, exportedKindToExport) =>
         //   exportedKindToExport.foreach((exportedKind, (kind, export)) =>
         //     exportedKind match { case StructTT(_) => ...; case contentsStaticSizedArrayTT(...) => ...; ... }))
-        package_to_kind_to_export.iter().for_each(|(package_coord, exported_kind_to_export)| {
-            exported_kind_to_export.iter().for_each(|(exported_kind, export)| {
+        for (package_coord, exported_kind_to_export) in package_to_kind_to_export.iter() {
+            for (exported_kind, export) in exported_kind_to_export.iter() {
                 match exported_kind {
                     KindT::Struct(sr) => {
                         let struct_def = coutputs.lookup_struct(sr.id, self);
@@ -3165,14 +3179,32 @@ where 's: 't,
                                         && !self.is_primitive(member_kind)
                                         && !exported_kind_to_export.contains_key(&member_kind)
                                     {
-                                        panic!("implement: ensure_deep_exports — ExportedImmutableKindDependedOnNonExportedKind");
+                                        let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
+                                        return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                                            range: range_t,
+                                            paackage: **package_coord,
+                                            exported_kind: *exported_kind,
+                                            non_exported_kind: member_kind,
+                                        });
                                     }
                                 }
                             }
                         }
                     }
-                    KindT::StaticSizedArray(_as_tt) => {
-                        panic!("implement: ensure_deep_exports — contentsStaticSizedArrayTT");
+                    KindT::StaticSizedArray(as_tt) => {
+                        let element_kind = as_tt.element_type().kind;
+                        if as_tt.mutability() == ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable })
+                            && !self.is_primitive(element_kind)
+                            && !exported_kind_to_export.contains_key(&element_kind)
+                        {
+                            let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
+                            return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                                range: range_t,
+                                paackage: **package_coord,
+                                exported_kind: *exported_kind,
+                                non_exported_kind: element_kind,
+                            });
+                        }
                     }
                     KindT::RuntimeSizedArray(rsa) => {
                         let mutability = match rsa.name.local_name {
@@ -3187,7 +3219,13 @@ where 's: 't,
                             && !self.is_primitive(element_kind)
                             && !exported_kind_to_export.contains_key(&element_kind)
                         {
-                            panic!("implement: ensure_deep_exports — ExportedImmutableKindDependedOnNonExportedKind (rsa)");
+                            let range_t = self.typing_interner.alloc_slice_copy(&[export.range]);
+                            return Err(ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind {
+                                range: range_t,
+                                paackage: **package_coord,
+                                exported_kind: *exported_kind,
+                                non_exported_kind: element_kind,
+                            });
                         }
                     }
                     KindT::Interface(_) => {}
@@ -3196,8 +3234,8 @@ where 's: 't,
                         panic!("vwat: unexpected kind in exportedKindToExport");
                     }
                 }
-            });
-        });
+            }
+        }
         Ok(())
     }
     /*

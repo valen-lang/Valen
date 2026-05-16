@@ -139,6 +139,7 @@ override def hashCode(): Int = vcurious() }
 
 
 */
+#[derive(Copy, Clone)]
 pub struct FindFunctionFailure<'s, 't> {
     pub name: IImpreciseNameS<'s>,
     pub args: &'t [CoordT<'s, 't>],

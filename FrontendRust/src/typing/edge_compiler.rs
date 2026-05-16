@@ -18,6 +18,7 @@ use crate::typing::compiler_outputs::*;
 use crate::interner::Interner;
 use crate::utils::arena_index_map::ArenaIndexMap;
 use crate::typing::function::function_compiler::IDefineFunctionResult;
+use crate::typing::compiler_error_reporter::ICompileErrorT;
 
 /*
 package dev.vale.typing
@@ -124,7 +125,7 @@ where 's: 't,
                                     overriding_citizen_template_id,
                                     *abstract_function_prototype,
                                     *abstract_index,
-                                );
+                                ).unwrap_or_else(|_| panic!("implement: ICompileErrorT from look_for_override in compile_i_tables"));
                                 (abstract_function_prototype.id, self.typing_interner.alloc(overrride))
                             }).collect();
                         let overriding_citizen = overriding_impl.sub_citizen;
@@ -517,7 +518,7 @@ where 's: 't,
         sub_citizen_template_id: IdT<'s, 't>,
         abstract_function_prototype: PrototypeT<'s, 't>,
         abstract_index: i32,
-    ) -> OverrideT<'s, 't> {
+    ) -> Result<OverrideT<'s, 't>, ICompileErrorT<'s, 't>> {
         use crate::typing::infer_compiler::InitialKnown;
         use crate::typing::templata_compiler::IBoundArgumentsSource;
         use crate::postparsing::rules::rules::RuneUsage;
@@ -640,7 +641,7 @@ where 's: 't,
                 args[abstract_index as usize] = Some(dispatcher_placeholdered_abstract_param_type);
                 args
             },
-        );
+        )?;
         let (dispatching_func_prototype, dispatcher_inner_inferences, dispatcher_instantiation_bound_params) =
             match define_result {
                 IDefineFunctionResult::DefineFunctionFailure(_f) => {
@@ -922,7 +923,7 @@ where 's: 't,
             )
         };
 
-        OverrideT {
+        Ok(OverrideT {
             dispatcher_call_id: *dispatcher_id_ref,
             impl_placeholder_to_dispatcher_placeholder: impl_placeholder_to_dispatcher_placeholder_slice,
             impl_placeholder_to_case_placeholder: impl_independent_placeholder_to_case_placeholder_slice,
@@ -930,7 +931,7 @@ where 's: 't,
             case_id: *dispatcher_case_id_ref,
             override_prototype: *found_function.prototype,
             dispatcher_instantiation_bound_params,
-        }
+        })
     }
 /*
   private def lookForOverride(

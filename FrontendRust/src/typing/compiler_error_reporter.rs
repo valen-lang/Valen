@@ -133,7 +133,75 @@ pub enum ICompileErrorT<'s, 't> {
     RangedInternalErrorT { range: &'t [RangeS<'s>], message: &'s str },
 }
 /*
-sealed trait ICompileErrorT { def range: List[RangeS] }
+sealed trait ICompileErrorT {
+*/
+// mig: fn range
+impl<'s, 't> ICompileErrorT<'s, 't> {
+    pub fn range(&self) -> &[RangeS<'s>] {
+        match self {
+            Self::CouldntNarrowDownCandidates { range, .. } => *range,
+            Self::CouldntSolveRuneTypesT { range, .. } => *range,
+            Self::NotEnoughGenericArgs { range, .. } => *range,
+            Self::ImplSubCitizenNotFound { range, .. } => *range,
+            Self::ImplSuperInterfaceNotFound { range, .. } => *range,
+            Self::ImmStructCantHaveVaryingMember { range, .. } => *range,
+            Self::ImmStructCantHaveMutableMember { range, .. } => *range,
+            Self::CantReconcileBranchesResults { range, .. } => *range,
+            Self::IndexedArrayWithNonInteger { range, .. } => *range,
+            Self::WrongNumberOfDestructuresError { range, .. } => *range,
+            Self::CantDowncastUnrelatedTypes { range, .. } => *range,
+            Self::CantDowncastToInterface { range, .. } => *range,
+            Self::CouldntFindTypeT { range, .. } => *range,
+            Self::TooManyTypesWithNameT { range, .. } => *range,
+            Self::ArrayElementsHaveDifferentTypes { range, .. } => *range,
+            Self::UnexpectedArrayElementType { range, .. } => *range,
+            Self::InitializedWrongNumberOfElements { range, .. } => *range,
+            Self::NewImmRSANeedsCallable { range, .. } => *range,
+            Self::CannotSubscriptT { range, .. } => *range,
+            Self::NonReadonlyReferenceFoundInPureFunctionParameter { range, .. } => *range,
+            Self::CouldntFindIdentifierToLoadT { range, .. } => *range,
+            Self::CouldntFindMemberT { range, .. } => *range,
+            Self::BodyResultDoesntMatch { range, .. } => *range,
+            Self::CouldntConvertForReturnT { range, .. } => *range,
+            Self::CouldntConvertForMutateT { range, .. } => *range,
+            Self::CantMoveOutOfMemberT { range, .. } => *range,
+            Self::CouldntFindFunctionToCallT { range, .. } => *range,
+            Self::CouldntEvaluateFunction { range, .. } => *range,
+            Self::CouldntEvaluatImpl { range, .. } => *range,
+            Self::CouldntEvaluateStruct { range, .. } => *range,
+            Self::CouldntEvaluateInterface { range, .. } => *range,
+            Self::CouldntFindOverrideT { range, .. } => *range,
+            Self::ExportedFunctionDependedOnNonExportedKind { range, .. } => *range,
+            Self::ExternFunctionDependedOnNonExportedKind { range, .. } => *range,
+            Self::ExportedImmutableKindDependedOnNonExportedKind { range, .. } => *range,
+            Self::TypeExportedMultipleTimes { range, .. } => *range,
+            Self::CantUseUnstackifiedLocal { range, .. } => *range,
+            Self::CantUnstackifyOutsideLocalFromInsideWhile { range, .. } => *range,
+            Self::CantRestackifyOutsideLocalFromInsideWhile { range, .. } => *range,
+            Self::FunctionAlreadyExists { new_function_range, .. } => std::slice::from_ref(new_function_range),
+            Self::CantMutateFinalMember { range, .. } => *range,
+            Self::CantMutateFinalElement { range, .. } => *range,
+            Self::CantUseReadonlyReferenceAsReadwrite { range, .. } => *range,
+            Self::LambdaReturnDoesntMatchInterfaceConstructor { range, .. } => *range,
+            Self::IfConditionIsntBoolean { range, .. } => *range,
+            Self::WhileConditionIsntBoolean { range, .. } => *range,
+            Self::CantMoveFromGlobal { range, .. } => *range,
+            Self::HigherTypingInferError { range, .. } => *range,
+            Self::AbstractMethodOutsideOpenInterface { range, .. } => *range,
+            Self::TypingPassSolverError { range, .. } => *range,
+            Self::TypingPassResolvingError { range, .. } => *range,
+            Self::TypingPassDefiningError { range, .. } => *range,
+            Self::CantImplNonInterface { range, .. } => *range,
+            Self::NonCitizenCantImpl { range, .. } => *range,
+            Self::RangedInternalErrorT { range, .. } => *range,
+        }
+    }
+    /*
+  def range: List[RangeS]
+    */
+}
+/*
+}
 */
 /*
 case class CouldntNarrowDownCandidates(range: List[RangeS], candidates: Vector[RangeS]) extends ICompileErrorT {

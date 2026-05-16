@@ -809,7 +809,7 @@ where 's: 't,
             outer_env, &identifying_runes, &inferred_templatas, &reachable_bound_protos));
 
         let prototype = self.get_generic_function_prototype_from_call(
-            runed_env, coutputs, call_range, function);
+            runed_env, coutputs, call_range, function)?;
 
         let prototype_templata = self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(prototype) });
 
@@ -947,7 +947,7 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         args: &[Option<CoordT<'s, 't>>],
-    ) -> IDefineFunctionResult<'s, 't> {
+    ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let function = near_env.function;
         self.check_closure_concerns_handled(near_env);
 
@@ -1042,13 +1042,13 @@ where 's: 't,
         let runed_env_ref = self.typing_interner.alloc(runed_env);
         let prototype =
             self.get_generic_function_prototype_from_call(
-                runed_env_ref, coutputs, call_range, function);
+                runed_env_ref, coutputs, call_range, function)?;
 
-        IDefineFunctionResult::DefineFunctionSuccess(DefineFunctionSuccess {
+        Ok(IDefineFunctionResult::DefineFunctionSuccess(DefineFunctionSuccess {
             prototype: self.typing_interner.alloc(PrototypeTemplataT { prototype: self.typing_interner.alloc(prototype) }),
             inferences,
             instantiation_bound_params: instantiation_bound_params,
-        })
+        }))
     }
 
 /*

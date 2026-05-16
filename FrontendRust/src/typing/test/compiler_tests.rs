@@ -3226,9 +3226,24 @@ fn zero_method_anonymous_interface() {
 */
 // mig: fn reports_when_exported_function_depends_on_non_exported_param
 #[test]
-#[ignore]
 fn reports_when_exported_function_depends_on_non_exported_param() {
-    panic!("Unmigrated test: reports_when_exported_function_depends_on_non_exported_param");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct Firefly { }\nexported func moo(firefly &Firefly) { }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when exported function depends on non-exported param") {
@@ -3245,9 +3260,24 @@ fn reports_when_exported_function_depends_on_non_exported_param() {
 */
 // mig: fn reports_when_exported_function_depends_on_non_exported_return
 #[test]
-#[ignore]
 fn reports_when_exported_function_depends_on_non_exported_return() {
-    panic!("Unmigrated test: reports_when_exported_function_depends_on_non_exported_return");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import panicutils.*;\nstruct Firefly { }\nexported func moo() &Firefly { __pretend<&Firefly>() }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedFunctionDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when exported function depends on non-exported return") {
@@ -3266,9 +3296,24 @@ fn reports_when_exported_function_depends_on_non_exported_return() {
 */
 // mig: fn reports_when_extern_function_depends_on_non_exported_param
 #[test]
-#[ignore]
 fn reports_when_extern_function_depends_on_non_exported_param() {
-    panic!("Unmigrated test: reports_when_extern_function_depends_on_non_exported_param");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct Firefly { }\nextern func moo(firefly &Firefly);";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when extern function depends on non-exported param") {
@@ -3285,9 +3330,24 @@ fn reports_when_extern_function_depends_on_non_exported_param() {
 */
 // mig: fn reports_when_extern_function_depends_on_non_exported_return
 #[test]
-#[ignore]
 fn reports_when_extern_function_depends_on_non_exported_return() {
-    panic!("Unmigrated test: reports_when_extern_function_depends_on_non_exported_return");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct Firefly imm { }\nextern func moo() &Firefly;";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExternFunctionDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExternFunctionDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when extern function depends on non-exported return") {
@@ -3304,9 +3364,24 @@ fn reports_when_extern_function_depends_on_non_exported_return() {
 */
 // mig: fn reports_when_exported_struct_depends_on_non_exported_member
 #[test]
-#[ignore]
 fn reports_when_exported_struct_depends_on_non_exported_member() {
-    panic!("Unmigrated test: reports_when_exported_struct_depends_on_non_exported_member");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported struct Firefly imm {\n  raza Raza;\n}\nstruct Raza imm { }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when exported struct depends on non-exported member") {
@@ -3419,9 +3494,36 @@ fn reports_when_reading_nonexistant_local() {
 */
 // mig: fn reports_when_mutating_after_moving
 #[test]
-#[ignore]
 fn reports_when_mutating_after_moving() {
-    panic!("Unmigrated test: reports_when_mutating_after_moving");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
+    use crate::interner::StrI;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Weapon { ammo! int; }\n",
+        "struct Marine { weapon! Weapon; }\n",
+        "exported func main() int {\n",
+        "  m = Marine(Weapon(7));\n",
+        "  newWeapon = Weapon(10);\n",
+        "  set m.weapon = newWeapon;\n",
+        "  set newWeapon.ammo = 11;\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
+        _other => panic!("expected CantUseUnstackifiedLocal"),
+    }
 }
 /*
   test("Reports when mutating after moving") {
@@ -3492,9 +3594,36 @@ fn tests_export_struct_twice() {
 */
 // mig: fn reports_when_reading_after_moving
 #[test]
-#[ignore]
 fn reports_when_reading_after_moving() {
-    panic!("Unmigrated test: reports_when_reading_after_moving");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
+    use crate::interner::StrI;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Weapon { ammo! int; }\n",
+        "struct Marine { weapon! Weapon; }\n",
+        "exported func main() int {\n",
+        "  m = Marine(Weapon(7));\n",
+        "  newWeapon = Weapon(10);\n",
+        "  set m.weapon = newWeapon;\n",
+        "  println(newWeapon.ammo);\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::CantUseUnstackifiedLocal { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("newWeapon"), .. }), .. } => {}
+        _other => panic!("expected CantUseUnstackifiedLocal"),
+    }
 }
 /*
   test("Reports when reading after moving") {
@@ -3523,9 +3652,35 @@ fn reports_when_reading_after_moving() {
 */
 // mig: fn reports_when_moving_from_inside_a_while
 #[test]
-#[ignore]
 fn reports_when_moving_from_inside_a_while() {
-    panic!("Unmigrated test: reports_when_moving_from_inside_a_while");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::typing::names::names::{IVarNameT, CodeVarNameT};
+    use crate::interner::StrI;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Marine { ammo int; }\n",
+        "exported func main() int {\n",
+        "  m = Marine(7);\n",
+        "  while (false) {\n",
+        "    drop(m);\n",
+        "  }\n",
+        "  return 42;\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { local_id: IVarNameT::CodeVar(CodeVarNameT { name: StrI("m"), .. }), .. } => {}
+        _other => panic!("expected CantUnstackifyOutsideLocalFromInsideWhile"),
+    }
 }
 /*
   test("Reports when moving from inside a while") {
@@ -3551,9 +3706,48 @@ fn reports_when_moving_from_inside_a_while() {
 */
 // mig: fn cant_subscript_non_subscriptable_type
 #[test]
-#[ignore]
 fn cant_subscript_non_subscriptable_type() {
-    panic!("Unmigrated test: cant_subscript_non_subscriptable_type");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::typing::types::types::{KindT, StructTT};
+    use crate::typing::names::names::{INameT, IStructTemplateNameT, StructNameT, StructTemplateNameT, IdT};
+    use crate::interner::StrI;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = concat!(
+        "struct Weapon { ammo! int; }\n",
+        "exported func main() int {\n",
+        "  weapon = Weapon(10);\n",
+        "  return weapon[42];\n",
+        "}\n",
+    );
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::CannotSubscriptT {
+            tyype: KindT::Struct(StructTT {
+                id: IdT {
+                    local_name: INameT::Struct(StructNameT {
+                        template: IStructTemplateNameT::StructTemplate(StructTemplateNameT {
+                            human_name: StrI("Weapon"), ..
+                        }),
+                        template_args: &[],
+                        ..
+                    }),
+                    ..
+                },
+                ..
+            }),
+            ..
+        } => {}
+        _other => panic!("expected CannotSubscriptT for Weapon struct"),
+    }
 }
 /*
   test("Cant subscript non-subscriptable type") {
@@ -3576,9 +3770,198 @@ fn cant_subscript_non_subscriptable_type() {
 */
 // mig: fn humanize_errors
 #[test]
-#[ignore]
 fn humanize_errors() {
-    panic!("Unmigrated test: humanize_errors");
+    use crate::interner::StrI;
+    use crate::postparsing::names::{
+        CodeNameS, CodeRuneS, FunctionNameS, IFunctionDeclarationNameS, IImpreciseNameS,
+        IImpreciseNameValS, INameS, IRuneValS, TopLevelStructDeclarationNameS,
+    };
+    use crate::typing::compiler_error_humanizer::humanize;
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::typing::names::names::{
+        CodeVarNameT, ExportNameT, ExportTemplateNameT, FunctionNameValT, FunctionTemplateNameT,
+        IdValT, INameT, IStructTemplateNameT, IVarNameT, InterfaceNameValT, InterfaceTemplateNameT,
+        StructNameValT, StructTemplateNameT,
+    };
+    use crate::typing::ast::ast::{KindExportT, SignatureValT};
+    use crate::typing::types::types::{InterfaceTTValT, KindT, OwnershipT, RegionT, StructTTValT};
+    use crate::typing::templata::templata::{ITemplataT, KindTemplataT};
+    use crate::typing::typing_interner::TypingInterner;
+    use crate::typing::overload_resolver::FindFunctionFailure;
+    use crate::solver::solver::{FailedSolve, ISolverError, RuleError, Step};
+    use crate::typing::infer::compiler_solver::ITypingPassSolverError;
+    use crate::utils::range::{CodeLocationS, RangeS};
+    use crate::utils::code_hierarchy::FileCoordinateMap;
+    use crate::utils::source_code_utils::{
+        humanize_pos_code_map, line_containing, line_range_containing, lines_between,
+    };
+
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let typing_interner = TypingInterner::new(&typing_bump);
+
+    let tz_code_loc = CodeLocationS::test_zero(&scout_arena);
+    let tz = RangeS::test_zero(&scout_arena);
+    let tz_slice: &[RangeS] = typing_bump.alloc_slice_copy(&[tz]);
+    let test_tld = scout_arena.intern_package_coordinate(scout_arena.intern_str("test"), &[]);
+
+    let filenames_and_sources = FileCoordinateMap::test(&scout_arena, "blah blah blah\nblah blah blah".to_string());
+    let humanize_pos = |x| humanize_pos_code_map(&filenames_and_sources, &x);
+    let lines_between = |x, y| lines_between(&filenames_and_sources, &x, &y);
+    let line_range_containing = |x| line_range_containing(&filenames_and_sources, &x);
+    let line_containing = |x| line_containing(&filenames_and_sources, &x);
+
+    let firefly_struct_template_name = typing_interner.intern_struct_template_name(
+        StructTemplateNameT { human_name: scout_arena.intern_str("Firefly"), _phantom: std::marker::PhantomData });
+    let firefly_struct_name = typing_interner.intern_struct_name(
+        StructNameValT { template: IStructTemplateNameT::StructTemplate(firefly_struct_template_name), template_args: &[] });
+    let firefly_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Struct(firefly_struct_name),
+    });
+    let firefly_tt = typing_interner.intern_struct_tt(StructTTValT { id: *firefly_id });
+    let firefly_kind = KindT::Struct(firefly_tt);
+    let firefly_coord = CoordT { ownership: OwnershipT::Own, region: RegionT, kind: firefly_kind };
+
+    let serenity_struct_template_name = typing_interner.intern_struct_template_name(
+        StructTemplateNameT { human_name: scout_arena.intern_str("Serenity"), _phantom: std::marker::PhantomData });
+    let serenity_struct_name = typing_interner.intern_struct_name(
+        StructNameValT { template: IStructTemplateNameT::StructTemplate(serenity_struct_template_name), template_args: &[] });
+    let serenity_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Struct(serenity_struct_name),
+    });
+    let serenity_tt = typing_interner.intern_struct_tt(StructTTValT { id: *serenity_id });
+    let serenity_kind = KindT::Struct(serenity_tt);
+    let serenity_coord = CoordT { ownership: OwnershipT::Own, region: RegionT, kind: serenity_kind };
+
+    let ispaceship_interface_template_name = typing_interner.intern_interface_template_name(
+        InterfaceTemplateNameT { human_namee: scout_arena.intern_str("ISpaceship"), _phantom: std::marker::PhantomData });
+    let ispaceship_interface_name = typing_interner.intern_interface_name(
+        InterfaceNameValT { template: ispaceship_interface_template_name, template_args: &[] });
+    let ispaceship_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Interface(ispaceship_interface_name),
+    });
+    let ispaceship_tt = typing_interner.intern_interface_tt(InterfaceTTValT { id: *ispaceship_id });
+    let ispaceship_kind = KindT::Interface(ispaceship_tt);
+
+    let unrelated_struct_template_name = typing_interner.intern_struct_template_name(
+        StructTemplateNameT { human_name: scout_arena.intern_str("Spoon"), _phantom: std::marker::PhantomData });
+    let unrelated_struct_name = typing_interner.intern_struct_name(
+        StructNameValT { template: IStructTemplateNameT::StructTemplate(unrelated_struct_template_name), template_args: &[] });
+    let unrelated_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Struct(unrelated_struct_name),
+    });
+    let unrelated_tt = typing_interner.intern_struct_tt(StructTTValT { id: *unrelated_id });
+    let unrelated_kind = KindT::Struct(unrelated_tt);
+
+    let myfunc_template_name = typing_interner.intern_function_template_name(
+        FunctionTemplateNameT { human_name: scout_arena.intern_str("myFunc"), code_location: tz_code_loc, _phantom: std::marker::PhantomData });
+    let firefly_func_name = typing_interner.intern_function_name(
+        FunctionNameValT { template: myfunc_template_name, template_args: &[], parameters: &[firefly_coord] });
+    let firefly_signature_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Function(firefly_func_name),
+    });
+    let firefly_signature = typing_interner.intern_signature(
+        SignatureValT { id: IdValT { package_coord: test_tld, init_steps: &[], local_name: INameT::Function(firefly_func_name) } });
+
+    let export_template_name = typing_interner.intern_export_template_name(
+        ExportTemplateNameT { code_loc: tz_code_loc, _phantom: std::marker::PhantomData });
+    let export_name = typing_interner.intern_export_name(
+        ExportNameT { template: export_template_name, region: RegionT });
+    let firefly_export_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Export(export_name),
+    });
+    let firefly_export = KindExportT { range: tz, tyype: firefly_kind, id: *firefly_export_id, exported_name: scout_arena.intern_str("Firefly") };
+    let serenity_export_id = typing_interner.intern_id(IdValT {
+        package_coord: test_tld, init_steps: &[], local_name: INameT::Export(export_name),
+    });
+    let serenity_export = KindExportT { range: tz, tyype: firefly_kind, id: *serenity_export_id, exported_name: scout_arena.intern_str("Serenity") };
+    let exports_slice: &[KindExportT] = typing_bump.alloc_slice_fill_iter([firefly_export, serenity_export].into_iter());
+
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntFindTypeT { range: tz_slice, name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("Spaceship") })) }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntFindFunctionToCallT { range: tz_slice, fff: FindFunctionFailure {
+            name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("someFunc") })),
+            args: &[], rejected_callee_to_reason: &[],
+        } }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntFindFunctionToCallT { range: tz_slice, fff: FindFunctionFailure {
+            name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("") })),
+            args: &[], rejected_callee_to_reason: &[],
+        } }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CannotSubscriptT { range: tz_slice, tyype: firefly_kind }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntFindIdentifierToLoadT { range: tz_slice, name: scout_arena.intern_imprecise_name(IImpreciseNameValS::CodeName(CodeNameS { name: scout_arena.intern_str("spaceship") })) }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntFindMemberT { range: tz_slice, member_name: "hp" }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::BodyResultDoesntMatch {
+            range: tz_slice,
+            function_name: IFunctionDeclarationNameS::FunctionName(FunctionNameS {
+                name: scout_arena.intern_str("myFunc"),
+                code_location: tz_code_loc,
+            }),
+            expected_return_type: firefly_coord,
+            result_type: serenity_coord,
+        }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntConvertForReturnT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CouldntConvertForMutateT { range: tz_slice, expected_type: firefly_coord, actual_type: serenity_coord }).is_empty());
+    let hp_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("hp"), _phantom: std::marker::PhantomData });
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantMoveOutOfMemberT { range: tz_slice, name: IVarNameT::CodeVar(hp_var_name) }).is_empty());
+    let firefly_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("firefly"), _phantom: std::marker::PhantomData });
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantUseUnstackifiedLocal { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile { range: tz_slice, local_id: IVarNameT::CodeVar(firefly_var_name) }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::FunctionAlreadyExists { old_function_range: tz, new_function_range: tz, signature: *firefly_signature_id }).is_empty());
+    let bork_var_name: &CodeVarNameT = typing_bump.alloc(CodeVarNameT { name: scout_arena.intern_str("bork"), _phantom: std::marker::PhantomData });
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantMutateFinalMember { range: tz_slice, struct_: *serenity_tt, member_name: IVarNameT::CodeVar(bork_var_name) }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::LambdaReturnDoesntMatchInterfaceConstructor { range: tz_slice }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::IfConditionIsntBoolean { range: tz_slice, actual_type: firefly_coord }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::WhileConditionIsntBoolean { range: tz_slice, actual_type: firefly_coord }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantImplNonInterface { range: tz_slice, templata: ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })) }).is_empty());
+    let spaceship_snapshot_name_s = scout_arena.intern_struct_declaration_name(
+        TopLevelStructDeclarationNameS { name: scout_arena.intern_str("SpaceshipSnapshot"), range: tz });
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::ImmStructCantHaveVaryingMember { range: tz_slice, struct_name: INameS::TopLevelStructDeclaration(spaceship_snapshot_name_s), member_name: "fuel" }).is_empty());
+    let candidates_slice: &[FailedSolve<_, _, _, _>] = typing_bump.alloc_slice_fill_iter(std::iter::empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantDowncastUnrelatedTypes { range: tz_slice, source_kind: ispaceship_kind, target_kind: unrelated_kind, candidates: candidates_slice }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::CantDowncastToInterface { range: tz_slice, target_kind: *ispaceship_tt }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::ExportedFunctionDependedOnNonExportedKind { range: tz_slice, paackage: *test_tld, signature: firefly_signature, non_exported_kind: firefly_kind }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { range: tz_slice, paackage: *test_tld, exported_kind: serenity_kind, non_exported_kind: firefly_kind }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::ExternFunctionDependedOnNonExportedKind { range: tz_slice, paackage: *test_tld, signature: firefly_signature, non_exported_kind: firefly_kind }).is_empty());
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::TypeExportedMultipleTimes { range: tz_slice, paackage: *test_tld, exports: exports_slice }).is_empty());
+    let x_rune = scout_arena.intern_rune(IRuneValS::CodeRune(CodeRuneS { name: scout_arena.intern_str("X") }));
+    let mut step_conclusions = std::collections::HashMap::new();
+    step_conclusions.insert(x_rune, ITemplataT::Kind(typing_bump.alloc(KindTemplataT { kind: firefly_kind })));
+    assert!(!humanize(&scout_arena, &typing_interner, false, &humanize_pos, &lines_between, &line_range_containing, &line_containing,
+        ICompileErrorT::TypingPassSolverError { range: tz_slice, failed_solve: FailedSolve {
+            steps: vec![Step { complex: false, solved_rules: vec![], added_rules: vec![], conclusions: step_conclusions }],
+            conclusions: std::collections::HashMap::new(),
+            unsolved_rules: vec![],
+            unsolved_runes: vec![],
+            error: ISolverError::RuleError(RuleError { err: ITypingPassSolverError::KindIsNotConcrete { kind: ispaceship_kind }, _phantom: std::marker::PhantomData }),
+        } }).is_empty());
 }
 /*
   test("Humanize errors") {
@@ -3760,9 +4143,32 @@ fn humanize_errors() {
 */
 // mig: fn report_when_multiple_types_in_array
 #[test]
-#[ignore]
 fn report_when_multiple_types_in_array() {
-    panic!("Unmigrated test: report_when_multiple_types_in_array");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use std::collections::HashSet;
+    use crate::typing::types::types::{BoolT, RegionT};
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "exported func main() int {\n  arr = [#](true, 42);\n  return arr.1;\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ArrayElementsHaveDifferentTypes { types, .. } => {
+            let types_set: HashSet<CoordT> = types.iter().copied().collect();
+            assert_eq!(types_set, HashSet::from([
+                CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Int(IntT::I32) },
+                CoordT { ownership: OwnershipT::Share, region: RegionT, kind: KindT::Bool(BoolT) },
+            ]));
+        }
+        _other => panic!("expected ArrayElementsHaveDifferentTypes"),
+    }
 }
 /*
   test("Report when multiple types in array") {
@@ -3783,9 +4189,24 @@ fn report_when_multiple_types_in_array() {
 */
 // mig: fn report_when_abstract_method_defined_outside_open_interface
 #[test]
-#[ignore]
 fn report_when_abstract_method_defined_outside_open_interface() {
-    panic!("Unmigrated test: report_when_abstract_method_defined_outside_open_interface");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "import v.builtins.panic.*;\ninterface IBlah { }\nabstract func bork(virtual moo &IBlah);\nexported func main() {\n  bork(__vbi_panic());\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::AbstractMethodOutsideOpenInterface { .. } => {}
+        _other => panic!("expected AbstractMethodOutsideOpenInterface"),
+    }
 }
 /*
   test("Report when abstract method defined outside open interface") {
@@ -3806,9 +4227,24 @@ fn report_when_abstract_method_defined_outside_open_interface() {
 */
 // mig: fn report_when_imm_struct_has_varying_member
 #[test]
-#[ignore]
 fn report_when_imm_struct_has_varying_member() {
-    panic!("Unmigrated test: report_when_imm_struct_has_varying_member");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}\nexported func main() {\n  ship = Spaceship(\"Serenity\", 2);\n  println(ship.name);\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ImmStructCantHaveVaryingMember { .. } => {}
+        _other => panic!("expected ImmStructCantHaveVaryingMember"),
+    }
 }
 /*
   test("Report when imm struct has varying member") {
@@ -3832,9 +4268,24 @@ fn report_when_imm_struct_has_varying_member() {
 */
 // mig: fn report_imm_mut_mismatch_for_generic_type
 #[test]
-#[ignore]
 fn report_imm_mut_mismatch_for_generic_type() {
-    panic!("Unmigrated test: report_imm_mut_mismatch_for_generic_type");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct MyImmContainer<T Ref> imm\nwhere func drop(T)void { value T; }\nstruct MyMutStruct { }\nexported func main() { x = MyImmContainer<MyMutStruct>(MyMutStruct()); }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ImmStructCantHaveMutableMember { .. } => {}
+        _other => panic!("expected ImmStructCantHaveMutableMember"),
+    }
 }
 /*
   test("Report imm mut mismatch for generic type") {
@@ -3925,9 +4376,26 @@ fn tests_stamping_a_struct_and_its_implemented_interface_from_a_function_param()
 */
 // mig: fn report_when_imm_contains_varying_member
 #[test]
-#[ignore]
 fn report_when_imm_contains_varying_member() {
-    panic!("Unmigrated test: report_when_imm_contains_varying_member");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    use crate::postparsing::names::{INameS, TopLevelStructDeclarationNameS};
+    use crate::interner::StrI;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "struct Spaceship imm {\n  name! str;\n  numWings int;\n}";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ImmStructCantHaveVaryingMember { struct_name: INameS::TopLevelStructDeclaration(TopLevelStructDeclarationNameS { name: StrI("Spaceship"), .. }), member_name: "name", .. } => {}
+        _other => panic!("expected ImmStructCantHaveVaryingMember for Spaceship.name"),
+    }
 }
 /*
   test("Report when imm contains varying member") {
@@ -4341,9 +4809,24 @@ fn generates_free_function_for_imm_struct() {
 */
 // mig: fn reports_when_exported_ssa_depends_on_non_exported_element
 #[test]
-#[ignore]
 fn reports_when_exported_ssa_depends_on_non_exported_element() {
-    panic!("Unmigrated test: reports_when_exported_ssa_depends_on_non_exported_element");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "export [#5]<imm>Raza as RazaArray;\nstruct Raza imm { }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when exported SSA depends on non-exported element") {
@@ -4360,9 +4843,24 @@ fn reports_when_exported_ssa_depends_on_non_exported_element() {
 */
 // mig: fn reports_when_exported_rsa_depends_on_non_exported_element
 #[test]
-#[ignore]
 fn reports_when_exported_rsa_depends_on_non_exported_element() {
-    panic!("Unmigrated test: reports_when_exported_rsa_depends_on_non_exported_element");
+    use crate::typing::compiler_error_reporter::ICompileErrorT;
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+    let code = "export []<imm>Raza as RazaArray;\nstruct Raza imm { }";
+    let resolver = crate::builtins::builtins::get_embedded_modulized_code_map(&parse_arena, &parser_keywords)
+        .or(code_hierarchy::test_from_vec(&parse_arena, vec![code.to_string()]))
+        .or(crate::tests::tests::get_package_to_resource_resolver());
+    let mut compile = compiler_test_compilation(&scout_arena, &keywords, &parser_keywords, &parse_arena, &resolver, &typing_bump);
+    match compile.get_compiler_outputs().err().unwrap() {
+        ICompileErrorT::ExportedImmutableKindDependedOnNonExportedKind { .. } => {}
+        _other => panic!("expected ExportedImmutableKindDependedOnNonExportedKind"),
+    }
 }
 /*
   test("Reports when exported RSA depends on non-exported element") {

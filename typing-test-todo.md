@@ -61,20 +61,20 @@
 - [x] downcast_function_rrbfs
 - [x] reports_mismatched_return_type_when_expecting_void
 - [x] reports_when_reading_nonexistant_local
-- [ ] reports_when_mutating_after_moving
-- [ ] reports_when_reading_after_moving
-- [ ] reports_when_moving_from_inside_a_while
-- [ ] cant_subscript_non_subscriptable_type
-- [ ] report_when_multiple_types_in_array
-- [ ] report_when_abstract_method_defined_outside_open_interface
-- [ ] report_when_imm_struct_has_varying_member
-- [ ] report_imm_mut_mismatch_for_generic_type
-- [ ] report_when_imm_contains_varying_member
-- [ ] reports_when_exported_function_depends_on_non_exported_param
-- [ ] reports_when_exported_function_depends_on_non_exported_return
-- [ ] reports_when_extern_function_depends_on_non_exported_param
-- [ ] reports_when_extern_function_depends_on_non_exported_return
-- [ ] reports_when_exported_struct_depends_on_non_exported_member
-- [ ] reports_when_exported_ssa_depends_on_non_exported_element
-- [ ] reports_when_exported_rsa_depends_on_non_exported_element
-- [ ] humanize_errors
+- [x] reports_when_mutating_after_moving
+- [x] reports_when_reading_after_moving
+- [x] reports_when_moving_from_inside_a_while
+- [x] cant_subscript_non_subscriptable_type
+- [x] report_when_multiple_types_in_array
+- [x] report_when_abstract_method_defined_outside_open_interface
+- [x] report_when_imm_struct_has_varying_member
+- [x] report_imm_mut_mismatch_for_generic_type
+- [x] report_when_imm_contains_varying_member
+- [x] reports_when_exported_function_depends_on_non_exported_param
+- [x] reports_when_exported_function_depends_on_non_exported_return
+- [x] reports_when_extern_function_depends_on_non_exported_param
+- [x] reports_when_extern_function_depends_on_non_exported_return
+- [x] reports_when_exported_struct_depends_on_non_exported_member
+- [x] reports_when_exported_ssa_depends_on_non_exported_element
+- [x] reports_when_exported_rsa_depends_on_non_exported_element
+- [x] humanize_errors

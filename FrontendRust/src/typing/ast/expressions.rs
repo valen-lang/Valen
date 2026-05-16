@@ -359,7 +359,7 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
             AddressExpressionTE::LocalLookup(e) => e.variability(),
             AddressExpressionTE::StaticSizedArrayLookup(e) => panic!("Unimplemented: variability StaticSizedArrayLookup"),
             AddressExpressionTE::RuntimeSizedArrayLookup(e) => panic!("Unimplemented: variability RuntimeSizedArrayLookup"),
-            AddressExpressionTE::ReferenceMemberLookup(e) => panic!("Unimplemented: variability ReferenceMemberLookup"),
+            AddressExpressionTE::ReferenceMemberLookup(e) => e.variability,
             AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: variability AddressMemberLookup"),
         }
     }

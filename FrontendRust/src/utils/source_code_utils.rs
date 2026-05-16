@@ -34,7 +34,7 @@ import scala.collection.mutable.ArrayBuffer
 object SourceCodeUtils {
 */
 // mig: fn humanize_package
-fn humanize_package<'a>(package_coord: &'a crate::utils::code_hierarchy::PackageCoordinate<'a>) -> String {
+pub fn humanize_package<'a>(package_coord: &'a crate::utils::code_hierarchy::PackageCoordinate<'a>) -> String {
   let mut result = package_coord.module.as_str().to_string();
   for p in package_coord.packages.iter() {
     result.push('.');

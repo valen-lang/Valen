@@ -391,7 +391,7 @@ where 's: 't,
         variability_rune_a: IRuneS<'s>,
         exprs_2: Vec<&'t ReferenceExpressionTE<'s, 't>>,
         region: RegionT,
-    ) -> StaticArrayFromValuesTE<'s, 't> {
+    ) -> Result<StaticArrayFromValuesTE<'s, 't>, ICompileErrorT<'s, 't>> {
         use crate::postparsing::itemplatatype::CoordTemplataType;
         use crate::postparsing::rune_type_solver::solve_rune_type;
         use crate::typing::infer_compiler::{CompleteResolveSolve, InferEnv, InitialKnown};
@@ -424,7 +424,9 @@ where 's: 't,
         let member_types: HashSet<CoordT<'s, 't>> =
             exprs_2.iter().map(|e| e.result().coord).collect();
         if member_types.len() > 1 {
-            panic!("implement: evaluate_static_sized_array_from_values — ArrayElementsHaveDifferentTypes");
+            let parent_ranges_t = self.typing_interner.alloc_slice_copy(parent_ranges);
+            let types_t = self.typing_interner.alloc_slice_copy(&member_types.iter().copied().collect::<Vec<_>>());
+            return Err(ICompileErrorT::ArrayElementsHaveDifferentTypes { range: parent_ranges_t, types: types_t });
         }
         let member_type = *member_types.iter().next().expect("vassert: memberTypes is empty");
 
@@ -488,11 +490,11 @@ where 's: 't,
         };
         let ssa_ref = self.typing_interner.alloc(static_sized_array_type);
         let ssa_coord = CoordT { ownership, region, kind: KindT::StaticSizedArray(ssa_ref) };
-        StaticArrayFromValuesTE {
+        Ok(StaticArrayFromValuesTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs_2),
             result_reference: ssa_coord,
             array_type: ssa_ref,
-        }
+        })
     }
 /*
   def evaluateStaticSizedArrayFromValues(

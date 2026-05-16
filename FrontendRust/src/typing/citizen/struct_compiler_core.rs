@@ -62,7 +62,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_a: &'s StructA<'s>,
-    ) {
+    ) -> Result<(), ICompileErrorT<'s, 't>> {
         use crate::typing::names::names::{IInstantiationNameT, IStructTemplateNameT, IdValT, INameT};
         use crate::typing::env::environment::{TemplatasStoreBuilder, IEnvironmentT, ILookupContext};
         use crate::typing::types::types::StructTTValT;
@@ -154,17 +154,39 @@ where 's: 't,
         let members_vec = self.make_struct_members(struct_inner_env_ref, coutputs, struct_a.members);
 
         if mutability == ITemplataT::Mutability(crate::typing::templata::templata::MutabilityTemplataT { mutability: crate::typing::types::types::MutabilityT::Immutable }) {
-            for (_index, member) in members_vec.iter().enumerate() {
+            for (index, member) in members_vec.iter().enumerate() {
+                let member_s = &struct_a.members[index];
+                let member_range = member_s.range();
+                let member_name = match member_s {
+                    crate::postparsing::ast::IStructMemberS::NormalStructMember(m) => m.name.0,
+                    crate::postparsing::ast::IStructMemberS::VariadicStructMember(_) => "(unnamed)",
+                };
+                let member_range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(member_range).chain(parent_ranges.iter().copied()).collect();
+                let member_range_t = self.typing_interner.alloc_slice_copy(&member_range_with_parent);
+                let struct_name_s = match &struct_a.name {
+                    crate::postparsing::names::IStructDeclarationNameS::TopLevelStructDeclarationName(n) =>
+                        crate::postparsing::names::INameS::TopLevelStructDeclaration(n),
+                    other => panic!("implement: struct_name_s for non-TopLevelStructDeclarationName: {:?}", other),
+                };
                 match member {
                     IStructMemberT::Variadic(_) => {
                         panic!("implement: immutable variadic struct member check");
                     }
                     IStructMemberT::Normal(NormalStructMemberT { variability, tyype, .. }) => {
                         if *variability == VariabilityT::Varying {
-                            panic!("ImmStructCantHaveVaryingMember");
+                            return Err(ICompileErrorT::ImmStructCantHaveVaryingMember {
+                                range: member_range_t,
+                                struct_name: struct_name_s,
+                                member_name,
+                            });
                         }
                         if tyype.reference().ownership != OwnershipT::Share {
-                            panic!("ImmStructCantHaveMutableMember");
+                            return Err(ICompileErrorT::ImmStructCantHaveMutableMember {
+                                range: member_range_t,
+                                struct_name: struct_name_s,
+                                member_name,
+                            });
                         }
                     }
                 }
@@ -211,6 +233,7 @@ where 's: 't,
         });
 
         coutputs.add_struct(struct_def_t);
+        Ok(())
     }
 /*
   def compileStruct(

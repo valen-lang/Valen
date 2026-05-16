@@ -651,7 +651,7 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         struct_templata: StructDefinitionTemplataT<'s, 't>,
-    ) -> UncheckedDefiningConclusions<'s, 't> {
+    ) -> Result<UncheckedDefiningConclusions<'s, 't>, ICompileErrorT<'s, 't>> {
         use std::collections::HashMap;
         use std::marker::PhantomData;
         use crate::typing::infer_compiler::{InferEnv, include_rule_in_definition_solve};
@@ -755,8 +755,8 @@ where 's: 't,
         });
         let inner_env_ref = IInDenizenEnvironmentT::Citizen(inner_env);
         coutputs.declare_type_inner_env(struct_template_id, inner_env_ref);
-        self.compile_struct_core(outer_env, inner_env, coutputs, parent_ranges, call_location, struct_a);
-        unchecked_defining_conclusions
+        self.compile_struct_core(outer_env, inner_env, coutputs, parent_ranges, call_location, struct_a)?;
+        Ok(unchecked_defining_conclusions)
     }
 /*
   def compileStruct(

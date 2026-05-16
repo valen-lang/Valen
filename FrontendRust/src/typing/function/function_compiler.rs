@@ -478,7 +478,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         function_templata: FunctionTemplataT<'s, 't>,
         args: &[Option<CoordT<'s, 't>>],
-    ) -> IDefineFunctionResult<'s, 't> {
+    ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         let FunctionTemplataT { outer_env, function } = function_templata;
         self.evaluate_generic_virtual_dispatcher_function_for_prototype_closure_or_light(
             outer_env, coutputs, calling_env, call_range, call_location, function, args)

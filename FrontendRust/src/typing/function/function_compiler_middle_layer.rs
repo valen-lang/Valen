@@ -95,9 +95,9 @@ where 's: 't,
         parent_ranges: &[RangeS<'s>],
         param_kind: &KindT<'s, 't>,
         maybe_virtuality: Option<&AbstractSP<'s>>,
-    ) -> Option<AbstractT> {
+    ) -> Result<Option<AbstractT>, ICompileErrorT<'s, 't>> {
         match maybe_virtuality {
-            None => None,
+            None => Ok(None),
             Some(abstract_sp) => {
                 use crate::typing::types::types::KindT;
                 let interface_tt = match param_kind {
@@ -110,11 +110,14 @@ where 's: 't,
                     let interface_template = self.get_interface_template(interface_tt.id);
                     if !coutputs.lookup_sealed(interface_template) {
                         if env.id().init_steps != &interface_template.steps()[..] {
-                            panic!("AbstractMethodOutsideOpenInterface");
+                            let ranges: Vec<RangeS<'s>> =
+                                std::iter::once(abstract_sp.range).chain(parent_ranges.iter().copied()).collect();
+                            let ranges_t = self.typing_interner.alloc_slice_copy(&ranges);
+                            return Err(ICompileErrorT::AbstractMethodOutsideOpenInterface { range: ranges_t });
                         }
                     }
                 }
-                Some(crate::typing::ast::ast::AbstractT)
+                Ok(Some(crate::typing::ast::ast::AbstractT))
             }
         }
     }
@@ -193,7 +196,7 @@ where 's: 't,
             assert!(
                 rued_env_as_i.lookup_nearest_with_imprecise_name(imprecise_name, lookup_filter, self.typing_interner).is_some());
         }
-        let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params);
+        let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params)?;
 
         let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
         let param_types: Vec<CoordT<'s, 't>> = params2.iter().map(|p| p.tyype).collect();
@@ -357,7 +360,7 @@ where 's: 't,
                 coutputs.declare_function_outer_env(outer_env_id_ref, outer_env_as_i);
 
                 // val params2 = assembleFunctionParams(runedEnv, coutputs, callRange, function1.params)
-                let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params);
+                let params2 = self.assemble_function_params(rued_env_as_i, coutputs, call_range, &function1.params)?;
 
                 // val maybeReturnType = getMaybeReturnType(runedEnv, function1.maybeRetCoordRune.map(_.rune))
                 let maybe_return_type = self.get_maybe_return_type(rued_env, function1.maybe_ret_coord_rune.as_ref().map(|r| &r.rune));
@@ -565,7 +568,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         params1: &[ParameterS<'s>],
-    ) -> Vec<ParameterT<'s, 't>> {
+    ) -> Result<Vec<ParameterT<'s, 't>>, ICompileErrorT<'s, 't>> {
         // params1.zipWithIndex.map({ case (param1, index) =>
         params1.iter().enumerate().map(|(index, param1)| {
             //   val CoordTemplataT(coord) = vassertSome(
@@ -584,7 +587,7 @@ where 's: 't,
 
             //   val maybeVirtuality = evaluateMaybeVirtuality(env, coutputs, parentRanges, coord.kind, param1.virtuality)
             let maybe_virtuality = self.evaluate_maybe_virtuality(
-                env, coutputs, parent_ranges, &coord.kind, param1.virtuality.as_ref());
+                env, coutputs, parent_ranges, &coord.kind, param1.virtuality.as_ref())?;
 
             //   val nameT = param1.pattern.name match {
             //     case None => interner.intern(TypingIgnoredParamNameT(index))
@@ -600,12 +603,12 @@ where 's: 't,
             };
 
             //   ParameterT(nameT, maybeVirtuality, param1.preChecked, coord)
-            ParameterT {
+            Ok(ParameterT {
                 name: name_t,
                 virtuality: maybe_virtuality,
                 pre_checked: param1.pre_checked,
                 tyype: coord,
-            }
+            })
         }).collect()
     }
 
@@ -736,7 +739,7 @@ where 's: 't,
         coutputs: &CompilerOutputs<'s, 't>,
         call_range: &[RangeS<'s>],
         function1: &FunctionA<'s>,
-    ) -> PrototypeT<'s, 't> {
+    ) -> Result<PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {
         // Check preconditions
         for (template_param, _) in function1.rune_to_type.iter() {
             let imprecise_name = self.scout_arena.intern_imprecise_name(
@@ -755,13 +758,13 @@ where 's: 't,
         let needle_signature = SignatureT { id: named_env.id };
 
         let named_env_as_i = IInDenizenEnvironmentT::Function(named_env);
-        let params2 = self.assemble_function_params(named_env_as_i, coutputs, call_range, function1.params);
+        let params2 = self.assemble_function_params(named_env_as_i, coutputs, call_range, function1.params)?;
 
         let prototype = self.get_function_prototype_for_call(
             named_env, coutputs, call_range, &params2);
 
         assert!(prototype.to_signature() == needle_signature);
-        prototype
+        Ok(prototype)
     }
 
 /*

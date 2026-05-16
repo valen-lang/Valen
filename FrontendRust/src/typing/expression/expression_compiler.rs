@@ -208,15 +208,35 @@ where 's: 't,
         region: RegionT,
         name: IVarNameT<'s, 't>,
         target_ownership: LoadAsP,
-    ) -> Option<ExpressionTE<'s, 't>> {
-        match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name) {
+    ) -> Result<Option<ExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
+        match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
             Some(x) => {
                 let thing = self.soft_load(nenv, range, x, target_ownership, region);
                 let thing_ref: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(thing);
-                Some(ExpressionTE::Reference(thing_ref))
+                Ok(Some(ExpressionTE::Reference(thing_ref)))
             }
             None => {
-                panic!("implement: evaluate_lookup_for_load — None from evaluate_addressible_lookup");
+                let name_as_name_t: INameT<'s, 't> = name.into();
+                let lookup_filter: HashSet<ILookupContext> =
+                    [ILookupContext::TemplataLookupContext].into_iter().collect();
+                match nenv.lookup_nearest_with_name(name_as_name_t, &lookup_filter) {
+                    Some(ITemplataT::Integer(num)) => {
+                        Ok(Some(ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                            value: ITemplataT::Integer(num),
+                            bits: 32,
+                            region,
+                        })))))
+                    }
+                    Some(ITemplataT::Boolean(b)) => {
+                        Ok(Some(ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::ConstantBool(ConstantBoolTE {
+                            value: b,
+                            region,
+                            _phantom: std::marker::PhantomData,
+                        })))))
+                    }
+                    None => Ok(None),
+                    _ => panic!("implement: evaluate_lookup_for_load None branch — unexpected templata"),
+                }
             }
         }
     }
@@ -380,23 +400,26 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
-    ) -> Option<&'t AddressExpressionTE<'s, 't>> {
+    ) -> Result<Option<&'t AddressExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         match nenv.get_variable(name_2, self.typing_interner) {
             Some(IVariableT::AddressibleLocal(alv)) => {
                 assert!(!nenv.unstackifieds().contains(&alv.name));
-                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Addressible(alv),
-                })))
+                }))))
             }
             Some(IVariableT::ReferenceLocal(rlv)) => {
                 if nenv.unstackifieds().contains(&rlv.name) {
-                    panic!("CantUseUnstackifiedLocal {:?}", rlv.name);
+                    return Err(ICompileErrorT::CantUseUnstackifiedLocal {
+                        range: self.typing_interner.alloc_slice_copy(ranges),
+                        local_id: rlv.name,
+                    });
                 }
-                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(rlv),
-                })))
+                }))))
             }
             Some(IVariableT::AddressibleClosure(acv)) => {
                 let closured_vars_struct_ref = *acv.closured_vars_struct_type;
@@ -420,13 +443,13 @@ where 's: 't,
                 })));
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &acv.name));
-                Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
                     range: ranges[0],
                     struct_expr: self.typing_interner.alloc(borrow_expr),
                     member_name: acv.name,
                     result_type2: acv.coord,
                     variability: acv.variability,
-                })))
+                }))))
             }
             Some(IVariableT::ReferenceClosure(rcv)) => {
                 let closured_vars_struct_ref = *rcv.closured_vars_struct_type;
@@ -453,15 +476,16 @@ where 's: 't,
                         coord: closured_vars_struct_ref_coord,
                     }),
                 })));
-                Some(self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
                     range: ranges[0],
                     struct_expr: self.typing_interner.alloc(borrow_expr),
                     member_name: rcv.name,
                     member_reference: rcv.coord,
                     variability: rcv.variability,
-                })))
+                }))))
             }
-            None => None,
+            None => Ok(None),
+            _ => panic!("evaluate_addressible_lookup: unexpected variable type"),
         }
     }
 /*
@@ -583,6 +607,7 @@ where 's: 't,
                     IStructMemberT::Variadic(_) => panic!("implement: make_closure_struct_construct_expression — VariadicStructMemberT (closures cant contain variadic members)"),
                     IStructMemberT::Normal(NormalStructMemberT { name: member_name, tyype, .. }) => {
                         let lookup = self.evaluate_addressible_lookup(coutputs, nenv, range, region, *member_name)
+                            .unwrap_or_else(|_| panic!("evaluate_addressible_lookup error"))
                             .unwrap_or_else(|| panic!("Couldn't find {:?}", member_name));
                         match tyype {
                             IMemberTypeT::Reference(ReferenceMemberTypeT { reference: unsubstituted_coord }) => {
@@ -790,8 +815,20 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
-    ) -> (&'t AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>) {
-        panic!("Unimplemented: Slab 15 — body migration");
+    ) -> Result<(&'t AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+        let (expr_2, returns) =
+            self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
+        let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+            &std::iter::once(expr_1.range()).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+        match expr_2 {
+            ExpressionTE::Address(a) => Ok((a, returns)),
+            ExpressionTE::Reference(_) => {
+                Err(ICompileErrorT::RangedInternalErrorT {
+                    range: range_with_parent,
+                    message: "Expected reference expression!",
+                })
+            }
+        }
     }
 /*
   private def evaluateExpectedAddressExpression(
@@ -1016,7 +1053,7 @@ where 's: 't,
                 let name = self.translate_var_name_step(local_load.name);
                 let range_list = vec![local_load.range];
                 let lookup_expr_1 =
-                    self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership);
+                    self.evaluate_lookup_for_load(coutputs, nenv, &range_list, outer_call_location, region, name, local_load.target_ownership)?;
                 match lookup_expr_1 {
                     None => {
                         panic!("Couldnt find {:?}", name);
@@ -1419,14 +1456,29 @@ where 's: 't,
                             loop_block_fate.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
 
                         if !body_unstackified_ancestor_locals.is_empty() {
-                            panic!("CantUnstackifyOutsideLocalFromInsideWhile");
+                            let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                            return Err(ICompileErrorT::CantUnstackifyOutsideLocalFromInsideWhile {
+                                range: range_with_parent,
+                                local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                            });
                         }
                         if !body_restackified_ancestor_locals.is_empty() {
-                            panic!("CantRestackifyOutsideLocalFromInsideWhile");
+                            let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                            return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
+                                range: range_with_parent,
+                                local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                            });
                         }
                         // BUG: Scala checks bodyRestackifiedAncestorLocals twice (same condition, same error) — mirroring as-is
                         if !body_restackified_ancestor_locals.is_empty() {
-                            panic!("CantRestackifyOutsideLocalFromInsideWhile");
+                            let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
+                                &std::iter::once(w.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>());
+                            return Err(ICompileErrorT::CantRestackifyOutsideLocalFromInsideWhile {
+                                range: range_with_parent,
+                                local_id: *body_unstackified_ancestor_locals.iter().next().unwrap(),
+                            });
                         }
                     }
                 }
@@ -1435,7 +1487,68 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(loop_expr_2), body_returns_from_exprs))
             }
             IExpressionSE::Map(_) => panic!("implement: evaluate_expression — Map"),
-            IExpressionSE::ExprMutate(_) => panic!("implement: evaluate_expression — ExprMutate"),
+            IExpressionSE::ExprMutate(em) => {
+                let (unconverted_source_expr_2, returns_from_source) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), em.expr)?;
+                let (destination_expr_2, returns_from_destination) =
+                    self.evaluate_expected_address_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 1), parent_ranges, outer_call_location, region, em.mutatee)?;
+                if destination_expr_2.variability() != VariabilityT::Varying {
+                    match destination_expr_2 {
+                        AddressExpressionTE::ReferenceMemberLookup(rml) => {
+                            match rml.struct_expr.result().coord.kind {
+                                KindT::Struct(s) => {
+                                    return Err(ICompileErrorT::CantMutateFinalMember {
+                                        range: self.typing_interner.alloc_slice_copy(
+                                            &std::iter::once(rml.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                        struct_: *s,
+                                        member_name: rml.member_name,
+                                    });
+                                }
+                                _ => panic!("implement: ExprMutate ReferenceMemberLookup non-struct kind"),
+                            }
+                        }
+                        AddressExpressionTE::RuntimeSizedArrayLookup(rsal) => {
+                            return Err(ICompileErrorT::CantMutateFinalElement {
+                                range: self.typing_interner.alloc_slice_copy(
+                                    &std::iter::once(rsal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                coord: rsal.array_expr.result().coord,
+                            });
+                        }
+                        AddressExpressionTE::StaticSizedArrayLookup(ssal) => {
+                            return Err(ICompileErrorT::CantMutateFinalElement {
+                                range: self.typing_interner.alloc_slice_copy(
+                                    &std::iter::once(ssal.range).chain(parent_ranges.iter().copied()).collect::<Vec<_>>()),
+                                coord: ssal.array_expr.result().coord,
+                            });
+                        }
+                        _ => panic!("implement: ExprMutate non-varying variability unexpected arm"),
+                    }
+                }
+                let range_with_parent: Vec<RangeS<'s>> =
+                    std::iter::once(em.range).chain(parent_ranges.iter().copied()).collect();
+                let is_convertible =
+                    self.is_type_convertible(coutputs, IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), &range_with_parent, outer_call_location,
+                        unconverted_source_expr_2.result().coord, destination_expr_2.result().coord);
+                if !is_convertible {
+                    return Err(ICompileErrorT::CouldntConvertForMutateT {
+                        range: self.typing_interner.alloc_slice_copy(&range_with_parent),
+                        expected_type: destination_expr_2.result().coord,
+                        actual_type: unconverted_source_expr_2.result().coord,
+                    });
+                }
+                let converted_source_expr_2 =
+                    self.convert(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), coutputs, &range_with_parent, outer_call_location,
+                        unconverted_source_expr_2, destination_expr_2.result().coord);
+                let mutate_2 = self.typing_interner.alloc(ReferenceExpressionTE::Mutate(MutateTE {
+                    destination_expr: destination_expr_2,
+                    source_expr: converted_source_expr_2,
+                }));
+                let mut returns = returns_from_source;
+                returns.extend(returns_from_destination);
+                Ok((ExpressionTE::Reference(mutate_2), returns))
+            }
             IExpressionSE::GlobalMutate(_) => panic!("implement: evaluate_expression — GlobalMutate"),
             IExpressionSE::LocalMutate(lm) => {
                 let (unconverted_source_expr_2, returns_from_source) =
@@ -1500,7 +1613,7 @@ where 's: 't,
                     sav.variability_st.rune,
                     exprs_2,
                     region,
-                );
+                )?;
                 Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromValues(expr_2))), returns_from_elements))
             }
             IExpressionSE::StaticArrayFromCallable(_) => panic!("implement: evaluate_expression — StaticArrayFromCallable"),
@@ -1562,7 +1675,12 @@ where 's: 't,
                         let lookup = self.lookup_in_static_sized_array(index_se.range, container_expr_2, index_expr_2, *at);
                         ExpressionTE::Address(self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(lookup)))
                     }
-                    _ => panic!("implement: evaluate_expression Index — CannotSubscript"),
+                    _ => {
+                        return Err(ICompileErrorT::CannotSubscriptT {
+                            range: self.typing_interner.alloc_slice_copy(&range_with_parent),
+                            tyype: container_expr_2.result().coord.kind,
+                        });
+                    }
                 };
                 let mut returns = returns_from_container_expr;
                 returns.extend(returns_from_index_expr);

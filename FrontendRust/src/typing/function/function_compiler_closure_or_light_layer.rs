@@ -331,7 +331,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         function: &'s FunctionA<'s>,
         args: &[Option<CoordT<'s, 't>>],
-    ) -> IDefineFunctionResult<'s, 't> {
+    ) -> Result<IDefineFunctionResult<'s, 't>, ICompileErrorT<'s, 't>> {
         self.check_not_closure(function);
         let function_template_name = self.translate_generic_function_name(function.name);
         let function_name_local: INameT<'s, 't> = match function_template_name {
@@ -350,6 +350,7 @@ where 's: 't,
         self.evaluate_generic_virtual_dispatcher_function_for_prototype_solving(
             outer_env, coutputs, calling_env, call_range, call_location, args)
     }
+
 /*
   def evaluateGenericVirtualDispatcherFunctionForPrototype(
     parentEnv: IEnvironmentT,
