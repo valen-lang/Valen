@@ -84,7 +84,10 @@ where 's: 't,
                         &[],
                         false)?
                 {
-                    Err(_e) => { panic!("CouldntFindFunctionToCallT"); }
+                    Err(e) => return Err(crate::typing::compiler_error_reporter::ICompileErrorT::CouldntFindFunctionToCallT {
+                        range: self.typing_interner.alloc_slice_copy(range),
+                        fff: e,
+                    }),
                     Ok(x) => x,
                 };
 

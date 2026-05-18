@@ -360,7 +360,7 @@ impl<'s, 't> AddressExpressionTE<'s, 't> where 's: 't {
             AddressExpressionTE::StaticSizedArrayLookup(e) => e.variability,
             AddressExpressionTE::RuntimeSizedArrayLookup(e) => e.variability,
             AddressExpressionTE::ReferenceMemberLookup(e) => e.variability,
-            AddressExpressionTE::AddressMemberLookup(e) => panic!("Unimplemented: variability AddressMemberLookup"),
+            AddressExpressionTE::AddressMemberLookup(e) => e.variability,
         }
     }
     /*
@@ -1280,7 +1280,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 pub struct TupleTE<'s, 't>
 where 's: 't,
 {
-    pub elements: &'t [ReferenceExpressionTE<'s, 't>],
+    pub elements: &'t [&'t ReferenceExpressionTE<'s, 't>],
     pub result_reference: CoordT<'s, 't>,
 }
 /*
@@ -1301,7 +1301,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> TupleTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> { ReferenceResultT { coord: self.result_reference } }
 /*
   override def result = ReferenceResultT(resultReference)
 }

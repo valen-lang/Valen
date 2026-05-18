@@ -21,7 +21,9 @@ override def hashCode(): Int = vcurious()
   vpass()
 }
 
-sealed trait ICompileErrorT { def range: List[RangeS] }
+sealed trait ICompileErrorT {
+  def range: List[RangeS]
+}
 case class CouldntNarrowDownCandidates(range: List[RangeS], candidates: Vector[RangeS]) extends ICompileErrorT {
   override def equals(obj: Any): Boolean = vcurious();
 override def hashCode(): Int = vcurious()

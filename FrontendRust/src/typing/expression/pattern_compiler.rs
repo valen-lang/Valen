@@ -1003,7 +1003,9 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
                     KindT::Struct(struct_tt) => {
                         self.load_from_struct(coutputs, env, head_maybe_destructure_member_pattern.range, region, container_aliasing_expr_te, *struct_tt, member_index)
                     }
-                    KindT::StaticSizedArray(_) => panic!("implement: iterate_destructure_non_owning_and_maybe_continue — StaticSizedArray"),
+                    KindT::StaticSizedArray(static_sized_array_t) => {
+                        self.load_from_static_sized_array(head_maybe_destructure_member_pattern.range, *static_sized_array_t, expected_container_coord, expected_container_coord.ownership, container_aliasing_expr_te, member_index)
+                    }
                     _ => panic!("implement: iterate_destructure_non_owning_and_maybe_continue — unknown container kind"),
                 };
                 let member_ownership_in_struct = member_addr_expr_te.result().coord.ownership;
@@ -1510,12 +1512,18 @@ where 's: 't, 't: 'ctx, 's: 'ctx,
         &self,
         range: RangeS<'s>,
         static_sized_array_t: StaticSizedArrayTT<'s, 't>,
-        local_coord: CoordT<'s, 't>,
-        struct_ownership: OwnershipT,
+        _local_coord: CoordT<'s, 't>,
+        _struct_ownership: OwnershipT,
         container_alias: &'t ReferenceExpressionTE<'s, 't>,
         index: i32,
     ) -> &'t AddressExpressionTE<'s, 't> {
-        panic!("Unimplemented: Slab 15 — body migration");
+        let index_expr = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+            value: ITemplataT::Integer(index as i64),
+            bits: 32,
+            region: RegionT,
+        }));
+        let lookup = self.lookup_in_static_sized_array(range, container_alias, index_expr, static_sized_array_t);
+        self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(lookup))
     }
 /*
   private def loadFromStaticSizedArray(

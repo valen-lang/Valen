@@ -147,6 +147,9 @@ impl<'s, 't> IEnvironmentT<'s, 't> where 's: 't {
   ) -> Vec<ITemplataT<'s, 't>> {
     match self {
       IEnvironmentT::Citizen(c) => c.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Node(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Function(e) => e.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
+      IEnvironmentT::Package(p) => p.lookup_with_name_inner(name_s, &lookup_filter, get_only_nearest, interner),
       _ => panic!("implement: lookup_with_name_inner for {:?}", std::mem::discriminant(self)),
     }
   }
@@ -1360,9 +1363,22 @@ impl<'s, 't> PackageEnvironmentT<'s, 't> where 's: 't {
     &'t self,
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
-    get_only_nearest: bool,
+    _get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    let mut result: Vec<ITemplataT<'s, 't>> = Vec::new();
+    result.extend(self.global_env.builtins.lookup_with_name_inner(
+      IEnvironmentT::Package(self), name, lookup_filter, interner));
+    for global_namespace in self.global_namespaces {
+      let per_namespace_env = interner.alloc(PackageEnvironmentT {
+        global_env: self.global_env,
+        id: *global_namespace.templatas_store_name,
+        global_namespaces: self.global_namespaces,
+      });
+      result.extend(global_namespace.lookup_with_name_inner(
+        IEnvironmentT::Package(per_namespace_env), name, lookup_filter, interner));
+    }
+    result
   }
   /*
     private[env] override def lookupWithNameInner(

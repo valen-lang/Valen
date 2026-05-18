@@ -222,3 +222,4 @@ Instead, use the same file.
 - **Read when investigating a compiler bug by tracing execution with debug printouts and narrowing the call graph.** → Luz/skills/CollapsedCallTree.md
 - **Read when starting a new feature, to follow the gated discuss/plan/stub/test/implement sequence.** → Luz/skills/feature-development-flow.md
 - **Read when reviewing or critiquing a plan for testing correctness before implementation.** → Luz/skills/good-testing.md
+- **Read when writing a plan that includes implementation work — every such plan needs an RFIGA list, defined here.** → Luz/skills/tdd.md

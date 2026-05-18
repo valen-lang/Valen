@@ -113,6 +113,8 @@ follow them mechanically.
 
 ## Phase 2: Triage with Human
 
+Before proposing any wording changes to a shield, consult the LLM's verdict log (`<def>.<ShieldName>.<ShieldName>.log`) to read the exact observation it made, and the thinking-token log (`log.<def>.<ShieldName>.vote0.log`) if available — understanding *why* the LLM reached its conclusion is essential to writing a clarification that actually addresses the failure mode rather than papering over it.
+
 Present each classification to the human, **propose** the fix you intend to make (which shield text to add/change, which exception to add, which companion program logic to update), and **wait for explicit approval before making any changes**. Do not proceed to Phases 3–6 until the human confirms.
 
 Human confirms or overrides:

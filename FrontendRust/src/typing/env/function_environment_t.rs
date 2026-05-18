@@ -414,8 +414,14 @@ impl<'s, 't> NodeEnvironmentT<'s, 't> where 's: 't {
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    let parent: IEnvironmentT<'s, 't> = match self.parent_node_env {
+        Some(p) => IEnvironmentT::Node(p),
+        None => IEnvironmentT::Function(self.parent_function_env),
+    };
+    lookup_with_name_inner(
+        IEnvironmentT::Node(self), &self.templatas, parent, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -1533,8 +1539,10 @@ impl<'s, 't> FunctionEnvironmentT<'s, 't> where 's: 't {
     name: INameT<'s, 't>,
     lookup_filter: &HashSet<ILookupContext>,
     get_only_nearest: bool,
+    interner: &TypingInterner<'s, 't>,
   ) -> Vec<ITemplataT<'s, 't>> {
-    panic!("Unimplemented: lookup_with_name_inner");
+    lookup_with_name_inner(
+      IEnvironmentT::Function(self), self.templatas, self.parent_env, name, lookup_filter, get_only_nearest, interner)
   }
   /*
     private[env] override def lookupWithNameInner(
@@ -2111,6 +2119,7 @@ impl<'s, 't> TryFrom<ILocalVariableT<'s, 't>> for ReferenceLocalVariableT<'s, 't
 }
 
 // mig: fn lookup_with_name_inner
+// Rust adaptation (SPDMX-B): interner threaded for entry_to_templata
 pub fn lookup_with_name_inner<'s, 't>(
   requesting_env: IEnvironmentT<'s, 't>,
   templatas: &TemplatasStoreT<'s, 't>,
@@ -2118,10 +2127,18 @@ pub fn lookup_with_name_inner<'s, 't>(
   name: INameT<'s, 't>,
   lookup_filter: &HashSet<ILookupContext>,
   get_only_nearest: bool,
+  interner: &TypingInterner<'s, 't>,
 ) -> Vec<ITemplataT<'s, 't>>
 where 's: 't,
 {
-  panic!("Unimplemented: lookup_with_name_inner");
+  let result: Vec<ITemplataT<'s, 't>> = templatas.lookup_with_name_inner(requesting_env, name, lookup_filter, interner).into_iter().collect();
+  if !result.is_empty() && get_only_nearest {
+    result
+  } else {
+    let mut combined = result;
+    combined.extend(parent.lookup_with_name_inner(name, lookup_filter.clone(), get_only_nearest, interner));
+    combined
+  }
 }
 /*
   def lookupWithNameInner(

@@ -359,13 +359,231 @@ fn typing_pass_uses_same_instance() {
     compile.expect_compiler_outputs();
 }
 
+#[test]
+fn typing_pass_ssa_destructure() {
+    use crate::builtins::builtins::get_code_map;
+    use crate::compile_options::GlobalOptions;
+    use crate::instantiating::InstantiatorCompilationOptions;
+    use crate::tests::tests::get_package_to_resource_resolver;
+    use crate::typing::compilation::TypingPassCompilation;
+    use std::sync::Arc;
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+
+    let source = "\nexported func main() int {\n  arr = #[#](3, 4);\n  [a, b] = arr;\n  return a + b;\n}\n";
+
+    let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
+    let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
+    let resolver = code_hierarchy::test_from_map(
+            &parse_arena,
+            HashMap::from([("0.vale".to_string(), source.to_string())]),
+        )
+        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+            .expect("get_code_map failed to load builtins"))
+        .or(get_package_to_resource_resolver());
+    let global_options = GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+    };
+    let instantiator_options = InstantiatorCompilationOptions {
+        debug_out: Arc::new(|_x: &str| {}),
+    };
+    let mut compile = TypingPassCompilation::new(
+        &scout_arena,
+        &keywords,
+        &parser_keywords,
+        &parse_arena,
+        vec![builtin_coord, test_tld],
+        &resolver,
+        global_options,
+        instantiator_options,
+        &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
+
+// NOVEL CODE — TDD reproducer for the `evaluate_addressible_lookup_for_mutate
+// — AddressibleClosureVariableT` panic surfaced by typing_pass_on_roguelike.
+// Triggered by `set x = ...` inside a lambda where x is captured from the
+// enclosing function scope.
+#[test]
+fn typing_pass_closure_var_mutate() {
+    use crate::builtins::builtins::get_code_map;
+    use crate::compile_options::GlobalOptions;
+    use crate::instantiating::InstantiatorCompilationOptions;
+    use crate::tests::tests::get_package_to_resource_resolver;
+    use crate::typing::compilation::TypingPassCompilation;
+    use std::sync::Arc;
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+
+    let source = "\nexported func main() {\n  x = 0;\n  l = () => { set x = 1; };\n  l();\n}\n";
+
+    let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
+    let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
+    let resolver = code_hierarchy::test_from_map(
+            &parse_arena,
+            HashMap::from([("0.vale".to_string(), source.to_string())]),
+        )
+        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+            .expect("get_code_map failed to load builtins"))
+        .or(get_package_to_resource_resolver());
+    let global_options = GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+    };
+    let instantiator_options = InstantiatorCompilationOptions {
+        debug_out: Arc::new(|_x: &str| {}),
+    };
+    let mut compile = TypingPassCompilation::new(
+        &scout_arena,
+        &keywords,
+        &parser_keywords,
+        &parse_arena,
+        vec![builtin_coord, test_tld],
+        &resolver,
+        global_options,
+        instantiator_options,
+        &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
+
+// NOVEL CODE — TDD reproducer for the `evaluate_expression — Tuple` chain
+// surfaced by typing_pass_on_roguelike. Exercises evaluate_expression Tuple
+// arm → resolve_tuple → make_tuple_coord → make_tuple_kind. Scala equivalent
+// at ExpressionCompiler.scala:869-876 (case TupleSE) + SequenceCompiler.scala.
+#[test]
+fn typing_pass_tuple_literal() {
+    use crate::builtins::builtins::get_code_map;
+    use crate::compile_options::GlobalOptions;
+    use crate::instantiating::InstantiatorCompilationOptions;
+    use crate::tests::tests::get_package_to_resource_resolver;
+    use crate::typing::compilation::TypingPassCompilation;
+    use std::sync::Arc;
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+
+    let source = "\nexported func main() {\n  x = (3, 4);\n}\n";
+
+    let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
+    let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
+    let resolver = code_hierarchy::test_from_map(
+            &parse_arena,
+            HashMap::from([("0.vale".to_string(), source.to_string())]),
+        )
+        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+            .expect("get_code_map failed to load builtins"))
+        .or(get_package_to_resource_resolver());
+    let global_options = GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+    };
+    let instantiator_options = InstantiatorCompilationOptions {
+        debug_out: Arc::new(|_x: &str| {}),
+    };
+    let mut compile = TypingPassCompilation::new(
+        &scout_arena,
+        &keywords,
+        &parser_keywords,
+        &parse_arena,
+        vec![builtin_coord, test_tld],
+        &resolver,
+        global_options,
+        instantiator_options,
+        &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
+
+// NOVEL CODE — TDD reproducer for the `evaluate_expression — Destruct` panic
+// surfaced by typing_pass_on_roguelike. Scala equivalent at
+// ExpressionCompiler.scala:1387-1429 (case DestructSE).
+#[test]
+fn typing_pass_destruct_struct() {
+    use crate::builtins::builtins::get_code_map;
+    use crate::compile_options::GlobalOptions;
+    use crate::instantiating::InstantiatorCompilationOptions;
+    use crate::tests::tests::get_package_to_resource_resolver;
+    use crate::typing::compilation::TypingPassCompilation;
+    use std::sync::Arc;
+
+    let parse_bump = Bump::new();
+    let scout_bump = Bump::new();
+    let typing_bump = Bump::new();
+    let parse_arena = ParseArena::new(&parse_bump);
+    let scout_arena = ScoutArena::new(&scout_bump);
+    let keywords = Keywords::new_for_scout(&scout_arena);
+    let parser_keywords = Keywords::new_for_parse(&parse_arena);
+
+    let source = "\nstruct MyStruct { a int; }\nexported func main() {\n  m = MyStruct(7);\n  destruct m;\n}\n";
+
+    let builtin_coord = parse_arena.intern_package_coordinate(parser_keywords.empty_string, &[]);
+    let test_tld = parse_arena.intern_package_coordinate(parse_arena.intern_str("test"), &[]);
+    let resolver = code_hierarchy::test_from_map(
+            &parse_arena,
+            HashMap::from([("0.vale".to_string(), source.to_string())]),
+        )
+        .or(get_code_map(&parse_arena, &parser_keywords, "src/builtins/resources")
+            .expect("get_code_map failed to load builtins"))
+        .or(get_package_to_resource_resolver());
+    let global_options = GlobalOptions {
+        sanity_check: true,
+        use_overload_index: true,
+        use_optimized_solver: true,
+        verbose_errors: true,
+        debug_output: false,
+    };
+    let instantiator_options = InstantiatorCompilationOptions {
+        debug_out: Arc::new(|_x: &str| {}),
+    };
+    let mut compile = TypingPassCompilation::new(
+        &scout_arena,
+        &keywords,
+        &parser_keywords,
+        &parse_arena,
+        vec![builtin_coord, test_tld],
+        &resolver,
+        global_options,
+        instantiator_options,
+        &typing_bump,
+    );
+    compile.expect_compiler_outputs();
+}
+
 // NOVEL CODE — exploratory: run the typing pass on roguelike.vale to gauge
 // how close the migration is to handling a real-world program. Loads the
 // roguelike.vale source from disk, rewrites `stdlib.*` imports to use the
 // Rust-side on-disk file layout, and feeds the program through
-// compiler_test_compilation. Currently #[ignore]'d so it doesn't gate CI.
+// compiler_test_compilation.
 #[test]
-#[ignore]
 fn typing_pass_on_roguelike() {
     use crate::builtins::builtins::get_code_map;
     use crate::compile_options::GlobalOptions;
@@ -382,13 +600,8 @@ fn typing_pass_on_roguelike() {
     let keywords = Keywords::new_for_scout(&scout_arena);
     let parser_keywords = Keywords::new_for_parse(&parse_arena);
 
-    let source_raw =
-        std::fs::read_to_string("src/tests/programs/roguelike.vale")
+    let source = std::fs::read_to_string("src/tests/programs/roguelike.vale")
             .expect("could not read src/tests/programs/roguelike.vale");
-    // Rewrite stdlib-style imports to the Rust on-disk test-package layout.
-    let source = source_raw
-        .replace("import stdlib.collections.hashmap.*;", "import hashmap.*;\nimport list.*;")
-        .replace("import stdlib.stdin.*;", "import printutils.*;");
 
     // Scala-parity: mirror Benchmark.scala — instantiate TypingPassCompilation
     // directly with packages_to_build=[BUILTIN, TEST_TLD] (the BUILTIN root

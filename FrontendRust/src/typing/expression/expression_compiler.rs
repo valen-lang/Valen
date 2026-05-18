@@ -294,8 +294,35 @@ where 's: 't,
                     local_variable: ILocalVariableT::Reference(rlv),
                 })))
             }
-            Some(IVariableT::AddressibleClosure(_)) => {
-                panic!("implement: evaluate_addressible_lookup_for_mutate — AddressibleClosureVariableT");
+            Some(IVariableT::AddressibleClosure(acv)) => {
+                let closured_vars_struct_ref = *acv.closured_vars_struct_type;
+                let closured_vars_struct_template_id = self.get_struct_template(closured_vars_struct_ref.id);
+                let closured_vars_struct_template_name = match closured_vars_struct_template_id.local_name {
+                    INameT::LambdaCitizenTemplate(n) => n,
+                    _ => panic!("evaluate_addressible_lookup_for_mutate AddressibleClosure: expected LambdaCitizenTemplateNameT"),
+                };
+                let mutability = self.get_mutability(coutputs, KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)));
+                let ownership = match mutability {
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) => OwnershipT::Borrow,
+                    ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => OwnershipT::Share,
+                    ITemplataT::Placeholder(_) => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — PlaceholderTemplataT mutability"),
+                    _ => panic!("implement: evaluate_addressible_lookup_for_mutate AddressibleClosure — unexpected mutability"),
+                };
+                let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
+                let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
+                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                    range: load_range,
+                    local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
+                })));
+                let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
+                assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &acv.name));
+                Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                    range: load_range,
+                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    member_name: acv.name,
+                    result_type2: acv.coord,
+                    variability: acv.variability,
+                })))
             }
             Some(IVariableT::ReferenceClosure(_)) => {
                 panic!("implement: evaluate_addressible_lookup_for_mutate — ReferenceClosureVariableT");
@@ -1616,7 +1643,19 @@ where 's: 't,
             IExpressionSE::ArgLookup(_) => panic!("implement: evaluate_expression — ArgLookup"),
             IExpressionSE::RepeaterBlock(_) => panic!("implement: evaluate_expression — RepeaterBlock"),
             IExpressionSE::RepeaterBlockIterator(_) => panic!("implement: evaluate_expression — RepeaterBlockIterator"),
-            IExpressionSE::Tuple(_) => panic!("implement: evaluate_expression — Tuple"),
+            IExpressionSE::Tuple(t) => {
+                let (exprs_2, returns_from_elements) =
+                    self.evaluate_and_coerce_to_reference_expressions(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), t.elements)?;
+                let expr_2 = self.resolve_tuple(
+                    IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)),
+                    coutputs,
+                    parent_ranges,
+                    outer_call_location,
+                    exprs_2,
+                );
+                Ok((ExpressionTE::Reference(self.typing_interner.alloc(expr_2)), returns_from_elements))
+            }
             IExpressionSE::StaticArrayFromValues(sav) => {
                 let (exprs_2, returns_from_elements) =
                     self.evaluate_and_coerce_to_reference_expressions(
@@ -1703,7 +1742,41 @@ where 's: 't,
                 }));
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
-            IExpressionSE::Destruct(_) => panic!("implement: evaluate_expression — Destruct"),
+            IExpressionSE::Destruct(destruct_se) => {
+                use crate::typing::ast::citizens::{IStructMemberT, NormalStructMemberT, IMemberTypeT, ReferenceMemberTypeT};
+                let (inner_expr_2, returns_from_array_expr) =
+                    self.evaluate_and_coerce_to_reference_expression(
+                        coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, region, destruct_se.inner)?;
+                assert!(inner_expr_2.result().coord.ownership == OwnershipT::Own, "can only destruct own");
+                let destroy_2 = match inner_expr_2.result().coord.kind {
+                    KindT::Struct(struct_tt) => {
+                        let struct_def = coutputs.lookup_struct(struct_tt.id, self);
+                        let substituter = self.get_placeholder_substituter(
+                            self.opts.global_options.sanity_check,
+                            nenv.function_environment().template_id,
+                            struct_tt.id,
+                            IBoundArgumentsSource::InheritBoundsFromTypeItself,
+                        );
+                        let destination_locals: Vec<ReferenceLocalVariableT<'s, 't>> = struct_def.members.iter().enumerate().map(|(index, m)| {
+                            let unsubstituted_coord = match m {
+                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Reference(ReferenceMemberTypeT { reference }), .. }) => *reference,
+                                IStructMemberT::Normal(NormalStructMemberT { tyype: IMemberTypeT::Address(_), .. }) => panic!("implement: Destruct — AddressMemberTypeT"),
+                                IStructMemberT::Variadic(_) => panic!("implement: Destruct — VariadicStructMemberT"),
+                            };
+                            let reference = substituter.substitute_for_coord(coutputs, unsubstituted_coord);
+                            self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + index as i32), reference)
+                        }).collect();
+                        self.typing_interner.alloc(ReferenceExpressionTE::Destroy(DestroyTE {
+                            expr: inner_expr_2,
+                            struct_tt: struct_tt,
+                            destination_reference_variables: self.typing_interner.alloc_slice_from_vec(destination_locals),
+                        }))
+                    }
+                    KindT::Interface(_) => panic!("implement: evaluate_expression Destruct — Interface"),
+                    _ => panic!("Can't destruct type"),
+                };
+                Ok((ExpressionTE::Reference(destroy_2), returns_from_array_expr))
+            }
             IExpressionSE::Unlet(_) => panic!("implement: evaluate_expression — Unlet"),
             IExpressionSE::Index(index_se) => {
                 let (unborrowed_container_expr_2, returns_from_container_expr) =
