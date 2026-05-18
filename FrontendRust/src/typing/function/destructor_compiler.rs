@@ -99,30 +99,30 @@ where 's: 't,
         call_range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
-        undestructed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        undestructed_expr_2: ReferenceExpressionTE<'s, 't>,
+    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let result_coord = undestructed_expr_2.result().coord;
         let result_expr_2 = match (result_coord.ownership, result_coord.kind) {
             (OwnershipT::Share, KindT::Never(_)) => undestructed_expr_2,
             (OwnershipT::Share, _) => {
-                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Own, _) => {
                 let StampFunctionSuccess { prototype: destructor_prototype, .. } =
                     self.get_drop_function(env, coutputs, call_range, call_location, RegionT {}, result_coord)?;
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, destructor_prototype.id).is_some());
                 let result_tt = destructor_prototype.return_type;
-                self.typing_interner.alloc(ReferenceExpressionTE::FunctionCall(FunctionCallTE {
+                ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
                     callable: destructor_prototype,
                     args: self.typing_interner.alloc_slice_from_vec(vec![undestructed_expr_2]),
                     return_type: result_tt,
                 }))
             }
             (OwnershipT::Borrow, _) => {
-                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
             (OwnershipT::Weak, _) => {
-                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE { expr: undestructed_expr_2 }))
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE { expr: undestructed_expr_2 }))
             }
         };
         match result_expr_2.result().coord.kind {

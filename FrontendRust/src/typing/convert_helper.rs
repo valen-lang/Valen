@@ -63,9 +63,9 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_exprs: &[&'t ReferenceExpressionTE<'s, 't>],
+        source_exprs: &[ReferenceExpressionTE<'s, 't>],
         target_pointer_types: &[CoordT<'s, 't>],
-    ) -> Vec<&'t ReferenceExpressionTE<'s, 't>> {
+    ) -> Vec<ReferenceExpressionTE<'s, 't>> {
         if source_exprs.len() != target_pointer_types.len() {
             panic!("num exprs mismatch, source:\n{:?}\ntarget:\n{:?}", source_exprs, target_pointer_types);
         }
@@ -73,7 +73,7 @@ where 's: 't,
         let mut previous_ref_exprs = Vec::new();
         for (source_expr, target_pointer_type) in source_exprs.iter().zip(target_pointer_types.iter()) {
             let ref_expr =
-                self.convert(env, coutputs, range, call_location, source_expr, *target_pointer_type);
+                self.convert(env, coutputs, range, call_location, *source_expr, *target_pointer_type);
             previous_ref_exprs.push(ref_expr);
         }
         previous_ref_exprs
@@ -114,9 +114,9 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_expr: &'t ReferenceExpressionTE<'s, 't>,
+        source_expr: ReferenceExpressionTE<'s, 't>,
         target_pointer_type: CoordT<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         if source_expr.result().coord == target_pointer_type {
             return source_expr;
         }
@@ -156,7 +156,7 @@ where 's: 't,
             }
             _ => panic!("vfail: cannot convert {:?} to {:?}", source_type, target_type),
         };
-        self.typing_interner.alloc(converted)
+        converted
     }
 /*
   def convert(
@@ -242,7 +242,7 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        source_expr: &'t ReferenceExpressionTE<'s, 't>,
+        source_expr: ReferenceExpressionTE<'s, 't>,
         source_sub_kind: ISubKindTT<'s, 't>,
         target_super_kind: ISuperKindTT<'s, 't>,
     ) -> ReferenceExpressionTE<'s, 't> {
@@ -250,11 +250,11 @@ where 's: 't,
         match self.is_parent(coutputs, calling_env, range, call_location, source_sub_kind, target_super_kind) {
             IsParentResult::IsParent(is_parent) => {
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, is_parent.impl_id).is_some());
-                ReferenceExpressionTE::Upcast(crate::typing::ast::expressions::UpcastTE {
+                ReferenceExpressionTE::Upcast(self.typing_interner.alloc(crate::typing::ast::expressions::UpcastTE {
                     inner_expr: source_expr,
                     target_super_kind,
                     impl_name: is_parent.impl_id,
-                })
+                }))
             }
             IsParentResult::IsntParent(_candidates) => {
                 panic!("Can't upcast a {:?} to a {:?}", source_sub_kind, target_super_kind)

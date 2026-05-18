@@ -613,7 +613,7 @@ where 's: 't,
         let function2 = self.typing_interner.alloc(FunctionDefinitionT {
             header,
             instantiation_bound_params,
-            body: ReferenceExpressionTE::Block(BlockTE { inner: body2.inner }),
+            body: ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: body2.inner })),
         });
         coutputs.add_function(header_sig, function2);
         Ok(function2.header)
@@ -750,10 +750,10 @@ where 's: 't,
 
                 let arg_lookups: Vec<ReferenceExpressionTE<'s, 't>> =
                     header.params.iter().enumerate().map(|(index, param)| {
-                        ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                        ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                             param_index: index as i32,
                             coord: param.tyype,
-                        })
+                        }))
                     }).collect();
 
                 let function2 = self.typing_interner.alloc(FunctionDefinitionT {
@@ -763,12 +763,12 @@ where 's: 't,
                         rune_to_citizen_rune_to_reachable_prototype: self.typing_interner.alloc_index_map(),
                         rune_to_bound_impl: self.typing_interner.alloc_index_map(),
                     }),
-                    body: ReferenceExpressionTE::Return(ReturnTE {
-                        source_expr: self.typing_interner.alloc(ReferenceExpressionTE::ExternFunctionCall(ExternFunctionCallTE {
+                    body: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                        source_expr: ReferenceExpressionTE::ExternFunctionCall(self.typing_interner.alloc(ExternFunctionCallTE {
                             prototype2: extern_prototype,
                             args: self.typing_interner.alloc_slice_from_vec(arg_lookups),
                         })),
-                    }),
+                    })),
                 });
 
                 let header_sig = self.typing_interner.alloc(function2.header.to_signature());

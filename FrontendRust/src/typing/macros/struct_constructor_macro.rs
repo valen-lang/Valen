@@ -359,17 +359,17 @@ where 's: 't,
         };
 
         let args: Vec<ExpressionTE<'s, 't>> = constructor_params_slice.iter().enumerate().map(|(index, p)| {
-            ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: index as i32, coord: p.tyype })))
+            ExpressionTE::Reference(ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: index as i32, coord: p.tyype })))
         }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
         let struct_tt_ref = self.typing_interner.alloc(struct_tt);
-        let construct_expr = self.typing_interner.alloc(ReferenceExpressionTE::Construct(ConstructTE {
+        let construct_expr = ReferenceExpressionTE::Construct(self.typing_interner.alloc(ConstructTE {
             struct_tt: struct_tt_ref,
             result_reference: constructor_return_type,
             args: args_slice,
         }));
-        let return_expr = self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE { source_expr: construct_expr }));
-        let body = ReferenceExpressionTE::Block(BlockTE { inner: return_expr });
+        let return_expr = ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE { source_expr: construct_expr }));
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: return_expr }));
         (header, body)
     }
 /*

@@ -65,8 +65,8 @@ where 's: 't,
         let borrow_coord = CoordT { ownership: OwnershipT::Borrow, ..param_coords[0].tyype };
         let (opt_coord, some_constructor, none_constructor, some_impl_id, none_impl_id) =
             self.get_option(coutputs, env, call_range, call_location, RegionT, borrow_coord);
-        let lock_expr = self.typing_interner.alloc(ReferenceExpressionTE::LockWeak(LockWeakTE {
-            inner_expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let lock_expr = ReferenceExpressionTE::LockWeak(self.typing_interner.alloc(LockWeakTE {
+            inner_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: param_coords[0].tyype,
             })),
@@ -76,11 +76,11 @@ where 's: 't,
             some_impl_name: some_impl_id,
             none_impl_name: none_impl_id,
         }));
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: lock_expr,
             })),
-        });
+        }));
         (header, body)
     }
 /*

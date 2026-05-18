@@ -93,10 +93,10 @@ where 's: 't,
             .expect("vassertSome: header.getVirtualIndex") as i32;
         let args: Vec<ReferenceExpressionTE<'s, 't>> = prototype.param_types().iter().enumerate()
             .map(|(index, param_type)| {
-                ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                     param_index: index as i32,
                     coord: *param_type,
-                })
+                }))
             }).collect();
         let args_slice = self.typing_interner.alloc_slice_from_vec(args);
         let ifc = InterfaceFunctionCallTE {
@@ -105,15 +105,11 @@ where 's: 't,
             result_reference: prototype.return_type,
             args: args_slice,
         };
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(
-                ReferenceExpressionTE::Return(ReturnTE {
-                    source_expr: self.typing_interner.alloc(
-                        ReferenceExpressionTE::InterfaceFunctionCall(ifc)
-                    ),
-                })
-            ),
-        });
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::InterfaceFunctionCall(self.typing_interner.alloc(ifc)),
+            })),
+        }));
 
         Ok((header, body))
     }

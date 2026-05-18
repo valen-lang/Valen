@@ -60,16 +60,16 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::RuntimeSizedArrayCapacity(RuntimeSizedArrayCapacityTE {
-                    array_expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::RuntimeSizedArrayCapacity(self.typing_interner.alloc(RuntimeSizedArrayCapacityTE {
+                    array_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,
                     })),
                 })),
             })),
-        });
+        }));
         (header, body)
     }
 /*

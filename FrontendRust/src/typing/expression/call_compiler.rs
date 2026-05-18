@@ -54,11 +54,11 @@ where 's: 't,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         context_region: RegionT,
-        callable_expr: &'t ReferenceExpressionTE<'s, 't>,
+        callable_expr: ReferenceExpressionTE<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
-        given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
+    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         match callable_expr.result().coord.kind {
             KindT::Never(NeverT { from_break: true }) => { panic!("vwat"); }
             KindT::Never(NeverT { from_break: false }) | KindT::Bool(_) => {
@@ -110,12 +110,11 @@ where 's: 't,
 
                 assert!(coutputs.get_instantiation_bounds(self.typing_interner, stamp_result.prototype.id).is_some());
                 let result_te = stamp_result.prototype.return_type;
-                Ok(self.typing_interner.alloc(
-                    ReferenceExpressionTE::FunctionCall(FunctionCallTE {
-                        callable: stamp_result.prototype,
-                        args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
-                        return_type: result_te,
-                    })))
+                Ok(ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+                    callable: stamp_result.prototype,
+                    args: self.typing_interner.alloc_slice_from_vec(args_exprs_2),
+                    return_type: result_te,
+                })))
             }
             other => {
                 self.evaluate_custom_call(
@@ -243,11 +242,11 @@ where 's: 't,
         kind: KindT<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
-        given_callable_unborrowed_expr_2: &'t ReferenceExpressionTE<'s, 't>,
-        given_args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        given_callable_unborrowed_expr_2: ReferenceExpressionTE<'s, 't>,
+        given_args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
+    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         // Whether we're given a borrow or an own, the call itself will be given a borrow.
-        let given_callable_borrow_expr_2: &'t ReferenceExpressionTE<'s, 't> =
+        let given_callable_borrow_expr_2: ReferenceExpressionTE<'s, 't> =
             match given_callable_unborrowed_expr_2.result().coord {
                 CoordT { ownership: OwnershipT::Borrow | OwnershipT::Share, .. } => given_callable_unborrowed_expr_2,
                 CoordT { ownership: OwnershipT::Own, .. } => {
@@ -292,7 +291,7 @@ where 's: 't,
         assert!(given_callable_borrow_expr_2.result().coord.ownership == ownership);
         let actual_callable_expr_2 = given_callable_borrow_expr_2;
 
-        let mut actual_args_exprs_2: Vec<&'t ReferenceExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
+        let mut actual_args_exprs_2: Vec<ReferenceExpressionTE<'s, 't>> = vec![actual_callable_expr_2];
         actual_args_exprs_2.extend_from_slice(given_args_exprs_2);
 
         let arg_types: Vec<CoordT<'s, 't>> = actual_args_exprs_2.iter().map(|e| e.result().coord).collect();
@@ -304,12 +303,11 @@ where 's: 't,
 
         assert!(coutputs.get_instantiation_bounds(self.typing_interner, resolved.prototype.id).is_some());
         let result_te = resolved.prototype.return_type;
-        Ok(self.typing_interner.alloc(
-            ReferenceExpressionTE::FunctionCall(FunctionCallTE {
-                callable: resolved.prototype,
-                args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
-                return_type: result_te,
-            })))
+        Ok(ReferenceExpressionTE::FunctionCall(self.typing_interner.alloc(FunctionCallTE {
+            callable: resolved.prototype,
+            args: self.typing_interner.alloc_slice_from_vec(actual_args_exprs_2),
+            return_type: result_te,
+        })))
     }
 /*
   private def evaluateCustomCall(
@@ -499,11 +497,11 @@ where 's: 't,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         region: RegionT,
-        callable_reference_expr_2: &'t ReferenceExpressionTE<'s, 't>,
+        callable_reference_expr_2: ReferenceExpressionTE<'s, 't>,
         explicit_template_arg_rules_s: &[IRulexSR<'s>],
         explicit_template_arg_runes_s: &[IRuneS<'s>],
-        args_exprs_2: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        args_exprs_2: &[ReferenceExpressionTE<'s, 't>],
+    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let call_expr =
             self.evaluate_call(
                 coutputs,

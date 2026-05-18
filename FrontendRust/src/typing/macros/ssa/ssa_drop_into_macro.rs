@@ -59,8 +59,8 @@ where 's: 't,
             self.typing_interner.alloc(header.to_signature()),
             header.return_type,
         );
-        let arr_arg = ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype });
-        let callable_arg = ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype });
+        let arr_arg = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: param_coords[0].tyype }));
+        let callable_arg = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 1, coord: param_coords[1].tyype }));
         let destroy_te = self.evaluate_destroy_static_sized_array_into_callable(
             coutputs,
             env,
@@ -70,11 +70,11 @@ where 's: 't,
             callable_arg,
             RegionT,
         )?;
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(destroy_te)),
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::DestroyStaticSizedArrayIntoFunction(self.typing_interner.alloc(destroy_te)),
             })),
-        });
+        }));
         Ok((header, body))
     }
 /*

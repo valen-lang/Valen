@@ -103,18 +103,18 @@ where 's: 't,
 
         let array_tt = self.resolve_runtime_sized_array(element_type, mutability, RegionT);
 
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::NewMutRuntimeSizedArray(NewMutRuntimeSizedArrayTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::NewMutRuntimeSizedArray(self.typing_interner.alloc(NewMutRuntimeSizedArrayTE {
                     array_type: self.typing_interner.alloc(array_tt),
                     region: RegionT,
-                    capacity_expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                    capacity_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,
                     })),
                 })),
             })),
-        });
+        }));
         (header, body)
     }
 /*

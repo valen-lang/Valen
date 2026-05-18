@@ -80,7 +80,7 @@ where 's: 't,
         size_rune_a: IRuneS<'s>,
         mutability_rune: IRuneS<'s>,
         variability_rune: IRuneS<'s>,
-        callable_te: &'t ReferenceExpressionTE<'s, 't>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
     ) -> StaticArrayFromCallableTE<'s, 't> {
         use crate::postparsing::itemplatatype::CoordTemplataType;
         use crate::postparsing::rune_type_solver::solve_rune_type;
@@ -476,7 +476,7 @@ where 's: 't,
         size_rune_a: IRuneS<'s>,
         mutability_rune_a: IRuneS<'s>,
         variability_rune_a: IRuneS<'s>,
-        exprs_2: Vec<&'t ReferenceExpressionTE<'s, 't>>,
+        exprs_2: Vec<ReferenceExpressionTE<'s, 't>>,
         region: RegionT,
     ) -> Result<StaticArrayFromValuesTE<'s, 't>, ICompileErrorT<'s, 't>> {
         use crate::postparsing::itemplatatype::CoordTemplataType;
@@ -728,14 +728,12 @@ where 's: 't,
             KindT::StaticSizedArray(s) => s,
             other => panic!("Destroying a non-array with a callable! Destroying: {:?}", other),
         };
-        let arr_te_ref = self.typing_interner.alloc(arr_te);
-        let callable_te_ref = self.typing_interner.alloc(callable_te);
         let prototype = self.get_array_consumer_prototype(
-            coutputs, fate, range, call_location, callable_te_ref, array_tt.element_type(), context_region)?;
+            coutputs, fate, range, call_location, callable_te, array_tt.element_type(), context_region)?;
         Ok(DestroyStaticSizedArrayIntoFunctionTE {
-            array_expr: arr_te_ref,
+            array_expr: arr_te,
             array_type: array_tt,
-            consumer: callable_te_ref,
+            consumer: callable_te,
             consumer_method: prototype,
         })
     }
@@ -1290,8 +1288,8 @@ where 's: 't,
     pub fn lookup_in_static_sized_array(
         &self,
         range: RangeS<'s>,
-        container_expr_2: &'t ReferenceExpressionTE<'s, 't>,
-        index_expr_2: &'t ReferenceExpressionTE<'s, 't>,
+        container_expr_2: ReferenceExpressionTE<'s, 't>,
+        index_expr_2: ReferenceExpressionTE<'s, 't>,
         at: StaticSizedArrayTT<'s, 't>,
     ) -> StaticSizedArrayLookupTE<'s, 't> {
         let variability_templata = at.variability();
@@ -1335,8 +1333,8 @@ where 's: 't,
         &self,
         parent_ranges: &[RangeS<'s>],
         range: RangeS<'s>,
-        container_expr_2: &'t ReferenceExpressionTE<'s, 't>,
-        index_expr_2: &'t ReferenceExpressionTE<'s, 't>,
+        container_expr_2: ReferenceExpressionTE<'s, 't>,
+        index_expr_2: ReferenceExpressionTE<'s, 't>,
         rsa: &'t RuntimeSizedArrayTT<'s, 't>,
     ) -> RuntimeSizedArrayLookupTE<'s, 't> {
         if index_expr_2.result().coord.kind != KindT::Int(IntT::I32) {

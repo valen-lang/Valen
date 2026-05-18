@@ -1446,7 +1446,7 @@ where 's: 't,
         calling_env: IInDenizenEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: &'t ReferenceExpressionTE<'s, 't>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
         context_region: RegionT,
     ) -> &'t PrototypeT<'s, 't> {
         use crate::postparsing::names::{IImpreciseNameValS, CodeNameS};
@@ -1502,7 +1502,7 @@ where 's: 't,
         fate: &'t FunctionEnvironmentT<'s, 't>,
         range: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        callable_te: &'t ReferenceExpressionTE<'s, 't>,
+        callable_te: ReferenceExpressionTE<'s, 't>,
         element_type: CoordT<'s, 't>,
         context_region: RegionT,
     ) -> Result<&'t PrototypeT<'s, 't>, ICompileErrorT<'s, 't>> {

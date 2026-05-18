@@ -53,14 +53,14 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         parent_ranges: &[RangeS<'s>],
         call_location: LocationInDenizen<'s>,
-        exprs: Vec<&'t ReferenceExpressionTE<'s, 't>>,
+        exprs: Vec<ReferenceExpressionTE<'s, 't>>,
     ) -> ReferenceExpressionTE<'s, 't> {
         let types_2: Vec<CoordT<'s, 't>> = exprs.iter().map(|e| IExpressionResultT::Reference(e.result()).expect_reference().coord).collect();
         let region = RegionT;
-        let final_expr = ReferenceExpressionTE::Tuple(TupleTE {
+        let final_expr = ReferenceExpressionTE::Tuple(self.typing_interner.alloc(TupleTE {
             elements: self.typing_interner.alloc_slice_from_vec(exprs),
             result_reference: self.make_tuple_coord(env, coutputs, parent_ranges, call_location, region, types_2),
-        });
+        }));
         final_expr
     }
 /*

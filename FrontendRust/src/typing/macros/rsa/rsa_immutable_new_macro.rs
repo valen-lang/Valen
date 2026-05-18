@@ -126,18 +126,18 @@ where 's: 't,
 
         assert!(generator_prototype.prototype.return_type.ownership == OwnershipT::Share);
 
-        let size_te = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let size_te = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
             param_index: 0,
             coord: param_coords[0].tyype,
         }));
-        let generator_te = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let generator_te = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
             param_index: 1,
             coord: param_coords[1].tyype,
         }));
 
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::NewImmRuntimeSizedArray(NewImmRuntimeSizedArrayTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::NewImmRuntimeSizedArray(self.typing_interner.alloc(NewImmRuntimeSizedArrayTE {
                     array_type: self.typing_interner.alloc(array_tt),
                     region: RegionT,
                     size_expr: size_te,
@@ -145,7 +145,7 @@ where 's: 't,
                     generator_method: generator_prototype.prototype,
                 })),
             })),
-        });
+        }));
         Ok((header, body))
     }
 /*

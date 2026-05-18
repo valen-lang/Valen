@@ -144,15 +144,15 @@ impl<'s, 't> ReferenceResultT<'s, 't> {
 }
 /// Value-type (see @TFITCX)
 //
-// Wrapper holding `&'t ReferenceExpressionTE` / `&'t AddressExpressionTE`. The inner
+// Wrapper holding `ReferenceExpressionTE` / `AddressExpressionTE`. The inner
 // expression hierarchies opt out of equality entirely (mirroring Scala's `vcurious`
 // equals overrides — see comment above `ReferenceExpressionTE`), so this wrapper
 // can't `derive(PartialEq)` either: the derive would call the inner type's eq, which
 // doesn't exist. Misuse fails at compile time.
 #[derive(Copy, Clone, Debug)]
 pub enum ExpressionTE<'s, 't> {
-    Reference(&'t ReferenceExpressionTE<'s, 't>),
-    Address(&'t AddressExpressionTE<'s, 't>),
+    Reference(ReferenceExpressionTE<'s, 't>),
+    Address(AddressExpressionTE<'s, 't>),
 }
 /*
 trait ExpressionT  {
@@ -191,56 +191,56 @@ impl<'s, 't> ExpressionTE<'s, 't> where 's: 't {
 // reasons (large, deeply nested trees with `&'t` child pointers) but has no
 // identity semantics — two distinct allocations of `ConstantIntTE { value: 5 }` are
 // neither `==` (Scala vfails) nor distinguishable by identity (no callers care).
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum ReferenceExpressionTE<'s, 't> {
-    LetAndLend(LetAndLendTE<'s, 't>),
-    LockWeak(LockWeakTE<'s, 't>),
-    BorrowToWeak(BorrowToWeakTE<'s, 't>),
-    LetNormal(LetNormalTE<'s, 't>),
-    Unlet(UnletTE<'s, 't>),
-    Discard(DiscardTE<'s, 't>),
-    Defer(DeferTE<'s, 't>),
-    If(IfTE<'s, 't>),
-    While(WhileTE<'s, 't>),
-    Mutate(MutateTE<'s, 't>),
-    Restackify(RestackifyTE<'s, 't>),
-    Transmigrate(TransmigrateTE<'s, 't>),
-    Return(ReturnTE<'s, 't>),
-    Break(BreakTE<'s, 't>),
-    Block(BlockTE<'s, 't>),
-    Pure(PureTE<'s, 't>),
-    Consecutor(ConsecutorTE<'s, 't>),
-    Tuple(TupleTE<'s, 't>),
-    StaticArrayFromValues(StaticArrayFromValuesTE<'s, 't>),
-    ArraySize(ArraySizeTE<'s, 't>),
-    IsSameInstance(IsSameInstanceTE<'s, 't>),
-    AsSubtype(AsSubtypeTE<'s, 't>),
-    VoidLiteral(VoidLiteralTE<'s, 't>),
-    ConstantInt(ConstantIntTE<'s, 't>),
-    ConstantBool(ConstantBoolTE<'s, 't>),
-    ConstantStr(ConstantStrTE<'s, 't>),
-    ConstantFloat(ConstantFloatTE<'s, 't>),
-    ArgLookup(ArgLookupTE<'s, 't>),
-    ArrayLength(ArrayLengthTE<'s, 't>),
-    InterfaceFunctionCall(InterfaceFunctionCallTE<'s, 't>),
-    ExternFunctionCall(ExternFunctionCallTE<'s, 't>),
-    FunctionCall(FunctionCallTE<'s, 't>),
-    Reinterpret(ReinterpretTE<'s, 't>),
-    Construct(ConstructTE<'s, 't>),
-    NewMutRuntimeSizedArray(NewMutRuntimeSizedArrayTE<'s, 't>),
-    StaticArrayFromCallable(StaticArrayFromCallableTE<'s, 't>),
-    DestroyStaticSizedArrayIntoFunction(DestroyStaticSizedArrayIntoFunctionTE<'s, 't>),
-    DestroyStaticSizedArrayIntoLocals(DestroyStaticSizedArrayIntoLocalsTE<'s, 't>),
-    DestroyMutRuntimeSizedArray(DestroyMutRuntimeSizedArrayTE<'s, 't>),
-    RuntimeSizedArrayCapacity(RuntimeSizedArrayCapacityTE<'s, 't>),
-    PushRuntimeSizedArray(PushRuntimeSizedArrayTE<'s, 't>),
-    PopRuntimeSizedArray(PopRuntimeSizedArrayTE<'s, 't>),
-    InterfaceToInterfaceUpcast(InterfaceToInterfaceUpcastTE<'s, 't>),
-    Upcast(UpcastTE<'s, 't>),
-    SoftLoad(SoftLoadTE<'s, 't>),
-    Destroy(DestroyTE<'s, 't>),
-    DestroyImmRuntimeSizedArray(DestroyImmRuntimeSizedArrayTE<'s, 't>),
-    NewImmRuntimeSizedArray(NewImmRuntimeSizedArrayTE<'s, 't>),
+    LetAndLend(&'t LetAndLendTE<'s, 't>),
+    LockWeak(&'t LockWeakTE<'s, 't>),
+    BorrowToWeak(&'t BorrowToWeakTE<'s, 't>),
+    LetNormal(&'t LetNormalTE<'s, 't>),
+    Unlet(&'t UnletTE<'s, 't>),
+    Discard(&'t DiscardTE<'s, 't>),
+    Defer(&'t DeferTE<'s, 't>),
+    If(&'t IfTE<'s, 't>),
+    While(&'t WhileTE<'s, 't>),
+    Mutate(&'t MutateTE<'s, 't>),
+    Restackify(&'t RestackifyTE<'s, 't>),
+    Transmigrate(&'t TransmigrateTE<'s, 't>),
+    Return(&'t ReturnTE<'s, 't>),
+    Break(&'t BreakTE<'s, 't>),
+    Block(&'t BlockTE<'s, 't>),
+    Pure(&'t PureTE<'s, 't>),
+    Consecutor(&'t ConsecutorTE<'s, 't>),
+    Tuple(&'t TupleTE<'s, 't>),
+    StaticArrayFromValues(&'t StaticArrayFromValuesTE<'s, 't>),
+    ArraySize(&'t ArraySizeTE<'s, 't>),
+    IsSameInstance(&'t IsSameInstanceTE<'s, 't>),
+    AsSubtype(&'t AsSubtypeTE<'s, 't>),
+    VoidLiteral(&'t VoidLiteralTE<'s, 't>),
+    ConstantInt(&'t ConstantIntTE<'s, 't>),
+    ConstantBool(&'t ConstantBoolTE<'s, 't>),
+    ConstantStr(&'t ConstantStrTE<'s, 't>),
+    ConstantFloat(&'t ConstantFloatTE<'s, 't>),
+    ArgLookup(&'t ArgLookupTE<'s, 't>),
+    ArrayLength(&'t ArrayLengthTE<'s, 't>),
+    InterfaceFunctionCall(&'t InterfaceFunctionCallTE<'s, 't>),
+    ExternFunctionCall(&'t ExternFunctionCallTE<'s, 't>),
+    FunctionCall(&'t FunctionCallTE<'s, 't>),
+    Reinterpret(&'t ReinterpretTE<'s, 't>),
+    Construct(&'t ConstructTE<'s, 't>),
+    NewMutRuntimeSizedArray(&'t NewMutRuntimeSizedArrayTE<'s, 't>),
+    StaticArrayFromCallable(&'t StaticArrayFromCallableTE<'s, 't>),
+    DestroyStaticSizedArrayIntoFunction(&'t DestroyStaticSizedArrayIntoFunctionTE<'s, 't>),
+    DestroyStaticSizedArrayIntoLocals(&'t DestroyStaticSizedArrayIntoLocalsTE<'s, 't>),
+    DestroyMutRuntimeSizedArray(&'t DestroyMutRuntimeSizedArrayTE<'s, 't>),
+    RuntimeSizedArrayCapacity(&'t RuntimeSizedArrayCapacityTE<'s, 't>),
+    PushRuntimeSizedArray(&'t PushRuntimeSizedArrayTE<'s, 't>),
+    PopRuntimeSizedArray(&'t PopRuntimeSizedArrayTE<'s, 't>),
+    InterfaceToInterfaceUpcast(&'t InterfaceToInterfaceUpcastTE<'s, 't>),
+    Upcast(&'t UpcastTE<'s, 't>),
+    SoftLoad(&'t SoftLoadTE<'s, 't>),
+    Destroy(&'t DestroyTE<'s, 't>),
+    DestroyImmRuntimeSizedArray(&'t DestroyImmRuntimeSizedArrayTE<'s, 't>),
+    NewImmRuntimeSizedArray(&'t NewImmRuntimeSizedArrayTE<'s, 't>),
 }
 /*
 trait ReferenceExpressionTE extends ExpressionT {
@@ -310,13 +310,13 @@ impl<'s, 't> ReferenceExpressionTE<'s, 't> where 's: 't {
     */
 }
 /// Arena-allocated (see @TFITCX)
-#[derive(Debug)]
+#[derive(Copy, Clone, Debug)]
 pub enum AddressExpressionTE<'s, 't> {
-    LocalLookup(LocalLookupTE<'s, 't>),
-    StaticSizedArrayLookup(StaticSizedArrayLookupTE<'s, 't>),
-    RuntimeSizedArrayLookup(RuntimeSizedArrayLookupTE<'s, 't>),
-    ReferenceMemberLookup(ReferenceMemberLookupTE<'s, 't>),
-    AddressMemberLookup(AddressMemberLookupTE<'s, 't>),
+    LocalLookup(&'t LocalLookupTE<'s, 't>),
+    StaticSizedArrayLookup(&'t StaticSizedArrayLookupTE<'s, 't>),
+    RuntimeSizedArrayLookup(&'t RuntimeSizedArrayLookupTE<'s, 't>),
+    ReferenceMemberLookup(&'t ReferenceMemberLookupTE<'s, 't>),
+    AddressMemberLookup(&'t AddressMemberLookupTE<'s, 't>),
 }
 /*
 // This is an Expression2 because we sometimes take an address and throw it
@@ -376,7 +376,7 @@ pub struct LetAndLendTE<'s, 't>
 where 's: 't,
 {
     pub variable: ILocalVariableT<'s, 't>,
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
     pub target_ownership: OwnershipT,
 }
 /*
@@ -401,7 +401,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 impl<'s, 't> LetAndLendTE<'s, 't> where 's: 't, {
     fn new(
         variable: ILocalVariableT<'s, 't>,
-        expr: &'t ReferenceExpressionTE<'s, 't>,
+        expr: ReferenceExpressionTE<'s, 't>,
         target_ownership: OwnershipT,
     ) -> LetAndLendTE<'s, 't> { panic!("Unimplemented: LetAndLendTE::new"); }
 /*
@@ -438,7 +438,7 @@ impl<'s, 't> LetAndLendTE<'s, 't> {
 pub struct LockWeakTE<'s, 't>
 where 's: 't,
 {
-    pub inner_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner_expr: ReferenceExpressionTE<'s, 't>,
     pub result_opt_borrow_type: CoordT<'s, 't>,
     pub some_constructor: &'t PrototypeT<'s, 't>,
     pub none_constructor: &'t PrototypeT<'s, 't>,
@@ -492,7 +492,7 @@ impl<'s, 't> LockWeakTE<'s, 't> {
 pub struct BorrowToWeakTE<'s, 't>
 where 's: 't,
 {
-    pub inner_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 // Turns a borrow ref into a weak ref
@@ -536,7 +536,7 @@ pub struct LetNormalTE<'s, 't>
 where 's: 't,
 {
     pub variable: ILocalVariableT<'s, 't>,
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class LetNormalTE(
@@ -627,7 +627,7 @@ impl<'s, 't> UnletTE<'s, 't> {
 pub struct DiscardTE<'s, 't>
 where 's: 't,
 {
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 // Throws away a reference.
@@ -693,8 +693,8 @@ impl<'s, 't> DiscardTE<'s, 't> {
 pub struct DeferTE<'s, 't>
 where 's: 't,
 {
-    pub inner_expr: &'t ReferenceExpressionTE<'s, 't>,
-    pub deferred_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner_expr: ReferenceExpressionTE<'s, 't>,
+    pub deferred_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class DeferTE(
@@ -726,8 +726,8 @@ impl<'s, 't> DeferTE<'s, 't> {
 }
 impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
     pub fn new(
-        inner_expr: &'t ReferenceExpressionTE<'s, 't>,
-        deferred_expr: &'t ReferenceExpressionTE<'s, 't>,
+        inner_expr: ReferenceExpressionTE<'s, 't>,
+        deferred_expr: ReferenceExpressionTE<'s, 't>,
     ) -> DeferTE<'s, 't> {
         // Rust adaptation: Scala class-body vassert moved to constructor.
         let inner_coord = inner_expr.result().coord;
@@ -750,9 +750,9 @@ impl<'s, 't> DeferTE<'s, 't> where 's: 't, {
 pub struct IfTE<'s, 't>
 where 's: 't,
 {
-    pub condition: &'t ReferenceExpressionTE<'s, 't>,
-    pub then_call: &'t ReferenceExpressionTE<'s, 't>,
-    pub else_call: &'t ReferenceExpressionTE<'s, 't>,
+    pub condition: ReferenceExpressionTE<'s, 't>,
+    pub then_call: ReferenceExpressionTE<'s, 't>,
+    pub else_call: ReferenceExpressionTE<'s, 't>,
     // Rust adaptation: Scala's `private val commonSupertype` stored as a field.
     pub common_supertype: CoordT<'s, 't>,
 }
@@ -782,9 +782,9 @@ impl<'s, 't> IfTE<'s, 't> {
     // assertions live here in the constructor. Only `common_supertype` escapes
     // as a stored field; the other three intermediates are locals.
     pub fn new(
-        condition: &'t ReferenceExpressionTE<'s, 't>,
-        then_call: &'t ReferenceExpressionTE<'s, 't>,
-        else_call: &'t ReferenceExpressionTE<'s, 't>,
+        condition: ReferenceExpressionTE<'s, 't>,
+        then_call: ReferenceExpressionTE<'s, 't>,
+        else_call: ReferenceExpressionTE<'s, 't>,
     ) -> IfTE<'s, 't> {
         let condition_result_coord = condition.result().coord;
         let then_result_coord = then_call.result().coord;
@@ -913,8 +913,8 @@ impl<'s, 't> WhileTE<'s, 't> {
 pub struct MutateTE<'s, 't>
 where 's: 't,
 {
-    pub destination_expr: &'t AddressExpressionTE<'s, 't>,
-    pub source_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub destination_expr: AddressExpressionTE<'s, 't>,
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class MutateTE(
@@ -950,7 +950,7 @@ pub struct RestackifyTE<'s, 't>
 where 's: 't,
 {
     pub variable: ILocalVariableT<'s, 't>,
-    pub source_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class RestackifyTE(
@@ -989,7 +989,7 @@ impl<'s, 't> RestackifyTE<'s, 't> {
 pub struct TransmigrateTE<'s, 't>
 where 's: 't,
 {
-    pub source_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
     pub target_region: RegionT,
 }
 /*
@@ -1025,7 +1025,7 @@ impl<'s, 't> TransmigrateTE<'s, 't> {
 pub struct ReturnTE<'s, 't>
 where 's: 't,
 {
-    pub source_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class ReturnTE(
@@ -1101,7 +1101,7 @@ impl<'s, 't> BreakTE<'s, 't> {
 pub struct BlockTE<'s, 't>
 where 's: 't,
 {
-    pub inner: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner: ReferenceExpressionTE<'s, 't>,
 }
 /*
 // when we make a closure, we make a struct full of pointers to all our variables
@@ -1140,7 +1140,7 @@ pub struct PureTE<'s, 't>
 where 's: 't,
 {
     pub newdefault_region: RegionT,
-    pub inner: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner: ReferenceExpressionTE<'s, 't>,
     pub result_type: CoordT<'s, 't>,
 }
 /*
@@ -1187,7 +1187,7 @@ impl<'s, 't> PureTE<'s, 't> {
 pub struct ConsecutorTE<'s, 't>
 where 's: 't,
 {
-    pub exprs: &'t [&'t ReferenceExpressionTE<'s, 't>],
+    pub exprs: &'t [ReferenceExpressionTE<'s, 't>],
 }
 /*
 case class ConsecutorTE(exprs: Vector[ReferenceExpressionTE]) extends ReferenceExpressionTE {
@@ -1205,7 +1205,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ConsecutorTE<'s, 't> where 's: 't, {
-    fn new(exprs: &'t [&'t ReferenceExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> { panic!("Unimplemented: ConsecutorTE::new"); }
+    fn new(exprs: &'t [ReferenceExpressionTE<'s, 't>]) -> ConsecutorTE<'s, 't> { panic!("Unimplemented: ConsecutorTE::new"); }
 /*
   // There shouldn't be a 0-element consecutor.
   // If we want a consecutor that returns nothing, put a VoidLiteralTE in it.
@@ -1280,7 +1280,7 @@ impl<'s, 't> ConsecutorTE<'s, 't> {
 pub struct TupleTE<'s, 't>
 where 's: 't,
 {
-    pub elements: &'t [&'t ReferenceExpressionTE<'s, 't>],
+    pub elements: &'t [ReferenceExpressionTE<'s, 't>],
     pub result_reference: CoordT<'s, 't>,
 }
 /*
@@ -1326,7 +1326,7 @@ impl<'s, 't> TupleTE<'s, 't> {
 pub struct StaticArrayFromValuesTE<'s, 't>
 where 's: 't,
 {
-    pub elements: &'t [&'t ReferenceExpressionTE<'s, 't>],
+    pub elements: &'t [ReferenceExpressionTE<'s, 't>],
     pub result_reference: CoordT<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
 }
@@ -1362,7 +1362,7 @@ impl<'s, 't> StaticArrayFromValuesTE<'s, 't> {
 pub struct ArraySizeTE<'s, 't>
 where 's: 't,
 {
-    pub array: &'t ReferenceExpressionTE<'s, 't>,
+    pub array: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class ArraySizeTE(array: ReferenceExpressionTE) extends ReferenceExpressionTE {
@@ -1392,8 +1392,8 @@ impl<'s, 't> ArraySizeTE<'s, 't> {
 pub struct IsSameInstanceTE<'s, 't>
 where 's: 't,
 {
-    pub left: &'t ReferenceExpressionTE<'s, 't>,
-    pub right: &'t ReferenceExpressionTE<'s, 't>,
+    pub left: ReferenceExpressionTE<'s, 't>,
+    pub right: ReferenceExpressionTE<'s, 't>,
 }
 /*
 // Can we do an === of objects in two regions? It could be pretty useful.
@@ -1412,7 +1412,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> IsSameInstanceTE<'s, 't> where 's: 't, {
-    fn new(left: &'t ReferenceExpressionTE<'s, 't>, right: &'t ReferenceExpressionTE<'s, 't>) -> IsSameInstanceTE<'s, 't> { panic!("Unimplemented: IsSameInstanceTE::new"); }
+    fn new(left: ReferenceExpressionTE<'s, 't>, right: ReferenceExpressionTE<'s, 't>) -> IsSameInstanceTE<'s, 't> { panic!("Unimplemented: IsSameInstanceTE::new"); }
 /*
   vassert(left.result.coord == right.result.coord)
 
@@ -1439,7 +1439,7 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> {
 pub struct AsSubtypeTE<'s, 't>
 where 's: 't,
 {
-    pub source_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub source_expr: ReferenceExpressionTE<'s, 't>,
     pub target_type: CoordT<'s, 't>,
     pub result_result_type: CoordT<'s, 't>,
     pub ok_constructor: &'t PrototypeT<'s, 't>,
@@ -1745,9 +1745,9 @@ pub struct StaticSizedArrayLookupTE<'s, 't>
 where 's: 't,
 {
     pub range: RangeS<'s>,
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
-    pub index_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub index_expr: ReferenceExpressionTE<'s, 't>,
     pub element_type: CoordT<'s, 't>,
     pub variability: VariabilityT,
 }
@@ -1792,9 +1792,9 @@ pub struct RuntimeSizedArrayLookupTE<'s, 't>
 where 's: 't,
 {
     pub range: RangeS<'s>,
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-    pub index_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub index_expr: ReferenceExpressionTE<'s, 't>,
     pub variability: VariabilityT,
 }
 /*
@@ -1822,9 +1822,9 @@ override def hashCode(): Int = vcurious()
 impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> where 's: 't, {
     pub fn new(
         range: RangeS<'s>,
-        array_expr: &'t ReferenceExpressionTE<'s, 't>,
+        array_expr: ReferenceExpressionTE<'s, 't>,
         array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-        index_expr: &'t ReferenceExpressionTE<'s, 't>,
+        index_expr: ReferenceExpressionTE<'s, 't>,
         variability: VariabilityT,
     ) -> RuntimeSizedArrayLookupTE<'s, 't> {
         assert_eq!(array_expr.result().coord.kind, KindT::RuntimeSizedArray(array_type));
@@ -1854,7 +1854,7 @@ impl<'s, 't> RuntimeSizedArrayLookupTE<'s, 't> {
 pub struct ArrayLengthTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class ArrayLengthTE(arrayExpr: ReferenceExpressionTE) extends ReferenceExpressionTE {
@@ -1894,7 +1894,7 @@ pub struct ReferenceMemberLookupTE<'s, 't>
 where 's: 't,
 {
     pub range: RangeS<'s>,
-    pub struct_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub struct_expr: ReferenceExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
     pub member_reference: CoordT<'s, 't>,
     pub variability: VariabilityT,
@@ -1942,7 +1942,7 @@ pub struct AddressMemberLookupTE<'s, 't>
 where 's: 't,
 {
     pub range: RangeS<'s>,
-    pub struct_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub struct_expr: ReferenceExpressionTE<'s, 't>,
     pub member_name: IVarNameT<'s, 't>,
     pub result_type2: CoordT<'s, 't>,
     pub variability: VariabilityT,
@@ -2064,7 +2064,7 @@ pub struct FunctionCallTE<'s, 't>
 where 's: 't,
 {
     pub callable: &'t PrototypeT<'s, 't>,
-    pub args: &'t [&'t ReferenceExpressionTE<'s, 't>],
+    pub args: &'t [ReferenceExpressionTE<'s, 't>],
     pub return_type: CoordT<'s, 't>,
 }
 /*
@@ -2116,7 +2116,7 @@ impl<'s, 't> FunctionCallTE<'s, 't> {
 pub struct ReinterpretTE<'s, 't>
 where 's: 't,
 {
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
     pub result_reference: CoordT<'s, 't>,
 }
 /*
@@ -2142,7 +2142,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> ReinterpretTE<'s, 't> where 's: 't, {
-    fn new(expr: &'t ReferenceExpressionTE<'s, 't>, result_reference: CoordT<'s, 't>) -> ReinterpretTE<'s, 't> { panic!("Unimplemented: ReinterpretTE::new"); }
+    fn new(expr: ReferenceExpressionTE<'s, 't>, result_reference: CoordT<'s, 't>) -> ReinterpretTE<'s, 't> { panic!("Unimplemented: ReinterpretTE::new"); }
 /*
   vassert(expr.result.coord != resultReference)
 
@@ -2214,7 +2214,7 @@ where 's: 't,
 {
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub region: RegionT,
-    pub capacity_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub capacity_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 // Note: the functionpointercall's last argument is a Placeholder2,
@@ -2278,7 +2278,7 @@ where 's: 't,
 {
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
     pub region: RegionT,
-    pub generator: &'t ReferenceExpressionTE<'s, 't>,
+    pub generator: ReferenceExpressionTE<'s, 't>,
     pub generator_method: &'t PrototypeT<'s, 't>,
 }
 /*
@@ -2334,9 +2334,9 @@ impl<'s, 't> StaticArrayFromCallableTE<'s, 't> {
 pub struct DestroyStaticSizedArrayIntoFunctionTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub array_type: &'t StaticSizedArrayTT<'s, 't>,
-    pub consumer: &'t ReferenceExpressionTE<'s, 't>,
+    pub consumer: ReferenceExpressionTE<'s, 't>,
     pub consumer_method: &'t PrototypeT<'s, 't>,
 }
 /*
@@ -2364,9 +2364,9 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> where 's: 't, {
     fn new(
-        array_expr: &'t ReferenceExpressionTE<'s, 't>,
+        array_expr: ReferenceExpressionTE<'s, 't>,
         array_type: &'t StaticSizedArrayTT<'s, 't>,
-        consumer: &'t ReferenceExpressionTE<'s, 't>,
+        consumer: ReferenceExpressionTE<'s, 't>,
         consumer_method: &'t PrototypeT<'s, 't>,
     ) -> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> { panic!("Unimplemented: DestroyStaticSizedArrayIntoFunctionTE::new"); }
 /*
@@ -2407,7 +2407,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoFunctionTE<'s, 't> {
 pub struct DestroyStaticSizedArrayIntoLocalsTE<'s, 't>
 where 's: 't,
 {
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
     pub static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
     pub destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
 }
@@ -2444,7 +2444,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> {
 }
 impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
     fn new(
-        expr: &'t ReferenceExpressionTE<'s, 't>,
+        expr: ReferenceExpressionTE<'s, 't>,
         static_sized_array: &'t StaticSizedArrayTT<'s, 't>,
         destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
     ) -> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> { panic!("Unimplemented: DestroyStaticSizedArrayIntoLocalsTE::new"); }
@@ -2462,7 +2462,7 @@ impl<'s, 't> DestroyStaticSizedArrayIntoLocalsTE<'s, 't> where 's: 't, {
 pub struct DestroyMutRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class DestroyMutRuntimeSizedArrayTE(
@@ -2492,7 +2492,7 @@ impl<'s, 't> DestroyMutRuntimeSizedArrayTE<'s, 't> {
 pub struct RuntimeSizedArrayCapacityTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class RuntimeSizedArrayCapacityTE(
@@ -2521,8 +2521,8 @@ impl<'s, 't> RuntimeSizedArrayCapacityTE<'s, 't> {
 pub struct PushRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
-    pub new_element_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
+    pub new_element_expr: ReferenceExpressionTE<'s, 't>,
 }
 /*
 case class PushRuntimeSizedArrayTE(
@@ -2554,7 +2554,7 @@ impl<'s, 't> PushRuntimeSizedArrayTE<'s, 't> {
 pub struct PopRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub element_type: CoordT<'s, 't>,
 }
 /*
@@ -2582,7 +2582,7 @@ impl<'s, 't> PopRuntimeSizedArrayTE<'s, 't> {
 pub struct InterfaceToInterfaceUpcastTE<'s, 't>
 where 's: 't,
 {
-    pub inner_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner_expr: ReferenceExpressionTE<'s, 't>,
     pub target_interface: &'t InterfaceTT<'s, 't>,
 }
 /*
@@ -2621,7 +2621,7 @@ impl<'s, 't> InterfaceToInterfaceUpcastTE<'s, 't> {
 pub struct UpcastTE<'s, 't>
 where 's: 't,
 {
-    pub inner_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub inner_expr: ReferenceExpressionTE<'s, 't>,
     pub target_super_kind: ISuperKindTT<'s, 't>,
     pub impl_name: IdT<'s, 't>,
 }
@@ -2679,7 +2679,7 @@ impl<'s, 't> UpcastTE<'s, 't> {
 pub struct SoftLoadTE<'s, 't>
 where 's: 't,
 {
-    pub expr: &'t AddressExpressionTE<'s, 't>,
+    pub expr: AddressExpressionTE<'s, 't>,
     pub target_ownership: OwnershipT,
 }
 /*
@@ -2706,7 +2706,7 @@ override def hashCode(): Int = vcurious()
 */
 }
 impl<'s, 't> SoftLoadTE<'s, 't> where 's: 't, {
-    fn new(expr: &'t AddressExpressionTE<'s, 't>, target_ownership: OwnershipT) -> SoftLoadTE<'s, 't> { panic!("Unimplemented: SoftLoadTE::new"); }
+    fn new(expr: AddressExpressionTE<'s, 't>, target_ownership: OwnershipT) -> SoftLoadTE<'s, 't> { panic!("Unimplemented: SoftLoadTE::new"); }
 /*
   vassert((targetOwnership == ShareT) == (expr.result.coord.ownership == ShareT))
   vassert(targetOwnership != OwnT) // need to unstackify or destroy to get an owning reference
@@ -2739,7 +2739,7 @@ impl<'s, 't> SoftLoadTE<'s, 't> {
 pub struct DestroyTE<'s, 't>
 where 's: 't,
 {
-    pub expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub expr: ReferenceExpressionTE<'s, 't>,
     pub struct_tt: &'t StructTT<'s, 't>,
     pub destination_reference_variables: &'t [ReferenceLocalVariableT<'s, 't>],
 }
@@ -2788,9 +2788,9 @@ impl<'s, 't> DestroyTE<'s, 't> {
 pub struct DestroyImmRuntimeSizedArrayTE<'s, 't>
 where 's: 't,
 {
-    pub array_expr: &'t ReferenceExpressionTE<'s, 't>,
+    pub array_expr: ReferenceExpressionTE<'s, 't>,
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-    pub consumer: &'t ReferenceExpressionTE<'s, 't>,
+    pub consumer: ReferenceExpressionTE<'s, 't>,
     pub consumer_method: &'t PrototypeT<'s, 't>,
 }
 /*
@@ -2820,9 +2820,9 @@ override def hashCode(): Int = vcurious()
 }
 impl<'s, 't> DestroyImmRuntimeSizedArrayTE<'s, 't> where 's: 't, {
     fn new(
-        array_expr: &'t ReferenceExpressionTE<'s, 't>,
+        array_expr: ReferenceExpressionTE<'s, 't>,
         array_type: &'t RuntimeSizedArrayTT<'s, 't>,
-        consumer: &'t ReferenceExpressionTE<'s, 't>,
+        consumer: ReferenceExpressionTE<'s, 't>,
         consumer_method: &'t PrototypeT<'s, 't>,
     ) -> DestroyImmRuntimeSizedArrayTE<'s, 't> { panic!("Unimplemented: DestroyImmRuntimeSizedArrayTE::new"); }
 /*
@@ -2853,8 +2853,8 @@ where 's: 't,
 {
     pub array_type: &'t RuntimeSizedArrayTT<'s, 't>,
     pub region: RegionT,
-    pub size_expr: &'t ReferenceExpressionTE<'s, 't>,
-    pub generator: &'t ReferenceExpressionTE<'s, 't>,
+    pub size_expr: ReferenceExpressionTE<'s, 't>,
+    pub generator: ReferenceExpressionTE<'s, 't>,
     pub generator_method: &'t PrototypeT<'s, 't>,
 }
 /*

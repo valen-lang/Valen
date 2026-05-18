@@ -68,24 +68,24 @@ where 's: 't,
             KindT::StaticSizedArray(ssa) => ssa.size(),
             other => panic!("SSALenMacro received non-SSA param: {:?}", other),
         };
-        let discard_te = self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE {
-            expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let discard_te = ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
+            expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: param_coords[0].tyype,
             })),
         }));
-        let return_te = self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-            source_expr: self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+        let return_te = ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+            source_expr: ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                 value: len,
                 bits: 32,
                 region: RegionT,
             })),
         }));
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Consecutor(ConsecutorTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE {
                 exprs: self.typing_interner.alloc_slice_from_vec(vec![discard_te, return_te]),
             })),
-        });
+        }));
         (header, body)
     }
 /*

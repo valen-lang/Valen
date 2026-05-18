@@ -164,7 +164,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         exprs_1: &[&'s IExpressionSE<'s>],
-    ) -> Result<(Vec<&'t ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(Vec<ReferenceExpressionTE<'s, 't>>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let mut result_exprs = Vec::new();
         let mut all_returns = HashSet::new();
         for (index, expr) in exprs_1.iter().enumerate() {
@@ -212,8 +212,7 @@ where 's: 't,
         match self.evaluate_addressible_lookup(coutputs, nenv, range, region, name)? {
             Some(x) => {
                 let thing = self.soft_load(nenv, range, x, target_ownership, region);
-                let thing_ref: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(thing);
-                Ok(Some(ExpressionTE::Reference(thing_ref)))
+                Ok(Some(ExpressionTE::Reference(thing)))
             }
             None => {
                 let name_as_name_t: INameT<'s, 't> = name.into();
@@ -221,14 +220,14 @@ where 's: 't,
                     [ILookupContext::TemplataLookupContext].into_iter().collect();
                 match nenv.lookup_nearest_with_name(name_as_name_t, &lookup_filter) {
                     Some(ITemplataT::Integer(num)) => {
-                        Ok(Some(ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                        Ok(Some(ExpressionTE::Reference(ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                             value: ITemplataT::Integer(num),
                             bits: 32,
                             region,
                         })))))
                     }
                     Some(ITemplataT::Boolean(b)) => {
-                        Ok(Some(ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::ConstantBool(ConstantBoolTE {
+                        Ok(Some(ExpressionTE::Reference(ReferenceExpressionTE::ConstantBool(self.typing_interner.alloc(ConstantBoolTE {
                             value: b,
                             region,
                             _phantom: std::marker::PhantomData,
@@ -279,17 +278,17 @@ where 's: 't,
         region: RegionT,
         load_range: RangeS<'s>,
         name_a: IVarNameS<'s>,
-    ) -> Option<&'t AddressExpressionTE<'s, 't>> {
+    ) -> Option<AddressExpressionTE<'s, 't>> {
         let name_2 = self.translate_var_name_step(name_a);
         match nenv.get_variable(name_2, self.typing_interner) {
             Some(IVariableT::AddressibleLocal(alv)) => {
-                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Some(AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
                     local_variable: ILocalVariableT::Addressible(alv),
                 })))
             }
             Some(IVariableT::ReferenceLocal(rlv)) => {
-                Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Some(AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
                     local_variable: ILocalVariableT::Reference(rlv),
                 })))
@@ -310,15 +309,15 @@ where 's: 't,
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
-                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: load_range,
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
                 })));
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &acv.name));
-                Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                Some(AddressExpressionTE::AddressMemberLookup(self.typing_interner.alloc(AddressMemberLookupTE {
                     range: load_range,
-                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    struct_expr: borrow_expr,
                     member_name: acv.name,
                     result_type2: acv.coord,
                     variability: acv.variability,
@@ -427,11 +426,11 @@ where 's: 't,
         ranges: &[RangeS<'s>],
         region: RegionT,
         name_2: IVarNameT<'s, 't>,
-    ) -> Result<Option<&'t AddressExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
+    ) -> Result<Option<AddressExpressionTE<'s, 't>>, ICompileErrorT<'s, 't>> {
         match nenv.get_variable(name_2, self.typing_interner) {
             Some(IVariableT::AddressibleLocal(alv)) => {
                 assert!(!nenv.unstackifieds().contains(&alv.name));
-                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Ok(Some(AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Addressible(alv),
                 }))))
@@ -443,7 +442,7 @@ where 's: 't,
                         local_id: rlv.name,
                     });
                 }
-                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                Ok(Some(AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(rlv),
                 }))))
@@ -464,15 +463,15 @@ where 's: 't,
                 };
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closure_param_var_name_2 = IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData }));
-                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT { name: closure_param_var_name_2, variability: VariabilityT::Final, coord: closured_vars_struct_ref_coord }),
                 })));
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &acv.name));
-                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::AddressMemberLookup(AddressMemberLookupTE {
+                Ok(Some(AddressExpressionTE::AddressMemberLookup(self.typing_interner.alloc(AddressMemberLookupTE {
                     range: ranges[0],
-                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    struct_expr: borrow_expr,
                     member_name: acv.name,
                     result_type2: acv.coord,
                     variability: acv.variability,
@@ -495,7 +494,7 @@ where 's: 't,
                 let closured_vars_struct_ref_coord = CoordT { ownership, region: RegionT, kind: KindT::Struct(self.typing_interner.alloc(closured_vars_struct_ref)) };
                 let closured_vars_struct_def = coutputs.lookup_struct(closured_vars_struct_ref.id, self);
                 assert!(closured_vars_struct_def.members.iter().any(|m| m.name() == &rcv.name));
-                let borrow_expr = self.borrow_soft_load(coutputs, self.typing_interner.alloc(AddressExpressionTE::LocalLookup(LocalLookupTE {
+                let borrow_expr = self.borrow_soft_load(coutputs, AddressExpressionTE::LocalLookup(self.typing_interner.alloc(LocalLookupTE {
                     range: ranges[0],
                     local_variable: ILocalVariableT::Reference(ReferenceLocalVariableT {
                         name: IVarNameT::ClosureParam(self.typing_interner.intern_closure_param_name(ClosureParamNameT { code_location: closured_vars_struct_template_name.code_location, _phantom: std::marker::PhantomData })),
@@ -503,9 +502,9 @@ where 's: 't,
                         coord: closured_vars_struct_ref_coord,
                     }),
                 })));
-                Ok(Some(self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                Ok(Some(AddressExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(ReferenceMemberLookupTE {
                     range: ranges[0],
-                    struct_expr: self.typing_interner.alloc(borrow_expr),
+                    struct_expr: borrow_expr,
                     member_name: rcv.name,
                     member_reference: rcv.coord,
                     variability: rcv.variability,
@@ -617,7 +616,7 @@ where 's: 't,
         range: &[RangeS<'s>],
         region: RegionT,
         closure_struct_ref: StructTT<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         let closure_struct_def = coutputs.lookup_struct(closure_struct_ref.id, self);
         let substituter =
             self.get_placeholder_substituter(
@@ -645,7 +644,7 @@ where 's: 't,
                                 // it's a borrow or a weak. See "Captured own is borrow" test for more.
                                 assert!(coord.ownership != OwnershipT::Own);
                                 let borrow_loaded = self.borrow_soft_load(coutputs, lookup);
-                                ExpressionTE::Reference(self.typing_interner.alloc(borrow_loaded))
+                                ExpressionTE::Reference(borrow_loaded)
                             }
                             IMemberTypeT::Address(AddressMemberTypeT { reference: unsubstituted_coord }) => {
                                 let coord = substituter.substitute_for_coord(coutputs, *unsubstituted_coord);
@@ -671,7 +670,7 @@ where 's: 't,
             result_reference: result_pointer_type,
             args: self.typing_interner.alloc_slice_from_vec(lookup_expressions2),
         };
-        self.typing_interner.alloc(ReferenceExpressionTE::Construct(construct_expr2))
+        ReferenceExpressionTE::Construct(self.typing_interner.alloc(construct_expr2))
     }
 /*
   private def makeClosureStructConstructExpression(
@@ -753,7 +752,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
-    ) -> Result<(&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (expr2, returns_from_expr) =
             self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
         match expr2 {
@@ -800,14 +799,14 @@ where 's: 't,
         parent_ranges: &'t [RangeS<'s>],
         expr_2: ExpressionTE<'s, 't>,
         region: RegionT,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         match expr_2 {
             ExpressionTE::Reference(r) => r,
             ExpressionTE::Address(a) => {
                 let range_with_parent: Vec<RangeS<'s>> =
                     std::iter::once(a.range()).chain(parent_ranges.iter().copied()).collect();
                 let soft_loaded = self.soft_load(nenv, &range_with_parent, a, LoadAsP::Use, region);
-                self.typing_interner.alloc(soft_loaded)
+                soft_loaded
             }
         }
     }
@@ -842,7 +841,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         expr_1: &'s IExpressionSE<'s>,
-    ) -> Result<(&'t AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(AddressExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         let (expr_2, returns) =
             self.evaluate_expression(coutputs, nenv, life, parent_ranges, call_location, region, expr_1)?;
         let range_with_parent: &'t [RangeS<'s>] = self.typing_interner.alloc_slice_copy(
@@ -896,15 +895,15 @@ where 's: 't,
     ) -> Result<(ExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         match expr_1 {
             IExpressionSE::Void(_) => {
-                Ok((ExpressionTE::Reference(self.typing_interner.alloc(
-                    ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
+                Ok((ExpressionTE::Reference(
+                    ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE {
                         region,
                         _phantom: std::marker::PhantomData,
                     }))), HashSet::new()))
             }
             IExpressionSE::ConstantInt(c) => {
-                Ok((ExpressionTE::Reference(self.typing_interner.alloc(
-                    ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                Ok((ExpressionTE::Reference(
+                    ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                         value: ITemplataT::Integer(c.value),
                         bits: c.bits,
                         region,
@@ -957,8 +956,8 @@ where 's: 't,
                     variability: VariabilityT::Final,
                     coord: inner_expr_2.result().coord,
                 };
-                let result_let = self.typing_interner.alloc(
-                    ReferenceExpressionTE::LetNormal(LetNormalTE {
+                let result_let =
+                    ReferenceExpressionTE::LetNormal(self.typing_interner.alloc(LetNormalTE {
                         variable: ILocalVariableT::Reference(result_variable),
                         expr: inner_expr_2,
                     }));
@@ -973,18 +972,18 @@ where 's: 't,
 
                 let get_result_expr = self.unlet_local_without_dropping(
                     nenv, &ILocalVariableT::Reference(result_variable));
-                let get_result_expr_ref = self.typing_interner.alloc(
-                    ReferenceExpressionTE::Unlet(get_result_expr));
+                let get_result_expr_ref =
+                    ReferenceExpressionTE::Unlet(self.typing_interner.alloc(get_result_expr));
 
-                let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                let mut all_exprs: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
                 all_exprs.push(result_let);
                 all_exprs.extend(destruct_exprs_refs);
                 all_exprs.push(get_result_expr_ref);
 
                 let consecutor = self.consecutive(&all_exprs);
 
-                let return_te = self.typing_interner.alloc(
-                    ReferenceExpressionTE::Return(ReturnTE {
+                let return_te =
+                    ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                         source_expr: consecutor,
                     }));
 
@@ -1028,11 +1027,10 @@ where 's: 't,
                     source_expr_2,
                     region,
                     |compiler, _coutputs, nenv, _life, _live_capture_locals| {
-                        compiler.typing_interner.alloc(
-                            ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
-                                region: nenv.default_region(),
-                                _phantom: std::marker::PhantomData,
-                            }))
+                        ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE {
+                            region: nenv.default_region(),
+                            _phantom: std::marker::PhantomData,
+                        }))
                     },
                 );
 
@@ -1042,7 +1040,7 @@ where 's: 't,
                 assert!(region == nenv.default_region());
                 let region_for_inners = region;
 
-                let mut init_exprs_te: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                let mut init_exprs_te: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
                 let mut init_returns: HashSet<CoordT<'s, 't>> = HashSet::new();
                 for (index, expr_se) in consecutor_se.exprs.iter().enumerate().take(consecutor_se.exprs.len() - 1) {
                     let (undropped_expr_te, returns) =
@@ -1185,7 +1183,7 @@ where 's: 't,
                                         coutputs, nenv, &range_with_parent, outer_call_location,
                                         life.add(self.typing_interner, 1), region,
                                         source_te, OwnershipT::Borrow);
-                                    self.typing_interner.alloc(ReferenceExpressionTE::Defer(defer_te))
+                                    ReferenceExpressionTE::Defer(self.typing_interner.alloc(defer_te))
                                 }
                                 LoadAsP::LoadAsWeak => {
                                     panic!("implement: Ownershipped OwnT LoadAsWeakP");
@@ -1257,7 +1255,7 @@ where 's: 't,
                                 })
                             .substitute_for_coord(coutputs, unsubstituted_member_type);
                         assert!(struct_def.members.iter().any(|m| m.name() == &member_name));
-                        self.typing_interner.alloc(AddressExpressionTE::ReferenceMemberLookup(ReferenceMemberLookupTE {
+                        AddressExpressionTE::ReferenceMemberLookup(self.typing_interner.alloc(ReferenceMemberLookupTE {
                             range: dot.range,
                             struct_expr: container_expr_2,
                             member_name,
@@ -1268,14 +1266,14 @@ where 's: 't,
                     KindT::StaticSizedArray(ssa) => {
                         if dot.member.0.chars().all(|c| c.is_ascii_digit()) {
                             let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
-                            let index_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                            let index_expr_2 = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                                 value: ITemplataT::Integer(index),
                                 bits: 32,
                                 region,
                             }));
-                            self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(
-                                self.lookup_in_static_sized_array(dot.range, container_expr_2, index_expr_2, *ssa)
-                            ))
+                            AddressExpressionTE::StaticSizedArrayLookup(
+                                self.typing_interner.alloc(self.lookup_in_static_sized_array(dot.range, container_expr_2, index_expr_2, *ssa))
+                            )
                         } else {
                             panic!("implement: evaluate_expression Dot StaticSizedArray — RangedInternalErrorT: Sequence has no member named");
                         }
@@ -1283,17 +1281,17 @@ where 's: 't,
                     KindT::RuntimeSizedArray(rsa) => {
                         if dot.member.0.chars().all(|c| c.is_ascii_digit()) {
                             let index = dot.member.0.parse::<i64>().expect("vassert: member is digit string");
-                            let index_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                            let index_expr_2 = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                                 value: ITemplataT::Integer(index),
                                 bits: 32,
                                 region,
                             }));
                             let range_with_parent: Vec<RangeS<'s>> =
                                 std::iter::once(dot.range).chain(parent_ranges.iter().copied()).collect();
-                            self.typing_interner.alloc(AddressExpressionTE::RuntimeSizedArrayLookup(
-                                self.lookup_in_unknown_sized_array(
-                                    &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa)
-                            ))
+                            AddressExpressionTE::RuntimeSizedArrayLookup(
+                                self.typing_interner.alloc(self.lookup_in_unknown_sized_array(
+                                    &range_with_parent, dot.range, container_expr_2, index_expr_2, rsa))
+                            )
                         } else {
                             panic!("implement: evaluate_expression Dot RuntimeSizedArray — RangedInternalErrorT: Array has no member named");
                         }
@@ -1389,12 +1387,12 @@ where 's: 't,
                 let range_with_parent: Vec<RangeS<'s>> =
                     std::iter::once(if_se.range).chain(parent_ranges.iter().copied()).collect();
                 let then_expr_2 = self.convert(then_fate_snap, coutputs, &range_with_parent, outer_call_location,
-                    self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_then_block_2)), common_type);
+                    ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_then_block_2)), common_type);
                 let else_fate_snap = IInDenizenEnvironmentT::Node(else_fate.snapshot(self.typing_interner));
                 let else_expr_2 = self.convert(else_fate_snap, coutputs, &range_with_parent, outer_call_location,
-                    self.typing_interner.alloc(ReferenceExpressionTE::Block(uncoerced_else_block_2)), common_type);
+                    ReferenceExpressionTE::Block(self.typing_interner.alloc(uncoerced_else_block_2)), common_type);
 
-                let if_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::If(IfTE::new(
+                let if_expr_2 = ReferenceExpressionTE::If(self.typing_interner.alloc(IfTE::new(
                     condition_expr,
                     then_expr_2,
                     else_expr_2,
@@ -1463,9 +1461,9 @@ where 's: 't,
                     }
                     Some((while_nenv, _)) => {
                         assert!(region == nenv.default_region()); // vcurious
-                        let void_literal = self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+                        let void_literal = ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
                         let drops_te = self.drop_since(coutputs, while_nenv, nenv, &range_with_parent, outer_call_location, life, region, void_literal)?;
-                        let break_te = self.typing_interner.alloc(ReferenceExpressionTE::Break(BreakTE { region, _phantom: std::marker::PhantomData }));
+                        let break_te = ReferenceExpressionTE::Break(self.typing_interner.alloc(BreakTE { region, _phantom: std::marker::PhantomData }));
                         let drops_and_break_te = self.consecutive(&[drops_te, break_te]);
                         Ok((ExpressionTE::Reference(drops_and_break_te), HashSet::new()))
                     }
@@ -1528,7 +1526,7 @@ where 's: 't,
                     }
                 }
 
-                let loop_expr_2 = self.typing_interner.alloc(ReferenceExpressionTE::While(WhileTE::new(uncoerced_body_block_2)));
+                let loop_expr_2 = ReferenceExpressionTE::While(self.typing_interner.alloc(WhileTE::new(uncoerced_body_block_2)));
                 Ok((ExpressionTE::Reference(loop_expr_2), body_returns_from_exprs))
             }
             IExpressionSE::Map(_) => panic!("implement: evaluate_expression — Map"),
@@ -1586,7 +1584,7 @@ where 's: 't,
                 let converted_source_expr_2 =
                     self.convert(IInDenizenEnvironmentT::Node(nenv.snapshot(self.typing_interner)), coutputs, &range_with_parent, outer_call_location,
                         unconverted_source_expr_2, destination_expr_2.result().coord);
-                let mutate_2 = self.typing_interner.alloc(ReferenceExpressionTE::Mutate(MutateTE {
+                let mutate_2 = ReferenceExpressionTE::Mutate(self.typing_interner.alloc(MutateTE {
                     destination_expr: destination_expr_2,
                     source_expr: converted_source_expr_2,
                 }));
@@ -1626,13 +1624,13 @@ where 's: 't,
                 let expr_te = match destination_expr_2 {
                     AddressExpressionTE::LocalLookup(local_lookup) if nenv.unstackifieds().contains(&local_lookup.local_variable.name()) => {
                         nenv.mark_local_restackified(local_lookup.local_variable.name());
-                        self.typing_interner.alloc(ReferenceExpressionTE::Restackify(RestackifyTE {
+                        ReferenceExpressionTE::Restackify(self.typing_interner.alloc(RestackifyTE {
                             variable: local_lookup.local_variable,
                             source_expr: converted_source_expr_2,
                         }))
                     }
                     _ => {
-                        self.typing_interner.alloc(ReferenceExpressionTE::Mutate(MutateTE {
+                        ReferenceExpressionTE::Mutate(self.typing_interner.alloc(MutateTE {
                             destination_expr: destination_expr_2,
                             source_expr: converted_source_expr_2,
                         }))
@@ -1654,7 +1652,7 @@ where 's: 't,
                     outer_call_location,
                     exprs_2,
                 );
-                Ok((ExpressionTE::Reference(self.typing_interner.alloc(expr_2)), returns_from_elements))
+                Ok((ExpressionTE::Reference(expr_2), returns_from_elements))
             }
             IExpressionSE::StaticArrayFromValues(sav) => {
                 let (exprs_2, returns_from_elements) =
@@ -1675,7 +1673,7 @@ where 's: 't,
                     exprs_2,
                     region,
                 )?;
-                Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromValues(expr_2))), returns_from_elements))
+                Ok((ExpressionTE::Reference(ReferenceExpressionTE::StaticArrayFromValues(self.typing_interner.alloc(expr_2))), returns_from_elements))
             }
             IExpressionSE::StaticArrayFromCallable(sa) => {
                 let (callable_te, returns_from_callable) =
@@ -1696,7 +1694,7 @@ where 's: 't,
                     sa.variability_st.rune,
                     callable_te,
                 );
-                Ok((ExpressionTE::Reference(self.typing_interner.alloc(ReferenceExpressionTE::StaticArrayFromCallable(expr_2))), returns_from_callable))
+                Ok((ExpressionTE::Reference(ReferenceExpressionTE::StaticArrayFromCallable(self.typing_interner.alloc(expr_2))), returns_from_callable))
             }
             IExpressionSE::NewRuntimeSizedArray(_) => panic!("implement: evaluate_expression — NewRuntimeSizedArray"),
             IExpressionSE::RepeaterPack(_) => panic!("implement: evaluate_expression — RepeaterPack"),
@@ -1714,7 +1712,7 @@ where 's: 't,
                         outer_call_location,
                         nenv.default_region(),
                         b)?;
-                let block_2 = self.typing_interner.alloc(ReferenceExpressionTE::Block(BlockTE { inner: expressions_with_result }));
+                let block_2 = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE { inner: expressions_with_result }));
                 let (unstackified_ancestor_locals, restackified_ancestor_locals) =
                     child_environment.snapshot(self.typing_interner).get_effects_since(nenv.snapshot(self.typing_interner));
                 for local in unstackified_ancestor_locals {
@@ -1727,7 +1725,7 @@ where 's: 't,
             }
             IExpressionSE::Pure(_) => panic!("implement: evaluate_expression — Pure"),
             IExpressionSE::ConstantStr(c) => {
-                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantStr(ConstantStrTE {
+                let result = ReferenceExpressionTE::ConstantStr(self.typing_interner.alloc(ConstantStrTE {
                     value: c.value,
                     region,
                     _phantom: std::marker::PhantomData,
@@ -1735,7 +1733,7 @@ where 's: 't,
                 Ok((ExpressionTE::Reference(result), HashSet::new()))
             }
             IExpressionSE::ConstantFloat(c) => {
-                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantFloat(ConstantFloatTE {
+                let result = ReferenceExpressionTE::ConstantFloat(self.typing_interner.alloc(ConstantFloatTE {
                     value: c.value,
                     region,
                     _phantom: std::marker::PhantomData,
@@ -1766,7 +1764,7 @@ where 's: 't,
                             let reference = substituter.substitute_for_coord(coutputs, unsubstituted_coord);
                             self.make_temporary_local(nenv, life.add(self.typing_interner, 1 + index as i32), reference)
                         }).collect();
-                        self.typing_interner.alloc(ReferenceExpressionTE::Destroy(DestroyTE {
+                        ReferenceExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
                             expr: inner_expr_2,
                             struct_tt: struct_tt,
                             destination_reference_variables: self.typing_interner.alloc_slice_from_vec(destination_locals),
@@ -1791,11 +1789,11 @@ where 's: 't,
                 let expr_templata = match container_expr_2.result().coord.kind {
                     KindT::RuntimeSizedArray(rsa) => {
                         let lookup = self.lookup_in_unknown_sized_array(&range_with_parent, index_se.range, container_expr_2, index_expr_2, rsa);
-                        ExpressionTE::Address(self.typing_interner.alloc(AddressExpressionTE::RuntimeSizedArrayLookup(lookup)))
+                        ExpressionTE::Address(AddressExpressionTE::RuntimeSizedArrayLookup(self.typing_interner.alloc(lookup)))
                     }
                     KindT::StaticSizedArray(at) => {
                         let lookup = self.lookup_in_static_sized_array(index_se.range, container_expr_2, index_expr_2, *at);
-                        ExpressionTE::Address(self.typing_interner.alloc(AddressExpressionTE::StaticSizedArrayLookup(lookup)))
+                        ExpressionTE::Address(AddressExpressionTE::StaticSizedArrayLookup(self.typing_interner.alloc(lookup)))
                     }
                     _ => {
                         return Err(ICompileErrorT::CannotSubscriptT {
@@ -1818,7 +1816,7 @@ where 's: 't,
                 }, self.typing_interner).unwrap();
                 match templata {
                     ITemplataT::Integer(value) => {
-                        let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                        let result = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                             value: ITemplataT::Integer(value),
                             bits: 32,
                             region,
@@ -1826,7 +1824,7 @@ where 's: 't,
                         Ok((ExpressionTE::Reference(result), HashSet::new()))
                     }
                     ITemplataT::Placeholder(p) if matches!(p.tyype, ITemplataType::IntegerTemplataType(_)) => {
-                        let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantInt(ConstantIntTE {
+                        let result = ReferenceExpressionTE::ConstantInt(self.typing_interner.alloc(ConstantIntTE {
                             value: ITemplataT::Placeholder(p),
                             bits: 32,
                             region,
@@ -1852,7 +1850,7 @@ where 's: 't,
                 }
             }
             IExpressionSE::ConstantBool(c) => {
-                let result = self.typing_interner.alloc(ReferenceExpressionTE::ConstantBool(ConstantBoolTE {
+                let result = ReferenceExpressionTE::ConstantBool(self.typing_interner.alloc(ConstantBoolTE {
                     value: c.value,
                     region,
                     _phantom: std::marker::PhantomData,
@@ -3446,8 +3444,8 @@ where 's: 't,
     pub fn weak_alias(
         &self,
         coutputs: &mut CompilerOutputs<'s, 't>,
-        expr: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        expr: ReferenceExpressionTE<'s, 't>,
+    ) -> ReferenceExpressionTE<'s, 't> {
         panic!("Unimplemented: Slab 15 — body migration");
     }
 /*
@@ -3485,7 +3483,7 @@ where 's: 't,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         context_region: RegionT,
         undecayed_unborrowed_container_expr_2: ExpressionTE<'s, 't>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         match undecayed_unborrowed_container_expr_2 {
             ExpressionTE::Address(a) => {
                 panic!("implement: dot_borrow — AddressExpressionTE arm (borrow_soft_load)");
@@ -3554,7 +3552,7 @@ where 's: 't,
         region: RegionT,
         name: IFunctionDeclarationNameS<'s>,
         function_s: &'s FunctionS<'s>,
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
+    ) -> Result<ReferenceExpressionTE<'s, 't>, ICompileErrorT<'s, 't>> {
         let function_a = self.astronomize_lambda(coutputs, nenv, parent_ranges, function_s);
 
         let snapshot_env = nenv.snapshot(self.typing_interner);
@@ -3627,21 +3625,20 @@ where 's: 't,
         coutputs: &mut CompilerOutputs<'s, 't>,
         region: RegionT,
         name: IImpreciseNameS<'s>,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         let name_ref: &'s IImpreciseNameS<'s> = self.scout_arena.alloc(name);
         let overload_set = self.typing_interner.intern_overload_set(
             OverloadSetTValT { env, name: name_ref });
-        let void_expr: &'t ReferenceExpressionTE<'s, 't> = self.typing_interner.alloc(
-            ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
-        self.typing_interner.alloc(
-            ReferenceExpressionTE::Reinterpret(ReinterpretTE {
-                expr: void_expr,
-                result_reference: CoordT {
-                    ownership: OwnershipT::Share,
-                    region,
-                    kind: KindT::OverloadSet(overload_set),
-                },
-            }))
+        let void_expr: ReferenceExpressionTE<'s, 't> =
+            ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData }));
+        ReferenceExpressionTE::Reinterpret(self.typing_interner.alloc(ReinterpretTE {
+            expr: void_expr,
+            result_reference: CoordT {
+                ownership: OwnershipT::Share,
+                region,
+                kind: KindT::OverloadSet(overload_set),
+            },
+        }))
     }
 /*
   private def newGlobalFunctionGroupExpression(
@@ -3675,7 +3672,7 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         region: RegionT,
         block: &'s BlockSE<'s>,
-    ) -> Result<(&'t ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
+    ) -> Result<(ReferenceExpressionTE<'s, 't>, HashSet<CoordT<'s, 't>>), ICompileErrorT<'s, 't>> {
         self.evaluate_block_statements_block(
             coutputs, starting_nenv, nenv, parent_ranges, call_location,
             life, region, block)
@@ -3709,15 +3706,15 @@ where 's: 't,
         parent_ranges: &'t [RangeS<'s>],
         call_location: LocationInDenizen<'s>,
         patterns_1: &'t [&'s AtomSP<'s>],
-        pattern_input_exprs_2: &'t [&'t ReferenceExpressionTE<'s, 't>],
+        pattern_input_exprs_2: &'t [ReferenceExpressionTE<'s, 't>],
         region: RegionT,
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+    ) -> ReferenceExpressionTE<'s, 't> {
         self.translate_pattern_list_pattern(
             coutputs, nenv, life, parent_ranges, call_location,
             patterns_1, pattern_input_exprs_2, region,
             |compiler, _coutputs, nenv, _live_capture_locals| {
-                compiler.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE {
-                    region: nenv.default_region,
+                ReferenceExpressionTE::VoidLiteral(compiler.typing_interner.alloc(VoidLiteralTE {
+                    region: nenv.default_region(),
                     _phantom: std::marker::PhantomData,
                 }))
             })
@@ -3915,8 +3912,8 @@ where 's: 't,
         call_location: LocationInDenizen<'s>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
         region: RegionT,
-        expr_te: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> Result<&'t ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
+        expr_te: ReferenceExpressionTE<'s, 't>,
+    ) -> Result<ReferenceExpressionTE<'s, 't>, crate::typing::compiler_error_reporter::ICompileErrorT<'s, 't>> {
         let snapshot = nenv.snapshot(self.typing_interner);
         let unreversed_variables_to_destruct =
             snapshot.get_live_variables_introduced_since(starting_nenv);
@@ -3928,10 +3925,10 @@ where 's: 't,
                 KindT::Void(_) => {
                     let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
                     let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct)?;
-                    let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                    let mut exprs: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(expr_te);
                     exprs.extend(destroy_expressions);
-                    exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region, _phantom: std::marker::PhantomData })));
+                    exprs.push(ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region, _phantom: std::marker::PhantomData })));
                     Ok(self.consecutive(&exprs))
                 }
                 KindT::Never(_) => {
@@ -3948,12 +3945,12 @@ where 's: 't,
                     let (resultified_expr, result_local_variable) = self.resultify_expressions(nenv, life.add(self.typing_interner, 1), expr_te);
                     let reversed_variables_to_destruct: Vec<_> = unreversed_variables_to_destruct.iter().rev().collect();
                     let destroy_expressions = self.unlet_and_drop_all(coutputs, nenv, range, call_location, region, &reversed_variables_to_destruct)?;
-                    let mut exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = Vec::new();
+                    let mut exprs: Vec<ReferenceExpressionTE<'s, 't>> = Vec::new();
                     exprs.push(resultified_expr);
                     exprs.extend(destroy_expressions);
                     let result_ilocal_variable = ILocalVariableT::Reference(result_local_variable);
                     let unlet_te = self.unlet_local_without_dropping(nenv, &result_ilocal_variable);
-                    exprs.push(self.typing_interner.alloc(ReferenceExpressionTE::Unlet(unlet_te)));
+                    exprs.push(ReferenceExpressionTE::Unlet(self.typing_interner.alloc(unlet_te)));
                     Ok(self.consecutive(&exprs))
                 }
             }
@@ -4035,14 +4032,14 @@ where 's: 't,
         &self,
         nenv: &mut NodeEnvironmentBox<'s, 't>,
         life: LocationInFunctionEnvironmentT<'s, 't>,
-        expr: &'t ReferenceExpressionTE<'s, 't>,
-    ) -> (&'t ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
+        expr: ReferenceExpressionTE<'s, 't>,
+    ) -> (ReferenceExpressionTE<'s, 't>, ReferenceLocalVariableT<'s, 't>) {
         let result_var_ref = self.typing_interner.intern_typing_pass_block_result_var_name(TypingPassBlockResultVarNameT { life });
         let result_var_name: IVarNameT<'s, 't> = result_var_ref.into();
         let result_variable = ReferenceLocalVariableT { name: result_var_name, variability: VariabilityT::Final, coord: expr.result().coord };
         let result_let = LetNormalTE { variable: ILocalVariableT::Reference(result_variable), expr };
         nenv.add_variable(IVariableT::ReferenceLocal(result_variable));
-        (self.typing_interner.alloc(ReferenceExpressionTE::LetNormal(result_let)), result_variable)
+        (ReferenceExpressionTE::LetNormal(self.typing_interner.alloc(result_let)), result_variable)
     }
 /*
   // Makes the last expression stored in a variable.

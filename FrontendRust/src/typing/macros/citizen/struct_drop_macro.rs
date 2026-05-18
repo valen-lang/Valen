@@ -441,10 +441,10 @@ where 's: 't,
         coutputs.declare_function_return_type(
             self.typing_interner.alloc(header.to_signature()), header.return_type);
 
-        let body_expr: &'t ReferenceExpressionTE<'s, 't> = match struct_def.mutability {
+        let body_expr: ReferenceExpressionTE<'s, 't> = match struct_def.mutability {
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Immutable }) => {
-                self.typing_interner.alloc(ReferenceExpressionTE::Discard(DiscardTE {
-                    expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: struct_type })),
+                ReferenceExpressionTE::Discard(self.typing_interner.alloc(DiscardTE {
+                    expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type })),
                 }))
             }
             ITemplataT::Mutability(MutabilityTemplataT { mutability: MutabilityT::Mutable }) |
@@ -471,8 +471,8 @@ where 's: 't,
                         }
                     }).collect();
                 let member_local_variables_slice = self.typing_interner.alloc_slice_from_vec(member_local_variables.clone());
-                let arg_lookup = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE { param_index: 0, coord: struct_type }));
-                let destroy = self.typing_interner.alloc(ReferenceExpressionTE::Destroy(DestroyTE {
+                let arg_lookup = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE { param_index: 0, coord: struct_type }));
+                let destroy = ReferenceExpressionTE::Destroy(self.typing_interner.alloc(DestroyTE {
                     expr: arg_lookup,
                     struct_tt,
                     destination_reference_variables: member_local_variables_slice,
@@ -480,29 +480,28 @@ where 's: 't,
                 let origin_range: Vec<RangeS<'s>> = origin_function1.map(|f| f.range).into_iter().collect();
                 let drop_call_range: Vec<RangeS<'s>> = origin_range.into_iter().chain(call_range.iter().copied()).collect();
                 let drop_call_range_slice = self.typing_interner.alloc_slice_from_vec(drop_call_range);
-                let drop_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
-                    let unlet = self.typing_interner.alloc(ReferenceExpressionTE::Unlet(UnletTE {
+                let drop_exprs: Vec<ReferenceExpressionTE<'s, 't>> = member_local_variables.iter().map(|v| {
+                    let unlet = ReferenceExpressionTE::Unlet(self.typing_interner.alloc(UnletTE {
                         variable: ILocalVariableT::Reference(*v),
                     }));
                     // Until a test path forces Result conversion through struct_drop_macro.
                     self.drop(body_env, coutputs, drop_call_range_slice, call_location, RegionT {}, unlet)
                         .unwrap_or_else(|_| panic!("Unimplemented: Result propagation through struct_drop_macro"))
                 }).collect();
-                let mut all_exprs: Vec<&'t ReferenceExpressionTE<'s, 't>> = vec![destroy];
+                let mut all_exprs: Vec<ReferenceExpressionTE<'s, 't>> = vec![destroy];
                 all_exprs.extend(drop_exprs.into_iter());
                 self.consecutive(&all_exprs)
             }
             _ => panic!("struct drop: unexpected mutability"),
         };
 
-        let return_expr = self.typing_interner.alloc(
-            ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(
-                    ReferenceExpressionTE::VoidLiteral(VoidLiteralTE { region: RegionT {}, _phantom: std::marker::PhantomData })),
+        let return_expr =
+            ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::VoidLiteral(self.typing_interner.alloc(VoidLiteralTE { region: RegionT {}, _phantom: std::marker::PhantomData })),
             }));
-        let body = ReferenceExpressionTE::Block(BlockTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
             inner: self.consecutive(&[body_expr, return_expr]),
-        });
+        }));
 
         (header, body)
     }

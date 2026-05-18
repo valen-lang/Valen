@@ -60,9 +60,9 @@ pub enum NodeRefT<'s, 't> {
     InstantiationBoundArguments(&'t InstantiationBoundArgumentsT<'s, 't>),
 
     // ---- Expression hierarchy ----
-    Expression(&'t ExpressionTE<'s, 't>),
-    ReferenceExpression(&'t ReferenceExpressionTE<'s, 't>),
-    AddressExpression(&'t AddressExpressionTE<'s, 't>),
+    Expression(ExpressionTE<'s, 't>),
+    ReferenceExpression(ReferenceExpressionTE<'s, 't>),
+    AddressExpression(AddressExpressionTE<'s, 't>),
 
     // 48 reference expression variants
     LetAndLend(&'t LetAndLendTE<'s, 't>),
@@ -234,7 +234,7 @@ where
 }
 
 pub fn collect_in_reference_expression<'s, 't, T, F>(
-    e: &'t ReferenceExpressionTE<'s, 't>,
+    e: ReferenceExpressionTE<'s, 't>,
     predicate: &F,
 ) -> Vec<T>
 where
@@ -247,7 +247,7 @@ where
 }
 
 pub fn collect_in_address_expression<'s, 't, T, F>(
-    e: &'t AddressExpressionTE<'s, 't>,
+    e: AddressExpressionTE<'s, 't>,
     predicate: &F,
 ) -> Vec<T>
 where
@@ -347,7 +347,7 @@ fn visit_function_definition<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::FunctionDefinition(f));
     visit_function_header(pred, out, f.header);
     visit_instantiation_bound_arguments(pred, out, f.instantiation_bound_params);
-    visit_reference_expression(pred, out, &f.body);
+    visit_reference_expression(pred, out, f.body);
 }
 
 fn visit_function_header<'s, 't, T, F>(
@@ -516,7 +516,7 @@ fn visit_instantiation_bound_arguments<'s, 't, T, F>(
 // Expression hierarchy visitors
 // ============================================================================
 
-fn visit_expression_te<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, e: &'t ExpressionTE<'s, 't>)
+fn visit_expression_te<'s, 't, T, F>(pred: &F, out: &mut Vec<T>, e: ExpressionTE<'s, 't>)
 where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -531,7 +531,7 @@ where
 fn visit_reference_expression<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    e: &'t ReferenceExpressionTE<'s, 't>,
+    e: ReferenceExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -618,7 +618,7 @@ fn visit_reference_expression<'s, 't, T, F>(
 fn visit_address_expression<'s, 't, T, F>(
     pred: &F,
     out: &mut Vec<T>,
-    e: &'t AddressExpressionTE<'s, 't>,
+    e: AddressExpressionTE<'s, 't>,
 ) where
     F: Fn(NodeRefT<'s, 't>) -> Option<T>,
     's: 't,
@@ -802,7 +802,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Consecutor(x));
     for e in x.exprs {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
 }
 
@@ -813,7 +813,7 @@ where
 {
     collect_if(pred, out, NodeRefT::Tuple(x));
     for e in x.elements {
-        visit_reference_expression(pred, out, e);
+        visit_reference_expression(pred, out, *e);
     }
     visit_coord(pred, out, &x.result_reference);
 }
@@ -943,7 +943,7 @@ fn visit_interface_function_call<'s, 't, T, F>(
     visit_prototype(pred, out, x.super_function_prototype);
     visit_coord(pred, out, &x.result_reference);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
 }
 
@@ -958,7 +958,7 @@ fn visit_extern_function_call<'s, 't, T, F>(
     collect_if(pred, out, NodeRefT::ExternFunctionCall(x));
     visit_prototype(pred, out, x.prototype2);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
 }
 
@@ -970,7 +970,7 @@ where
     collect_if(pred, out, NodeRefT::FunctionCall(x));
     visit_prototype(pred, out, x.callable);
     for a in x.args {
-        visit_reference_expression(pred, out, a);
+        visit_reference_expression(pred, out, *a);
     }
     visit_coord(pred, out, &x.return_type);
 }
@@ -994,7 +994,7 @@ where
     visit_struct_tt(pred, out, x.struct_tt);
     visit_coord(pred, out, &x.result_reference);
     for a in x.args {
-        visit_expression_te(pred, out, a);
+        visit_expression_te(pred, out, *a);
     }
 }
 
@@ -1683,8 +1683,8 @@ where
         NodeRefT::FunctionDefinition(f) => visit_function_definition(predicate, &mut out, f),
         NodeRefT::StructDefinition(s) => visit_struct_definition(predicate, &mut out, s),
         NodeRefT::InterfaceDefinition(i) => visit_interface_definition(predicate, &mut out, i),
-        NodeRefT::ReferenceExpression(e) => visit_reference_expression(predicate, &mut out, e),
-        NodeRefT::AddressExpression(e) => visit_address_expression(predicate, &mut out, e),
+        NodeRefT::ReferenceExpression(e) => visit_reference_expression(predicate, &mut out, *e),
+        NodeRefT::AddressExpression(e) => visit_address_expression(predicate, &mut out, *e),
         NodeRefT::Templata(t) => visit_templata(predicate, &mut out, t),
         NodeRefT::Kind(k) => visit_kind(predicate, &mut out, k),
         NodeRefT::Coord(c) => visit_coord(predicate, &mut out, c),

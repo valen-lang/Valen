@@ -59,14 +59,14 @@ where 's: 't,
             return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
             maybe_origin_function_templata: Some(env.templata()),
         };
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
-                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::PopRuntimeSizedArray({
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
+                source_expr: ReferenceExpressionTE::PopRuntimeSizedArray({
                     // Rust adaptation: Scala's PopRuntimeSizedArrayTE has a `private val elementType`
                     // computed in the class body from `arrayExpr.result.coord.kind`. Rust has no
                     // class-body computed fields, so element_type is stored on the struct and
                     // computed here at construction.
-                    let array_expr = self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                    let array_expr = ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                         param_index: 0,
                         coord: param_coords[0].tyype,
                     }));
@@ -74,10 +74,10 @@ where 's: 't,
                         crate::typing::types::types::KindT::RuntimeSizedArray(rsa) => rsa.element_type(),
                         other => panic!("vwat: {:?}", other),
                     };
-                    PopRuntimeSizedArrayTE { array_expr, element_type }
-                })),
+                    self.typing_interner.alloc(PopRuntimeSizedArrayTE { array_expr, element_type })
+                }),
             })),
-        });
+        }));
         (header, body)
     }
 /*

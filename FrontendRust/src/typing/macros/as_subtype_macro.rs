@@ -115,8 +115,8 @@ where 's: 't,
             IsParentResult::IsntParent(_) => panic!("vwat"),
         };
 
-        let as_subtype_expr = self.typing_interner.alloc(ReferenceExpressionTE::AsSubtype(AsSubtypeTE {
-            source_expr: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+        let as_subtype_expr = ReferenceExpressionTE::AsSubtype(self.typing_interner.alloc(AsSubtypeTE {
+            source_expr: ReferenceExpressionTE::ArgLookup(self.typing_interner.alloc(ArgLookupTE {
                 param_index: 0,
                 coord: incoming_coord,
             })),
@@ -129,11 +129,11 @@ where 's: 't,
             err_impl_name: err_result_impl,
         }));
 
-        let body = ReferenceExpressionTE::Block(BlockTE {
-            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+        let body = ReferenceExpressionTE::Block(self.typing_interner.alloc(BlockTE {
+            inner: ReferenceExpressionTE::Return(self.typing_interner.alloc(ReturnTE {
                 source_expr: as_subtype_expr,
             })),
-        });
+        }));
         (header, body)
     }
 /*

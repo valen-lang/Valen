@@ -3410,13 +3410,13 @@ where 's: 't,
 {
     pub fn consecutive(
         &self,
-        exprs: &[&'t ReferenceExpressionTE<'s, 't>],
-    ) -> &'t ReferenceExpressionTE<'s, 't> {
+        exprs: &[ReferenceExpressionTE<'s, 't>],
+    ) -> ReferenceExpressionTE<'s, 't> {
         match exprs {
             [] => panic!("Shouldn't have zero-element consecutors!"),
-            [only] => only,
+            [only] => *only,
             _ => {
-                let flattened: Vec<&'t ReferenceExpressionTE<'s, 't>> =
+                let flattened: Vec<ReferenceExpressionTE<'s, 't>> =
                     exprs.iter().flat_map(|e| {
                         match e {
                             ReferenceExpressionTE::Consecutor(c) => c.exprs.to_vec(),
@@ -3424,9 +3424,9 @@ where 's: 't,
                         }
                     }).collect();
 
-                let without_init_voids: Vec<&'t ReferenceExpressionTE<'s, 't>> = {
+                let without_init_voids: Vec<ReferenceExpressionTE<'s, 't>> = {
                     let (init, last) = flattened.split_at(flattened.len() - 1);
-                    let mut filtered: Vec<&'t ReferenceExpressionTE<'s, 't>> = init.iter()
+                    let mut filtered: Vec<ReferenceExpressionTE<'s, 't>> = init.iter()
                         .filter(|e| !matches!(e, ReferenceExpressionTE::VoidLiteral(_)))
                         .copied()
                         .collect();
@@ -3436,10 +3436,10 @@ where 's: 't,
 
                 match without_init_voids.as_slice() {
                     [] => panic!("Shouldn't have zero-element consecutors!"),
-                    [only] => only,
+                    [only] => *only,
                     _ => {
                         let exprs_slice = self.typing_interner.alloc_slice_copy(&without_init_voids);
-                        &*self.typing_interner.alloc(ReferenceExpressionTE::Consecutor(ConsecutorTE { exprs: exprs_slice }))
+                        ReferenceExpressionTE::Consecutor(self.typing_interner.alloc(ConsecutorTE { exprs: exprs_slice }))
                     }
                 }
             }
