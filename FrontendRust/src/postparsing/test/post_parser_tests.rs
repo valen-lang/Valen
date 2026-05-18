@@ -1862,3 +1862,86 @@ fn foreach_expr() {
 /*
 }
 */
+
+// NOVEL CODE — TDD reproducer for the `destruct` expression scout panic
+// surfaced by typing_pass_on_roguelike. The Scala equivalent is `case
+// DestructPE(range, innerPE) => ...` at ExpressionScout.scala:393.
+#[test]
+fn destruct_expression() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "struct MyStruct { a int; }\nexported func main() { m = MyStruct(7); destruct m; }",
+  );
+  let main = program.lookup_function("main");
+  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  // Just ensure scout completed without panicking.
+}
+
+// NOVEL CODE — TDD reproducer for the AndPE/OrPE expression scout panic
+// surfaced by typing_pass_on_roguelike. Scala equivalent at
+// ExpressionScout.scala:605/628 uses `newIf` to expand `&&` / `||` into
+// short-circuiting conditionals.
+#[test]
+fn and_or_expression() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func main() bool { return true and false or true; }",
+  );
+  let main = program.lookup_function("main");
+  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+}
+
+// NOVEL CODE — TDD reproducer for the TuplePE expression scout panic
+// surfaced by typing_pass_on_roguelike. The Scala equivalent is
+// `case TuplePE(range, elementsPE) => ...` at ExpressionScout.scala:486.
+#[test]
+fn tuple_expression() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func main() { x = (3, 4); }",
+  );
+  let main = program.lookup_function("main");
+  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+}
+
+// NOVEL CODE — TDD reproducer for the StrInterpolatePE expression scout
+// panic surfaced by typing_pass_on_roguelike. The Scala equivalent is
+// `case StrInterpolatePE(range, partsPE) => ...` at ExpressionScout.scala:254.
+#[test]
+fn str_interpolate_expression() {
+  let parse_bump = Bump::new();
+  let scout_bump = Bump::new();
+  let parse_arena = ParseArena::new(&parse_bump);
+  let scout_arena = ScoutArena::new(&scout_bump);
+  let keywords = Keywords::new_for_scout(&scout_arena);
+  let program = compile(
+    &scout_arena,
+    &keywords,
+    &parse_arena,
+    "exported func main() str { return \"\"; }",
+  );
+  let main = program.lookup_function("main");
+  let _code_body = cast!(&main.body, crate::postparsing::ast::IBodyS::CodeBody);
+  // Just ensure scout completed without panicking.
+}

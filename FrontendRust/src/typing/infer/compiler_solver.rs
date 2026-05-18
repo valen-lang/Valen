@@ -563,7 +563,7 @@ where 's: 't,
             if self.opts.global_options.sanity_check {
                 self.sanity_check_conclusion(&env, state, *rune, *templata);
             }
-            assert_eq!(templata.tyype(), *initial_rune_to_type.get(rune).unwrap());
+            assert_eq!(templata.tyype(self.scout_arena), *initial_rune_to_type.get(rune).unwrap());
         }
 
         let all_runes: Vec<IRuneS<'s>> = initial_rune_to_type.keys().copied().collect();
@@ -1685,7 +1685,18 @@ where 's: 't,
                 }
             }
             //     case RuneParentEnvLookupSR(...) =>
-            IRulexSR::RuneParentEnvLookup(_) => { panic!("Unimplemented: solve_rule RuneParentEnvLookup"); }
+            IRulexSR::RuneParentEnvLookup(r) => {
+                // This rule does nothing, it was actually preprocessed.
+                match solver_state.commit_step::<ITypingPassSolverError<'s, 't>>(false, vec![rule_index], std::collections::HashMap::new(), vec![]) {
+                    Ok(_) => Ok(()),
+                    Err(e) => {
+                        let ranges: Vec<RangeS<'s>> = std::iter::once(r.range).chain(env.parent_ranges.iter().copied()).collect();
+                        let ranges_slice = self.typing_interner.alloc_slice_from_vec(ranges);
+                        let error = self.typing_interner.alloc(e);
+                        Err(ITypingPassSolverError::InternalSolverError { range: ranges_slice, err: error })
+                    }
+                }
+            }
             //     case AugmentSR(...) =>
             IRulexSR::Augment(augment) => {
                 match solver_state.get_conclusion(&augment.result_rune.rune) {

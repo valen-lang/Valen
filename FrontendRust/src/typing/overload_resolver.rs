@@ -514,6 +514,7 @@ where 's: 't,
         struct OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             calling_env: IInDenizenEnvironmentT<'s, 't>,
             typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+            scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
         }
         impl<'a, 's, 't> IRuneTypeSolverEnv<'s> for OverloadRuneTypeSolverEnv<'a, 's, 't> where 's: 't {
             fn lookup(
@@ -526,7 +527,7 @@ where 's: 't,
                 let mut filter = std::collections::HashSet::new();
                 filter.insert(ILookupContext::TemplataLookupContext);
                 match self.calling_env.lookup_nearest_with_imprecise_name(name_s, filter, self.typing_interner) {
-                    Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult { templata: x.tyype() })),
+                    Some(x) => Ok(IRuneTypeSolverLookupResult::Templata(TemplataLookupResult { templata: x.tyype(self.scout_arena) })),
                     None => Err(IRuneTypingLookupFailedError::CouldntFindType(RuneTypingCouldntFindType { range, name: name_s })),
                 }
             }
@@ -551,7 +552,7 @@ where 's: 't,
                             .collect();
 
                     let rune_type_solve_env =
-                        OverloadRuneTypeSolverEnv { calling_env, typing_interner: self.typing_interner };
+                        OverloadRuneTypeSolverEnv { calling_env, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
 
                     // Scala: runeTypeSolver.solve(sanityCheck, useOptimizedSolver, env, ...)
                     // Note: Rust solve_rune_type doesn't accept useOptimizedSolver (pre-existing API difference)

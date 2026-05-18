@@ -2090,6 +2090,7 @@ where 's: 't,
         TemplataCompilerRuneTypeSolverEnv {
             parent_env,
             typing_interner: self.typing_interner,
+            scout_arena: self.scout_arena,
         }
     }
     /*
@@ -2113,6 +2114,7 @@ where
 {
     parent_env: IInDenizenEnvironmentT<'s, 't>,
     typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+    scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
 }
 /*
 Guardian: disable-all
@@ -2171,7 +2173,7 @@ where
                     Some(x) => {
                         Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
                             crate::postparsing::rune_type_solver::TemplataLookupResult {
-                                templata: x.tyype(),
+                                templata: x.tyype(self.scout_arena),
                             },
                         ))
                     }
@@ -2241,10 +2243,12 @@ where 's: 't,
         match (&source_type, &target_type) {
             (KindT::Never(_), _) => return true,
             (a, b) if a == b => {}
-            (KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_), _) => {
+            (KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_)
+                | KindT::RuntimeSizedArray(_) | KindT::StaticSizedArray(_), _) => {
                 return false;
             }
-            (_, KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_)) => {
+            (_, KindT::Void(_) | KindT::Int(_) | KindT::Bool(_) | KindT::Str(_) | KindT::Float(_)
+                | KindT::RuntimeSizedArray(_) | KindT::StaticSizedArray(_)) => {
                 return false;
             }
             (_, KindT::Struct(_)) => return false,

@@ -1419,7 +1419,15 @@ impl<'s, 't> IsSameInstanceTE<'s, 't> where 's: 't, {
 */
 }
 impl<'s, 't> IsSameInstanceTE<'s, 't> {
-    fn result(&self) -> ReferenceResultT<'s, 't> { panic!("Unimplemented: result"); }
+    pub fn result(&self) -> ReferenceResultT<'s, 't> {
+        ReferenceResultT {
+            coord: crate::typing::types::types::CoordT {
+                ownership: crate::typing::types::types::OwnershipT::Share,
+                region: crate::typing::types::types::RegionT,
+                kind: crate::typing::types::types::KindT::Bool(crate::typing::types::types::BoolT),
+            },
+        }
+    }
 /*
   override def result = ReferenceResultT(CoordT(ShareT, left.result.coord.region, BoolT()))
 }

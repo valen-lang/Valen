@@ -4,7 +4,7 @@ use crate::postparsing::itemplatatype::{
   BooleanTemplataType, CoordTemplataType, ITemplataType, ImplTemplataType,
   IntegerTemplataType, KindTemplataType, LocationTemplataType,
   MutabilityTemplataType, OwnershipTemplataType, PrototypeTemplataType,
-  StringTemplataType, VariabilityTemplataType,
+  StringTemplataType, TemplateTemplataType, VariabilityTemplataType,
 };
 use crate::typing::ast::ast::{FunctionHeaderT, PrototypeT};
 use crate::typing::env::environment::*;
@@ -223,7 +223,10 @@ pub enum ITemplataT<'s, 't> {
   Location(LocationTemplataT),
 }
 impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
-  pub fn tyype(&self) -> ITemplataType<'s> {
+  // Rust adaptation (SPDMX-B): takes &ScoutArena because the TemplateTemplataType
+  // arms construct a fresh slice of param ITemplataType values per call;
+  // Scala uses GC-backed Vector and doesn't need an arena parameter.
+  pub fn tyype(&self, scout_arena: &crate::scout_arena::ScoutArena<'s>) -> ITemplataType<'s> {
     match self {
       ITemplataT::Coord(_) => ITemplataType::CoordTemplataType(CoordTemplataType {}),
       ITemplataT::Kind(_) => ITemplataType::KindTemplataType(KindTemplataType {}),
@@ -239,8 +242,22 @@ impl<'s, 't> ITemplataT<'s, 't> where 's: 't {
       ITemplataT::ImplDefinition(_) => ITemplataType::ImplTemplataType(ImplTemplataType {}),
       ITemplataT::Location(_) => ITemplataType::LocationTemplataType(LocationTemplataType {}),
       ITemplataT::CoordList(_) => panic!("Unimplemented: tyype on CoordList"),
-      ITemplataT::RuntimeSizedArrayTemplate(_) => panic!("Unimplemented: tyype on RuntimeSizedArrayTemplate"),
-      ITemplataT::StaticSizedArrayTemplate(_) => panic!("Unimplemented: tyype on StaticSizedArrayTemplate"),
+      ITemplataT::RuntimeSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
+        param_types: scout_arena.alloc_slice_copy(&[
+          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        ]),
+        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+      }),
+      ITemplataT::StaticSizedArrayTemplate(_) => ITemplataType::TemplateTemplataType(TemplateTemplataType {
+        param_types: scout_arena.alloc_slice_copy(&[
+          ITemplataType::IntegerTemplataType(IntegerTemplataType {}),
+          ITemplataType::MutabilityTemplataType(MutabilityTemplataType {}),
+          ITemplataType::VariabilityTemplataType(VariabilityTemplataType {}),
+          ITemplataType::CoordTemplataType(CoordTemplataType {}),
+        ]),
+        return_type: scout_arena.alloc(ITemplataType::KindTemplataType(KindTemplataType {})),
+      }),
       ITemplataT::Function(_) => panic!("Unimplemented: tyype on Function"),
       // Note that this might disagree with originStruct.tyype, which might not be a TemplateTemplataType().
       // In Compiler, StructTemplatas are templates, even if they have zero arguments.

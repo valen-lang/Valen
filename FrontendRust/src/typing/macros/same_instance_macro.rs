@@ -37,17 +37,38 @@ where 's: 't,
 {
     pub fn generate_function_body_same_instance(
         &self,
-        coutputs: &mut CompilerOutputs<'s, 't>,
-        env: &FunctionEnvironmentT<'s, 't>,
-        generator_id: StrI<'s>,
-        life: LocationInFunctionEnvironmentT<'s, 't>,
-        call_range: &[RangeS<'s>],
-        call_location: LocationInDenizen<'s>,
-        origin_function: Option<&FunctionA<'s>>,
+        _coutputs: &mut CompilerOutputs<'s, 't>,
+        env: &'t FunctionEnvironmentT<'s, 't>,
+        _generator_id: StrI<'s>,
+        _life: LocationInFunctionEnvironmentT<'s, 't>,
+        _call_range: &[RangeS<'s>],
+        _call_location: LocationInDenizen<'s>,
+        _origin_function: Option<&FunctionA<'s>>,
         param_coords: &[ParameterT<'s, 't>],
         maybe_ret_coord: Option<CoordT<'s, 't>>,
     ) -> (FunctionHeaderT<'s, 't>, ReferenceExpressionTE<'s, 't>) {
-        panic!("Unimplemented: generate_function_body_same_instance");
+        let header = FunctionHeaderT {
+            id: env.id,
+            attributes: self.typing_interner.alloc_slice_from_vec(vec![]),
+            params: self.typing_interner.alloc_slice_from_vec(param_coords.to_vec()),
+            return_type: maybe_ret_coord.expect("vassertSome: maybeRetCoord"),
+            maybe_origin_function_templata: Some(env.templata()),
+        };
+        let body = ReferenceExpressionTE::Block(BlockTE {
+            inner: self.typing_interner.alloc(ReferenceExpressionTE::Return(ReturnTE {
+                source_expr: self.typing_interner.alloc(ReferenceExpressionTE::IsSameInstance(IsSameInstanceTE {
+                    left: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                        param_index: 0,
+                        coord: param_coords[0].tyype,
+                    })),
+                    right: self.typing_interner.alloc(ReferenceExpressionTE::ArgLookup(ArgLookupTE {
+                        param_index: 1,
+                        coord: param_coords[1].tyype,
+                    })),
+                })),
+            })),
+        });
+        (header, body)
     }
 /*
   def generateFunctionBody(

@@ -968,7 +968,7 @@ where 's: 't,
                     self.evaluate_and_coerce_to_reference_expression(
                         coutputs, nenv, life.add(self.typing_interner, 0), parent_ranges, outer_call_location, nenv.default_region(), let_se.expr)?;
 
-                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner };
+                let rune_type_solve_env = LetExprRuneTypeSolverEnv { nenv, typing_interner: self.typing_interner, scout_arena: self.scout_arena };
                 let rune_to_initially_known_type: HashMap<_, _> =
                     crate::higher_typing::patterns::get_rune_types_from_pattern(&let_se.pattern)
                         .into_iter().collect();
@@ -4013,6 +4013,7 @@ where
 {
     nenv: &'a crate::typing::env::function_environment_t::NodeEnvironmentBox<'s, 't>,
     typing_interner: &'a crate::typing::typing_interner::TypingInterner<'s, 't>,
+    scout_arena: &'a crate::scout_arena::ScoutArena<'s>,
 }
 /*
 Guardian: disable-all
@@ -4057,7 +4058,7 @@ where
             Some(x) => {
                 Ok(crate::postparsing::rune_type_solver::IRuneTypeSolverLookupResult::Templata(
                     crate::postparsing::rune_type_solver::TemplataLookupResult {
-                        templata: x.tyype(),
+                        templata: x.tyype(self.scout_arena),
                     },
                 ))
             }
